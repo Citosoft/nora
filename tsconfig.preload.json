@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["main/preload.ts", "main/preload/**/*.ts", "shared/**/*.ts"],
+  "exclude": ["dist", "node_modules"]
+}

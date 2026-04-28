@@ -1,0 +1,46 @@
+import type { AppUiCommands } from "@/components/app/hooks/useAppUiCommands";
+import type { WorkspaceSessionFocusCommands } from "@/components/app/hooks/useWorkspaceSessionFocusCommands";
+import type { AppView, FileEditorState, UiState } from "@/components/app/types";
+import type { AppSettings, AppState, ChangeEntry } from "@shared/appTypes";
+import type { Dispatch, SetStateAction } from "react";
+
+export type KeyboardShortcutActionsBuildDeps = {
+  activeWorkspaceContentTab: "file" | "diff" | null;
+  appSettingsTerminalQuickLaunchDefaults: AppSettings["terminalQuickLaunchDefaults"];
+  defaultTerminalShellId: string | null;
+  fileEditorState: FileEditorState | null;
+  focusLocalTerminalDock: () => void | Promise<void>;
+  handleOpenWorkspaceBrowser: (projectId: string, url?: string) => void;
+  isCenterDiffExpanded: boolean;
+  openSettingsPage: () => void;
+  openStartupDependenciesDialog: () => void;
+  sessionFocusCommands: WorkspaceSessionFocusCommands;
+  safely: (action: () => Promise<AppState>) => Promise<AppState | null>;
+  selectedChange: ChangeEntry | null;
+  setActiveView: Dispatch<SetStateAction<AppView>>;
+  setActiveWorkspaceContentTab: Dispatch<SetStateAction<"file" | "diff" | null>>;
+  setFileEditorState: Dispatch<SetStateAction<FileEditorState | null>>;
+  setIsCenterDiffExpanded: Dispatch<SetStateAction<boolean>>;
+  setIsChangesSidebarCollapsed: Dispatch<SetStateAction<boolean>>;
+  setIsLocalTerminalDockCollapsed: Dispatch<SetStateAction<boolean>>;
+  setIsWorkspaceSidebarCollapsed: Dispatch<SetStateAction<boolean>>;
+  setWorkspaceQuickSearchRequestId: Dispatch<SetStateAction<number>>;
+  snapshot: AppState | null;
+  uiCommands: Pick<
+    AppUiCommands,
+    | "openAddWorkspaceDialog"
+    | "openCreateAgentDialog"
+    | "openCreateTerminalDialog"
+    | "openKeyboardShortcutsDialog"
+    | "openWorkspaceSwitcherDialog"
+  >;
+  uiState: Pick<
+    UiState,
+    | "aiChatTabs"
+    | "browserTabs"
+    | "focusedAiChatTabId"
+    | "focusedBrowserTabId"
+    | "focusedForgeViewerTabId"
+    | "forgeViewerTabs"
+  >;
+};

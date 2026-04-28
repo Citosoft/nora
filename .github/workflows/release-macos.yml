@@ -1,0 +1,82 @@
+name: Publish macOS Release Assets
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to attach macOS artifacts to (for example v0.1.31)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  publish_macos:
+    name: Publish macOS assets
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Download macOS build artifact from Supabase
+        shell: bash
+        env:
+          SUPABASE_STORAGE_URL: ${{ secrets.NORA_SUPABASE_STORAGE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.NORA_SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_BUCKET: ${{ secrets.NORA_SUPABASE_BUCKET }}
+          SUPABASE_STORAGE_PATH: releases/${{ inputs.tag }}/macos-arm64.dmg
+        run: |
+          mkdir -p release-assets
+          DOWNLOAD_URL="${SUPABASE_STORAGE_URL%/}/storage/v1/object/authenticated/${SUPABASE_BUCKET}/${SUPABASE_STORAGE_PATH}"
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --location \
+            --header "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            --header "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            --output "release-assets/Nora-arm64.dmg" \
+            "${DOWNLOAD_URL}"
+
+      - name: Download macOS checksum artifact from Supabase
+        shell: bash
+        env:
+          SUPABASE_STORAGE_URL: ${{ secrets.NORA_SUPABASE_STORAGE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.NORA_SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_BUCKET: ${{ secrets.NORA_SUPABASE_BUCKET }}
+          SUPABASE_STORAGE_PATH: releases/${{ inputs.tag }}/macos-arm64.dmg.sha256
+        run: |
+          DOWNLOAD_URL="${SUPABASE_STORAGE_URL%/}/storage/v1/object/authenticated/${SUPABASE_BUCKET}/${SUPABASE_STORAGE_PATH}"
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --location \
+            --header "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            --header "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            --output "release-assets/Nora-arm64.dmg.sha256" \
+            "${DOWNLOAD_URL}"
+
+      - name: Verify macOS DMG checksum
+        shell: bash
+        run: |
+          cd release-assets
+          shasum -a 256 -c Nora-arm64.dmg.sha256
+
+      - name: Resolve macOS DMG asset path
+        shell: bash
+        run: |
+          RELEASE_ASSET_PATH="$(find release-assets -type f -name '*.dmg' | head -n 1)"
+          if [ -z "${RELEASE_ASSET_PATH}" ]; then
+            echo "No .dmg file found in release-assets"
+            exit 1
+          fi
+          echo "RELEASE_ASSET_PATH=${RELEASE_ASSET_PATH}" >> "${GITHUB_ENV}"
+
+      - name: Attach macOS assets to existing release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag }}
+          files: ${{ env.RELEASE_ASSET_PATH }}

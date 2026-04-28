@@ -1,0 +1,18 @@
+export type WorkspaceFileIconKind =
+  | "archive"
+  | "audio"
+  | "binary"
+  | "code"
+  | "config"
+  | "database"
+  | "diff"
+  | "font"
+  | "generic"
+  | "image"
+  | "json"
+  | "keys"
+  | "markdown"
+  | "sheet"
+  | "terminal"
+  | "text"
+  | "video";

@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "rootDir": ".",
+    "outDir": "dist",
+    "strict": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./renderer/*"],
+      "@shared/*": ["./shared/*"],
+      "@main/*": ["./main/*"]
+    },
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "skipLibCheck": true,
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"]
+  },
+  "include": [
+    "main/**/*.ts",
+    "renderer/**/*.ts",
+    "renderer/**/*.tsx",
+    "renderer/**/*.d.ts",
+    "shared/**/*.ts",
+    "tests/unit/**/*.ts"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "main/preload.ts",
+    "main/preload/**/*.ts"
+  ]
+}

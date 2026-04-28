@@ -1,0 +1,39 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist-tests",
+    "rootDir": ".",
+    "types": ["node"],
+    "noEmit": false
+  },
+  "include": [
+    "tests/unit/**/*.ts",
+    "main/**/*.ts",
+    "shared/**/*.ts",
+    "renderer/components/app/constants/uiLayout.ts",
+    "renderer/components/app/logic/workspaceSessionSignatures.ts",
+    "renderer/components/app/logic/fileTreePanelUtils.ts",
+    "renderer/components/app/logic/appPresenceSignatures.ts",
+    "renderer/components/app/logic/appPersistence.ts",
+    "renderer/components/app/types.ts",
+    "renderer/components/app/logic/workspacePathDrag.ts",
+    "renderer/components/app/logic/agentInputAttachments.ts",
+    "renderer/components/app/logic/terminalDropPaths.ts",
+    "renderer/lib/types/workspaceFileIcon.types.ts",
+    "renderer/lib/workspaceFileIconKind.ts",
+    "renderer/lib/workspaceCodeSimpleIcon.tsx",
+    "renderer/components/app/ai/workspaceAiChatToolUtils.ts",
+    "renderer/components/app/ai/workspaceChatProviderOptions.ts",
+    "renderer/components/app/logic/hydrateAppDomainState.ts",
+    "renderer/components/app/logic/applyAppDomainEvents.ts",
+    "renderer/components/app/logic/appStateFromAppDomainState.ts",
+    "renderer/components/app/logic/canonicalizeAppState.ts"
+  ],
+  "exclude": [
+    "dist",
+    "dist-tests",
+    "node_modules",
+    "main/preload.ts",
+    "main/preload/**/*.ts"
+  ]
+}

@@ -1,0 +1,36 @@
+import type { AccentColor, ThemeMode, UiState } from "@/components/app/types";
+import type { AppSettings, AppState, InstalledIde } from "@shared/appTypes";
+import type { StartupDependencyId, StartupDependencyReport } from "@shared/types/startupDependency.types";
+
+export type BuildOnboardingDialogPropsDeps = {
+  mode: "loading" | "onboarding";
+  snapshot: AppState | null;
+  effectiveStartupDependencyReport: StartupDependencyReport | null;
+  isStartupDependencyDialogBusy: boolean;
+  startupDependencyInstallTargetId: StartupDependencyId | null;
+  startupDependencyInstallErrorMessage: string | null;
+  installCommandDrafts: UiState["installCommandDrafts"];
+  isRefreshingOnboardingTools: boolean;
+  isAddingWorkspace: boolean;
+  themeMode: ThemeMode;
+  accentColor: AccentColor;
+  appSettings: AppSettings;
+  installedIdes: InstalledIde[];
+  defaultIdeId: string | null;
+  userDisplayName: string;
+  setInstallCommandDraft: (toolId: string, value: string) => void;
+  updateThemeMode: (mode: ThemeMode) => void;
+  updateAccentColor: (accentColor: AccentColor) => void;
+  updateHardwareAccelerationEnabled: (enabled: boolean) => Promise<void>;
+  updateWorkspaceStateStorageMode: (mode: AppSettings["workspaceStateStorageMode"]) => Promise<void>;
+  updateDefaultIde: (ideId: string | null) => void;
+  updateUserDisplayName: (displayName: string) => void;
+  installStartupDependencyWithRefresh: (dependencyId: StartupDependencyId) => Promise<void>;
+  copyStartupDependencyInstructions: (dependencyId: StartupDependencyId) => void;
+  reloadStartupDependencyReport: () => Promise<void>;
+  refreshOnboardingTools: () => Promise<void>;
+  installOnboardingTool: (toolId: string) => Promise<void>;
+  setOnboardingToolEnabled: (toolId: string, enabled: boolean) => Promise<void>;
+  openAddWorkspaceModal: () => Promise<AppState | null>;
+  completeOnboarding: () => void;
+};

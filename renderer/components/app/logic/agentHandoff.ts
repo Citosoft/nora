@@ -1,0 +1,154 @@
+import { noraAgentClient } from "@/components/app/clients/noraAgentClient";
+import { noraAppClient } from "@/components/app/clients/noraAppClient";
+import { normalizeSnapshot } from "@/components/app/logic/appUtils";
+import type { UpdateSnapshot } from "@/components/app/types/component.types";
+
+export async function sendAgentTerminalText(options: {
+  agentId: string;
+  text: string;
+  focusAgent?: (agentId: string) => void | Promise<void>;
+  submit?: boolean;
+  updateSnapshot?: UpdateSnapshot;
+}): Promise<void> {
+  let lastError: unknown = null;
+
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    try {
+      await options.focusAgent?.(options.agentId);
+      await noraAgentClient.sendAgentTerminalInput(options.agentId, options.text);
+      if (options.submit) {
+        await new Promise((resolve) => globalThis.setTimeout(resolve, 120));
+        await noraAgentClient.sendAgentTerminalInput(options.agentId, "\r");
+      }
+      if (options.updateSnapshot) {
+        options.updateSnapshot(normalizeSnapshot(await noraAppClient.getSnapshot()));
+      }
+      return;
+    } catch (error: unknown) {
+      lastError = error;
+      await new Promise((resolve) => globalThis.setTimeout(resolve, 500));
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Unable to send task details to the new agent.");
+}
+
+export async function sendInstructionToAgent(
+  agentId: string,
+  instruction: string,
+  updateSnapshot: UpdateSnapshot
+): Promise<void> {
+  await sendAgentTerminalText({
+    agentId,
+    text: instruction,
+    submit: true,
+    updateSnapshot
+  });
+}
+
+export async function waitForAgentPromptReady(
+  agentId: string,
+  updateSnapshot: UpdateSnapshot
+): Promise<void> {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const next = normalizeSnapshot(await noraAppClient.getSnapshot());
+    const agent = next.agents.find((entry) => entry.id === agentId) ?? null;
+    updateSnapshot(next);
+
+    if (agent?.status === "running") {
+      await new Promise((resolve) => globalThis.setTimeout(resolve, 200));
+      return;
+    }
+
+    await new Promise((resolve) => globalThis.setTimeout(resolve, 300));
+  }
+}
+
+async function waitForAgentConversationReady(
+  agentId: string,
+  updateSnapshot: UpdateSnapshot
+): Promise<void> {
+  let acceptedTrustPrompt = false;
+  let acceptedModelPrompt = false;
+  let acceptedContinuePrompt = false;
+  let promptReadyAt: number | null = null;
+
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    const next = normalizeSnapshot(await noraAppClient.getSnapshot());
+    const agent = next.agents.find((entry) => entry.id === agentId) ?? null;
+    updateSnapshot(next);
+
+    if (!agent) {
+      throw new Error("Agent session could not be found while waiting for prompt readiness.");
+    }
+
+    const buffer = await noraAgentClient.getAgentTerminalBuffer(agentId);
+    const plainOutput = buffer.replace(/\x1B\[[0-9;?]*[ -/]*[@-~]/g, "").replace(/\s+/g, " ");
+
+    if (agent.toolId === "codex") {
+      const hasTrustPrompt = plainOutput.includes("Do you trust the contents of this directory?");
+      const hasModelPrompt = plainOutput.includes("Choose how you'd like Codex to proceed.");
+      const hasContinuePrompt = plainOutput.includes("Press enter to continue");
+
+      if (!acceptedTrustPrompt && hasTrustPrompt) {
+        acceptedTrustPrompt = true;
+        await noraAgentClient.sendAgentTerminalInput(agentId, "1");
+        await noraAgentClient.sendAgentTerminalInput(agentId, "\r");
+      }
+
+      if (!acceptedModelPrompt && hasModelPrompt) {
+        acceptedModelPrompt = true;
+        await noraAgentClient.sendAgentTerminalInput(agentId, "1");
+        await noraAgentClient.sendAgentTerminalInput(agentId, "\r");
+      }
+
+      if (!acceptedContinuePrompt && hasContinuePrompt) {
+        acceptedContinuePrompt = true;
+        await noraAgentClient.sendAgentTerminalInput(agentId, "\r");
+      }
+
+      const promptReady =
+        plainOutput.includes("Tip: Use /mcp to list configured MCP tools.") ||
+        plainOutput.includes("Summarize recent commits") ||
+        plainOutput.includes(" /status");
+
+      if (promptReady && promptReadyAt === null) {
+        promptReadyAt = Date.now();
+      }
+
+      if (promptReadyAt !== null && Date.now() - promptReadyAt > 1200) {
+        return;
+      }
+
+      // Codex often accepts input as soon as the session is running, before
+      // banner/status markers settle. Return early when no interactive startup
+      // prompt is currently visible so instruction handoff is not delayed.
+      const hasPendingStartupPrompt =
+        (hasTrustPrompt && !acceptedTrustPrompt) ||
+        (hasModelPrompt && !acceptedModelPrompt) ||
+        (hasContinuePrompt && !acceptedContinuePrompt);
+      if (agent.status === "running" && !hasPendingStartupPrompt) {
+        return;
+      }
+    } else if (agent.status === "running") {
+      await new Promise((resolve) => globalThis.setTimeout(resolve, 200));
+      return;
+    }
+
+    await new Promise((resolve) => globalThis.setTimeout(resolve, 300));
+  }
+}
+
+export async function handoffInstructionToAgent(options: {
+  agentId: string;
+  instruction: string;
+  updateSnapshot: UpdateSnapshot;
+  focusAgent?: (agentId: string) => Promise<void>;
+}): Promise<void> {
+  if (options.focusAgent) {
+    await options.focusAgent(options.agentId);
+  }
+
+  await waitForAgentConversationReady(options.agentId, options.updateSnapshot);
+  await sendInstructionToAgent(options.agentId, options.instruction, options.updateSnapshot);
+}

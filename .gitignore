@@ -1,0 +1,10 @@
+node_modules/
+workspaces/
+dist/
+dist-tests/
+.DS_Store
+out/
+.env
+.nora/
+.codex
+.superset/

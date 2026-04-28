@@ -1,0 +1,42 @@
+import type { AppUiCommands } from "@/components/app/hooks/useAppUiCommands";
+import type { UseAppCenterTabsResult } from "@/components/app/types/appCenterTabs.types";
+import type { UseAiModelCatalogResult, UseAppAutoUpdateResult, UseBrowserTabsResult } from "@/components/app/types/appHooks.types";
+import type { UseAppToolInstallFlowsResult } from "@/components/app/types/appToolInstallFlows.types";
+import type { AppPreferences, UseLinuxUpdateNoticeResult, UseWorkspaceLoadingResult } from "@/components/app/types/workflow.types";
+import type { AppRootRuntimeProps } from "@/components/app/types/appRootRuntime.types";
+import type { UseAppBootstrapResult } from "@/components/app/types/component.types";
+import type { AppState } from "@shared/appTypes";
+import type { Dispatch, MutableRefObject, SetStateAction } from "react";
+
+import type { useAppIssueReporter } from "@/components/app/hooks/useAppIssueReporter";
+import type { useAppNavigationActions } from "@/components/app/hooks/useAppNavigationActions";
+import type { useAppRootShellFrame } from "@/components/app/hooks/useAppRootShellFrame";
+import type { useAppRootSnapshotCommands } from "@/components/app/hooks/useAppRootSnapshotCommands";
+import type { useWorkspaceLifecycleActions } from "@/components/app/hooks/useWorkspaceLifecycleActions";
+
+export type SignedInAppRootProps = AppRootRuntimeProps & {
+  preferences: AppPreferences;
+  bootstrap: UseAppBootstrapResult;
+  autoUpdate: UseAppAutoUpdateResult;
+  aiModels: UseAiModelCatalogResult;
+  toolInstallFlows: UseAppToolInstallFlowsResult;
+  navigation: ReturnType<typeof useAppNavigationActions>;
+  browserTabs: UseBrowserTabsResult;
+  centerTabs: UseAppCenterTabsResult;
+  workspaceLifecycle: ReturnType<typeof useWorkspaceLifecycleActions>;
+  workspaceLoading: UseWorkspaceLoadingResult;
+  snapshotCommands: ReturnType<typeof useAppRootSnapshotCommands>;
+  shellFrame: ReturnType<typeof useAppRootShellFrame>;
+  issueReporter: ReturnType<typeof useAppIssueReporter>;
+  linuxUpdateNotice: UseLinuxUpdateNoticeResult;
+  uiCommands: AppUiCommands;
+  safely: (action: () => Promise<AppState>) => Promise<AppState | null>;
+  refreshSnapshot: (statusMessage: string) => Promise<void>;
+  captureError: (error: unknown) => void;
+  clearCapturedError: () => void;
+  defaultTerminalShellId: string | null;
+  setDefaultTerminalShellId: Dispatch<SetStateAction<string | null>>;
+  normalizeSnapshot: (snapshot: AppState) => AppState;
+  addWorkspaceBaselineSignatureRef: MutableRefObject<string>;
+  finishAddingWorkspace: () => void;
+};

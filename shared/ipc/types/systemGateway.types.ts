@@ -1,0 +1,79 @@
+import type {
+  AgentCompletionNotificationPayload,
+  AnalyticsRuntimeConfig,
+  AppSettings,
+  AutoUpdateStatus,
+  AutoUpdateTestSupport,
+  AutoUpdateTestTarget,
+  BrowserCookieProfileSummary,
+  BrowserDataImportResult,
+  ForgeOAuthDevicePrompt,
+  InstalledIde,
+  LinuxAptSetupStatus,
+  LinuxUpdateStatus,
+  ReleaseVersionStatus,
+  RemoteConnectionOptions
+} from "../../appTypes";
+import type {
+  PastedImageReference,
+  SavePastedImagePayload
+} from "../../types/agentInput.types";
+import type {
+  StartupDependencyId,
+  StartupDependencyReport
+} from "../../types/startupDependency.types";
+import type { DetectedUserIdentity } from "../../types/userIdentity.types";
+
+export interface WindowState {
+  isMaximized: boolean;
+  platform: NodeJS.Platform;
+}
+
+export interface AppClosingProgressPayload {
+  detail: string;
+  command: string | null;
+}
+
+export interface RemoteMountOutputPayload {
+  line: string;
+}
+
+export interface SystemBridge {
+  openExternalUrl: (url: string) => Promise<void>;
+  copyText: (text: string) => Promise<void>;
+  closeWindow: () => Promise<void>;
+  minimizeWindow: () => Promise<void>;
+  toggleMaximizeWindow: () => Promise<WindowState>;
+  getWindowState: () => Promise<WindowState>;
+  onWindowStateChanged: (listener: (state: WindowState) => void) => () => void;
+  getDetectedUserIdentity: () => Promise<DetectedUserIdentity>;
+  getAppSettings: () => Promise<AppSettings>;
+  saveAppSettings: (settings: AppSettings) => Promise<AppSettings>;
+  relaunchApplication: (options?: { hardwareAccelerationEnabled?: boolean }) => Promise<void>;
+  getAnalyticsRuntimeConfig: () => Promise<AnalyticsRuntimeConfig>;
+  getStartupDependencyReport: () => Promise<StartupDependencyReport>;
+  installStartupDependency: (dependencyId: StartupDependencyId) => Promise<StartupDependencyReport>;
+  getLinuxAptSetupStatus: () => Promise<LinuxAptSetupStatus>;
+  installLinuxAptUpdates: () => Promise<LinuxAptSetupStatus>;
+  getLinuxUpdateStatus: () => Promise<LinuxUpdateStatus>;
+  getReleaseVersionStatus: () => Promise<ReleaseVersionStatus>;
+  getAutoUpdateStatus: () => Promise<AutoUpdateStatus>;
+  getAutoUpdateTestSupport: () => Promise<AutoUpdateTestSupport>;
+  simulateAutoUpdateStatus: (target: AutoUpdateTestTarget) => Promise<AutoUpdateStatus>;
+  installDownloadedUpdate: () => Promise<void>;
+  onAutoUpdateStatus: (listener: (payload: AutoUpdateStatus) => void) => () => void;
+  onForgeOAuthDevicePrompt: (listener: (payload: ForgeOAuthDevicePrompt) => void) => () => void;
+  getInstalledIdes: () => Promise<InstalledIde[]>;
+  openProjectInIde: (ideId: string, projectPath: string) => Promise<void>;
+  getRemoteConnectionOptions: () => Promise<RemoteConnectionOptions>;
+  installRemoteMountSupport: () => Promise<RemoteConnectionOptions>;
+  onRemoteMountOutput: (listener: (payload: RemoteMountOutputPayload) => void) => () => void;
+  listChromeCookieProfiles: () => Promise<BrowserCookieProfileSummary[]>;
+  importChromeBrowserData: (profileId?: string) => Promise<BrowserDataImportResult>;
+  savePastedImage: (payload: SavePastedImagePayload) => Promise<PastedImageReference>;
+  showAgentCompletionNotification: (payload: AgentCompletionNotificationPayload) => Promise<void>;
+  onAppClosingProgress: (listener: (payload: AppClosingProgressPayload) => void) => () => void;
+  logAnalytics: (level: "info" | "warn" | "debug" | "error", message: string) => Promise<void>;
+}
+
+export interface SystemGateway extends SystemBridge {}

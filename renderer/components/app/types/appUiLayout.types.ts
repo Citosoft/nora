@@ -1,0 +1,35 @@
+import type { StoredUiLayout } from "@/components/app/types";
+import type { Dispatch, SetStateAction } from "react";
+
+export type UseAppUiLayoutStateResult = {
+  activeChangesPanelTab: StoredUiLayout["activeChangesPanelTab"];
+  setActiveChangesPanelTab: Dispatch<SetStateAction<StoredUiLayout["activeChangesPanelTab"]>>;
+  changesSidebarWidth: number;
+  setChangesSidebarWidth: Dispatch<SetStateAction<number>>;
+  collapsedWorkspaceIds: Record<string, boolean>;
+  setCollapsedWorkspaceIds: Dispatch<SetStateAction<Record<string, boolean>>>;
+  isChangesSidebarCollapsed: boolean;
+  setIsChangesSidebarCollapsed: Dispatch<SetStateAction<boolean>>;
+  isChatbotsSectionCollapsed: boolean;
+  setIsChatbotsSectionCollapsed: Dispatch<SetStateAction<boolean>>;
+  isCliSectionCollapsed: boolean;
+  setIsCliSectionCollapsed: Dispatch<SetStateAction<boolean>>;
+  isLocalTerminalDockCollapsed: boolean;
+  setIsLocalTerminalDockCollapsed: Dispatch<SetStateAction<boolean>>;
+  isPortsSectionCollapsed: boolean;
+  setIsPortsSectionCollapsed: Dispatch<SetStateAction<boolean>>;
+  isRemoteMountsSectionCollapsed: boolean;
+  setIsRemoteMountsSectionCollapsed: Dispatch<SetStateAction<boolean>>;
+  isSkillsSectionCollapsed: boolean;
+  setIsSkillsSectionCollapsed: Dispatch<SetStateAction<boolean>>;
+  isSpecsSectionCollapsed: boolean;
+  setIsSpecsSectionCollapsed: Dispatch<SetStateAction<boolean>>;
+  isTasksSectionCollapsed: boolean;
+  setIsTasksSectionCollapsed: Dispatch<SetStateAction<boolean>>;
+  isWorkspaceSidebarCollapsed: boolean;
+  setIsWorkspaceSidebarCollapsed: Dispatch<SetStateAction<boolean>>;
+  localTerminalDockHeight: number;
+  setLocalTerminalDockHeight: Dispatch<SetStateAction<number>>;
+  workspaceSidebarWidth: number;
+  setWorkspaceSidebarWidth: Dispatch<SetStateAction<number>>;
+};
