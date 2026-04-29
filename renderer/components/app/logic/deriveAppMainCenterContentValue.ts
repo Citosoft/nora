@@ -138,6 +138,7 @@ export function deriveAppMainCenterContentValue(
     aiChatTabs: args.uiState.aiChatTabs,
     aiModelLoading: args.aiModelLoading,
     aiModelOptions: args.aiModelOptions,
+    appSettings: args.appSettings,
     aiSettings: args.appSettings.ai,
     browserTab: args.focusedBrowserTab,
     browserTabs: args.uiState.browserTabs,

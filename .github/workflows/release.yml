@@ -34,7 +34,7 @@ jobs:
             target_name: macOS
             storage_name: macos
             make_command: npm run make:darwin
-            source_dir: out/release-macos
+            source_dir: out/make
             storage_path: releases/${{ github.ref_name }}/macos-arm64.dmg
             upload_content_type: application/x-apple-diskimage
 
@@ -73,36 +73,19 @@ jobs:
           VITE_PUBLIC_POSTHOG_HOST: ${{ secrets.VITE_PUBLIC_POSTHOG_HOST }}
         run: ${{ matrix.make_command }}
 
-      - name: Build macOS DMG artifact
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          APP_BUNDLE_PATH="out/Nora-darwin-arm64/Nora.app"
-          if [ ! -d "${APP_BUNDLE_PATH}" ]; then
-            echo "Missing packaged app bundle at ${APP_BUNDLE_PATH}"
-            exit 1
-          fi
-          mkdir -p out/release-macos
-          hdiutil create \
-            -volname "Nora" \
-            -srcfolder "${APP_BUNDLE_PATH}" \
-            -ov \
-            -format UDZO \
-            "out/release-macos/Nora-arm64.dmg"
-
       - name: Verify and checksum macOS DMG artifact
         if: runner.os == 'macOS'
         shell: bash
         run: |
-          DMG_PATH="out/release-macos/Nora-arm64.dmg"
-          CHECKSUM_PATH="out/release-macos/Nora-arm64.dmg.sha256"
+          DMG_PATH="out/make/Nora-arm64.dmg"
+          CHECKSUM_PATH="out/make/Nora-arm64.dmg.sha256"
           if [ ! -f "${DMG_PATH}" ]; then
             echo "Missing expected macOS DMG at ${DMG_PATH}"
             exit 1
           fi
           hdiutil verify "${DMG_PATH}"
           (
-            cd out/release-macos
+            cd out/make
             shasum -a 256 Nora-arm64.dmg > Nora-arm64.dmg.sha256
           )
           if [ ! -s "${CHECKSUM_PATH}" ]; then
@@ -134,6 +117,33 @@ jobs:
           fi
           node scripts/release/upload-supabase-artifact.mjs
 
+      - name: Verify macOS DMG round-trip against Supabase
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          SUPABASE_STORAGE_URL: ${{ secrets.NORA_SUPABASE_STORAGE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.NORA_SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_BUCKET: ${{ secrets.NORA_SUPABASE_BUCKET }}
+        run: |
+          DOWNLOAD_URL="${SUPABASE_STORAGE_URL%/}/storage/v1/object/authenticated/${SUPABASE_BUCKET}/releases/${{ github.ref_name }}/macos-arm64.dmg"
+          DL="$(mktemp "${TMPDIR:-/tmp}/nora-dmg-roundtrip.XXXXXX")"
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --location \
+            --header "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            --header "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+            --output "${DL}" \
+            "${DOWNLOAD_URL}"
+          EXPECTED="$(awk '{print $1}' out/make/Nora-arm64.dmg.sha256)"
+          ACTUAL="$(shasum -a 256 "${DL}" | awk '{print $1}')"
+          rm -f "${DL}"
+          if [ "${EXPECTED}" != "${ACTUAL}" ]; then
+            echo "Round-trip SHA-256 mismatch (upload may be truncated): expected ${EXPECTED}, got ${ACTUAL}" >&2
+            exit 1
+          fi
+
       - name: Upload macOS DMG checksum to Supabase
         if: runner.os == 'macOS'
         shell: bash
@@ -143,7 +153,7 @@ jobs:
           SUPABASE_BUCKET: ${{ secrets.NORA_SUPABASE_BUCKET }}
           SUPABASE_STORAGE_PATH: releases/${{ github.ref_name }}/macos-arm64.dmg.sha256
           SUPABASE_UPLOAD_CONTENT_TYPE: text/plain
-          ARCHIVE_PATH: out/release-macos/Nora-arm64.dmg.sha256
+          ARCHIVE_PATH: out/make/Nora-arm64.dmg.sha256
         run: node scripts/release/upload-supabase-artifact.mjs
 
   release:

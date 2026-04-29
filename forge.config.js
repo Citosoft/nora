@@ -1,6 +1,7 @@
 const path = require("node:path");
 const fs = require("node:fs/promises");
 const { MakerDeb } = require("@electron-forge/maker-deb");
+const { MakerDMG } = require("@electron-forge/maker-dmg");
 const { MakerSquirrel } = require("@electron-forge/maker-squirrel");
 const { AutoUnpackNativesPlugin } = require("@electron-forge/plugin-auto-unpack-natives");
 
@@ -62,7 +63,15 @@ module.exports = {
       options: {
         bin: "Nora"
       }
-    }, ["linux"])
+    }, ["linux"]),
+    new MakerDMG(
+      {
+        name: "Nora-arm64",
+        title: "Nora",
+        icon: iconIcnsPath
+      },
+      ["darwin"]
+    )
   ],
   plugins: [new AutoUnpackNativesPlugin({})]
 };

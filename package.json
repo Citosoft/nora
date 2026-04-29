@@ -19,7 +19,8 @@
     "dev:nogpu": "node scripts/dev.mjs --disable-gpu",
     "package": "npm run build && electron-forge package",
     "make": "npm run build && electron-forge make",
-    "make:darwin": "npm run build && electron-forge package --platform=darwin --arch=arm64",
+    "make:darwin": "npm run build && electron-forge make --platform=darwin --arch=arm64",
+    "package:darwin": "npm run build && electron-forge package --platform=darwin --arch=arm64",
     "test:unit": "tsc -p tsconfig.unit.json && tsc-alias -p tsconfig.unit.json && node scripts/runUnitTests.mjs",
     "check:path-hygiene": "node scripts/check-path-hygiene.mjs",
     "check:shell-assembly-imports": "node scripts/checkShellAssemblyImports.mjs",
@@ -74,6 +75,7 @@
   "devDependencies": {
     "@electron-forge/cli": "^7.11.1",
     "@electron-forge/maker-deb": "^7.11.1",
+    "@electron-forge/maker-dmg": "^7.11.1",
     "@electron-forge/maker-squirrel": "^7.11.1",
     "@electron-forge/maker-zip": "^7.11.1",
     "@electron-forge/plugin-auto-unpack-natives": "^7.11.1",
