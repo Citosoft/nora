@@ -11,6 +11,11 @@
 
 Built with **Electron**, **React**, **TypeScript**, and **Tailwind CSS**.
 
+[![CI](https://github.com/Citosoft/nora/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Citosoft/nora/actions/workflows/ci.yml)
+[![Release](https://github.com/Citosoft/nora/actions/workflows/release.yml/badge.svg)](https://github.com/Citosoft/nora/actions/workflows/release.yml)
+[![Latest release](https://img.shields.io/github/v/release/Citosoft/nora?sort=semver&logo=github)](https://github.com/Citosoft/nora/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Citosoft/nora/blob/main/package.json)
+
 ## Features
 
 - Workspace picker and per-session git worktrees under `.nora/worktrees/`
