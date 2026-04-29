@@ -5,6 +5,10 @@ dist-tests/
 .DS_Store
 out/
 .env
+scripts/github-actions-secrets.local.env
+scripts/github-actions-secrets.local.env.example
+scripts/apply-github-actions-secrets-from-env.sh
+scripts/maint/
 .nora/
 .codex
 .superset/
