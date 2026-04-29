@@ -46,6 +46,9 @@ export const buildSettingsRuntimeValue = (d: BuildSettingsRuntimeValueDeps): Set
   updateVercelToken: d.updateVercelToken,
   disconnectVercelAccount: d.disconnectVercelAccount,
   appSettings: d.appSettings,
+  updateFileEditorThemeId: (fileEditorThemeId) => {
+    void d.updateFileEditorThemeId(fileEditorThemeId).catch(d.captureError);
+  },
   updateHardwareAcceleration: (enabled) => {
     void d.updateHardwareAccelerationEnabled(enabled).catch(d.captureError);
   },

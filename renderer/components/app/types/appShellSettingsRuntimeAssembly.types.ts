@@ -43,6 +43,7 @@ export type AppShellSettingsRuntimeAssemblyInput = {
   appPrefs: Pick<
     BuildSettingsRuntimeValueDeps,
     | "appSettings"
+    | "updateFileEditorThemeId"
     | "updateHardwareAccelerationEnabled"
     | "updateWorkspaceStateStorageMode"
     | "updateDefaultAgentLaunchTarget"

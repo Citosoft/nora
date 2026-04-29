@@ -46,6 +46,7 @@ export type BuildSettingsRuntimeValueDeps = {
   updateVercelToken: (token: string) => void;
   disconnectVercelAccount: () => void;
   appSettings: AppSettings;
+  updateFileEditorThemeId: (themeId: AppSettings["fileEditorThemeId"]) => Promise<void>;
   updateHardwareAccelerationEnabled: (enabled: boolean) => Promise<void>;
   updateWorkspaceStateStorageMode: (mode: AppSettings["workspaceStateStorageMode"]) => Promise<void>;
   updateDefaultAgentLaunchTarget: (defaultAgentLaunchTarget: AppSettings["defaultAgentLaunchTarget"]) => Promise<void>;

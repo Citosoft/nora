@@ -77,6 +77,7 @@ export type FileEditorPanelProps = {
   showTabStrip?: boolean;
   title?: string;
   resolvedTheme: ResolvedTheme;
+  fileEditorThemeId?: AppSettings["fileEditorThemeId"];
   onGenerateTasks?: (() => void) | null;
   agentSendTargets?: FileEditorAgentSendTarget[];
   /** Clears file/diff as the active center tab so the session strip shows the focused agent (call before focusAgent). */
@@ -379,6 +380,7 @@ export type WorkspaceSessionPanelProps = {
   projectScripts: WorkspaceScriptLauncher[];
   terminalShells: TerminalShellOption[];
   terminalQuickLaunchDefaults: AppSettings["terminalQuickLaunchDefaults"];
+  appSettings: AppSettings;
   platform: WindowUiState["platform"];
   resolvedTheme: ResolvedTheme;
   terminalThemeId: TerminalThemeId;

@@ -276,6 +276,13 @@ export function useAppPreferences(): AppPreferences {
     }));
   };
 
+  const updateFileEditorThemeId = async (fileEditorThemeId: AppSettings["fileEditorThemeId"]) => {
+    await saveAppSettings((current) => ({
+      ...current,
+      fileEditorThemeId
+    }));
+  };
+
   const updateWorkspaceStateStorageMode = async (workspaceStateStorageMode: AppSettings["workspaceStateStorageMode"]) => {
     await saveAppSettings((current) => ({
       ...current,
@@ -438,6 +445,7 @@ export function useAppPreferences(): AppPreferences {
     updateGithubAccountLabel,
     updateGitlabAccountLabel,
     updateVercelAccountLabel,
+    updateFileEditorThemeId,
     updateHardwareAccelerationEnabled,
     updateWorkspaceStateStorageMode,
     updateDefaultAgentLaunchTarget,

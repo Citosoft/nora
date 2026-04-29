@@ -38,6 +38,7 @@ export const createWorkspaceSessionPanelValue = (d: WorkspaceSessionPanelBuildDe
   projectScripts: d.projectScripts,
   terminalShells: d.terminalShells,
   terminalQuickLaunchDefaults: d.terminalQuickLaunchDefaults,
+  appSettings: d.appSettings,
   platform: d.platform,
   resolvedTheme: d.resolvedTheme,
   terminalThemeId: d.terminalThemeId,
@@ -307,6 +308,7 @@ type WorkspaceSessionPanelData = Pick<
   | "projectScripts"
   | "terminalShells"
   | "terminalQuickLaunchDefaults"
+  | "appSettings"
   | "platform"
   | "resolvedTheme"
   | "terminalThemeId"
@@ -363,6 +365,7 @@ export function WorkspaceSessionPanelProvider({
     projectScripts: value.projectScripts,
     terminalShells: value.terminalShells,
     terminalQuickLaunchDefaults: value.terminalQuickLaunchDefaults,
+    appSettings: value.appSettings,
     platform: value.platform,
     resolvedTheme: value.resolvedTheme,
     terminalThemeId: value.terminalThemeId,

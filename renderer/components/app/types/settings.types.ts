@@ -60,6 +60,7 @@ export type SettingsRuntimeValue = {
   updateVercelToken: (token: string) => void;
   disconnectVercelAccount: () => void;
   appSettings: AppSettings;
+  updateFileEditorThemeId: (themeId: AppSettings["fileEditorThemeId"]) => void;
   updateHardwareAcceleration: (enabled: boolean) => void;
   updateWorkspaceStateStorageMode: (mode: AppSettings["workspaceStateStorageMode"]) => void;
   updateDefaultAgentLaunchTarget: (launchTarget: AgentLaunchTargetPreference) => void;

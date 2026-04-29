@@ -20,6 +20,7 @@ type WorkspaceSessionPanelDataDepsKeys =
   | "activeWorkspaceContentTab"
   | "addFocusedLabel"
   | "agent"
+  | "appSettings"
   | "aiChatTab"
   | "aiChatTabs"
   | "aiModelLoading"

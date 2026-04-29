@@ -7,7 +7,6 @@ import {
 } from "@/components/app/context/changesPanelContext";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
 import { useStatusBar } from "@/components/app/logic/statusBarContext";
-import { DiffViewer } from "@/components/app/panels/DiffViewer";
 import { FileTreePanel } from "@/components/app/panels/FileTreePanel";
 import { ForgePanel } from "@/components/app/panels/ForgePanel";
 import { VercelPanel } from "@/components/app/panels/VercelPanel";
@@ -137,7 +136,6 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
     canGenerateAiCommitMessage,
     onGenerateCommitMessage,
     onPushChanges,
-    onOpenSelectedInCenter,
     onEditChange,
     onInspectCommit,
     onClearCommitInspection
@@ -865,118 +863,113 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
               onCommentSubmit={onForgeCommentSubmit}
               onSpawnIssueAgent={onSpawnIssueAgent}
             />
-          ) : selectedChange ? (
-            <>
-              <div className="max-h-52 shrink-0 overflow-auto border-b border-border/50">
-                <div className="border-b border-border/40 px-4 py-2.5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                      <FolderGit2 className="size-3.5" />
-                      Changed files
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 px-2 text-[11px]"
-                        onClick={() => setSelectedCommitPaths(snapshot.changes.map((change) => change.path))}
-                        disabled={!snapshot.changes.length}
-                      >
-                        Select all
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 px-2 text-[11px]"
-                        onClick={() => setSelectedCommitPaths([])}
-                        disabled={!snapshot.changes.length}
-                      >
-                        Select none
-                      </Button>
-                      <div className="text-[11px] text-muted-foreground">{snapshot.changes.length}</div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-6"
-                        onClick={() => setIsChangedFilesCollapsed((current) => !current)}
-                        aria-label={isChangedFilesCollapsed ? "Expand changed files section" : "Collapse changed files section"}
-                      >
-                        {isChangedFilesCollapsed ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}
-                      </Button>
-                    </div>
+          ) : snapshot.changes.length ? (
+            <div className="min-h-0 flex-1 overflow-auto">
+              <div className="border-b border-border/40 px-4 py-2.5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    <FolderGit2 className="size-3.5" />
+                    Changed files
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-[11px]"
+                      onClick={() => setSelectedCommitPaths(snapshot.changes.map((change) => change.path))}
+                      disabled={!snapshot.changes.length}
+                    >
+                      Select all
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-[11px]"
+                      onClick={() => setSelectedCommitPaths([])}
+                      disabled={!snapshot.changes.length}
+                    >
+                      Select none
+                    </Button>
+                    <div className="text-[11px] text-muted-foreground">{snapshot.changes.length}</div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-6"
+                      onClick={() => setIsChangedFilesCollapsed((current) => !current)}
+                      aria-label={isChangedFilesCollapsed ? "Expand changed files section" : "Collapse changed files section"}
+                    >
+                      {isChangedFilesCollapsed ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}
+                    </Button>
                   </div>
                 </div>
-                {isChangedFilesCollapsed ? null : (
-                  <div>
-                    {snapshot.changes.map((change) => (
-                      <div
-                        key={change.path}
-                        className={cn(
-                          "border-l-2 px-4 py-3 transition",
-                          selectedChange.path === change.path
-                            ? "border-primary bg-primary/10"
-                            : "border-transparent hover:bg-accent/30"
-                        )}
-                      >
-                        <div className="flex items-center gap-3">
-                          <label
-                            className="grid size-5 shrink-0 place-items-center"
-                            onClick={(event) => event.stopPropagation()}
-                          >
-                            <input
-                              type="checkbox"
-                              className="size-3.5 rounded-[4px] border border-input bg-background"
-                              checked={selectedPathSet.has(change.path)}
-                              onChange={() => toggleCommitPath(change.path)}
-                              aria-label={`Include ${change.path} in commit`}
-                            />
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => onSelectChange(change.path)}
-                            title={change.path}
-                            className="flex min-w-0 flex-1 items-center gap-3 text-left"
-                          >
-                            <div className={cn("w-4 shrink-0 text-xs font-semibold uppercase", changeTone(change.status))}>
-                              {changeGlyph(change.status)}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="truncate text-sm font-medium">{change.path}</div>
-                              <div className="mt-1 flex items-center gap-3 text-[11px] text-muted-foreground">
-                                <div className="uppercase tracking-[0.12em]">{change.status}</div>
-                                <div className="flex items-center gap-1">
-                                  <Plus className="size-3 text-emerald-500" />
-                                  <span>{change.additions}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <Minus className="size-3 text-destructive" />
-                                  <span>{change.deletions}</span>
-                                </div>
+              </div>
+              {isChangedFilesCollapsed ? null : (
+                <div>
+                  {snapshot.changes.map((change) => (
+                    <div
+                      key={change.path}
+                      className={cn(
+                        "border-l-2 px-4 py-3 transition",
+                        selectedChange?.path === change.path
+                          ? "border-primary bg-primary/10"
+                          : "border-transparent hover:bg-accent/30"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <label
+                          className="grid size-5 shrink-0 place-items-center"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <input
+                            type="checkbox"
+                            className="size-3.5 rounded-[4px] border border-input bg-background"
+                            checked={selectedPathSet.has(change.path)}
+                            onChange={() => toggleCommitPath(change.path)}
+                            aria-label={`Include ${change.path} in commit`}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => void onSelectChange(change.path)}
+                          title={change.path}
+                          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                        >
+                          <div className={cn("w-4 shrink-0 text-xs font-semibold uppercase", changeTone(change.status))}>
+                            {changeGlyph(change.status)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm font-medium">{change.path}</div>
+                            <div className="mt-1 flex items-center gap-3 text-[11px] text-muted-foreground">
+                              <div className="uppercase tracking-[0.12em]">{change.status}</div>
+                              <div className="flex items-center gap-1">
+                                <Plus className="size-3 text-emerald-500" />
+                                <span>{change.additions}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Minus className="size-3 text-destructive" />
+                                <span>{change.deletions}</span>
                               </div>
                             </div>
-                          </button>
-                          {canEditChange(change) ? (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="shrink-0"
-                              tooltip="Edit file"
-                              onClick={() => onEditChange(change.path)}
-                              aria-label={`Edit ${change.path}`}
-                            >
-                              <FilePenLine className="size-4" />
-                            </Button>
-                          ) : null}
-                        </div>
+                          </div>
+                        </button>
+                        {canEditChange(change) ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="shrink-0"
+                            tooltip="Edit file"
+                            onClick={() => onEditChange(change.path)}
+                            aria-label={`Edit ${change.path}`}
+                          >
+                            <FilePenLine className="size-4" />
+                          </Button>
+                        ) : null}
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="flex min-h-0 flex-1 flex-col bg-background/10">
-                <DiffViewer change={selectedChange} resolvedTheme={resolvedTheme} onExpand={onOpenSelectedInCenter} />
-              </div>
-            </>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           ) : (
             <div className="m-3 border border-dashed border-border/70 bg-background/40 p-4 text-sm text-muted-foreground">
               {isInspectingCommit ? "No diff available for this commit." : "The focused worktree is clean right now."}

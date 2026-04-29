@@ -3,34 +3,27 @@ import {
   useWorkspaceSessionPanelData
 } from "@/components/app/context/workspaceSessionPanelContext";
 import { noraAgentClient } from "@/components/app/clients/noraAgentClient";
+import { useFileEditorMonacoWorkspaceSupport } from "@/components/app/hooks/useFileEditorMonacoWorkspaceSupport";
 import { useSessionCenterPorts } from "@/components/app/hooks/useSessionCenterPorts";
 import { sendAgentTerminalText } from "@/components/app/logic/agentHandoff";
+import { buildFileEditorBreadcrumbs } from "@/components/app/logic/fileEditorPath";
+import {
+  buildMonacoModelPath,
+  configureMonacoTypeScript,
+  resolveFileEditorMonacoTheme,
+  resolveMonacoLanguageId
+} from "@/components/app/logic/fileEditorMonaco";
 import { MarkdownRenderer } from "@/components/app/shared/MarkdownRenderer";
 import type { FileEditorPanelProps } from "@/components/app/types/component.types";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import type { OnMount } from "@monaco-editor/react";
+import type { BeforeMount, Monaco, OnMount } from "@monaco-editor/react";
 import Editor from "@monaco-editor/react";
-import { AlertCircle, Eye, FolderKanban, Image as ImageIcon, LoaderCircle, PencilLine, RotateCcw, Save, SquarePen, X } from "lucide-react";
+import { AlertCircle, Eye, Image as ImageIcon, LoaderCircle, PencilLine, X } from "lucide-react";
 import type { editor } from "monaco-editor";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 type FileEditorPanelContextProps = Partial<FileEditorPanelProps>;
-
-function getMonacoLanguage(pathName: string): string {
-  const normalized = pathName.toLowerCase();
-  if (normalized.endsWith(".ts") || normalized.endsWith(".tsx")) return "typescript";
-  if (normalized.endsWith(".js") || normalized.endsWith(".jsx") || normalized.endsWith(".mjs") || normalized.endsWith(".cjs")) return "javascript";
-  if (normalized.endsWith(".json")) return "json";
-  if (normalized.endsWith(".css")) return "css";
-  if (normalized.endsWith(".scss")) return "scss";
-  if (normalized.endsWith(".html")) return "html";
-  if (normalized.endsWith(".md") || normalized.endsWith(".markdown")) return "markdown";
-  if (normalized.endsWith(".yml") || normalized.endsWith(".yaml")) return "yaml";
-  if (normalized.endsWith(".sh")) return "shell";
-  return "plaintext";
-}
 
 function getFileName(pathName: string): string {
   const normalized = pathName.replace(/\\/g, "/");
@@ -65,27 +58,24 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
   const sessionActions = useWorkspaceSessionPanelActions();
   const { sessionSurface } = useSessionCenterPorts();
   const sessionFileEditorState = sessionSurface.fileEditorState;
+  const sessionAppSettings = sessionData.appSettings;
   const tabs = props.tabs ?? sessionFileEditorState?.tabs ?? [];
   const activePath = props.activePath ?? sessionFileEditorState?.activePath ?? "";
   const showTabStrip = props.showTabStrip ?? true;
-  const title = props.title ?? "Multi-file editor";
   const resolvedTheme = props.resolvedTheme ?? sessionData.resolvedTheme;
-  const onGenerateTasks = props.onGenerateTasks ?? null;
+  const fileEditorThemeId = props.fileEditorThemeId ?? sessionAppSettings?.fileEditorThemeId ?? "default";
   const agentSendTargets = props.agentSendTargets;
   const onExitFileEditorForAgentHandoff = props.onExitFileEditorForAgentHandoff;
   const onChange = props.onChange ?? sessionActions.onChangeActiveFileEditorContent;
   const onSave = props.onSave ?? sessionActions.onSaveActiveFileEditor;
-  const onRevert = props.onRevert ?? sessionActions.onRevertActiveFileEditor;
   const onSelectTab = props.onSelectTab ?? sessionActions.onFocusFileEditorTab;
   const onCloseTab = props.onCloseTab ?? sessionActions.onCloseFileEditorTab;
-  const onClose = props.onClose;
 
   if (!tabs.length || !activePath) {
     return null;
   }
 
   const activeTab = tabs.find((tab) => tab.path === activePath) ?? tabs[0];
-  const handleClose = onClose ?? (() => onCloseTab(activeTab.path));
   const pathName = activeTab?.path || "";
   const content = activeTab?.content || "";
   const savedContent = activeTab?.savedContent || "";
@@ -95,11 +85,33 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
   const isImage = activeTab?.kind === "image";
   const imageDataUrl = activeTab?.imageDataUrl ?? null;
   const isDirty = !isImage && content !== savedContent;
-  const language = useMemo(() => getMonacoLanguage(pathName), [pathName]);
+  const breadcrumbs = useMemo(() => buildFileEditorBreadcrumbs(pathName), [pathName]);
+  const language = useMemo(() => resolveMonacoLanguageId(pathName), [pathName]);
   const disposeSendActionsRef = useRef<(() => void) | null>(null);
   const [monacoEditor, setMonacoEditor] = useState<editor.IStandaloneCodeEditor | null>(null);
   const [markdownView, setMarkdownView] = useState<"preview" | "edit">("preview");
   const isMarkdownFile = !isImage && /\.(md|markdown)$/i.test(pathName);
+  const monacoRef = useRef<Monaco | null>(null);
+  const editorRootPath = activeTab?.rootPath ?? sessionData.project?.rootPath ?? null;
+  const projectRootPath = sessionData.project?.rootPath ?? null;
+  const monacoModelPath = useMemo(() => buildMonacoModelPath(pathName, editorRootPath), [pathName, editorRootPath]);
+  const monacoTheme = useMemo(
+    () => resolveFileEditorMonacoTheme(fileEditorThemeId, resolvedTheme),
+    [fileEditorThemeId, resolvedTheme]
+  );
+  const editorOptions = useMemo<editor.IStandaloneEditorConstructionOptions>(() => ({
+    automaticLayout: true,
+    minimap: { enabled: false },
+    fontSize: 13,
+    scrollBeyondLastLine: false,
+    wordWrap: "on",
+    smoothScrolling: true,
+    cursorBlinking: "smooth",
+    padding: { top: 16, bottom: 16 },
+    renderLineHighlight: "gutter",
+    renderValidationDecorations: "off",
+    tabSize: 2
+  }), []);
 
   useEffect(() => {
     if (isMarkdownFile) {
@@ -112,9 +124,28 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
     [agentSendTargets]
   );
 
-  const handleEditorMount: OnMount = (editorInstance) => {
+  const handleEditorBeforeMount: BeforeMount = (monacoInstance) => {
+    monacoRef.current = monacoInstance;
+    configureMonacoTypeScript(monacoInstance, projectRootPath);
+  };
+
+  const handleEditorMount: OnMount = (editorInstance, monacoInstance) => {
+    monacoRef.current = monacoInstance;
     setMonacoEditor(editorInstance);
   };
+
+  useEffect(() => {
+    if (!monacoRef.current) {
+      return;
+    }
+    configureMonacoTypeScript(monacoRef.current, projectRootPath);
+  }, [projectRootPath]);
+
+  useFileEditorMonacoWorkspaceSupport({
+    monaco: monacoRef.current,
+    projectId: sessionData.project?.id ?? null,
+    projectRootPath
+  });
 
   useEffect(() => {
     if (isImage) {
@@ -191,46 +222,26 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
   }, [isImage, isLoading, isSaving, onSave]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background">
-      <div className="border-b border-border/50 px-4 py-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              <SquarePen className="size-3.5" />
-              {title}
-            </div>
-            <div className="mt-1 truncate text-sm font-medium" title={pathName}>
-              {pathName}
-            </div>
-            <div className="mt-1 text-[11px] text-muted-foreground">
-              {isLoading ? "Loading file..." : isSaving ? "Saving changes..." : isDirty ? "Unsaved changes" : "Saved"}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {onGenerateTasks ? (
-              <Button variant="outline" size="sm" onClick={onGenerateTasks} disabled={isLoading || isSaving}>
-                <FolderKanban className="size-3.5" />
-                Generate Tasks
-              </Button>
-            ) : null}
-            <Button variant="outline" size="sm" onClick={onRevert} disabled={isLoading || isSaving || !isDirty}>
-              <RotateCcw className="size-3.5" />
-              Revert
-            </Button>
-            <Button variant="default" size="sm" onClick={onSave} disabled={isLoading || isSaving || !isDirty}>
-              {isSaving ? <LoaderCircle className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
-              Save
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleClose}>
-              <X className="size-3.5" />
-              Close
-            </Button>
-          </div>
+    <div className="flex h-full min-h-0 flex-col bg-transparent">
+      <div className="border-b border-border/50 px-3 py-2">
+        <div className="flex min-w-0 items-center gap-1 overflow-hidden text-xs text-muted-foreground" title={pathName}>
+          {breadcrumbs.map((segment, index) => {
+            const isLast = index === breadcrumbs.length - 1;
+            return (
+              <div key={`${segment}-${index}`} className="flex min-w-0 items-center gap-1">
+                {index > 0 ? <span className="shrink-0 text-muted-foreground/60">/</span> : null}
+                <span className={cn("shrink-0 whitespace-nowrap", isLast ? "truncate font-medium text-foreground" : "")}>
+                  {segment}
+                </span>
+                {isLast && isDirty ? <span className="shrink-0 text-primary">•</span> : null}
+              </div>
+            );
+          })}
         </div>
       </div>
       {showTabStrip ? (
-      <div className="border-b border-border/50 bg-background px-2 pt-2">
-        <div className="flex items-end gap-1 overflow-x-auto pb-0.5">
+      <div className="border-b border-border/50 bg-transparent px-2 pt-2">
+        <div className="thin-scrollbar flex items-end gap-1 overflow-x-auto pb-0.5">
           {tabs.map((tab) => {
             const tabDirty = tab.content !== tab.savedContent;
             const isActive = tab.path === activePath;
@@ -241,7 +252,7 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
                 className={cn(
                   "group flex min-w-0 max-w-[240px] items-center gap-1 rounded-t-[6px] border border-b-0 px-3 py-2 text-sm transition",
                   isActive
-                    ? "border-border bg-background text-foreground"
+                    ? "border-border bg-background/70 text-foreground"
                     : "border-transparent bg-muted/40 text-muted-foreground hover:bg-muted/60"
                 )}
               >
@@ -278,8 +289,8 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
           </div>
         </div>
       ) : null}
-      <div className="min-h-0 flex-1 px-4 pb-4 pt-3">
-        <div className="h-full min-h-0 overflow-hidden rounded-[6px] border border-border/60 bg-background">
+      <div className="min-h-0 flex-1">
+        <div className="h-full min-h-0 overflow-hidden bg-transparent">
           {isLoading ? (
             <div className="flex h-full items-center justify-center gap-3 text-sm text-muted-foreground">
               <LoaderCircle className="size-4 animate-spin" />
@@ -324,24 +335,14 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
               <TabsContent value="edit" className="mt-0 min-h-0 flex-1 overflow-hidden p-0 data-[state=inactive]:hidden">
                 <div className="h-full min-h-0">
                   <Editor
-                    path={pathName}
+                    beforeMount={handleEditorBeforeMount}
+                    path={monacoModelPath}
                     language={language}
                     value={content}
-                    theme={resolvedTheme === "dark" ? "vs-dark" : "vs"}
+                    theme={monacoTheme}
                     onMount={handleEditorMount}
                     onChange={(value) => onChange(value ?? "")}
-                    options={{
-                      automaticLayout: true,
-                      minimap: { enabled: false },
-                      fontSize: 13,
-                      scrollBeyondLastLine: false,
-                      wordWrap: "on",
-                      smoothScrolling: true,
-                      cursorBlinking: "smooth",
-                      padding: { top: 16, bottom: 16 },
-                      renderLineHighlight: "gutter",
-                      tabSize: 2
-                    }}
+                    options={editorOptions}
                     loading={
                       <div className={cn("flex h-full items-center justify-center gap-3 text-sm text-muted-foreground")}>
                         <LoaderCircle className="size-4 animate-spin" />
@@ -354,24 +355,14 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
             </Tabs>
           ) : (
             <Editor
-              path={pathName}
+              beforeMount={handleEditorBeforeMount}
+              path={monacoModelPath}
               language={language}
               value={content}
-              theme={resolvedTheme === "dark" ? "vs-dark" : "vs"}
+              theme={monacoTheme}
               onMount={handleEditorMount}
               onChange={(value) => onChange(value ?? "")}
-              options={{
-                automaticLayout: true,
-                minimap: { enabled: false },
-                fontSize: 13,
-                scrollBeyondLastLine: false,
-                wordWrap: "on",
-                smoothScrolling: true,
-                cursorBlinking: "smooth",
-                padding: { top: 16, bottom: 16 },
-                renderLineHighlight: "gutter",
-                tabSize: 2
-              }}
+              options={editorOptions}
               loading={
                 <div className={cn("flex h-full items-center justify-center gap-3 text-sm text-muted-foreground")}>
                   <LoaderCircle className="size-4 animate-spin" />

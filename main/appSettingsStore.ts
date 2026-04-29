@@ -80,6 +80,10 @@ function parseAppSettings(raw: string): AppSettings {
       openInternalBrowserOnNewPortDetection: candidate.openInternalBrowserOnNewPortDetection === true,
       browserDataImportPromptSeen: candidate.browserDataImportPromptSeen === true,
       linuxAptSetupPromptDismissed: candidate.linuxAptSetupPromptDismissed === true,
+      fileEditorThemeId:
+        candidate.fileEditorThemeId === "high-contrast"
+          ? candidate.fileEditorThemeId
+          : DEFAULT_APP_SETTINGS.fileEditorThemeId,
       terminalQuickLaunchDefaults: parseTerminalQuickLaunchDefaults(candidate.terminalQuickLaunchDefaults),
       terminalPresets: parseTerminalPresets(candidate.terminalPresets),
       ai: decryptedAiSettings

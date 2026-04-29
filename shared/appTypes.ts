@@ -8,6 +8,7 @@ export type {
 } from "./types/appDomainState.types";
 export * from "./types/ai.types";
 export * from "./types/analytics.types";
+export * from "./types/fileEditorTheme.types";
 export * from "./types/integrations.types";
 export * from "./types/remote.types";
 export * from "./types/session.types";

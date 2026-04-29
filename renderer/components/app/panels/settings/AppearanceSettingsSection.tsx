@@ -3,6 +3,7 @@ import { SettingRow, SettingsSectionHeader, TerminalThemePreview, ToggleButton }
 import type { AccentColor, TerminalFontId, TerminalThemeId } from "@/components/app/types";
 import { Select } from "@/components/ui/select";
 import { APP_SHORT_NAME } from "@shared/appMeta";
+import type { FileEditorThemeId } from "@shared/appTypes";
 import { Palette } from "lucide-react";
 
 export function AppearanceSettingsSection() {
@@ -15,6 +16,8 @@ export function AppearanceSettingsSection() {
     updateTerminalTheme,
     terminalFontId,
     updateTerminalFont,
+    appSettings,
+    updateFileEditorThemeId,
     resolvedTheme,
     canPreviewMacTitleBarChrome,
     forceMacTitleBarPreview,
@@ -77,6 +80,19 @@ export function AppearanceSettingsSection() {
               ))}
             </div>
           </div>
+        }
+      />
+      <SettingRow
+        title="File Editor Theme"
+        description="Choose the Monaco theme family used by the file editor. The editor stays in sync with the app's current light or dark mode."
+        control={
+          <Select
+            value={appSettings.fileEditorThemeId}
+            onChange={(event) => updateFileEditorThemeId(event.target.value as FileEditorThemeId)}
+          >
+            <option value="default">Default</option>
+            <option value="high-contrast">High Contrast</option>
+          </Select>
         }
       />
       <SettingRow

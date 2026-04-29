@@ -106,7 +106,7 @@ export function WorkspaceSessionTabs({
 
   return (
     <div className="border-b border-border/60 bg-background/70">
-      <div className="flex min-h-0 items-stretch overflow-x-auto">
+      <div className="thin-scrollbar flex min-h-0 items-stretch overflow-x-auto">
         <div className="flex min-h-0 items-stretch">
           {tabs.map((tab) => {
             const isActive = tab.id === activeTabId;

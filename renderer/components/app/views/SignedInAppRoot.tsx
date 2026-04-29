@@ -395,6 +395,7 @@ function SignedInAppRootContent({
     updateVercelToken: props.preferences.updateVercelToken,
     disconnectVercelAccount: vercelIntegration.disconnectVercelAccount,
     appSettings: props.preferences.appSettings,
+    updateFileEditorThemeId: props.preferences.updateFileEditorThemeId,
     updateHardwareAccelerationEnabled: props.preferences.updateHardwareAccelerationEnabled,
     updateWorkspaceStateStorageMode: props.preferences.updateWorkspaceStateStorageMode,
     updateDefaultAgentLaunchTarget: props.preferences.updateDefaultAgentLaunchTarget,

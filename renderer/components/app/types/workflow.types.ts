@@ -291,6 +291,7 @@ export type AppPreferences = {
   updateGithubAccountLabel: (nextLabel: string | null) => void;
   updateGitlabAccountLabel: (nextLabel: string | null) => void;
   updateVercelAccountLabel: (nextLabel: string | null) => void;
+  updateFileEditorThemeId: (themeId: AppSettings["fileEditorThemeId"]) => Promise<void>;
   updateHardwareAccelerationEnabled: (enabled: boolean) => Promise<void>;
   updateWorkspaceStateStorageMode: (mode: AppSettings["workspaceStateStorageMode"]) => Promise<void>;
   updateDefaultAgentLaunchTarget: (launchTarget: AppSettings["defaultAgentLaunchTarget"]) => Promise<void>;

@@ -91,7 +91,16 @@ export const buildChangesPanelSectionProps = (
     onRefreshChanges: async () => {
       await d.safely(() => noraWorkspaceManagementClient.refreshWorkspace());
     },
-    onSelectChange: (pathName) => d.safely(() => noraWorkspaceClient.selectChange(pathName)),
+    onSelectChange: async (pathName) => {
+      const next = await d.safely(() => noraWorkspaceClient.selectChange(pathName));
+      if (!next) {
+        return;
+      }
+      d.setTaskEditorState(null);
+      d.setIsTaskBoardOpen(false);
+      d.setIsCenterDiffExpanded(true);
+      d.setActiveWorkspaceContentTab("diff");
+    },
     onCommitChanges: (message, paths) => d.safely(() => noraWorkspaceClient.commitChanges(message, paths)),
     canGenerateAiCommitMessage: Object.values(d.appSettingsAi.apiKeys).some((apiKey) => apiKey.trim().length > 0),
     onGenerateCommitMessage: async (paths) => {
@@ -103,12 +112,6 @@ export const buildChangesPanelSectionProps = (
       }
     },
     onPushChanges: () => d.safely(() => noraWorkspaceClient.pushChanges()),
-    onOpenSelectedInCenter: () => {
-      d.setTaskEditorState(null);
-      d.setIsTaskBoardOpen(false);
-      d.setIsCenterDiffExpanded(true);
-      d.setActiveWorkspaceContentTab("diff");
-    },
     onEditChange: (pathName) => {
       void d.openFileEditor(pathName, {
         rootPath: snapshot.changesRoot || snapshot.project?.rootPath || null

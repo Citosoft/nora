@@ -1,5 +1,6 @@
 import type { AiSettings } from "./ai.types";
 import type { AnalyticsConsentStatus } from "./analytics.types";
+import type { FileEditorThemeId } from "./fileEditorTheme.types";
 
 export type Screen = "project-selector" | "workspace";
 
@@ -205,6 +206,7 @@ export interface AppSettings {
   openInternalBrowserOnNewPortDetection: boolean;
   browserDataImportPromptSeen: boolean;
   linuxAptSetupPromptDismissed: boolean;
+  fileEditorThemeId: FileEditorThemeId;
   terminalQuickLaunchDefaults: TerminalQuickLaunchDefaults;
   terminalPresets: TerminalPreset[];
   ai: AiSettings;
@@ -224,6 +226,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   openInternalBrowserOnNewPortDetection: false,
   browserDataImportPromptSeen: false,
   linuxAptSetupPromptDismissed: false,
+  fileEditorThemeId: "default",
   terminalQuickLaunchDefaults: {
     name: "Terminal",
     target: "session-default"
