@@ -2,7 +2,7 @@
 
 This product includes third-party open-source software.
 
-Generated: 2026-04-28T22:28:51.728Z
+Generated: 2026-04-29T01:02:02.841Z
 
 | Package | Version | License |
 | --- | --- | --- |
@@ -34,6 +34,7 @@ Generated: 2026-04-28T22:28:51.728Z
 | strip-ansi | 6.0.1 | MIT |
 | tailwind-merge | 3.5.0 | MIT |
 | update-electron-app | 3.1.2 | MIT |
+| zod | 4.3.6 | MIT |
 
 Includes top-level runtime dependencies declared in `package.json` (`dependencies` and `optionalDependencies`).
 

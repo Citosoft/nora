@@ -10,8 +10,6 @@ import type {
 } from "@shared/appTypes";
 import { DEFAULT_APP_SETTINGS } from "@shared/appTypes";
 import { app, BrowserWindow, session } from "electron";
-import { REACT_DEVELOPER_TOOLS } from "electron-devtools-installer";
-import { downloadChromeExtension } from "electron-devtools-installer/dist/downloadChromeExtension";
 import path from "node:path";
 import { AppSettingsStore } from "./appSettingsStore";
 import {
@@ -141,30 +139,6 @@ const {
   selectProject: (projectRoot) => services.workspace.selectProject(projectRoot),
   unmountRemoteWorkspace
 });
-
-async function installReactDeveloperTools(): Promise<void> {
-  if (!isDevelopmentMode) {
-    return;
-  }
-
-  try {
-    const chromeStoreId = typeof REACT_DEVELOPER_TOOLS === "string"
-      ? REACT_DEVELOPER_TOOLS
-      : REACT_DEVELOPER_TOOLS.id;
-    const targetSession = session.defaultSession;
-    const existing = targetSession.extensions.getAllExtensions().find((extension) => extension.id === chromeStoreId);
-    if (existing) {
-      console.log(`[nora main] React DevTools already installed: ${existing.name}`);
-      return;
-    }
-
-    const extensionFolder = await downloadChromeExtension(chromeStoreId);
-    const extension = await targetSession.extensions.loadExtension(extensionFolder);
-    console.log(`[nora main] Added Extension: ${extension.name}`);
-  } catch (error: unknown) {
-    console.warn("[nora main] Failed to install React Developer Tools extension.", error);
-  }
-}
 
 function parseAllowedExternalUrl(value: string): URL {
   return parseAllowedExternalUrlHelper(value, EXTERNAL_URL_ALLOWED_PROTOCOLS);
@@ -471,7 +445,6 @@ async function bootstrap(): Promise<void> {
   });
   registerIpc();
   createWindow();
-  void installReactDeveloperTools();
 
   const initialSnapshot = await orchestrator.initialize();
   notifyStateChanged(initialSnapshot);

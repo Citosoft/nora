@@ -2,7 +2,7 @@ import { filterPathsByPrefix, normalizeListPrefix, shapeReadFileResult } from "@
 import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
 import type { AiChatMode } from "@/components/app/types";
 import { tool, zodSchema } from "ai";
-import { z } from "zod/v4";
+import { z } from "zod";
 
 const MAX_LIST_RESULTS = 500;
 const DEFAULT_LIST_LIMIT = 200;
