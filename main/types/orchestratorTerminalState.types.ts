@@ -20,7 +20,7 @@ export interface TerminalStateHelperDeps {
   getTerminalActivity: (sessionId: string) => number[] | undefined;
   setTerminalActivity: (sessionId: string, timestamps: number[]) => void;
   setLiveTerminalSnapshot: (terminalId: string, terminal: TerminalSession) => void;
-  queueAgentContextAppend: (agent: AgentSession, chunk: string) => void;
+  appendAgentTerminalChunk: (agent: AgentSession, chunk: string) => void;
   resetAgentTranscriptFile: (agent: AgentSession) => Promise<void>;
   emitTerminalData: (sessionId: string, chunk: string) => void;
   notifyLocalTerminalChanged: (state: LocalTerminalState | null) => void;

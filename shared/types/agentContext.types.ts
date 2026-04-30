@@ -42,17 +42,28 @@ export interface AgentContextEntry {
   createdAt: string;
   kind: AgentContextEntryKind;
   precision: AgentContextPrecision;
-  source: AgentPromptSource | "transcript";
+  source: AgentPromptSource | "harness";
   title: string;
   content: string;
   preview: string;
   estimate: AgentContextEstimate;
+  conversationId?: string;
   references: AgentContextReference[];
   sourceAgentIds: string[];
 }
 
 export interface AgentContextSelection {
   sourceAgentId: string;
+  entryIds: string[];
+}
+
+export interface AgentContextEntryGroup {
+  id: string;
+  title: string;
+  latestPreview: string;
+  lastUpdatedAt: string | null;
+  entryCount: number;
+  estimate: AgentContextEstimate;
   entryIds: string[];
 }
 
@@ -92,7 +103,7 @@ export interface AgentContextSourceSummary {
   lastUpdatedAt: string | null;
   latestPreview: string;
   estimate: AgentContextEstimate;
-  latestEntries: AgentContextEntry[];
+  entryGroups: AgentContextEntryGroup[];
 }
 
 export interface AgentPromptDispatchResult {

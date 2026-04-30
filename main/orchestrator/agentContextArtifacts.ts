@@ -1,5 +1,7 @@
 import type {
   AgentContextEntry,
+  AgentContextEntryGroup,
+  AgentPromptSource,
   AgentContextSelection,
   AgentContextSourceSummary,
   AgentContextState,
@@ -14,6 +16,32 @@ const CONTEXT_EVENTS_EXTENSION = ".jsonl";
 
 function safePreview(value: string): string {
   return value.replace(/\s+/g, " ").trim().slice(0, 200);
+}
+
+const AGENT_PROMPT_SOURCES: readonly AgentPromptSource[] = [
+  "dialog",
+  "composer",
+  "task-panel",
+  "task-reference",
+  "task-planner",
+  "forge-issue",
+  "browser-selection",
+  "file-editor"
+];
+
+function normalizeStoredContextSource(
+  value: unknown,
+  kind: AgentContextEntry["kind"]
+): AgentContextEntry["source"] {
+  if (typeof value === "string" && AGENT_PROMPT_SOURCES.includes(value as AgentPromptSource)) {
+    return value as AgentPromptSource;
+  }
+
+  if (value === "harness" || value === "transcript") {
+    return "harness";
+  }
+
+  return kind === "agent-output" ? "harness" : "dialog";
 }
 
 export function estimateContextSize(characters: number): {
@@ -49,6 +77,14 @@ function formatMarkdownEntry(entry: AgentContextEntry): string {
   return `${lines.join("\n")}\n`;
 }
 
+export function formatAgentContextEntriesMarkdown(entries: readonly AgentContextEntry[]): string {
+  if (entries.length === 0) {
+    return "";
+  }
+
+  return `${entries.map((entry) => formatMarkdownEntry(entry)).join("\n")}`.trimEnd() + "\n";
+}
+
 export async function ensureAgentContextArtifacts(agent: AgentSession): Promise<void> {
   const contextEventsPath = buildAgentContextEventsPath(agent.contextFilePath);
   await Promise.all([
@@ -74,6 +110,7 @@ export async function readAgentContextEntries(contextFilePath: string): Promise<
         try {
           const parsed = JSON.parse(line) as Partial<AgentContextEntry> & { content?: string; preview?: string };
           const content = typeof parsed.content === "string" ? parsed.content : "";
+          const kind = parsed.kind || "agent-output";
           return [{
             id: parsed.id || `legacy-${Date.now()}`,
             agentId: parsed.agentId || "",
@@ -81,13 +118,16 @@ export async function readAgentContextEntries(contextFilePath: string): Promise<
             sessionId: parsed.sessionId || "",
             worktreeId: parsed.worktreeId || "",
             createdAt: parsed.createdAt || new Date().toISOString(),
-            kind: parsed.kind || "agent-output",
+            kind,
             precision: parsed.precision || "parsed",
-            source: parsed.source || "transcript",
+            source: normalizeStoredContextSource(parsed.source, kind),
             title: parsed.title || "Tracked context",
             content,
             preview: typeof parsed.preview === "string" && parsed.preview.length > 0 ? parsed.preview : safePreview(content),
             estimate: parsed.estimate || estimateContextSize(content.length),
+            conversationId: typeof parsed.conversationId === "string" && parsed.conversationId.trim().length > 0
+              ? parsed.conversationId
+              : undefined,
             references: Array.isArray(parsed.references) ? parsed.references : [],
             sourceAgentIds: Array.isArray(parsed.sourceAgentIds) ? parsed.sourceAgentIds : []
           }];
@@ -155,7 +195,7 @@ export function buildContextBundleMarkdown(options: {
     `Generated: ${options.createdAt}`,
     `Target agent: ${options.targetAgent.name} (${options.targetAgent.toolLabel})`,
     "",
-    "Parsed transcript excerpts may be incomplete; exact entries were captured directly by Nora.",
+    "Harness conversation entries were read from each agent CLI's own session files; exact entries were captured directly by Nora.",
     ""
   ];
 
@@ -369,10 +409,96 @@ export function buildAgentContextState(agent: AgentSession, entries: AgentContex
   };
 }
 
+function formatConversationLabel(toolLabel: string, rawSessionId: string | null): string {
+  if (!rawSessionId) {
+    return `${toolLabel} session`;
+  }
+
+  const compactId = rawSessionId.length > 18 ? `${rawSessionId.slice(0, 18)}...` : rawSessionId;
+  return `${toolLabel} session ${compactId}`;
+}
+
+function assignContextEntryGroupIds(agent: AgentSession, entries: AgentContextEntry[]): string[] {
+  const harnessAnchors = entries
+    .map((entry, index) => {
+      const harnessConversationId = entry.conversationId || null;
+      if (!harnessConversationId) {
+        return null;
+      }
+
+      return {
+        index,
+        groupId: `${agent.toolId}:${harnessConversationId}`,
+        timestampMs: Date.parse(entry.createdAt)
+      };
+    })
+    .flatMap((anchor) => (anchor ? [anchor] : []));
+
+  const fallbackGroupId = `${agent.toolId}:${agent.resumeSessionId || agent.sessionId}`;
+
+  return entries.map((entry) => {
+    const directConversationId = entry.conversationId || null;
+    if (directConversationId) {
+      return `${agent.toolId}:${directConversationId}`;
+    }
+
+    const entryTimestampMs = Date.parse(entry.createdAt);
+    if (!Number.isFinite(entryTimestampMs) || harnessAnchors.length === 0) {
+      return fallbackGroupId;
+    }
+
+    const nearestAnchor = harnessAnchors
+      .map((anchor) => ({
+        groupId: anchor.groupId,
+        distanceMs: Math.abs(anchor.timestampMs - entryTimestampMs)
+      }))
+      .sort((left, right) => left.distanceMs - right.distanceMs)[0];
+
+    return nearestAnchor?.groupId || fallbackGroupId;
+  });
+}
+
+function buildAgentContextEntryGroups(agent: AgentSession, entries: AgentContextEntry[]): AgentContextEntryGroup[] {
+  const groupedEntries = new Map<string, AgentContextEntry[]>();
+  const groupOrder: string[] = [];
+
+  assignContextEntryGroupIds(agent, entries).forEach((groupId, index) => {
+    if (!groupedEntries.has(groupId)) {
+      groupedEntries.set(groupId, []);
+      groupOrder.push(groupId);
+    }
+
+    groupedEntries.get(groupId)?.push(entries[index] as AgentContextEntry);
+  });
+
+  return groupOrder
+    .map((groupId) => {
+      const groupEntries = groupedEntries.get(groupId) || [];
+      const lastEntry = groupEntries[groupEntries.length - 1] || null;
+      const rawConversationId = groupId.includes(":") ? groupId.split(":").slice(1).join(":") : null;
+      const characters = groupEntries.reduce((total, entry) => total + entry.estimate.characters, 0);
+
+      return {
+        id: groupId,
+        title: formatConversationLabel(agent.toolLabel, rawConversationId),
+        latestPreview: lastEntry?.preview || "",
+        lastUpdatedAt: lastEntry?.createdAt || null,
+        entryCount: groupEntries.length,
+        estimate: estimateContextSize(characters),
+        entryIds: groupEntries.map((entry) => entry.id)
+      };
+    })
+    .sort((left, right) => {
+      const leftTimestamp = left.lastUpdatedAt ? Date.parse(left.lastUpdatedAt) : 0;
+      const rightTimestamp = right.lastUpdatedAt ? Date.parse(right.lastUpdatedAt) : 0;
+      return rightTimestamp - leftTimestamp;
+    });
+}
+
 export function buildAgentContextSourceSummary(agent: AgentSession, entries: AgentContextEntry[]): AgentContextSourceSummary {
-  const latestEntries = entries.slice(-8).reverse();
   const lastEntry = entries[entries.length - 1] || null;
   const estimate = estimateContextSize(entries.reduce((total, entry) => total + entry.estimate.characters, 0));
+  const entryGroups = buildAgentContextEntryGroups(agent, entries).slice(0, 6);
 
   return {
     agentId: agent.id,
@@ -385,7 +511,7 @@ export function buildAgentContextSourceSummary(agent: AgentSession, entries: Age
     lastUpdatedAt: lastEntry?.createdAt || null,
     latestPreview: lastEntry?.preview || "",
     estimate,
-    latestEntries
+    entryGroups
   };
 }
 

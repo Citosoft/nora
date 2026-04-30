@@ -9,12 +9,17 @@ export const orchestratorTestModules = [
   "tests/unit/main/orchestrator/shell.test.ts",
   "tests/unit/main/orchestrator/agentLaunch.test.ts",
   "tests/unit/main/orchestrator/agentBusyActivity.test.ts",
+  "tests/unit/main/orchestrator/agentContextSourceSummary.test.ts",
   "tests/unit/main/orchestrator/terminalPerformance.test.ts",
   "tests/unit/main/orchestrator/terminalLineExtraction.test.ts",
-  "tests/unit/main/orchestrator/transcriptNormalization.test.ts"
+  "tests/unit/main/orchestrator/claudeHarnessContext.test.ts",
+  "tests/unit/main/orchestrator/codexHarnessContext.test.ts",
+  "tests/unit/main/orchestrator/geminiHarnessContext.test.ts",
+  "tests/unit/main/orchestrator/cursorHarnessContext.test.ts"
 ] as const;
 
 export const rendererHelperTestModules = [
+  "tests/unit/renderer/agentContextSelections.test.ts",
   "tests/unit/renderer/appPersistence.onboarding.test.ts",
   "tests/unit/renderer/appStateDelta.test.ts",
   "tests/unit/renderer/workspaceSessionTabContextActions.test.ts",
