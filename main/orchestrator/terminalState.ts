@@ -199,10 +199,23 @@ export function createTerminalStateHelpers(deps: TerminalStateHelperDeps): Termi
     const shouldClearDetectedPort =
       !!(currentTerminal?.detectedLocalUrl || currentTerminal?.detectedLocalPort) &&
       deps.didReturnToShellPrompt(chunk);
+    const returnedToPrompt =
+      deps.didReturnToShellPrompt(chunk) ||
+      deps.didReturnToShellPrompt(nextOutput.slice(-4000));
+    const nextIsBusy = returnedToPrompt
+      ? false
+      : (
+        (currentTerminal?.isBusy ?? false) ||
+        (
+          currentTerminal?.status === "starting" &&
+          !deps.didReturnToShellPrompt(nextOutput.slice(-4000))
+        )
+      );
     const nextDetectedLocalUrl = shouldClearDetectedPort ? null : (detectedLocal.url || currentTerminal?.detectedLocalUrl || null);
     const nextDetectedLocalPort = shouldClearDetectedPort ? null : (detectedLocal.port || currentTerminal?.detectedLocalPort || null);
     const now = Date.now();
     const hasCriticalChange =
+      (currentTerminal?.isBusy ?? false) !== nextIsBusy ||
       (currentTerminal?.lastTerminalLine ?? "") !== lastTerminalLine ||
       (currentTerminal?.detectedLocalUrl ?? null) !== nextDetectedLocalUrl ||
       (currentTerminal?.detectedLocalPort ?? null) !== nextDetectedLocalPort;
@@ -216,6 +229,7 @@ export function createTerminalStateHelpers(deps: TerminalStateHelperDeps): Termi
       updateTerminal(terminalId, {
         rawTerminalOutput: nextOutput,
         lastEventAt: deps.nowIso(),
+        isBusy: nextIsBusy,
         lastTerminalLine,
         detectedLocalUrl: nextDetectedLocalUrl,
         detectedLocalPort: nextDetectedLocalPort
@@ -284,6 +298,7 @@ export function createTerminalStateHelpers(deps: TerminalStateHelperDeps): Termi
     terminalLastStateUpdateAt.delete(terminal.id);
     updateTerminal(terminal.id, {
       rawTerminalOutput: "",
+      isBusy: false,
       lastTerminalLine: "",
       lastEventAt: deps.nowIso()
     });

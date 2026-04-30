@@ -178,6 +178,7 @@ function createHarness(args: {
     resolveWorktreeForTerminal: async () => ({ session, worktree }),
     resolveTerminalShell: () => ({ id: "bash", label: "Bash", executable: "bash" }),
     initializeAgentContextFiles: async () => undefined,
+    appendAgentContextEntries: async () => undefined,
     attachAgentToWorktree: async () => undefined,
     attachTerminalToWorktree: async () => undefined,
     upsertSession: (sessions, nextSession) => {

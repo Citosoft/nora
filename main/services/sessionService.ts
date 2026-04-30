@@ -12,6 +12,7 @@ export function createSessionService(deps: SessionServiceDeps): SessionService {
     clearTerminal: deps.clearTerminal,
     clearLocalTerminal: deps.clearLocalTerminal,
     sendAgentInput: deps.sendAgentInput,
+    sendAgentPrompt: deps.sendAgentPrompt,
     sendAgentTerminalInput: deps.sendAgentTerminalInput,
     sendTerminalInput: deps.sendTerminalInput,
     resizeAgentTerminal: deps.resizeAgentTerminal,

@@ -57,9 +57,12 @@ export const NORA_AGENT_CLIENT_METHODS = [
   "restartAgent",
   "destroyAgent",
   "sendAgentInput",
+  "sendAgentPrompt",
   "sendAgentTerminalInput",
   "getAgentTerminalBuffer",
   "getAgentContextPreview",
+  "getAgentContextState",
+  "listWorkspaceAgentContextSources",
   "clearAgentContext",
   "clearAgentTerminal",
   "resizeAgentTerminal"

@@ -146,6 +146,7 @@ export function createPersistenceHelpers(deps: PersistenceHelperDeps): Persisten
               : terminal.command,
           pid: null,
           status: "starting",
+          isBusy: true,
           lastEventAt: deps.nowIso(),
           lastTerminalLine: terminal.lastTerminalLine || "",
           rawTerminalOutput: "",

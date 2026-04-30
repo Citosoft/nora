@@ -1,4 +1,4 @@
-import { handoffInstructionToAgent } from "@/components/app/logic/agentHandoff";
+import { handoffPromptToAgent } from "@/components/app/logic/agentHandoff";
 import type {
   LaunchAgentOptions,
   LaunchAgentWithInstructionOptions,
@@ -26,9 +26,9 @@ export async function launchAgent(
   if (options.handoff) {
     const statusId = options.handoff.statusBar.beginStatus(options.handoff.statusMessage, true);
     try {
-      await (options.handoff.handoffInstruction ?? handoffInstructionToAgent)({
+      await (options.handoff.handoffInstruction ?? handoffPromptToAgent)({
         agentId,
-        instruction: options.handoff.instruction,
+        prompt: options.handoff.prompt,
         updateSnapshot: options.handoff.updateSnapshot,
         focusAgent: options.focusAgent
       });
@@ -50,7 +50,13 @@ export async function launchAgentWithInstruction(
     trackCreation: options.trackCreation,
     onCreated: options.onCreated,
     handoff: {
-      instruction: options.instruction,
+      prompt: {
+        source: options.prompt?.source ?? "dialog",
+        title: options.prompt?.title,
+        text: options.instruction,
+        workspacePaths: options.prompt?.workspacePaths ?? [],
+        contextSelections: options.prompt?.contextSelections ?? []
+      },
       statusBar: options.statusBar,
       statusMessage: options.handoffStatusMessage,
       updateSnapshot: options.updateSnapshot,

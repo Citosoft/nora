@@ -42,6 +42,7 @@ function createTerminal(id: string): TerminalSession {
     worktreeId: "worktree-1",
     name: "Term",
     status: "running",
+    isBusy: false,
     workspace: "/tmp/project",
     branch: "main",
     host: "local",

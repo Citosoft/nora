@@ -27,6 +27,9 @@ function createSessionServiceStub(): SessionService {
     sendAgentInput: async () => {
       throw new Error("not used");
     },
+    sendAgentPrompt: async () => {
+      throw new Error("not used");
+    },
     sendAgentTerminalInput: async () => undefined,
     sendTerminalInput: async () => undefined,
     resizeAgentTerminal: () => {

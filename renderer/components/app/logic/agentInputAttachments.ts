@@ -4,7 +4,7 @@ import {
   joinWorkspaceRootAndRelative
 } from "@shared/workspaceAbsolutePath";
 
-function formatWorkspacePathForSubmission(
+export function formatWorkspacePathForSubmission(
   draft: WorkspacePathAttachmentDraft,
   absoluteWorkspaceRoot: string | null
 ): string {
@@ -18,11 +18,9 @@ function formatWorkspacePathForSubmission(
   return joinWorkspaceRootAndRelative(root, draft.path);
 }
 
-export function buildAgentInputPayload(
+export function buildAgentInputBodyText(
   value: string,
-  pastedImages: PastedImageDraft[],
-  workspacePaths: WorkspacePathAttachmentDraft[],
-  absoluteWorkspaceRoot: string | null
+  pastedImages: PastedImageDraft[]
 ): string {
   const trimmedValue = value.trim();
   const blocks: string[] = [];
@@ -30,13 +28,6 @@ export function buildAgentInputPayload(
   if (pastedImages.length > 0) {
     const lines = pastedImages.map((draft) => `- ${draft.path}`);
     blocks.push(`Attached pasted image files:\n${lines.join("\n")}`);
-  }
-
-  if (workspacePaths.length > 0) {
-    const lines = workspacePaths.map(
-      (draft) => `- ${formatWorkspacePathForSubmission(draft, absoluteWorkspaceRoot)}`
-    );
-    blocks.push(`Attached workspace paths:\n${lines.join("\n")}`);
   }
 
   if (!trimmedValue && blocks.length === 0) {
@@ -49,6 +40,24 @@ export function buildAgentInputPayload(
     return trimmedValue;
   }
   return `${trimmedValue}\n\n${blocks.join("\n\n")}`;
+}
+
+export function buildAgentInputPayload(
+  value: string,
+  pastedImages: PastedImageDraft[],
+  workspacePaths: WorkspacePathAttachmentDraft[],
+  absoluteWorkspaceRoot: string | null
+): string {
+  const bodyText = buildAgentInputBodyText(value, pastedImages);
+  if (workspacePaths.length > 0) {
+    const lines = workspacePaths.map(
+      (draft) => `- ${formatWorkspacePathForSubmission(draft, absoluteWorkspaceRoot)}`
+    );
+    const workspaceBlock = `Attached workspace paths:\n${lines.join("\n")}`;
+    return bodyText ? `${bodyText}\n\n${workspaceBlock}` : workspaceBlock;
+  }
+
+  return bodyText;
 }
 
 export function buildPlainTerminalInputWithWorkspacePaths(

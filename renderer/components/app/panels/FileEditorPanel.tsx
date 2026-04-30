@@ -5,8 +5,9 @@ import {
 import { noraAgentClient } from "@/components/app/clients/noraAgentClient";
 import { useFileEditorMonacoWorkspaceSupport } from "@/components/app/hooks/useFileEditorMonacoWorkspaceSupport";
 import { useSessionCenterPorts } from "@/components/app/hooks/useSessionCenterPorts";
-import { sendAgentTerminalText } from "@/components/app/logic/agentHandoff";
-import { buildFileEditorBreadcrumbs } from "@/components/app/logic/fileEditorPath";
+import { handoffPromptToAgent } from "@/components/app/logic/agentHandoff";
+import { joinWorkspacePath } from "@/components/app/logic/appUtils";
+import { buildFileEditorBreadcrumbs, getFileEditorLeafName } from "@/components/app/logic/fileEditorPath";
 import {
   buildMonacoModelPath,
   configureMonacoTypeScript,
@@ -24,12 +25,6 @@ import type { editor } from "monaco-editor";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 type FileEditorPanelContextProps = Partial<FileEditorPanelProps>;
-
-function getFileName(pathName: string): string {
-  const normalized = pathName.replace(/\\/g, "/");
-  const parts = normalized.split("/");
-  return parts[parts.length - 1] || pathName;
-}
 
 function getMultiSelectionText(ed: editor.ICodeEditor): string | null {
   const model = ed.getModel();
@@ -181,12 +176,22 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
             }
             void (async () => {
               onExitFileEditorForAgentHandoff?.();
-              await sendAgentTerminalText({
+              await handoffPromptToAgent({
                 agentId: target.id,
-                text,
+                prompt: {
+                  source: "file-editor",
+                  title: `Selection from ${getFileEditorLeafName(pathName)}`,
+                  text,
+                  workspacePaths: editorRootPath ? [{ path: joinWorkspacePath(editorRootPath, pathName), kind: "file" }] : [],
+                  contextSelections: [],
+                  references: editorRootPath
+                    ? [{ kind: "workspace-path", label: "Source file", value: joinWorkspacePath(editorRootPath, pathName) }]
+                    : []
+                },
                 focusAgent: async (agentId) => {
                   await noraAgentClient.focusAgent(agentId);
-                }
+                },
+                updateSnapshot: () => {}
               });
             })();
           }
@@ -222,7 +227,7 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
   }, [isImage, isLoading, isSaving, onSave]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-transparent">
+    <div className="center-column-surface flex h-full min-h-0 flex-col bg-card/95">
       <div className="border-b border-border/50 px-3 py-2">
         <div className="flex min-w-0 items-center gap-1 overflow-hidden text-xs text-muted-foreground" title={pathName}>
           {breadcrumbs.map((segment, index) => {
@@ -245,7 +250,7 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
           {tabs.map((tab) => {
             const tabDirty = tab.content !== tab.savedContent;
             const isActive = tab.path === activePath;
-            const label = getFileName(tab.path);
+            const label = getFileEditorLeafName(tab.path);
             return (
               <div
                 key={tab.path}
@@ -290,7 +295,7 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
         </div>
       ) : null}
       <div className="min-h-0 flex-1">
-        <div className="h-full min-h-0 overflow-hidden bg-transparent">
+        <div className="h-full min-h-0 overflow-hidden bg-card/95">
           {isLoading ? (
             <div className="flex h-full items-center justify-center gap-3 text-sm text-muted-foreground">
               <LoaderCircle className="size-4 animate-spin" />
@@ -328,7 +333,7 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="preview" className="mt-0 min-h-0 flex-1 overflow-hidden data-[state=inactive]:hidden">
-                <div className="h-full min-h-0 overflow-auto px-4 py-4">
+                <div className="thin-scrollbar h-full min-h-0 overflow-auto rounded-[8px] bg-background/55 px-4 py-4">
                   <MarkdownRenderer>{content}</MarkdownRenderer>
                 </div>
               </TabsContent>

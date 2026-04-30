@@ -4,7 +4,6 @@ import type {
   AnalyticsRuntimeConfig,
   AppSettings,
   AppState,
-  CreateAgentPayload,
   ImportBrowserImagePayload,
   WriteWorkspaceFilePayload
 } from "@shared/appTypes";
@@ -35,7 +34,6 @@ import {
 } from "./helpers/windowLifecycle";
 import {
   parseAllowedExternalUrl as parseAllowedExternalUrlHelper,
-  validateCreateAgentPayload as validateCreateAgentPayloadHelper,
   validateImportBrowserImagePayload as validateImportBrowserImagePayloadHelper,
   validateMoveWorkspaceFilePayload as validateMoveWorkspaceFilePayloadHelper,
   validateWriteWorkspaceFilePayload as validateWriteWorkspaceFilePayloadHelper
@@ -154,10 +152,6 @@ function validateWriteWorkspaceFilePayload(payload: WriteWorkspaceFilePayload): 
 
 function validateImportBrowserImagePayload(payload: ImportBrowserImagePayload): void {
   validateImportBrowserImagePayloadHelper(payload, EXTERNAL_URL_ALLOWED_PROTOCOLS);
-}
-
-function validateCreateAgentPayload(payload: CreateAgentPayload): void {
-  validateCreateAgentPayloadHelper(payload);
 }
 
 async function importBrowserImageToWorkspace(payload: ImportBrowserImagePayload): Promise<AppState> {
@@ -384,8 +378,7 @@ function registerIpc(): void {
 
   registerSessionIpc({
     services,
-    withSnapshot,
-    validateCreateAgentPayload
+    withSnapshot
   });
 
   registerSystemIpc({

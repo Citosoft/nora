@@ -1,4 +1,4 @@
-import type { AppState } from "@shared/appTypes";
+import type { AgentContextEntry, AgentSession, AppState } from "@shared/appTypes";
 import type { SessionCreationHelpers } from "../../types/orchestratorSessionCreation.types";
 
 type AgentTerminalActionDeps = ReturnType<
@@ -21,5 +21,10 @@ export type SessionMainServiceDeps = {
   getAgentTerminalActionDependencies: () => AgentTerminalActionDeps;
   getSessionActionDependencies: () => SessionActionDeps;
   getSnapshot: () => AppState;
+  nowIso: () => string;
+  randomId: () => string;
+  readAgentContextEntries: (agent: AgentSession) => Promise<AgentContextEntry[]>;
+  appendAgentContextEntries: (agent: AgentSession, entries: AgentContextEntry[]) => Promise<void>;
+  writeAgentContextBundle: (agent: AgentSession, bundleId: string, content: string) => Promise<string>;
   resizeRuntimeSession: (sessionId: string, cols: number, rows: number) => void;
 };

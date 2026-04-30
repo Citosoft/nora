@@ -1,5 +1,6 @@
 import type { ResolvedTheme, TerminalFontId, TerminalThemeId, TerminalSubmission } from "@/components/app/types";
 import type { WorkspaceTaskDragPayload } from "@/components/app/types/workspaceTaskDrag.types";
+import type { AgentContextSelection, AgentContextSourceSummary } from "@shared/appTypes";
 import type { LucideIcon } from "lucide-react";
 
 export type LiveTerminalProps = {
@@ -20,10 +21,7 @@ export type AgentInfoRowProps = {
   value: string;
 };
 
-export type FocusedAgentInjectableContext = {
-  agentId: string;
-  agentName: string;
-  toolLabel: string;
-  contextFilePath: string;
-  preview: string;
+export type FocusedAgentContextSelectorState = {
+  sources: AgentContextSourceSummary[];
+  selections: AgentContextSelection[];
 };

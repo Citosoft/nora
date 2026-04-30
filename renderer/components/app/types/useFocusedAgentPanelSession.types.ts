@@ -1,9 +1,9 @@
 import type { TerminalSubmission, WindowUiState, ResolvedTheme, TerminalFontId, TerminalThemeId } from "@/components/app/types";
 import type { PastedImageDraft, WorkspacePathAttachmentDraft } from "@/components/app/types/agentInput.types";
 import type { FocusedAgentWorkspaceHomeProps } from "@/components/app/types/focusedAgentEmptyState.types";
-import type { FocusedAgentInjectableContext } from "@/components/app/types/focusedAgentPanelParts.types";
+import type { FocusedAgentContextSelectorState } from "@/components/app/types/focusedAgentPanelParts.types";
 import type { WorkspaceTaskDragPayload } from "@/components/app/types/workspaceTaskDrag.types";
-import type { AgentSession, AgentContextPreview, AppState, TerminalSession, WorkspaceSummary } from "@shared/appTypes";
+import type { AgentContextState, AgentSession, AppState, TerminalSession, WorkspaceSummary } from "@shared/appTypes";
 import type {
   ClipboardEvent as ReactClipboardEvent,
   Dispatch,
@@ -34,18 +34,19 @@ export type UseFocusedAgentPanelSessionResult = {
   setShowContext: Dispatch<SetStateAction<boolean>>;
   showInfo: boolean;
   setShowInfo: Dispatch<SetStateAction<boolean>>;
-  contextPreview: AgentContextPreview | null;
+  contextState: AgentContextState | null;
   contextStatus: "idle" | "loading";
   isClearingContext: boolean;
   handleClearContext: () => Promise<void>;
+  handleCopyContextReference: (value: string) => Promise<void>;
   pastedImages: PastedImageDraft[];
   attachedWorkspacePaths: WorkspacePathAttachmentDraft[];
   previewImageDraft: PastedImageDraft | null;
   setPreviewImageDraft: Dispatch<SetStateAction<PastedImageDraft | null>>;
   isSendingTerminalInput: boolean;
   isSavingPastedImage: boolean;
-  injectableContexts: FocusedAgentInjectableContext[];
-  isLoadingInjectableContexts: boolean;
+  contextSelector: FocusedAgentContextSelectorState;
+  isLoadingContextSources: boolean;
   terminalSubmission: TerminalSubmission | null;
   terminalResetVersion: number;
   infoPopoverRef: RefObject<HTMLDivElement | null>;
@@ -59,7 +60,7 @@ export type UseFocusedAgentPanelSessionResult = {
   handleClearTerminal: () => Promise<void>;
   handleRestart: () => Promise<void>;
   handleSendTerminalInput: () => Promise<void>;
-  handleInjectContext: (context: FocusedAgentInjectableContext) => void;
+  handleChangeContextSelections: (next: FocusedAgentContextSelectorState["selections"]) => void;
   handleAgentInputPaste: (event: ReactClipboardEvent<HTMLInputElement>) => Promise<void>;
   handleRemovePastedImage: (draftId: string) => void;
   handleRemoveAttachedWorkspacePath: (draftId: string) => void;

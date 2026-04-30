@@ -10,6 +10,7 @@ import { FocusedAgentWorktreePreparingBanner } from "@/components/app/panels/foc
 import { LiveTerminal } from "@/components/app/panels/focused-agent/LiveTerminal";
 import type { FocusedAgentPanelProps } from "@/components/app/types/component.types";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogBody, DialogContent } from "@/components/ui/dialog";
 import { memo } from "react";
 
 function FocusedAgentPanelComponent({ agent, terminal, compact = false }: FocusedAgentPanelProps) {
@@ -32,14 +33,25 @@ function FocusedAgentPanelComponent({ agent, terminal, compact = false }: Focuse
     <Card className="center-column-surface h-full min-h-0 rounded-none border-x-0 border-t-0 bg-card/95">
       <CardContent className="grid h-full grid-rows-[minmax(0,1fr)] p-0">
         <div className="grid min-h-0">
-          {agent && s.showContext ? (
-            <AgentContextCard
-              preview={s.contextPreview}
-              loading={s.contextStatus === "loading"}
-              clearing={s.isClearingContext}
-              onClear={() => void s.handleClearContext()}
-              onClose={() => s.setShowContext(false)}
-            />
+          {agent ? (
+            <Dialog open={s.showContext} onOpenChange={s.setShowContext}>
+              <DialogContent
+                onClose={() => s.setShowContext(false)}
+                className="h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-h-none max-w-none"
+              >
+                <DialogBody className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4 pt-0">
+                  <AgentContextCard
+                    layout="modal"
+                    state={s.contextState}
+                    loading={s.contextStatus === "loading"}
+                    clearing={s.isClearingContext}
+                    onClear={() => void s.handleClearContext()}
+                    onCopyReference={(value) => void s.handleCopyContextReference(value)}
+                    onClose={() => s.setShowContext(false)}
+                  />
+                </DialogBody>
+              </DialogContent>
+            </Dialog>
           ) : null}
           <div className="relative flex min-h-0 flex-col bg-card/95">
             <FocusedAgentSessionToolbar
@@ -87,15 +99,15 @@ function FocusedAgentPanelComponent({ agent, terminal, compact = false }: Focuse
               agent={agent}
               pastedImages={s.pastedImages}
               attachedWorkspacePaths={s.attachedWorkspacePaths}
-              injectableContexts={s.injectableContexts}
-              isLoadingInjectableContexts={s.isLoadingInjectableContexts}
+              contextSelector={s.contextSelector}
+              isLoadingContextSources={s.isLoadingContextSources}
               isSendingTerminalInput={s.isSendingTerminalInput}
               isSavingPastedImage={s.isSavingPastedImage}
               canSendLiveTerminalInput={s.canSendLiveTerminalInput}
               onRemovePastedImage={s.handleRemovePastedImage}
               onRemoveAttachedPath={s.handleRemoveAttachedWorkspacePath}
               onOpenImagePreview={s.setPreviewImageDraft}
-              onInjectContext={s.handleInjectContext}
+              onChangeContextSelections={s.handleChangeContextSelections}
               onDragOver={s.handleAgentInputDragOver}
               onDrop={s.handleAgentInputDrop}
               onPaste={s.handleAgentInputPaste}

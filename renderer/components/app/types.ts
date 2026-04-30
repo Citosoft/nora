@@ -83,6 +83,7 @@ export type CreateAgentDialogDefaults = {
   toolId?: string;
   mode?: AgentSession["mode"];
   target?: CreateAgentPayload["target"];
+  contextSelections?: NonNullable<CreateAgentPayload["contextSelections"]>;
 };
 
 export type CreateTerminalDialogDefaults = {

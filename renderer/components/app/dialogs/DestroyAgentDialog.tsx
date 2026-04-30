@@ -1,3 +1,4 @@
+import { buildDestroyAgentDescription } from "@/components/app/logic/sessionCloseGuard";
 import type { DestroyAgentDialogProps } from "@/components/app/types/component.types";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader } from "@/components/ui/dialog";
@@ -24,7 +25,7 @@ export function DestroyAgentDialog({
       <DialogContent headerTitle="Destroy Agent">
         <DialogHeader>
           <DialogDescription>
-            This will stop the agent. If no other agents are attached, {APP_SHORT_NAME} will also remove the worktree.
+            {agent ? buildDestroyAgentDescription(agent, Date.now()) : `This will stop the agent. If no other agents are attached, ${APP_SHORT_NAME} will also remove the worktree.`}
           </DialogDescription>
         </DialogHeader>
         <DialogBody>

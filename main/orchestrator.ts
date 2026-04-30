@@ -707,6 +707,7 @@ export class Orchestrator implements OrchestratorFacade {
           getShell
         }),
       initializeAgentContextFiles: (agent) => this.terminalMutationFacade.initializeAgentContextFiles(agent),
+      appendAgentContextEntries: (agent, entries) => this.terminalMutationFacade.appendContextEntries(agent, entries),
       attachAgentToWorktree: (agent, worktree) => this.attachAgentToWorktree(agent, worktree),
       attachTerminalToWorktree: (terminal, worktree) => this.attachTerminalToWorktree(terminal, worktree),
       upsertSession: (sessions, session) => this.upsertSession(sessions, session),
@@ -838,6 +839,12 @@ export class Orchestrator implements OrchestratorFacade {
       getAgentTerminalActionDependencies: () => this.createAgentTerminalActionsDependencies(),
       getSessionActionDependencies: () => this.createSessionActionsDependencies(),
       getSnapshot: () => this.getSnapshot(),
+      nowIso,
+      randomId: () => randomUUID(),
+      readAgentContextEntries: (agent) => this.terminalMutationFacade.readContextEntries(agent.contextFilePath),
+      appendAgentContextEntries: (agent, entries) => this.terminalMutationFacade.appendContextEntries(agent, entries),
+      writeAgentContextBundle: (agent, bundleId, content) =>
+        this.terminalMutationFacade.writeContextBundle(agent, bundleId, content),
       resizeRuntimeSession: (sessionId, cols, rows) => this.sessionRuntime.resizeRuntimeSession(sessionId, cols, rows)
     });
 
@@ -854,7 +861,8 @@ export class Orchestrator implements OrchestratorFacade {
       getSnapshot: () => this.stateGateway.getSnapshot(),
       getTerminalBuffer: (sessionId: string) => this.sessionRuntime.getTerminalBuffer(sessionId),
       getLocalTerminalState: () => this.sessionRuntime.getLocalTerminalState(),
-      readContextFile: (contextFilePath: string) => this.terminalMutationFacade.readContextFile(contextFilePath)
+      readContextFile: (contextFilePath: string) => this.terminalMutationFacade.readContextFile(contextFilePath),
+      readContextEntries: (contextFilePath: string) => this.terminalMutationFacade.readContextEntries(contextFilePath)
     });
     const domains = buildDomainMainServicesFromOrchestrator(
       snapshot,
@@ -1169,6 +1177,9 @@ export class Orchestrator implements OrchestratorFacade {
       },
       updateAgent: (agentId: string, partial: Partial<AgentSession>) => {
         this.terminalMutationFacade.updateAgent(agentId, partial);
+      },
+      updateTerminal: (terminalId: string, partial: Partial<TerminalSession>) => {
+        this.terminalMutationFacade.updateTerminal(terminalId, partial);
       },
       resetTerminalTranscript: (terminal: TerminalSession) => this.terminalMutationFacade.resetTerminalTranscript(terminal),
       clearAgentContextFile: (agent: AgentSession) => this.terminalMutationFacade.clearAgentContext(agent)

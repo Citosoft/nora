@@ -1,32 +1,37 @@
+import { countSelectedAgentContextEntries } from "@/components/app/logic/agentContextSelections";
+import { AgentContextPicker } from "@/components/app/shared/AgentContextPicker";
 import { getPastedImageLabel, getWorkspacePathPillLabel } from "@/components/app/logic/agentInputAttachments";
 import type { FocusedAgentInputComposerProps } from "@/components/app/types/focusedAgentSessionChrome.types";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { FileImage, FileText, Folder, LoaderCircle, Send, X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { FileImage, FileText, Folder, LoaderCircle, Send, Share2, X } from "lucide-react";
 
 export const FocusedAgentInputComposer = ({
   agent,
   pastedImages,
   attachedWorkspacePaths,
-  injectableContexts,
-  isLoadingInjectableContexts,
+  contextSelector,
+  isLoadingContextSources,
   isSendingTerminalInput,
   isSavingPastedImage,
   canSendLiveTerminalInput,
   onRemovePastedImage,
   onRemoveAttachedPath,
   onOpenImagePreview,
-  onInjectContext,
+  onChangeContextSelections,
   onDragOver,
   onDrop,
   onPaste,
   onSend,
   inputRef
-}: FocusedAgentInputComposerProps) => (
-  <div className="relative -top-[16px] mb-[-16px] bg-card/95 px-4 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-    <div className="space-y-2">
-      {(agent && pastedImages.length > 0) || attachedWorkspacePaths.length > 0 ? (
+}: FocusedAgentInputComposerProps) => {
+  const selectedContextCount = countSelectedAgentContextEntries(contextSelector.selections);
+
+  return (
+    <div className="relative -top-[16px] mb-[-16px] bg-card/95 px-4 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+      <div className="space-y-2">
+        {(agent && pastedImages.length > 0) || attachedWorkspacePaths.length > 0 || selectedContextCount > 0 ? (
         <div className="flex flex-wrap items-center gap-2">
           {agent && pastedImages.length > 0
             ? pastedImages.map((draft, index) => (
@@ -78,6 +83,12 @@ export const FocusedAgentInputComposer = ({
               </button>
             </div>
           ))}
+          {agent && selectedContextCount > 0 ? (
+            <div className="inline-flex h-8 max-w-full items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 text-xs text-foreground">
+              <Share2 className="size-3.5 shrink-0 text-primary" />
+              <span>{selectedContextCount} context entr{selectedContextCount === 1 ? "y" : "ies"} selected</span>
+            </div>
+          ) : null}
         </div>
       ) : null}
       <div className="flex items-center gap-2">
@@ -99,41 +110,32 @@ export const FocusedAgentInputComposer = ({
           className="h-9 rounded-[4px] border border-border/40 bg-transparent px-2 shadow-none"
         />
         {agent ? (
-          <DropdownMenu
-            align="end"
-            trigger={(
+          <Popover>
+            <PopoverTrigger asChild>
               <Button
                 variant="outline"
                 size="sm"
-                tooltip="Inject context from another agent"
+                tooltip="Share agent context"
                 className="h-9 rounded-[4px] border border-border/40 bg-transparent px-2.5 hover:bg-transparent"
-                disabled={isLoadingInjectableContexts || !injectableContexts.length}
-                aria-label="Inject context"
+                disabled={isLoadingContextSources || (contextSelector.sources.length === 0 && selectedContextCount === 0)}
+                aria-label="Share agent context"
               >
-                {isLoadingInjectableContexts ? <LoaderCircle className="size-4 animate-spin" /> : <FileText className="size-4" />}
+                {isLoadingContextSources ? <LoaderCircle className="size-4 animate-spin" /> : <Share2 className="size-4" />}
+                {selectedContextCount > 0 ? (
+                  <span className="ml-1 text-xs text-muted-foreground">{selectedContextCount}</span>
+                ) : null}
               </Button>
-            )}
-          >
-            {injectableContexts.length ? (
-              injectableContexts.map((context) => (
-                <DropdownMenuItem
-                  key={context.agentId}
-                  onSelect={() => {
-                    onInjectContext(context);
-                  }}
-                >
-                  <div className="min-w-0">
-                    <div className="truncate text-sm">{context.agentName}</div>
-                    <div className="truncate text-xs text-muted-foreground">{context.preview.slice(0, 72)}</div>
-                  </div>
-                </DropdownMenuItem>
-              ))
-            ) : (
-              <DropdownMenuItem onSelect={() => {}}>
-                <span className="text-xs text-muted-foreground">No context from other agents yet</span>
-              </DropdownMenuItem>
-            )}
-          </DropdownMenu>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-[min(42rem,calc(100vw-2rem))] p-0">
+              <AgentContextPicker
+                sources={contextSelector.sources}
+                selections={contextSelector.selections}
+                isLoading={isLoadingContextSources}
+                emptyMessage="No other agents in this workspace have tracked context yet."
+                onChange={onChangeContextSelections}
+              />
+            </PopoverContent>
+          </Popover>
         ) : null}
         <Button
           variant="outline"
@@ -147,6 +149,7 @@ export const FocusedAgentInputComposer = ({
           <Send className="size-4" />
         </Button>
       </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};

@@ -1,5 +1,5 @@
 import type { StatusBarContextValue, UpdateSnapshot } from "@/components/app/types/component.types";
-import type { AgentSession, AppState, CreateAgentPayload } from "@shared/appTypes";
+import type { AgentPromptSubmission, AgentSession, AppState, CreateAgentPayload } from "@shared/appTypes";
 
 export type LaunchAgentWithInstructionResult = {
   snapshot: AppState;
@@ -8,13 +8,13 @@ export type LaunchAgentWithInstructionResult = {
 };
 
 export type LaunchAgentHandoffOptions = {
-  instruction: string;
+  prompt: AgentPromptSubmission;
   statusBar: StatusBarContextValue;
   statusMessage: string;
   updateSnapshot: UpdateSnapshot;
   handoffInstruction?: (options: {
     agentId: string;
-    instruction: string;
+    prompt: AgentPromptSubmission;
     updateSnapshot: UpdateSnapshot;
     focusAgent?: (agentId: string) => Promise<void>;
   }) => Promise<void>;
@@ -31,6 +31,7 @@ export type LaunchAgentOptions = {
 
 export type LaunchAgentWithInstructionOptions = Omit<LaunchAgentOptions, "handoff"> & {
   instruction: string;
+  prompt?: Omit<AgentPromptSubmission, "text">;
   handoffStatusMessage: string;
   statusBar: StatusBarContextValue;
   updateSnapshot: UpdateSnapshot;

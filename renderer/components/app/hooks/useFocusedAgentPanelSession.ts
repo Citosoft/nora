@@ -2,11 +2,12 @@ import { noraAgentClient } from "@/components/app/clients/noraAgentClient";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { noraTerminalClient } from "@/components/app/clients/noraTerminalClient";
 import { useWorkspaceSessionContext } from "@/components/app/context/workspaceSessionContext";
-import { useFocusedAgentInjectableContexts } from "@/components/app/hooks/useFocusedAgentInjectableContexts";
+import { useWorkspaceAgentContextSources } from "@/components/app/hooks/useWorkspaceAgentContextSources";
 import { useWorkspaceProjectFavicon } from "@/components/app/hooks/useWorkspaceProjectFavicon";
 import {
-  buildAgentInputPayload,
-  buildPlainTerminalInputWithWorkspacePaths
+  buildAgentInputBodyText,
+  buildPlainTerminalInputWithWorkspacePaths,
+  formatWorkspacePathForSubmission
 } from "@/components/app/logic/agentInputAttachments";
 import { workspacePathDraftsFromNativeFileDrop } from "@/components/app/logic/agentInputNativeFileDrop";
 import { formatTaskFileInstruction, resolveTaskInstructionPath } from "@/components/app/logic/appUtils";
@@ -27,14 +28,13 @@ import { dataTransferDeclaresTaskDrop, readWorkspaceTaskFromDataTransfer } from 
 import type { TerminalSubmission } from "@/components/app/types";
 import type { PastedImageDraft, WorkspacePathAttachmentDraft } from "@/components/app/types/agentInput.types";
 import type { FocusedAgentWorkspaceHomeProps } from "@/components/app/types/focusedAgentEmptyState.types";
-import type { FocusedAgentInjectableContext } from "@/components/app/types/focusedAgentPanelParts.types";
 import type {
   UseFocusedAgentPanelSessionArgs,
   UseFocusedAgentPanelSessionResult
 } from "@/components/app/types/useFocusedAgentPanelSession.types";
 import type { WorkspaceTaskDragPayload } from "@/components/app/types/workspaceTaskDrag.types";
 import { isAgentToolAvailable } from "@shared/agentToolState";
-import type { AgentContextPreview } from "@shared/appTypes";
+import type { AgentContextSelection, AgentContextState } from "@shared/appTypes";
 import { useCallback, useEffect, useMemo, useRef, useState, type ClipboardEvent as ReactClipboardEvent, type DragEvent as ReactDragEvent } from "react";
 
 export const useFocusedAgentPanelSession = ({
@@ -74,11 +74,12 @@ export const useFocusedAgentPanelSession = ({
   } = useWorkspaceSessionContext();
   const [showContext, setShowContext] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
-  const [contextPreview, setContextPreview] = useState<AgentContextPreview | null>(null);
+  const [contextState, setContextState] = useState<AgentContextState | null>(null);
   const [contextStatus, setContextStatus] = useState<"idle" | "loading">("idle");
   const [isClearingContext, setIsClearingContext] = useState(false);
   const [pastedImages, setPastedImages] = useState<PastedImageDraft[]>([]);
   const [attachedWorkspacePaths, setAttachedWorkspacePaths] = useState<WorkspacePathAttachmentDraft[]>([]);
+  const [contextSelections, setContextSelections] = useState<AgentContextSelection[]>([]);
   const [previewImageDraft, setPreviewImageDraft] = useState<PastedImageDraft | null>(null);
   const [isSendingTerminalInput, setIsSendingTerminalInput] = useState(false);
   const [isSavingPastedImage, setIsSavingPastedImage] = useState(false);
@@ -98,15 +99,15 @@ export const useFocusedAgentPanelSession = ({
     const raw = (agent?.workspace ?? terminal?.workspace ?? workspace?.project?.rootPath ?? "").trim();
     return raw.length > 0 ? raw : null;
   })();
-  const { injectableContexts, isLoadingInjectableContexts } = useFocusedAgentInjectableContexts({
-    agent,
-    workspace
-  });
+  const { sources: contextSources, isLoading: isLoadingContextSources } = useWorkspaceAgentContextSources(
+    workspace?.project.id ?? null,
+    agent?.id
+  );
 
   useEffect(() => {
     setShowContext(false);
     setShowInfo(false);
-    setContextPreview(null);
+    setContextState(null);
     setContextStatus("idle");
     setIsClearingContext(false);
     if (terminalInputRef.current) {
@@ -114,6 +115,7 @@ export const useFocusedAgentPanelSession = ({
     }
     setPastedImages([]);
     setAttachedWorkspacePaths([]);
+    setContextSelections([]);
     setPreviewImageDraft(null);
     setIsSendingTerminalInput(false);
     setIsSavingPastedImage(false);
@@ -159,9 +161,9 @@ export const useFocusedAgentPanelSession = ({
     const load = async () => {
       setContextStatus("loading");
       try {
-        const next = await noraAgentClient.getAgentContextPreview(agent.id);
+        const next = await noraAgentClient.getAgentContextState(agent.id);
         if (!cancelled) {
-          setContextPreview(next);
+          setContextState(next);
           setContextStatus("idle");
         }
       } catch {
@@ -206,11 +208,15 @@ export const useFocusedAgentPanelSession = ({
 
     setIsClearingContext(true);
     try {
-      const next = await noraAgentClient.clearAgentContext(agent.id);
-      setContextPreview(next);
+      await noraAgentClient.clearAgentContext(agent.id);
+      setContextState(await noraAgentClient.getAgentContextState(agent.id));
     } finally {
       setIsClearingContext(false);
     }
+  };
+
+  const handleCopyContextReference = async (value: string) => {
+    await noraSystemClient.copyText(value);
   };
 
   const handleClearTerminal = async () => {
@@ -246,37 +252,41 @@ export const useFocusedAgentPanelSession = ({
 
     setIsSendingTerminalInput(true);
     try {
-      const submissionValue = agent
-        ? buildAgentInputPayload(inputValue, pastedImages, attachedWorkspacePaths, sessionWorkspaceAbsoluteRoot)
-        : buildPlainTerminalInputWithWorkspacePaths(inputValue, attachedWorkspacePaths, sessionWorkspaceAbsoluteRoot);
-      setTerminalSubmission({
-        nonce: Date.now(),
-        value: submissionValue
-      });
+      if (agent) {
+        const promptText = buildAgentInputBodyText(inputValue, pastedImages);
+        await noraAgentClient.sendAgentPrompt(agent.id, {
+          source: "composer",
+          title: "Prompt sent to agent",
+          text: promptText,
+          workspacePaths: attachedWorkspacePaths.map((draft) => ({
+            path: formatWorkspacePathForSubmission(draft, sessionWorkspaceAbsoluteRoot),
+            kind: draft.kind
+          })),
+          contextSelections
+        });
+        if (showContext) {
+          setContextState(await noraAgentClient.getAgentContextState(agent.id));
+        }
+      } else {
+        const submissionValue = buildPlainTerminalInputWithWorkspacePaths(
+          inputValue,
+          attachedWorkspacePaths,
+          sessionWorkspaceAbsoluteRoot
+        );
+        setTerminalSubmission({
+          nonce: Date.now(),
+          value: submissionValue
+        });
+      }
       if (terminalInputRef.current) {
         terminalInputRef.current.value = "";
       }
       setPastedImages([]);
       setAttachedWorkspacePaths([]);
+      setContextSelections([]);
     } finally {
       setIsSendingTerminalInput(false);
     }
-  };
-
-  const handleInjectContext = (context: FocusedAgentInjectableContext) => {
-    setAttachedWorkspacePaths((current) => {
-      if (current.some((draft) => draft.path === context.contextFilePath)) {
-        return current;
-      }
-      return [
-        ...current,
-        {
-          id: `agent-context-${context.agentId}`,
-          path: context.contextFilePath,
-          kind: "file"
-        }
-      ];
-    });
   };
 
   const handleAgentInputPaste = async (event: ReactClipboardEvent<HTMLInputElement>) => {
@@ -330,6 +340,10 @@ export const useFocusedAgentPanelSession = ({
 
   const handleRemoveAttachedWorkspacePath = (draftId: string) => {
     setAttachedWorkspacePaths((current) => current.filter((draft) => draft.id !== draftId));
+  };
+
+  const handleChangeContextSelections = (next: AgentContextSelection[]) => {
+    setContextSelections(next);
   };
 
   const launchShellId = selectedShellId || resolvePreferredTerminalShellId(terminalShells);
@@ -541,18 +555,22 @@ export const useFocusedAgentPanelSession = ({
     setShowContext,
     showInfo,
     setShowInfo,
-    contextPreview,
+    contextState,
     contextStatus,
     isClearingContext,
     handleClearContext,
+    handleCopyContextReference,
     pastedImages,
     attachedWorkspacePaths,
     previewImageDraft,
     setPreviewImageDraft,
     isSendingTerminalInput,
     isSavingPastedImage,
-    injectableContexts,
-    isLoadingInjectableContexts,
+    contextSelector: {
+      sources: contextSources,
+      selections: contextSelections
+    },
+    isLoadingContextSources,
     terminalSubmission,
     terminalResetVersion,
     infoPopoverRef,
@@ -566,7 +584,7 @@ export const useFocusedAgentPanelSession = ({
     handleClearTerminal,
     handleRestart,
     handleSendTerminalInput,
-    handleInjectContext,
+    handleChangeContextSelections,
     handleAgentInputPaste,
     handleRemovePastedImage,
     handleRemoveAttachedWorkspacePath,

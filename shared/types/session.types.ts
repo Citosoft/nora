@@ -196,6 +196,7 @@ export interface TerminalSession {
   worktreeId: string;
   name: string;
   status: TerminalStatus;
+  isBusy: boolean;
   workspace: string;
   branch: string;
   host: string;
@@ -282,6 +283,8 @@ export interface CreateAgentPayload {
   commandOverride: string;
   mode: AgentMode;
   target: WorktreeTarget;
+  contextSelections?: import("./agentContext.types").AgentContextSelection[];
+  launchSource?: import("./agentContext.types").AgentPromptSource;
   branchCheckout?: {
     mode: "existing" | "new";
     branchName: string;

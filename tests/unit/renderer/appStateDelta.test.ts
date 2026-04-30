@@ -42,6 +42,7 @@ function createTerminal(id: string, name: string): TerminalSession {
     worktreeId: "worktree-1",
     name,
     status: "running",
+    isBusy: false,
     workspace: "/tmp/project",
     branch: "main",
     host: "local",
@@ -158,4 +159,3 @@ test("applyStateDelta returns null when delta references unknown sessions", () =
 
   assert.equal(applyStateDelta(snapshot, delta), null);
 });
-

@@ -87,6 +87,34 @@ export function useWorkspaceContentController({
     return snapshot.workspaces.find((workspace) => workspace.project.id === projectId)?.project.name ?? "Workspace";
   };
 
+  const resolveProjectSummary = (projectId: string) => {
+    if (!snapshot) {
+      return null;
+    }
+    if (snapshot.project?.id === projectId) {
+      return snapshot.project;
+    }
+
+    return snapshot.workspaces.find((workspace) => workspace.project.id === projectId)?.project ?? null;
+  };
+
+  const buildWorkspaceInstructionPromptDetails = (projectId: string) => {
+    const instructionFile = resolveProjectSummary(projectId)?.workspaceInstructionFile;
+    if (!instructionFile) {
+      return {
+        workspacePaths: [],
+        references: [],
+        reminderText: ""
+      };
+    }
+
+    return {
+      workspacePaths: [{ path: instructionFile.absolutePath, kind: "file" as const }],
+      references: [{ kind: "workspace-path" as const, label: "Workspace instructions", value: instructionFile.absolutePath }],
+      reminderText: `Workspace instructions live at ${instructionFile.absolutePath}.`
+    };
+  };
+
   const resolveWorkspaceStatePath = async (projectId: string, relativePath: string): Promise<string> =>
     noraWorkspaceClient.resolveWorkspaceStatePath({
       projectId,
@@ -671,11 +699,13 @@ export function useWorkspaceContentController({
     const activeTaskEditor = taskEditorState;
     const absoluteTaskPath = await resolveWorkspaceStatePath(activeTaskEditor.projectId, activeTaskEditor.path);
     const instruction = formatTaskFileInstruction(absoluteTaskPath);
+    const workspaceInstruction = buildWorkspaceInstructionPromptDetails(activeTaskEditor.projectId);
     const payload: CreateAgentPayload = {
       toolId,
       name: activeTaskEditor.title,
       task: `Open task file ${absoluteTaskPath}`,
       commandOverride: "",
+      launchSource: "task-panel",
       mode: "write",
       target: { kind: "new" }
     };
@@ -684,6 +714,19 @@ export function useWorkspaceContentController({
         payload,
         createAgent: (agentPayload) => runWithStatus("Creating agent", () => noraAgentClient.createAgent(agentPayload)),
         instruction,
+        prompt: {
+          source: "task-panel",
+          title: "Task details",
+          contextSelections: payload.contextSelections ?? [],
+          workspacePaths: [
+            { path: absoluteTaskPath, kind: "file" },
+            ...workspaceInstruction.workspacePaths
+          ],
+          references: [
+            { kind: "workspace-path", label: "Task file", value: absoluteTaskPath },
+            ...workspaceInstruction.references
+          ]
+        },
         handoffStatusMessage: "Sending task details",
         statusBar,
         updateSnapshot: updateSnapshotState,
@@ -722,11 +765,13 @@ export function useWorkspaceContentController({
 
     const absoluteTaskPath = await resolveWorkspaceStatePath(task.projectId, task.path);
     const instruction = formatTaskFileInstruction(absoluteTaskPath);
+    const workspaceInstruction = buildWorkspaceInstructionPromptDetails(task.projectId);
     const payload: CreateAgentPayload = {
       toolId,
       name: task.title,
       task: `Open task file ${absoluteTaskPath}`,
       commandOverride: "",
+      launchSource: "task-reference",
       mode: "write",
       target: { kind: "new" }
     };
@@ -734,6 +779,19 @@ export function useWorkspaceContentController({
       payload,
       createAgent: noraAgentClient.createAgent,
       instruction,
+      prompt: {
+        source: "task-reference",
+        title: "Task details",
+        contextSelections: payload.contextSelections ?? [],
+        workspacePaths: [
+          { path: absoluteTaskPath, kind: "file" },
+          ...workspaceInstruction.workspacePaths
+        ],
+        references: [
+          { kind: "workspace-path", label: "Task file", value: absoluteTaskPath },
+          ...workspaceInstruction.references
+        ]
+      },
       handoffStatusMessage: "Sending task details",
       statusBar,
       updateSnapshot: updateSnapshotState,
@@ -795,6 +853,8 @@ export function useWorkspaceContentController({
 
     const projectName = nextWorkspaceState.project.name;
     const projectRootPath = nextWorkspaceState.project.rootPath;
+    const workspaceInstruction = buildWorkspaceInstructionPromptDetails(projectId);
+    const absoluteSpecPath = specPath ? await resolveWorkspaceStatePath(projectId, specPath) : null;
     const instruction = createTaskPlanningInstruction({
       projectName,
       projectRootPath,
@@ -807,6 +867,7 @@ export function useWorkspaceContentController({
       name: `${projectName} planner`,
       task: `Plan and create workspace tasks for ${projectName}`,
       commandOverride: "",
+      launchSource: "task-planner",
       mode: "write",
       target: { kind: "root" }
     };
@@ -815,6 +876,19 @@ export function useWorkspaceContentController({
         payload,
         createAgent: (agentPayload) => runWithStatus("Creating planning agent", () => noraAgentClient.createAgent(agentPayload)),
         instruction,
+        prompt: {
+          source: "task-planner",
+          title: "Planning brief",
+          contextSelections: payload.contextSelections ?? [],
+          workspacePaths: [
+            ...workspaceInstruction.workspacePaths,
+            ...(absoluteSpecPath ? [{ path: absoluteSpecPath, kind: "file" as const }] : [])
+          ],
+          references: [
+            ...workspaceInstruction.references,
+            ...(absoluteSpecPath ? [{ kind: "workspace-path" as const, label: "Spec file", value: absoluteSpecPath }] : [])
+          ]
+        },
         handoffStatusMessage: "Sending planning brief",
         statusBar,
         updateSnapshot: updateSnapshotState,
@@ -836,17 +910,60 @@ export function useWorkspaceContentController({
 
   const handleCreateAgentFromDialog = async (payload: CreateAgentPayload, taskPath: string | null): Promise<void> => {
     try {
-      const launchResult = taskPath && snapshot?.project
+      const dialogContextSelections = payload.contextSelections ?? [];
+      const resolvedDialogTaskPath =
+        taskPath && snapshot?.project ? await resolveWorkspaceStatePath(snapshot.project.id, taskPath) : null;
+      const workspaceInstruction = snapshot?.project ? buildWorkspaceInstructionPromptDetails(snapshot.project.id) : {
+        workspacePaths: [],
+        references: [],
+        reminderText: ""
+      };
+      const launchResult = resolvedDialogTaskPath && snapshot?.project
         ? await launchAgentWithInstruction({
           payload,
           createAgent: (agentPayload) => runWithStatus("Creating agent", () => noraAgentClient.createAgent(agentPayload)),
-          instruction: formatTaskFileInstruction(await resolveWorkspaceStatePath(snapshot.project.id, taskPath)),
+          instruction: formatTaskFileInstruction(resolvedDialogTaskPath),
+          prompt: {
+            source: "dialog",
+            title: "Task details",
+            contextSelections: dialogContextSelections,
+            workspacePaths: [
+              { path: resolvedDialogTaskPath, kind: "file" },
+              ...workspaceInstruction.workspacePaths
+            ],
+            references: [
+              { kind: "workspace-path", label: "Task file", value: resolvedDialogTaskPath },
+              ...workspaceInstruction.references
+            ]
+          },
           handoffStatusMessage: "Sending task details",
           statusBar,
           updateSnapshot: updateSnapshotState,
           focusAgent: focusCreatedAgent,
           trackCreation: (agentPayload) => {
             trackAgentCreation(agentPayload, "dialog");
+          }
+        })
+        : dialogContextSelections.length > 0 || workspaceInstruction.workspacePaths.length > 0
+        ? await launchAgent({
+          payload,
+          createAgent: (agentPayload) => runWithStatus("Creating agent", () => noraAgentClient.createAgent(agentPayload)),
+          focusAgent: focusCreatedAgent,
+          trackCreation: (agentPayload) => {
+            trackAgentCreation(agentPayload, "dialog");
+          },
+          handoff: {
+            prompt: {
+              source: "dialog",
+              title: "Shared agent context",
+              text: workspaceInstruction.reminderText,
+              workspacePaths: workspaceInstruction.workspacePaths,
+              contextSelections: dialogContextSelections,
+              references: workspaceInstruction.references
+            },
+            statusBar,
+            statusMessage: "Sharing selected context",
+            updateSnapshot: updateSnapshotState
           }
         })
         : await launchAgent({

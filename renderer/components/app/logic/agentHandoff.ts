@@ -2,6 +2,7 @@ import { noraAgentClient } from "@/components/app/clients/noraAgentClient";
 import { noraAppClient } from "@/components/app/clients/noraAppClient";
 import { normalizeSnapshot } from "@/components/app/logic/appUtils";
 import type { UpdateSnapshot } from "@/components/app/types/component.types";
+import type { AgentPromptSubmission } from "@shared/appTypes";
 
 export async function sendAgentTerminalText(options: {
   agentId: string;
@@ -44,6 +45,15 @@ export async function sendInstructionToAgent(
     submit: true,
     updateSnapshot
   });
+}
+
+export async function sendPromptToAgent(
+  agentId: string,
+  prompt: AgentPromptSubmission,
+  updateSnapshot: UpdateSnapshot
+): Promise<void> {
+  await noraAgentClient.sendAgentPrompt(agentId, prompt);
+  updateSnapshot(normalizeSnapshot(await noraAppClient.getSnapshot()));
 }
 
 export async function waitForAgentPromptReady(
@@ -139,9 +149,9 @@ async function waitForAgentConversationReady(
   }
 }
 
-export async function handoffInstructionToAgent(options: {
+export async function handoffPromptToAgent(options: {
   agentId: string;
-  instruction: string;
+  prompt: AgentPromptSubmission;
   updateSnapshot: UpdateSnapshot;
   focusAgent?: (agentId: string) => Promise<void>;
 }): Promise<void> {
@@ -150,5 +160,5 @@ export async function handoffInstructionToAgent(options: {
   }
 
   await waitForAgentConversationReady(options.agentId, options.updateSnapshot);
-  await sendInstructionToAgent(options.agentId, options.instruction, options.updateSnapshot);
+  await sendPromptToAgent(options.agentId, options.prompt, options.updateSnapshot);
 }

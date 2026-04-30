@@ -1,4 +1,4 @@
-import type { FocusedAgentInjectableContext } from "@/components/app/types/focusedAgentPanelParts.types";
+import type { FocusedAgentContextSelectorState } from "@/components/app/types/focusedAgentPanelParts.types";
 import type { PastedImageDraft, WorkspacePathAttachmentDraft } from "@/components/app/types/agentInput.types";
 import type { AgentSession, TerminalSession } from "@shared/appTypes";
 import type { ClipboardEvent as ReactClipboardEvent, DragEvent as ReactDragEvent, RefObject } from "react";
@@ -25,15 +25,15 @@ export type FocusedAgentInputComposerProps = {
   agent: AgentSession | null;
   pastedImages: PastedImageDraft[];
   attachedWorkspacePaths: WorkspacePathAttachmentDraft[];
-  injectableContexts: FocusedAgentInjectableContext[];
-  isLoadingInjectableContexts: boolean;
+  contextSelector: FocusedAgentContextSelectorState;
+  isLoadingContextSources: boolean;
   isSendingTerminalInput: boolean;
   isSavingPastedImage: boolean;
   canSendLiveTerminalInput: boolean;
   onRemovePastedImage: (draftId: string) => void;
   onRemoveAttachedPath: (draftId: string) => void;
   onOpenImagePreview: (draft: PastedImageDraft) => void;
-  onInjectContext: (context: FocusedAgentInjectableContext) => void;
+  onChangeContextSelections: (next: FocusedAgentContextSelectorState["selections"]) => void;
   onDragOver: (event: ReactDragEvent<HTMLInputElement>) => void;
   onDrop: (event: ReactDragEvent<HTMLInputElement>) => void;
   onPaste: (event: ReactClipboardEvent<HTMLInputElement>) => void | Promise<void>;

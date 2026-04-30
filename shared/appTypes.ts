@@ -6,6 +6,7 @@ export type {
   ToolingDomainModel,
   WorkspaceDomainModel
 } from "./types/appDomainState.types";
+export * from "./types/agentContext.types";
 export * from "./types/ai.types";
 export * from "./types/analytics.types";
 export * from "./types/fileEditorTheme.types";

@@ -89,6 +89,12 @@ function createHarness(overrides: Partial<LaunchAgentWithInstructionOptions> = {
       payload: createPayload(),
       createAgent: async () => createSnapshot("agent-1"),
       instruction: "Review this task",
+      prompt: {
+        source: "dialog",
+        title: "Task details",
+        workspacePaths: [],
+        contextSelections: []
+      },
       handoffStatusMessage: "Sending task details",
       statusBar: {
         beginStatus: (message, loading) => {
@@ -113,8 +119,8 @@ function createHarness(overrides: Partial<LaunchAgentWithInstructionOptions> = {
       onCreated: async ({ agentId }) => {
         events.push(`created:${agentId}`);
       },
-      handoffInstruction: async ({ agentId, instruction, focusAgent, updateSnapshot }) => {
-        events.push(`handoff:${agentId}:${instruction}`);
+      handoffInstruction: async ({ agentId, prompt, focusAgent, updateSnapshot }) => {
+        events.push(`handoff:${agentId}:${prompt.text}`);
         await focusAgent?.(agentId);
         updateSnapshot(createSnapshot(agentId));
       },

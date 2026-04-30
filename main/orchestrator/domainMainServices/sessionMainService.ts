@@ -1,4 +1,6 @@
 import type {
+  AgentPromptDispatchResult,
+  AgentPromptSubmission,
   AgentContextPreview,
   AppState,
   CreateAgentPayload,
@@ -6,6 +8,13 @@ import type {
   LocalTerminalState
 } from "@shared/appTypes";
 import type { SessionService } from "../../types/mainServices.types";
+import {
+  buildContextBundleMarkdown,
+  buildPromptContextEntries,
+  buildPromptText,
+  estimateContextSize,
+  resolveSelectedContextEntries
+} from "../agentContextArtifacts";
 import {
   clearAgentContext as clearAgentContextAction,
   clearAgentTerminal as clearAgentTerminalAction,
@@ -41,6 +50,74 @@ export class SessionMainService implements SessionService {
 
   sendAgentInput = (agentId: string, input: string): Promise<AppState> =>
     sendAgentInputAction(this.d.getAgentTerminalActionDependencies(), agentId, input);
+
+  sendAgentPrompt = async (
+    agentId: string,
+    input: AgentPromptSubmission
+  ): Promise<AgentPromptDispatchResult> => {
+    const targetAgent = this.d.getSnapshot().agents.find((entry) => entry.id === agentId);
+    if (!targetAgent) {
+      throw new Error("Agent session could not be found.");
+    }
+
+    const createdAt = this.d.nowIso();
+    const agentsById = new Map(
+      this.d.getSnapshot().agents
+        .filter((entry) => entry.projectId === targetAgent.projectId)
+        .map((entry) => [entry.id, entry] as const)
+    );
+    const uniqueSourceIds = [...new Set(input.contextSelections.map((selection) => selection.sourceAgentId))];
+    const entriesByAgentId = new Map(
+      await Promise.all(uniqueSourceIds.map(async (sourceAgentId) => {
+        const sourceAgent = agentsById.get(sourceAgentId);
+        if (!sourceAgent) {
+          return [sourceAgentId, [] as import("@shared/appTypes").AgentContextEntry[]] as const;
+        }
+        return [sourceAgentId, await this.d.readAgentContextEntries(sourceAgent)] as const;
+      }))
+    );
+    const selectedSources = resolveSelectedContextEntries({
+      selections: input.contextSelections,
+      agentsById,
+      entriesByAgentId
+    });
+    const bundleId = selectedSources.length > 0 ? this.d.randomId() : null;
+    const bundleFilePath = bundleId
+      ? await this.d.writeAgentContextBundle(
+          targetAgent,
+          bundleId,
+          buildContextBundleMarkdown({
+            bundleId,
+            createdAt,
+            targetAgent,
+            sources: selectedSources
+          })
+        )
+      : null;
+    const compiledPrompt = buildPromptText(input, bundleFilePath);
+    const contextEntries = buildPromptContextEntries({
+      agent: targetAgent,
+      submission: input,
+      createdAt,
+      bundleFilePath,
+      sourceEntries: selectedSources
+    });
+
+    if (contextEntries.length > 0) {
+      await this.d.appendAgentContextEntries(targetAgent, contextEntries);
+    }
+
+    if (compiledPrompt.trim()) {
+      await sendAgentInputAction(this.d.getAgentTerminalActionDependencies(), agentId, compiledPrompt);
+    }
+
+    return {
+      agentId,
+      bundleFilePath,
+      compiledPrompt,
+      estimate: estimateContextSize(compiledPrompt.length)
+    };
+  };
 
   sendAgentTerminalInput = (agentId: string, input: string): Promise<void> =>
     sendAgentTerminalInputAction(this.d.getAgentTerminalActionDependencies(), agentId, input);

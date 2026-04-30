@@ -1,5 +1,9 @@
 import type {
+  AgentContextSourceSummary,
+  AgentContextState,
   AgentContextPreview,
+  AgentPromptDispatchResult,
+  AgentPromptSubmission,
   AppState,
   CreateAgentPayload,
   CreateTerminalPayload,
@@ -12,9 +16,15 @@ export interface SessionBridge {
   restartAgent: (agentId: string) => Promise<AppState>;
   destroyAgent: (agentId: string) => Promise<AppState>;
   sendAgentInput: (agentId: string, input: string) => Promise<AppState>;
+  sendAgentPrompt: (agentId: string, input: AgentPromptSubmission) => Promise<AgentPromptDispatchResult>;
   sendAgentTerminalInput: (agentId: string, input: string) => Promise<void>;
   getAgentTerminalBuffer: (agentId: string) => Promise<string>;
   getAgentContextPreview: (agentId: string) => Promise<AgentContextPreview>;
+  getAgentContextState: (agentId: string) => Promise<AgentContextState>;
+  listWorkspaceAgentContextSources: (
+    projectId: string,
+    excludeAgentId?: string
+  ) => Promise<AgentContextSourceSummary[]>;
   clearAgentContext: (agentId: string) => Promise<AgentContextPreview>;
   clearAgentTerminal: (agentId: string) => Promise<AppState>;
   resizeAgentTerminal: (agentId: string, cols: number, rows: number) => Promise<void>;

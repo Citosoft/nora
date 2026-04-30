@@ -1,5 +1,11 @@
 import { noraSessionClient } from "@/components/app/clients/noraSessionClient";
 import { noraToolingManagementClient } from "@/components/app/clients/noraToolingManagementClient";
+import {
+  buildCloseDirtyFileEditorTabMessage,
+  closeFileEditorTab,
+  findFileEditorTab
+} from "@/components/app/logic/fileEditorTabs";
+import { buildDestroyTerminalGuardMessage } from "@/components/app/logic/sessionCloseGuard";
 import type { WorkspaceSessionPanelProps } from "@/components/app/types/panel.types";
 import type { WorkspaceSessionPanelBuildDeps } from "@/components/app/types/workspaceSessionPanelBuild.types";
 import { createContext, useContext, type ReactNode } from "react";
@@ -136,26 +142,17 @@ export const createWorkspaceSessionPanelValue = (d: WorkspaceSessionPanelBuildDe
     );
   },
   onCloseFileEditorTab: (pathName) => {
-    d.setFileEditorState((current) => {
-      if (!current) {
-        return current;
-      }
-      const nextTabs = current.tabs.filter((tab) => tab.path !== pathName);
-      if (!nextTabs.length) {
-        return null;
-      }
-      const currentIndex = current.tabs.findIndex((tab) => tab.path === pathName);
-      const fallbackTab = nextTabs[Math.max(0, Math.min(currentIndex, nextTabs.length - 1))];
-      return {
-        activePath: current.activePath === pathName ? fallbackTab.path : current.activePath,
-        tabs: nextTabs
-      };
-    });
+    const closingTab = findFileEditorTab(d.fileEditorState, pathName);
+    const confirmMessage = closingTab ? buildCloseDirtyFileEditorTabMessage(closingTab) : null;
+    if (confirmMessage && !window.confirm(confirmMessage)) {
+      return;
+    }
+
+    const nextFileEditorState = closeFileEditorTab(d.fileEditorState, pathName);
+    d.setFileEditorState((current) => closeFileEditorTab(current, pathName));
     d.setActiveWorkspaceContentTab((current) =>
       current === "file"
-        ? ((d.fileEditorState?.tabs.filter((tab) => tab.path !== pathName).length ?? 0) > 0
-            ? "file"
-            : (d.isDiffExpanded ? "diff" : null))
+        ? ((nextFileEditorState?.tabs.length ?? 0) > 0 ? "file" : (d.isDiffExpanded ? "diff" : null))
         : current
     );
   },
@@ -199,7 +196,15 @@ export const createWorkspaceSessionPanelValue = (d: WorkspaceSessionPanelBuildDe
   onRestartTerminal: (sessionId) => d.safely(() => noraSessionClient.restartTerminal(sessionId)),
   onClearTerminal: (sessionId) => d.safely(() => noraSessionClient.clearTerminal(sessionId)),
   onDestroyRequest: (agentId) => d.uiCommands.setDestroyAgentId(agentId),
-  onDestroyTerminal: (sessionId) => d.safely(() => noraSessionClient.destroyTerminal(sessionId)),
+  onDestroyTerminal: (sessionId) => {
+    const terminal = d.workspace?.terminals.find((item) => item.id === sessionId) ?? null;
+    const confirmMessage = terminal ? buildDestroyTerminalGuardMessage(terminal, Date.now()) : null;
+    if (confirmMessage && !window.confirm(confirmMessage)) {
+      return Promise.resolve(null);
+    }
+
+    return d.safely(() => noraSessionClient.destroyTerminal(sessionId));
+  },
   onDeleteViewById: (viewId) => d.workspaceSessionViews.deleteViewById(viewId),
   onExitSplitView: () => d.workspaceSessionViews.setActiveViewId(null),
   onGridPresetChange: (gridColumns, gridRows) => {

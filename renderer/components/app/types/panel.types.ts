@@ -23,7 +23,6 @@ import type { FileEditorAgentSendTarget } from "@/components/app/types/fileEdito
 import type { TaskCenterTaskReference, WorkspaceSessionTab } from "@/components/app/types/workflow.types";
 import type {
   AgentCatalogEntry,
-  AgentContextPreview,
   AgentSession,
   AiModelCatalogEntry,
   AiProvider,
@@ -57,11 +56,14 @@ import type {
 import type { ReactNode } from "react";
 
 export type AgentContextCardProps = {
-  preview: AgentContextPreview | null;
+  state: import("@shared/appTypes").AgentContextState | null;
   loading: boolean;
   clearing: boolean;
   onClear: () => void;
+  onCopyReference: (value: string) => void;
   onClose: () => void;
+  /** `modal` fills the parent (e.g. full-screen dialog); `inline` keeps a short panel height. */
+  layout?: "inline" | "modal";
 };
 
 export type AgentShortcutBarProps = {

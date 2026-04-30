@@ -5,6 +5,7 @@ import type {
   CreateTerminalPayload,
   TerminalSession
 } from "@shared/appTypes";
+import { buildLaunchContextEntry } from "./agentContextArtifacts";
 import type {
   SessionCreationDeps,
   SessionCreationHelpers
@@ -166,6 +167,13 @@ export function createSessionCreationHelpers(deps: SessionCreationDeps): Session
       deps.setTerminalBuffer(agentId, agent.rawTerminalOutput);
       await deps.initializeAgentContextFiles(agent);
     }
+    await deps.appendAgentContextEntries(agent, [
+      buildLaunchContextEntry({
+        agent,
+        createdAt: deps.nowIso(),
+        payload
+      })
+    ]);
     await deps.attachAgentToWorktree(agent, worktree);
 
     deps.updateState((currentState) => {
@@ -331,6 +339,7 @@ export function createSessionCreationHelpers(deps: SessionCreationDeps): Session
       worktreeId: worktree.id,
       name: terminalName,
       status: "starting",
+      isBusy: true,
       workspace: worktree.path,
       branch: worktree.branch,
       host: project.location?.kind === "ssh" ? project.location.host : "local",

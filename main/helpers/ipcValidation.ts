@@ -62,14 +62,24 @@ export function validateImportBrowserImagePayload(payload: ImportBrowserImagePay
   }
 }
 
+/** Coerces IPC-deserialized fields so validation and session code see stable string shapes. */
+export function normalizeCreateAgentPayload(payload: CreateAgentPayload): CreateAgentPayload {
+  return {
+    ...payload,
+    toolId: typeof payload.toolId === "string" ? payload.toolId : "",
+    name: typeof payload.name === "string" ? payload.name : "",
+    task: typeof payload.task === "string" ? payload.task : "",
+    commandOverride: typeof payload.commandOverride === "string" ? payload.commandOverride : ""
+  };
+}
+
 export function validateCreateAgentPayload(payload: CreateAgentPayload): void {
-  if (!payload.toolId.trim()) {
+  const toolId = (typeof payload.toolId === "string" ? payload.toolId : "").trim();
+  const task = (typeof payload.task === "string" ? payload.task : "").trim();
+  if (!toolId) {
     throw new Error("toolId is required.");
   }
-  if (!payload.name.trim()) {
-    throw new Error("name is required.");
-  }
-  if (!payload.task.trim()) {
+  if (!task) {
     throw new Error("task is required.");
   }
 }

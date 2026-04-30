@@ -55,6 +55,12 @@ export function registerWorkspaceIpc({
   ipcMain.handle("app:get-agent-context-preview", (_event, agentId: string) =>
     services.snapshot.getAgentContextPreview(agentId)
   );
+  ipcMain.handle("app:get-agent-context-state", (_event, agentId: string) =>
+    services.snapshot.getAgentContextState(agentId)
+  );
+  ipcMain.handle("app:list-workspace-agent-context-sources", (_event, projectId: string, excludeAgentId?: string) =>
+    services.snapshot.listWorkspaceAgentContextSources(projectId, excludeAgentId)
+  );
   ipcMain.handle("app:read-workspace-file", (_event, payload: WorkspaceFileRequest) =>
     services.workspace.readWorkspaceFile(payload)
   );

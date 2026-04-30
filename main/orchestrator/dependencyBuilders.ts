@@ -46,6 +46,7 @@ export function buildAgentTerminalActionsDependencies(params: {
   setTerminalBuffer: (sessionId: string, value: string) => void;
   deleteTerminalActivity: (sessionId: string) => void;
   updateAgent: (agentId: string, partial: Partial<AgentSession>) => void;
+  updateTerminal: (terminalId: string, partial: Partial<TerminalSession>) => void;
   resetTerminalTranscript: (terminal: TerminalSession) => Promise<void>;
   clearAgentContextFile: (agent: AgentSession) => Promise<void>;
 }) {
@@ -58,6 +59,7 @@ export function buildAgentTerminalActionsDependencies(params: {
     "setTerminalBuffer",
     "deleteTerminalActivity",
     "updateAgent",
+    "updateTerminal",
     "resetTerminalTranscript",
     "clearAgentContextFile"
   ]);
@@ -75,4 +77,3 @@ function assertDependencyFunctions<T extends Record<string, unknown>>(
     }
   }
 }
-

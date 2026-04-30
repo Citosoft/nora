@@ -6,7 +6,7 @@ import { noraAgentClient } from "@/components/app/clients/noraAgentClient";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { useSessionCenterPorts } from "@/components/app/hooks/useSessionCenterPorts";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
-import { sendAgentTerminalText } from "@/components/app/logic/agentHandoff";
+import { handoffPromptToAgent } from "@/components/app/logic/agentHandoff";
 import { markBrowserTabLoadStopped, updateTabNavigationState } from "@/components/app/logic/browserTabNavigation";
 import { getBrowserTabTitle, getCurrentBrowserUrl, normalizeBrowserUrl } from "@/components/app/logic/browserTabs";
 import { launchAgent } from "@/components/app/logic/launchAgentWithInstruction";
@@ -68,6 +68,7 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
   }
 
   const currentUrl = getCurrentBrowserUrl(tab);
+  const workspaceInstructionPath = sessionData.project?.workspaceInstructionFile?.absolutePath ?? null;
   const [addressInput, setAddressInput] = useState(currentUrl);
   const [reloadNonce, setReloadNonce] = useState(0);
   const [selectionMenu, setSelectionMenu] = useState<SelectionContextMenuState | null>(null);
@@ -231,6 +232,7 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
       name: "Browser Selection",
       task: `Review and act on this selected browser text:\n\n${selectedText}`,
       commandOverride: "",
+      launchSource: "browser-selection",
       mode: "read",
       target: { kind: "session-default" }
     };
@@ -241,6 +243,26 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
         createAgent: noraAgentClient.createAgent
       });
       if (launchResult) {
+        await handoffPromptToAgent({
+          agentId: launchResult.agentId,
+          prompt: {
+            source: "browser-selection",
+            title: "Browser selection",
+            text: `Selected text from browser:\n\n${selectedText}`,
+            workspacePaths: workspaceInstructionPath ? [{ path: workspaceInstructionPath, kind: "file" }] : [],
+            contextSelections: payload.contextSelections ?? [],
+            references: [
+              ...(currentUrl ? [{ kind: "workspace-path" as const, label: "Browser URL", value: currentUrl }] : []),
+              ...(workspaceInstructionPath
+                ? [{ kind: "workspace-path" as const, label: "Workspace instructions", value: workspaceInstructionPath }]
+                : [])
+            ]
+          },
+          updateSnapshot: () => {},
+          focusAgent: async (focusedAgentId: string) => {
+            onFocusAgent(focusedAgentId);
+          }
+        });
         onFocusAgent(launchResult.agentId);
       }
     } finally {
@@ -254,13 +276,26 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
     }
 
     const selectedText = selectionMenu.text;
-    const instruction = `Selected text from browser:\n\n${selectedText}`;
     try {
-      await sendAgentTerminalText({
+      await handoffPromptToAgent({
         agentId,
-        text: instruction,
-        focusAgent: onFocusAgent,
-        submit: true
+        prompt: {
+          source: "browser-selection",
+          title: "Browser selection",
+          text: `Selected text from browser:\n\n${selectedText}`,
+          workspacePaths: workspaceInstructionPath ? [{ path: workspaceInstructionPath, kind: "file" }] : [],
+          contextSelections: [],
+          references: [
+            ...(currentUrl ? [{ kind: "workspace-path" as const, label: "Browser URL", value: currentUrl }] : []),
+            ...(workspaceInstructionPath
+              ? [{ kind: "workspace-path" as const, label: "Workspace instructions", value: workspaceInstructionPath }]
+              : [])
+          ]
+        },
+        focusAgent: async (focusedAgentId: string) => {
+          onFocusAgent(focusedAgentId);
+        },
+        updateSnapshot: () => {}
       });
     } finally {
       setSelectionMenu(null);

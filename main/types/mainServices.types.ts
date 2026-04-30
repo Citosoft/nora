@@ -1,5 +1,9 @@
 import type {
+  AgentContextSourceSummary,
+  AgentContextState,
   AgentContextPreview,
+  AgentPromptDispatchResult,
+  AgentPromptSubmission,
   AgentSkillInstallOutputEvent,
   AgentSkillSearchResult,
   AppState,
@@ -47,6 +51,11 @@ export interface SnapshotService {
   getTerminalBuffer: (sessionId: string) => string;
   getLocalTerminalState: () => LocalTerminalState | null;
   getAgentContextPreview: (agentId: string) => Promise<AgentContextPreview>;
+  getAgentContextState: (agentId: string) => Promise<AgentContextState>;
+  listWorkspaceAgentContextSources: (
+    projectId: string,
+    excludeAgentId?: string
+  ) => Promise<AgentContextSourceSummary[]>;
 }
 
 export interface WorkspaceService {
@@ -128,6 +137,7 @@ export interface SessionService {
   clearTerminal: (sessionId: string) => Promise<AppState>;
   clearLocalTerminal: () => Promise<LocalTerminalState | null>;
   sendAgentInput: (agentId: string, input: string) => Promise<AppState>;
+  sendAgentPrompt: (agentId: string, input: AgentPromptSubmission) => Promise<AgentPromptDispatchResult>;
   sendAgentTerminalInput: (
     agentId: string,
     input: string

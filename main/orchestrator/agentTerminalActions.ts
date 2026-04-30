@@ -11,6 +11,7 @@ type AgentTerminalActionsDependencies = {
   setTerminalBuffer: (sessionId: string, value: string) => void;
   deleteTerminalActivity: (sessionId: string) => void;
   updateAgent: (agentId: string, partial: Partial<AgentSession>) => void;
+  updateTerminal: (terminalId: string, partial: Partial<TerminalSession>) => void;
   resetTerminalTranscript: (terminal: TerminalSession) => Promise<void>;
   clearAgentContextFile: (agent: AgentSession) => Promise<void>;
 };
@@ -111,10 +112,16 @@ export async function sendTerminalInput(
   sessionId: string,
   input: string
 ): Promise<void> {
+  const shouldMarkBusy = /[\r\n]/.test(input);
   const session = deps.getPtySession(sessionId);
   if (!session) {
     throw new Error("Terminal session is not running.");
   }
+  if (shouldMarkBusy) {
+    deps.updateTerminal(sessionId, {
+      isBusy: true,
+      lastEventAt: deps.nowIso()
+    });
+  }
   session.write(input);
 }
-

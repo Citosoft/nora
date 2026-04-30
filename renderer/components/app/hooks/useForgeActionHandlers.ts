@@ -39,11 +39,13 @@ export function useForgeActionHandlers({
     }
 
     const instruction = formatForgeIssueInstruction(forgeWorkItemDetail);
+    const workspaceInstructionPath = snapshot.project.workspaceInstructionFile?.absolutePath ?? null;
     const payload: CreateAgentPayload = {
       toolId,
       name: `Issue #${forgeWorkItemDetail.item.number}`,
       task: `Work on issue #${forgeWorkItemDetail.item.number}: ${forgeWorkItemDetail.item.title}`,
       commandOverride: "",
+      launchSource: "forge-issue",
       mode: "write",
       target: { kind: "new" }
     };
@@ -52,6 +54,18 @@ export function useForgeActionHandlers({
         payload,
         createAgent: (agentPayload) => runWithStatus("Creating agent", () => noraAgentClient.createAgent(agentPayload)),
         instruction,
+        prompt: {
+          source: "forge-issue",
+          title: "Issue details",
+          contextSelections: payload.contextSelections ?? [],
+          workspacePaths: workspaceInstructionPath ? [{ path: workspaceInstructionPath, kind: "file" }] : [],
+          references: [
+            { kind: "workspace-path", label: "Issue URL", value: forgeWorkItemDetail.item.webUrl },
+            ...(workspaceInstructionPath
+              ? [{ kind: "workspace-path" as const, label: "Workspace instructions", value: workspaceInstructionPath }]
+              : [])
+          ]
+        },
         handoffStatusMessage: "Sending issue details",
         statusBar,
         updateSnapshot: updateSnapshotState,

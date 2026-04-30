@@ -1,5 +1,7 @@
 import { AGENT_ROLE_OPTIONS, getAgentRolePrompt } from "@/components/app/logic/agentRoles";
 import { createLaunchTargetFormState, launchTargetModeFromTarget, resolveSupportedLaunchTargetMode } from "@/components/app/logic/createAgentLaunchTarget";
+import { useWorkspaceAgentContextSources } from "@/components/app/hooks/useWorkspaceAgentContextSources";
+import { AgentContextPicker } from "@/components/app/shared/AgentContextPicker";
 import { Field } from "@/components/app/shared/Field";
 import type { AgentRoleId, CreateAgentDialogProps, LaunchTargetMode } from "@/components/app/types/component.types";
 import { Button } from "@/components/ui/button";
@@ -74,6 +76,10 @@ export function CreateAgentDialog({
   });
   const [branchPrefix, setBranchPrefix] = useState(WORKTREE_BRANCH_PREFIX_OPTIONS[0].value);
   const [branchName, setBranchName] = useState("");
+  const [contextSelections, setContextSelections] = useState<NonNullable<CreateAgentPayload["contextSelections"]>>([]);
+  const { sources: contextSources, isLoading: isLoadingContextSources } = useWorkspaceAgentContextSources(project?.id || null, undefined, {
+    enabled: open
+  });
   const workspacePresetEntries = workspaceTerminalPresets
     .map((preset) => {
       const command = formatPresetCommand(preset);
@@ -131,6 +137,7 @@ export function CreateAgentDialog({
       setLaunchTargetMode(initialMode);
       setBranchPrefix(WORKTREE_BRANCH_PREFIX_OPTIONS[0].value);
       setBranchName("");
+      setContextSelections(defaults?.contextSelections ?? []);
     }
     wasOpenRef.current = open;
   }, [open, detectedTools, defaults, defaultLaunchTargetMode, defaultWorktreePrepareCommand, availableTasks, worktrees, projectBranches]);
@@ -279,6 +286,13 @@ export function CreateAgentDialog({
                   placeholder="Leave blank to use the detected CLI"
                 />
               </Field>
+              <AgentContextPicker
+                sources={contextSources}
+                selections={contextSelections}
+                isLoading={isLoadingContextSources}
+                emptyMessage="No other agents in this workspace have tracked context yet."
+                onChange={setContextSelections}
+              />
             </div>
             <div className="space-y-5">
               <Field label="Launch target">
@@ -493,7 +507,9 @@ export function CreateAgentDialog({
               onCreateAgent(
                 {
                   ...formState,
+                  launchSource: "dialog",
                   task: getAgentRolePrompt(selectedRoleId, formState.task),
+                  contextSelections,
                   worktreeBranch
                 },
                 selectedTaskPath || null

@@ -11,9 +11,13 @@ export function createSessionBridge(): SessionBridge {
     restartAgent: (agentId) => invokeIpc("app:restart-agent", agentId),
     destroyAgent: (agentId) => invokeIpc("app:destroy-agent", agentId),
     sendAgentInput: (agentId, input) => invokeIpc("app:send-agent-input", agentId, input),
+    sendAgentPrompt: (agentId, input) => invokeIpc("app:send-agent-prompt", agentId, input),
     sendAgentTerminalInput: (agentId, input) => invokeIpc("app:send-agent-terminal-input", agentId, input),
     getAgentTerminalBuffer: (agentId) => invokeIpc("app:get-agent-terminal-buffer", agentId),
     getAgentContextPreview: (agentId) => invokeIpc("app:get-agent-context-preview", agentId),
+    getAgentContextState: (agentId) => invokeIpc("app:get-agent-context-state", agentId),
+    listWorkspaceAgentContextSources: (projectId, excludeAgentId) =>
+      invokeIpc("app:list-workspace-agent-context-sources", projectId, excludeAgentId),
     clearAgentContext: (agentId) => invokeIpc("app:clear-agent-context", agentId),
     clearAgentTerminal: (agentId) => invokeIpc("app:clear-agent-terminal", agentId),
     resizeAgentTerminal: (agentId, cols, rows) => invokeIpc("app:resize-agent-terminal", agentId, cols, rows),

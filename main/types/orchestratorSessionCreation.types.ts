@@ -1,4 +1,5 @@
 import type {
+  AgentContextEntry,
   AgentCatalogEntry,
   AgentSession,
   AppState,
@@ -38,6 +39,7 @@ export interface SessionCreationDeps {
   ) => Promise<{ session: SessionRecord; worktree: WorktreeRecord }>;
   resolveTerminalShell: (shellId?: string) => TerminalShellOption;
   initializeAgentContextFiles: (agent: AgentSession) => Promise<void>;
+  appendAgentContextEntries: (agent: AgentSession, entries: AgentContextEntry[]) => Promise<void>;
   attachAgentToWorktree: (agent: AgentSession, worktree: WorktreeRecord) => Promise<void>;
   attachTerminalToWorktree: (terminal: TerminalSession, worktree: WorktreeRecord) => Promise<void>;
   upsertSession: (sessions: SessionRecord[], session: SessionRecord) => SessionRecord[];

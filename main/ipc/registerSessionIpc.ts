@@ -1,18 +1,14 @@
 import type { AppState, CreateAgentPayload, CreateTerminalPayload } from "@shared/appTypes";
 import { ipcMain } from "electron";
 import type { MainServices } from "@main/services/mainServices";
+import { normalizeCreateAgentPayload, validateCreateAgentPayload } from "@main/helpers/ipcValidation";
 
 interface RegisterSessionIpcDeps {
   services: MainServices;
   withSnapshot: (action: () => Promise<AppState>) => Promise<AppState>;
-  validateCreateAgentPayload: (payload: CreateAgentPayload) => void;
 }
 
-export function registerSessionIpc({
-  services,
-  withSnapshot,
-  validateCreateAgentPayload
-}: RegisterSessionIpcDeps): void {
+export function registerSessionIpc({ services, withSnapshot }: RegisterSessionIpcDeps): void {
   ipcMain.handle("app:clear-agent-context", (_event, agentId: string) =>
     services.session.clearAgentContext(agentId)
   );
@@ -27,8 +23,9 @@ export function registerSessionIpc({
   );
   ipcMain.handle("app:create-agent", (_event, payload: CreateAgentPayload) =>
     withSnapshot(() => {
-      validateCreateAgentPayload(payload);
-      return services.session.createAgent(payload);
+      const normalized = normalizeCreateAgentPayload(payload);
+      validateCreateAgentPayload(normalized);
+      return services.session.createAgent(normalized);
     })
   );
   ipcMain.handle("app:create-terminal", (_event, payload: CreateTerminalPayload) =>
@@ -39,6 +36,9 @@ export function registerSessionIpc({
   );
   ipcMain.handle("app:send-agent-input", (_event, agentId: string, input: string) =>
     withSnapshot(() => services.session.sendAgentInput(agentId, input))
+  );
+  ipcMain.handle("app:send-agent-prompt", (_event, agentId: string, input) =>
+    services.session.sendAgentPrompt(agentId, input)
   );
   ipcMain.handle("app:send-agent-terminal-input", (_event, agentId: string, input: string) =>
     services.session.sendAgentTerminalInput(agentId, input)

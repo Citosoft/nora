@@ -1,5 +1,6 @@
 import type {
   AgentCatalogEntry,
+  AgentContextEntry,
   AgentSession,
   AgentSkillCatalog,
   LocalTerminalState,
@@ -24,6 +25,9 @@ type TerminalStateHelpers = {
 type TranscriptHelpers = {
   initializeAgentContextFiles: (agent: AgentSession) => Promise<void>;
   readContextFile: (contextFilePath: string) => Promise<string>;
+  readContextEntries: (contextFilePath: string) => Promise<AgentContextEntry[]>;
+  appendContextEntries: (agent: AgentSession, entries: AgentContextEntry[]) => Promise<void>;
+  writeContextBundle: (agent: AgentSession, bundleId: string, content: string) => Promise<string>;
   clearAgentContext: (agent: AgentSession) => Promise<void>;
 };
 
@@ -79,6 +83,18 @@ export class TerminalMutationFacade {
 
   async readContextFile(contextFilePath: string): Promise<string> {
     return this.transcriptHelpers.readContextFile(contextFilePath);
+  }
+
+  async readContextEntries(contextFilePath: string): Promise<AgentContextEntry[]> {
+    return this.transcriptHelpers.readContextEntries(contextFilePath);
+  }
+
+  async appendContextEntries(agent: AgentSession, entries: AgentContextEntry[]): Promise<void> {
+    await this.transcriptHelpers.appendContextEntries(agent, entries);
+  }
+
+  async writeContextBundle(agent: AgentSession, bundleId: string, content: string): Promise<string> {
+    return this.transcriptHelpers.writeContextBundle(agent, bundleId, content);
   }
 
   async resetTerminalTranscript(terminal: TerminalSession): Promise<void> {
