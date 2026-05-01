@@ -14,7 +14,7 @@ test("badge variants include dark-mode classes for default, secondary, and outli
 test("success badge includes tuned dark-mode styling for deployment readiness", () => {
   const source = readFileSync(join(process.cwd(), "renderer/components/ui/badge.tsx"), "utf8");
 
-  assert.match(source, /success:\s*"[^"]*dark:border-emerald-300\/55/);
-  assert.match(source, /success:\s*"[^"]*dark:bg-emerald-500\/12/);
+  assert.match(source, /success:\s*"[^"]*dark:border-emerald-400\/50/);
+  assert.match(source, /success:\s*"[^"]*dark:bg-emerald-950/);
   assert.match(source, /success:\s*"[^"]*dark:text-emerald-100/);
 });
