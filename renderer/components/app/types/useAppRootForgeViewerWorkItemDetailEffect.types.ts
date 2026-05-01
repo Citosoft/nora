@@ -5,7 +5,7 @@ export type UseAppRootForgeViewerWorkItemDetailEffectArgs = {
   focusedForgeViewerTab: ForgeViewerTabState | null;
   forgeWorkItemDetail: ForgeWorkItemDetail | null;
   loadForgeWorkItemDetail: (
-    kind: ForgeViewerTabState["kind"],
+    kind: "pull_request" | "issue",
     number: number,
     repoOverride: { host: string; fullName: string } | null
   ) => void;

@@ -27,6 +27,9 @@ export type FocusedAgentInputComposerProps = {
   attachedWorkspacePaths: WorkspacePathAttachmentDraft[];
   contextSelector: FocusedAgentContextSelectorState;
   isLoadingContextSources: boolean;
+  hasVoiceTranscriptionApiKey: boolean;
+  isVoiceInputSupported: boolean;
+  isListeningVoiceInput: boolean;
   isSendingTerminalInput: boolean;
   isSavingPastedImage: boolean;
   canSendLiveTerminalInput: boolean;
@@ -38,5 +41,6 @@ export type FocusedAgentInputComposerProps = {
   onDrop: (event: ReactDragEvent<HTMLInputElement>) => void;
   onPaste: (event: ReactClipboardEvent<HTMLInputElement>) => void | Promise<void>;
   onSend: () => void | Promise<void>;
+  onToggleVoiceInput: () => void;
   inputRef: RefObject<HTMLInputElement | null>;
 };

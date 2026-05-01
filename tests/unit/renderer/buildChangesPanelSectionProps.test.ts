@@ -61,6 +61,7 @@ function createBuildDeps(
     setForgeWorkItemDetail: () => null,
     setForgeWorkItemDetailErrorMessage: () => null,
     setIsCenterDiffExpanded: () => true,
+    setIsCenterFullDiffExpanded: () => false,
     setIsCreatePullRequestDialogOpen: () => true,
     setIsTaskBoardOpen: () => true,
     setTaskEditorState: () => null,
@@ -98,6 +99,10 @@ test("buildChangesPanelSectionProps opens the selected change in the center diff
         calls.push("expand-diff");
         return true;
       },
+      setIsCenterFullDiffExpanded: () => {
+        calls.push("collapse-full-diff");
+        return false;
+      },
       setActiveWorkspaceContentTab: () => {
         calls.push("activate-diff-tab");
         return "diff";
@@ -112,6 +117,7 @@ test("buildChangesPanelSectionProps opens the selected change in the center diff
     "select",
     "clear-task-editor",
     "close-task-board",
+    "collapse-full-diff",
     "expand-diff",
     "activate-diff-tab"
   ]);
@@ -133,6 +139,10 @@ test("buildChangesPanelSectionProps leaves the center surface unchanged when sel
       setIsCenterDiffExpanded: () => {
         calls.push("expand-diff");
         return true;
+      },
+      setIsCenterFullDiffExpanded: () => {
+        calls.push("collapse-full-diff");
+        return false;
       },
       setActiveWorkspaceContentTab: () => {
         calls.push("activate-diff-tab");

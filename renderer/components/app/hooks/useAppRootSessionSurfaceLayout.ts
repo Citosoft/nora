@@ -17,6 +17,7 @@ export const useAppRootSessionSurfaceLayout = ({
   uiState,
   fileEditorState,
   isCenterDiffExpanded,
+  isCenterFullDiffExpanded,
   selectedChange,
   workspaceSplitViews,
   saveWorkspaceSplitViews,
@@ -63,7 +64,10 @@ export const useAppRootSessionSurfaceLayout = ({
         uiState.forgeViewerTabs,
         activeSplitViewCollection.views,
         fileEditorState?.tabs ?? [],
-        isCenterDiffExpanded && selectedChange ? selectedChange.path : null
+        isCenterDiffExpanded
+          ? (isCenterFullDiffExpanded ? "__all_changes__" : (selectedChange ? selectedChange.path : null))
+          : null,
+        isCenterDiffExpanded && isCenterFullDiffExpanded ? (snapshot?.changes.length ?? 0) : undefined
       )
     : [];
   const shouldShowProjectSelectorScreen =

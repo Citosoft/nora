@@ -62,6 +62,7 @@ export const assembleSignedInChangesPanelSectionBuild = (
     setActiveWorkspaceContentTab: sessionSurface.setActiveWorkspaceContentTab,
     ...forgeWorkItemMutators,
     setIsCenterDiffExpanded: sessionSurface.setIsCenterDiffExpanded,
+    setIsCenterFullDiffExpanded: sessionSurface.setIsCenterFullDiffExpanded,
     setIsCreatePullRequestDialogOpen: modalExtras.setIsCreatePullRequestDialogOpen,
     setIsTaskBoardOpen: workspaceContent.setIsTaskBoardOpen,
     setTaskEditorState: workspaceContent.setTaskEditorState,

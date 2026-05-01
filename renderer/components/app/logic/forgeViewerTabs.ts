@@ -3,7 +3,7 @@ import type { ForgeWorkItemKind } from "@shared/appTypes";
 
 export function createForgeViewerTab(
   projectId: string,
-  kind: ForgeWorkItemKind,
+  kind: ForgeWorkItemKind | "workflow_run",
   number: number,
   title: string,
   repoOverride?: { host: string; fullName: string } | null
@@ -13,7 +13,7 @@ export function createForgeViewerTab(
     projectId,
     kind,
     number,
-    title: title.trim() || `${kind === "pull_request" ? "PR" : "Issue"} #${number}`,
+    title: title.trim() || (kind === "workflow_run" ? `Action #${number}` : `${kind === "pull_request" ? "PR" : "Issue"} #${number}`),
     forgeRepoHostOverride: repoOverride?.host ?? null,
     forgeRepoFullNameOverride: repoOverride?.fullName ?? null
   };

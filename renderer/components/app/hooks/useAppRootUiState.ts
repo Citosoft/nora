@@ -7,6 +7,7 @@ type AppClosingState = { detail: string; command: string | null } | null;
 
 type AppRootUiState = {
   isCenterDiffExpanded: boolean;
+  isCenterFullDiffExpanded: boolean;
   activeWorkspaceContentTab: "file" | "diff" | null;
   activeView: AppView;
   settingsGroup: SettingsGroup;
@@ -24,6 +25,7 @@ export function useAppRootUiState(
   initialActiveWorkspaceContentTab: "file" | "diff" | null
 ): AppRootUiState & {
   setIsCenterDiffExpanded: Dispatch<SetStateAction<boolean>>;
+  setIsCenterFullDiffExpanded: Dispatch<SetStateAction<boolean>>;
   setActiveWorkspaceContentTab: Dispatch<SetStateAction<"file" | "diff" | null>>;
   setActiveView: Dispatch<SetStateAction<AppView>>;
   setSettingsGroup: Dispatch<SetStateAction<SettingsGroup>>;
@@ -34,6 +36,7 @@ export function useAppRootUiState(
 } {
   const [state, setState] = useState<AppRootUiState>({
     isCenterDiffExpanded: false,
+    isCenterFullDiffExpanded: false,
     activeWorkspaceContentTab: initialActiveWorkspaceContentTab,
     activeView: "main",
     settingsGroup: "appearance",
@@ -47,6 +50,13 @@ export function useAppRootUiState(
     setState((current) => ({
       ...current,
       isCenterDiffExpanded: resolveNext(current.isCenterDiffExpanded, next)
+    }));
+  }, []);
+
+  const setIsCenterFullDiffExpanded = useCallback<Dispatch<SetStateAction<boolean>>>((next) => {
+    setState((current) => ({
+      ...current,
+      isCenterFullDiffExpanded: resolveNext(current.isCenterFullDiffExpanded, next)
     }));
   }, []);
 
@@ -102,6 +112,7 @@ export function useAppRootUiState(
   return {
     ...state,
     setIsCenterDiffExpanded,
+    setIsCenterFullDiffExpanded,
     setActiveWorkspaceContentTab,
     setActiveView,
     setSettingsGroup,

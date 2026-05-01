@@ -13,6 +13,8 @@ export function createIntegrationBridge(): IntegrationBridge {
       invokeIpc("app:get-forge-branch-pull-request-status", projectId, branch, options),
     getForgeWorkItemDetail: (projectId, kind, number, options) =>
       invokeIpc("app:get-forge-work-item-detail", projectId, kind, number, options),
+    getForgeWorkflowRunDetail: (projectId, runId, options) =>
+      invokeIpc("app:get-forge-workflow-run-detail", projectId, runId, options),
     addForgeWorkItemComment: (projectId, kind, number, payload, options) =>
       invokeIpc("app:add-forge-work-item-comment", projectId, kind, number, payload, options),
     createForgePullRequest: (projectId, payload, options) =>

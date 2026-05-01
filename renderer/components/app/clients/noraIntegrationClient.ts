@@ -23,6 +23,8 @@ export const noraIntegrationClient: IntegrationGateway = {
     baseIntegrationClient.getForgeBranchPullRequestStatus(projectId, branch, options),
   getForgeWorkItemDetail: (projectId: string, kind: ForgeWorkItemKind, number: number, options: ForgeRequestOptions) =>
     baseIntegrationClient.getForgeWorkItemDetail(projectId, kind, number, options),
+  getForgeWorkflowRunDetail: (projectId: string, runId: number, options: ForgeRequestOptions) =>
+    baseIntegrationClient.getForgeWorkflowRunDetail(projectId, runId, options),
   performForgeWorkItemAction: (
     projectId: string,
     kind: ForgeWorkItemKind,

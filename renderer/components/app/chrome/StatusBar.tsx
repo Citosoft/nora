@@ -7,13 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import type { AgentCatalogEntry, AgentSkillCatalog, ToolUsageInfo } from "@shared/appTypes";
-import { LoaderCircle, RefreshCcw, Sparkles, UserRound, Wrench } from "lucide-react";
+import { GitBranch, LoaderCircle, RefreshCcw, Sparkles, UserRound, Wrench } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 interface StatusBarProps {
   entries: StatusBarEntry[];
   tools?: AgentCatalogEntry[];
   agentSkillCatalogs?: AgentSkillCatalog[];
+  activeWorkspaceBranch?: string | null;
+  activeWorkspaceWorktreeName?: string | null;
   onInstallTool?: (toolId: string) => Promise<void> | void;
   onSwitchToolAccount?: (toolId: string) => Promise<void> | void;
   onOpenSkillsSettings?: () => void;
@@ -113,6 +115,8 @@ export function StatusBar({
   entries,
   tools = [],
   agentSkillCatalogs = [],
+  activeWorkspaceBranch = null,
+  activeWorkspaceWorktreeName = null,
   onInstallTool,
   onSwitchToolAccount,
   onOpenSkillsSettings
@@ -490,6 +494,14 @@ export function StatusBar({
         </div>
       </div>
       <div className="flex items-center gap-4">
+        {activeWorkspaceBranch || activeWorkspaceWorktreeName ? (
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <GitBranch className="size-3.5" />
+            <span className="truncate" title={[activeWorkspaceBranch, activeWorkspaceWorktreeName].filter(Boolean).join(" · ")}>
+              {[activeWorkspaceBranch, activeWorkspaceWorktreeName].filter(Boolean).join(" · ")}
+            </span>
+          </div>
+        ) : null}
         <div>{activeEntry ? "Working" : "Idle"}</div>
       </div>
     </div>

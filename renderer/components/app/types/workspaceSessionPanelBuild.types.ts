@@ -39,6 +39,7 @@ type WorkspaceSessionPanelDataDepsKeys =
   | "forgeViewerTab"
   | "forgeViewerTabs"
   | "isDiffExpanded"
+  | "isFullDiffExpanded"
   | "platform"
   | "project"
   | "projectScripts"
@@ -83,7 +84,7 @@ export type WorkspaceSessionPanelOrchestrationDeps = {
   openAiChat: WorkspaceSessionPanelProps["onOpenAiChat"];
   openForgeViewer: (
     projectId: string,
-    kind: ForgeWorkItemKind,
+    kind: ForgeWorkItemKind | "workflow_run",
     number: number,
     title: string,
     repoOverride?: { host: string; fullName: string } | null
@@ -98,6 +99,7 @@ export type WorkspaceSessionPanelOrchestrationDeps = {
   setFileEditorState: Dispatch<SetStateAction<FileEditorState | null>>;
   setGenerateTasksRequest: Dispatch<SetStateAction<{ projectId: string; specPath: string; nonce: number } | null>>;
   setIsCenterDiffExpanded: Dispatch<SetStateAction<boolean>>;
+  setIsCenterFullDiffExpanded: Dispatch<SetStateAction<boolean>>;
   setIsNoteBrowserOpen: Dispatch<SetStateAction<boolean>>;
   setIsSpecBrowserOpen: Dispatch<SetStateAction<boolean>>;
   setIsTaskBoardOpen: Dispatch<SetStateAction<boolean>>;

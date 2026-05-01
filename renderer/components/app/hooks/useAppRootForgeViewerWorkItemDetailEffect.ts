@@ -10,6 +10,9 @@ export const useAppRootForgeViewerWorkItemDetailEffect = ({
     if (!focusedForgeViewerTab) {
       return;
     }
+    if (focusedForgeViewerTab.kind === "workflow_run") {
+      return;
+    }
 
     const activeDetailRepo = forgeWorkItemDetail?.item.sourceRepository?.trim() || null;
     const focusedTabRepo = focusedForgeViewerTab.forgeRepoFullNameOverride?.trim() || null;

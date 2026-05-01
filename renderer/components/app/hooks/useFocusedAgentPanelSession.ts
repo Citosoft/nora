@@ -83,6 +83,8 @@ export const useFocusedAgentPanelSession = ({
   const [previewImageDraft, setPreviewImageDraft] = useState<PastedImageDraft | null>(null);
   const [isSendingTerminalInput, setIsSendingTerminalInput] = useState(false);
   const [isSavingPastedImage, setIsSavingPastedImage] = useState(false);
+  const [hasVoiceTranscriptionApiKey, setHasVoiceTranscriptionApiKey] = useState(false);
+  const [isListeningVoiceInput, setIsListeningVoiceInput] = useState(false);
   const workspaceProjectFaviconUrl = useWorkspaceProjectFavicon(workspace?.project.id ?? null, workspace?.project.rootPath ?? null);
   const [terminalSubmission, setTerminalSubmission] = useState<TerminalSubmission | null>(null);
   const [terminalResetVersion, setTerminalResetVersion] = useState(0);
@@ -92,8 +94,12 @@ export const useFocusedAgentPanelSession = ({
   const [defaultShellId, setDefaultShellId] = useState<string | null>(() => getStoredTerminalShellIds().defaultShellId);
   const infoPopoverRef = useRef<HTMLDivElement | null>(null);
   const terminalInputRef = useRef<HTMLInputElement | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const recordedVoiceChunksRef = useRef<BlobPart[]>([]);
   const activeSessionId = agent?.id || terminal?.id || null;
   const focusedSession = agent ?? terminal;
+  const canSendLiveTerminalInput = agent ? agent.status === "running" : terminal ? terminal.status === "running" : false;
   const isPreparingWorktree = !!agent && agent.status === "starting" && agent.lastTerminalLine === "Preparing worktree...";
   const sessionWorkspaceAbsoluteRoot = (() => {
     const raw = (agent?.workspace ?? terminal?.workspace ?? workspace?.project?.rootPath ?? "").trim();
@@ -103,6 +109,29 @@ export const useFocusedAgentPanelSession = ({
     workspace?.project.id ?? null,
     agent?.id
   );
+  const isVoiceInputSupported = typeof window !== "undefined" && !!window.MediaRecorder && !!navigator.mediaDevices?.getUserMedia;
+
+  useEffect(() => {
+    let cancelled = false;
+    const refreshVoiceKeyAvailability = async () => {
+      try {
+        const settings = await noraSystemClient.getAppSettings();
+        if (!cancelled) {
+          setHasVoiceTranscriptionApiKey(settings.ai.apiKeys.openai.trim().length > 0);
+        }
+      } catch {
+        if (!cancelled) {
+          setHasVoiceTranscriptionApiKey(false);
+        }
+      }
+    };
+    void refreshVoiceKeyAvailability();
+    window.addEventListener("focus", refreshVoiceKeyAvailability);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", refreshVoiceKeyAvailability);
+    };
+  }, []);
 
   useEffect(() => {
     setShowContext(false);
@@ -119,8 +148,22 @@ export const useFocusedAgentPanelSession = ({
     setPreviewImageDraft(null);
     setIsSendingTerminalInput(false);
     setIsSavingPastedImage(false);
+    setIsListeningVoiceInput(false);
     setTerminalSubmission(null);
+    mediaRecorderRef.current?.stop();
+    mediaRecorderRef.current = null;
+    mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+    mediaStreamRef.current = null;
+    recordedVoiceChunksRef.current = [];
   }, [agent?.id, terminal?.id]);
+
+  useEffect(() => () => {
+    mediaRecorderRef.current?.stop();
+    mediaRecorderRef.current = null;
+    mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+    mediaStreamRef.current = null;
+    recordedVoiceChunksRef.current = [];
+  }, []);
 
   useEffect(() => {
     const preferredShellId = resolvePreferredTerminalShellId(terminalShells);
@@ -289,6 +332,94 @@ export const useFocusedAgentPanelSession = ({
     }
   };
 
+  const handleToggleVoiceInput = useCallback(() => {
+    if (
+      !canSendLiveTerminalInput ||
+      isSendingTerminalInput ||
+      isSavingPastedImage ||
+      !isVoiceInputSupported ||
+      !hasVoiceTranscriptionApiKey
+    ) {
+      return;
+    }
+
+    if (isListeningVoiceInput) {
+      mediaRecorderRef.current?.stop();
+      return;
+    }
+
+    void (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const recorder = new MediaRecorder(stream);
+        recordedVoiceChunksRef.current = [];
+        mediaStreamRef.current = stream;
+        mediaRecorderRef.current = recorder;
+
+        recorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            recordedVoiceChunksRef.current.push(event.data);
+          }
+        };
+
+        recorder.onstop = () => {
+          const run = async () => {
+            try {
+              const chunks = recordedVoiceChunksRef.current;
+              recordedVoiceChunksRef.current = [];
+              if (!chunks.length) {
+                return;
+              }
+              const audioBlob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+              const audioBytes = new Uint8Array(await audioBlob.arrayBuffer());
+              const transcript = await noraSystemClient.transcribeVoiceInput({
+                audioData: Array.from(audioBytes),
+                mimeType: recorder.mimeType || "audio/webm"
+              });
+              const input = terminalInputRef.current;
+              if (!input) {
+                return;
+              }
+              const prefix = input.value.trim();
+              input.value = prefix.length > 0 ? `${prefix} ${transcript}` : transcript;
+              input.focus();
+            } catch (error) {
+              const message = error instanceof Error ? error.message : "Unknown transcription error.";
+              window.alert(`Voice input failed: ${message}`);
+            } finally {
+              setIsListeningVoiceInput(false);
+              mediaRecorderRef.current = null;
+              mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+              mediaStreamRef.current = null;
+            }
+          };
+          void run();
+        };
+
+        recorder.onerror = () => {
+          setIsListeningVoiceInput(false);
+          mediaRecorderRef.current = null;
+          mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+          mediaStreamRef.current = null;
+          recordedVoiceChunksRef.current = [];
+          window.alert("Voice recording failed. Check microphone permissions and try again.");
+        };
+
+        recorder.start();
+        setIsListeningVoiceInput(true);
+      } catch {
+        window.alert("Microphone permission is required for voice input. Please allow microphone access and try again.");
+      }
+    })();
+  }, [
+    canSendLiveTerminalInput,
+    isListeningVoiceInput,
+    isSavingPastedImage,
+    isSendingTerminalInput,
+    isVoiceInputSupported,
+    hasVoiceTranscriptionApiKey
+  ]);
+
   const handleAgentInputPaste = async (event: ReactClipboardEvent<HTMLInputElement>) => {
     if (!agent || isSavingPastedImage) {
       return;
@@ -357,7 +488,6 @@ export const useFocusedAgentPanelSession = ({
   }, [platform]);
   const isDirectSshWorkspace = workspace?.project.location?.kind === "ssh";
   const directSshHost = workspace?.project.location?.kind === "ssh" ? workspace.project.location.host : null;
-  const canSendLiveTerminalInput = agent ? agent.status === "running" : terminal ? terminal.status === "running" : false;
   const buildTaskInstructionText = (taskReference: WorkspaceTaskDragPayload): string => {
     const absoluteTaskPath = resolveTaskInstructionPath(taskReference.projectRootPath, taskReference.taskPath);
     return formatTaskFileInstruction(absoluteTaskPath);
@@ -566,6 +696,9 @@ export const useFocusedAgentPanelSession = ({
     setPreviewImageDraft,
     isSendingTerminalInput,
     isSavingPastedImage,
+    hasVoiceTranscriptionApiKey,
+    isVoiceInputSupported,
+    isListeningVoiceInput,
     contextSelector: {
       sources: contextSources,
       selections: contextSelections
@@ -584,6 +717,7 @@ export const useFocusedAgentPanelSession = ({
     handleClearTerminal,
     handleRestart,
     handleSendTerminalInput,
+    handleToggleVoiceInput,
     handleChangeContextSelections,
     handleAgentInputPaste,
     handleRemovePastedImage,

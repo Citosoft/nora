@@ -2,10 +2,24 @@ import { noraWorkspaceManagementClient } from "@/components/app/clients/noraWork
 import type { AppChromeShellComposeSlice } from "@/components/app/types/appChromeShellComposeSlice.types";
 import type { AppShellSignedInAssemblySources } from "@/components/app/types/appShellSignedInAssemblySources.types";
 
-type SignedInChromeShellAssemblySlice = Pick<AppShellSignedInAssemblySources, "core" | "sessionSurface" | "chromeShell">;
+type SignedInChromeShellAssemblySlice = Pick<AppShellSignedInAssemblySources, "core" | "sessionSurface" | "chromeShell" | "gitBranches">;
+
+function getPathLeaf(pathValue: string | null | undefined): string | null {
+  if (!pathValue) {
+    return null;
+  }
+  const normalized = pathValue.replace(/\\/g, "/").replace(/\/+$/, "");
+  if (!normalized) {
+    return null;
+  }
+  const segments = normalized.split("/");
+  return segments[segments.length - 1] || null;
+}
 
 export const assembleSignedInChromeShellComposeSlice = (s: SignedInChromeShellAssemblySlice): AppChromeShellComposeSlice => {
-  const { core, sessionSurface, chromeShell } = s;
+  const { core, sessionSurface, chromeShell, gitBranches } = s;
+  const activeWorktreePath = core.snapshot.changesRoot || sessionSurface.focusedWorkspace?.project.rootPath || null;
+  const activeWorkspaceWorktreeName = getPathLeaf(activeWorktreePath);
 
   return {
     titleBar: {
@@ -82,6 +96,8 @@ export const assembleSignedInChromeShellComposeSlice = (s: SignedInChromeShellAs
       entries: chromeShell.statusEntries,
       tools: core.snapshot.agentCatalog,
       agentSkillCatalogs: core.snapshot.agentSkillCatalogs,
+      activeWorkspaceBranch: gitBranches.activeBranch || null,
+      activeWorkspaceWorktreeName,
       onInstallTool: chromeShell.installStatusBarTool,
       onSwitchToolAccount: chromeShell.switchStatusBarToolAccount,
       onOpenSkillsSettings: () => core.openSettingsPage("skills")

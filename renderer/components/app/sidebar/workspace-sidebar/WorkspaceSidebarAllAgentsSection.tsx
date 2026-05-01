@@ -46,7 +46,7 @@ export const WorkspaceSidebarAllAgentsSection = ({
   return (
     <section className="border-t border-border/60">
       <div className="flex items-center justify-between bg-background/70 px-4 py-2">
-        <div className="text-[12px] font-medium text-muted-foreground">Agents</div>
+        <div className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">Agents</div>
         <div className="flex items-center gap-2">
           <div className="text-xs text-muted-foreground">{filteredAllWorkspaceAgentEntries.length}</div>
           <Popover>

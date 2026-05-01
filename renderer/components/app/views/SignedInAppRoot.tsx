@@ -120,7 +120,9 @@ function SignedInAppRootContent({
     focusLocalTerminalDock,
     setLocalTerminalState,
     setIsCenterDiffExpanded,
-    isCenterDiffExpanded
+    setIsCenterFullDiffExpanded,
+    isCenterDiffExpanded,
+    isCenterFullDiffExpanded
   } = useAppRootShellState();
   const dialogs = useAppRootDialogs();
   const {
@@ -145,6 +147,7 @@ function SignedInAppRootContent({
       buildKeyboardShortcutActions({
         activeWorkspaceContentTab,
         appSettingsTerminalQuickLaunchDefaults: props.preferences.appSettings.terminalQuickLaunchDefaults,
+        createTerminalWithStatus: sessionActions.createTerminalWithStatus,
         defaultTerminalShellId: props.defaultTerminalShellId,
         fileEditorState: sessionActions.fileEditorState,
         focusLocalTerminalDock,
@@ -183,11 +186,13 @@ function SignedInAppRootContent({
     [
       activeWorkspaceContentTab,
       props.preferences.appSettings.terminalQuickLaunchDefaults,
+      sessionActions.createTerminalWithStatus,
       props.defaultTerminalShellId,
       sessionActions.fileEditorState,
       focusLocalTerminalDock,
       props.centerTabs.handleOpenWorkspaceBrowser,
       isCenterDiffExpanded,
+      isCenterFullDiffExpanded,
       props.navigation.openSettingsPage,
       dialogs.openStartupDependenciesDialog,
       sessionFocusCommands,
@@ -629,9 +634,11 @@ function SignedInAppRootContent({
           focusedWorkspace: layout.focusedWorkspace,
           selectedChange: layout.selectedChange,
           isCenterDiffExpanded: activeWorkspaceContentTab === "diff",
+          isCenterFullDiffExpanded,
           setActiveWorkspaceContentTab,
           setFileEditorState: sessionActions.setFileEditorState,
           setIsCenterDiffExpanded,
+          setIsCenterFullDiffExpanded,
           splitViewsErrorMessage: layout.splitViewsErrorMessage,
           splitViewsLoading: layout.splitViewsLoading,
           shouldShowProjectSelectorScreen: layout.shouldShowProjectSelectorScreen,
@@ -753,6 +760,7 @@ function SignedInAppRootContent({
     setActiveWorkspaceContentTab,
     sessionActions.setFileEditorState,
     setIsCenterDiffExpanded,
+    setIsCenterFullDiffExpanded,
     layout.splitViewsErrorMessage,
     layout.splitViewsLoading,
     layout.shouldShowProjectSelectorScreen,

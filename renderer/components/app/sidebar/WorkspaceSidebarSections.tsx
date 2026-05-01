@@ -383,7 +383,7 @@ function SectionHeader({
 }) {
   return (
     <div className="flex items-center justify-between bg-background/70 px-4 pb-2.5 pt-1.5">
-      <div className="text-[12px] font-medium text-muted-foreground">{title}</div>
+      <div className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">{title}</div>
       <div className="flex items-center gap-2">
         <div className="text-xs text-muted-foreground">{detail}</div>
         <Button variant="ghost" size="icon" className="size-7" onClick={onToggleCollapsed} aria-label={isCollapsed ? `Expand ${title.toLowerCase()} section` : `Collapse ${title.toLowerCase()} section`}>

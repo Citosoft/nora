@@ -18,7 +18,7 @@ import { VercelPanel } from "@/components/app/panels/VercelPanel";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { ForgeProviderIcon } from "@/components/app/views/ForgeProviderIcon";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -127,6 +127,23 @@ function importedContextBundleHeadline(entry: ContextBundleHeadlineFields): stri
   return "Imported context";
 }
 
+function buildContextGroupTooltipContent(groupTitle: string): string {
+  return `${groupTitle}\n\nClick to start a new agent with this conversation group attached.`;
+}
+
+function buildExternalHarnessTooltipContent(sessionLabel: string): string {
+  return `${sessionLabel}\n\nClick to start a new agent with this transcript attached.`;
+}
+
+function buildImportedBundleTooltipContent(
+  headline: string,
+  path: string,
+  displaySources: string | null
+): string {
+  const prefix = displaySources ? `${headline}\n${displaySources}\n${path}` : `${headline}\n${path}`;
+  return `${prefix}\n\nDrag to an agent terminal to paste the path.`;
+}
+
 function VercelMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden="true" fill="currentColor">
@@ -179,6 +196,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
     onOpenUrl: onOpenForgeUrl,
     onOpenForgeViewer,
     onOpenForgeItem,
+    onOpenForgeWorkflowRun,
     onBackFromForgeItem,
     onRefreshForgeItem,
     onForgeAction,
@@ -215,6 +233,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
     onActiveTabChange,
     onRefreshChanges,
     onSelectChange,
+    onOpenFullDiff,
     onCommitChanges,
     canGenerateAiCommitMessage,
     onGenerateCommitMessage,
@@ -648,14 +667,12 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
 
   const commitSubtitle = (entry: CommitHistoryEntry) =>
     `${entry.author} · ${formatCommitTimestamp(entry.authoredAt)} · ${entry.shortHash}`;
-  const activeSidebarTabClass = resolvedTheme === "dark"
-    ? "bg-accent/70 text-foreground"
-    : "bg-muted text-foreground";
+  const activeSidebarTabClass = "bg-muted text-foreground";
 
   return (
-    <Card className={cn("flex h-full min-h-0 flex-col overflow-hidden rounded-none border-y-0 border-x-0 bg-card/95 shadow-none", collapsed && "changes-sidebar-collapsed-surface")}>
+    <section className={cn("flex h-full min-h-0 min-w-0 flex-col overflow-hidden border-y-0 border-r-0 border-l border-l-border/70 bg-card/95", collapsed && "changes-sidebar-collapsed-surface")}>
       {!collapsed ? (
-        <CardHeader className="border-b border-border/60 px-0 py-2">
+        <CardHeader className="min-w-0 border-b border-border/60 px-0 py-2">
           <div className="mb-2 flex items-center gap-3 px-4">
             <div className="min-w-0 flex-1">
               <div className="flex w-full flex-wrap items-center rounded-[4px] border border-border/60 bg-background/40 p-1 sm:flex-nowrap">
@@ -739,8 +756,8 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
               </div>
             </div>
           </div>
-          <div className="mt-3 space-y-3 px-4">
-            <CardTitle className="text-base font-semibold">
+          <div className="mt-3 min-w-0 space-y-3 px-4">
+            <CardTitle className="truncate text-base font-semibold">
               {activeTab === "git"
                 ? (
                     isInspectingCommit
@@ -883,9 +900,9 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                         </div>
                       </div>
                     </div>
-                    <Button variant="outline" className="h-9 justify-start gap-2" onClick={() => void onClearCommitInspection()}>
+                    <Button variant="outline" className="h-8 justify-start gap-2 rounded-[6px] px-3 text-[11px] font-semibold" onClick={() => void onClearCommitInspection()}>
                       <Undo2 className="size-4" />
-                      <span className="text-xs font-medium uppercase tracking-[0.14em]">Back to working tree</span>
+                      <span>Back to working tree</span>
                     </Button>
                   </div>
                 ) : (
@@ -905,13 +922,13 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                             }
                           }}
                           placeholder="Write commit message"
-                          className="h-9"
+                          className="h-8 text-[12px]"
                         />
                         {canGenerateAiCommitMessage ? (
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-9 w-9 shrink-0"
+                            className="h-8 w-8 shrink-0"
                             disabled={selectedChangeCount === 0 || isGeneratingCommitMessage || isCommitting}
                             onClick={() => void handleGenerateCommitMessage()}
                             tooltip={isGeneratingCommitMessage ? "Generating commit message with AI" : "Generate commit message with AI"}
@@ -922,36 +939,36 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                         ) : null}
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-3 gap-0 rounded-[6px] border border-border/70 bg-background/40">
                       <Button
-                        variant="default"
-                        className="h-9 justify-start gap-2"
+                        variant="outline"
+                        className="button-default-surface h-8 w-full justify-center gap-1.5 rounded-none border-0 border-r border-border/70 px-3 text-[11px] font-semibold tracking-normal"
                         disabled={!snapshot.changes.length || selectedChangeCount === 0 || !commitMessage.trim() || isCommitting}
                         onClick={() => void handleCommit()}
-                        title="Create commit"
+                        tooltip="Create commit"
                       >
-                        {isCommitting ? null : <FileText className="size-4" />}
-                        <span className="text-xs font-medium uppercase tracking-[0.14em]">{isCommitting ? "Working" : "Commit"}</span>
+                        {isCommitting ? null : <FileText className="size-3.5" />}
+                        <span>{isCommitting ? "Working" : "Commit"}</span>
                       </Button>
                       <Button
                         variant="outline"
-                        className="h-9 justify-start gap-2"
+                        className="h-8 w-full justify-center gap-1.5 rounded-none border-0 border-r border-border/70 px-3 text-[11px] font-semibold tracking-normal"
                         disabled={!snapshot.project || isPushing || isInspectingCommit}
                         onClick={() => void handlePush()}
-                        title="Push branch"
+                        tooltip="Push branch"
                       >
-                        {isPushing ? null : <ArrowUp className="size-4" />}
-                        <span className="text-xs font-medium uppercase tracking-[0.14em]">{isPushing ? "Working" : "Push"}</span>
+                        {isPushing ? null : <ArrowUp className="size-3.5" />}
+                        <span>{isPushing ? "Working" : "Push"}</span>
                       </Button>
                       <Button
                         variant="outline"
-                        className="h-9 justify-start gap-2"
+                        className="h-8 w-full justify-center gap-1.5 rounded-none border-0 px-3 text-[11px] font-semibold tracking-normal"
                         disabled={!canCreatePullRequest}
                         onClick={canCreatePullRequest ? onOpenCreatePullRequest : undefined}
-                        title={canCreatePullRequest ? `${createPullRequestLabel} from ${activeBranch}` : (createPullRequestDisabledReason ?? `${createPullRequestLabel} unavailable`)}
+                        tooltip={canCreatePullRequest ? `${createPullRequestLabel} from ${activeBranch}` : (createPullRequestDisabledReason ?? `${createPullRequestLabel} unavailable`)}
                       >
-                        <GitPullRequest className="size-4" />
-                        <span className="text-xs font-medium uppercase tracking-[0.14em]">{createPullRequestLabel}</span>
+                        <GitPullRequest className="size-3.5" />
+                        <span>{createPullRequestLabel}</span>
                       </Button>
                     </div>
                     <div className="text-[11px] text-muted-foreground">
@@ -1156,28 +1173,28 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                                   </div>
                                   <div className="space-y-2 p-3">
                                     {source.entryGroups.map((group) => (
-                                      <button
-                                        key={group.id}
-                                        type="button"
-                                        className="w-full rounded-md border border-border/60 bg-background/30 px-2 py-2 text-left outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                                        title={`${group.title}\n\nClick to start a new agent with this conversation group attached.`}
-                                        aria-label={`New agent with context: ${source.agentName} — ${group.title}`}
-                                        onClick={() => handleOpenCreateAgentFromContextGroup(source, group)}
-                                      >
-                                        <div className="flex flex-wrap items-center justify-between gap-2">
-                                          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-                                            <span className="text-sm font-medium text-foreground">{group.title}</span>
-                                            <span className="text-[11px] text-muted-foreground">
-                                              {group.entryCount} entr{group.entryCount === 1 ? "y" : "ies"} · ~
-                                              {group.estimate.estimatedTokens.toLocaleString()} tok
+                                      <Tooltip key={group.id} content={buildContextGroupTooltipContent(group.title)}>
+                                        <button
+                                          type="button"
+                                          className="w-full rounded-md border border-border/60 bg-background/30 px-2 py-2 text-left outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                                          aria-label={`New agent with context: ${source.agentName} — ${group.title}`}
+                                          onClick={() => handleOpenCreateAgentFromContextGroup(source, group)}
+                                        >
+                                          <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                                              <span className="text-sm font-medium text-foreground">{group.title}</span>
+                                              <span className="text-[11px] text-muted-foreground">
+                                                {group.entryCount} entr{group.entryCount === 1 ? "y" : "ies"} · ~
+                                                {group.estimate.estimatedTokens.toLocaleString()} tok
+                                              </span>
+                                            </div>
+                                            <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
+                                              {formatTimestamp(group.lastUpdatedAt)}
                                             </span>
                                           </div>
-                                          <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
-                                            {formatTimestamp(group.lastUpdatedAt)}
-                                          </span>
-                                        </div>
-                                        <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{group.latestPreview}</div>
-                                      </button>
+                                          <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{group.latestPreview}</div>
+                                        </button>
+                                      </Tooltip>
                                     ))}
                                   </div>
                                 </div>
@@ -1211,43 +1228,46 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                           ) : (
                             <div className="space-y-2">
                               {externalHarnessSessions.map((session) => (
-                                <button
+                                <Tooltip
                                   key={`${session.toolId}:${session.primaryArtifactPath}`}
-                                  type="button"
-                                  disabled={openingExternalHarnessArtifactPath === session.primaryArtifactPath}
-                                  className="w-full rounded-md border border-border/60 bg-background/30 px-2 py-2 text-left outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-60"
-                                  title={`${session.sessionLabel}\n\nClick to start a new agent with this transcript attached.`}
-                                  aria-label={`New agent with external CLI context: ${session.sessionLabel}`}
-                                  onClick={() => void handleOpenCreateAgentFromExternalHarness(session)}
+                                  content={buildExternalHarnessTooltipContent(session.sessionLabel)}
                                 >
-                                  <div className="flex min-w-0 items-stretch gap-2">
-                                    <div className="flex shrink-0 items-center" aria-hidden>
-                                      <AgentToolIcon
-                                        toolId={session.toolId}
-                                        label={session.toolLabel}
-                                        className="size-8 shrink-0"
-                                        imageClassName="size-5 rounded-sm"
-                                      />
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                      <div className="flex flex-wrap items-center justify-between gap-2">
-                                        <span className="text-sm font-medium text-foreground">{session.sessionLabel}</span>
-                                        <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
-                                          {formatTimestamp(session.lastUpdatedAt)}
-                                        </span>
+                                  <button
+                                    type="button"
+                                    disabled={openingExternalHarnessArtifactPath === session.primaryArtifactPath}
+                                    className="w-full rounded-md border border-border/60 bg-background/30 px-2 py-2 text-left outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-60"
+                                    aria-label={`New agent with external CLI context: ${session.sessionLabel}`}
+                                    onClick={() => void handleOpenCreateAgentFromExternalHarness(session)}
+                                  >
+                                    <div className="flex min-w-0 items-stretch gap-2">
+                                      <div className="flex shrink-0 items-center" aria-hidden>
+                                        <AgentToolIcon
+                                          toolId={session.toolId}
+                                          label={session.toolLabel}
+                                          className="size-8 shrink-0"
+                                          imageClassName="size-5 rounded-sm"
+                                        />
                                       </div>
-                                      <div className="mt-0.5 text-[11px] text-muted-foreground">
-                                        {session.entryCount} entr{session.entryCount === 1 ? "y" : "ies"} · ~
-                                        {session.estimate.estimatedTokens.toLocaleString()} tok · {session.estimate.characters.toLocaleString()}{" "}
-                                        chars
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                          <span className="text-sm font-medium text-foreground">{session.sessionLabel}</span>
+                                          <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
+                                            {formatTimestamp(session.lastUpdatedAt)}
+                                          </span>
+                                        </div>
+                                        <div className="mt-0.5 text-[11px] text-muted-foreground">
+                                          {session.entryCount} entr{session.entryCount === 1 ? "y" : "ies"} · ~
+                                          {session.estimate.estimatedTokens.toLocaleString()} tok · {session.estimate.characters.toLocaleString()}{" "}
+                                          chars
+                                        </div>
+                                        <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{session.latestPreview}</div>
                                       </div>
-                                      <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{session.latestPreview}</div>
+                                      {openingExternalHarnessArtifactPath === session.primaryArtifactPath ? (
+                                        <LoaderCircle className="mt-1 size-4 shrink-0 animate-spin text-primary" aria-hidden />
+                                      ) : null}
                                     </div>
-                                    {openingExternalHarnessArtifactPath === session.primaryArtifactPath ? (
-                                      <LoaderCircle className="mt-1 size-4 shrink-0 animate-spin text-primary" aria-hidden />
-                                    ) : null}
-                                  </div>
-                                </button>
+                                  </button>
+                                </Tooltip>
                               ))}
                             </div>
                           )}
@@ -1289,47 +1309,49 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                       <ul className="divide-y divide-border/50">
                         {importedBundlesUnique.map((entry) => (
                           <li key={entry.path} className="flex items-stretch gap-1 px-2 py-2 sm:items-start">
-                            <button
-                              type="button"
-                              draggable
-                              className="min-w-0 flex-1 cursor-grab rounded-md px-2 py-2 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:cursor-grabbing"
-                              title={
-                                (entry.displaySources
-                                  ? `${importedContextBundleHeadline(entry)}\n${entry.displaySources}\n${entry.path}`
-                                  : `${importedContextBundleHeadline(entry)}\n${entry.path}`) +
-                                  "\n\nDrag to an agent terminal to paste the path."
-                              }
-                              aria-label={`Open markdown preview: ${importedContextBundleHeadline(entry)}. Drag to an agent terminal to paste the file path.`}
-                              onDragStart={(event) => {
-                                setWorkspaceRelativePathDragData(event.dataTransfer, entry.path, "file");
-                              }}
-                              onClick={() => onOpenFile(entry.path)}
+                            <Tooltip
+                              content={buildImportedBundleTooltipContent(
+                                importedContextBundleHeadline(entry),
+                                entry.path,
+                                entry.displaySources
+                              )}
                             >
-                              <div className="truncate text-sm font-medium text-foreground">{importedContextBundleHeadline(entry)}</div>
-                              {entry.displaySources && entry.extraSourceAgentCount > 0 ? (
-                                <div className="mt-0.5 truncate text-xs text-muted-foreground" title={entry.displaySources}>
-                                  Contributors: {entry.displaySources}
-                                </div>
-                              ) : null}
-                              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
-                                {entry.approxEstimatedTokens != null ? (
-                                  <span title="Rough size (~characters ÷ 4), same as context estimates elsewhere">
-                                    {formatImportedContextApproxTokens(entry.approxEstimatedTokens)}
-                                  </span>
+                              <button
+                                type="button"
+                                draggable
+                                className="min-w-0 flex-1 cursor-grab rounded-md px-2 py-2 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:cursor-grabbing"
+                                aria-label={`Open markdown preview: ${importedContextBundleHeadline(entry)}. Drag to an agent terminal to paste the file path.`}
+                                onDragStart={(event) => {
+                                  setWorkspaceRelativePathDragData(event.dataTransfer, entry.path, "file");
+                                }}
+                                onClick={() => onOpenFile(entry.path)}
+                              >
+                                <div className="truncate text-sm font-medium text-foreground">{importedContextBundleHeadline(entry)}</div>
+                                {entry.displaySources && entry.extraSourceAgentCount > 0 ? (
+                                  <div className="mt-0.5 truncate text-xs text-muted-foreground" title={entry.displaySources}>
+                                    Contributors: {entry.displaySources}
+                                  </div>
                                 ) : null}
-                                <span title={entry.handoffCreatedAt ? "Handoff time (from bundle)" : "Last saved"}>
-                                  {entry.handoffCreatedAt
-                                    ? formatCommitTimestamp(entry.handoffCreatedAt)
-                                    : entry.updatedAt
-                                      ? formatCommitTimestamp(entry.updatedAt)
-                                      : "Remote / unknown"}
-                                </span>
-                                <span title="File size">{entry.sizeBytes > 0 ? formatImportedContextFileSize(entry.sizeBytes) : "—"}</span>
-                              </div>
-                              <div className="mt-0.5 truncate font-mono text-[10px] text-muted-foreground/80" title={entry.path}>
-                                {entry.fileName}
-                              </div>
-                            </button>
+                                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+                                  {entry.approxEstimatedTokens != null ? (
+                                    <span title="Rough size (~characters ÷ 4), same as context estimates elsewhere">
+                                      {formatImportedContextApproxTokens(entry.approxEstimatedTokens)}
+                                    </span>
+                                  ) : null}
+                                  <span title={entry.handoffCreatedAt ? "Handoff time (from bundle)" : "Last saved"}>
+                                    {entry.handoffCreatedAt
+                                      ? formatCommitTimestamp(entry.handoffCreatedAt)
+                                      : entry.updatedAt
+                                        ? formatCommitTimestamp(entry.updatedAt)
+                                        : "Remote / unknown"}
+                                  </span>
+                                  <span title="File size">{entry.sizeBytes > 0 ? formatImportedContextFileSize(entry.sizeBytes) : "—"}</span>
+                                </div>
+                                <div className="mt-0.5 truncate font-mono text-[10px] text-muted-foreground/80" title={entry.path}>
+                                  {entry.fileName}
+                                </div>
+                              </button>
+                            </Tooltip>
                             <div className="flex shrink-0 self-start pt-1">
                               <Button
                                 type="button"
@@ -1395,6 +1417,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                 onOpenForgeViewer(forgeDetail.kind, forgeDetail.item);
               }}
               onOpenItem={onOpenForgeItem}
+              onOpenWorkflowRun={onOpenForgeWorkflowRun}
               onBackToList={onBackFromForgeItem}
               onRefreshDetail={onRefreshForgeItem}
               onAction={onForgeAction}
@@ -1404,40 +1427,53 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
           ) : snapshot.changes.length ? (
             <div className="min-h-0 flex-1 overflow-auto">
               <div className="border-b border-border/40 px-4 py-2.5">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                    <FolderGit2 className="size-3.5" />
-                    Changed files
+                <div className="flex min-w-0 flex-nowrap items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    <FolderGit2 className="size-3.5 shrink-0" />
+                    <span className="whitespace-nowrap">Changed</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 px-2 text-[11px]"
-                      onClick={() => setSelectedCommitPaths(snapshot.changes.map((change) => change.path))}
-                      disabled={!snapshot.changes.length}
-                    >
-                      Select all
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 px-2 text-[11px]"
-                      onClick={() => setSelectedCommitPaths([])}
-                      disabled={!snapshot.changes.length}
-                    >
-                      Select none
-                    </Button>
-                    <div className="text-[11px] text-muted-foreground">{snapshot.changes.length}</div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-6"
-                      onClick={() => setIsChangedFilesCollapsed((current) => !current)}
-                      aria-label={isChangedFilesCollapsed ? "Expand changed files section" : "Collapse changed files section"}
-                    >
-                      {isChangedFilesCollapsed ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}
-                    </Button>
+                  <div className="min-h-6 min-w-0 flex-1 overflow-x-auto">
+                    <div className="flex w-max min-w-0 items-center justify-end gap-1 sm:gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 shrink-0 px-2 text-[11px]"
+                        onClick={onOpenFullDiff}
+                        disabled={!snapshot.changes.length}
+                      >
+                        Open full diff
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 shrink-0 px-2 text-[11px]"
+                        onClick={() => setSelectedCommitPaths(snapshot.changes.map((change) => change.path))}
+                        disabled={!snapshot.changes.length}
+                      >
+                        Select all
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 shrink-0 px-2 text-[11px]"
+                        onClick={() => setSelectedCommitPaths([])}
+                        disabled={!snapshot.changes.length}
+                      >
+                        Select none
+                      </Button>
+                      <div className="flex shrink-0 items-center px-0.5 text-[11px] tabular-nums text-muted-foreground">
+                        {snapshot.changes.length}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-6 shrink-0"
+                        onClick={() => setIsChangedFilesCollapsed((current) => !current)}
+                        aria-label={isChangedFilesCollapsed ? "Expand changed section" : "Collapse changed section"}
+                      >
+                        {isChangedFilesCollapsed ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1515,7 +1551,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
           )}
         </CardContent>
       )}
-    </Card>
+    </section>
   );
 }
 
@@ -1527,3 +1563,4 @@ export function ChangesPanel() {
 
   return <ChangesPanelInner snapshot={snapshot} />;
 }
+

@@ -214,7 +214,7 @@ function normalizeStoredForgeViewerTab(value: unknown): ForgeViewerTabState | nu
   if (typeof value.id !== "string" || !value.id.trim() || typeof value.projectId !== "string" || !value.projectId.trim()) {
     return null;
   }
-  const kind = value.kind === "pull_request" || value.kind === "issue" ? value.kind : null;
+  const kind = value.kind === "pull_request" || value.kind === "issue" || value.kind === "workflow_run" ? value.kind : null;
   if (!kind) {
     return null;
   }
@@ -225,7 +225,9 @@ function normalizeStoredForgeViewerTab(value: unknown): ForgeViewerTabState | nu
   const title =
     typeof value.title === "string" && value.title.trim()
       ? value.title.trim()
-      : `${kind === "pull_request" ? "PR" : "Issue"} #${numberRaw}`;
+      : kind === "workflow_run"
+        ? `Action #${numberRaw}`
+        : `${kind === "pull_request" ? "PR" : "Issue"} #${numberRaw}`;
   const forgeRepoHostOverride =
     typeof value.forgeRepoHostOverride === "string" && value.forgeRepoHostOverride.trim().length > 0
       ? value.forgeRepoHostOverride.trim()

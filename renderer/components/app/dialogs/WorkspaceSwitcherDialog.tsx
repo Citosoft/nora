@@ -2,7 +2,7 @@ import type { WorkspaceSwitcherDialogProps } from "@/components/app/types/compon
 import { Dialog, DialogBody, DialogContent } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { Bot, Check, FolderGit2, TerminalSquare } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export function WorkspaceSwitcherDialog({
   open,
@@ -16,12 +16,22 @@ export function WorkspaceSwitcherDialog({
     [workspaces]
   );
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const selectionResetGateRef = useRef(false);
 
   useEffect(() => {
     if (!open) {
+      selectionResetGateRef.current = false;
       return;
     }
 
+    // Only align highlight to the active workspace when the dialog first opens.
+    // `sortedWorkspaces` (and often `workspaces`) gets a new array reference on many parent
+    // re-renders; including it in deps was resetting keyboard selection on every ArrowDown.
+    if (selectionResetGateRef.current) {
+      return;
+    }
+
+    selectionResetGateRef.current = true;
     const activeIndex = sortedWorkspaces.findIndex((workspace) => workspace.project.id === activeWorkspaceId);
     setSelectedIndex(activeIndex >= 0 ? activeIndex : 0);
   }, [activeWorkspaceId, open, sortedWorkspaces]);

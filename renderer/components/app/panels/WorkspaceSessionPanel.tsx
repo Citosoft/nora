@@ -19,6 +19,8 @@ import { DiffViewer } from "@/components/app/panels/DiffViewer";
 import { FileEditorPanel } from "@/components/app/panels/FileEditorPanel";
 import { FocusedAgentPanel } from "@/components/app/panels/FocusedAgentPanel";
 import { ForgeDetailPanel } from "@/components/app/panels/ForgePanel";
+import { ForgeWorkflowRunPanel } from "@/components/app/panels/ForgeWorkflowRunPanel";
+import { FullDiffViewer } from "@/components/app/panels/FullDiffViewer";
 import { WorkspaceSessionToolbar } from "@/components/app/panels/WorkspaceSessionToolbar";
 import { WorkspaceSplitViewPanel } from "@/components/app/panels/WorkspaceSplitViewPanel";
 import { BusyIndicator } from "@/components/app/shared/BusyIndicator";
@@ -39,8 +41,9 @@ import type {
   WorkspaceScriptLauncher,
   WorkspaceSummary
 } from "@shared/appTypes";
-import { Bot, Expand, FileText, GitPullRequest, Globe, LayoutPanelTop, MessageSquare, Plus, TerminalSquare, X } from "lucide-react";
+import { Bot, FileDiff, FileText, GitPullRequest, Globe, LayoutPanelTop, MessageSquare, Plus, TerminalSquare, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
 
 function assertUnreachable(value: never): never {
   throw new Error(`Unhandled workspace session tab kind: ${String(value)}`);
@@ -293,7 +296,7 @@ function WorkspaceSessionTabs({
                 ) : tab.kind === "file" ? (
                   <FileText className="size-4 shrink-0" />
                 ) : tab.kind === "diff" ? (
-                  <Expand className="size-4 shrink-0" />
+                  <FileDiff className="size-4 shrink-0" />
                 ) : tab.kind === "browser" && tab.faviconUrl ? (
                   <img
                     src={tab.faviconUrl}
@@ -455,6 +458,7 @@ export function WorkspaceSessionPanel() {
     forgeViewerTabs,
     fileEditorState,
     isDiffExpanded,
+    isFullDiffExpanded,
     selectedDiffChange,
     splitViews,
     tools,
@@ -500,6 +504,7 @@ export function WorkspaceSessionPanel() {
     onCloseFileEditorTab,
     onSetActiveWorkspaceContentTab,
     onCloseExpandedDiff,
+    onCloseFullDiff,
     onRestart,
     onRestartTerminal,
     onClearTerminal,
@@ -599,11 +604,14 @@ export function WorkspaceSessionPanel() {
   const destroyTerminal = useCallback((sessionId: string) => destroyTerminalRef.current(sessionId), []);
 
   const activeFileEditorTab = fileEditorState?.tabs.find((tab) => tab.path === fileEditorState.activePath) ?? fileEditorState?.tabs[0] ?? null;
+  const snapshot = useCanonicalAppSnapshot();
   const activeSpecEditorTab =
     activeFileEditorTab && isWorkspaceSpecMarkdownPath(activeFileEditorTab.path) ? activeFileEditorTab : null;
   const stableAgent = useMemo(() => agent, [getAgentRenderSignature(agent)]);
   const stableTerminal = useMemo(() => terminal, [getTerminalRenderSignature(terminal)]);
-  const expandedDiffPath = isDiffExpanded && selectedDiffChange ? selectedDiffChange.path : null;
+  const expandedDiffPath = isDiffExpanded
+    ? (isFullDiffExpanded ? "__all_changes__" : (selectedDiffChange ? selectedDiffChange.path : null))
+    : null;
   const sessionTabs = getWorkspaceSessionTabs(
     stableWorkspace,
     stableBrowserTabs,
@@ -611,7 +619,8 @@ export function WorkspaceSessionPanel() {
     forgeViewerTabs,
     splitViews,
     fileEditorState?.tabs ?? [],
-    expandedDiffPath
+    expandedDiffPath,
+    isFullDiffExpanded ? (snapshot?.changes.length ?? 0) : undefined
   );
   const [closingTerminalTabIds, setClosingTerminalTabIds] = useState<string[]>([]);
   const sessionTabOrderRef = useRef<string[]>([]);
@@ -697,6 +706,14 @@ export function WorkspaceSessionPanel() {
         </>
       );
     }
+    if (activeWorkspaceContentTab === "diff" && isDiffExpanded && isFullDiffExpanded) {
+      return (
+        <FullDiffViewer
+          changes={snapshot?.changes ?? []}
+          resolvedTheme={resolvedTheme}
+        />
+      );
+    }
     if (activeWorkspaceContentTab === "diff" && isDiffExpanded && selectedDiffChange) {
       return (
         <DiffViewer
@@ -726,6 +743,14 @@ export function WorkspaceSessionPanel() {
       );
     }
     if (forgeViewerTab) {
+      if (forgeViewerTab.kind === "workflow_run") {
+        return (
+          <ForgeWorkflowRunPanel
+            projectId={forgeViewerTab.projectId}
+            runId={forgeViewerTab.number}
+          />
+        );
+      }
       return (
         <ForgeDetailPanel
           detail={forgeDetail}
@@ -868,7 +893,11 @@ export function WorkspaceSessionPanel() {
         return;
       case "diff":
         onSetActiveWorkspaceContentTab(activeFileEditorTab ? "file" : null);
-        onCloseExpandedDiff();
+        if (isFullDiffExpanded) {
+          onCloseFullDiff();
+        } else {
+          onCloseExpandedDiff();
+        }
         return;
     }
     return assertUnreachable(tab);

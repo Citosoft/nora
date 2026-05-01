@@ -204,6 +204,18 @@ export function createForgeHelpers(deps: ForgeHelperDeps): ForgeHelpers {
     return deps.fetchForgeWorkItemDetail(repo, kind, number, options);
   }
 
+  async function getForgeWorkflowRunDetail(
+    projectId: string,
+    runId: number,
+    options: ForgeRequestOptions
+  ) {
+    const repo = await resolveForgeRepo(projectId, options);
+    if (!repo) {
+      throw new Error(NO_REPO_ERROR);
+    }
+    return deps.fetchForgeWorkflowRunDetailForRepo(repo, runId, options);
+  }
+
   async function addForgeWorkItemComment(
     projectId: string,
     kind: ForgeWorkItemKind,
@@ -259,6 +271,7 @@ export function createForgeHelpers(deps: ForgeHelperDeps): ForgeHelpers {
     getForgeOverview,
     getForgeBranchPullRequestStatus,
     getForgeWorkItemDetail,
+    getForgeWorkflowRunDetail,
     addForgeWorkItemComment,
     createForgePullRequest,
     performForgeWorkItemAction

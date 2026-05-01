@@ -8,6 +8,7 @@ import type {
   ForgeRequestOptions,
   ForgeWorkItemAction,
   ForgeWorkItemDetail,
+  ForgeWorkflowRunDetail,
   ForgeWorkItemKind,
   OAuthProvider,
   VercelDeploymentSummary,
@@ -32,6 +33,11 @@ export interface IntegrationBridge {
     number: number,
     options: ForgeRequestOptions
   ) => Promise<ForgeWorkItemDetail>;
+  getForgeWorkflowRunDetail: (
+    projectId: string,
+    runId: number,
+    options: ForgeRequestOptions
+  ) => Promise<ForgeWorkflowRunDetail>;
   addForgeWorkItemComment: (
     projectId: string,
     kind: ForgeWorkItemKind,

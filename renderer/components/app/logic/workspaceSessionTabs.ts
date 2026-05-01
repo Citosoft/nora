@@ -3,6 +3,9 @@ import type { WorkspaceSessionTab } from "@/components/app/types/component.types
 import type { WorkspaceSplitView, WorkspaceSummary } from "@shared/appTypes";
 
 function getFileName(pathName: string): string {
+  if (pathName === "__all_changes__") {
+    return "All Changes";
+  }
   const normalized = pathName.replace(/\\/g, "/");
   const segments = normalized.split("/");
   return segments[segments.length - 1] || pathName;
@@ -91,7 +94,8 @@ export function getWorkspaceSessionTabs(
   forgeViewerTabs: ForgeViewerTabState[],
   splitViews: WorkspaceSplitView[],
   fileEditorTabs: FileEditorTab[],
-  expandedDiffPath: string | null
+  expandedDiffPath: string | null,
+  expandedDiffCount?: number
 ): WorkspaceSessionTab[] {
   if (!workspace) {
     return [];
@@ -159,7 +163,10 @@ export function getWorkspaceSessionTabs(
           id: getDiffWorkspaceSessionTabId(expandedDiffPath),
           kind: "diff" as const,
           path: expandedDiffPath,
-          name: `Diff: ${getFileName(expandedDiffPath)}`,
+          name:
+            expandedDiffPath === "__all_changes__"
+              ? `Diff: All Changes (${expandedDiffCount ?? 0})`
+              : `Diff: ${getFileName(expandedDiffPath)}`,
           status: "idle" as const
       }]
       : [])

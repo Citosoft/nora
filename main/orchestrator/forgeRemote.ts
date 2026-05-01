@@ -11,7 +11,8 @@ import type {
   ForgeWorkItemFileChange,
   ForgeWorkItemKind,
   ForgeWorkItemSummary,
-  ForgeWorkflowRunSummary
+  ForgeWorkflowRunSummary,
+  ForgeWorkflowRunDetail
 } from "@shared/appTypes";
 import { randomUUID } from "node:crypto";
 import { getBoolean, getJsonArray, getJsonObject, getNumber, getString, type JsonObject } from "../jsonValue";
@@ -170,6 +171,73 @@ export function createForgeRemoteOps(countDiffLines: CountDiffLinesFn) {
       event: getString(item.event),
       updatedAt: getString(item.updated_at) ?? getString(item.created_at) ?? new Date().toISOString(),
       webUrl: getString(item.html_url) ?? ""
+    };
+  }
+
+  async function fetchForgeWorkflowRunDetailForRepo(
+    repo: ForgeRepoSummary,
+    runId: number,
+    options: ForgeRequestOptions
+  ): Promise<ForgeWorkflowRunDetail> {
+    if (repo.provider !== "github") {
+      throw new Error("Workflow run details are only available for GitHub repositories.");
+    }
+
+    const headers: Record<string, string> = {
+      Accept: "application/vnd.github+json"
+    };
+    if (options.githubToken) {
+      headers.Authorization = `Bearer ${options.githubToken}`;
+    }
+
+    const [runResponse, jobsResponse] = await Promise.all([
+      fetch(`https://api.github.com/repos/${repo.fullName}/actions/runs/${runId}`, { headers }),
+      fetch(`https://api.github.com/repos/${repo.fullName}/actions/runs/${runId}/jobs?per_page=100`, { headers })
+    ]);
+
+    if (!runResponse.ok || !jobsResponse.ok) {
+      const detail = !runResponse.ok ? await runResponse.text() : await jobsResponse.text();
+      throw new Error(`GitHub request failed: ${detail || runResponse.statusText || jobsResponse.statusText}`);
+    }
+
+    const runPayload = getJsonObject(await runResponse.json()) ?? {};
+    const jobsPayload = getJsonObject(await jobsResponse.json()) ?? {};
+    const jobs = getJsonArray(jobsPayload.jobs)
+      .map((item) => getJsonObject(item))
+      .filter((item): item is JsonObject => !!item)
+      .map((job) => ({
+        id: String(getNumber(job.id) ?? randomUUID()),
+        name: getString(job.name) ?? "Unnamed job",
+        status: getString(job.status) ?? "unknown",
+        conclusion: getString(job.conclusion),
+        startedAt: getString(job.started_at),
+        completedAt: getString(job.completed_at),
+        webUrl: getString(job.html_url),
+        steps: getJsonArray(job.steps)
+          .map((item) => getJsonObject(item))
+          .filter((item): item is JsonObject => !!item)
+          .map((step) => ({
+            id: String(getNumber(step.number) ?? randomUUID()),
+            name: getString(step.name) ?? "Unnamed step",
+            number: getNumber(step.number) ?? 0,
+            status: getString(step.status) ?? "unknown",
+            conclusion: getString(step.conclusion),
+            startedAt: getString(step.started_at),
+            completedAt: getString(step.completed_at)
+          }))
+      }));
+
+    return {
+      id: getNumber(runPayload.id) ?? runId,
+      name: getString(runPayload.display_title) ?? getString(runPayload.name) ?? `Action #${runId}`,
+      status: getString(runPayload.status) ?? "unknown",
+      conclusion: getString(runPayload.conclusion),
+      branch: getString(runPayload.head_branch),
+      event: getString(runPayload.event),
+      createdAt: getString(runPayload.created_at) ?? new Date().toISOString(),
+      updatedAt: getString(runPayload.updated_at) ?? getString(runPayload.created_at) ?? new Date().toISOString(),
+      webUrl: getString(runPayload.html_url) ?? "",
+      jobs
     };
   }
 
@@ -802,6 +870,7 @@ export function createForgeRemoteOps(countDiffLines: CountDiffLinesFn) {
     fetchGitlabUserMergeRequests,
     fetchForgeBranchPullRequestStatusForRepo,
     fetchForgeWorkItemDetail,
+    fetchForgeWorkflowRunDetailForRepo,
     performForgeWorkItemActionForRepo,
     addForgeWorkItemCommentForRepo,
     createForgePullRequestForRepo

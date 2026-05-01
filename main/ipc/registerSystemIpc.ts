@@ -2,6 +2,7 @@ import { importChromeBrowserDataToSession, listChromeCookieProfiles } from "@mai
 import { getInstalledIdes, openProjectInIde } from "@main/ideIntegration";
 import { getLinuxAptSetupStatus, installLinuxAptUpdates } from "@main/linuxAptUpdates";
 import { getLinuxUpdateStatus, getReleaseVersionStatus } from "@main/linuxUpdates";
+import { transcribeVoiceInput } from "@main/ai/voiceTranscription";
 import type {
   AgentCompletionNotificationPayload,
   AnalyticsRuntimeConfig,
@@ -17,6 +18,7 @@ import type {
   ReleaseVersionStatus
 } from "@shared/appTypes";
 import type { StartupDependencyId } from "@shared/types/startupDependency.types";
+import type { VoiceInputTranscriptionPayload } from "@shared/ipc/types/systemGateway.types";
 import { app, ipcMain, session, shell } from "electron";
 import {
   getAutoUpdateStatus,
@@ -116,5 +118,8 @@ export function registerSystemIpc({
   });
   ipcMain.handle("app:open-project-in-ide", (_event, ideId: string, projectPath: string) =>
     openProjectInIde(ideId, projectPath)
+  );
+  ipcMain.handle("app:transcribe-voice-input", (_event, payload: VoiceInputTranscriptionPayload) =>
+    transcribeVoiceInput(getAppSettings(), payload)
   );
 }

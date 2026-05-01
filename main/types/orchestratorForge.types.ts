@@ -8,6 +8,7 @@ import type {
   ForgeRequestOptions,
   ForgeWorkItemAction,
   ForgeWorkItemDetail,
+  ForgeWorkflowRunDetail,
   ForgeWorkItemKind,
   ForgeWorkItemSummary,
   ProjectSummary
@@ -34,6 +35,11 @@ export interface ForgeHelperDeps {
     number: number,
     options: ForgeRequestOptions
   ) => Promise<ForgeWorkItemDetail>;
+  fetchForgeWorkflowRunDetailForRepo: (
+    repo: ForgeRepoSummary,
+    runId: number,
+    options: ForgeRequestOptions
+  ) => Promise<ForgeWorkflowRunDetail>;
   addForgeWorkItemCommentForRepo: (
     repo: ForgeRepoSummary,
     kind: ForgeWorkItemKind,
@@ -75,6 +81,11 @@ export interface ForgeHelpers {
     number: number,
     options: ForgeRequestOptions
   ) => Promise<ForgeWorkItemDetail>;
+  getForgeWorkflowRunDetail: (
+    projectId: string,
+    runId: number,
+    options: ForgeRequestOptions
+  ) => Promise<ForgeWorkflowRunDetail>;
   addForgeWorkItemComment: (
     projectId: string,
     kind: ForgeWorkItemKind,

@@ -1,4 +1,8 @@
-import { SHORTCUT_DEFINITIONS, formatShortcutKeys } from "@/components/app/logic/keyboardShortcuts";
+import {
+  SHORTCUT_DEFINITIONS,
+  buildShortcutsForHelpDialog,
+  formatShortcutKeys
+} from "@/components/app/logic/keyboardShortcuts";
 import type { WindowUiState } from "@/components/app/types";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader } from "@/components/ui/dialog";
@@ -14,7 +18,8 @@ export function KeyboardShortcutsDialog({
   onOpenChange,
   platform
 }: KeyboardShortcutsDialogProps) {
-  const groupedShortcuts = SHORTCUT_DEFINITIONS.reduce<Record<string, typeof SHORTCUT_DEFINITIONS>>((acc, shortcut) => {
+  const helpShortcuts = buildShortcutsForHelpDialog(SHORTCUT_DEFINITIONS, platform);
+  const groupedShortcuts = helpShortcuts.reduce<Record<string, typeof helpShortcuts>>((acc, shortcut) => {
     const group = acc[shortcut.category] ?? [];
     group.push(shortcut);
     acc[shortcut.category] = group;
@@ -46,7 +51,7 @@ export function KeyboardShortcutsDialog({
                       <div className="text-xs text-muted-foreground">{shortcut.description}</div>
                     </div>
                     <div className="shrink-0 rounded-[4px] border border-border/60 bg-muted/30 px-2 py-1 font-mono text-xs text-foreground">
-                      {formatShortcutKeys(shortcut.keys, platform)}
+                      {shortcut.helpKeysLabel ?? formatShortcutKeys(shortcut.keys, platform)}
                     </div>
                   </div>
                 ))}

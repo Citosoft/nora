@@ -20,6 +20,9 @@ export class ForgeMainService implements ForgeService {
   getForgeWorkItemDetail = (projectId: string, kind: ForgeWorkItemKind, number: number, options: ForgeRequestOptions) =>
     this.helpers.getForgeWorkItemDetail(projectId, kind, number, options);
 
+  getForgeWorkflowRunDetail = (projectId: string, runId: number, options: ForgeRequestOptions) =>
+    this.helpers.getForgeWorkflowRunDetail(projectId, runId, options);
+
   addForgeWorkItemComment = (
     projectId: string,
     kind: ForgeWorkItemKind,

@@ -8,6 +8,7 @@ import type {
   ForgeBranchPullRequestStatus,
   ForgeOverview,
   ForgeWorkItemAction,
+  ForgeWorkflowRunSummary,
   ForgeWorkItemDetail,
   ForgeWorkItemKind,
   ForgeWorkItemSummary,
@@ -51,6 +52,7 @@ export type ChangesPanelForgeSlice = {
   onOpenUrl: (url: string) => void;
   onOpenForgeViewer: (kind: ForgeWorkItemKind, item: ForgeWorkItemSummary) => void;
   onOpenForgeItem: (kind: ForgeWorkItemKind, item: ForgeWorkItemSummary) => void;
+  onOpenForgeWorkflowRun: (run: ForgeWorkflowRunSummary) => void;
   onBackFromForgeItem: () => void;
   onRefreshForgeItem: () => void;
   onForgeAction: (action: ForgeWorkItemAction) => void;
@@ -89,6 +91,7 @@ export type ChangesPanelChromeSlice = {
   onActiveTabChange: (tab: "git" | "files" | "context" | "forge" | "vercel") => void;
   onRefreshChanges: () => Promise<void>;
   onSelectChange: (pathName: string) => Promise<void>;
+  onOpenFullDiff: () => void;
   onCommitChanges: (message: string, paths?: string[]) => Promise<AppState | null>;
   canGenerateAiCommitMessage: boolean;
   onGenerateCommitMessage: (paths?: string[]) => Promise<GenerateCommitMessageResult | null>;

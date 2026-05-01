@@ -36,7 +36,7 @@ export function useAppCenterTabs({
 
   const openForgeViewer = useCallback((
     projectId: string,
-    kind: "pull_request" | "issue",
+    kind: "pull_request" | "issue" | "workflow_run",
     number: number,
     title: string,
     repoOverride?: ForgeRepoOverride | null

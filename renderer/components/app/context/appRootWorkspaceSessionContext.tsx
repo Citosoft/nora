@@ -48,6 +48,7 @@ export function AppRootWorkspaceSessionProvider({
   const snapshot = useCanonicalAppSnapshot();
   const {
     isCenterDiffExpanded,
+    isCenterFullDiffExpanded,
     setActiveView,
     setActiveWorkspaceContentTab,
     setIsCenterDiffExpanded
@@ -78,6 +79,7 @@ export function AppRootWorkspaceSessionProvider({
     uiState,
     fileEditorState: sessionActions.fileEditorState,
     isCenterDiffExpanded,
+    isCenterFullDiffExpanded,
     selectedChange,
     workspaceSplitViews,
     saveWorkspaceSplitViews,

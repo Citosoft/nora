@@ -76,6 +76,23 @@ const analyticsRuntimeConfig: AnalyticsRuntimeConfig = {
   analyticsAllowedInCurrentRun: !isDevelopmentMode || devModeAnalyticsEnabled
 };
 
+function configureMediaPermissions(): void {
+  const ses = session.defaultSession;
+  if (!ses) {
+    return;
+  }
+
+  ses.setPermissionRequestHandler((_webContents, permission, callback) => {
+    if (permission === "media") {
+      callback(true);
+      return;
+    }
+    callback(false);
+  });
+
+  ses.setPermissionCheckHandler((_webContents, permission) => permission === "media");
+}
+
 const {
   notifyWindowStateChanged,
   notifyAppClosingProgress,
@@ -416,6 +433,7 @@ function registerIpc(): void {
 
 async function bootstrap(): Promise<void> {
   appSettings = await appSettingsStore.load();
+  configureMediaPermissions();
   applyMacDockIcon();
   if (process.platform === "win32") {
     app.setAppUserModelId("com.nora.desktop");

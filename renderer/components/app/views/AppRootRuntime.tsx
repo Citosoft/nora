@@ -1,5 +1,6 @@
 import { StatusBar as AppStatusBar } from "@/components/app/chrome/StatusBar";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
+import { noraTerminalClient } from "@/components/app/clients/noraTerminalClient";
 import { AppRootDialogsProvider, useAppRootDialogs } from "@/components/app/context/appRootDialogsContext";
 import { useAppRootShellState } from "@/components/app/context/appRootShellStateContext";
 import { useAppRootState } from "@/components/app/context/appRootStateContext";
@@ -31,6 +32,7 @@ import { buildKeyboardShortcutActions } from "@/components/app/logic/buildKeyboa
 import { SHORTCUT_DEFINITIONS } from "@/components/app/logic/keyboardShortcuts";
 import { getStoredTerminalShellIds } from "@/components/app/logic/terminalShellPreferences";
 import type { AppRootRuntimeProps } from "@/components/app/types/appRootRuntime.types";
+import type { CreateTerminalPayload } from "@shared/appTypes";
 import type { FileEditorState } from "@/components/app/types";
 import type { ShortcutActionMap } from "@/components/app/types/workflow.types";
 import { AppPreLaunchView } from "@/components/app/views/AppPreLaunchView";
@@ -181,6 +183,11 @@ function AppRootRuntimeContent({
     safely,
     refreshSnapshot
   });
+  const createTerminalWithStatus = useCallback(
+    async (payload: CreateTerminalPayload) =>
+      snapshotCommands.runWithStatus("Creating terminal", () => noraTerminalClient.createTerminal(payload)),
+    [snapshotCommands.runWithStatus]
+  );
   const workspaceLoading = useWorkspaceLoading({
     setUiState,
     captureError
@@ -245,6 +252,7 @@ function AppRootRuntimeContent({
     return buildKeyboardShortcutActions({
       activeWorkspaceContentTab: null,
       appSettingsTerminalQuickLaunchDefaults: preferences.appSettings.terminalQuickLaunchDefaults,
+      createTerminalWithStatus,
       defaultTerminalShellId,
       fileEditorState: null,
       focusLocalTerminalDock,
@@ -282,6 +290,7 @@ function AppRootRuntimeContent({
     });
   }, [
     preferences.appSettings.terminalQuickLaunchDefaults,
+    createTerminalWithStatus,
     defaultTerminalShellId,
     focusLocalTerminalDock,
     centerTabs.handleOpenWorkspaceBrowser,

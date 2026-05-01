@@ -156,11 +156,11 @@ function ForgeWorkItemList({
 function ForgeWorkflowRunList({
   provider,
   runs,
-  onOpenUrl
+  onOpenRun
 }: {
   provider: ForgeOverview["repo"] extends infer T ? T extends { provider: infer P } ? P : never : never;
   runs: ForgeWorkflowRunSummary[];
-  onOpenUrl: (url: string) => void;
+  onOpenRun: (run: ForgeWorkflowRunSummary) => void;
 }) {
   if (provider !== "github") {
     return (
@@ -184,7 +184,7 @@ function ForgeWorkflowRunList({
         <button
           key={run.id}
           type="button"
-          onClick={() => onOpenUrl(run.webUrl)}
+          onClick={() => onOpenRun(run)}
           className="w-full rounded-[6px] border border-border/50 bg-background/50 px-3 py-2 text-left transition hover:border-primary/40 hover:bg-accent/30"
         >
           <div className="flex items-start justify-between gap-3">
@@ -223,6 +223,7 @@ export function ForgePanel(props: ForgePanelProps) {
     onOpenUrl,
     onOpenInViewer,
     onOpenItem,
+    onOpenWorkflowRun,
     onBackToList,
     onRefreshDetail,
     onAction,
@@ -449,7 +450,7 @@ export function ForgePanel(props: ForgePanelProps) {
             <ForgeWorkflowRunList
               provider={provider}
               runs={overview?.workflowRuns ?? []}
-              onOpenUrl={onOpenUrl}
+              onOpenRun={onOpenWorkflowRun}
             />
           ) : (
             <div className="rounded-[6px] border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">

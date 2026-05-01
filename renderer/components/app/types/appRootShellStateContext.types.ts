@@ -7,6 +7,7 @@ export type AppClosingState = { detail: string; command: string | null } | null;
 
 export type AppRootShellStateValue = {
   isCenterDiffExpanded: boolean;
+  isCenterFullDiffExpanded: boolean;
   activeWorkspaceContentTab: "file" | "diff" | null;
   activeView: AppView;
   settingsGroup: SettingsGroup;
@@ -15,6 +16,7 @@ export type AppRootShellStateValue = {
   appClosingState: AppClosingState;
   workspaceQuickSearchRequestId: number;
   setIsCenterDiffExpanded: Dispatch<SetStateAction<boolean>>;
+  setIsCenterFullDiffExpanded: Dispatch<SetStateAction<boolean>>;
   setActiveWorkspaceContentTab: Dispatch<SetStateAction<"file" | "diff" | null>>;
   setActiveView: Dispatch<SetStateAction<AppView>>;
   setSettingsGroup: Dispatch<SetStateAction<SettingsGroup>>;

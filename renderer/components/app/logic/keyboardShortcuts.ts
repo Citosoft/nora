@@ -47,7 +47,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
   {
     id: "open-create-terminal",
     title: "New Terminal",
-    description: "Open the new terminal flow for the current workspace.",
+    description: "Open a new terminal in the current workspace using your default shell and quick-launch settings.",
     category: "Workbench",
     keys: ["mod", "t"]
   },
@@ -150,6 +150,44 @@ export function formatShortcutKeys(keys: ShortcutKey[], platform: WindowUiState[
     return parts.join("");
   }
   return parts.join(" + ");
+}
+
+const RECENT_WORKSPACE_SHORTCUT_IDS: ShortcutDefinition["id"][] = [
+  "open-recent-workspace-1",
+  "open-recent-workspace-2",
+  "open-recent-workspace-3",
+  "open-recent-workspace-4",
+  "open-recent-workspace-5"
+];
+
+export function formatRecentWorkspaceShortcutsRange(platform: WindowUiState["platform"]): string {
+  if (platform === "darwin") {
+    return "⌘1 … ⌘5";
+  }
+  return "Ctrl + 1 … Ctrl + 5";
+}
+
+/** Collapses recent-workspace shortcuts (same action family) into one help row. */
+export function buildShortcutsForHelpDialog(
+  definitions: ShortcutDefinition[],
+  platform: WindowUiState["platform"]
+): ShortcutDefinition[] {
+  const recentSet = new Set<string>(RECENT_WORKSPACE_SHORTCUT_IDS);
+  const firstRecentIndex = definitions.findIndex((d) => d.id === "open-recent-workspace-1");
+  if (firstRecentIndex === -1) {
+    return definitions;
+  }
+  const firstRecent = definitions[firstRecentIndex];
+  const withoutRecent = definitions.filter((d) => !recentSet.has(d.id));
+  const merged: ShortcutDefinition = {
+    ...firstRecent,
+    id: "open-recent-workspace-1",
+    title: "Open Recent Workspace",
+    description:
+      "Open one of the first five workspaces in your recent list, by position (modifier + 1 through 5).",
+    helpKeysLabel: formatRecentWorkspaceShortcutsRange(platform)
+  };
+  return [...withoutRecent.slice(0, firstRecentIndex), merged, ...withoutRecent.slice(firstRecentIndex)];
 }
 
 export function formatShortcutKeyParts(keys: ShortcutKey[], platform: WindowUiState["platform"]): string[] {

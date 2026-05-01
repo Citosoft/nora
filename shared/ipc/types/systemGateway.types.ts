@@ -38,6 +38,11 @@ export interface RemoteMountOutputPayload {
   line: string;
 }
 
+export interface VoiceInputTranscriptionPayload {
+  audioData: number[];
+  mimeType: string;
+}
+
 export interface SystemBridge {
   openExternalUrl: (url: string) => Promise<void>;
   copyText: (text: string) => Promise<void>;
@@ -70,6 +75,7 @@ export interface SystemBridge {
   onRemoteMountOutput: (listener: (payload: RemoteMountOutputPayload) => void) => () => void;
   listChromeCookieProfiles: () => Promise<BrowserCookieProfileSummary[]>;
   importChromeBrowserData: (profileId?: string) => Promise<BrowserDataImportResult>;
+  transcribeVoiceInput: (payload: VoiceInputTranscriptionPayload) => Promise<string>;
   savePastedImage: (payload: SavePastedImagePayload) => Promise<PastedImageReference>;
   showAgentCompletionNotification: (payload: AgentCompletionNotificationPayload) => Promise<void>;
   onAppClosingProgress: (listener: (payload: AppClosingProgressPayload) => void) => () => void;

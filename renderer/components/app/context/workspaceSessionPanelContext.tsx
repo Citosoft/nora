@@ -29,6 +29,7 @@ export const createWorkspaceSessionPanelValue = (d: WorkspaceSessionPanelBuildDe
   forgeViewerTabs: d.forgeViewerTabs,
   fileEditorState: d.fileEditorState,
   isDiffExpanded: d.isDiffExpanded,
+  isFullDiffExpanded: d.isFullDiffExpanded,
   selectedDiffChange: d.selectedDiffChange,
   splitViewCollection: d.splitViewCollection,
   splitViews: d.splitViews,
@@ -190,6 +191,12 @@ export const createWorkspaceSessionPanelValue = (d: WorkspaceSessionPanelBuildDe
     ),
   onCloseExpandedDiff: () => {
     d.setIsCenterDiffExpanded(false);
+    d.setIsCenterFullDiffExpanded(false);
+    d.setActiveWorkspaceContentTab((d.fileEditorState?.tabs.length ?? 0) > 0 ? "file" : null);
+  },
+  onCloseFullDiff: () => {
+    d.setIsCenterFullDiffExpanded(false);
+    d.setIsCenterDiffExpanded(false);
     d.setActiveWorkspaceContentTab((d.fileEditorState?.tabs.length ?? 0) > 0 ? "file" : null);
   },
   onRestart: (agentId) => d.safely(() => noraSessionClient.restartAgent(agentId)),
@@ -242,8 +249,21 @@ export const createWorkspaceSessionPanelValue = (d: WorkspaceSessionPanelBuildDe
     const repoOverride = d.resolveGitlabForgeRepoOverride(item);
     d.openForgeViewer(d.project.id, kind, item.number, item.title, repoOverride);
   },
+  onOpenForgeWorkflowRun: (run) => {
+    if (!d.project?.id) {
+      return;
+    }
+    const runId = Number.parseInt(run.id.replace(/^github-workflow-run-/, ""), 10);
+    if (!Number.isInteger(runId) || runId < 1) {
+      return;
+    }
+    d.openForgeViewer(d.project.id, "workflow_run", runId, run.name);
+  },
   onRefreshForgeItem: () => {
     if (!d.forgeViewerTab) {
+      return;
+    }
+    if (d.forgeViewerTab.kind === "workflow_run") {
       return;
     }
     const repoOverride =
@@ -298,6 +318,7 @@ type WorkspaceSessionPanelData = Pick<
   | "forgeViewerTabs"
   | "fileEditorState"
   | "isDiffExpanded"
+  | "isFullDiffExpanded"
   | "selectedDiffChange"
   | "splitViewCollection"
   | "splitViews"
@@ -355,6 +376,7 @@ export function WorkspaceSessionPanelProvider({
     forgeViewerTabs: value.forgeViewerTabs,
     fileEditorState: value.fileEditorState,
     isDiffExpanded: value.isDiffExpanded,
+    isFullDiffExpanded: value.isFullDiffExpanded,
     selectedDiffChange: value.selectedDiffChange,
     splitViewCollection: value.splitViewCollection,
     splitViews: value.splitViews,
@@ -419,6 +441,7 @@ export function WorkspaceSessionPanelProvider({
     onSaveActiveFileEditor: value.onSaveActiveFileEditor,
     onRevertActiveFileEditor: value.onRevertActiveFileEditor,
     onCloseExpandedDiff: value.onCloseExpandedDiff,
+    onCloseFullDiff: value.onCloseFullDiff,
     onRestart: value.onRestart,
     onRestartTerminal: value.onRestartTerminal,
     onClearTerminal: value.onClearTerminal,
@@ -435,6 +458,7 @@ export function WorkspaceSessionPanelProvider({
     onRefreshForge: value.onRefreshForge,
     onOpenForgeUrl: value.onOpenForgeUrl,
     onOpenForgeItem: value.onOpenForgeItem,
+    onOpenForgeWorkflowRun: value.onOpenForgeWorkflowRun,
     onRefreshForgeItem: value.onRefreshForgeItem,
     onForgeAction: value.onForgeAction,
     onForgeCommentSubmit: value.onForgeCommentSubmit,

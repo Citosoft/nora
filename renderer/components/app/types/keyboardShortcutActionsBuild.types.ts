@@ -1,12 +1,13 @@
 import type { AppUiCommands } from "@/components/app/hooks/useAppUiCommands";
 import type { WorkspaceSessionFocusCommands } from "@/components/app/hooks/useWorkspaceSessionFocusCommands";
 import type { AppView, FileEditorState, UiState } from "@/components/app/types";
-import type { AppSettings, AppState, ChangeEntry } from "@shared/appTypes";
+import type { AppSettings, AppState, ChangeEntry, CreateTerminalPayload } from "@shared/appTypes";
 import type { Dispatch, SetStateAction } from "react";
 
 export type KeyboardShortcutActionsBuildDeps = {
   activeWorkspaceContentTab: "file" | "diff" | null;
   appSettingsTerminalQuickLaunchDefaults: AppSettings["terminalQuickLaunchDefaults"];
+  createTerminalWithStatus: (payload: CreateTerminalPayload) => Promise<AppState | null>;
   defaultTerminalShellId: string | null;
   fileEditorState: FileEditorState | null;
   focusLocalTerminalDock: () => void | Promise<void>;

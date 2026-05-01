@@ -32,7 +32,7 @@ export function DiffViewer({
   };
 
   return (
-    <div className={cn("flex min-h-0 flex-1 flex-col bg-background/10", expanded ? "h-full" : "")}>
+    <div className={cn("flex min-h-0 flex-1 flex-col", expanded ? "h-full" : "")}>
       <div className="border-b border-border/50 px-4 py-3">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
@@ -62,7 +62,7 @@ export function DiffViewer({
           </div>
         </div>
       </div>
-      <div className={cn("terminal-text min-h-0 flex-1 overflow-auto bg-background/20 text-[12px] leading-6", expanded ? "p-5" : "p-4")}>
+      <div className={cn("terminal-text min-h-0 flex-1 overflow-auto text-[12px] leading-6", expanded ? "p-5" : "p-4")}>
         {change.diff.split("\n").map((line, index) => (
           <div key={`${index}-${line}`} className={cn("whitespace-pre-wrap break-words px-2", diffLineClass(line, resolvedTheme))}>
             {line || " "}

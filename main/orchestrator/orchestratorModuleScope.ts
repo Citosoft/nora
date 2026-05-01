@@ -45,6 +45,7 @@ const {
   fetchGitlabUserMergeRequests,
   fetchForgeBranchPullRequestStatusForRepo,
   fetchForgeWorkItemDetail,
+  fetchForgeWorkflowRunDetailForRepo,
   performForgeWorkItemActionForRepo,
   addForgeWorkItemCommentForRepo,
   createForgePullRequestForRepo
@@ -161,6 +162,7 @@ export {
   fetchForgeBranchPullRequestStatusForRepo,
   fetchForgeOverviewForRepo,
   fetchForgeWorkItemDetail,
+  fetchForgeWorkflowRunDetailForRepo,
   fetchGitlabUserMergeRequests,
   getProjectMetadata,
   getWorkspaceForgeRepo,

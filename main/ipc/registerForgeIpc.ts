@@ -32,6 +32,11 @@ export function registerForgeIpc({
       services.forge.getForgeWorkItemDetail(projectId, kind, number, options)
   );
   ipcMain.handle(
+    "app:get-forge-workflow-run-detail",
+    (_event, projectId: string, runId: number, options: ForgeRequestOptions) =>
+      services.forge.getForgeWorkflowRunDetail(projectId, runId, options)
+  );
+  ipcMain.handle(
     "app:add-forge-work-item-comment",
     (_event, projectId: string, kind: ForgeWorkItemKind, number: number, payload: ForgeAddCommentPayload, options: ForgeRequestOptions) =>
       services.forge.addForgeWorkItemComment(projectId, kind, number, payload, options)

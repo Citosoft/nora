@@ -1,6 +1,7 @@
 import { ImagePreviewDialog } from "@/components/app/dialogs/ImagePreviewDialog";
 import { useFocusedAgentPanelSession } from "@/components/app/hooks/useFocusedAgentPanelSession";
 import { getPastedImageLabel } from "@/components/app/logic/agentInputAttachments";
+import { resolveTerminalTheme } from "@/components/app/logic/terminalPresentation";
 import { AgentContextCard } from "@/components/app/panels/AgentContextCard";
 import { FocusedAgentInputComposer } from "@/components/app/panels/focused-agent/FocusedAgentInputComposer";
 import { FocusedAgentNoSessionView } from "@/components/app/panels/focused-agent/FocusedAgentNoSessionView";
@@ -11,10 +12,14 @@ import { LiveTerminal } from "@/components/app/panels/focused-agent/LiveTerminal
 import type { FocusedAgentPanelProps } from "@/components/app/types/component.types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogBody, DialogContent } from "@/components/ui/dialog";
-import { memo } from "react";
+import { memo, useMemo } from "react";
 
 function FocusedAgentPanelComponent({ agent, terminal, compact = false }: FocusedAgentPanelProps) {
   const s = useFocusedAgentPanelSession({ agent, terminal });
+  const terminalOverlayBackground = useMemo(() => {
+    const rootStyles = getComputedStyle(document.documentElement);
+    return resolveTerminalTheme(s.terminalThemeId, s.resolvedTheme, rootStyles).background || "";
+  }, [s.resolvedTheme, s.terminalThemeId]);
 
   if (!agent && !terminal) {
     return (
@@ -81,39 +86,54 @@ function FocusedAgentPanelComponent({ agent, terminal, compact = false }: Focuse
               />
             ) : null}
             {s.isPreparingWorktree ? <FocusedAgentWorktreePreparingBanner /> : null}
-            {s.activeSessionId ? (
-              <LiveTerminal
-                key={`${s.activeSessionId}:${s.terminalResetVersion}`}
-                sessionId={s.activeSessionId}
-                resetVersion={s.terminalResetVersion}
-                submission={s.terminalSubmission}
-                canSendInput={s.canSendLiveTerminalInput}
-                workspaceRootForPathDrop={s.sessionWorkspaceAbsoluteRoot}
-                resolvedTheme={s.resolvedTheme}
-                terminalThemeId={s.terminalThemeId}
-                terminalFontId={s.terminalFontId}
-                getTaskDropText={s.buildTaskInstructionText}
-              />
-            ) : null}
-            <FocusedAgentInputComposer
-              agent={agent}
-              pastedImages={s.pastedImages}
-              attachedWorkspacePaths={s.attachedWorkspacePaths}
-              contextSelector={s.contextSelector}
-              isLoadingContextSources={s.isLoadingContextSources}
-              isSendingTerminalInput={s.isSendingTerminalInput}
-              isSavingPastedImage={s.isSavingPastedImage}
-              canSendLiveTerminalInput={s.canSendLiveTerminalInput}
-              onRemovePastedImage={s.handleRemovePastedImage}
-              onRemoveAttachedPath={s.handleRemoveAttachedWorkspacePath}
-              onOpenImagePreview={s.setPreviewImageDraft}
-              onChangeContextSelections={s.handleChangeContextSelections}
-              onDragOver={s.handleAgentInputDragOver}
-              onDrop={s.handleAgentInputDrop}
-              onPaste={s.handleAgentInputPaste}
-              onSend={s.handleSendTerminalInput}
-              inputRef={s.terminalInputRef}
-            />
+            <div className="relative min-h-0 flex-1">
+              <div className="flex h-full min-h-0 flex-col pb-32" style={{ backgroundColor: terminalOverlayBackground }}>
+                {s.activeSessionId ? (
+                  <LiveTerminal
+                    key={`${s.activeSessionId}:${s.terminalResetVersion}`}
+                    sessionId={s.activeSessionId}
+                    resetVersion={s.terminalResetVersion}
+                    submission={s.terminalSubmission}
+                    canSendInput={s.canSendLiveTerminalInput}
+                    workspaceRootForPathDrop={s.sessionWorkspaceAbsoluteRoot}
+                    resolvedTheme={s.resolvedTheme}
+                    terminalThemeId={s.terminalThemeId}
+                    terminalFontId={s.terminalFontId}
+                    getTaskDropText={s.buildTaskInstructionText}
+                  />
+                ) : null}
+              </div>
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 px-6 pb-4 sm:px-8 md:px-10">
+                <div
+                  className="pointer-events-auto mx-auto w-full max-w-3xl rounded-2xl"
+                  style={{ backgroundColor: terminalOverlayBackground }}
+                >
+                  <FocusedAgentInputComposer
+                    agent={agent}
+                    pastedImages={s.pastedImages}
+                    attachedWorkspacePaths={s.attachedWorkspacePaths}
+                    contextSelector={s.contextSelector}
+                    isLoadingContextSources={s.isLoadingContextSources}
+                    hasVoiceTranscriptionApiKey={s.hasVoiceTranscriptionApiKey}
+                    isVoiceInputSupported={s.isVoiceInputSupported}
+                    isListeningVoiceInput={s.isListeningVoiceInput}
+                    isSendingTerminalInput={s.isSendingTerminalInput}
+                    isSavingPastedImage={s.isSavingPastedImage}
+                    canSendLiveTerminalInput={s.canSendLiveTerminalInput}
+                    onRemovePastedImage={s.handleRemovePastedImage}
+                    onRemoveAttachedPath={s.handleRemoveAttachedWorkspacePath}
+                    onOpenImagePreview={s.setPreviewImageDraft}
+                    onChangeContextSelections={s.handleChangeContextSelections}
+                    onDragOver={s.handleAgentInputDragOver}
+                    onDrop={s.handleAgentInputDrop}
+                    onPaste={s.handleAgentInputPaste}
+                    onSend={s.handleSendTerminalInput}
+                    onToggleVoiceInput={s.handleToggleVoiceInput}
+                    inputRef={s.terminalInputRef}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <ImagePreviewDialog

@@ -9,12 +9,12 @@ export function normalizeTerminalQuickLaunchName(value: string): string {
 }
 
 export function createQuickTerminalPayload(
-  shellId: string,
+  preferredShellId: string | null | undefined,
   defaults: AppSettings["terminalQuickLaunchDefaults"]
 ): CreateTerminalPayload {
   return {
     name: normalizeTerminalQuickLaunchName(defaults.name),
-    shellId,
+    ...(preferredShellId ? { shellId: preferredShellId } : {}),
     target: { kind: defaults.target },
     launchConfig: {
       kind: "blank",

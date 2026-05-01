@@ -5,7 +5,8 @@ import type { FocusedAgentInputComposerProps } from "@/components/app/types/focu
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { FileImage, FileText, Folder, LoaderCircle, Send, Share2, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { ArrowUp, FileImage, FileText, Folder, LoaderCircle, Mic, Share2, X } from "lucide-react";
 
 export const FocusedAgentInputComposer = ({
   agent,
@@ -13,6 +14,9 @@ export const FocusedAgentInputComposer = ({
   attachedWorkspacePaths,
   contextSelector,
   isLoadingContextSources,
+  hasVoiceTranscriptionApiKey,
+  isVoiceInputSupported,
+  isListeningVoiceInput,
   isSendingTerminalInput,
   isSavingPastedImage,
   canSendLiveTerminalInput,
@@ -24,13 +28,14 @@ export const FocusedAgentInputComposer = ({
   onDrop,
   onPaste,
   onSend,
+  onToggleVoiceInput,
   inputRef
 }: FocusedAgentInputComposerProps) => {
   const selectedContextCount = countSelectedAgentContextGroups(contextSelector.sources, contextSelector.selections);
 
   return (
-    <div className="relative -top-[16px] mb-[-16px] bg-card/95 px-4 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-      <div className="space-y-2">
+    <div className="relative overflow-hidden rounded-[22px] border border-transparent bg-transparent p-1.5 shadow-none ring-0">
+      <div className="space-y-1.5">
         {(agent && pastedImages.length > 0) || attachedWorkspacePaths.length > 0 || selectedContextCount > 0 ? (
         <div className="flex flex-wrap items-center gap-2">
           {agent && pastedImages.length > 0
@@ -91,7 +96,32 @@ export const FocusedAgentInputComposer = ({
           ) : null}
         </div>
       ) : null}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 rounded-[18px] border border-border/45 bg-background/25 px-2.5 py-1.5">
+        {agent ? (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                tooltip="Share agent context"
+                className="size-8 shrink-0 rounded-full"
+                disabled={isLoadingContextSources || (contextSelector.sources.length === 0 && selectedContextCount === 0)}
+                aria-label="Share agent context"
+              >
+                {isLoadingContextSources ? <LoaderCircle className="size-4 animate-spin" /> : <Share2 className="size-4" />}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-[min(42rem,calc(100vw-2rem))] p-0">
+              <AgentContextPicker
+                sources={contextSelector.sources}
+                selections={contextSelector.selections}
+                isLoading={isLoadingContextSources}
+                emptyMessage="No other agents in this workspace have tracked context yet."
+                onChange={onChangeContextSelections}
+              />
+            </PopoverContent>
+          </Popover>
+        ) : null}
         <Input
           ref={inputRef}
           onDragOver={onDragOver}
@@ -107,46 +137,43 @@ export const FocusedAgentInputComposer = ({
           }}
           placeholder={agent ? "Send input to agent" : "Send input to terminal"}
           disabled={isSendingTerminalInput || isSavingPastedImage || !canSendLiveTerminalInput}
-          className="h-9 rounded-[4px] border border-border/40 bg-transparent px-2 shadow-none"
+          className="h-8 min-w-0 flex-1 border-0 bg-transparent px-2 text-[15px] shadow-none placeholder:text-muted-foreground/70 focus-visible:ring-0 focus-visible:ring-offset-0"
         />
-        {agent ? (
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                tooltip="Share agent context"
-                className="h-9 rounded-[4px] border border-border/40 bg-transparent px-2.5 hover:bg-transparent"
-                disabled={isLoadingContextSources || (contextSelector.sources.length === 0 && selectedContextCount === 0)}
-                aria-label="Share agent context"
-              >
-                {isLoadingContextSources ? <LoaderCircle className="size-4 animate-spin" /> : <Share2 className="size-4" />}
-                {selectedContextCount > 0 ? (
-                  <span className="ml-1 text-xs text-muted-foreground">{selectedContextCount}</span>
-                ) : null}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-[min(42rem,calc(100vw-2rem))] p-0">
-              <AgentContextPicker
-                sources={contextSelector.sources}
-                selections={contextSelector.selections}
-                isLoading={isLoadingContextSources}
-                emptyMessage="No other agents in this workspace have tracked context yet."
-                onChange={onChangeContextSelections}
-              />
-            </PopoverContent>
-          </Popover>
-        ) : null}
         <Button
-          variant="outline"
-          size="sm"
+          variant="ghost"
+          size="icon"
+          tooltip={
+            !hasVoiceTranscriptionApiKey
+              ? "Add an OpenAI API key in Settings -> AI to enable voice input"
+              : !isVoiceInputSupported
+              ? "Voice input is not supported in this environment"
+              : isListeningVoiceInput
+                ? "Stop voice input"
+                : "Start voice input"
+          }
+          className={cn("size-8 shrink-0 rounded-full", isListeningVoiceInput && "bg-primary/15 text-primary hover:bg-primary/20")}
+          disabled={
+            !hasVoiceTranscriptionApiKey ||
+            !isVoiceInputSupported ||
+            isSendingTerminalInput ||
+            isSavingPastedImage ||
+            !canSendLiveTerminalInput
+          }
+          aria-label={isListeningVoiceInput ? "Stop voice input" : "Start voice input"}
+          onClick={onToggleVoiceInput}
+        >
+          <Mic className="size-[16px]" />
+        </Button>
+        <Button
+          variant="default"
+          size="icon"
           tooltip="Send terminal input"
-          className="h-9 rounded-[4px] border border-border/40 bg-transparent px-2.5 hover:bg-transparent"
+          className="size-8 shrink-0 rounded-full shadow-sm"
           onClick={() => void onSend()}
           disabled={isSendingTerminalInput || isSavingPastedImage || !canSendLiveTerminalInput}
           aria-label="Send terminal input"
         >
-          <Send className="size-4" />
+          <ArrowUp className="size-[16px]" strokeWidth={2.25} />
         </Button>
       </div>
       </div>

@@ -124,9 +124,10 @@ export type AppCenterContentValueArgs = {
   handleSelectAiChatProviderModel: UseAiModelCatalogResult["handleSelectAiChatProviderModel"];
   handleSpawnForgeIssueAgent: (toolId: string) => Promise<void>;
   isCenterDiffExpanded: boolean;
+  isCenterFullDiffExpanded: boolean;
   loadForgeWorkItemDetail: (kind: ForgeWorkItemKind, number: number, repoOverride?: { host: string; fullName: string } | null) => Promise<void>;
   openAiChat: (projectId: string) => void;
-  openForgeViewer: (projectId: string, kind: ForgeWorkItemKind, number: number, title: string, repoOverride?: { host: string; fullName: string } | null) => void;
+  openForgeViewer: (projectId: string, kind: ForgeWorkItemKind | "workflow_run", number: number, title: string, repoOverride?: { host: string; fullName: string } | null) => void;
   openSettingsPage: (group?: SettingsGroup) => void;
   performForgeWorkItemAction: (action: ForgeWorkItemAction) => void | Promise<void>;
   windowUiStatePlatform: WindowUiState["platform"];
@@ -137,6 +138,7 @@ export type AppCenterContentValueArgs = {
   setActiveWorkspaceContentTab: Dispatch<SetStateAction<"file" | "diff" | null>>;
   setFileEditorState: Dispatch<SetStateAction<FileEditorState | null>>;
   setIsCenterDiffExpanded: Dispatch<SetStateAction<boolean>>;
+  setIsCenterFullDiffExpanded: Dispatch<SetStateAction<boolean>>;
   splitViewsErrorMessage: string | null;
   splitViewsLoading: boolean;
   terminalFontId: TerminalFontId;

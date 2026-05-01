@@ -112,7 +112,7 @@ export type BrowserTabState = {
 export type ForgeViewerTabState = {
   id: string;
   projectId: string;
-  kind: ForgeWorkItemKind;
+  kind: ForgeWorkItemKind | "workflow_run";
   number: number;
   title: string;
   forgeRepoHostOverride: string | null;

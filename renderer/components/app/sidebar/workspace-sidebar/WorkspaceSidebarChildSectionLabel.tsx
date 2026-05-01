@@ -6,7 +6,7 @@ type WorkspaceSidebarChildSectionLabelProps = {
 };
 
 export const WorkspaceSidebarChildSectionLabel = ({ icon, label }: WorkspaceSidebarChildSectionLabelProps) => (
-  <div className="flex items-center gap-2 text-[12px] font-medium text-muted-foreground">
+  <div className="flex items-center gap-2 text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
     {icon}
     {label}
   </div>

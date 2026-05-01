@@ -36,6 +36,16 @@ export const buildChangesPanelSectionProps = (
       const repoOverride = kind === "pull_request" ? d.resolveGitlabForgeRepoOverride(item) : null;
       d.openForgeViewer(snapshot.project.id, kind, item.number, `#${item.number} ${item.title}`, repoOverride);
     },
+    onOpenForgeWorkflowRun: (run) => {
+      if (!snapshot.project) {
+        return;
+      }
+      const runId = Number.parseInt(run.id.replace(/^github-workflow-run-/, ""), 10);
+      if (!Number.isInteger(runId) || runId < 1) {
+        return;
+      }
+      d.openForgeViewer(snapshot.project.id, "workflow_run", runId, run.name);
+    },
     onBackFromForgeItem: () => {
       d.setForgeWorkItemDetail(null);
       d.setForgeWorkItemDetailErrorMessage(null);
@@ -98,6 +108,14 @@ export const buildChangesPanelSectionProps = (
       }
       d.setTaskEditorState(null);
       d.setIsTaskBoardOpen(false);
+      d.setIsCenterFullDiffExpanded(false);
+      d.setIsCenterDiffExpanded(true);
+      d.setActiveWorkspaceContentTab("diff");
+    },
+    onOpenFullDiff: () => {
+      d.setTaskEditorState(null);
+      d.setIsTaskBoardOpen(false);
+      d.setIsCenterFullDiffExpanded(true);
       d.setIsCenterDiffExpanded(true);
       d.setActiveWorkspaceContentTab("diff");
     },

@@ -1,6 +1,6 @@
 import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
 import { getFocusedWorkspace } from "@/components/app/logic/appUtils";
-import { createQuickTerminalDialogDefaults } from "@/components/app/logic/terminalQuickLaunch";
+import { createQuickTerminalPayload } from "@/components/app/logic/terminalQuickLaunch";
 import { getActiveWorkspaceSessionTabId, getAdjacentWorkspaceSessionTab, getWorkspaceSessionTabs } from "@/components/app/logic/workspaceSessionTabs";
 import type { KeyboardShortcutActionsBuildDeps } from "@/components/app/types/keyboardShortcutActionsBuild.types";
 import type { ShortcutActionMap, WorkspaceSessionTab } from "@/components/app/types/workflow.types";
@@ -110,11 +110,8 @@ export const buildKeyboardShortcutActions = (d: KeyboardShortcutActionsBuildDeps
       }
 
       d.setActiveView("main");
-      d.uiCommands.openCreateTerminalDialog(
-        createQuickTerminalDialogDefaults(
-          d.defaultTerminalShellId,
-          d.appSettingsTerminalQuickLaunchDefaults
-        )
+      void d.createTerminalWithStatus(
+        createQuickTerminalPayload(d.defaultTerminalShellId, d.appSettingsTerminalQuickLaunchDefaults)
       );
     },
     "open-add-workspace": () => {

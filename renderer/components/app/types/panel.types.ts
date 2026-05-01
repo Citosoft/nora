@@ -34,6 +34,7 @@ import type {
   ForgeAddCommentPayload,
   ForgeOverview,
   ForgeWorkItemAction,
+  ForgeWorkflowRunSummary,
   ForgeWorkItemDetail,
   ForgeWorkItemKind,
   ForgeWorkItemSummary,
@@ -143,6 +144,7 @@ export type ForgePanelProps = {
   onOpenUrl: (url: string) => void;
   onOpenInViewer?: (() => void) | null;
   onOpenItem: (kind: ForgeWorkItemKind, item: ForgeWorkItemSummary) => void;
+  onOpenWorkflowRun: (run: ForgeWorkflowRunSummary) => void;
   onBackToList: () => void;
   onRefreshDetail: () => void;
   onAction: (action: ForgeWorkItemAction) => void;
@@ -367,6 +369,7 @@ export type WorkspaceSessionPanelProps = {
   forgeViewerTabs: ForgeViewerTabState[];
   fileEditorState: FileEditorState | null;
   isDiffExpanded: boolean;
+  isFullDiffExpanded: boolean;
   selectedDiffChange: ChangeEntry | null;
   splitViewCollection: WorkspaceSplitViewCollection;
   splitViews: WorkspaceSplitView[];
@@ -426,6 +429,7 @@ export type WorkspaceSessionPanelProps = {
   onSaveActiveFileEditor: () => void;
   onRevertActiveFileEditor: () => void;
   onCloseExpandedDiff: () => void;
+  onCloseFullDiff: () => void;
   onRestart: (agentId: string) => Promise<AppState | null>;
   onRestartTerminal: (sessionId: string) => Promise<AppState | null>;
   onClearTerminal: (sessionId: string) => Promise<AppState | null>;
@@ -442,6 +446,7 @@ export type WorkspaceSessionPanelProps = {
   onRefreshForge: () => void;
   onOpenForgeUrl: (url: string) => void;
   onOpenForgeItem: (kind: ForgeWorkItemKind, item: ForgeWorkItemSummary) => void;
+  onOpenForgeWorkflowRun: (run: ForgeWorkflowRunSummary) => void;
   onRefreshForgeItem: () => void;
   onForgeAction: (action: ForgeWorkItemAction) => void;
   onForgeCommentSubmit: (payload: ForgeAddCommentPayload) => Promise<void>;

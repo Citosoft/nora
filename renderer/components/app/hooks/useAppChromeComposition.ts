@@ -27,6 +27,8 @@ export function useAppChromeComposition(args: AppChromeCompositionArgs): AppChro
       entries: args.statusBar.entries,
       tools: args.statusBar.tools,
       agentSkillCatalogs: args.statusBar.agentSkillCatalogs,
+      activeWorkspaceBranch: args.statusBar.activeWorkspaceBranch,
+      activeWorkspaceWorktreeName: args.statusBar.activeWorkspaceWorktreeName,
       onInstallTool: args.statusBar.onInstallTool,
       onSwitchToolAccount: args.statusBar.onSwitchToolAccount,
       onOpenSkillsSettings: args.statusBar.onOpenSkillsSettings

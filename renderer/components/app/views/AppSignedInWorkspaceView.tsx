@@ -47,7 +47,7 @@ export function AppSignedInWorkspaceView() {
             />
           ) : null}
         </div>
-        <div className="center-column-host relative flex min-h-0 min-w-0 flex-col overflow-hidden bg-background dark:bg-[#0b1016]">
+        <div className="center-column-host relative flex min-h-0 min-w-0 flex-col overflow-hidden bg-background">
           <div className="min-h-0 flex-1 overflow-hidden">
             <AppMainCenterContentProvider value={appMainCenterContentValue}>
               <AppMainCenterContent />

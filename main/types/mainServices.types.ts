@@ -21,6 +21,7 @@ import type {
   ForgeRequestOptions,
   ForgeWorkItemAction,
   ForgeWorkItemDetail,
+  ForgeWorkflowRunDetail,
   ForgeWorkItemKind,
   InstallAgentSkillPayload,
   InstallToolPayload,
@@ -241,6 +242,11 @@ export interface ForgeService {
     number: number,
     options: ForgeRequestOptions
   ) => Promise<ForgeWorkItemDetail>;
+  getForgeWorkflowRunDetail: (
+    projectId: string,
+    runId: number,
+    options: ForgeRequestOptions
+  ) => Promise<ForgeWorkflowRunDetail>;
   addForgeWorkItemComment: (
     projectId: string,
     kind: ForgeWorkItemKind,

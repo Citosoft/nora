@@ -24,6 +24,7 @@ export type UseAppRootSessionSurfaceLayoutArgs = {
   uiState: UiState;
   fileEditorState: FileEditorState | null;
   isCenterDiffExpanded: boolean;
+  isCenterFullDiffExpanded: boolean;
   selectedChange: ChangeEntry | null;
   workspaceSplitViews: WorkspaceSplitViewsBundle["workspaceSplitViews"];
   saveWorkspaceSplitViews: WorkspaceSplitViewsBundle["saveWorkspaceSplitViews"];

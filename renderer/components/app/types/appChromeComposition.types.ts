@@ -19,6 +19,8 @@ export type AppChromeCompositionArgs = {
     entries: StatusBarEntry[];
     tools: AgentCatalogEntry[];
     agentSkillCatalogs: AgentSkillCatalog[];
+    activeWorkspaceBranch?: string | null;
+    activeWorkspaceWorktreeName?: string | null;
     onInstallTool: (toolId: string) => Promise<void> | void;
     onSwitchToolAccount: (toolId: string) => Promise<void> | void;
     onOpenSkillsSettings: () => void;

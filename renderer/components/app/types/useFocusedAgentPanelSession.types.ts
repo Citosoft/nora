@@ -47,6 +47,9 @@ export type UseFocusedAgentPanelSessionResult = {
   isSavingPastedImage: boolean;
   contextSelector: FocusedAgentContextSelectorState;
   isLoadingContextSources: boolean;
+  hasVoiceTranscriptionApiKey: boolean;
+  isVoiceInputSupported: boolean;
+  isListeningVoiceInput: boolean;
   terminalSubmission: TerminalSubmission | null;
   terminalResetVersion: number;
   infoPopoverRef: RefObject<HTMLDivElement | null>;
@@ -60,6 +63,7 @@ export type UseFocusedAgentPanelSessionResult = {
   handleClearTerminal: () => Promise<void>;
   handleRestart: () => Promise<void>;
   handleSendTerminalInput: () => Promise<void>;
+  handleToggleVoiceInput: () => void;
   handleChangeContextSelections: (next: FocusedAgentContextSelectorState["selections"]) => void;
   handleAgentInputPaste: (event: ReactClipboardEvent<HTMLInputElement>) => Promise<void>;
   handleRemovePastedImage: (draftId: string) => void;

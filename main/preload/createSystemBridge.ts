@@ -45,6 +45,7 @@ export function createSystemBridge(): SystemBridge {
       subscribeToIpcEvent<RemoteMountOutputPayload>("remote-mount:output", listener),
     listChromeCookieProfiles: () => invokeIpc("app:list-chrome-cookie-profiles"),
     importChromeBrowserData: (profileId) => invokeIpc("app:import-chrome-browser-data", profileId),
+    transcribeVoiceInput: (payload) => invokeIpc("app:transcribe-voice-input", payload),
     savePastedImage: (payload) => invokeIpc("app:save-pasted-image", payload),
     showAgentCompletionNotification: (payload) => invokeIpc("app:show-agent-completion-notification", payload),
     onAppClosingProgress: (listener) =>

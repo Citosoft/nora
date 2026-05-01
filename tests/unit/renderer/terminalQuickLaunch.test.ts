@@ -32,6 +32,20 @@ test("createQuickTerminalPayload maps settings into a blank shell payload", () =
   });
 });
 
+test("createQuickTerminalPayload omits shellId when preferred shell is unset", () => {
+  const payload = createQuickTerminalPayload(null, quickLaunchDefaults);
+
+  assert.deepEqual(payload, {
+    name: "Quick Shell",
+    target: { kind: "root" },
+    launchConfig: {
+      kind: "blank",
+      label: "Shell",
+      command: ""
+    }
+  });
+});
+
 test("createQuickTerminalDialogDefaults uses optional shell and quick launch target", () => {
   const defaults = createQuickTerminalDialogDefaults(null, {
     name: "   ",

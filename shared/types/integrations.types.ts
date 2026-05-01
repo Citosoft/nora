@@ -65,6 +65,40 @@ export interface ForgeWorkflowRunSummary {
   webUrl: string;
 }
 
+export interface ForgeWorkflowRunStepDetail {
+  id: string;
+  name: string;
+  number: number;
+  status: string;
+  conclusion: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
+export interface ForgeWorkflowRunJobDetail {
+  id: string;
+  name: string;
+  status: string;
+  conclusion: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  webUrl: string | null;
+  steps: ForgeWorkflowRunStepDetail[];
+}
+
+export interface ForgeWorkflowRunDetail {
+  id: number;
+  name: string;
+  status: string;
+  conclusion: string | null;
+  branch: string | null;
+  event: string | null;
+  createdAt: string;
+  updatedAt: string;
+  webUrl: string;
+  jobs: ForgeWorkflowRunJobDetail[];
+}
+
 export interface ForgeWorkItemDetail {
   kind: ForgeWorkItemKind;
   item: ForgeWorkItemSummary;

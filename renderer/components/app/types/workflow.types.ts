@@ -83,6 +83,8 @@ export type ShortcutDefinition = {
   category: "Workbench" | "Help";
   keys: ShortcutKey[];
   allowInEditable?: boolean;
+  /** When set (help dialog only), overrides formatted `keys` for display. */
+  helpKeysLabel?: string;
 };
 
 export type AgentSkillCatalogSummary = {

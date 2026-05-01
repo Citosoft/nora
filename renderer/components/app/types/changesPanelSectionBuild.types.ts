@@ -45,7 +45,7 @@ export type ChangesPanelSectionBuildDeps = {
   openCreateAgentDialog: (defaults?: CreateAgentDialogDefaults | null) => void;
   openForgeViewer: (
     projectId: string,
-    kind: ForgeWorkItemKind,
+    kind: ForgeWorkItemKind | "workflow_run",
     number: number,
     title: string,
     repoOverride?: { host: string; fullName: string } | null
@@ -67,6 +67,7 @@ export type ChangesPanelSectionBuildDeps = {
   setForgeWorkItemDetail: Dispatch<SetStateAction<ForgeWorkItemDetail | null>>;
   setForgeWorkItemDetailErrorMessage: Dispatch<SetStateAction<string | null>>;
   setIsCenterDiffExpanded: Dispatch<SetStateAction<boolean>>;
+  setIsCenterFullDiffExpanded: Dispatch<SetStateAction<boolean>>;
   setIsCreatePullRequestDialogOpen: Dispatch<SetStateAction<boolean>>;
   setIsTaskBoardOpen: Dispatch<SetStateAction<boolean>>;
   setTaskEditorState: Dispatch<SetStateAction<TaskEditorState | null>>;
