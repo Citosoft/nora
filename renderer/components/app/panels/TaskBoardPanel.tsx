@@ -3,11 +3,13 @@ import { resolveTaskCompletionTogglePath } from "@/components/app/logic/appUtils
 import { buildWorkspaceTaskSectionGroups, getTaskAssignments, getTaskBoardSections } from "@/components/app/logic/taskBoardUtils";
 import type { TaskBoardViewMode } from "@/components/app/types";
 import type { DraggedTask, TaskBoardPanelProps } from "@/components/app/types/component.types";
+import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import type { WorkspaceTaskSummary } from "@shared/appTypes";
@@ -176,20 +178,28 @@ export function TaskBoardPanel({
               Generate tasks
             </Button>
             <Badge variant="outline">{selectedTaskCount} selected</Badge>
-            <select
+            <Select
+              className="h-9"
               value={selectedToolId}
               onChange={(event) => onSelectedToolChange(event.target.value)}
-              className="h-9 rounded-[4px] border border-input bg-background px-3 text-sm text-foreground"
               aria-label="Select agent CLI for selected tasks"
               disabled={!availableTools.length || isSpawningAgents}
             >
               <option value="">Choose agent CLI</option>
               {availableTools.map((tool) => (
                 <option key={tool.id} value={tool.id}>
-                  {tool.label}
+                  <span className="flex min-w-0 items-center gap-2">
+                    <AgentToolIcon
+                      toolId={tool.id}
+                      label={tool.label}
+                      className="size-5 shrink-0 rounded-sm"
+                      imageClassName="size-4 rounded-sm"
+                    />
+                    <span className="min-w-0 truncate">{tool.label}</span>
+                  </span>
                 </option>
               ))}
-            </select>
+            </Select>
             <Button variant="outline" size="sm" onClick={onClearTaskSelection} disabled={!selectedTaskCount || isSpawningAgents}>
               Clear
             </Button>

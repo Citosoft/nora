@@ -13,6 +13,7 @@ import {
   buildPromptContextEntries,
   buildPromptText,
   estimateContextSize,
+  importAgentContextBundleIntoWorkspace,
   resolveSelectedContextEntries
 } from "../agentContextArtifacts";
 import {
@@ -94,12 +95,17 @@ export class SessionMainService implements SessionService {
           })
         )
       : null;
-    const compiledPrompt = buildPromptText(input, bundleFilePath);
+    const workspaceBundlePath =
+      bundleFilePath && bundleId
+        ? await importAgentContextBundleIntoWorkspace(targetAgent.workspace, bundleId, bundleFilePath)
+        : null;
+    const promptBundlePath = workspaceBundlePath ?? bundleFilePath;
+    const compiledPrompt = buildPromptText(input, promptBundlePath);
     const contextEntries = buildPromptContextEntries({
       agent: targetAgent,
       submission: input,
       createdAt,
-      bundleFilePath,
+      bundleFilePath: promptBundlePath,
       sourceEntries: selectedSources
     });
 
@@ -113,7 +119,7 @@ export class SessionMainService implements SessionService {
 
     return {
       agentId,
-      bundleFilePath,
+      bundleFilePath: promptBundlePath,
       compiledPrompt,
       estimate: estimateContextSize(compiledPrompt.length)
     };

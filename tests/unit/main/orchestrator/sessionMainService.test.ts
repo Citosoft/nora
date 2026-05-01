@@ -2,6 +2,9 @@ import { SessionMainService } from "@main/orchestrator/domainMainServices/sessio
 import type { SessionMainServiceDeps } from "@main/orchestrator/domainMainServices/sessionMainService.types";
 import type { AgentContextEntry, AgentSession, AppState } from "@shared/appTypes";
 import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
 
 function createAgent(overrides: Partial<AgentSession>): AgentSession {
@@ -72,6 +75,7 @@ function createDeps(args: {
   writes: string[];
   appendedEntries: AgentContextEntry[][];
   bundleWrites: Array<{ agentId: string; bundleId: string; content: string }>;
+  writeAgentContextBundle?: SessionMainServiceDeps["writeAgentContextBundle"];
 }): SessionMainServiceDeps {
   return {
     sessionCreation: {
@@ -158,10 +162,12 @@ function createDeps(args: {
     appendAgentContextEntries: async (_agent, entries) => {
       args.appendedEntries.push(entries);
     },
-    writeAgentContextBundle: async (agent, bundleId, content) => {
-      args.bundleWrites.push({ agentId: agent.id, bundleId, content });
-      return `/tmp/project/.nora/context-bundle-${bundleId}.md`;
-    },
+    writeAgentContextBundle:
+      args.writeAgentContextBundle ??
+      (async (agent, bundleId, content) => {
+        args.bundleWrites.push({ agentId: agent.id, bundleId, content });
+        return `/tmp/project/.nora/context-bundle-${bundleId}.md`;
+      }),
     resizeRuntimeSession: () => undefined
   };
 }
@@ -242,4 +248,75 @@ test("sendAgentPrompt writes bundle-backed prompts and records exact provenance 
     label: "File",
     value: "/tmp/project/tasks/auth.md"
   }]);
+});
+
+test("sendAgentPrompt places bundle under workspace .nora/imported_context when copy succeeds", async () => {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "nora-smsvc-import-"));
+  const workspace = path.join(tmp, "checkout");
+  await fs.mkdir(workspace, { recursive: true });
+  const targetAgent = createAgent({
+    id: "agent-target",
+    name: "Target Agent",
+    workspace,
+    contextFilePath: path.join(tmp, "nora-meta", "context-agent-target.md"),
+    terminalStreamPath: path.join(tmp, "nora-meta", "terminal-agent-target.log")
+  });
+  const sourceAgent = createAgent({
+    id: "agent-source",
+    name: "Source Agent",
+    workspace: path.join(tmp, "other-checkout"),
+    contextFilePath: path.join(tmp, "nora-meta", "context-source.md"),
+    terminalStreamPath: path.join(tmp, "nora-meta", "terminal-source.log")
+  });
+  const sourceEntries: AgentContextEntry[] = [{
+    id: "entry-1",
+    agentId: sourceAgent.id,
+    projectId: sourceAgent.projectId,
+    sessionId: sourceAgent.sessionId,
+    worktreeId: sourceAgent.worktreeId,
+    createdAt: "2026-04-29T09:55:00.000Z",
+    kind: "agent-output",
+    precision: "exact",
+    source: "harness",
+    title: "Line",
+    content: "hello",
+    preview: "hello",
+    estimate: { characters: 5, estimatedTokens: 2 },
+    references: [],
+    sourceAgentIds: []
+  }];
+
+  const writes: string[] = [];
+  const appendedEntries: AgentContextEntry[][] = [];
+  const bundleWrites: Array<{ agentId: string; bundleId: string; content: string }> = [];
+  const internalBundleRoot = path.join(tmp, "bundles");
+  const service = new SessionMainService(createDeps({
+    snapshot: createSnapshot([targetAgent, sourceAgent]),
+    sourceEntriesByAgentId: { [sourceAgent.id]: sourceEntries },
+    writes,
+    appendedEntries,
+    bundleWrites,
+    writeAgentContextBundle: async (agent, bundleId, content) => {
+      bundleWrites.push({ agentId: agent.id, bundleId, content });
+      const p = path.join(internalBundleRoot, `context-bundle-${bundleId}.md`);
+      await fs.mkdir(path.dirname(p), { recursive: true });
+      await fs.writeFile(p, content, "utf8");
+      return p;
+    }
+  }));
+
+  const result = await service.sendAgentPrompt(targetAgent.id, {
+    source: "composer",
+    title: "Handoff",
+    text: "Go",
+    workspacePaths: [],
+    contextSelections: [{ sourceAgentId: sourceAgent.id, entryIds: ["entry-1"] }],
+    references: []
+  });
+
+  const expectedImport = path.join(workspace, ".nora", "imported_context", "context-bundle-bundle-1.md");
+  assert.equal(result.bundleFilePath, expectedImport);
+  assert.ok(result.compiledPrompt.includes(`Shared agent context bundle:\n- ${expectedImport}`));
+  const gi = await fs.readFile(path.join(workspace, ".nora", ".gitignore"), "utf8");
+  assert.match(gi, /imported_context\//);
 });

@@ -79,7 +79,8 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
   const errorMessage = activeTab?.errorMessage ?? null;
   const isImage = activeTab?.kind === "image";
   const imageDataUrl = activeTab?.imageDataUrl ?? null;
-  const isDirty = !isImage && content !== savedContent;
+  const isReadOnlyTab = activeTab?.isReadOnly === true;
+  const isDirty = !isImage && !isReadOnlyTab && content !== savedContent;
   const breadcrumbs = useMemo(() => buildFileEditorBreadcrumbs(pathName), [pathName]);
   const language = useMemo(() => resolveMonacoLanguageId(pathName), [pathName]);
   const disposeSendActionsRef = useRef<(() => void) | null>(null);
@@ -94,19 +95,23 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
     () => resolveFileEditorMonacoTheme(fileEditorThemeId, resolvedTheme),
     [fileEditorThemeId, resolvedTheme]
   );
-  const editorOptions = useMemo<editor.IStandaloneEditorConstructionOptions>(() => ({
-    automaticLayout: true,
-    minimap: { enabled: false },
-    fontSize: 13,
-    scrollBeyondLastLine: false,
-    wordWrap: "on",
-    smoothScrolling: true,
-    cursorBlinking: "smooth",
-    padding: { top: 16, bottom: 16 },
-    renderLineHighlight: "gutter",
-    renderValidationDecorations: "off",
-    tabSize: 2
-  }), []);
+  const editorOptions = useMemo<editor.IStandaloneEditorConstructionOptions>(
+    () => ({
+      automaticLayout: true,
+      minimap: { enabled: false },
+      fontSize: 13,
+      scrollBeyondLastLine: false,
+      wordWrap: "on",
+      smoothScrolling: true,
+      cursorBlinking: "smooth",
+      padding: { top: 16, bottom: 16 },
+      renderLineHighlight: "gutter",
+      renderValidationDecorations: "off",
+      tabSize: 2,
+      readOnly: isReadOnlyTab
+    }),
+    [isReadOnlyTab]
+  );
 
   useEffect(() => {
     if (isMarkdownFile) {
@@ -214,7 +219,7 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
         event.preventDefault();
         event.stopPropagation();
-        if (!isLoading && !isSaving && !isImage) {
+        if (!isLoading && !isSaving && !isImage && !isReadOnlyTab) {
           onSave();
         }
       }
@@ -224,7 +229,7 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isImage, isLoading, isSaving, onSave]);
+  }, [isImage, isLoading, isReadOnlyTab, isSaving, onSave]);
 
   return (
     <div className="center-column-surface flex h-full min-h-0 flex-col bg-card/95">
@@ -248,7 +253,7 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
       <div className="border-b border-border/50 bg-transparent px-2 pt-2">
         <div className="thin-scrollbar flex items-end gap-1 overflow-x-auto pb-0.5">
           {tabs.map((tab) => {
-            const tabDirty = tab.content !== tab.savedContent;
+            const tabDirty = tab.kind !== "image" && tab.isReadOnly !== true && tab.content !== tab.savedContent;
             const isActive = tab.path === activePath;
             const label = getFileEditorLeafName(tab.path);
             return (
@@ -316,7 +321,13 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
                 Unable to preview this image.
               </div>
             )
-            ) : isMarkdownFile ? (
+            ) : isMarkdownFile && isReadOnlyTab ? (
+            <div className="flex h-full min-h-0 flex-col px-3 pb-3 pt-3">
+              <div className="thin-scrollbar h-full min-h-0 flex-1 overflow-auto rounded-[8px] bg-background/55 px-4 py-4">
+                <MarkdownRenderer>{content}</MarkdownRenderer>
+              </div>
+            </div>
+          ) : isMarkdownFile ? (
             <Tabs
               value={markdownView}
               onValueChange={(value) => setMarkdownView(value === "edit" ? "edit" : "preview")}

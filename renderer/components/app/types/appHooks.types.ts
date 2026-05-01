@@ -155,7 +155,7 @@ export type UseAppAutoUpdateResult = {
 };
 
 export type UseVercelIntegrationArgs = {
-  activeChangesPanelTab: "git" | "files" | "forge" | "vercel";
+  activeChangesPanelTab: "git" | "files" | "context" | "forge" | "vercel";
   forgeOverview: ForgeOverview | null;
   vercelToken: string;
   vercelWorkspaceLinks: Record<string, { vercelProjectId: string; teamId: string | null }>;
@@ -200,7 +200,7 @@ export type UseForgeIntegrationArgs = {
   updateVercelAccountLabel: (label: string | null) => void;
   statusBar: StatusBarContextValue;
   captureError: (error: unknown) => void;
-  setActiveChangesPanelTab: Dispatch<SetStateAction<"git" | "files" | "forge" | "vercel">>;
+  setActiveChangesPanelTab: Dispatch<SetStateAction<"git" | "files" | "context" | "forge" | "vercel">>;
   setIsCreatePullRequestDialogOpen: Dispatch<SetStateAction<boolean>>;
 };
 

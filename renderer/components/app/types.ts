@@ -72,6 +72,8 @@ export type FileEditorTab = {
   isLoading: boolean;
   isSaving: boolean;
   errorMessage: string | null;
+  /** When true, content is not persisted via workspace write (e.g. Nora metadata preview). */
+  isReadOnly?: boolean;
 };
 
 export type FileEditorState = {
@@ -84,6 +86,8 @@ export type CreateAgentDialogDefaults = {
   mode?: AgentSession["mode"];
   target?: CreateAgentPayload["target"];
   contextSelections?: NonNullable<CreateAgentPayload["contextSelections"]>;
+  /** Wizard step to show when the dialog opens: 0 Agent, 1 Workspace, 2 Context. */
+  initialWizardStepIndex?: number;
 };
 
 export type CreateTerminalDialogDefaults = {
@@ -185,7 +189,7 @@ export type StoredUiLayout = {
   isChangesSidebarCollapsed: boolean;
   workspaceSidebarWidth: number;
   changesSidebarWidth: number;
-  activeChangesPanelTab: "git" | "files" | "forge" | "vercel";
+  activeChangesPanelTab: "git" | "files" | "context" | "forge" | "vercel";
   collapsedWorkspaceIds: Record<string, boolean>;
   isTasksSectionCollapsed: boolean;
   isRemoteMountsSectionCollapsed: boolean;

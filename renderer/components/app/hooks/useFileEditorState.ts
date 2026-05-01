@@ -2,6 +2,7 @@ import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClien
 import { normalizeSnapshot } from "@/components/app/logic/appUtils";
 import type { FileEditorState, FileEditorTab } from "@/components/app/types";
 import type { UseFileEditorStateArgs, UseFileEditorStateResult } from "@/components/app/types/component.types";
+import type { OpenWorkspaceFileEditorOptions } from "@/components/app/types/workflow.types";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
 import { useEffect, useState } from "react";
 
@@ -53,11 +54,30 @@ export function useFileEditorState({
     });
   };
 
-  const openFileEditor = async (
-    pathName: string,
-    options?: { selectChange?: boolean; rootPath?: string | null }
-  ): Promise<void> => {
+  const openFileEditor = async (pathName: string, options?: OpenWorkspaceFileEditorOptions): Promise<void> => {
     if (!snapshot?.project) {
+      return;
+    }
+
+    if (options?.prefetchedContent !== undefined) {
+      if (options.selectChange !== false) {
+        void safely(() => noraWorkspaceClient.selectChange(pathName));
+      }
+      onOpenEditor();
+      upsertFileEditorTab({
+        projectId: snapshot.project.id,
+        path: pathName,
+        rootPath: options.rootPath ?? snapshot.changesRoot ?? snapshot.project.rootPath,
+        kind: "text",
+        content: options.prefetchedContent,
+        savedContent: options.prefetchedContent,
+        imageDataUrl: null,
+        imageMimeType: null,
+        isLoading: false,
+        isSaving: false,
+        errorMessage: null,
+        isReadOnly: options.isReadOnly === true
+      });
       return;
     }
 
@@ -121,7 +141,14 @@ export function useFileEditorState({
 
   const saveFileEditor = async (): Promise<void> => {
     const activeTab = fileEditorState?.tabs.find((tab) => tab.path === fileEditorState.activePath) ?? null;
-    if (!fileEditorState || !activeTab || activeTab.kind !== "text" || activeTab.isLoading || activeTab.isSaving) {
+    if (
+      !fileEditorState ||
+      !activeTab ||
+      activeTab.kind !== "text" ||
+      activeTab.isReadOnly === true ||
+      activeTab.isLoading ||
+      activeTab.isSaving
+    ) {
       return;
     }
 

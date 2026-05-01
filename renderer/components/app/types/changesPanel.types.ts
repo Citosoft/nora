@@ -1,4 +1,5 @@
-import type { ResolvedTheme } from "@/components/app/types";
+import type { CreateAgentDialogDefaults, ResolvedTheme } from "@/components/app/types";
+import type { OpenWorkspaceFileEditorOptions } from "@/components/app/types/workflow.types";
 import type {
   AgentCatalogEntry,
   AppState,
@@ -17,6 +18,7 @@ import type {
 
 export type ChangesPanelWorkspaceSlice = {
   tools: AgentCatalogEntry[];
+  onOpenCreateAgentDialog: (defaults?: CreateAgentDialogDefaults | null) => void;
 };
 
 export type ChangesPanelFilesSlice = {
@@ -25,7 +27,7 @@ export type ChangesPanelFilesSlice = {
   changeCounts: Record<string, Pick<ChangeEntry, "additions" | "deletions">>;
   loading: boolean;
   errorMessage: string | null;
-  onOpenFile: (pathName: string) => void;
+  onOpenFile: (pathName: string, options?: OpenWorkspaceFileEditorOptions) => void;
   onImportImageToDirectory: (
     directoryPath: string,
     payload: { sourceUrl?: string; data?: Uint8Array; mimeType?: string; suggestedFileName?: string }
@@ -80,11 +82,11 @@ export type ChangesPanelVercelSlice = {
 export type ChangesPanelChromeSlice = {
   resolvedTheme: ResolvedTheme;
   collapsed: boolean;
-  activeTab: "git" | "files" | "forge" | "vercel";
+  activeTab: "git" | "files" | "context" | "forge" | "vercel";
   activeFilePath: string | null;
   activeBranch: string;
   selectedChange: ChangeEntry | null;
-  onActiveTabChange: (tab: "git" | "files" | "forge" | "vercel") => void;
+  onActiveTabChange: (tab: "git" | "files" | "context" | "forge" | "vercel") => void;
   onRefreshChanges: () => Promise<void>;
   onSelectChange: (pathName: string) => Promise<void>;
   onCommitChanges: (message: string, paths?: string[]) => Promise<AppState | null>;
@@ -105,10 +107,7 @@ export type ChangesPanelProps = {
 };
 
 export type ChangesPanelSectionFileHandlers = {
-  openFileEditor: (
-    pathName: string,
-    options: { selectChange?: boolean; rootPath?: string | null }
-  ) => void | Promise<void>;
+  openFileEditor: (pathName: string, options?: OpenWorkspaceFileEditorOptions) => void | Promise<void>;
   onCreateFile: ChangesPanelFilesSlice["onCreateFile"];
   onCreateDirectory: ChangesPanelFilesSlice["onCreateDirectory"];
   onRenameFile: ChangesPanelFilesSlice["onRenameFile"];
@@ -120,4 +119,5 @@ export type ChangesPanelSectionProps = {
   vercel: ChangesPanelVercelSlice;
   chrome: ChangesPanelChromeSlice;
   fileHandlers: ChangesPanelSectionFileHandlers;
+  openCreateAgentDialog: (defaults?: CreateAgentDialogDefaults | null) => void;
 };

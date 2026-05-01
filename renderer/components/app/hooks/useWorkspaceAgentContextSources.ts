@@ -49,7 +49,7 @@ export function useWorkspaceAgentContextSources(
     return () => {
       cancelled = true;
     };
-  }, [projectId, excludeAgentId, enabled]);
+  }, [projectId, excludeAgentId, enabled, options?.reloadToken]);
 
   return {
     sources,

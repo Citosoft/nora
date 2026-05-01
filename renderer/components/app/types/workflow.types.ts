@@ -327,10 +327,19 @@ export type UseFileEditorStateArgs = {
   onAfterWorkspaceFileSaved?: (payload: { projectId: string; path: string }) => void;
 };
 
+export type OpenWorkspaceFileEditorOptions = {
+  selectChange?: boolean;
+  rootPath?: string | null;
+  /** When set, skips workspace read and opens the tab with this content immediately. */
+  prefetchedContent?: string;
+  /** When true with prefetched content, save and edit affordances are disabled. */
+  isReadOnly?: boolean;
+};
+
 export type UseFileEditorStateResult = {
   fileEditorState: FileEditorState | null;
   setFileEditorState: Dispatch<SetStateAction<FileEditorState | null>>;
-  openFileEditor: (pathName: string, options?: { selectChange?: boolean; rootPath?: string | null }) => Promise<void>;
+  openFileEditor: (pathName: string, options?: OpenWorkspaceFileEditorOptions) => Promise<void>;
   saveFileEditor: () => Promise<void>;
 };
 

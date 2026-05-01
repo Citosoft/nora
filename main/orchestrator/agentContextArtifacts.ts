@@ -9,6 +9,7 @@ import type {
   AgentPromptSubmission,
   AgentSession
 } from "@shared/appTypes";
+import { NORA_IMPORTED_CONTEXT_RELATIVE } from "@shared/constants/noraImportedContext";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -175,6 +176,64 @@ export async function writeAgentContextBundle(
   await fs.mkdir(path.dirname(bundleFilePath), { recursive: true });
   await fs.writeFile(bundleFilePath, content, "utf8");
   return bundleFilePath;
+}
+
+const NORA_IMPORTED_CONTEXT_GITIGNORE_LINE = "imported_context/";
+
+export function buildImportedContextBundlePath(workspaceRoot: string, bundleId: string): string {
+  return path.join(workspaceRoot, ...NORA_IMPORTED_CONTEXT_RELATIVE.split("/"), `context-bundle-${bundleId}.md`);
+}
+
+export async function ensureNoraImportedContextGitignore(workspaceRoot: string): Promise<void> {
+  const noraDir = path.join(workspaceRoot, ".nora");
+  const gitignorePath = path.join(noraDir, ".gitignore");
+  await fs.mkdir(noraDir, { recursive: true });
+  let existing = "";
+  try {
+    existing = await fs.readFile(gitignorePath, "utf8");
+  } catch {
+    existing = "";
+  }
+  const hasRule = existing.split(/\r?\n/).some((line) => {
+    const t = line.trim();
+    return (
+      t === NORA_IMPORTED_CONTEXT_GITIGNORE_LINE ||
+      t === "/imported_context/" ||
+      t === ".nora/imported_context/" ||
+      t === "/.nora/imported_context/"
+    );
+  });
+  if (hasRule) {
+    return;
+  }
+  const base = existing.replace(/\s*$/, "");
+  const next = base.length > 0 ? `${base}\n${NORA_IMPORTED_CONTEXT_GITIGNORE_LINE}\n` : `${NORA_IMPORTED_CONTEXT_GITIGNORE_LINE}\n`;
+  await fs.writeFile(gitignorePath, next, "utf8");
+}
+
+/**
+ * Copies a bundle from Nora's worktree metadata dir into the agent checkout so CLIs can read it.
+ * Skips when the workspace path is missing, uses "~", or copy fails (e.g. SSH-only path on host).
+ */
+export async function importAgentContextBundleIntoWorkspace(
+  workspaceRoot: string,
+  bundleId: string,
+  sourceBundlePath: string
+): Promise<string | null> {
+  const trimmed = workspaceRoot.trim();
+  if (!trimmed || trimmed.startsWith("~")) {
+    return null;
+  }
+  const resolvedRoot = path.resolve(trimmed);
+  try {
+    await ensureNoraImportedContextGitignore(resolvedRoot);
+    const dest = buildImportedContextBundlePath(resolvedRoot, bundleId);
+    await fs.mkdir(path.dirname(dest), { recursive: true });
+    await fs.copyFile(sourceBundlePath, dest);
+    return dest;
+  } catch {
+    return null;
+  }
 }
 
 export function buildContextBundleMarkdown(options: {
@@ -503,6 +562,7 @@ export function buildAgentContextSourceSummary(agent: AgentSession, entries: Age
   return {
     agentId: agent.id,
     agentName: agent.name,
+    toolId: agent.toolId,
     toolLabel: agent.toolLabel,
     contextFilePath: agent.contextFilePath,
     contextEventsPath: buildAgentContextEventsPath(agent.contextFilePath),

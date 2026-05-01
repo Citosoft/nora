@@ -1,5 +1,6 @@
 import type {
   AppState,
+  ImportedContextBundleSummary,
   ProjectSummary,
   TerminalPreset,
   WorkspaceGitStatusSummary,
@@ -35,6 +36,7 @@ export type WorkspaceActionsDependencies = {
   readWorkspaceBinaryFile: (target: WorkspaceTarget, projectId: string, filePath: string) => Promise<Buffer>;
   getWorkspaceImageMimeType: (filePath: string) => string;
   listWorkspaceTrackedAndUntrackedFiles: (target: WorkspaceTarget) => Promise<string[]>;
+  listImportedContextBundles: (target: WorkspaceTarget, projectId: string) => Promise<ImportedContextBundleSummary[]>;
   listWorkspaceDirectories: (target: WorkspaceTarget) => Promise<string[]>;
   listWorkspaceSpecs: (target: WorkspaceTarget, projectId: string) => Promise<WorkspaceSpecSummary[]>;
   listWorkspaceNotes: (target: WorkspaceTarget, projectId: string) => Promise<WorkspaceNoteSummary[]>;
@@ -94,6 +96,14 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
   const listWorkspaceDirectoriesByProject = async (projectId: string, rootPath?: string): Promise<string[]> => {
     const project = await deps.resolveProjectSummaryById(projectId);
     return deps.listWorkspaceDirectories(deps.resolveWorkspaceFileTarget(project, rootPath));
+  };
+
+  const listImportedContextBundlesByProject = async (
+    projectId: string,
+    rootPath?: string
+  ): Promise<ImportedContextBundleSummary[]> => {
+    const project = await deps.resolveProjectSummaryById(projectId);
+    return deps.listImportedContextBundles(deps.resolveWorkspaceFileTarget(project, rootPath), project.id);
   };
 
   const listWorkspaceSpecsByProject = async (projectId: string): Promise<WorkspaceSpecSummary[]> => {
@@ -226,6 +236,7 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
     resolveWorkspaceStatePath,
     readWorkspaceImageFile,
     listWorkspaceFiles,
+    listImportedContextBundlesByProject,
     listWorkspaceDirectoriesByProject,
     listWorkspaceSpecsByProject,
     listWorkspaceNotesByProject,

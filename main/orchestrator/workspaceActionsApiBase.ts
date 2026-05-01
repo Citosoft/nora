@@ -1,5 +1,6 @@
 import type {
   AppState,
+  ImportedContextBundleSummary,
   TerminalPreset,
   WorkspaceGitStatusSummary,
   WorkspaceNoteSummary,
@@ -47,6 +48,10 @@ export abstract class WorkspaceActionsApiBase {
 
   async searchWorkspaceFiles(payload: WorkspaceSearchRequest): Promise<WorkspaceSearchResult[]> {
     return this.getWorkspaceActions().searchWorkspaceFilesByProject(payload);
+  }
+
+  async listImportedContextBundles(projectId: string, rootPath?: string): Promise<ImportedContextBundleSummary[]> {
+    return this.getWorkspaceActions().listImportedContextBundlesByProject(projectId, rootPath);
   }
 
   async statWorkspacePath(payload: { projectId: string; path: string; rootPath?: string }): Promise<WorkspacePathStatResult> {

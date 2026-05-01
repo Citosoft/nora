@@ -33,6 +33,8 @@ import type {
   VercelRuntimeLogStreamRequest,
   WorkspaceFileRequest,
   WorkspaceGitStatusSummary,
+  ImportedContextBundleSummary,
+  NoraDetectableContextBundleSummary,
   WorkspaceNoteSummary,
   WorkspacePathStatResult,
   WorkspaceSearchRequest,
@@ -90,6 +92,34 @@ export interface WorkspaceService {
   searchWorkspaceFiles: (
     payload: WorkspaceSearchRequest
   ) => Promise<WorkspaceSearchResult[]>;
+  listImportedContextBundles: (
+    projectId: string,
+    rootPath?: string
+  ) => Promise<ImportedContextBundleSummary[]>;
+  listNoraDetectableContextBundles: (
+    projectId: string,
+    sessionId: string,
+    worktreeId: string
+  ) => Promise<NoraDetectableContextBundleSummary[]>;
+  importNoraDetectableContextBundle: (payload: {
+    projectId: string;
+    sessionId: string;
+    worktreeId: string;
+    bundleId: string;
+    workspaceRoot: string;
+  }) => Promise<string | null>;
+  readNoraDetectableContextBundle: (payload: {
+    projectId: string;
+    sessionId: string;
+    worktreeId: string;
+    bundleId: string;
+  }) => Promise<string | null>;
+  deleteNoraDetectableContextBundle: (payload: {
+    projectId: string;
+    sessionId: string;
+    worktreeId: string;
+    bundleId: string;
+  }) => Promise<boolean>;
   statWorkspacePath: (payload: WorkspaceFileRequest) => Promise<WorkspacePathStatResult>;
   getWorkspaceGitStatusSummary: (payload: {
     projectId: string;

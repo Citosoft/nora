@@ -102,6 +102,7 @@ test("buildAgentContextSourceSummary groups related exact and harness entries in
 
   const summary = buildAgentContextSourceSummary(agent, entries);
 
+  assert.equal(summary.toolId, "codex");
   assert.equal(summary.entryGroups.length, 2);
   assert.equal(summary.entryGroups[0]?.id, "codex:codex-thread-2");
   assert.deepEqual(summary.entryGroups[0]?.entryIds, ["entry-harness-2"]);

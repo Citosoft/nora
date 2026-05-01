@@ -1,4 +1,5 @@
 import { Field } from "@/components/app/shared/Field";
+import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import type { GenerateTasksDialogProps } from "@/components/app/types/component.types";
 import { Button } from "@/components/ui/button";
 import {
@@ -82,7 +83,15 @@ export function GenerateTasksDialog({
             <Select value={toolId} onChange={(event) => setToolId(event.target.value)} disabled={!detectedTools.length}>
               {detectedTools.map((tool) => (
                 <option key={tool.id} value={tool.id}>
-                  {tool.label}
+                  <span className="flex min-w-0 items-center gap-2">
+                    <AgentToolIcon
+                      toolId={tool.id}
+                      label={tool.label}
+                      className="size-5 shrink-0 rounded-sm"
+                      imageClassName="size-4 rounded-sm"
+                    />
+                    <span className="min-w-0 truncate">{tool.label}</span>
+                  </span>
                 </option>
               ))}
             </Select>

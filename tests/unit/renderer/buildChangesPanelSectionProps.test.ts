@@ -43,6 +43,7 @@ function createBuildDeps(
     loadForgeWorkItemDetail: async () => {},
     openFileEditor: () => {},
     openForgeViewer: () => {},
+    openCreateAgentDialog: () => {},
     openSettingsPage: () => {},
     performForgeWorkItemAction: () => {},
     redeployVercelDeployment: async () => {},

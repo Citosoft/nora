@@ -1,4 +1,4 @@
-import type { ResolvedTheme, TaskEditorState } from "@/components/app/types";
+import type { CreateAgentDialogDefaults, ResolvedTheme, TaskEditorState } from "@/components/app/types";
 import type {
   ChangesPanelChromeSlice,
   ChangesPanelForgeSlice,
@@ -42,6 +42,7 @@ export type ChangesPanelSectionBuildDeps = {
     pathName: string,
     options: { rootPath?: string | null }
   ) => void | Promise<void>;
+  openCreateAgentDialog: (defaults?: CreateAgentDialogDefaults | null) => void;
   openForgeViewer: (
     projectId: string,
     kind: ForgeWorkItemKind,

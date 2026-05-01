@@ -271,7 +271,10 @@ export function readStoredUiLayout(): StoredUiLayout {
       workspaceSidebarWidth: clampWorkspaceSidebarWidth(parsed.workspaceSidebarWidth),
       changesSidebarWidth: clampChangesSidebarWidth(parsed.changesSidebarWidth),
       activeChangesPanelTab:
-        parsed.activeChangesPanelTab === "files" || parsed.activeChangesPanelTab === "forge" || parsed.activeChangesPanelTab === "vercel"
+        parsed.activeChangesPanelTab === "files" ||
+        parsed.activeChangesPanelTab === "context" ||
+        parsed.activeChangesPanelTab === "forge" ||
+        parsed.activeChangesPanelTab === "vercel"
           ? parsed.activeChangesPanelTab
           : "git",
       collapsedWorkspaceIds:

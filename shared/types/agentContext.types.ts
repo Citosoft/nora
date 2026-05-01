@@ -95,6 +95,7 @@ export interface AgentContextState {
 export interface AgentContextSourceSummary {
   agentId: string;
   agentName: string;
+  toolId: string;
   toolLabel: string;
   contextFilePath: string;
   contextEventsPath: string;

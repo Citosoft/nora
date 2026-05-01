@@ -11,6 +11,7 @@ import { markBrowserTabLoadStopped, updateTabNavigationState } from "@/component
 import { getBrowserTabTitle, getCurrentBrowserUrl, normalizeBrowserUrl } from "@/components/app/logic/browserTabs";
 import { launchAgent } from "@/components/app/logic/launchAgentWithInstruction";
 import type { BrowserTabState } from "@/components/app/types";
+import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -564,12 +565,18 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
                   <button
                     key={`spawn-${tool.id}`}
                     type="button"
-                    className="flex w-full items-center justify-between gap-2 rounded-[4px] px-3 py-2 text-left text-sm text-popover-foreground transition hover:bg-accent/60"
+                    className="flex w-full items-center gap-2 rounded-[4px] px-3 py-2 text-left text-sm text-popover-foreground transition hover:bg-accent/60"
                     onClick={() => {
                       void handleSpawnAgentWithSelection(tool.id);
                     }}
                   >
-                    <span>Spawn {tool.label} agent with selection</span>
+                    <AgentToolIcon
+                      toolId={tool.id}
+                      label={tool.label}
+                      className="size-5 shrink-0 rounded-sm"
+                      imageClassName="size-4 rounded-sm"
+                    />
+                    <span className="min-w-0 flex-1">Spawn {tool.label} agent with selection</span>
                   </button>
                 ))}
                 {runningAgents.length ? (
@@ -579,12 +586,18 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
                       <button
                         key={`inject-${agent.id}`}
                         type="button"
-                        className="flex w-full items-center justify-between gap-2 rounded-[4px] px-3 py-2 text-left text-sm text-popover-foreground transition hover:bg-accent/60"
+                        className="flex w-full items-center gap-2 rounded-[4px] px-3 py-2 text-left text-sm text-popover-foreground transition hover:bg-accent/60"
                         onClick={() => {
                           void handleInjectSelectionToAgent(agent.id);
                         }}
                       >
-                        <span className="truncate">Inject into {agent.name}</span>
+                        <AgentToolIcon
+                          toolId={agent.toolId}
+                          label={agent.toolLabel}
+                          className="size-5 shrink-0 rounded-sm"
+                          imageClassName="size-4 rounded-sm"
+                        />
+                        <span className="min-w-0 flex-1 truncate">Inject into {agent.name}</span>
                       </button>
                     ))}
                   </>

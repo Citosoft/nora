@@ -12,6 +12,7 @@ import test from "node:test";
 const source: AgentContextSourceSummary = {
   agentId: "agent-1",
   agentName: "Agent One",
+  toolId: "codex",
   toolLabel: "Codex",
   contextFilePath: "/tmp/context.md",
   contextEventsPath: "/tmp/context.jsonl",
