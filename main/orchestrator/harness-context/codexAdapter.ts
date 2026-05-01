@@ -10,6 +10,8 @@ import type {
   CodexSessionMetaPayload
 } from "../../types/harness-context/codex.types";
 import type { HarnessContextAdapter, HarnessContextReadInput } from "../../types/harnessContext.types";
+import type { ExternalHarnessArtifactCandidate } from "../../types/externalHarnessDiscovery.types";
+import { normalizeComparablePath } from "@shared/pathComparison";
 import { normalizeStoredResumeSessionId } from "../resumeCommandUtils";
 import {
   buildHarnessContextEntry,
@@ -37,7 +39,7 @@ function isCodexRolloutFileName(fileName: string): boolean {
   return fileName.startsWith(ROLLOUT_FILE_NAME_PREFIX) && fileName.endsWith(ROLLOUT_FILE_NAME_SUFFIX);
 }
 
-async function listCodexRolloutFilePaths(directoryPath: string): Promise<string[]> {
+export async function listCodexRolloutFilePaths(directoryPath: string): Promise<string[]> {
   let directoryEntries: Dirent[];
   try {
     directoryEntries = await fs.readdir(directoryPath, { withFileTypes: true });
@@ -102,6 +104,16 @@ async function chooseCodexRolloutFilePath(
   input: HarnessContextReadInput,
   sessionsRootPath: string
 ): Promise<string | null> {
+  const forced = input.forcedArtifactPath?.trim();
+  if (forced) {
+    try {
+      await fs.access(forced);
+      return forced;
+    } catch {
+      return null;
+    }
+  }
+
   const rolloutFilePaths = await listCodexRolloutFilePaths(sessionsRootPath);
   if (rolloutFilePaths.length === 0) {
     return null;
@@ -238,6 +250,80 @@ export async function readCodexHarnessEntries(options: {
   } catch {
     return [];
   }
+}
+
+const isWindowsHarnessHost = (): boolean => os.platform() === "win32";
+
+function codexWorkspacePathsMatch(cwd: string | null, workspaceAbsolutePath: string): boolean {
+  if (!cwd || !workspaceAbsolutePath) {
+    return false;
+  }
+  const windows = isWindowsHarnessHost();
+  return (
+    normalizeComparablePath(path.resolve(cwd), { windows }) ===
+    normalizeComparablePath(path.resolve(workspaceAbsolutePath), { windows })
+  );
+}
+
+function extractCodexRolloutSessionId(filePath: string, summary: CodexRolloutSummary): string {
+  if (summary.sessionId) {
+    return summary.sessionId;
+  }
+  const base = path.basename(filePath, ROLLOUT_FILE_NAME_SUFFIX);
+  return base.startsWith(ROLLOUT_FILE_NAME_PREFIX) ? base.slice(ROLLOUT_FILE_NAME_PREFIX.length) : base;
+}
+
+export async function discoverCodexExternalHarnessCandidates(
+  workspaceAbsolutePath: string,
+  occupiedKeys: Set<string>
+): Promise<ExternalHarnessArtifactCandidate[]> {
+  const rolloutFilePaths = await listCodexRolloutFilePaths(getCodexSessionsRootPath());
+  const bestBySession = new Map<
+    string,
+    { filePath: string; mtime: number; summary: CodexRolloutSummary; sessionId: string }
+  >();
+
+  for (const filePath of rolloutFilePaths) {
+    try {
+      const [raw, stat] = await Promise.all([fs.readFile(filePath, "utf8"), fs.stat(filePath)]);
+      const summary = parseCodexRolloutSummary(raw);
+      if (!codexWorkspacePathsMatch(summary.cwd, workspaceAbsolutePath)) {
+        continue;
+      }
+      const sessionId = extractCodexRolloutSessionId(filePath, summary);
+      if (!sessionId) {
+        continue;
+      }
+      const occKey = `codex:${normalizeStoredResumeSessionId(sessionId)}`;
+      if (occupiedKeys.has(occKey)) {
+        continue;
+      }
+      const mtime = stat.mtimeMs;
+      const existing = bestBySession.get(sessionId);
+      if (!existing || mtime > existing.mtime) {
+        bestBySession.set(sessionId, { filePath, mtime, summary, sessionId });
+      }
+    } catch {
+      // ignore unreadable rollouts
+    }
+  }
+
+  return [...bestBySession.values()]
+    .map((row) => {
+      const started = row.summary.sessionStartedAtMs;
+      const lastUpdatedAt =
+        started !== null && Number.isFinite(started) ? new Date(started).toISOString() : new Date(row.mtime).toISOString();
+      const compact = row.sessionId.length > 22 ? `${row.sessionId.slice(0, 22)}…` : row.sessionId;
+      return {
+        toolId: "codex",
+        conversationId: row.sessionId,
+        primaryArtifactPath: row.filePath,
+        sessionLabel: `Codex · ${compact}`,
+        lastUpdatedAt
+      };
+    })
+    .sort((left, right) => (right.lastUpdatedAt || "").localeCompare(left.lastUpdatedAt || ""))
+    .slice(0, 20);
 }
 
 export const codexHarnessContextAdapter: HarnessContextAdapter = {

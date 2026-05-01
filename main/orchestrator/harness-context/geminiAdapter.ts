@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import type { GeminiSessionFile, GeminiSessionMessage } from "../../types/harness-context/gemini.types";
 import type { HarnessContextAdapter, HarnessContextReadInput } from "../../types/harnessContext.types";
+import type { ExternalHarnessArtifactCandidate } from "../../types/externalHarnessDiscovery.types";
 import { normalizeStoredResumeSessionId } from "../resumeCommandUtils";
 import {
   buildHarnessContextEntry,
@@ -42,6 +43,16 @@ async function chooseGeminiSessionFilePath(
   input: HarnessContextReadInput,
   projectsRootPath: string
 ): Promise<string | null> {
+  const forced = input.forcedArtifactPath?.trim();
+  if (forced) {
+    try {
+      await fs.access(forced);
+      return forced;
+    } catch {
+      return null;
+    }
+  }
+
   const chatsDirectoryPath = path.join(projectsRootPath, buildGeminiProjectHash(input.agent.workspace), "chats");
 
   let fileNames: string[];
@@ -185,6 +196,52 @@ export async function readGeminiHarnessEntries(options: {
   } catch {
     return [];
   }
+}
+
+export async function discoverGeminiExternalHarnessCandidates(
+  workspaceAbsolutePath: string,
+  occupiedKeys: Set<string>
+): Promise<ExternalHarnessArtifactCandidate[]> {
+  const chatsDirectoryPath = path.join(getGeminiProjectsRootPath(), buildGeminiProjectHash(workspaceAbsolutePath), "chats");
+  let fileNames: string[];
+  try {
+    fileNames = (await fs.readdir(chatsDirectoryPath)).filter(
+      (fileName) => fileName.startsWith("session-") && fileName.endsWith(".json")
+    );
+  } catch {
+    return [];
+  }
+
+  const rows: ExternalHarnessArtifactCandidate[] = [];
+  for (const fileName of fileNames) {
+    const filePath = path.join(chatsDirectoryPath, fileName);
+    try {
+      const [raw, stat] = await Promise.all([fs.readFile(filePath, "utf8"), fs.stat(filePath)]);
+      const sessionFile = parseGeminiSessionFile(raw);
+      const conversationId =
+        sessionFile && typeof sessionFile.sessionId === "string" && sessionFile.sessionId.trim().length > 0
+          ? sessionFile.sessionId.trim()
+          : path.basename(fileName, ".json");
+      if (occupiedKeys.has(`gemini:${normalizeStoredResumeSessionId(conversationId)}`)) {
+        continue;
+      }
+      const lastMs =
+        parseIsoTimestamp(sessionFile?.lastUpdated) ??
+        parseIsoTimestamp(sessionFile?.startTime) ??
+        stat.mtimeMs;
+      rows.push({
+        toolId: "gemini",
+        conversationId,
+        primaryArtifactPath: filePath,
+        sessionLabel: `Gemini · ${conversationId.length > 18 ? `${conversationId.slice(0, 18)}…` : conversationId}`,
+        lastUpdatedAt: new Date(lastMs).toISOString()
+      });
+    } catch {
+      // ignore
+    }
+  }
+
+  return rows.sort((left, right) => (right.lastUpdatedAt || "").localeCompare(left.lastUpdatedAt || "")).slice(0, 20);
 }
 
 export const geminiHarnessContextAdapter: HarnessContextAdapter = {

@@ -1,4 +1,5 @@
 import type {
+  AgentContextSelection,
   AgentContextSourceSummary,
   AgentContextState,
   AgentContextPreview,
@@ -11,6 +12,8 @@ import type {
   CreateAgentPayload,
   CreateTerminalPayload,
   CreateWorkspaceDirectoryPayload,
+  ExternalHarnessContextRef,
+  ExternalHarnessSessionSummary,
   ForgeAddCommentPayload,
   ForgeBranchPullRequestStatus,
   ForgeCreatePullRequestPayload,
@@ -96,6 +99,14 @@ export interface WorkspaceService {
     projectId: string,
     rootPath?: string
   ) => Promise<ImportedContextBundleSummary[]>;
+  listExternalHarnessContextSessions: (
+    projectId: string,
+    rootPath?: string
+  ) => Promise<ExternalHarnessSessionSummary[]>;
+  composeExternalHarnessContextSelections: (
+    projectId: string,
+    ref: ExternalHarnessContextRef
+  ) => Promise<AgentContextSelection[]>;
   listNoraDetectableContextBundles: (
     projectId: string,
     sessionId: string,

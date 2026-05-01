@@ -4,6 +4,8 @@ export interface HarnessContextReadInput {
   agent: AgentSession;
   exactEntries: AgentContextEntry[];
   contextBoundaryMs: number;
+  /** When set, read this transcript file instead of searching default harness stores. */
+  forcedArtifactPath?: string;
 }
 
 export interface HarnessContextAdapter {

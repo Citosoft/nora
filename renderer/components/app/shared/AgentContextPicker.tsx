@@ -3,12 +3,15 @@ import {
   countSelectedAgentContextGroupsForSource,
   estimateSelectedAgentContext,
   isAgentContextGroupSelected,
+  mergeAgentContextPickerSources,
   toggleAgentContextGroupSelection
 } from "@/components/app/logic/agentContextSelections";
 import { formatTimestamp } from "@/components/app/logic/utils";
+import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { cn } from "@/lib/utils";
 import type { AgentContextSourceSummary, AgentContextSelection } from "@shared/appTypes";
 import { LoaderCircle } from "lucide-react";
+import { useMemo } from "react";
 
 function compareOptionalTimestampsDescending(left: string | null, right: string | null): number {
   const leftTimestamp = left ? Date.parse(left) : 0;
@@ -32,10 +35,11 @@ export function AgentContextPicker({
   surface?: "card" | "flush";
 }) {
   const isFlush = surface === "flush";
-  const selectedCount = countSelectedAgentContextGroups(sources, selections);
-  const selectedEstimate = estimateSelectedAgentContext(sources, selections);
+  const pickerSources = useMemo(() => mergeAgentContextPickerSources(sources, selections), [sources, selections]);
+  const selectedCount = countSelectedAgentContextGroups(pickerSources, selections);
+  const selectedEstimate = estimateSelectedAgentContext(pickerSources, selections);
   const showLargeWarning = selectedEstimate.estimatedTokens >= 2000;
-  const sortedSources = [...sources]
+  const sortedSources = [...pickerSources]
     .sort((left, right) => compareOptionalTimestampsDescending(left.lastUpdatedAt, right.lastUpdatedAt))
     .map((source) => ({
       ...source,
@@ -57,12 +61,13 @@ export function AgentContextPicker({
           <>
             <div className="text-sm font-medium text-foreground">Agent context</div>
             <div className="text-xs text-muted-foreground">
-              Select grouped agent conversations to share with the new agent. Newest sessions appear first.
+              Select grouped agent conversations or local CLI transcripts to share with the new agent. Newest sessions
+              appear first.
             </div>
           </>
         ) : (
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Newest sessions first. Toggle conversation groups to attach to this launch.
+            Newest sessions first. Toggle conversation groups or local CLI transcripts to attach to this launch.
           </p>
         )}
       </div>
@@ -93,7 +98,7 @@ export function AgentContextPicker({
       <LoaderCircle className="size-4 animate-spin text-primary" />
       Loading agent context
     </div>
-  ) : !sources.length ? (
+  ) : !pickerSources.length ? (
     <p className={cn("text-sm text-muted-foreground", isFlush ? "py-10 text-center" : "rounded-[4px] border border-dashed border-border/60 bg-background/30 px-3 py-3")}>
       {emptyMessage}
     </p>
@@ -108,11 +113,22 @@ export function AgentContextPicker({
         >
           <div className={cn(isFlush ? "px-0.5" : "border-b border-border/60 px-3 py-2")}>
             <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="truncate text-sm font-medium text-foreground">{source.agentName}</div>
-                <div className="truncate text-xs text-muted-foreground">
-                  {source.toolLabel} · {formatTimestamp(source.lastUpdatedAt)} · {source.entryCount} entr{source.entryCount === 1 ? "y" : "ies"} ·{" "}
-                  {source.estimate.characters.toLocaleString()} chars
+              <div className="flex min-w-0 flex-1 items-stretch gap-2">
+                <div className="flex shrink-0 items-center pt-0.5" aria-hidden>
+                  <AgentToolIcon
+                    toolId={source.toolId}
+                    label={source.toolLabel}
+                    className="size-8 shrink-0"
+                    imageClassName="size-5 rounded-sm"
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium text-foreground">{source.agentName}</div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    {source.agentId.startsWith("external-harness:") ? `${source.toolLabel} · local CLI` : source.toolLabel} ·{" "}
+                    {formatTimestamp(source.lastUpdatedAt)} · {source.entryCount} entr{source.entryCount === 1 ? "y" : "ies"} ·{" "}
+                    {source.estimate.characters.toLocaleString()} chars
+                  </div>
                 </div>
               </div>
               <div className="shrink-0 text-[11px] text-muted-foreground tabular-nums">

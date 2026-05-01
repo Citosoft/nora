@@ -3,6 +3,7 @@ import {
   countSelectedAgentContextGroupsForSource,
   estimateSelectedAgentContext,
   isAgentContextGroupSelected,
+  mergeAgentContextPickerSources,
   toggleAgentContextGroupSelection
 } from "@/components/app/logic/agentContextSelections";
 import type { AgentContextSelection, AgentContextSourceSummary } from "@shared/appTypes";
@@ -70,4 +71,67 @@ test("agent context group selection toggles full groups and estimates selected g
 
   const clearedSelections = toggleAgentContextGroupSelection(nextSelections, source.agentId, source.entryGroups[1]!);
   assert.deepEqual(clearedSelections, []);
+});
+
+test("toggle selection preserves externalHarness metadata on the same synthetic source id", () => {
+  const externalSelection: AgentContextSelection = {
+    sourceAgentId: "external-harness:codex:abc",
+    entryIds: ["e1", "e2"],
+    externalHarness: {
+      toolId: "codex",
+      toolLabel: "Codex",
+      conversationId: "thr-1",
+      primaryArtifactPath: "/tmp/rollout.jsonl",
+      sessionLabel: "Codex · thr-1",
+      workspacePath: "/tmp/ws"
+    }
+  };
+  const toggled = toggleAgentContextGroupSelection(
+    [externalSelection],
+    externalSelection.sourceAgentId,
+    { entryIds: ["e1"] }
+  );
+  assert.equal(toggled.length, 1);
+  assert.deepEqual(toggled[0]?.externalHarness, externalSelection.externalHarness);
+  assert.ok(toggled[0]?.entryIds.includes("e2"));
+});
+
+test("mergeAgentContextPickerSources appends a synthetic Nora-shaped row for external-only selections", () => {
+  const externalSelection: AgentContextSelection = {
+    sourceAgentId: "external-harness:codex:abc",
+    entryIds: ["e1", "e2"],
+    externalHarness: {
+      toolId: "codex",
+      toolLabel: "Codex",
+      conversationId: "thr-1",
+      primaryArtifactPath: "/tmp/rollout.jsonl",
+      sessionLabel: "Codex · thr-1",
+      workspacePath: "/tmp/ws"
+    }
+  };
+  const merged = mergeAgentContextPickerSources([], [externalSelection]);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0]?.agentId, externalSelection.sourceAgentId);
+  assert.equal(merged[0]?.entryGroups.length, 1);
+  assert.deepEqual(merged[0]?.entryGroups[0]?.entryIds, ["e1", "e2"]);
+});
+
+test("count and estimate include external harness selections not present in Nora sources", () => {
+  const externalSelection: AgentContextSelection = {
+    sourceAgentId: "external-harness:codex:abc",
+    entryIds: ["e1", "e2"],
+    externalHarness: {
+      toolId: "codex",
+      toolLabel: "Codex",
+      conversationId: "thr-1",
+      primaryArtifactPath: "/tmp/rollout.jsonl",
+      sessionLabel: "Codex · thr-1",
+      workspacePath: "/tmp/ws"
+    }
+  };
+  assert.equal(countSelectedAgentContextGroups([source], [externalSelection]), 1);
+  assert.deepEqual(estimateSelectedAgentContext([source], [externalSelection]), {
+    characters: 1000,
+    estimatedTokens: 250
+  });
 });

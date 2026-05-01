@@ -8,6 +8,7 @@ import {
 } from "@/components/app/context/changesPanelContext";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
 import { useWorkspaceAgentContextSources } from "@/components/app/hooks/useWorkspaceAgentContextSources";
+import { useWorkspaceExternalHarnessSessions } from "@/components/app/hooks/useWorkspaceExternalHarnessSessions";
 import { useStatusBar } from "@/components/app/logic/statusBarContext";
 import { formatTimestamp } from "@/components/app/logic/utils";
 import { setWorkspaceRelativePathDragData } from "@/components/app/logic/workspacePathDrag";
@@ -30,6 +31,7 @@ import type {
   ChangeEntry,
   CommitHistoryEntry,
   GithubBranchPullRequestState,
+  ExternalHarnessSessionSummary,
   ImportedContextBundleSummary,
   WorkspaceSearchResult
 } from "@shared/appTypes";
@@ -286,6 +288,17 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
     }
   );
 
+  const { sessions: externalHarnessSessions, isLoading: isExternalHarnessLoading } = useWorkspaceExternalHarnessSessions(
+    snapshot.project?.id ?? null,
+    snapshot.changesRoot,
+    {
+      enabled: activeTab === "context" && !collapsed && !!snapshot.project?.id && !!snapshot.changesRoot,
+      reloadToken: agentContextReloadKey
+    }
+  );
+
+  const [openingExternalHarnessArtifactPath, setOpeningExternalHarnessArtifactPath] = useState<string | null>(null);
+
   useEffect(() => {
     setCommitMessage("");
     setSelectedCommitPaths(null);
@@ -349,6 +362,8 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
     [agentContextSources]
   );
 
+  const detectedContextSurfaceCount = workspaceAgentContextGroupCount + externalHarnessSessions.length;
+
   const sortedAgentContextSources = useMemo(
     () =>
       [...agentContextSources]
@@ -362,7 +377,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
     [agentContextSources]
   );
 
-  const contextTabListsLoading = importedLoading || isAgentContextLoading;
+  const contextTabListsLoading = importedLoading || isAgentContextLoading || isExternalHarnessLoading;
   const selectedCommit = snapshot.selectedCommit;
   const isInspectingCommit = !!selectedCommit;
   const forgeProvider = forgeOverview?.repo?.provider ?? null;
@@ -538,6 +553,24 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
       contextSelections: buildAgentContextSelectionForGroup(source.agentId, group),
       initialWizardStepIndex: 2
     });
+  };
+
+  const handleOpenCreateAgentFromExternalHarness = async (session: ExternalHarnessSessionSummary) => {
+    if (!snapshot.project?.id) {
+      return;
+    }
+    setOpeningExternalHarnessArtifactPath(session.primaryArtifactPath);
+    try {
+      const selections = await noraWorkspaceClient.composeExternalHarnessContextSelections(snapshot.project.id, session);
+      if (selections.length > 0) {
+        onOpenCreateAgentDialog({
+          contextSelections: selections,
+          initialWizardStepIndex: 2
+        });
+      }
+    } finally {
+      setOpeningExternalHarnessArtifactPath(null);
+    }
   };
 
   const handleDeleteImportedBundle = async (entry: ImportedContextBundleSummary) => {
@@ -1061,7 +1094,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                     <TabsList className="mb-2 h-auto w-full flex-wrap justify-start gap-1">
                       <TabsTrigger value="detected" className="gap-1.5 px-2.5 py-1.5 text-xs">
                         <span>Detected</span>
-                        <span className="tabular-nums opacity-80">({workspaceAgentContextGroupCount})</span>
+                        <span className="tabular-nums opacity-80">({detectedContextSurfaceCount})</span>
                       </TabsTrigger>
                       <TabsTrigger value="imported" className="gap-1.5 px-2.5 py-1.5 text-xs">
                         <span>Imported</span>
@@ -1075,71 +1108,150 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                     value="detected"
                     className="absolute inset-0 m-0 mt-0 overflow-y-auto p-0 focus-visible:outline-none data-[state=inactive]:hidden"
                   >
-                    {isAgentContextLoading && sortedAgentContextSources.length === 0 ? (
+                    {isAgentContextLoading &&
+                    sortedAgentContextSources.length === 0 &&
+                    isExternalHarnessLoading &&
+                    externalHarnessSessions.length === 0 ? (
                       <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
                         <LoaderCircle className="size-4 animate-spin text-primary" aria-hidden />
                         Loading agent context
                       </div>
-                    ) : !sortedAgentContextSources.length ? (
-                      <div className="m-3 border border-dashed border-border/70 bg-background/40 p-3 text-sm text-muted-foreground">
-                        No other agents in this workspace have tracked context yet. Launch an agent and send prompts to
-                        build shareable conversation groups.
-                      </div>
                     ) : (
-                      <div className="space-y-3 p-3">
-                        {sortedAgentContextSources.map((source) => (
-                          <div
-                            key={source.agentId}
-                            className="rounded-[4px] border border-border/60 bg-card/40"
-                          >
-                            <div className="border-b border-border/60 px-3 py-2">
-                              <div className="flex min-w-0 items-stretch gap-2">
-                                <div className="flex shrink-0 items-center" aria-hidden>
-                                  <AgentToolIcon
-                                    toolId={source.toolId}
-                                    label={source.toolLabel}
-                                    className="size-8 shrink-0"
-                                    imageClassName="size-5 rounded-sm"
-                                  />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="truncate text-sm font-medium text-foreground">{source.agentName}</div>
-                                  <div className="truncate text-xs text-muted-foreground">
-                                    {source.toolLabel} · {formatTimestamp(source.lastUpdatedAt)} · {source.entryCount}{" "}
-                                    entr{source.entryCount === 1 ? "y" : "ies"} · {source.estimate.characters.toLocaleString()}{" "}
-                                    chars
-                                  </div>
-                                </div>
-                              </div>
+                      <div className="space-y-5 p-3 pb-6">
+                        <section className="space-y-2" aria-labelledby="detected-nora-agents-heading">
+                          <h3 id="detected-nora-agents-heading" className="px-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            Nora workspace agents
+                          </h3>
+                          {!sortedAgentContextSources.length ? (
+                            <div className="border border-dashed border-border/70 bg-background/40 p-3 text-sm text-muted-foreground">
+                              No other agents in this workspace have tracked context yet. Launch an agent and send prompts to
+                              build shareable conversation groups.
                             </div>
-                            <div className="space-y-2 p-3">
-                              {source.entryGroups.map((group) => (
-                                <button
-                                  key={group.id}
-                                  type="button"
-                                  className="w-full rounded-md border border-border/60 bg-background/30 px-2 py-2 text-left outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                                  title={`${group.title}\n\nClick to start a new agent with this conversation group attached.`}
-                                  aria-label={`New agent with context: ${source.agentName} — ${group.title}`}
-                                  onClick={() => handleOpenCreateAgentFromContextGroup(source, group)}
+                          ) : (
+                            <div className="space-y-3">
+                              {sortedAgentContextSources.map((source) => (
+                                <div
+                                  key={source.agentId}
+                                  className="rounded-[4px] border border-border/60 bg-card/40"
                                 >
-                                  <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-                                      <span className="text-sm font-medium text-foreground">{group.title}</span>
-                                      <span className="text-[11px] text-muted-foreground">
-                                        {group.entryCount} entr{group.entryCount === 1 ? "y" : "ies"} · ~
-                                        {group.estimate.estimatedTokens.toLocaleString()} tok
-                                      </span>
+                                  <div className="border-b border-border/60 px-3 py-2">
+                                    <div className="flex min-w-0 items-stretch gap-2">
+                                      <div className="flex shrink-0 items-center" aria-hidden>
+                                        <AgentToolIcon
+                                          toolId={source.toolId}
+                                          label={source.toolLabel}
+                                          className="size-8 shrink-0"
+                                          imageClassName="size-5 rounded-sm"
+                                        />
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <div className="truncate text-sm font-medium text-foreground">{source.agentName}</div>
+                                        <div className="truncate text-xs text-muted-foreground">
+                                          {source.toolLabel} · {formatTimestamp(source.lastUpdatedAt)} · {source.entryCount}{" "}
+                                          entr{source.entryCount === 1 ? "y" : "ies"} · {source.estimate.characters.toLocaleString()}{" "}
+                                          chars
+                                        </div>
+                                      </div>
                                     </div>
-                                    <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
-                                      {formatTimestamp(group.lastUpdatedAt)}
-                                    </span>
                                   </div>
-                                  <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{group.latestPreview}</div>
+                                  <div className="space-y-2 p-3">
+                                    {source.entryGroups.map((group) => (
+                                      <button
+                                        key={group.id}
+                                        type="button"
+                                        className="w-full rounded-md border border-border/60 bg-background/30 px-2 py-2 text-left outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                                        title={`${group.title}\n\nClick to start a new agent with this conversation group attached.`}
+                                        aria-label={`New agent with context: ${source.agentName} — ${group.title}`}
+                                        onClick={() => handleOpenCreateAgentFromContextGroup(source, group)}
+                                      >
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                                            <span className="text-sm font-medium text-foreground">{group.title}</span>
+                                            <span className="text-[11px] text-muted-foreground">
+                                              {group.entryCount} entr{group.entryCount === 1 ? "y" : "ies"} · ~
+                                              {group.estimate.estimatedTokens.toLocaleString()} tok
+                                            </span>
+                                          </div>
+                                          <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
+                                            {formatTimestamp(group.lastUpdatedAt)}
+                                          </span>
+                                        </div>
+                                        <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{group.latestPreview}</div>
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </section>
+
+                        <section className="space-y-2" aria-labelledby="detected-external-harness-heading">
+                          <h3 id="detected-external-harness-heading" className="px-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            Local CLI transcripts
+                          </h3>
+                          <p className="px-0.5 text-[11px] leading-relaxed text-muted-foreground">
+                            Codex, Claude, Gemini, and Cursor logs on this machine whose working directory matches this worktree.
+                            Remote-only checkouts are skipped.
+                          </p>
+                          {!snapshot.changesRoot ? (
+                            <div className="border border-dashed border-border/70 bg-background/40 p-3 text-sm text-muted-foreground">
+                              Focus a worktree checkout to scan local harness stores for this folder.
+                            </div>
+                          ) : isExternalHarnessLoading && externalHarnessSessions.length === 0 ? (
+                            <div className="flex items-center gap-2 px-0.5 py-2 text-xs text-muted-foreground">
+                              <LoaderCircle className="size-3.5 animate-spin text-primary" aria-hidden />
+                              Scanning local CLI sessions
+                            </div>
+                          ) : !externalHarnessSessions.length ? (
+                            <div className="border border-dashed border-border/70 bg-background/40 p-3 text-sm text-muted-foreground">
+                              No matching local CLI sessions for this worktree path, or every session is already linked to a Nora
+                              agent.
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              {externalHarnessSessions.map((session) => (
+                                <button
+                                  key={`${session.toolId}:${session.primaryArtifactPath}`}
+                                  type="button"
+                                  disabled={openingExternalHarnessArtifactPath === session.primaryArtifactPath}
+                                  className="w-full rounded-md border border-border/60 bg-background/30 px-2 py-2 text-left outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-60"
+                                  title={`${session.sessionLabel}\n\nClick to start a new agent with this transcript attached.`}
+                                  aria-label={`New agent with external CLI context: ${session.sessionLabel}`}
+                                  onClick={() => void handleOpenCreateAgentFromExternalHarness(session)}
+                                >
+                                  <div className="flex min-w-0 items-stretch gap-2">
+                                    <div className="flex shrink-0 items-center" aria-hidden>
+                                      <AgentToolIcon
+                                        toolId={session.toolId}
+                                        label={session.toolLabel}
+                                        className="size-8 shrink-0"
+                                        imageClassName="size-5 rounded-sm"
+                                      />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <span className="text-sm font-medium text-foreground">{session.sessionLabel}</span>
+                                        <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
+                                          {formatTimestamp(session.lastUpdatedAt)}
+                                        </span>
+                                      </div>
+                                      <div className="mt-0.5 text-[11px] text-muted-foreground">
+                                        {session.entryCount} entr{session.entryCount === 1 ? "y" : "ies"} · ~
+                                        {session.estimate.estimatedTokens.toLocaleString()} tok · {session.estimate.characters.toLocaleString()}{" "}
+                                        chars
+                                      </div>
+                                      <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{session.latestPreview}</div>
+                                    </div>
+                                    {openingExternalHarnessArtifactPath === session.primaryArtifactPath ? (
+                                      <LoaderCircle className="mt-1 size-4 shrink-0 animate-spin text-primary" aria-hidden />
+                                    ) : null}
+                                  </div>
                                 </button>
                               ))}
                             </div>
-                          </div>
-                        ))}
+                          )}
+                        </section>
                       </div>
                     )}
                   </TabsContent>

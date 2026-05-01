@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import type { CursorTranscriptRecord } from "../../types/harness-context/cursor.types";
 import type { HarnessContextAdapter, HarnessContextReadInput } from "../../types/harnessContext.types";
+import type { ExternalHarnessArtifactCandidate } from "../../types/externalHarnessDiscovery.types";
 import { normalizeStoredResumeSessionId } from "../resumeCommandUtils";
 import {
   buildHarnessContextEntry,
@@ -77,6 +78,16 @@ async function chooseCursorTranscriptFilePath(
   input: HarnessContextReadInput,
   projectsRootPath: string
 ): Promise<string | null> {
+  const forced = input.forcedArtifactPath?.trim();
+  if (forced) {
+    try {
+      await fs.access(forced);
+      return forced;
+    } catch {
+      return null;
+    }
+  }
+
   const projectDirectoryPath = path.join(projectsRootPath, buildCursorProjectDirectoryName(input.agent.workspace));
   const transcriptFilePaths = await listCursorTranscriptFilePaths(projectDirectoryPath);
   if (transcriptFilePaths.length === 0) {
@@ -194,6 +205,39 @@ export async function readCursorHarnessEntries(options: {
   } catch {
     return [];
   }
+}
+
+export async function discoverCursorExternalHarnessCandidates(
+  workspaceAbsolutePath: string,
+  occupiedKeys: Set<string>
+): Promise<ExternalHarnessArtifactCandidate[]> {
+  const projectDirectoryPath = path.join(getCursorProjectsRootPath(), buildCursorProjectDirectoryName(workspaceAbsolutePath));
+  const transcriptFilePaths = await listCursorTranscriptFilePaths(projectDirectoryPath);
+  const rows: ExternalHarnessArtifactCandidate[] = [];
+
+  for (const filePath of transcriptFilePaths) {
+    const conversationId = path.basename(filePath, ".jsonl");
+    if (!conversationId) {
+      continue;
+    }
+    if (occupiedKeys.has(`cursor:${normalizeStoredResumeSessionId(conversationId)}`)) {
+      continue;
+    }
+    try {
+      const stat = await fs.stat(filePath);
+      rows.push({
+        toolId: "cursor",
+        conversationId,
+        primaryArtifactPath: filePath,
+        sessionLabel: `Cursor · ${conversationId.length > 18 ? `${conversationId.slice(0, 18)}…` : conversationId}`,
+        lastUpdatedAt: new Date(stat.mtimeMs).toISOString()
+      });
+    } catch {
+      // ignore
+    }
+  }
+
+  return rows.sort((left, right) => (right.lastUpdatedAt || "").localeCompare(left.lastUpdatedAt || "")).slice(0, 20);
 }
 
 export const cursorHarnessContextAdapter: HarnessContextAdapter = {

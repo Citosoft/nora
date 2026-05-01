@@ -16,6 +16,8 @@ import {
   importAgentContextBundleIntoWorkspace,
   resolveSelectedContextEntries
 } from "../agentContextArtifacts";
+import { readMergedAgentContextEntries } from "../harness-context/contextRepository";
+import { buildSyntheticExternalHarnessAgent } from "../harness-context/externalHarnessSyntheticAgent";
 import {
   clearAgentContext as clearAgentContextAction,
   clearAgentTerminal as clearAgentTerminalAction,
@@ -69,13 +71,28 @@ export class SessionMainService implements SessionService {
     );
     const uniqueSourceIds = [...new Set(input.contextSelections.map((selection) => selection.sourceAgentId))];
     const entriesByAgentId = new Map(
-      await Promise.all(uniqueSourceIds.map(async (sourceAgentId) => {
-        const sourceAgent = agentsById.get(sourceAgentId);
-        if (!sourceAgent) {
-          return [sourceAgentId, [] as import("@shared/appTypes").AgentContextEntry[]] as const;
-        }
-        return [sourceAgentId, await this.d.readAgentContextEntries(sourceAgent)] as const;
-      }))
+      await Promise.all(
+        uniqueSourceIds.map(async (sourceAgentId) => {
+          const selection = input.contextSelections.find((item) => item.sourceAgentId === sourceAgentId);
+          if (selection?.externalHarness) {
+            const ref = selection.externalHarness;
+            const synthetic = buildSyntheticExternalHarnessAgent({
+              ref,
+              projectId: targetAgent.projectId,
+              worktreeId: targetAgent.worktreeId
+            });
+            const entries = await readMergedAgentContextEntries(synthetic, {
+              forcedHarnessArtifactPath: ref.primaryArtifactPath
+            });
+            return [sourceAgentId, entries] as const;
+          }
+          const sourceAgent = agentsById.get(sourceAgentId);
+          if (!sourceAgent) {
+            return [sourceAgentId, [] as import("@shared/appTypes").AgentContextEntry[]] as const;
+          }
+          return [sourceAgentId, await this.d.readAgentContextEntries(sourceAgent)] as const;
+        })
+      )
     );
     const selectedSources = resolveSelectedContextEntries({
       selections: input.contextSelections,

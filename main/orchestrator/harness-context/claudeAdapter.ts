@@ -4,11 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import type { ClaudeSessionRecord } from "../../types/harness-context/claude.types";
 import type { HarnessContextAdapter, HarnessContextReadInput } from "../../types/harnessContext.types";
-import {
-  buildHarnessContextEntry,
-  hasExactUserPromptDuplicate,
-  parseIsoTimestamp
-} from "./contextEntryFactory";
+import type { ExternalHarnessArtifactCandidate } from "../../types/externalHarnessDiscovery.types";
+import { normalizeStoredResumeSessionId } from "../resumeCommandUtils";
+import { buildHarnessContextEntry, hasExactUserPromptDuplicate, parseIsoTimestamp } from "./contextEntryFactory";
 
 function getClaudeProjectsRootPath(): string {
   return path.join(os.homedir(), ".claude", "projects");
@@ -128,6 +126,16 @@ async function chooseClaudeSessionFilePath(
   input: HarnessContextReadInput,
   projectsRootPath: string
 ): Promise<string | null> {
+  const forced = input.forcedArtifactPath?.trim();
+  if (forced) {
+    try {
+      await fs.access(forced);
+      return forced;
+    } catch {
+      return null;
+    }
+  }
+
   const projectDirectoryPath = path.join(projectsRootPath, buildClaudeProjectDirectoryName(input.agent.workspace));
 
   let directoryEntries: path.ParsedPath[] | null = null;
@@ -181,6 +189,45 @@ export async function readClaudeHarnessEntries(options: {
   } catch {
     return [];
   }
+}
+
+export async function discoverClaudeExternalHarnessCandidates(
+  workspaceAbsolutePath: string,
+  occupiedKeys: Set<string>
+): Promise<ExternalHarnessArtifactCandidate[]> {
+  const projectDirectoryPath = path.join(getClaudeProjectsRootPath(), buildClaudeProjectDirectoryName(workspaceAbsolutePath));
+  let names: string[];
+  try {
+    names = (await fs.readdir(projectDirectoryPath)).filter((name) => name.endsWith(".jsonl"));
+  } catch {
+    return [];
+  }
+
+  const rows: ExternalHarnessArtifactCandidate[] = [];
+  for (const name of names) {
+    const conversationId = path.basename(name, ".jsonl");
+    if (!conversationId) {
+      continue;
+    }
+    if (occupiedKeys.has(`claude:${normalizeStoredResumeSessionId(conversationId)}`)) {
+      continue;
+    }
+    const filePath = path.join(projectDirectoryPath, name);
+    try {
+      const stat = await fs.stat(filePath);
+      rows.push({
+        toolId: "claude",
+        conversationId,
+        primaryArtifactPath: filePath,
+        sessionLabel: `Claude · ${conversationId.length > 18 ? `${conversationId.slice(0, 18)}…` : conversationId}`,
+        lastUpdatedAt: new Date(stat.mtimeMs).toISOString()
+      });
+    } catch {
+      // ignore
+    }
+  }
+
+  return rows.sort((left, right) => (right.lastUpdatedAt || "").localeCompare(left.lastUpdatedAt || "")).slice(0, 20);
 }
 
 export const claudeHarnessContextAdapter: HarnessContextAdapter = {

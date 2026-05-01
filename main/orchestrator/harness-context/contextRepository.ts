@@ -45,8 +45,12 @@ function mergeAgentContextEntries(
   });
 }
 
-export async function readMergedAgentContextEntries(agent: AgentSession): Promise<AgentContextEntry[]> {
-  const exactEntries = await readAgentContextEntries(agent.contextFilePath);
+export async function readMergedAgentContextEntries(
+  agent: AgentSession,
+  options?: { forcedHarnessArtifactPath?: string | null }
+): Promise<AgentContextEntry[]> {
+  const forcedPath = options?.forcedHarnessArtifactPath?.trim() || null;
+  const exactEntries = forcedPath ? [] : await readAgentContextEntries(agent.contextFilePath);
   const adapter = getHarnessContextAdapter(agent.toolId);
   if (!adapter) {
     return exactEntries;
@@ -56,7 +60,8 @@ export async function readMergedAgentContextEntries(agent: AgentSession): Promis
     const harnessEntries = await adapter.readEntries({
       agent,
       exactEntries,
-      contextBoundaryMs: await readContextBoundaryMs(agent, exactEntries)
+      contextBoundaryMs: forcedPath ? 0 : await readContextBoundaryMs(agent, exactEntries),
+      forcedArtifactPath: forcedPath ?? undefined
     });
     return mergeAgentContextEntries(exactEntries, harnessEntries);
   } catch {

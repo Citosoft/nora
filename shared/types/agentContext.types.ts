@@ -52,9 +52,27 @@ export interface AgentContextEntry {
   sourceAgentIds: string[];
 }
 
+/** Local CLI harness transcripts used when attaching context from sessions that were not started in Nora. */
+export interface ExternalHarnessContextRef {
+  toolId: string;
+  toolLabel: string;
+  conversationId: string;
+  primaryArtifactPath: string;
+  sessionLabel: string;
+  workspacePath: string;
+}
+
+export interface ExternalHarnessSessionSummary extends ExternalHarnessContextRef {
+  lastUpdatedAt: string | null;
+  latestPreview: string;
+  entryCount: number;
+  estimate: AgentContextEstimate;
+}
+
 export interface AgentContextSelection {
   sourceAgentId: string;
   entryIds: string[];
+  externalHarness?: ExternalHarnessContextRef;
 }
 
 export interface AgentContextEntryGroup {

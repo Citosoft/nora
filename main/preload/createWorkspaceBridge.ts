@@ -38,6 +38,10 @@ export function createWorkspaceBridge(): WorkspaceBridge {
     searchWorkspaceFiles: (payload) => invokeIpc("app:search-workspace-files", payload),
     listImportedContextBundles: (projectId, rootPath) =>
       invokeIpc("app:list-imported-context-bundles", projectId, rootPath),
+    listExternalHarnessContextSessions: (projectId, rootPath) =>
+      invokeIpc("app:list-external-harness-context-sessions", projectId, rootPath),
+    composeExternalHarnessContextSelections: (projectId, ref) =>
+      invokeIpc("app:compose-external-harness-context-selections", projectId, ref),
     listNoraDetectableContextBundles: (projectId, sessionId, worktreeId) =>
       invokeIpc("app:list-nora-detectable-context-bundles", projectId, sessionId, worktreeId),
     importNoraDetectableContextBundle: (payload) =>

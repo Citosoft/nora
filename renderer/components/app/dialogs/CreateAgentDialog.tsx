@@ -284,6 +284,12 @@ export function CreateAgentDialog({
       >
         <DialogBody className="min-h-0 overflow-y-auto px-6 pb-4 pt-3">
           <div className="flex min-h-0 flex-col gap-5">
+            <div className="rounded-md border border-border/60 bg-muted/15 px-3 py-2.5 text-sm leading-relaxed text-muted-foreground">
+              Start a new AI agent in its own terminal for this project. Use the steps to pick which CLI to run, which
+              checkout or worktree it should use, and any optional conversation context—from other Nora agents or
+              matching local CLI transcripts for this folder.
+            </div>
+
             <nav aria-label="Wizard steps">
               <div className="flex w-full border-b border-border" role="tablist">
                 {CREATE_AGENT_WIZARD_STEPS.map((step, index) => {
@@ -612,7 +618,8 @@ export function CreateAgentDialog({
                   <div className="border-t border-border/60 pt-5">
                     <h3 className="text-sm font-medium text-foreground">Shared context</h3>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Optional — attach conversation groups from other agents in this workspace.
+                      Optional — attach conversation groups from other Nora agents or matching local CLI sessions for
+                      this worktree.
                     </p>
                     <div className="mt-3">
                       <AgentContextPicker

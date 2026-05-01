@@ -1,10 +1,13 @@
 import { listProviderModels } from "@main/ai/providerModels";
 import type { MainServices } from "@main/services/mainServices";
 import type {
+  AgentContextSelection,
   AppSettings,
   AppState,
   CommitChangesPayload,
   CreateWorkspaceDirectoryPayload,
+  ExternalHarnessContextRef,
+  ExternalHarnessSessionSummary,
   GenerateCommitMessagePayload,
   GenerateCommitMessageResult,
   ImportBrowserImagePayload,
@@ -62,6 +65,16 @@ export function registerWorkspaceIpc({
   );
   ipcMain.handle("app:list-workspace-agent-context-sources", (_event, projectId: string, excludeAgentId?: string) =>
     services.snapshot.listWorkspaceAgentContextSources(projectId, excludeAgentId)
+  );
+  ipcMain.handle(
+    "app:list-external-harness-context-sessions",
+    (_event, projectId: string, rootPath?: string): Promise<ExternalHarnessSessionSummary[]> =>
+      services.workspace.listExternalHarnessContextSessions(projectId, rootPath)
+  );
+  ipcMain.handle(
+    "app:compose-external-harness-context-selections",
+    (_event, projectId: string, ref: ExternalHarnessContextRef): Promise<AgentContextSelection[]> =>
+      services.workspace.composeExternalHarnessContextSelections(projectId, ref)
   );
   ipcMain.handle("app:read-workspace-file", (_event, payload: WorkspaceFileRequest) =>
     services.workspace.readWorkspaceFile(payload)

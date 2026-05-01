@@ -593,15 +593,29 @@ export function resolveSelectedContextEntries(options: {
   }> = [];
 
   for (const selection of options.selections) {
-    const sourceAgent = options.agentsById.get(selection.sourceAgentId);
     const sourceEntries = options.entriesByAgentId.get(selection.sourceAgentId) || [];
-    if (!sourceAgent || selection.entryIds.length === 0) {
+    if (selection.entryIds.length === 0) {
       continue;
     }
 
     const selectedEntryIdSet = new Set(selection.entryIds);
     const selectedEntries = sourceEntries.filter((entry) => selectedEntryIdSet.has(entry.id));
     if (!selectedEntries.length) {
+      continue;
+    }
+
+    if (selection.externalHarness) {
+      bundles.push({
+        agentId: selection.sourceAgentId,
+        agentName: selection.externalHarness.sessionLabel,
+        toolLabel: selection.externalHarness.toolLabel,
+        entries: selectedEntries
+      });
+      continue;
+    }
+
+    const sourceAgent = options.agentsById.get(selection.sourceAgentId);
+    if (!sourceAgent) {
       continue;
     }
 

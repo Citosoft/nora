@@ -1,5 +1,8 @@
 import type {
+  AgentContextSelection,
   AppState,
+  ExternalHarnessContextRef,
+  ExternalHarnessSessionSummary,
   ImportedContextBundleSummary,
   TerminalPreset,
   WorkspaceGitStatusSummary,
@@ -52,6 +55,20 @@ export abstract class WorkspaceActionsApiBase {
 
   async listImportedContextBundles(projectId: string, rootPath?: string): Promise<ImportedContextBundleSummary[]> {
     return this.getWorkspaceActions().listImportedContextBundlesByProject(projectId, rootPath);
+  }
+
+  async listExternalHarnessContextSessions(
+    projectId: string,
+    rootPath?: string
+  ): Promise<ExternalHarnessSessionSummary[]> {
+    return this.getWorkspaceActions().listExternalHarnessContextSessionsByProject(projectId, rootPath);
+  }
+
+  async composeExternalHarnessContextSelections(
+    projectId: string,
+    ref: ExternalHarnessContextRef
+  ): Promise<AgentContextSelection[]> {
+    return this.getWorkspaceActions().composeExternalHarnessContextSelectionsByProject(projectId, ref);
   }
 
   async statWorkspacePath(payload: { projectId: string; path: string; rootPath?: string }): Promise<WorkspacePathStatResult> {

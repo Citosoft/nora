@@ -1,7 +1,10 @@
 import type {
+  AgentContextSelection,
   AppState,
   CommitChangesPayload,
   CreateWorkspaceDirectoryPayload,
+  ExternalHarnessContextRef,
+  ExternalHarnessSessionSummary,
   ImportedContextBundleSummary,
   NoraDetectableContextBundleSummary,
   TerminalPreset,
@@ -80,6 +83,17 @@ export class WorkspaceMainService implements WorkspaceService {
 
   listImportedContextBundles = (projectId: string, rootPath?: string): Promise<ImportedContextBundleSummary[]> =>
     this.actions().listImportedContextBundlesByProject(projectId, rootPath);
+
+  listExternalHarnessContextSessions = (
+    projectId: string,
+    rootPath?: string
+  ): Promise<ExternalHarnessSessionSummary[]> =>
+    this.actions().listExternalHarnessContextSessionsByProject(projectId, rootPath);
+
+  composeExternalHarnessContextSelections = (
+    projectId: string,
+    ref: ExternalHarnessContextRef
+  ): Promise<AgentContextSelection[]> => this.actions().composeExternalHarnessContextSelectionsByProject(projectId, ref);
 
   listNoraDetectableContextBundles = (
     projectId: string,

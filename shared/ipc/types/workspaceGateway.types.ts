@@ -1,8 +1,11 @@
 import type {
+  AgentContextSelection,
   AppState,
   CommitChangesPayload,
   ConnectRemoteProjectPayload,
   CreateWorkspaceDirectoryPayload,
+  ExternalHarnessContextRef,
+  ExternalHarnessSessionSummary,
   GenerateCommitMessagePayload,
   GenerateCommitMessageResult,
   ImportBrowserImagePayload,
@@ -70,6 +73,14 @@ export interface WorkspaceBridge {
   deleteWorkspaceFile: (payload: WorkspaceFileRequest) => Promise<AppState>;
   searchWorkspaceFiles: (payload: WorkspaceSearchRequest) => Promise<WorkspaceSearchResult[]>;
   listImportedContextBundles: (projectId: string, rootPath?: string) => Promise<ImportedContextBundleSummary[]>;
+  listExternalHarnessContextSessions: (
+    projectId: string,
+    rootPath?: string
+  ) => Promise<ExternalHarnessSessionSummary[]>;
+  composeExternalHarnessContextSelections: (
+    projectId: string,
+    ref: ExternalHarnessContextRef
+  ) => Promise<AgentContextSelection[]>;
   listNoraDetectableContextBundles: (
     projectId: string,
     sessionId: string,
