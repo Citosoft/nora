@@ -45,6 +45,7 @@ import { registerDeploymentIpc } from "./ipc/registerDeploymentIpc";
 import { registerForgeIpc } from "./ipc/registerForgeIpc";
 import { registerRemoteIpc } from "./ipc/registerRemoteIpc";
 import { Orchestrator } from "./orchestrator";
+import { registerAgentUsageIpc } from "./ipc/registerAgentUsageIpc";
 import { registerSessionIpc } from "./ipc/registerSessionIpc";
 import { registerSystemIpc } from "./ipc/registerSystemIpc";
 import { registerToolingIpc } from "./ipc/registerToolingIpc";
@@ -397,6 +398,8 @@ function registerIpc(): void {
     services,
     withSnapshot
   });
+
+  registerAgentUsageIpc();
 
   registerSystemIpc({
     parseAllowedExternalUrl,

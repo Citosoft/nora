@@ -7,6 +7,7 @@ export type {
   WorkspaceDomainModel
 } from "./types/appDomainState.types";
 export * from "./types/agentContext.types";
+export * from "./types/agentUsageStats.types";
 export * from "./types/ai.types";
 export * from "./types/analytics.types";
 export * from "./types/fileEditorTheme.types";

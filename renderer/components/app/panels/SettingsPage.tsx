@@ -10,11 +10,13 @@ import { PrivacySettingsSection } from "@/components/app/panels/settings/Privacy
 import { SkillsSettingsSection } from "@/components/app/panels/settings/SkillsSettingsSection";
 import { SystemSettingsSection } from "@/components/app/panels/settings/SystemSettingsSection";
 import { TerminalSettingsSection } from "@/components/app/panels/settings/TerminalSettingsSection";
+import { AgentUsageStatsSection } from "@/components/app/panels/settings/AgentUsageStatsSection";
 import { WorkbenchSettingsSection } from "@/components/app/panels/settings/WorkbenchSettingsSection";
 import type { SettingsGroup, SettingsPageProps } from "@/components/app/types/component.types";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  BarChart3,
   Bot,
   Cpu,
   FlaskConical,
@@ -37,6 +39,7 @@ const SETTINGS_GROUP_ITEMS: { value: SettingsGroup; label: string; icon: LucideI
   { value: "terminal", label: "Terminal", icon: TerminalSquare },
   { value: "browser", label: "Browser", icon: Globe },
   { value: "cli", label: "Agents", icon: Bot },
+  { value: "agentUsage", label: "Agent usage", icon: BarChart3 },
   { value: "skills", label: "Skills", icon: Sparkles },
   { value: "integrations", label: "Integrations", icon: Plug },
   { value: "ai", label: "AI", icon: Bot },
@@ -118,6 +121,10 @@ export function SettingsPage({ initialGroup }: SettingsPageProps) {
 
           <TabsContent value="cli" className="mt-0">
             <CliSettingsSection />
+          </TabsContent>
+
+          <TabsContent value="agentUsage" className="mt-0">
+            <AgentUsageStatsSection />
           </TabsContent>
 
           <TabsContent value="skills" className="mt-0">

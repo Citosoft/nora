@@ -82,6 +82,7 @@ async function waitForAgentConversationReady(
   let acceptedModelPrompt = false;
   let acceptedContinuePrompt = false;
   let promptReadyAt: number | null = null;
+  let codexRunningSinceMs: number | null = null;
   let geminiRunningSinceMs: number | null = null;
   let geminiLastNormalizedOutput = "";
   let geminiStableIterations = 0;
@@ -133,14 +134,39 @@ async function waitForAgentConversationReady(
         return;
       }
 
-      // Codex often accepts input as soon as the session is running, before
-      // banner/status markers settle. Return early when no interactive startup
-      // prompt is currently visible so instruction handoff is not delayed.
       const hasPendingStartupPrompt =
         (hasTrustPrompt && !acceptedTrustPrompt) ||
         (hasModelPrompt && !acceptedModelPrompt) ||
         (hasContinuePrompt && !acceptedContinuePrompt);
-      if (agent.status === "running" && !hasPendingStartupPrompt) {
+
+      if (agent.status !== "running") {
+        codexRunningSinceMs = null;
+      } else if (codexRunningSinceMs === null) {
+        codexRunningSinceMs = Date.now();
+      }
+
+      // Do not hand off while the PTY is "running" but Codex has not printed
+      // anything yet: the first prompt can be dropped and the UI still shows
+      // context entries from sendAgentPrompt. Require a short warm-up and
+      // either visible output or a longer fallback delay (new Codex banners).
+      const CODEX_HANDOFF_MIN_MS = 900;
+      const CODEX_HANDOFF_FALLBACK_MS = 2_800;
+      const CODEX_HANDOFF_MIN_BUFFER = 40;
+      const elapsedSinceRunning =
+        agent.status === "running" && codexRunningSinceMs !== null ? Date.now() - codexRunningSinceMs : 0;
+      const bufferLooksReady =
+        plainOutput.length >= CODEX_HANDOFF_MIN_BUFFER ||
+        promptReady ||
+        hasTrustPrompt ||
+        hasModelPrompt ||
+        hasContinuePrompt;
+      const codexCanAcceptHandoff =
+        agent.status === "running" &&
+        !hasPendingStartupPrompt &&
+        elapsedSinceRunning >= CODEX_HANDOFF_MIN_MS &&
+        (bufferLooksReady || elapsedSinceRunning >= CODEX_HANDOFF_FALLBACK_MS);
+
+      if (codexCanAcceptHandoff) {
         return;
       }
     } else if (agent.toolId === "gemini") {

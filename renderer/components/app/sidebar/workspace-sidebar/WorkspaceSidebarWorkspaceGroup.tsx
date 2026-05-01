@@ -285,7 +285,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
           </div>
         </div>
         {isGroupCollapsed ? null : (
-          <div className="border-t border-border/40 bg-background/10">
+          <div className="border-t border-border/40 bg-background/10 pl-1.5">
             <div className="py-2 pl-5 pr-4">
               <div className="flex items-center justify-between gap-3">
                 <WorkspaceSidebarChildSectionLabel icon={<Bot className="size-3.5" />} label="Agents" />

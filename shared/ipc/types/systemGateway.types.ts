@@ -22,6 +22,7 @@ import type {
   StartupDependencyId,
   StartupDependencyReport
 } from "../../types/startupDependency.types";
+import type { AgentUsageScanRequest, LocalAgentUsageReport } from "../../types/agentUsageStats.types";
 import type { DetectedUserIdentity } from "../../types/userIdentity.types";
 
 export interface WindowState {
@@ -80,6 +81,7 @@ export interface SystemBridge {
   showAgentCompletionNotification: (payload: AgentCompletionNotificationPayload) => Promise<void>;
   onAppClosingProgress: (listener: (payload: AppClosingProgressPayload) => void) => () => void;
   logAnalytics: (level: "info" | "warn" | "debug" | "error", message: string) => Promise<void>;
+  scanLocalAgentUsage: (request: AgentUsageScanRequest) => Promise<LocalAgentUsageReport>;
 }
 
 export interface SystemGateway extends SystemBridge {}

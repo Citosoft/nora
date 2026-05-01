@@ -2,7 +2,7 @@
 
 This product includes third-party open-source software.
 
-Generated: 2026-05-01T21:36:16.003Z
+Generated: 2026-05-01T22:29:35.174Z
 
 | Package | Version | License |
 | --- | --- | --- |
@@ -30,6 +30,7 @@ Generated: 2026-05-01T21:36:16.003Z
 | react | 19.2.4 | MIT |
 | react-dom | 19.2.4 | MIT |
 | react-markdown | 10.1.0 | MIT |
+| recharts | 2.15.4 | MIT |
 | remark-gfm | 4.0.1 | MIT |
 | strip-ansi | 6.0.1 | MIT |
 | tailwind-merge | 3.5.0 | MIT |

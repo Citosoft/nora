@@ -1,4 +1,5 @@
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
+import { APP_DOCS_URL } from "@shared/appMeta";
 import { TitleBarWorkspaceQuickSearch } from "@/components/app/chrome/TitleBarWorkspaceQuickSearch";
 import { AppMark } from "@/components/app/shared/AppMark";
 import { IdeBadge } from "@/components/app/shared/IdeBadge";
@@ -7,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { ChevronDown, ChevronRight, CircleHelp, Code2, Copy, Keyboard, Minus, Moon, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, Settings, Square, Sun, X } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronRight, CircleHelp, Code2, Copy, Keyboard, Minus, Moon, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, Settings, Square, Sun, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 function TitleBarControls({
@@ -355,6 +356,9 @@ export function TitleBar({
                 </button>
               )}
             >
+              <DropdownMenuItem onSelect={() => void noraSystemClient.openExternalUrl(APP_DOCS_URL)}>
+                <span>Documentation</span>
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={onOpenKeyboardShortcuts}>
                 <span>Keyboard Shortcuts</span>
               </DropdownMenuItem>
@@ -551,6 +555,10 @@ export function TitleBar({
             </button>
           )}
         >
+          <DropdownMenuItem onSelect={() => void noraSystemClient.openExternalUrl(APP_DOCS_URL)}>
+            <BookOpen className="size-4" />
+            <span>Documentation</span>
+          </DropdownMenuItem>
           <DropdownMenuItem onSelect={onSubmitIssue}>
             <CircleHelp className="size-4" />
             <span>Submit Issue</span>

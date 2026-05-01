@@ -124,6 +124,7 @@ export type SettingsGroup =
   | "terminal"
   | "browser"
   | "cli"
+  | "agentUsage"
   | "skills"
   | "integrations"
   | "ai"

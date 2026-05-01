@@ -50,6 +50,7 @@ export function createSystemBridge(): SystemBridge {
     showAgentCompletionNotification: (payload) => invokeIpc("app:show-agent-completion-notification", payload),
     onAppClosingProgress: (listener) =>
       subscribeToIpcEvent<AppClosingProgressPayload>("app:closing-progress", listener),
-    logAnalytics: (level, message) => invokeIpc("app:log-analytics", { level, message })
+    logAnalytics: (level, message) => invokeIpc("app:log-analytics", { level, message }),
+    scanLocalAgentUsage: (request) => invokeIpc("app:scan-local-agent-usage", request)
   };
 }

@@ -168,7 +168,8 @@ export const NORA_SYSTEM_CLIENT_METHODS = [
   "savePastedImage",
   "showAgentCompletionNotification",
   "onAppClosingProgress",
-  "logAnalytics"
+  "logAnalytics",
+  "scanLocalAgentUsage"
 ] as const satisfies readonly (keyof NoraBridge)[];
 
 function getNoraApi(): NoraBridge {
