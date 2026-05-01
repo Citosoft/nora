@@ -1,4 +1,5 @@
 import { formatDiffPreview, getInlineCommentKey, parseDiffLines, splitForgeComments } from "@/components/app/logic/forgePanelDiff";
+import { resolveForgeWorkflowRunBadgeVariant } from "@/components/app/logic/forgeWorkflowRunUi";
 import { diffLineClass } from "@/components/app/logic/utils";
 import { MarkdownRenderer } from "@/components/app/shared/MarkdownRenderer";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
@@ -47,17 +48,7 @@ function getWorkflowRunLabel(run: ForgeWorkflowRunSummary): string {
 }
 
 function getWorkflowRunBadgeVariant(run: ForgeWorkflowRunSummary): "success" | "warning" | "destructive" | "outline" {
-  const label = getWorkflowRunLabel(run).toLowerCase();
-  if (label === "success") {
-    return "success";
-  }
-  if (label === "queued" || label === "in_progress" || label === "pending" || label === "requested" || label === "waiting") {
-    return "warning";
-  }
-  if (label === "failure" || label === "failed" || label === "cancelled" || label === "timed_out" || label === "action_required") {
-    return "destructive";
-  }
-  return "outline";
+  return resolveForgeWorkflowRunBadgeVariant(run.conclusion, run.status);
 }
 
 function isWorkflowRunActive(run: ForgeWorkflowRunSummary): boolean {

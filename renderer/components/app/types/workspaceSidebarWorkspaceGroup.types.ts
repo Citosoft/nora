@@ -19,11 +19,13 @@ export type WorkspaceSidebarWorkspaceGroupProps = {
   collapsedWorkspaceIds: Record<string, boolean>;
   onCollapsedWorkspaceIdsChange: (updater: (current: Record<string, boolean>) => Record<string, boolean>) => void;
   collapsedWorkspaceAgentSectionIds: Record<string, boolean>;
+  collapsedWorkspaceTerminalSectionIds: Record<string, boolean>;
   collapsedWorkspaceAiChatSectionIds: Record<string, boolean>;
   collapsedWorkspaceNoteSectionIds: Record<string, boolean>;
   collapsedWorkspaceSpecSectionIds: Record<string, boolean>;
   collapsedWorkspaceTaskSectionIds: Record<string, boolean>;
   toggleWorkspaceAgentSection: (workspaceId: string) => void;
+  toggleWorkspaceTerminalSection: (workspaceId: string) => void;
   toggleWorkspaceAiChatSection: (workspaceId: string) => void;
   toggleWorkspaceNoteSection: (workspaceId: string) => void;
   toggleWorkspaceSpecSection: (workspaceId: string) => void;

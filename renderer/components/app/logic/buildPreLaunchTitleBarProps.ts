@@ -18,6 +18,7 @@ export const buildPreLaunchTitleBarLoadingProps = (
   preferredIde: null,
   onOpenProjectInIde: noop,
   isWorkspaceSidebarCollapsed: false,
+  sidebarsSwapped: false,
   onToggleWorkspaceSidebar: noop,
   onCloseWorkspace: noop,
   onRefreshWorkspace: noop,
@@ -47,6 +48,7 @@ export const buildPreLaunchTitleBarOnboardingProps = (
     preferredIde: null,
     onOpenProjectInIde: noop,
     isWorkspaceSidebarCollapsed: false,
+    sidebarsSwapped: false,
     onToggleWorkspaceSidebar: noop,
     onCloseWorkspace: () => {
       void workspace.safely(() => noraWorkspaceManagementClient.closeWorkspace());

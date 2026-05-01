@@ -83,6 +83,7 @@ export type AppShellSettingsRuntimeAssemblyInput = {
     BuildSettingsRuntimeValueDeps,
     | "isWorkspaceSidebarCollapsed"
     | "isChangesSidebarCollapsed"
+    | "sidebarsSwapped"
     | "isRemoteMountsSectionCollapsed"
     | "isPortsSectionCollapsed"
     | "isChatbotsSectionCollapsed"
@@ -92,6 +93,7 @@ export type AppShellSettingsRuntimeAssemblyInput = {
     | "isLocalTerminalDockCollapsed"
     | "setIsWorkspaceSidebarCollapsed"
     | "setIsChangesSidebarCollapsed"
+    | "setSidebarsSwapped"
     | "setIsRemoteMountsSectionCollapsed"
     | "setIsPortsSectionCollapsed"
     | "setIsChatbotsSectionCollapsed"

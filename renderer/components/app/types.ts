@@ -187,6 +187,8 @@ export type StoredWorkspaceContentState = {
 export type StoredUiLayout = {
   isWorkspaceSidebarCollapsed: boolean;
   isChangesSidebarCollapsed: boolean;
+  /** When true, the Changes sidebar is on the left and the workspace sidebar on the right. */
+  sidebarsSwapped: boolean;
   workspaceSidebarWidth: number;
   changesSidebarWidth: number;
   activeChangesPanelTab: "git" | "files" | "context" | "forge" | "vercel";

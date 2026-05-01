@@ -105,6 +105,7 @@ export const buildAppShellSettingsRuntimeAssemblyInputFromDeps = (
   sidebarLayout: {
     isWorkspaceSidebarCollapsed: deps.isWorkspaceSidebarCollapsed,
     isChangesSidebarCollapsed: deps.isChangesSidebarCollapsed,
+    sidebarsSwapped: deps.sidebarsSwapped,
     isRemoteMountsSectionCollapsed: deps.isRemoteMountsSectionCollapsed,
     isPortsSectionCollapsed: deps.isPortsSectionCollapsed,
     isChatbotsSectionCollapsed: deps.isChatbotsSectionCollapsed,
@@ -114,6 +115,7 @@ export const buildAppShellSettingsRuntimeAssemblyInputFromDeps = (
     isLocalTerminalDockCollapsed: deps.isLocalTerminalDockCollapsed,
     setIsWorkspaceSidebarCollapsed: deps.setIsWorkspaceSidebarCollapsed,
     setIsChangesSidebarCollapsed: deps.setIsChangesSidebarCollapsed,
+    setSidebarsSwapped: deps.setSidebarsSwapped,
     setIsRemoteMountsSectionCollapsed: deps.setIsRemoteMountsSectionCollapsed,
     setIsPortsSectionCollapsed: deps.setIsPortsSectionCollapsed,
     setIsChatbotsSectionCollapsed: deps.setIsChatbotsSectionCollapsed,

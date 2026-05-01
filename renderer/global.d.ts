@@ -38,6 +38,7 @@ declare global {
     goForward(): void;
     reload(): void;
     stop(): void;
+    openDevTools(): void;
     getURL(): string;
     addEventListener(
       type: "did-start-loading" | "did-stop-loading",

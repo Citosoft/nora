@@ -670,7 +670,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
   const activeSidebarTabClass = "bg-muted text-foreground";
 
   return (
-    <section className={cn("flex h-full min-h-0 min-w-0 flex-col overflow-hidden border-y-0 border-r-0 border-l border-l-border/70 bg-card/95", collapsed && "changes-sidebar-collapsed-surface")}>
+    <section className={cn("flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-card/95", collapsed && "changes-sidebar-collapsed-surface")}>
       {!collapsed ? (
         <CardHeader className="min-w-0 border-b border-border/60 px-0 py-2">
           <div className="mb-2 flex items-center gap-3 px-4">

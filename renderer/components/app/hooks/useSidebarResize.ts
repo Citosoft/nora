@@ -13,6 +13,8 @@ export type UseSidebarResizeArgs = {
   maxChangesSidebarWidth: number;
   workspaceSidebarAutoCollapseWidth: number;
   changesSidebarAutoCollapseWidth: number;
+  /** When true, workspace is on the right and Changes on the left; drag deltas are inverted per edge. */
+  sidebarsSwapped: boolean;
 };
 
 function clampSidebarWidth(value: number, min: number, max: number): number {
@@ -31,7 +33,8 @@ export function useSidebarResize({
   minChangesSidebarWidth,
   maxChangesSidebarWidth,
   workspaceSidebarAutoCollapseWidth,
-  changesSidebarAutoCollapseWidth
+  changesSidebarAutoCollapseWidth,
+  sidebarsSwapped
 }: UseSidebarResizeArgs): { startSidebarResize: (side: "left" | "right", event: ReactPointerEvent<HTMLDivElement>) => void } {
   const resizeCleanupRef = useRef<(() => void) | null>(null);
 
@@ -80,9 +83,13 @@ export function useSidebarResize({
       setIsChangesSidebarCollapsed(false);
     };
 
+    const workspaceDeltaSign = sidebarsSwapped ? -1 : 1;
+    const changesDeltaSign = sidebarsSwapped ? 1 : -1;
+
     const handlePointerMove = (moveEvent: PointerEvent) => {
       const delta = moveEvent.clientX - startX;
-      latestRawWidth = side === "left" ? startWidth + delta : startWidth - delta;
+      latestRawWidth =
+        side === "left" ? startWidth + workspaceDeltaSign * delta : startWidth + changesDeltaSign * delta;
       if (animationFrameId === null) {
         animationFrameId = window.requestAnimationFrame(applyLatestWidth);
       }
@@ -122,7 +129,8 @@ export function useSidebarResize({
     setIsWorkspaceSidebarCollapsed,
     setWorkspaceSidebarWidth,
     workspaceSidebarAutoCollapseWidth,
-    workspaceSidebarWidth
+    workspaceSidebarWidth,
+    sidebarsSwapped
   ]);
 
   return {

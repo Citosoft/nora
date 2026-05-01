@@ -11,6 +11,7 @@ export type AppShellLayoutSlice = {
   hasActiveWorkspace: boolean;
   isWorkspaceSidebarCollapsed: boolean;
   isChangesSidebarCollapsed: boolean;
+  sidebarsSwapped: boolean;
   startSidebarResize: (side: "left" | "right", event: ReactPointerEvent<HTMLDivElement>) => void;
   localTerminalState: LocalTerminalState | null;
   localTerminalDockHeight: number;

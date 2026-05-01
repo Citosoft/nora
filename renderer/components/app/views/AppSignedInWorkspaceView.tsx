@@ -13,6 +13,7 @@ export function AppSignedInWorkspaceView() {
   const {
     workspaceRuntimeValue,
     gridTemplateColumns,
+    areSidebarsSwapped,
     workspaceSidebarContextValue,
     isWorkspaceSidebarCollapsed,
     onStartWorkspaceSidebarResize,
@@ -25,6 +26,60 @@ export function AppSignedInWorkspaceView() {
     onStartChangesSidebarResize
   } = useAppSignedInWorkspaceView();
 
+  const workspaceSidebarCell = (
+    <div className="relative min-h-0">
+      <WorkspaceSidebarProvider value={workspaceSidebarContextValue}>
+        <AppWorkspaceSidebar />
+      </WorkspaceSidebarProvider>
+      {!isWorkspaceSidebarCollapsed ? (
+        <div
+          role="separator"
+          aria-label="Resize workspace sidebar"
+          aria-orientation="vertical"
+          className={[
+            "absolute inset-y-0 z-20 w-1.5 cursor-col-resize bg-transparent transition hover:bg-border/60",
+            areSidebarsSwapped ? "left-0" : "right-0"
+          ].join(" ")}
+          onPointerDown={onStartWorkspaceSidebarResize}
+        />
+      ) : null}
+    </div>
+  );
+
+  const changesSidebarCell = hasActiveWorkspace ? (
+    <div className="relative min-h-0">
+      <ChangesPanelSection {...changesPanelSectionProps} />
+      {!isChangesSidebarCollapsed ? (
+        <div
+          role="separator"
+          aria-label="Resize changes sidebar"
+          aria-orientation="vertical"
+          className={[
+            "absolute inset-y-0 z-20 w-1.5 cursor-col-resize bg-transparent transition hover:bg-border/60",
+            areSidebarsSwapped ? "right-0" : "left-0"
+          ].join(" ")}
+          onPointerDown={onStartChangesSidebarResize}
+        />
+      ) : null}
+    </div>
+  ) : (
+    <div className="min-h-0" aria-hidden />
+  );
+
+  const centerColumnCell = (
+    <div className="center-column-host relative flex min-h-0 min-w-0 flex-col overflow-hidden border-x border-border/70 bg-background">
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <AppMainCenterContentProvider value={appMainCenterContentValue}>
+          <AppMainCenterContent />
+        </AppMainCenterContentProvider>
+      </div>
+      <LocalTerminalDockProvider value={localTerminalDockProps}>
+        <AppLocalTerminalDock />
+      </LocalTerminalDockProvider>
+      <WorkspaceSessionLoadingOverlay {...workspaceSessionLoadingOverlayProps} />
+    </div>
+  );
+
   return (
     <WorkspaceRuntimeProvider value={workspaceRuntimeValue}>
       <div
@@ -33,45 +88,19 @@ export function AppSignedInWorkspaceView() {
           gridTemplateColumns
         }}
       >
-        <div className="relative min-h-0">
-          <WorkspaceSidebarProvider value={workspaceSidebarContextValue}>
-            <AppWorkspaceSidebar />
-          </WorkspaceSidebarProvider>
-          {!isWorkspaceSidebarCollapsed ? (
-            <div
-              role="separator"
-              aria-label="Resize workspace sidebar"
-              aria-orientation="vertical"
-              className="absolute inset-y-0 right-0 z-20 w-1.5 cursor-col-resize bg-transparent transition hover:bg-border/60"
-              onPointerDown={onStartWorkspaceSidebarResize}
-            />
-          ) : null}
-        </div>
-        <div className="center-column-host relative flex min-h-0 min-w-0 flex-col overflow-hidden bg-background">
-          <div className="min-h-0 flex-1 overflow-hidden">
-            <AppMainCenterContentProvider value={appMainCenterContentValue}>
-              <AppMainCenterContent />
-            </AppMainCenterContentProvider>
-          </div>
-          <LocalTerminalDockProvider value={localTerminalDockProps}>
-            <AppLocalTerminalDock />
-          </LocalTerminalDockProvider>
-          <WorkspaceSessionLoadingOverlay {...workspaceSessionLoadingOverlayProps} />
-        </div>
-        {hasActiveWorkspace ? (
-          <div className="relative min-h-0">
-            <ChangesPanelSection {...changesPanelSectionProps} />
-            {!isChangesSidebarCollapsed ? (
-              <div
-                role="separator"
-                aria-label="Resize changes sidebar"
-                aria-orientation="vertical"
-                className="absolute inset-y-0 left-0 z-20 w-1.5 cursor-col-resize bg-transparent transition hover:bg-border/60"
-                onPointerDown={onStartChangesSidebarResize}
-              />
-            ) : null}
-          </div>
-        ) : null}
+        {areSidebarsSwapped ? (
+          <>
+            {changesSidebarCell}
+            {centerColumnCell}
+            {workspaceSidebarCell}
+          </>
+        ) : (
+          <>
+            {workspaceSidebarCell}
+            {centerColumnCell}
+            {changesSidebarCell}
+          </>
+        )}
       </div>
     </WorkspaceRuntimeProvider>
   );

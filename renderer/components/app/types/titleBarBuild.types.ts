@@ -18,6 +18,7 @@ export type TitleBarBuildDeps = {
   isChangesSidebarCollapsed: boolean;
   isLoadingInstalledIdes: boolean;
   isWorkspaceSidebarCollapsed: boolean;
+  sidebarsSwapped: boolean;
   onAddRemoteWorkspace: () => void;
   onFocusLocalTerminalDock: () => void;
   onOpenAbout: () => void;

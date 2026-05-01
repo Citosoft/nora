@@ -17,23 +17,17 @@ export function NoteBrowserPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
-      <div className="border-b border-border/60 px-6 py-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              <StickyNote className="size-4" />
-              Notes
-            </div>
-            <h2 className="mt-2 text-2xl font-semibold text-foreground">Workspace notes</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Personal Markdown scratch space per repository — not used by agents or automation.
-            </p>
+      <div className="border-b border-border/60 px-6 py-3">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            <StickyNote className="size-4 shrink-0" />
+            Notes Center
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close notes browser">
+          <Button variant="ghost" size="icon" className="shrink-0" onClick={onClose} aria-label="Close notes browser">
             <X className="size-4" />
           </Button>
         </div>
-        <div className="mt-4 flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Badge variant="outline">{totalNoteCount} notes</Badge>
         </div>
       </div>

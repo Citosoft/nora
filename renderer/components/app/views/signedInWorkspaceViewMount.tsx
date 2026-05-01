@@ -24,9 +24,22 @@ export function useSignedInWorkspaceViewMount(): ReactElement | null {
       return null;
     }
 
+    const workspaceTrack = layout.isWorkspaceSidebarCollapsed
+      ? `${COLLAPSED_SIDEBAR_WIDTH}px`
+      : `${layout.workspaceSidebarWidth}px`;
+    const changesTrack = layout.hasActiveWorkspace
+      ? layout.isChangesSidebarCollapsed
+        ? `${COLLAPSED_SIDEBAR_WIDTH}px`
+        : `${layout.changesSidebarWidth}px`
+      : "0px";
+    const gridTemplateColumns = layout.sidebarsSwapped
+      ? `${changesTrack} minmax(0, 1fr) ${workspaceTrack}`
+      : `${workspaceTrack} minmax(0, 1fr) ${changesTrack}`;
+
     const value = {
       workspaceRuntimeValue: layout.workspaceRuntimeValue,
-      gridTemplateColumns: `${layout.isWorkspaceSidebarCollapsed ? `${COLLAPSED_SIDEBAR_WIDTH}px` : `${layout.workspaceSidebarWidth}px`} minmax(0, 1fr) ${layout.hasActiveWorkspace ? (layout.isChangesSidebarCollapsed ? `${COLLAPSED_SIDEBAR_WIDTH}px` : `${layout.changesSidebarWidth}px`) : "0px"}`,
+      gridTemplateColumns,
+      areSidebarsSwapped: layout.sidebarsSwapped,
       workspaceSidebarContextValue,
       isWorkspaceSidebarCollapsed: layout.isWorkspaceSidebarCollapsed,
       onStartWorkspaceSidebarResize: (event: PointerEvent<HTMLDivElement>) =>
@@ -76,6 +89,7 @@ export function useSignedInWorkspaceViewMount(): ReactElement | null {
     layout.isCreatingLocalTerminal,
     layout.isLocalTerminalDockCollapsed,
     layout.isWorkspaceSidebarCollapsed,
+    layout.sidebarsSwapped,
     layout.localTerminalDockFocusVersion,
     layout.localTerminalDockHeight,
     layout.localTerminalState,

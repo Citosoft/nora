@@ -17,9 +17,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { isAgentToolAvailable } from "@shared/agentToolState";
 import type { AgentCatalogEntry, AgentSession, CreateAgentPayload } from "@shared/appTypes";
-import { ArrowLeft, ArrowRight, ExternalLink, Globe, RefreshCcw } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { ArrowLeft, ArrowRight, Bug, ExternalLink, Globe, RefreshCcw } from "lucide-react";
 import type { FocusEvent, MouseEvent } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 type BrowserTabPanelProps = {
   tab?: BrowserTabState | null;
@@ -74,6 +75,7 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
   const [reloadNonce, setReloadNonce] = useState(0);
   const [selectionMenu, setSelectionMenu] = useState<SelectionContextMenuState | null>(null);
   const webviewRef = useRef<HTMLWebViewElement | null>(null);
+  const addressInputRef = useRef<HTMLInputElement | null>(null);
   const canGoBack = tab.historyIndex > 0;
   const canGoForward = tab.historyIndex < tab.history.length - 1;
   const webviewKey = useMemo(() => `${tab.id}:${reloadNonce}`, [reloadNonce, tab.id]);
@@ -83,6 +85,25 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
   useEffect(() => {
     setAddressInput(currentUrl);
   }, [currentUrl]);
+
+  useLayoutEffect(() => {
+    if (currentUrl !== "about:blank") {
+      return;
+    }
+
+    const focusAddress = () => {
+      const el = addressInputRef.current;
+      if (!el) {
+        return;
+      }
+      el.focus();
+      el.select();
+    };
+
+    focusAddress();
+    const rafId = requestAnimationFrame(focusAddress);
+    return () => cancelAnimationFrame(rafId);
+  }, [currentUrl, tab.id]);
 
   useEffect(() => {
     const webview = webviewRef.current;
@@ -387,64 +408,75 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
       <CardContent className="grid h-full grid-rows-[auto_minmax(0,1fr)] p-0">
         <div className="border-b border-border/60 bg-background/60 px-4 py-3">
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => {
-                if (webviewRef.current?.canGoBack()) {
-                  webviewRef.current.goBack();
-                  return;
-                }
+            <div className="flex shrink-0 overflow-hidden rounded-[6px] border border-border/70 bg-background/40">
+              <Button
+                variant="outline"
+                size="icon"
+                className="button-default-surface h-10 w-10 shrink-0 rounded-none border-0 border-r border-border/70 shadow-none"
+                onClick={() => {
+                  if (webviewRef.current?.canGoBack()) {
+                    webviewRef.current.goBack();
+                    return;
+                  }
 
-                onUpdateTab(tab.id, (current) => ({
-                  ...current,
-                  historyIndex: Math.max(0, current.historyIndex - 1),
-                  status: "starting"
-                }));
-              }}
-              disabled={!canGoBack}
-              aria-label="Go back"
-            >
-              <ArrowLeft className="size-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => {
-                if (webviewRef.current?.canGoForward()) {
-                  webviewRef.current.goForward();
-                  return;
-                }
+                  onUpdateTab(tab.id, (current) => ({
+                    ...current,
+                    historyIndex: Math.max(0, current.historyIndex - 1),
+                    status: "starting"
+                  }));
+                }}
+                disabled={!canGoBack}
+                aria-label="Go back"
+              >
+                <ArrowLeft className="size-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 shrink-0 rounded-none border-0 border-r border-border/70 shadow-none"
+                onClick={() => {
+                  if (webviewRef.current?.canGoForward()) {
+                    webviewRef.current.goForward();
+                    return;
+                  }
 
-                onUpdateTab(tab.id, (current) => ({
-                  ...current,
-                  historyIndex: Math.min(current.history.length - 1, current.historyIndex + 1),
-                  status: "starting"
-                }));
-              }}
-              disabled={!canGoForward}
-              aria-label="Go forward"
+                  onUpdateTab(tab.id, (current) => ({
+                    ...current,
+                    historyIndex: Math.min(current.history.length - 1, current.historyIndex + 1),
+                    status: "starting"
+                  }));
+                }}
+                disabled={!canGoForward}
+                aria-label="Go forward"
+              >
+                <ArrowRight className="size-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 shrink-0 rounded-none border-0 shadow-none"
+                onClick={() => {
+                  onUpdateTab(tab.id, (current) => ({ ...current, status: "starting" }));
+                  if (currentUrl === "about:blank") {
+                    setReloadNonce((current) => current + 1);
+                    return;
+                  }
+                  webviewRef.current?.reload();
+                }}
+                aria-label="Reload page"
+              >
+                <RefreshCcw className="size-4" />
+              </Button>
+            </div>
+            <div
+              className={cn(
+                "relative flex min-w-0 flex-1 items-stretch overflow-hidden rounded-[6px] border border-border/70 bg-background/40",
+                "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background"
+              )}
             >
-              <ArrowRight className="size-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => {
-                onUpdateTab(tab.id, (current) => ({ ...current, status: "starting" }));
-                if (currentUrl === "about:blank") {
-                  setReloadNonce((current) => current + 1);
-                  return;
-                }
-                webviewRef.current?.reload();
-              }}
-              aria-label="Reload page"
-            >
-              <RefreshCcw className="size-4" />
-            </Button>
-            <div className="relative min-w-0 flex-1">
-              <Globe className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Globe className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
+                ref={addressInputRef}
                 value={addressInput}
                 onChange={(event) => setAddressInput(event.target.value)}
                 onMouseDown={handleAddressInputMouseDown}
@@ -456,25 +488,47 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
                   }
                 }}
                 placeholder="Enter a URL"
-                className="pl-9"
+                className="h-10 min-w-0 flex-1 rounded-none border-0 bg-transparent pl-9 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
               />
+              <Button
+                variant="outline"
+                onClick={navigateToInput}
+                className="button-default-surface h-10 shrink-0 rounded-none border-0 border-l border-border/70 px-4 text-[12px] font-semibold shadow-none"
+              >
+                Go
+              </Button>
             </div>
-            <Button variant="outline" onClick={navigateToInput}>
-              Go
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => {
-                if (currentUrl !== "about:blank") {
-                  void noraSystemClient.openExternalUrl(currentUrl);
-                }
-              }}
-              disabled={currentUrl === "about:blank"}
-              aria-label="Open in external browser"
-            >
-              <ExternalLink className="size-4" />
-            </Button>
+            <div className="flex shrink-0 overflow-hidden rounded-[6px] border border-border/70 bg-background/40">
+              <Button
+                variant="outline"
+                size="icon"
+                className="button-default-surface h-10 w-10 shrink-0 rounded-none border-0 border-r border-border/70 shadow-none"
+                onClick={() => {
+                  if (currentUrl === "about:blank") {
+                    return;
+                  }
+                  webviewRef.current?.openDevTools();
+                }}
+                disabled={currentUrl === "about:blank"}
+                aria-label="Open developer tools for this page"
+              >
+                <Bug className="size-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 shrink-0 rounded-none border-0 shadow-none"
+                onClick={() => {
+                  if (currentUrl !== "about:blank") {
+                    void noraSystemClient.openExternalUrl(currentUrl);
+                  }
+                }}
+                disabled={currentUrl === "about:blank"}
+                aria-label="Open in external browser"
+              >
+                <ExternalLink className="size-4" />
+              </Button>
+            </div>
           </div>
         </div>
         {currentUrl === "about:blank" ? (
@@ -483,7 +537,7 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
               <Globe className="mx-auto size-10 text-primary" />
               <div className="text-lg font-medium text-foreground">New browser tab</div>
               <div className="text-sm text-muted-foreground">
-                Enter a URL above to open a page in the center column.
+                Enter a URL in the address bar to open a page.
               </div>
             </div>
           </div>

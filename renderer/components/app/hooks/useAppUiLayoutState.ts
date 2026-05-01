@@ -9,6 +9,7 @@ export const useAppUiLayoutState = (): UseAppUiLayoutStateResult => {
     storedLayout.isWorkspaceSidebarCollapsed
   );
   const [isChangesSidebarCollapsed, setIsChangesSidebarCollapsed] = useState(storedLayout.isChangesSidebarCollapsed);
+  const [sidebarsSwapped, setSidebarsSwapped] = useState(storedLayout.sidebarsSwapped);
   const [workspaceSidebarWidth, setWorkspaceSidebarWidth] = useState(
     storedLayout.workspaceSidebarWidth
   );
@@ -37,6 +38,7 @@ export const useAppUiLayoutState = (): UseAppUiLayoutStateResult => {
     writeStoredUiLayout({
       isWorkspaceSidebarCollapsed,
       isChangesSidebarCollapsed,
+      sidebarsSwapped,
       workspaceSidebarWidth,
       changesSidebarWidth,
       activeChangesPanelTab,
@@ -66,6 +68,7 @@ export const useAppUiLayoutState = (): UseAppUiLayoutStateResult => {
     isTasksSectionCollapsed,
     isWorkspaceSidebarCollapsed,
     localTerminalDockHeight,
+    sidebarsSwapped,
     workspaceSidebarWidth
   ]);
 
@@ -96,6 +99,8 @@ export const useAppUiLayoutState = (): UseAppUiLayoutStateResult => {
     setIsTasksSectionCollapsed,
     isWorkspaceSidebarCollapsed,
     setIsWorkspaceSidebarCollapsed,
+    sidebarsSwapped,
+    setSidebarsSwapped,
     localTerminalDockHeight,
     setLocalTerminalDockHeight,
     workspaceSidebarWidth,

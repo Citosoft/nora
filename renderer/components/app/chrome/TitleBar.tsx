@@ -91,6 +91,7 @@ export function TitleBar({
   defaultIdeId,
   onOpenProjectInIde,
   isWorkspaceSidebarCollapsed,
+  sidebarsSwapped,
   onToggleWorkspaceSidebar,
   onAddWorkspace,
   onAddRemoteWorkspace,
@@ -198,11 +199,37 @@ export function TitleBar({
         <button
           type="button"
           className={`app-no-drag grid h-8 w-8 place-items-center rounded-[4px] ${titleBarIconToneClass} transition hover:bg-accent/60 hover:text-foreground`}
-          onClick={onToggleWorkspaceSidebar}
-          aria-label={isWorkspaceSidebarCollapsed ? "Expand workspace sidebar" : "Collapse workspace sidebar"}
-          title={isWorkspaceSidebarCollapsed ? "Expand workspace sidebar" : "Collapse workspace sidebar"}
+          onClick={sidebarsSwapped ? onToggleChangesSidebar : onToggleWorkspaceSidebar}
+          aria-label={
+            sidebarsSwapped
+              ? isChangesSidebarCollapsed
+                ? "Expand changes sidebar"
+                : "Collapse changes sidebar"
+              : isWorkspaceSidebarCollapsed
+                ? "Expand workspace sidebar"
+                : "Collapse workspace sidebar"
+          }
+          title={
+            sidebarsSwapped
+              ? isChangesSidebarCollapsed
+                ? "Expand changes sidebar"
+                : "Collapse changes sidebar"
+              : isWorkspaceSidebarCollapsed
+                ? "Expand workspace sidebar"
+                : "Collapse workspace sidebar"
+          }
         >
-          {isWorkspaceSidebarCollapsed ? <PanelLeftOpen className="size-3.5" /> : <PanelLeftClose className="size-3.5" />}
+          {sidebarsSwapped ? (
+            isChangesSidebarCollapsed ? (
+              <PanelLeftOpen className="size-3.5" />
+            ) : (
+              <PanelLeftClose className="size-3.5" />
+            )
+          ) : isWorkspaceSidebarCollapsed ? (
+            <PanelLeftOpen className="size-3.5" />
+          ) : (
+            <PanelLeftClose className="size-3.5" />
+          )}
         </button>
         {showCustomTitleMenus ? (
           <>
@@ -471,11 +498,37 @@ export function TitleBar({
         <button
           type="button"
           className={`grid h-8 w-11 shrink-0 place-items-center ${titleBarIconToneClass} transition hover:bg-accent hover:text-foreground`}
-          onClick={onToggleChangesSidebar}
-          aria-label={isChangesSidebarCollapsed ? "Expand changes sidebar" : "Collapse changes sidebar"}
-          title={isChangesSidebarCollapsed ? "Expand changes sidebar" : "Collapse changes sidebar"}
+          onClick={sidebarsSwapped ? onToggleWorkspaceSidebar : onToggleChangesSidebar}
+          aria-label={
+            sidebarsSwapped
+              ? isWorkspaceSidebarCollapsed
+                ? "Expand workspace sidebar"
+                : "Collapse workspace sidebar"
+              : isChangesSidebarCollapsed
+                ? "Expand changes sidebar"
+                : "Collapse changes sidebar"
+          }
+          title={
+            sidebarsSwapped
+              ? isWorkspaceSidebarCollapsed
+                ? "Expand workspace sidebar"
+                : "Collapse workspace sidebar"
+              : isChangesSidebarCollapsed
+                ? "Expand changes sidebar"
+                : "Collapse changes sidebar"
+          }
         >
-          {isChangesSidebarCollapsed ? <PanelRightOpen className="size-3.5" /> : <PanelRightClose className="size-3.5" />}
+          {sidebarsSwapped ? (
+            isWorkspaceSidebarCollapsed ? (
+              <PanelRightOpen className="size-3.5" />
+            ) : (
+              <PanelRightClose className="size-3.5" />
+            )
+          ) : isChangesSidebarCollapsed ? (
+            <PanelRightOpen className="size-3.5" />
+          ) : (
+            <PanelRightClose className="size-3.5" />
+          )}
         </button>
         <button
           type="button"

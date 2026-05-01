@@ -175,6 +175,7 @@ export const buildSettingsRuntimeValue = (d: BuildSettingsRuntimeValueDeps): Set
   workbenchLayout: {
     isWorkspaceSidebarCollapsed: d.isWorkspaceSidebarCollapsed,
     isChangesSidebarCollapsed: d.isChangesSidebarCollapsed,
+    sidebarsSwapped: d.sidebarsSwapped,
     isRemoteMountsSectionCollapsed: d.isRemoteMountsSectionCollapsed,
     isPortsSectionCollapsed: d.isPortsSectionCollapsed,
     isChatbotsSectionCollapsed: d.isChatbotsSectionCollapsed,
@@ -186,6 +187,7 @@ export const buildSettingsRuntimeValue = (d: BuildSettingsRuntimeValueDeps): Set
   updateWorkbenchLayout: (next) => {
     if (typeof next.isWorkspaceSidebarCollapsed === "boolean") d.setIsWorkspaceSidebarCollapsed(next.isWorkspaceSidebarCollapsed);
     if (typeof next.isChangesSidebarCollapsed === "boolean") d.setIsChangesSidebarCollapsed(next.isChangesSidebarCollapsed);
+    if (typeof next.sidebarsSwapped === "boolean") d.setSidebarsSwapped(next.sidebarsSwapped);
     if (typeof next.isRemoteMountsSectionCollapsed === "boolean") d.setIsRemoteMountsSectionCollapsed(next.isRemoteMountsSectionCollapsed);
     if (typeof next.isPortsSectionCollapsed === "boolean") d.setIsPortsSectionCollapsed(next.isPortsSectionCollapsed);
     if (typeof next.isChatbotsSectionCollapsed === "boolean") d.setIsChatbotsSectionCollapsed(next.isChatbotsSectionCollapsed);

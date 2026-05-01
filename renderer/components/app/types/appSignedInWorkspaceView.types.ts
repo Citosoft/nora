@@ -9,6 +9,7 @@ import type { PointerEvent } from "react";
 export type AppSignedInWorkspaceViewProps = {
   workspaceRuntimeValue: WorkspaceRuntimeValue;
   gridTemplateColumns: string;
+  areSidebarsSwapped: boolean;
   workspaceSidebarContextValue: WorkspaceSidebarProps;
   isWorkspaceSidebarCollapsed: boolean;
   onStartWorkspaceSidebarResize: (event: PointerEvent<HTMLDivElement>) => void;

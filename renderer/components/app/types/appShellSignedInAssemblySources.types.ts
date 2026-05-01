@@ -247,6 +247,7 @@ export type AppShellSignedInChromeShellSources = {
   toggleTheme: () => void;
   isWorkspaceSidebarCollapsed: boolean;
   isChangesSidebarCollapsed: boolean;
+  sidebarsSwapped: boolean;
   setIsChangesSidebarCollapsed: Dispatch<SetStateAction<boolean>>;
   setIsWorkspaceSidebarCollapsed: Dispatch<SetStateAction<boolean>>;
   setIsLocalTerminalDockCollapsed: Dispatch<SetStateAction<boolean>>;

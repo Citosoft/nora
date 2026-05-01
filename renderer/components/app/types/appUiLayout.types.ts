@@ -28,6 +28,8 @@ export type UseAppUiLayoutStateResult = {
   setIsTasksSectionCollapsed: Dispatch<SetStateAction<boolean>>;
   isWorkspaceSidebarCollapsed: boolean;
   setIsWorkspaceSidebarCollapsed: Dispatch<SetStateAction<boolean>>;
+  sidebarsSwapped: boolean;
+  setSidebarsSwapped: Dispatch<SetStateAction<boolean>>;
   localTerminalDockHeight: number;
   setLocalTerminalDockHeight: Dispatch<SetStateAction<number>>;
   workspaceSidebarWidth: number;

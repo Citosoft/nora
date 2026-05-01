@@ -1,24 +1,18 @@
-import { isAgentBusyAt } from "@/components/app/logic/agentBusy";
-import {
-  formatWorkspaceSessionTimestamp,
-  getWorkspaceSidebarPullRequestDotClass,
-  workspaceSidebarHasPullRequestState
-} from "@/components/app/logic/workspaceSidebarPresentation";
 import { createQuickTerminalDialogDefaults, createQuickTerminalPayload } from "@/components/app/logic/terminalQuickLaunch";
 import { createScriptTerminalDefaults, formatWorkspaceScriptActionLabel, getPreferredWorkspaceScripts } from "@/components/app/logic/workspaceScripts";
 import { setWorkspaceTaskDragData } from "@/components/app/logic/workspaceTaskDrag";
-import { BusyIndicator } from "@/components/app/shared/BusyIndicator";
-import { AgentToolIcon, WorkspaceProjectIcon } from "@/components/app/shared/Tooling";
+import { WorkspaceProjectIcon } from "@/components/app/shared/Tooling";
 import { WorkspaceSidebarChildSectionLabel } from "@/components/app/sidebar/workspace-sidebar/WorkspaceSidebarChildSectionLabel";
+import { WorkspaceSidebarWorkspaceSessionRow } from "@/components/app/sidebar/workspace-sidebar/WorkspaceSidebarWorkspaceSessionRow";
 import { WorkspaceWorkspaceActionsMenuItems } from "@/components/app/sidebar/workspace-sidebar/WorkspaceWorkspaceActionsMenuItems";
 import type { WorkspaceSidebarWorkspaceGroupProps } from "@/components/app/types/workspaceSidebarWorkspaceGroup.types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import {
+  Bot,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -41,11 +35,13 @@ export const WorkspaceSidebarWorkspaceGroup = ({
   collapsedWorkspaceIds,
   onCollapsedWorkspaceIdsChange,
   collapsedWorkspaceAgentSectionIds,
+  collapsedWorkspaceTerminalSectionIds,
   collapsedWorkspaceAiChatSectionIds,
   collapsedWorkspaceNoteSectionIds,
   collapsedWorkspaceSpecSectionIds,
   collapsedWorkspaceTaskSectionIds,
   toggleWorkspaceAgentSection,
+  toggleWorkspaceTerminalSection,
   toggleWorkspaceAiChatSection,
   toggleWorkspaceNoteSection,
   toggleWorkspaceSpecSection,
@@ -114,6 +110,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
       : null;
     const isGroupCollapsed = collapsedWorkspaceIds[workspace.project.id] ?? false;
     const isAgentSectionCollapsed = collapsedWorkspaceAgentSectionIds[workspace.project.id] ?? true;
+    const isTerminalSectionCollapsed = collapsedWorkspaceTerminalSectionIds[workspace.project.id] ?? true;
     const isTaskSectionCollapsed = collapsedWorkspaceTaskSectionIds[workspace.project.id] ?? true;
     const isSpecSectionCollapsed = collapsedWorkspaceSpecSectionIds[workspace.project.id] ?? true;
     const isNoteSectionCollapsed = collapsedWorkspaceNoteSectionIds[workspace.project.id] ?? true;
@@ -122,10 +119,25 @@ export const WorkspaceSidebarWorkspaceGroup = ({
       workspace.sessions[0]?.focusedWorktreeId ||
       workspace.worktrees[0]?.id ||
       null;
-    const items = [
-      ...workspace.agents.map((agent) => ({ kind: "agent" as const, item: agent })),
-      ...workspace.terminals.map((terminal) => ({ kind: "terminal" as const, item: terminal }))
-    ];
+    const sessionCount = workspace.agents.length + workspace.terminals.length;
+    const sessionRowSharedProps = {
+      workspaceId: workspace.project.id,
+      focusedProjectId: snapshot.project?.id ?? null,
+      now,
+      pullRequestStatusByWorkspaceBranch,
+      agentsNeedingAttention,
+      focusedAgent,
+      focusedTerminal,
+      activeSessionPopoverId,
+      setActiveSessionPopoverId,
+      openSessionPopover,
+      scheduleSessionPopoverClose,
+      openAgentSessionMenu,
+      onFocusAgent,
+      onFocusTerminal,
+      onFocusWorkspaceAgent,
+      onFocusWorkspaceTerminal
+    };
     const workspaceTaskEntries = workspaceTasks.filter((task) => task.projectId === workspace.project.id);
     const workspaceSpecEntries = workspaceSpecs.filter((spec) => spec.projectId === workspace.project.id);
     const workspaceNoteEntries = workspaceNotes.filter((note) => note.projectId === workspace.project.id);
@@ -189,7 +201,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
             </div>
           </button>
           <div className="flex items-center pr-2">
-            <Badge variant="outline">{items.length}</Badge>
+            <Badge variant="outline">{sessionCount}</Badge>
             {scripts.length && preferredShellId ? (
               <DropdownMenu
                 align="end"
@@ -276,9 +288,9 @@ export const WorkspaceSidebarWorkspaceGroup = ({
           <div className="border-t border-border/40 bg-background/10">
             <div className="py-2 pl-5 pr-4">
               <div className="flex items-center justify-between gap-3">
-                <WorkspaceSidebarChildSectionLabel icon={<TerminalSquare className="size-3.5" />} label="Agents" />
+                <WorkspaceSidebarChildSectionLabel icon={<Bot className="size-3.5" />} label="Agents" />
                 <div className="flex items-center gap-1">
-                  <div className="text-xs text-muted-foreground">{items.length}</div>
+                  <div className="text-xs text-muted-foreground">{workspace.agents.length}</div>
                   <DropdownMenu
                     align="end"
                     trigger={(
@@ -286,22 +298,74 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                         variant="ghost"
                         size="icon"
                         className="size-7"
-                        aria-label={`Create session for ${workspace.project.name}`}
+                        aria-label={`Create agent for ${workspace.project.name}`}
                       >
                         <Plus className="size-4" />
                       </Button>
                     )}
                   >
                     <DropdownMenuItem
-                  onSelect={() =>
-                    workspace.project.id === snapshot.project?.id
-                      ? onOpenCreateAgent()
-                      : onFocusWorkspace(workspace.project.id)
-                    }
+                      onSelect={() =>
+                        workspace.project.id === snapshot.project?.id
+                          ? onOpenCreateAgent()
+                          : onFocusWorkspace(workspace.project.id)
+                      }
+                    >
+                      <Plus className="size-4" />
+                      New agent
+                    </DropdownMenuItem>
+                  </DropdownMenu>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7"
+                    onClick={() => toggleWorkspaceAgentSection(workspace.project.id)}
+                    aria-label={isAgentSectionCollapsed ? "Expand agents section" : "Collapse agents section"}
                   >
-                  <Plus className="size-4" />
-                  New agent
-                </DropdownMenuItem>
+                    {isAgentSectionCollapsed ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}
+                  </Button>
+                </div>
+              </div>
+            </div>
+            {isAgentSectionCollapsed ? null : workspace.agents.length ? (
+              workspace.agents.map((agent) => (
+                <WorkspaceSidebarWorkspaceSessionRow
+                  key={agent.id}
+                  {...sessionRowSharedProps}
+                  entry={{ kind: "agent", item: agent }}
+                />
+              ))
+            ) : (
+              <button
+                type="button"
+                onClick={() =>
+                  isFocused && workspaceViewWorktreeId
+                    ? onFocusWorkspaceView(workspaceViewWorktreeId)
+                    : onFocusWorkspace(workspace.project.id)
+                }
+                className="w-full border-l-2 border-dashed border-border/60 py-2 pl-5 pr-4 text-left text-sm text-muted-foreground transition hover:bg-accent/40"
+              >
+                No agents yet
+              </button>
+            )}
+            <div className="py-2 pl-5 pr-4">
+              <div className="flex items-center justify-between gap-3">
+                <WorkspaceSidebarChildSectionLabel icon={<TerminalSquare className="size-3.5" />} label="Terminals" />
+                <div className="flex items-center gap-1">
+                  <div className="text-xs text-muted-foreground">{workspace.terminals.length}</div>
+                  <DropdownMenu
+                    align="end"
+                    trigger={(
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-7"
+                        aria-label={`Create terminal for ${workspace.project.name}`}
+                      >
+                        <Plus className="size-4" />
+                      </Button>
+                    )}
+                  >
                     <DropdownMenuItem
                       onSelect={() =>
                         preferredShellId
@@ -332,256 +396,22 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                     variant="ghost"
                     size="icon"
                     className="size-7"
-                    onClick={() =>
-                      toggleWorkspaceAgentSection(workspace.project.id)
-                    }
-                    aria-label={isAgentSectionCollapsed ? "Expand agents section" : "Collapse agents section"}
+                    onClick={() => toggleWorkspaceTerminalSection(workspace.project.id)}
+                    aria-label={isTerminalSectionCollapsed ? "Expand terminals section" : "Collapse terminals section"}
                   >
-                    {isAgentSectionCollapsed ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}
+                    {isTerminalSectionCollapsed ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}
                   </Button>
                 </div>
               </div>
             </div>
-            {isAgentSectionCollapsed ? null : items.length ? (
-              items.map(({ kind, item }) => {
-                const isAgentBusy =
-                  kind === "agent" &&
-                  isAgentBusyAt(item, now);
-                const agentPullRequestStatus =
-                  kind === "agent"
-                    ? pullRequestStatusByWorkspaceBranch[`${workspace.project.id}:${item.branch.trim()}`] ?? null
-                    : null;
-                const showAgentPullRequestStatus =
-                  kind === "agent" && workspaceSidebarHasPullRequestState(agentPullRequestStatus?.state);
-                const showAgentUpdateIndicator = kind === "agent" && !isAgentBusy && !!agentsNeedingAttention[item.id];
-                const sessionPopoverContent =
-                  kind === "agent" ? (
-                    <div>
-                      <div className="rounded-[6px] border border-border/60 bg-gradient-to-br from-background to-accent/20 p-3">
-                        <div className="flex items-start gap-3">
-                          <AgentToolIcon toolId={item.toolId} label={item.toolLabel} className="size-10 shrink-0" imageClassName="size-6 rounded-sm" />
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-semibold">{item.name}</div>
-                            <div className="mt-0.5 text-xs text-muted-foreground">{item.toolLabel} agent</div>
-                            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                              <Badge variant="outline">{item.mode}</Badge>
-                              <Badge variant={isAgentBusy ? "default" : "outline"}>
-                                {isAgentBusy ? "Busy" : item.status}
-                              </Badge>
-                              <Badge variant="outline">{item.branch}</Badge>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="grid gap-2 text-xs">
-                        <div className="rounded-[6px] border border-border/50 bg-background/60 p-2.5">
-                          <div className="mb-1 text-[11px] text-muted-foreground">Workspace</div>
-                          <div className="break-all font-mono text-[11px] text-foreground/90">{item.workspace}</div>
-                        </div>
-                        {item.resumeSessionId ? (
-                          <div className="rounded-[6px] border border-border/50 bg-background/60 p-2.5">
-                            <div className="mb-1 text-[11px] text-muted-foreground">Resume ID</div>
-                            <div className="break-all font-mono text-[11px] text-foreground/90">{item.resumeSessionId}</div>
-                          </div>
-                        ) : null}
-                        {agentPullRequestStatus && workspaceSidebarHasPullRequestState(agentPullRequestStatus.state) ? (
-                          <div className="rounded-[6px] border border-border/50 bg-background/60 p-2.5">
-                            <div className="mb-1 text-[11px] text-muted-foreground">Pull request</div>
-                            <div className="flex items-center gap-1.5 text-foreground/90">
-                              <span
-                                className={cn("inline-flex size-2 rounded-full", getWorkspaceSidebarPullRequestDotClass(agentPullRequestStatus.state))}
-                                aria-hidden="true"
-                              />
-                              <span>
-                                {agentPullRequestStatus.label}
-                                {agentPullRequestStatus.pullRequestNumber ? ` #${agentPullRequestStatus.pullRequestNumber}` : ""}
-                              </span>
-                            </div>
-                            {agentPullRequestStatus.webUrl ? (
-                              <div className="mt-1 break-all font-mono text-[11px] text-muted-foreground">
-                                {agentPullRequestStatus.webUrl}
-                              </div>
-                            ) : null}
-                          </div>
-                        ) : null}
-                        <div className="rounded-[6px] border border-border/50 bg-background/60 p-2.5">
-                          <div className="mb-1 text-[11px] text-muted-foreground">Task</div>
-                          <div className="text-foreground/90">{item.task}</div>
-                        </div>
-                        {item.lastTerminalLine ? (
-                          <div className="rounded-[6px] border border-border/50 bg-background/60 p-2.5">
-                            <div className="mb-1 text-[11px] text-muted-foreground">Latest Output</div>
-                            <div className="text-foreground/90">{item.lastTerminalLine}</div>
-                          </div>
-                        ) : null}
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="rounded-[6px] border border-border/50 bg-background/60 p-2.5">
-                            <div className="mb-1 text-[11px] text-muted-foreground">Host</div>
-                            <div className="text-foreground/90">{item.host}</div>
-                          </div>
-                          <div className="rounded-[6px] border border-border/50 bg-background/60 p-2.5">
-                            <div className="mb-1 text-[11px] text-muted-foreground">Last Activity</div>
-                            <div className="text-foreground/90">{formatWorkspaceSessionTimestamp(item.lastEventAt)}</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <div className="rounded-[6px] border border-border/60 bg-gradient-to-br from-background to-accent/20 p-3">
-                        <div className="flex items-start gap-3">
-                          <div className="grid size-10 shrink-0 place-items-center rounded-[6px] border border-border/50 bg-background/70">
-                            <TerminalSquare className="size-5 text-primary" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-semibold">{item.name}</div>
-                            <div className="mt-0.5 text-xs text-muted-foreground">{item.shellLabel} terminal</div>
-                            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                              <Badge variant={item.status === "running" ? "default" : "outline"}>{item.status}</Badge>
-                              <Badge variant="outline">{item.branch}</Badge>
-                              {item.detectedLocalPort ? <Badge variant="outline">:{item.detectedLocalPort}</Badge> : null}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="grid gap-2 text-xs">
-                        <div className="rounded-[6px] border border-border/50 bg-background/60 p-2.5">
-                          <div className="mb-1 text-[11px] text-muted-foreground">Workspace</div>
-                          <div className="break-all font-mono text-[11px] text-foreground/90">{item.workspace}</div>
-                        </div>
-                        <div className="rounded-[6px] border border-border/50 bg-background/60 p-2.5">
-                          <div className="mb-1 text-[11px] text-muted-foreground">Launch</div>
-                          <div className="text-foreground/90">{item.launchConfig.label}</div>
-                        </div>
-                        {item.lastTerminalLine ? (
-                          <div className="rounded-[6px] border border-border/50 bg-background/60 p-2.5">
-                            <div className="mb-1 text-[11px] text-muted-foreground">Latest Output</div>
-                            <div className="text-foreground/90">{item.lastTerminalLine}</div>
-                          </div>
-                        ) : null}
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="rounded-[6px] border border-border/50 bg-background/60 p-2.5">
-                            <div className="mb-1 text-[11px] text-muted-foreground">Host</div>
-                            <div className="text-foreground/90">{item.host}</div>
-                          </div>
-                          <div className="rounded-[6px] border border-border/50 bg-background/60 p-2.5">
-                            <div className="mb-1 text-[11px] text-muted-foreground">Last Activity</div>
-                            <div className="text-foreground/90">{formatWorkspaceSessionTimestamp(item.lastEventAt)}</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-
-                return (
-                  <Popover
-                    key={item.id}
-                    open={activeSessionPopoverId === item.id}
-                    onOpenChange={(open: boolean) => setActiveSessionPopoverId(open ? item.id : null)}
-                  >
-                    <PopoverTrigger asChild>
-                      <button
-                        onMouseEnter={() => openSessionPopover(item.id)}
-                        onMouseLeave={scheduleSessionPopoverClose}
-                        onFocus={() => openSessionPopover(item.id)}
-                        onBlur={scheduleSessionPopoverClose}
-                        onContextMenu={(event) => {
-                          if (kind !== "agent") {
-                            return;
-                          }
-                          const branchPr =
-                            pullRequestStatusByWorkspaceBranch[`${workspace.project.id}:${item.branch.trim()}`] ?? null;
-                          const prUrl =
-                            branchPr && workspaceSidebarHasPullRequestState(branchPr.state) ? branchPr.webUrl ?? null : null;
-                          openAgentSessionMenu(workspace.project.id, item, prUrl, event);
-                        }}
-                        onClick={() =>
-                          kind === "agent"
-                              ? workspace.project.id === snapshot.project?.id
-                                ? onFocusAgent(item.id)
-                                : void onFocusWorkspaceAgent(workspace.project.id, item.id)
-                              : workspace.project.id === snapshot.project?.id
-                                ? onFocusTerminal(item.id)
-                                : void onFocusWorkspaceTerminal(workspace.project.id, item.id)
-                        }
-                        className={cn(
-                          "w-full border-l-2 border-transparent py-1.5 pl-5 pr-4 text-left outline-none transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-inset",
-                          ((kind === "agent" && focusedAgent?.id === item.id) ||
-                            (kind === "terminal" && focusedTerminal?.id === item.id)) &&
-                            workspace.project.id === snapshot.project?.id
-                            ? "border-primary bg-primary/10"
-                            : "hover:bg-accent/40"
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          {kind === "agent" ? (
-                            <div className="relative shrink-0">
-                              <AgentToolIcon toolId={item.toolId} label={item.toolLabel} className="size-7" imageClassName="size-[18px] rounded-sm" />
-                              {showAgentUpdateIndicator ? (
-                                <span className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full border border-background bg-emerald-400 shadow-[0_0_10px_rgba(74,222,128,0.85)]" />
-                              ) : null}
-                            </div>
-                          ) : (
-                            <div className="grid size-7 place-items-center rounded-[4px] bg-background/60">
-                              <TerminalSquare className="size-4 text-primary" />
-                            </div>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-medium">{item.name}</div>
-                            <div className="truncate text-xs text-muted-foreground">
-                              {kind === "agent" && isAgentBusy && item.lastTerminalLine
-                                ? item.lastTerminalLine
-                                : kind === "agent"
-                                  ? item.branch
-                                  : item.launchConfig.label}
-                            </div>
-                          </div>
-                          {kind === "agent" && isAgentBusy ? (
-                            <BusyIndicator className="size-3.5 shrink-0" />
-                          ) : null}
-                          {showAgentPullRequestStatus && agentPullRequestStatus ? (
-                            <Tooltip
-                              content={
-                                agentPullRequestStatus.pullRequestNumber
-                                  ? `PR status: ${agentPullRequestStatus.label} (#${agentPullRequestStatus.pullRequestNumber})`
-                                  : `PR status: ${agentPullRequestStatus.label}`
-                              }
-                              side="right"
-                            >
-                              <span
-                                className={cn("inline-flex size-2 shrink-0 rounded-full", getWorkspaceSidebarPullRequestDotClass(agentPullRequestStatus.state))}
-                                aria-label={`Pull request status: ${agentPullRequestStatus.label}`}
-                              />
-                            </Tooltip>
-                          ) : null}
-                          {kind === "terminal" && item.detectedLocalPort ? (
-                            <div className="shrink-0 rounded-[4px] border border-border/60 bg-background/40 px-1.5 py-0.5 text-[11px] tabular-nums text-muted-foreground">
-                              :{item.detectedLocalPort}
-                            </div>
-                          ) : null}
-                          {item.changeSummary ? (
-                            <div className="text-[11px] tabular-nums text-muted-foreground">
-                              <span className="text-emerald-300">+{item.changeSummary.additions}</span>
-                              {" / "}
-                              <span className="text-rose-300">-{item.changeSummary.deletions}</span>
-                            </div>
-                          ) : null}
-                        </div>
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      side="right"
-                      align="start"
-                      className="max-w-[26rem] whitespace-normal"
-                      onMouseEnter={() => openSessionPopover(item.id)}
-                      onMouseLeave={scheduleSessionPopoverClose}
-                      onOpenAutoFocus={(event: Event) => event.preventDefault()}
-                    >
-                      {sessionPopoverContent}
-                    </PopoverContent>
-                  </Popover>
-                );
-              })
+            {isTerminalSectionCollapsed ? null : workspace.terminals.length ? (
+              workspace.terminals.map((terminal) => (
+                <WorkspaceSidebarWorkspaceSessionRow
+                  key={terminal.id}
+                  {...sessionRowSharedProps}
+                  entry={{ kind: "terminal", item: terminal }}
+                />
+              ))
             ) : (
               <button
                 type="button"
@@ -592,12 +422,20 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                 }
                 className="w-full border-l-2 border-dashed border-border/60 py-2 pl-5 pr-4 text-left text-sm text-muted-foreground transition hover:bg-accent/40"
               >
-                No sessions yet
+                No terminals yet
               </button>
             )}
             <div className="py-2 pl-5 pr-4">
               <div className="flex items-center justify-between gap-3">
-                <WorkspaceSidebarChildSectionLabel icon={<FolderKanban className="size-3.5" />} label="Tasks" />
+                <WorkspaceSidebarChildSectionLabel
+                  icon={<FolderKanban className="size-3.5" />}
+                  label="Tasks"
+                  onOpenCenter={() => {
+                    onFocusWorkspace(workspace.project.id);
+                    onOpenTaskBoard();
+                  }}
+                  openCenterAriaLabel={`Open task center for ${workspace.project.name}`}
+                />
                 <div className="flex items-center gap-1">
                   <div className="text-xs text-muted-foreground">{workspaceTaskEntries.length}</div>
                   <Button variant="ghost" size="icon" className="size-7" onClick={onOpenTaskBoard} aria-label="Open task center">
@@ -671,7 +509,15 @@ export const WorkspaceSidebarWorkspaceGroup = ({
             </div>
             <div className="py-2 pl-5 pr-4">
               <div className="flex items-center justify-between gap-3">
-                <WorkspaceSidebarChildSectionLabel icon={<ScrollText className="size-3.5" />} label="Specs" />
+                <WorkspaceSidebarChildSectionLabel
+                  icon={<ScrollText className="size-3.5" />}
+                  label="Specs"
+                  onOpenCenter={() => {
+                    onFocusWorkspace(workspace.project.id);
+                    onOpenSpecBrowser();
+                  }}
+                  openCenterAriaLabel={`Open spec center for ${workspace.project.name}`}
+                />
                 <div className="flex items-center gap-1">
                   <div className="text-xs text-muted-foreground">{workspaceSpecEntries.length}</div>
                   <Button variant="ghost" size="icon" className="size-7" onClick={onOpenSpecBrowser} aria-label="Open specs browser">
@@ -730,7 +576,15 @@ export const WorkspaceSidebarWorkspaceGroup = ({
             </div>
             <div className="py-2 pl-5 pr-4">
               <div className="flex items-center justify-between gap-3">
-                <WorkspaceSidebarChildSectionLabel icon={<StickyNote className="size-3.5" />} label="Notes" />
+                <WorkspaceSidebarChildSectionLabel
+                  icon={<StickyNote className="size-3.5" />}
+                  label="Notes"
+                  onOpenCenter={() => {
+                    onFocusWorkspace(workspace.project.id);
+                    onOpenNoteBrowser();
+                  }}
+                  openCenterAriaLabel={`Open notes center for ${workspace.project.name}`}
+                />
                 <div className="flex items-center gap-1">
                   <div className="text-xs text-muted-foreground">{workspaceNoteEntries.length}</div>
                   <Button variant="ghost" size="icon" className="size-7" onClick={onOpenNoteBrowser} aria-label="Open notes browser">

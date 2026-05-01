@@ -48,6 +48,7 @@ const STARTUP_DEPENDENCIES_DISMISSED_STORAGE_KEY = "nora-startup-dependencies-di
 const DEFAULT_UI_LAYOUT: StoredUiLayout = {
   isWorkspaceSidebarCollapsed: false,
   isChangesSidebarCollapsed: true,
+  sidebarsSwapped: false,
   workspaceSidebarWidth: 320,
   changesSidebarWidth: 440,
   activeChangesPanelTab: "git",
@@ -270,6 +271,7 @@ export function readStoredUiLayout(): StoredUiLayout {
     return {
       isWorkspaceSidebarCollapsed: parsed.isWorkspaceSidebarCollapsed === true,
       isChangesSidebarCollapsed: parsed.isChangesSidebarCollapsed !== false,
+      sidebarsSwapped: parsed.sidebarsSwapped === true,
       workspaceSidebarWidth: clampWorkspaceSidebarWidth(parsed.workspaceSidebarWidth),
       changesSidebarWidth: clampChangesSidebarWidth(parsed.changesSidebarWidth),
       activeChangesPanelTab:

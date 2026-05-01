@@ -65,6 +65,8 @@ export type TitleBarProps = {
   defaultIdeId: string | null;
   onOpenProjectInIde: (ideId: string) => void;
   isWorkspaceSidebarCollapsed: boolean;
+  /** When true, Changes is on the left and workspace on the right — header toggles and icons follow. */
+  sidebarsSwapped: boolean;
   onToggleWorkspaceSidebar: () => void;
   onAddWorkspace: () => void;
   onAddRemoteWorkspace: () => void;

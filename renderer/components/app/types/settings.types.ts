@@ -104,6 +104,7 @@ export type SettingsRuntimeValue = {
   workbenchLayout: {
     isWorkspaceSidebarCollapsed: boolean;
     isChangesSidebarCollapsed: boolean;
+    sidebarsSwapped: boolean;
     isRemoteMountsSectionCollapsed: boolean;
     isPortsSectionCollapsed: boolean;
     isChatbotsSectionCollapsed: boolean;

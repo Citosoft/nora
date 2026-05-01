@@ -34,7 +34,8 @@ export const useAppRootWorkspaceChrome = ({
     minChangesSidebarWidth: MIN_CHANGES_SIDEBAR_WIDTH,
     maxChangesSidebarWidth: MAX_CHANGES_SIDEBAR_WIDTH,
     workspaceSidebarAutoCollapseWidth: WORKSPACE_SIDEBAR_AUTO_COLLAPSE_WIDTH,
-    changesSidebarAutoCollapseWidth: CHANGES_SIDEBAR_AUTO_COLLAPSE_WIDTH
+    changesSidebarAutoCollapseWidth: CHANGES_SIDEBAR_AUTO_COLLAPSE_WIDTH,
+    sidebarsSwapped: layout.sidebarsSwapped
   });
 
   const localTerminalDock = useLocalTerminalDock({

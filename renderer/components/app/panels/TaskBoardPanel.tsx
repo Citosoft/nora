@@ -98,44 +98,42 @@ export function TaskBoardPanel({
     setEditingSectionTitle("");
   };
 
+  const workspaceSelectClassName =
+    "h-9 min-w-[10rem] max-w-[16rem] rounded-[5px] border border-input bg-background px-3 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
-      <div className="border-b border-border/60 px-6 py-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              <FolderKanban className="size-4" />
-              Task Center
-            </div>
-            <h2 className="mt-2 text-2xl font-semibold text-foreground">Workspace tasks</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Keep Markdown tasks in place and organize them with workspace-local board metadata.
-            </p>
+      <div className="border-b border-border/60 px-6 py-3">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            <FolderKanban className="size-4 shrink-0" />
+            Task Center
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close task center">
+          <Button variant="ghost" size="icon" className="shrink-0" onClick={onClose} aria-label="Close task center">
             <X className="size-4" />
           </Button>
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Tabs value={viewMode} onValueChange={(nextValue) => onViewModeChange(nextValue as TaskBoardViewMode)}>
-            <TabsList>
-              <TabsTrigger value="list" className="whitespace-nowrap">
-                <ListTree className="size-4" />
-                List
-              </TabsTrigger>
-              <TabsTrigger value="board" className="whitespace-nowrap">
-                <Columns3 className="size-4" />
-                Board
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-          {viewMode === "board" && activeWorkspace ? (
-            <>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+          <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <Tabs value={viewMode} onValueChange={(nextValue) => onViewModeChange(nextValue as TaskBoardViewMode)}>
+              <TabsList className="h-9">
+                <TabsTrigger value="list" className="whitespace-nowrap px-3">
+                  <ListTree className="size-4" />
+                  List
+                </TabsTrigger>
+                <TabsTrigger value="board" className="whitespace-nowrap px-3">
+                  <Columns3 className="size-4" />
+                  Board
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            {workspaces.length > 1 && activeWorkspace ? (
               <select
                 value={activeWorkspace.projectId}
                 onChange={(event) => onSelectWorkspace(event.target.value)}
-                className="h-9 rounded-[4px] border border-input bg-background px-3 text-sm text-foreground"
-                aria-label="Select workspace board"
+                className={workspaceSelectClassName}
+                aria-label="Active workspace for board and actions"
               >
                 {workspaces.map((workspace) => (
                   <option key={workspace.projectId} value={workspace.projectId}>
@@ -143,7 +141,21 @@ export function TaskBoardPanel({
                   </option>
                 ))}
               </select>
-              <div className="flex items-center gap-2">
+            ) : null}
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 shrink-0"
+              onClick={() => setIsGenerateTasksDialogOpen(true)}
+              disabled={!activeWorkspace || !availableTools.length}
+            >
+              <Plus className="size-4" />
+              Generate tasks
+            </Button>
+
+            {viewMode === "board" && activeWorkspace ? (
+              <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-1 sm:min-w-[12rem]">
                 <Input
                   value={sectionDraft}
                   onChange={(event) => setSectionDraft(event.target.value)}
@@ -153,33 +165,27 @@ export function TaskBoardPanel({
                       submitNewSection();
                     }
                   }}
-                  placeholder="Add section"
-                  className="h-9 w-40"
+                  placeholder="New section"
+                  className="h-9 min-w-[6rem] flex-1 sm:max-w-[11rem]"
                 />
-                <Button variant="outline" size="sm" onClick={submitNewSection} disabled={!sectionDraft.trim()}>
+                <Button variant="outline" size="sm" className="h-9 shrink-0" onClick={submitNewSection} disabled={!sectionDraft.trim()}>
                   <Plus className="size-4" />
                   Section
                 </Button>
-                <Button variant="default" size="sm" onClick={() => onCreateTask(activeWorkspace.projectId)}>
+                <Button variant="default" size="sm" className="h-9 shrink-0" onClick={() => onCreateTask(activeWorkspace.projectId)}>
                   <Plus className="size-4" />
                   Task
                 </Button>
               </div>
-            </>
-          ) : null}
-          <div className="ml-auto flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsGenerateTasksDialogOpen(true)}
-              disabled={!activeWorkspace || !availableTools.length}
-            >
-              <Plus className="size-4" />
-              Generate tasks
-            </Button>
-            <Badge variant="outline">{selectedTaskCount} selected</Badge>
+            ) : null}
+          </div>
+
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end lg:shrink-0 lg:border-l lg:border-border/50 lg:pl-6">
+            <span className="w-full text-xs tabular-nums text-muted-foreground sm:w-auto sm:shrink-0">
+              {selectedTaskCount === 0 ? "No tasks selected" : `${selectedTaskCount} selected`}
+            </span>
             <Select
-              className="h-9"
+              className="h-9 min-w-0 w-full sm:w-[13.5rem]"
               value={selectedToolId}
               onChange={(event) => onSelectedToolChange(event.target.value)}
               aria-label="Select agent CLI for selected tasks"
@@ -200,12 +206,19 @@ export function TaskBoardPanel({
                 </option>
               ))}
             </Select>
-            <Button variant="outline" size="sm" onClick={onClearTaskSelection} disabled={!selectedTaskCount || isSpawningAgents}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 shrink-0"
+              onClick={onClearTaskSelection}
+              disabled={!selectedTaskCount || isSpawningAgents}
+            >
               Clear
             </Button>
             <Button
               variant="default"
               size="sm"
+              className="h-9 shrink-0"
               onClick={() => void onSpawnSelectedAgents()}
               disabled={!selectedTaskCount || !selectedToolId || isSpawningAgents}
             >

@@ -15,6 +15,7 @@ function toggleSectionState(
 
 export function useWorkspaceSidebarSectionState() {
   const [collapsedWorkspaceAgentSectionIds, setCollapsedWorkspaceAgentSectionIds] = useState<SectionMap>({});
+  const [collapsedWorkspaceTerminalSectionIds, setCollapsedWorkspaceTerminalSectionIds] = useState<SectionMap>({});
   const [collapsedWorkspaceTaskSectionIds, setCollapsedWorkspaceTaskSectionIds] = useState<SectionMap>({});
   const [collapsedWorkspaceSpecSectionIds, setCollapsedWorkspaceSpecSectionIds] = useState<SectionMap>({});
   const [collapsedWorkspaceNoteSectionIds, setCollapsedWorkspaceNoteSectionIds] = useState<SectionMap>({});
@@ -22,12 +23,15 @@ export function useWorkspaceSidebarSectionState() {
 
   return {
     collapsedWorkspaceAgentSectionIds,
+    collapsedWorkspaceTerminalSectionIds,
     collapsedWorkspaceAiChatSectionIds,
     collapsedWorkspaceNoteSectionIds,
     collapsedWorkspaceSpecSectionIds,
     collapsedWorkspaceTaskSectionIds,
     toggleWorkspaceAgentSection: (workspaceId: string) =>
       toggleSectionState(setCollapsedWorkspaceAgentSectionIds, workspaceId),
+    toggleWorkspaceTerminalSection: (workspaceId: string) =>
+      toggleSectionState(setCollapsedWorkspaceTerminalSectionIds, workspaceId),
     toggleWorkspaceAiChatSection: (workspaceId: string) =>
       toggleSectionState(setCollapsedWorkspaceAiChatSectionIds, workspaceId),
     toggleWorkspaceNoteSection: (workspaceId: string) =>

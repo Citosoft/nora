@@ -259,6 +259,14 @@ export function useWorkspaceContentController({
   };
 
   const openWorkspaceSpec = async (projectId: string, pathName: string): Promise<void> => {
+    // Dismiss task/spec/note centers so the workspace session (file editor) is visible and focused.
+    // (openTaskEditor already does this before delegating here; direct calls from browsers did not.)
+    setIsTaskBoardOpen(false);
+    setIsSpecBrowserOpen(false);
+    setIsNoteBrowserOpen(false);
+    setIsCenterDiffExpanded(false);
+    setGenerateTasksRequest(null);
+
     if (snapshot?.project?.id === projectId) {
       await openFileEditor(pathName, {
         selectChange: false,

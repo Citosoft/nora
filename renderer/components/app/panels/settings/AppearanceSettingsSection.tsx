@@ -10,6 +10,8 @@ export function AppearanceSettingsSection() {
   const {
     themeMode,
     updateThemeMode,
+    workbenchLayout,
+    updateWorkbenchLayout,
     accentColor,
     updateAccentColor,
     terminalThemeId,
@@ -32,6 +34,17 @@ export function AppearanceSettingsSection() {
         icon={Palette}
       />
 
+      <SettingRow
+        title="Sidebar layout"
+        description="Swap the workspace sidebar and Changes sidebar so the workspace list sits on the right."
+        control={
+          <ToggleButton
+            checked={workbenchLayout.sidebarsSwapped}
+            onChange={(checked) => updateWorkbenchLayout({ sidebarsSwapped: checked })}
+            label={workbenchLayout.sidebarsSwapped ? "Workspace on the right" : "Workspace on the left"}
+          />
+        }
+      />
       <SettingRow
         title="Color Theme"
         description={`Choose whether ${APP_SHORT_NAME} follows the system appearance or uses a fixed light or dark theme.`}

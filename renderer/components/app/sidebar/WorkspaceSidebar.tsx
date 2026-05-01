@@ -161,11 +161,13 @@ export const WorkspaceSidebar = () => {
 
   const {
     collapsedWorkspaceAgentSectionIds,
+    collapsedWorkspaceTerminalSectionIds,
     collapsedWorkspaceAiChatSectionIds,
     collapsedWorkspaceNoteSectionIds,
     collapsedWorkspaceSpecSectionIds,
     collapsedWorkspaceTaskSectionIds,
     toggleWorkspaceAgentSection,
+    toggleWorkspaceTerminalSection,
     toggleWorkspaceAiChatSection,
     toggleWorkspaceNoteSection,
     toggleWorkspaceSpecSection,
@@ -205,7 +207,7 @@ export const WorkspaceSidebar = () => {
   return (
     <Card
       className={cn(
-        "h-full min-h-0 overflow-hidden rounded-none border-y-0 border-l-0 bg-card/95 shadow-none dark:bg-muted/35",
+        "h-full min-h-0 overflow-hidden rounded-none border-0 bg-card/95 shadow-none dark:bg-muted/35",
         collapsed && "workspace-sidebar-collapsed-surface"
       )}
     >
@@ -265,11 +267,13 @@ export const WorkspaceSidebar = () => {
                           collapsedWorkspaceIds={collapsedWorkspaceIds}
                           onCollapsedWorkspaceIdsChange={onCollapsedWorkspaceIdsChange}
                           collapsedWorkspaceAgentSectionIds={collapsedWorkspaceAgentSectionIds}
+                          collapsedWorkspaceTerminalSectionIds={collapsedWorkspaceTerminalSectionIds}
                           collapsedWorkspaceAiChatSectionIds={collapsedWorkspaceAiChatSectionIds}
                           collapsedWorkspaceNoteSectionIds={collapsedWorkspaceNoteSectionIds}
                           collapsedWorkspaceSpecSectionIds={collapsedWorkspaceSpecSectionIds}
                           collapsedWorkspaceTaskSectionIds={collapsedWorkspaceTaskSectionIds}
                           toggleWorkspaceAgentSection={toggleWorkspaceAgentSection}
+                          toggleWorkspaceTerminalSection={toggleWorkspaceTerminalSection}
                           toggleWorkspaceAiChatSection={toggleWorkspaceAiChatSection}
                           toggleWorkspaceNoteSection={toggleWorkspaceNoteSection}
                           toggleWorkspaceSpecSection={toggleWorkspaceSpecSection}

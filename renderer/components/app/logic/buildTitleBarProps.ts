@@ -19,6 +19,7 @@ export const buildTitleBarProps = (d: TitleBarBuildDeps): TitleBarProps => ({
   defaultIdeId: d.defaultIdeId,
   onOpenProjectInIde: d.handleOpenProjectInIde,
   isWorkspaceSidebarCollapsed: d.isWorkspaceSidebarCollapsed,
+  sidebarsSwapped: d.sidebarsSwapped,
   onToggleWorkspaceSidebar: d.onToggleWorkspaceSidebar,
   onAddWorkspace: d.openAddWorkspace,
   onAddRemoteWorkspace: d.onAddRemoteWorkspace,

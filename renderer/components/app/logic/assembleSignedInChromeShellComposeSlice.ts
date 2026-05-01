@@ -37,6 +37,7 @@ export const assembleSignedInChromeShellComposeSlice = (s: SignedInChromeShellAs
       isChangesSidebarCollapsed: chromeShell.isChangesSidebarCollapsed,
       isLoadingInstalledIdes: chromeShell.isLoadingInstalledIdes,
       isWorkspaceSidebarCollapsed: chromeShell.isWorkspaceSidebarCollapsed,
+      sidebarsSwapped: chromeShell.sidebarsSwapped,
       onAddRemoteWorkspace: core.openAddRemoteWorkspaceModal,
       onFocusLocalTerminalDock: () => {
         void chromeShell.focusLocalTerminalDock();

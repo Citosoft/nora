@@ -88,6 +88,7 @@ export type BuildSettingsRuntimeValueDeps = {
   openStartupDependenciesDialog: () => void;
   isWorkspaceSidebarCollapsed: boolean;
   isChangesSidebarCollapsed: boolean;
+  sidebarsSwapped: boolean;
   isRemoteMountsSectionCollapsed: boolean;
   isPortsSectionCollapsed: boolean;
   isChatbotsSectionCollapsed: boolean;
@@ -97,6 +98,7 @@ export type BuildSettingsRuntimeValueDeps = {
   isLocalTerminalDockCollapsed: boolean;
   setIsWorkspaceSidebarCollapsed: Dispatch<SetStateAction<boolean>>;
   setIsChangesSidebarCollapsed: Dispatch<SetStateAction<boolean>>;
+  setSidebarsSwapped: Dispatch<SetStateAction<boolean>>;
   setIsRemoteMountsSectionCollapsed: Dispatch<SetStateAction<boolean>>;
   setIsPortsSectionCollapsed: Dispatch<SetStateAction<boolean>>;
   setIsChatbotsSectionCollapsed: Dispatch<SetStateAction<boolean>>;
