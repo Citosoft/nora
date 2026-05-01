@@ -6,6 +6,18 @@ import * as React from "react";
 
 const EMPTY_OPTION_VALUE = "__nora_select_empty__";
 
+function renderSelectTriggerLabel(label: React.ReactNode): React.ReactNode {
+  if (label === null || label === undefined || label === "") {
+    return null;
+  }
+
+  if (typeof label === "string" || typeof label === "number") {
+    return <span className="block min-w-0 truncate">{label}</span>;
+  }
+
+  return <span className="flex min-w-0 items-center gap-2 overflow-hidden">{label}</span>;
+}
+
 function flattenOptions(children: React.ReactNode): SelectOption[] {
   return React.Children.toArray(children).flatMap((child) => {
     if (!React.isValidElement(child)) {
@@ -65,9 +77,7 @@ export function Select({
         name={props.name}
       >
         <SelectPrimitive.Value className="min-w-0 flex-1 text-left">
-          <span className="block truncate">
-            {selectedOption?.label ?? ""}
-          </span>
+          {renderSelectTriggerLabel(selectedOption?.label ?? "")}
         </SelectPrimitive.Value>
         <SelectPrimitive.Icon asChild>
           <ChevronDown className="size-4 shrink-0 text-muted-foreground" />

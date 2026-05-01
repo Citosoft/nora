@@ -156,6 +156,7 @@ import {
   listWorkspaceSpecs,
   listWorkspaceTaskPaths,
   listWorkspaceTasks,
+  listImportedContextBundles,
   listWorkspaceTrackedAndUntrackedFiles,
   moveWorkspaceFile,
   performForgeWorkItemActionForRepo,
@@ -291,7 +292,9 @@ export class Orchestrator implements OrchestratorFacade {
       getWriteChain: (agentId) => this.sessionRuntime.getContextWriteChain(agentId),
       setWriteChain: (agentId, chain) => {
         this.sessionRuntime.setContextWriteChain(agentId, chain);
-      }
+      },
+      findAgentByContextFilePath: (contextFilePath) =>
+        this.getSnapshot().agents.find((agent) => agent.contextFilePath === contextFilePath) || null
     });
     this.terminalStateHelpers = createTerminalStateHelpers({
       nowIso,
@@ -318,8 +321,8 @@ export class Orchestrator implements OrchestratorFacade {
       setLiveTerminalSnapshot: (terminalId, terminal) => {
         this.sessionRuntime.setLiveTerminalSnapshot(terminalId, terminal);
       },
-      queueAgentContextAppend: (agent, chunk) => {
-        this.transcriptHelpers.queueAgentContextAppend(agent, chunk);
+      appendAgentTerminalChunk: (agent, chunk) => {
+        this.transcriptHelpers.appendAgentTerminalChunk(agent, chunk);
       },
       resetAgentTranscriptFile: (agent) => this.transcriptHelpers.resetAgentTranscript(agent),
       emitTerminalData: (sessionId, chunk) => {
@@ -1136,6 +1139,7 @@ export class Orchestrator implements OrchestratorFacade {
       readWorkspaceBinaryFile,
       getWorkspaceImageMimeType,
       listWorkspaceTrackedAndUntrackedFiles,
+      listImportedContextBundles,
       listWorkspaceDirectories,
       listWorkspaceSpecs,
       listWorkspaceNotes,

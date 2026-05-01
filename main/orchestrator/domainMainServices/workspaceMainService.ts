@@ -1,7 +1,12 @@
 import type {
+  AgentContextSelection,
   AppState,
   CommitChangesPayload,
   CreateWorkspaceDirectoryPayload,
+  ExternalHarnessContextRef,
+  ExternalHarnessSessionSummary,
+  ImportedContextBundleSummary,
+  NoraDetectableContextBundleSummary,
   TerminalPreset,
   WorkspaceFileRequest,
   WorkspaceGitStatusSummary,
@@ -17,6 +22,12 @@ import type {
 } from "@shared/appTypes";
 import type { WorkspaceImageFileContent } from "@shared/types/workspaceFile.types";
 import type { WorkspaceService } from "../../types/mainServices.types";
+import {
+  deleteNoraWorktreeContextBundleFile,
+  importNoraWorktreeContextBundleIntoCheckout,
+  listNoraWorktreeDetectableContextBundles,
+  readNoraWorktreeContextBundleUtf8
+} from "../noraDetectableContextBundles";
 import type { WorkspaceMainServiceDeps } from "./workspaceMainService.types";
 
 export class WorkspaceMainService implements WorkspaceService {
@@ -69,6 +80,49 @@ export class WorkspaceMainService implements WorkspaceService {
 
   searchWorkspaceFiles = (payload: WorkspaceSearchRequest): Promise<WorkspaceSearchResult[]> =>
     this.actions().searchWorkspaceFilesByProject(payload);
+
+  listImportedContextBundles = (projectId: string, rootPath?: string): Promise<ImportedContextBundleSummary[]> =>
+    this.actions().listImportedContextBundlesByProject(projectId, rootPath);
+
+  listExternalHarnessContextSessions = (
+    projectId: string,
+    rootPath?: string
+  ): Promise<ExternalHarnessSessionSummary[]> =>
+    this.actions().listExternalHarnessContextSessionsByProject(projectId, rootPath);
+
+  composeExternalHarnessContextSelections = (
+    projectId: string,
+    ref: ExternalHarnessContextRef
+  ): Promise<AgentContextSelection[]> => this.actions().composeExternalHarnessContextSelectionsByProject(projectId, ref);
+
+  listNoraDetectableContextBundles = (
+    projectId: string,
+    sessionId: string,
+    worktreeId: string
+  ): Promise<NoraDetectableContextBundleSummary[]> =>
+    listNoraWorktreeDetectableContextBundles(projectId, sessionId, worktreeId);
+
+  importNoraDetectableContextBundle = (payload: {
+    projectId: string;
+    sessionId: string;
+    worktreeId: string;
+    bundleId: string;
+    workspaceRoot: string;
+  }): Promise<string | null> => importNoraWorktreeContextBundleIntoCheckout(payload);
+
+  readNoraDetectableContextBundle = (payload: {
+    projectId: string;
+    sessionId: string;
+    worktreeId: string;
+    bundleId: string;
+  }): Promise<string | null> => readNoraWorktreeContextBundleUtf8(payload);
+
+  deleteNoraDetectableContextBundle = (payload: {
+    projectId: string;
+    sessionId: string;
+    worktreeId: string;
+    bundleId: string;
+  }): Promise<boolean> => deleteNoraWorktreeContextBundleFile(payload);
 
   statWorkspacePath = (payload: WorkspaceFileRequest): Promise<WorkspacePathStatResult> =>
     this.actions().statWorkspacePathByProject(payload);

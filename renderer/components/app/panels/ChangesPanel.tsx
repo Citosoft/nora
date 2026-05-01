@@ -3,28 +3,41 @@ import {
   useChangesPanelChrome,
   useChangesPanelFiles,
   useChangesPanelForge,
-  useChangesPanelVercel
+  useChangesPanelVercel,
+  useChangesPanelWorkspace
 } from "@/components/app/context/changesPanelContext";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
+import { useWorkspaceAgentContextSources } from "@/components/app/hooks/useWorkspaceAgentContextSources";
+import { useWorkspaceExternalHarnessSessions } from "@/components/app/hooks/useWorkspaceExternalHarnessSessions";
 import { useStatusBar } from "@/components/app/logic/statusBarContext";
+import { formatTimestamp } from "@/components/app/logic/utils";
+import { setWorkspaceRelativePathDragData } from "@/components/app/logic/workspacePathDrag";
 import { FileTreePanel } from "@/components/app/panels/FileTreePanel";
 import { ForgePanel } from "@/components/app/panels/ForgePanel";
 import { VercelPanel } from "@/components/app/panels/VercelPanel";
+import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { ForgeProviderIcon } from "@/components/app/views/ForgeProviderIcon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type {
+  AgentContextEntryGroup,
+  AgentContextSelection,
+  AgentContextSourceSummary,
   AppState,
   ChangeEntry,
   CommitHistoryEntry,
   GithubBranchPullRequestState,
+  ExternalHarnessSessionSummary,
+  ImportedContextBundleSummary,
   WorkspaceSearchResult
 } from "@shared/appTypes";
 import {
   ArrowUp,
+  Brain,
   ChevronDown,
   ChevronRight,
   Clock3,
@@ -34,15 +47,85 @@ import {
   GitBranch,
   GitPullRequest,
   History,
+  LoaderCircle,
   MessageSquare,
   Minus,
   Plus,
   RefreshCcw,
   Sparkles,
+  Trash2,
   Undo2,
   User
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+function formatImportedContextFileSize(bytes: number): string {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatImportedContextApproxTokens(tokens: number): string {
+  if (tokens >= 1_000_000) {
+    return `~${(tokens / 1_000_000).toFixed(1)}M tok`;
+  }
+  if (tokens >= 10_000) {
+    return `~${Math.round(tokens / 1000)}k tok`;
+  }
+  if (tokens >= 1000) {
+    return `~${(tokens / 1000).toFixed(1)}k tok`;
+  }
+  return `~${tokens} tok`;
+}
+
+function compareAgentContextTimestampsDescending(left: string | null, right: string | null): number {
+  const leftMs = left ? Date.parse(left) : 0;
+  const rightMs = right ? Date.parse(right) : 0;
+  return rightMs - leftMs;
+}
+
+function buildAgentContextSelectionForGroup(sourceAgentId: string, group: AgentContextEntryGroup): AgentContextSelection[] {
+  return [{ sourceAgentId, entryIds: [...group.entryIds] }];
+}
+
+type ContextBundleHeadlineFields = {
+  displayTarget: string | null;
+  primarySourceAgentLabel: string | null;
+};
+
+function dedupeContextRowsByMd5<T extends { contentMd5: string | null }>(rows: T[]): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const row of rows) {
+    if (!row.contentMd5) {
+      out.push(row);
+      continue;
+    }
+    if (seen.has(row.contentMd5)) {
+      continue;
+    }
+    seen.add(row.contentMd5);
+    out.push(row);
+  }
+  return out;
+}
+
+function importedContextBundleHeadline(entry: ContextBundleHeadlineFields): string {
+  if (entry.primarySourceAgentLabel && entry.displayTarget) {
+    return `${entry.primarySourceAgentLabel} → ${entry.displayTarget}`;
+  }
+  if (entry.displayTarget) {
+    return entry.displayTarget;
+  }
+  if (entry.primarySourceAgentLabel) {
+    return entry.primarySourceAgentLabel;
+  }
+  return "Imported context";
+}
 
 function VercelMark({ className }: { className?: string }) {
   return (
@@ -69,7 +152,7 @@ function getPullRequestStatusDotClass(state: GithubBranchPullRequestState | null
 }
 
 function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
-  const tools = snapshot.agentCatalog;
+  const { tools, onOpenCreateAgentDialog } = useChangesPanelWorkspace();
   const {
     paths: filePaths,
     directoryPaths: fileDirectoryPaths,
@@ -154,9 +237,67 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
   const [isChangedFilesCollapsed, setIsChangedFilesCollapsed] = useState(false);
   const [isRefreshingChanges, setIsRefreshingChanges] = useState(false);
   const [selectedCommitPaths, setSelectedCommitPaths] = useState<string[] | null>(null);
+  const [importedBundles, setImportedBundles] = useState<ImportedContextBundleSummary[]>([]);
+  const [importedLoading, setImportedLoading] = useState(false);
+  const [importedError, setImportedError] = useState<string | null>(null);
+  const [agentContextReloadKey, setAgentContextReloadKey] = useState(0);
+  const [contextSubTab, setContextSubTab] = useState<"detected" | "imported">("detected");
   const refreshInFlightRef = useRef(false);
   const onRefreshChangesRef = useRef(onRefreshChanges);
   onRefreshChangesRef.current = onRefreshChanges;
+
+  const loadImportedBundles = useCallback(async () => {
+    if (!snapshot.project || !snapshot.changesRoot) {
+      setImportedBundles([]);
+      setImportedError(null);
+      return;
+    }
+
+    setImportedLoading(true);
+    setImportedError(null);
+    try {
+      const rows = await noraWorkspaceClient.listImportedContextBundles(snapshot.project.id, snapshot.changesRoot);
+      setImportedBundles(rows);
+    } catch (error: unknown) {
+      const detail = error instanceof Error && error.message.trim() ? error.message.trim() : "Could not load imported context files.";
+      setImportedError(detail);
+      setImportedBundles([]);
+    } finally {
+      setImportedLoading(false);
+    }
+  }, [snapshot.changesRoot, snapshot.project]);
+
+  const refreshContextTabLists = useCallback(async () => {
+    setAgentContextReloadKey((key) => key + 1);
+    await loadImportedBundles();
+  }, [loadImportedBundles]);
+
+  useEffect(() => {
+    if (activeTab !== "context" || collapsed || !snapshot.project?.id) {
+      return;
+    }
+    void refreshContextTabLists();
+  }, [activeTab, collapsed, refreshContextTabLists, snapshot.changesRoot, snapshot.project?.id]);
+
+  const { sources: agentContextSources, isLoading: isAgentContextLoading } = useWorkspaceAgentContextSources(
+    snapshot.project?.id ?? null,
+    undefined,
+    {
+      enabled: activeTab === "context" && !collapsed && !!snapshot.project?.id,
+      reloadToken: agentContextReloadKey
+    }
+  );
+
+  const { sessions: externalHarnessSessions, isLoading: isExternalHarnessLoading } = useWorkspaceExternalHarnessSessions(
+    snapshot.project?.id ?? null,
+    snapshot.changesRoot,
+    {
+      enabled: activeTab === "context" && !collapsed && !!snapshot.project?.id && !!snapshot.changesRoot,
+      reloadToken: agentContextReloadKey
+    }
+  );
+
+  const [openingExternalHarnessArtifactPath, setOpeningExternalHarnessArtifactPath] = useState<string | null>(null);
 
   useEffect(() => {
     setCommitMessage("");
@@ -213,6 +354,30 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
     }).format(new Date(timestamp));
 
   const sourcePath = snapshot.changesRoot || snapshot.project?.rootPath || "No repository selected";
+
+  const importedBundlesUnique = useMemo(() => dedupeContextRowsByMd5(importedBundles), [importedBundles]);
+
+  const workspaceAgentContextGroupCount = useMemo(
+    () => agentContextSources.reduce((total, source) => total + source.entryGroups.length, 0),
+    [agentContextSources]
+  );
+
+  const detectedContextSurfaceCount = workspaceAgentContextGroupCount + externalHarnessSessions.length;
+
+  const sortedAgentContextSources = useMemo(
+    () =>
+      [...agentContextSources]
+        .sort((left, right) => compareAgentContextTimestampsDescending(left.lastUpdatedAt, right.lastUpdatedAt))
+        .map((source) => ({
+          ...source,
+          entryGroups: [...source.entryGroups].sort((left, right) =>
+            compareAgentContextTimestampsDescending(left.lastUpdatedAt, right.lastUpdatedAt)
+          )
+        })),
+    [agentContextSources]
+  );
+
+  const contextTabListsLoading = importedLoading || isAgentContextLoading || isExternalHarnessLoading;
   const selectedCommit = snapshot.selectedCommit;
   const isInspectingCommit = !!selectedCommit;
   const forgeProvider = forgeOverview?.repo?.provider ?? null;
@@ -383,6 +548,52 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
     }
   };
 
+  const handleOpenCreateAgentFromContextGroup = (source: AgentContextSourceSummary, group: AgentContextEntryGroup) => {
+    onOpenCreateAgentDialog({
+      contextSelections: buildAgentContextSelectionForGroup(source.agentId, group),
+      initialWizardStepIndex: 2
+    });
+  };
+
+  const handleOpenCreateAgentFromExternalHarness = async (session: ExternalHarnessSessionSummary) => {
+    if (!snapshot.project?.id) {
+      return;
+    }
+    setOpeningExternalHarnessArtifactPath(session.primaryArtifactPath);
+    try {
+      const selections = await noraWorkspaceClient.composeExternalHarnessContextSelections(snapshot.project.id, session);
+      if (selections.length > 0) {
+        onOpenCreateAgentDialog({
+          contextSelections: selections,
+          initialWizardStepIndex: 2
+        });
+      }
+    } finally {
+      setOpeningExternalHarnessArtifactPath(null);
+    }
+  };
+
+  const handleDeleteImportedBundle = async (entry: ImportedContextBundleSummary) => {
+    if (!snapshot.project?.id || !snapshot.changesRoot) {
+      return;
+    }
+    const ok = window.confirm(`Remove ${entry.fileName} from this worktree?`);
+    if (!ok) {
+      return;
+    }
+    const statusId = statusBar.beginStatus("Removing imported context", true);
+    try {
+      await noraWorkspaceClient.deleteWorkspaceFile({
+        projectId: snapshot.project.id,
+        path: entry.path,
+        rootPath: snapshot.changesRoot
+      });
+      await refreshContextTabLists();
+    } finally {
+      statusBar.endStatus(statusId);
+    }
+  };
+
   const handleRefreshChanges = useCallback(async () => {
     if (refreshInFlightRef.current) {
       return;
@@ -447,11 +658,11 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
         <CardHeader className="border-b border-border/60 px-0 py-2">
           <div className="mb-2 flex items-center gap-3 px-4">
             <div className="min-w-0 flex-1">
-              <div className="flex w-full items-center rounded-[4px] border border-border/60 bg-background/40 p-1">
+              <div className="flex w-full flex-wrap items-center rounded-[4px] border border-border/60 bg-background/40 p-1 sm:flex-nowrap">
                 <button
                   type="button"
                   className={cn(
-                    "flex flex-1 items-center justify-center gap-1.5 rounded-[3px] px-3 py-1.5 text-xs font-medium transition",
+                    "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[3px] px-2 py-1.5 text-[11px] font-medium transition sm:gap-1.5 sm:px-3 sm:text-xs",
                     activeTab === "git" ? activeSidebarTabClass : "text-muted-foreground hover:text-foreground"
                   )}
                   onClick={() => onActiveTabChange("git")}
@@ -483,7 +694,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                 <button
                   type="button"
                   className={cn(
-                    "flex flex-1 items-center justify-center gap-1.5 rounded-[3px] px-3 py-1.5 text-xs font-medium transition",
+                    "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[3px] px-2 py-1.5 text-[11px] font-medium transition sm:gap-1.5 sm:px-3 sm:text-xs",
                     activeTab === "files" ? activeSidebarTabClass : "text-muted-foreground hover:text-foreground"
                   )}
                   onClick={() => onActiveTabChange("files")}
@@ -494,7 +705,19 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                 <button
                   type="button"
                   className={cn(
-                    "flex flex-1 items-center justify-center gap-1.5 rounded-[3px] px-3 py-1.5 text-xs font-medium transition",
+                    "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[3px] px-2 py-1.5 text-[11px] font-medium transition sm:gap-1.5 sm:px-3 sm:text-xs",
+                    activeTab === "context" ? activeSidebarTabClass : "text-muted-foreground hover:text-foreground"
+                  )}
+                  onClick={() => onActiveTabChange("context")}
+                  title="Workspace agent context you can attach to a new agent, and files under .nora/imported_context"
+                >
+                  <Brain className="size-3.5 shrink-0" />
+                  <span className="truncate">Context</span>
+                </button>
+                <button
+                  type="button"
+                  className={cn(
+                    "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[3px] px-2 py-1.5 text-[11px] font-medium transition sm:gap-1.5 sm:px-3 sm:text-xs",
                     activeTab === "vercel" ? activeSidebarTabClass : "text-muted-foreground hover:text-foreground"
                   )}
                   onClick={() => onActiveTabChange("vercel")}
@@ -505,7 +728,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                 <button
                   type="button"
                   className={cn(
-                    "flex flex-1 items-center justify-center gap-1.5 rounded-[3px] px-3 py-1.5 text-xs font-medium transition",
+                    "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[3px] px-2 py-1.5 text-[11px] font-medium transition sm:gap-1.5 sm:px-3 sm:text-xs",
                     activeTab === "forge" ? activeSidebarTabClass : "text-muted-foreground hover:text-foreground"
                   )}
                   onClick={() => onActiveTabChange("forge")}
@@ -530,6 +753,14 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                   ? fileCount
                     ? `${fileCount} project file${fileCount === 1 ? "" : "s"}`
                     : "No files available"
+                  : activeTab === "context"
+                    ? contextTabListsLoading && importedBundles.length === 0 && agentContextSources.length === 0
+                      ? "Loading context…"
+                      : importedError
+                        ? "Context"
+                        : importedBundlesUnique.length === 0 && workspaceAgentContextGroupCount === 0
+                          ? "No context bundles"
+                          : `${importedBundlesUnique.length} imported · ${workspaceAgentContextGroupCount} agent groups`
                   : activeTab === "vercel"
                     ? linkedVercelProject
                       ? `${vercelDeployments.length} deployment${vercelDeployments.length === 1 ? "" : "s"}`
@@ -594,6 +825,33 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                 <div className="flex items-center gap-1 text-muted-foreground" title={`${fileCount} project files`}>
                   <FileText className="size-3.5" />
                   <span>{fileCount}</span>
+                </div>
+              ) : activeTab === "context" ? (
+                <div className="flex items-center gap-1.5">
+                  <div
+                    className="flex items-center gap-1 text-muted-foreground"
+                    title={
+                      contextSubTab === "detected"
+                        ? `${workspaceAgentContextGroupCount} conversation group(s) from other agents in this workspace`
+                        : `${importedBundlesUnique.length} unique file(s) under .nora/imported_context`
+                    }
+                  >
+                    <Brain className="size-3.5" />
+                    <span className="tabular-nums">
+                      {contextSubTab === "detected" ? workspaceAgentContextGroupCount : importedBundlesUnique.length}
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-6"
+                    onClick={() => void refreshContextTabLists()}
+                    aria-label="Refresh context lists"
+                    disabled={contextTabListsLoading || !snapshot.project}
+                    title="Refresh agent context sources and imported bundle list"
+                  >
+                    <RefreshCcw className={cn("size-3.5", contextTabListsLoading ? "animate-spin" : "")} />
+                  </Button>
                 </div>
               ) : activeTab === "vercel" ? (
                 <div className="flex items-center gap-1 text-muted-foreground" title="Linked Vercel project">
@@ -776,6 +1034,8 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
             ? <FolderGit2 className="size-4 text-primary" />
               : activeTab === "files"
                 ? <FileText className="size-4 text-primary" />
+              : activeTab === "context"
+                ? <Brain className="size-4 text-primary" />
               : activeTab === "vercel"
                 ? <VercelMark className="size-4 text-primary" />
               : forgeProvider
@@ -786,6 +1046,8 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
               ? changeCount
               : activeTab === "files"
                 ? fileCount
+                : activeTab === "context"
+                  ? importedBundlesUnique.length + workspaceAgentContextGroupCount
                 : activeTab === "vercel"
                   ? linkedVercelProject
                     ? vercelDeployments.length
@@ -816,6 +1078,282 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
               onRenameFile={onRenameFile}
               onDeleteFile={onDeleteFile}
               />
+          ) : activeTab === "context" ? (
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              {!snapshot.project ? (
+                <div className="m-3 border border-dashed border-border/70 bg-background/40 p-4 text-sm text-muted-foreground">
+                  Choose a project to browse workspace context.
+                </div>
+              ) : (
+                <Tabs
+                  value={contextSubTab}
+                  onValueChange={(value) => setContextSubTab(value === "imported" ? "imported" : "detected")}
+                  className="flex min-h-0 flex-1 flex-col overflow-hidden"
+                >
+                  <div className="shrink-0 border-b border-border/50 px-3 pt-2">
+                    <TabsList className="mb-2 h-auto w-full flex-wrap justify-start gap-1">
+                      <TabsTrigger value="detected" className="gap-1.5 px-2.5 py-1.5 text-xs">
+                        <span>Detected</span>
+                        <span className="tabular-nums opacity-80">({detectedContextSurfaceCount})</span>
+                      </TabsTrigger>
+                      <TabsTrigger value="imported" className="gap-1.5 px-2.5 py-1.5 text-xs">
+                        <span>Imported</span>
+                        <span className="tabular-nums opacity-80">({importedBundlesUnique.length})</span>
+                      </TabsTrigger>
+                    </TabsList>
+                  </div>
+
+                  <div className="relative min-h-0 flex-1 overflow-hidden">
+                  <TabsContent
+                    value="detected"
+                    className="absolute inset-0 m-0 mt-0 overflow-y-auto p-0 focus-visible:outline-none data-[state=inactive]:hidden"
+                  >
+                    {isAgentContextLoading &&
+                    sortedAgentContextSources.length === 0 &&
+                    isExternalHarnessLoading &&
+                    externalHarnessSessions.length === 0 ? (
+                      <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
+                        <LoaderCircle className="size-4 animate-spin text-primary" aria-hidden />
+                        Loading agent context
+                      </div>
+                    ) : (
+                      <div className="space-y-5 p-3 pb-6">
+                        <section className="space-y-2" aria-labelledby="detected-nora-agents-heading">
+                          <h3 id="detected-nora-agents-heading" className="px-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            Nora workspace agents
+                          </h3>
+                          {!sortedAgentContextSources.length ? (
+                            <div className="border border-dashed border-border/70 bg-background/40 p-3 text-sm text-muted-foreground">
+                              No other agents in this workspace have tracked context yet. Launch an agent and send prompts to
+                              build shareable conversation groups.
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              {sortedAgentContextSources.map((source) => (
+                                <div
+                                  key={source.agentId}
+                                  className="rounded-[4px] border border-border/60 bg-card/40"
+                                >
+                                  <div className="border-b border-border/60 px-3 py-2">
+                                    <div className="flex min-w-0 items-stretch gap-2">
+                                      <div className="flex shrink-0 items-center" aria-hidden>
+                                        <AgentToolIcon
+                                          toolId={source.toolId}
+                                          label={source.toolLabel}
+                                          className="size-8 shrink-0"
+                                          imageClassName="size-5 rounded-sm"
+                                        />
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <div className="truncate text-sm font-medium text-foreground">{source.agentName}</div>
+                                        <div className="truncate text-xs text-muted-foreground">
+                                          {source.toolLabel} · {formatTimestamp(source.lastUpdatedAt)} · {source.entryCount}{" "}
+                                          entr{source.entryCount === 1 ? "y" : "ies"} · {source.estimate.characters.toLocaleString()}{" "}
+                                          chars
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="space-y-2 p-3">
+                                    {source.entryGroups.map((group) => (
+                                      <button
+                                        key={group.id}
+                                        type="button"
+                                        className="w-full rounded-md border border-border/60 bg-background/30 px-2 py-2 text-left outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                                        title={`${group.title}\n\nClick to start a new agent with this conversation group attached.`}
+                                        aria-label={`New agent with context: ${source.agentName} — ${group.title}`}
+                                        onClick={() => handleOpenCreateAgentFromContextGroup(source, group)}
+                                      >
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                                            <span className="text-sm font-medium text-foreground">{group.title}</span>
+                                            <span className="text-[11px] text-muted-foreground">
+                                              {group.entryCount} entr{group.entryCount === 1 ? "y" : "ies"} · ~
+                                              {group.estimate.estimatedTokens.toLocaleString()} tok
+                                            </span>
+                                          </div>
+                                          <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
+                                            {formatTimestamp(group.lastUpdatedAt)}
+                                          </span>
+                                        </div>
+                                        <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{group.latestPreview}</div>
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </section>
+
+                        <section className="space-y-2" aria-labelledby="detected-external-harness-heading">
+                          <h3 id="detected-external-harness-heading" className="px-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            Local CLI transcripts
+                          </h3>
+                          <p className="px-0.5 text-[11px] leading-relaxed text-muted-foreground">
+                            Codex, Claude, Gemini, and Cursor logs on this machine whose working directory matches this worktree.
+                            Remote-only checkouts are skipped.
+                          </p>
+                          {!snapshot.changesRoot ? (
+                            <div className="border border-dashed border-border/70 bg-background/40 p-3 text-sm text-muted-foreground">
+                              Focus a worktree checkout to scan local harness stores for this folder.
+                            </div>
+                          ) : isExternalHarnessLoading && externalHarnessSessions.length === 0 ? (
+                            <div className="flex items-center gap-2 px-0.5 py-2 text-xs text-muted-foreground">
+                              <LoaderCircle className="size-3.5 animate-spin text-primary" aria-hidden />
+                              Scanning local CLI sessions
+                            </div>
+                          ) : !externalHarnessSessions.length ? (
+                            <div className="border border-dashed border-border/70 bg-background/40 p-3 text-sm text-muted-foreground">
+                              No matching local CLI sessions for this worktree path, or every session is already linked to a Nora
+                              agent.
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              {externalHarnessSessions.map((session) => (
+                                <button
+                                  key={`${session.toolId}:${session.primaryArtifactPath}`}
+                                  type="button"
+                                  disabled={openingExternalHarnessArtifactPath === session.primaryArtifactPath}
+                                  className="w-full rounded-md border border-border/60 bg-background/30 px-2 py-2 text-left outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-60"
+                                  title={`${session.sessionLabel}\n\nClick to start a new agent with this transcript attached.`}
+                                  aria-label={`New agent with external CLI context: ${session.sessionLabel}`}
+                                  onClick={() => void handleOpenCreateAgentFromExternalHarness(session)}
+                                >
+                                  <div className="flex min-w-0 items-stretch gap-2">
+                                    <div className="flex shrink-0 items-center" aria-hidden>
+                                      <AgentToolIcon
+                                        toolId={session.toolId}
+                                        label={session.toolLabel}
+                                        className="size-8 shrink-0"
+                                        imageClassName="size-5 rounded-sm"
+                                      />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <span className="text-sm font-medium text-foreground">{session.sessionLabel}</span>
+                                        <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
+                                          {formatTimestamp(session.lastUpdatedAt)}
+                                        </span>
+                                      </div>
+                                      <div className="mt-0.5 text-[11px] text-muted-foreground">
+                                        {session.entryCount} entr{session.entryCount === 1 ? "y" : "ies"} · ~
+                                        {session.estimate.estimatedTokens.toLocaleString()} tok · {session.estimate.characters.toLocaleString()}{" "}
+                                        chars
+                                      </div>
+                                      <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{session.latestPreview}</div>
+                                    </div>
+                                    {openingExternalHarnessArtifactPath === session.primaryArtifactPath ? (
+                                      <LoaderCircle className="mt-1 size-4 shrink-0 animate-spin text-primary" aria-hidden />
+                                    ) : null}
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </section>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent
+                    value="imported"
+                    className="absolute inset-0 m-0 mt-0 overflow-y-auto p-0 focus-visible:outline-none data-[state=inactive]:hidden"
+                  >
+                    {!snapshot.changesRoot ? (
+                      <div className="m-3 border border-dashed border-border/70 bg-background/40 p-4 text-sm text-muted-foreground">
+                        Focus a worktree checkout to list files under{" "}
+                        <span className="font-mono text-[11px]">.nora/imported_context</span> for that checkout.
+                      </div>
+                    ) : (
+                      <>
+                    <div className="px-4 pb-2 pt-1">
+                      <p className="text-[11px] leading-relaxed text-muted-foreground">
+                        Files under{" "}
+                        <span className="font-mono text-[10px] text-foreground/80">.nora/imported_context</span> in this
+                        worktree. Use the <span className="font-medium text-foreground/90">Detected</span> tab to attach
+                        conversation context when starting a new agent.
+                      </p>
+                    </div>
+                    {importedError ? (
+                      <div className="m-3 border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">{importedError}</div>
+                    ) : importedLoading && importedBundles.length === 0 ? (
+                      <div className="px-4 pb-4 text-sm text-muted-foreground">Loading imported bundles…</div>
+                    ) : importedBundlesUnique.length === 0 ? (
+                      <div className="m-3 border border-dashed border-border/70 bg-background/40 p-4 text-sm text-muted-foreground">
+                        No files in{" "}
+                        <span className="font-mono text-[11px]">.nora/imported_context</span>
+                        . Bundles appear here when you share context into an agent launched in this worktree.
+                      </div>
+                    ) : (
+                      <ul className="divide-y divide-border/50">
+                        {importedBundlesUnique.map((entry) => (
+                          <li key={entry.path} className="flex items-stretch gap-1 px-2 py-2 sm:items-start">
+                            <button
+                              type="button"
+                              draggable
+                              className="min-w-0 flex-1 cursor-grab rounded-md px-2 py-2 text-left outline-none transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:cursor-grabbing"
+                              title={
+                                (entry.displaySources
+                                  ? `${importedContextBundleHeadline(entry)}\n${entry.displaySources}\n${entry.path}`
+                                  : `${importedContextBundleHeadline(entry)}\n${entry.path}`) +
+                                  "\n\nDrag to an agent terminal to paste the path."
+                              }
+                              aria-label={`Open markdown preview: ${importedContextBundleHeadline(entry)}. Drag to an agent terminal to paste the file path.`}
+                              onDragStart={(event) => {
+                                setWorkspaceRelativePathDragData(event.dataTransfer, entry.path, "file");
+                              }}
+                              onClick={() => onOpenFile(entry.path)}
+                            >
+                              <div className="truncate text-sm font-medium text-foreground">{importedContextBundleHeadline(entry)}</div>
+                              {entry.displaySources && entry.extraSourceAgentCount > 0 ? (
+                                <div className="mt-0.5 truncate text-xs text-muted-foreground" title={entry.displaySources}>
+                                  Contributors: {entry.displaySources}
+                                </div>
+                              ) : null}
+                              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+                                {entry.approxEstimatedTokens != null ? (
+                                  <span title="Rough size (~characters ÷ 4), same as context estimates elsewhere">
+                                    {formatImportedContextApproxTokens(entry.approxEstimatedTokens)}
+                                  </span>
+                                ) : null}
+                                <span title={entry.handoffCreatedAt ? "Handoff time (from bundle)" : "Last saved"}>
+                                  {entry.handoffCreatedAt
+                                    ? formatCommitTimestamp(entry.handoffCreatedAt)
+                                    : entry.updatedAt
+                                      ? formatCommitTimestamp(entry.updatedAt)
+                                      : "Remote / unknown"}
+                                </span>
+                                <span title="File size">{entry.sizeBytes > 0 ? formatImportedContextFileSize(entry.sizeBytes) : "—"}</span>
+                              </div>
+                              <div className="mt-0.5 truncate font-mono text-[10px] text-muted-foreground/80" title={entry.path}>
+                                {entry.fileName}
+                              </div>
+                            </button>
+                            <div className="flex shrink-0 self-start pt-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="size-8 text-destructive hover:text-destructive"
+                                tooltip="Delete imported file"
+                                aria-label={`Delete ${importedContextBundleHeadline(entry)}`}
+                                onClick={() => void handleDeleteImportedBundle(entry)}
+                              >
+                                <Trash2 className="size-4" />
+                              </Button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                      </>
+                    )}
+                  </TabsContent>
+                  </div>
+                </Tabs>
+              )}
+            </div>
           ) : activeTab === "vercel" ? (
             <VercelPanel
               isConnected={!!vercelToken.trim()}

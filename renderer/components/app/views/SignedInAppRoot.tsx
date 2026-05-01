@@ -673,7 +673,8 @@ function SignedInAppRootContent({
             onDeleteFile: fileMutations.handleDeleteWorkspaceFile
           },
           openFileEditor: sessionActions.openFileEditor,
-          openForgeViewer: props.centerTabs.openForgeViewer
+          openForgeViewer: props.centerTabs.openForgeViewer,
+          openCreateAgentDialog: props.uiCommands.openCreateAgentDialog
         },
         chromeShell: chromeShellSources
       },

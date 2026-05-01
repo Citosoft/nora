@@ -3,6 +3,7 @@ import type { AgentContextEntry, AgentSession } from "@shared/appTypes";
 export interface TranscriptHelperDeps {
   getWriteChain: (agentId: string) => Promise<void> | undefined;
   setWriteChain: (agentId: string, chain: Promise<void>) => void;
+  findAgentByContextFilePath: (contextFilePath: string) => AgentSession | null;
 }
 
 export interface TranscriptHelpers {
@@ -12,7 +13,7 @@ export interface TranscriptHelpers {
   initializeAgentContextFiles: (agent: AgentSession) => Promise<void>;
   appendContextEntries: (agent: AgentSession, entries: AgentContextEntry[]) => Promise<void>;
   writeContextBundle: (agent: AgentSession, bundleId: string, content: string) => Promise<string>;
-  queueAgentContextAppend: (agent: AgentSession, chunk: string) => void;
+  appendAgentTerminalChunk: (agent: AgentSession, chunk: string) => void;
   clearAgentContext: (agent: AgentSession) => Promise<void>;
   resetAgentTranscript: (agent: AgentSession) => Promise<void>;
 }

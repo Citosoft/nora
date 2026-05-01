@@ -1,11 +1,16 @@
 import type {
+  AgentContextSelection,
   AppState,
   CommitChangesPayload,
   ConnectRemoteProjectPayload,
   CreateWorkspaceDirectoryPayload,
+  ExternalHarnessContextRef,
+  ExternalHarnessSessionSummary,
   GenerateCommitMessagePayload,
   GenerateCommitMessageResult,
   ImportBrowserImagePayload,
+  ImportedContextBundleSummary,
+  NoraDetectableContextBundleSummary,
   TerminalPreset,
   WorkspaceFileRequest,
   WorkspaceGitStatusSummary,
@@ -67,6 +72,39 @@ export interface WorkspaceBridge {
   }) => Promise<AppState>;
   deleteWorkspaceFile: (payload: WorkspaceFileRequest) => Promise<AppState>;
   searchWorkspaceFiles: (payload: WorkspaceSearchRequest) => Promise<WorkspaceSearchResult[]>;
+  listImportedContextBundles: (projectId: string, rootPath?: string) => Promise<ImportedContextBundleSummary[]>;
+  listExternalHarnessContextSessions: (
+    projectId: string,
+    rootPath?: string
+  ) => Promise<ExternalHarnessSessionSummary[]>;
+  composeExternalHarnessContextSelections: (
+    projectId: string,
+    ref: ExternalHarnessContextRef
+  ) => Promise<AgentContextSelection[]>;
+  listNoraDetectableContextBundles: (
+    projectId: string,
+    sessionId: string,
+    worktreeId: string
+  ) => Promise<NoraDetectableContextBundleSummary[]>;
+  importNoraDetectableContextBundle: (payload: {
+    projectId: string;
+    sessionId: string;
+    worktreeId: string;
+    bundleId: string;
+    workspaceRoot: string;
+  }) => Promise<string | null>;
+  readNoraDetectableContextBundle: (payload: {
+    projectId: string;
+    sessionId: string;
+    worktreeId: string;
+    bundleId: string;
+  }) => Promise<string | null>;
+  deleteNoraDetectableContextBundle: (payload: {
+    projectId: string;
+    sessionId: string;
+    worktreeId: string;
+    bundleId: string;
+  }) => Promise<boolean>;
   statWorkspacePath: (payload: WorkspaceFileRequest) => Promise<WorkspacePathStatResult>;
   getWorkspaceGitStatusSummary: (
     payload: { projectId: string; rootPath?: string }

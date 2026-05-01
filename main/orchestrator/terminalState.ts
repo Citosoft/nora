@@ -115,7 +115,7 @@ export function createTerminalStateHelpers(deps: TerminalStateHelperDeps): Termi
     deps.setTerminalBuffer(agentId, capTerminalOutput(`${existing}${chunk}`));
     const agent = deps.getSnapshot().agents.find((item) => item.id === agentId);
     if (agent?.contextFilePath && agent.terminalStreamPath) {
-      deps.queueAgentContextAppend(agent, chunk);
+      deps.appendAgentTerminalChunk(agent, chunk);
     }
     deps.emitTerminalData(agentId, chunk);
   }
@@ -126,7 +126,7 @@ export function createTerminalStateHelpers(deps: TerminalStateHelperDeps): Termi
     deps.setTerminalBuffer(agentId, nextOutput);
     const currentAgent = deps.getSnapshot().agents.find((agent) => agent.id === agentId);
     if (currentAgent?.contextFilePath && currentAgent.terminalStreamPath) {
-      deps.queueAgentContextAppend(currentAgent, chunk);
+      deps.appendAgentTerminalChunk(currentAgent, chunk);
     }
     const shouldRescanLine = shouldRescanTerminalLastLine(chunk);
     const lastTerminalLine = shouldRescanLine

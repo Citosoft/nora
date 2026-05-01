@@ -1,13 +1,18 @@
 import { listProviderModels } from "@main/ai/providerModels";
 import type { MainServices } from "@main/services/mainServices";
 import type {
+  AgentContextSelection,
   AppSettings,
   AppState,
   CommitChangesPayload,
   CreateWorkspaceDirectoryPayload,
+  ExternalHarnessContextRef,
+  ExternalHarnessSessionSummary,
   GenerateCommitMessagePayload,
   GenerateCommitMessageResult,
   ImportBrowserImagePayload,
+  ImportedContextBundleSummary,
+  NoraDetectableContextBundleSummary,
   ListAiModelsPayload,
   ListAiModelsResult,
   TerminalPreset,
@@ -61,6 +66,16 @@ export function registerWorkspaceIpc({
   ipcMain.handle("app:list-workspace-agent-context-sources", (_event, projectId: string, excludeAgentId?: string) =>
     services.snapshot.listWorkspaceAgentContextSources(projectId, excludeAgentId)
   );
+  ipcMain.handle(
+    "app:list-external-harness-context-sessions",
+    (_event, projectId: string, rootPath?: string): Promise<ExternalHarnessSessionSummary[]> =>
+      services.workspace.listExternalHarnessContextSessions(projectId, rootPath)
+  );
+  ipcMain.handle(
+    "app:compose-external-harness-context-selections",
+    (_event, projectId: string, ref: ExternalHarnessContextRef): Promise<AgentContextSelection[]> =>
+      services.workspace.composeExternalHarnessContextSelections(projectId, ref)
+  );
   ipcMain.handle("app:read-workspace-file", (_event, payload: WorkspaceFileRequest) =>
     services.workspace.readWorkspaceFile(payload)
   );
@@ -84,6 +99,37 @@ export function registerWorkspaceIpc({
   );
   ipcMain.handle("app:search-workspace-files", (_event, payload: WorkspaceSearchRequest) =>
     services.workspace.searchWorkspaceFiles(payload)
+  );
+  ipcMain.handle(
+    "app:list-imported-context-bundles",
+    (_event, projectId: string, rootPath?: string): Promise<ImportedContextBundleSummary[]> =>
+      services.workspace.listImportedContextBundles(projectId, rootPath)
+  );
+  ipcMain.handle(
+    "app:list-nora-detectable-context-bundles",
+    (_event, projectId: string, sessionId: string, worktreeId: string): Promise<NoraDetectableContextBundleSummary[]> =>
+      services.workspace.listNoraDetectableContextBundles(projectId, sessionId, worktreeId)
+  );
+  ipcMain.handle(
+    "app:import-nora-detectable-context-bundle",
+    (
+      _event,
+      payload: { projectId: string; sessionId: string; worktreeId: string; bundleId: string; workspaceRoot: string }
+    ): Promise<string | null> => services.workspace.importNoraDetectableContextBundle(payload)
+  );
+  ipcMain.handle(
+    "app:read-nora-detectable-context-bundle",
+    (
+      _event,
+      payload: { projectId: string; sessionId: string; worktreeId: string; bundleId: string }
+    ): Promise<string | null> => services.workspace.readNoraDetectableContextBundle(payload)
+  );
+  ipcMain.handle(
+    "app:delete-nora-detectable-context-bundle",
+    (
+      _event,
+      payload: { projectId: string; sessionId: string; worktreeId: string; bundleId: string }
+    ): Promise<boolean> => services.workspace.deleteNoraDetectableContextBundle(payload)
   );
   ipcMain.handle("app:stat-workspace-path", (_event, payload: WorkspaceFileRequest) =>
     services.workspace.statWorkspacePath(payload)

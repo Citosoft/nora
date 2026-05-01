@@ -20,6 +20,50 @@ export interface WorkspaceNoteSummary {
   updatedAt: string | null;
 }
 
+/**
+ * Context bundles stored under Nora's app data for a worktree
+ * (`~/.nora/projects/.../sessions/.../worktrees/.../context-bundle-*.md`), detectable for import into the checkout.
+ */
+export interface NoraDetectableContextBundleSummary {
+  bundleId: string;
+  fileName: string;
+  sizeBytes: number;
+  updatedAt: string | null;
+  /** Lowercase hex MD5 of full file bytes; null if hashing failed. */
+  contentMd5: string | null;
+  displayTarget: string | null;
+  handoffCreatedAt: string | null;
+  displaySources: string | null;
+  primarySourceAgentLabel: string | null;
+  extraSourceAgentCount: number;
+  approxEstimatedTokens: number | null;
+}
+
+/** Files under `.nora/imported_context/` created when handing off shared agent context. */
+export interface ImportedContextBundleSummary {
+  path: string;
+  fileName: string;
+  sizeBytes: number;
+  updatedAt: string | null;
+  /** Lowercase hex MD5 of full file bytes; null if hashing failed. */
+  contentMd5: string | null;
+  /** From bundle markdown `Target agent:` when parsing succeeds. */
+  displayTarget: string | null;
+  /** From bundle markdown `Generated:` (ISO string) when parsing succeeds. */
+  handoffCreatedAt: string | null;
+  /** Comma-separated `## Source (tool)` lines from the bundle, when parsing succeeds. */
+  displaySources: string | null;
+  /** First contributing agent (`##` section) when parsing succeeds. */
+  primarySourceAgentLabel: string | null;
+  /** How many additional `##` sources exist after {@link primarySourceAgentLabel}. */
+  extraSourceAgentCount: number;
+  /**
+   * Rough token count (character length ÷ 4) when the full file is read; otherwise a coarse estimate from byte size.
+   * Same heuristic as other context size estimates in the app.
+   */
+  approxEstimatedTokens: number | null;
+}
+
 export interface WorkspaceTaskBoardSection {
   id: string;
   title: string;

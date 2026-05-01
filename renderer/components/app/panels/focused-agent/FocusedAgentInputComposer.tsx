@@ -1,4 +1,4 @@
-import { countSelectedAgentContextEntries } from "@/components/app/logic/agentContextSelections";
+import { countSelectedAgentContextGroups } from "@/components/app/logic/agentContextSelections";
 import { AgentContextPicker } from "@/components/app/shared/AgentContextPicker";
 import { getPastedImageLabel, getWorkspacePathPillLabel } from "@/components/app/logic/agentInputAttachments";
 import type { FocusedAgentInputComposerProps } from "@/components/app/types/focusedAgentSessionChrome.types";
@@ -26,7 +26,7 @@ export const FocusedAgentInputComposer = ({
   onSend,
   inputRef
 }: FocusedAgentInputComposerProps) => {
-  const selectedContextCount = countSelectedAgentContextEntries(contextSelector.selections);
+  const selectedContextCount = countSelectedAgentContextGroups(contextSelector.sources, contextSelector.selections);
 
   return (
     <div className="relative -top-[16px] mb-[-16px] bg-card/95 px-4 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
@@ -86,7 +86,7 @@ export const FocusedAgentInputComposer = ({
           {agent && selectedContextCount > 0 ? (
             <div className="inline-flex h-8 max-w-full items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 text-xs text-foreground">
               <Share2 className="size-3.5 shrink-0 text-primary" />
-              <span>{selectedContextCount} context entr{selectedContextCount === 1 ? "y" : "ies"} selected</span>
+              <span>{selectedContextCount} context session{selectedContextCount === 1 ? "" : "s"} selected</span>
             </div>
           ) : null}
         </div>

@@ -6,14 +6,15 @@ import { ChangesPanel as AppChangesPanel } from "@/components/app/panels/Changes
 import type { ChangesPanelProps, ChangesPanelSectionProps } from "@/components/app/types/changesPanel.types";
 import { useMemo } from "react";
 
-export const ChangesPanelSection = ({ forge, vercel, chrome, fileHandlers }: ChangesPanelSectionProps) => {
+export const ChangesPanelSection = ({ forge, vercel, chrome, fileHandlers, openCreateAgentDialog }: ChangesPanelSectionProps) => {
   const snapshot = useCanonicalAppSnapshot();
   const { workspaceFileTree, fileChangeCounts, safely } = useWorkspaceRuntime();
 
   const changesPanelValue = useMemo<ChangesPanelProps>(
     () => ({
       workspace: {
-        tools: snapshot?.agentCatalog ?? []
+        tools: snapshot?.agentCatalog ?? [],
+        onOpenCreateAgentDialog: openCreateAgentDialog
       },
       files: {
         paths: workspaceFileTree.paths,
@@ -21,10 +22,11 @@ export const ChangesPanelSection = ({ forge, vercel, chrome, fileHandlers }: Cha
         changeCounts: fileChangeCounts,
         loading: workspaceFileTree.isLoading,
         errorMessage: workspaceFileTree.errorMessage,
-        onOpenFile: (pathName) => {
+        onOpenFile: (pathName, options) => {
           void fileHandlers.openFileEditor(pathName, {
             selectChange: false,
-            rootPath: workspaceFileTree.rootPath
+            rootPath: workspaceFileTree.rootPath,
+            ...options
           });
         },
         onCreateFile: fileHandlers.onCreateFile,
@@ -57,7 +59,8 @@ export const ChangesPanelSection = ({ forge, vercel, chrome, fileHandlers }: Cha
       },
       forge,
       vercel,
-      chrome
+      chrome,
+      openCreateAgentDialog
     }),
     [
       snapshot,

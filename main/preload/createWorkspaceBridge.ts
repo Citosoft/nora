@@ -36,6 +36,20 @@ export function createWorkspaceBridge(): WorkspaceBridge {
     moveWorkspaceFile: (payload) => invokeIpc("app:move-workspace-file", payload),
     deleteWorkspaceFile: (payload) => invokeIpc("app:delete-workspace-file", payload),
     searchWorkspaceFiles: (payload) => invokeIpc("app:search-workspace-files", payload),
+    listImportedContextBundles: (projectId, rootPath) =>
+      invokeIpc("app:list-imported-context-bundles", projectId, rootPath),
+    listExternalHarnessContextSessions: (projectId, rootPath) =>
+      invokeIpc("app:list-external-harness-context-sessions", projectId, rootPath),
+    composeExternalHarnessContextSelections: (projectId, ref) =>
+      invokeIpc("app:compose-external-harness-context-selections", projectId, ref),
+    listNoraDetectableContextBundles: (projectId, sessionId, worktreeId) =>
+      invokeIpc("app:list-nora-detectable-context-bundles", projectId, sessionId, worktreeId),
+    importNoraDetectableContextBundle: (payload) =>
+      invokeIpc("app:import-nora-detectable-context-bundle", payload),
+    readNoraDetectableContextBundle: (payload) =>
+      invokeIpc("app:read-nora-detectable-context-bundle", payload),
+    deleteNoraDetectableContextBundle: (payload) =>
+      invokeIpc("app:delete-nora-detectable-context-bundle", payload),
     statWorkspacePath: (payload) => invokeIpc("app:stat-workspace-path", payload),
     getWorkspaceGitStatusSummary: (payload) => invokeIpc("app:get-workspace-git-status-summary", payload),
     selectChange: (pathName) => invokeIpc("app:select-change", pathName),

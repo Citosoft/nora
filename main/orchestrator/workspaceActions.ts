@@ -1,5 +1,9 @@
 import type {
+  AgentContextSelection,
   AppState,
+  ExternalHarnessContextRef,
+  ExternalHarnessSessionSummary,
+  ImportedContextBundleSummary,
   ProjectSummary,
   TerminalPreset,
   WorkspaceGitStatusSummary,
@@ -17,6 +21,11 @@ import type { WorkspaceImageFileContent } from "@shared/types/workspaceFile.type
 import fs from "node:fs/promises";
 import { getProjectFile } from "../noraPaths";
 import type { WorkspaceTarget } from "../types/internal.types";
+import {
+  composeExternalHarnessContextSelections,
+  listExternalHarnessContextSessions,
+  resolveWorktreeIdForWorkspacePath
+} from "./harness-context/listExternalHarnessContextSessions";
 
 export type WorkspaceActionsDependencies = {
   resolveProjectSummaryById: (projectId: string) => Promise<ProjectSummary>;
@@ -35,6 +44,7 @@ export type WorkspaceActionsDependencies = {
   readWorkspaceBinaryFile: (target: WorkspaceTarget, projectId: string, filePath: string) => Promise<Buffer>;
   getWorkspaceImageMimeType: (filePath: string) => string;
   listWorkspaceTrackedAndUntrackedFiles: (target: WorkspaceTarget) => Promise<string[]>;
+  listImportedContextBundles: (target: WorkspaceTarget, projectId: string) => Promise<ImportedContextBundleSummary[]>;
   listWorkspaceDirectories: (target: WorkspaceTarget) => Promise<string[]>;
   listWorkspaceSpecs: (target: WorkspaceTarget, projectId: string) => Promise<WorkspaceSpecSummary[]>;
   listWorkspaceNotes: (target: WorkspaceTarget, projectId: string) => Promise<WorkspaceNoteSummary[]>;
@@ -94,6 +104,47 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
   const listWorkspaceDirectoriesByProject = async (projectId: string, rootPath?: string): Promise<string[]> => {
     const project = await deps.resolveProjectSummaryById(projectId);
     return deps.listWorkspaceDirectories(deps.resolveWorkspaceFileTarget(project, rootPath));
+  };
+
+  const listImportedContextBundlesByProject = async (
+    projectId: string,
+    rootPath?: string
+  ): Promise<ImportedContextBundleSummary[]> => {
+    const project = await deps.resolveProjectSummaryById(projectId);
+    return deps.listImportedContextBundles(deps.resolveWorkspaceFileTarget(project, rootPath), project.id);
+  };
+
+  const listExternalHarnessContextSessionsByProject = async (
+    projectId: string,
+    rootPath?: string
+  ): Promise<ExternalHarnessSessionSummary[]> => {
+    const project = await deps.resolveProjectSummaryById(projectId);
+    const target = deps.resolveWorkspaceFileTarget(project, rootPath);
+    const snapshot = deps.getSnapshot();
+    const worktreeId =
+      resolveWorktreeIdForWorkspacePath(snapshot, project.id, target.path) ??
+      snapshot.worktrees.find((worktree) => worktree.projectId === project.id)?.id ??
+      "";
+    return listExternalHarnessContextSessions({
+      workspaceAbsolutePath: target.path,
+      projectId: project.id,
+      worktreeId,
+      agents: snapshot.agents,
+      agentCatalog: snapshot.agentCatalog,
+      isRemoteWorkspace: target.location?.kind === "ssh"
+    });
+  };
+
+  const composeExternalHarnessContextSelectionsByProject = async (
+    projectId: string,
+    ref: ExternalHarnessContextRef
+  ): Promise<AgentContextSelection[]> => {
+    const snapshot = deps.getSnapshot();
+    const worktreeId =
+      resolveWorktreeIdForWorkspacePath(snapshot, projectId, ref.workspacePath) ??
+      snapshot.worktrees.find((worktree) => worktree.projectId === projectId)?.id ??
+      "";
+    return composeExternalHarnessContextSelections({ ref, projectId, worktreeId });
   };
 
   const listWorkspaceSpecsByProject = async (projectId: string): Promise<WorkspaceSpecSummary[]> => {
@@ -226,6 +277,9 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
     resolveWorkspaceStatePath,
     readWorkspaceImageFile,
     listWorkspaceFiles,
+    listImportedContextBundlesByProject,
+    listExternalHarnessContextSessionsByProject,
+    composeExternalHarnessContextSelectionsByProject,
     listWorkspaceDirectoriesByProject,
     listWorkspaceSpecsByProject,
     listWorkspaceNotesByProject,

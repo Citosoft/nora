@@ -42,17 +42,46 @@ export interface AgentContextEntry {
   createdAt: string;
   kind: AgentContextEntryKind;
   precision: AgentContextPrecision;
-  source: AgentPromptSource | "transcript";
+  source: AgentPromptSource | "harness";
   title: string;
   content: string;
   preview: string;
   estimate: AgentContextEstimate;
+  conversationId?: string;
   references: AgentContextReference[];
   sourceAgentIds: string[];
 }
 
+/** Local CLI harness transcripts used when attaching context from sessions that were not started in Nora. */
+export interface ExternalHarnessContextRef {
+  toolId: string;
+  toolLabel: string;
+  conversationId: string;
+  primaryArtifactPath: string;
+  sessionLabel: string;
+  workspacePath: string;
+}
+
+export interface ExternalHarnessSessionSummary extends ExternalHarnessContextRef {
+  lastUpdatedAt: string | null;
+  latestPreview: string;
+  entryCount: number;
+  estimate: AgentContextEstimate;
+}
+
 export interface AgentContextSelection {
   sourceAgentId: string;
+  entryIds: string[];
+  externalHarness?: ExternalHarnessContextRef;
+}
+
+export interface AgentContextEntryGroup {
+  id: string;
+  title: string;
+  latestPreview: string;
+  lastUpdatedAt: string | null;
+  entryCount: number;
+  estimate: AgentContextEstimate;
   entryIds: string[];
 }
 
@@ -84,6 +113,7 @@ export interface AgentContextState {
 export interface AgentContextSourceSummary {
   agentId: string;
   agentName: string;
+  toolId: string;
   toolLabel: string;
   contextFilePath: string;
   contextEventsPath: string;
@@ -92,7 +122,7 @@ export interface AgentContextSourceSummary {
   lastUpdatedAt: string | null;
   latestPreview: string;
   estimate: AgentContextEstimate;
-  latestEntries: AgentContextEntry[];
+  entryGroups: AgentContextEntryGroup[];
 }
 
 export interface AgentPromptDispatchResult {

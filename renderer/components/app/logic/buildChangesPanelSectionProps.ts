@@ -120,5 +120,6 @@ export const buildChangesPanelSectionProps = (
     onInspectCommit: (hash) => d.safely(() => noraWorkspaceClient.inspectCommit(hash)),
     onClearCommitInspection: () => d.safely(() => noraWorkspaceClient.clearCommitInspection())
   },
-  fileHandlers: d.fileHandlers
+  fileHandlers: d.fileHandlers,
+  openCreateAgentDialog: d.openCreateAgentDialog
 });

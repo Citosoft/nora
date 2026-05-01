@@ -1,4 +1,5 @@
 import type {
+  ImportedContextBundleSummary,
   WorkspaceNoteSummary,
   WorkspacePathStatResult,
   WorkspaceSearchResult,
@@ -8,8 +9,11 @@ import type {
   WorkspaceTaskSummary
 } from "@shared/appTypes";
 import { createDefaultWorkspaceSplitViewCollection } from "@shared/appTypes";
+import { NORA_IMPORTED_CONTEXT_RELATIVE } from "@shared/constants/noraImportedContext";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { md5HexOfFile, md5HexOfUtf8String } from "./fileContentMd5";
+import { buildImportedContextBundleListMetadata } from "./importedContextBundleMetadata";
 import { normalizeWorkspaceTaskBoard, WORKSPACE_TASK_BOARD_PATH } from "../taskBoardStore";
 import type { WorkspaceTarget } from "../types/internal.types";
 import { normalizeWorkspaceSplitViewCollection } from "../workspaceSplitViewStore";
@@ -25,6 +29,9 @@ type WorkspaceOpsDeps = {
   workspaceInternalDirName: string;
   maxWorkspaceSearchResults: number;
 };
+
+const IMPORTED_CONTEXT_BUNDLE_HEADER_BYTES = 24 * 1024;
+const IMPORTED_CONTEXT_BUNDLE_MAX_FULL_READ_BYTES = 5 * 1024 * 1024;
 
 export function createWorkspaceOperations(deps: WorkspaceOpsDeps) {
   function getStatePath(target: WorkspaceTarget, projectId: string, relativePath: string, storageMode = loadWorkspaceStateStorageMode()): string {
@@ -141,7 +148,15 @@ export function createWorkspaceOperations(deps: WorkspaceOpsDeps) {
     return "application/octet-stream";
   }
 
+  function isRepoAnchoredNoraImportedContextPath(relativePath: string): boolean {
+    const n = relativePath.replace(/\\/g, "/").replace(/^\//, "");
+    return n === NORA_IMPORTED_CONTEXT_RELATIVE || n.startsWith(`${NORA_IMPORTED_CONTEXT_RELATIVE}/`);
+  }
+
   function isWorkspaceInternalPath(relativePath: string): boolean {
+    if (isRepoAnchoredNoraImportedContextPath(relativePath)) {
+      return false;
+    }
     return relativePath === deps.workspaceInternalDirName || relativePath.startsWith(`${deps.workspaceInternalDirName}/`);
   }
 
@@ -792,6 +807,151 @@ export function createWorkspaceOperations(deps: WorkspaceOpsDeps) {
     };
   }
 
+  async function readLocalImportedBundleHeader(absFile: string): Promise<string> {
+    const fh = await fs.open(absFile, "r");
+    try {
+      const stat = await fh.stat();
+      const byteLength = Math.min(IMPORTED_CONTEXT_BUNDLE_HEADER_BYTES, Math.max(0, Number(stat.size)));
+      if (byteLength === 0) {
+        return "";
+      }
+      const buf = Buffer.alloc(byteLength);
+      const { bytesRead } = await fh.read(buf, 0, byteLength, 0);
+      return buf.subarray(0, bytesRead).toString("utf8");
+    } finally {
+      await fh.close();
+    }
+  }
+
+  function importedContextBundleSortMs(row: ImportedContextBundleSummary): number {
+    const iso = row.handoffCreatedAt || row.updatedAt;
+    if (!iso) {
+      return 0;
+    }
+    const ms = Date.parse(iso);
+    return Number.isNaN(ms) ? 0 : ms;
+  }
+
+  function parseOpensslMd5Stdout(stdout: string): string | null {
+    const trimmed = stdout.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const eq = trimmed.lastIndexOf("=");
+    if (eq < 0) {
+      return null;
+    }
+    const hex = trimmed.slice(eq + 1).replace(/\s+/g, "").toLowerCase();
+    return /^[a-f0-9]{32}$/.test(hex) ? hex : null;
+  }
+
+  async function hashImportedContextBundleLocal(absFile: string, fullUtf8: string | null, sizeBytes: number): Promise<string | null> {
+    if (sizeBytes <= 0) {
+      return md5HexOfUtf8String("");
+    }
+    if (fullUtf8 != null) {
+      return md5HexOfUtf8String(fullUtf8);
+    }
+    return md5HexOfFile(absFile);
+  }
+
+  async function listImportedContextBundles(target: WorkspaceTarget, projectId: string): Promise<ImportedContextBundleSummary[]> {
+    const absoluteRoot = getRepoAbsolutePath(target, NORA_IMPORTED_CONTEXT_RELATIVE);
+    const location = deps.getWorkspaceLocation(target);
+
+    if (location.kind === "ssh") {
+      const normalizedRoot = deps.normalizeRemoteShellPath(absoluteRoot);
+      const renderedRoot = normalizedRoot.startsWith("$HOME/") ? normalizedRoot : deps.shellQuote(normalizedRoot);
+      const command = [
+        `if [ ! -d ${renderedRoot} ]; then`,
+        "  exit 0",
+        "fi",
+        `find ${renderedRoot} -maxdepth 1 -type f -name 'context-bundle-*.md' 2>/dev/null | sort`
+      ].join("\n");
+      const { stdout } = await deps.runRemoteSshCommand(target, command);
+      const absPaths = stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+      const results: ImportedContextBundleSummary[] = [];
+      for (const abs of absPaths) {
+        const renderedFile = abs.startsWith("$HOME/") ? abs : deps.shellQuote(abs);
+        const { stdout: wcOut } = await deps.runRemoteSshCommand(target, `wc -c < ${renderedFile} 2>/dev/null || echo 0`);
+        const sizeBytes = Number.parseInt(wcOut.trim().split(/\s+/)[0] || "0", 10) || 0;
+        let markdownForParse = "";
+        let fullMarkdown: string | null = null;
+        if (sizeBytes > 0 && sizeBytes <= IMPORTED_CONTEXT_BUNDLE_MAX_FULL_READ_BYTES) {
+          const { stdout: body } = await deps.runRemoteSshCommand(target, `cat ${renderedFile} 2>/dev/null || true`);
+          fullMarkdown = body;
+          markdownForParse = body;
+        } else {
+          const { stdout: chunk } = await deps.runRemoteSshCommand(
+            target,
+            `head -c ${IMPORTED_CONTEXT_BUNDLE_HEADER_BYTES} ${renderedFile} 2>/dev/null || true`
+          );
+          markdownForParse = chunk;
+        }
+        const relativePath = toWorkspaceRelativePath(target, projectId, abs).replace(/\\/g, "/");
+        const fileName = relativePath.split("/").pop() || relativePath;
+        let contentMd5: string | null = null;
+        if (sizeBytes <= 0) {
+          contentMd5 = md5HexOfUtf8String("");
+        } else {
+          const { stdout: md5Out } = await deps.runRemoteSshCommand(
+            target,
+            `openssl dgst -md5 ${renderedFile} 2>/dev/null || true`
+          );
+          contentMd5 = parseOpensslMd5Stdout(md5Out);
+        }
+        results.push({
+          path: relativePath,
+          fileName,
+          sizeBytes,
+          updatedAt: null,
+          contentMd5,
+          ...buildImportedContextBundleListMetadata(markdownForParse, {
+            fullMarkdownUtf8: fullMarkdown,
+            byteSize: sizeBytes
+          })
+        });
+      }
+      return results.sort((left, right) => importedContextBundleSortMs(right) - importedContextBundleSortMs(left));
+    }
+
+    const rootLocal = absoluteRoot;
+    const entries = await fs.readdir(rootLocal, { withFileTypes: true }).catch(() => [] as import("node:fs").Dirent[]);
+    const results: ImportedContextBundleSummary[] = [];
+    for (const entry of entries) {
+      if (!entry.isFile() || !/^context-bundle-.+\.md$/i.test(entry.name)) {
+        continue;
+      }
+      const relativePath = `${NORA_IMPORTED_CONTEXT_RELATIVE}/${entry.name}`;
+      const absFile = path.join(rootLocal, entry.name);
+      const st = await fs.stat(absFile).catch(() => null);
+      const sizeBytes = st?.size ?? 0;
+      let markdownForParse = "";
+      let fullMarkdown: string | null = null;
+      if (sizeBytes > 0 && sizeBytes <= IMPORTED_CONTEXT_BUNDLE_MAX_FULL_READ_BYTES) {
+        fullMarkdown = await fs.readFile(absFile, "utf8");
+        markdownForParse = fullMarkdown;
+      } else if (sizeBytes > IMPORTED_CONTEXT_BUNDLE_MAX_FULL_READ_BYTES) {
+        markdownForParse = await readLocalImportedBundleHeader(absFile).catch(() => "");
+      } else {
+        markdownForParse = "";
+      }
+      const contentMd5 = await hashImportedContextBundleLocal(absFile, fullMarkdown, sizeBytes);
+      results.push({
+        path: relativePath,
+        fileName: entry.name,
+        sizeBytes,
+        updatedAt: st?.mtime.toISOString() ?? null,
+        contentMd5,
+        ...buildImportedContextBundleListMetadata(markdownForParse, {
+          fullMarkdownUtf8: fullMarkdown,
+          byteSize: sizeBytes
+        })
+      });
+    }
+    return results.sort((left, right) => importedContextBundleSortMs(right) - importedContextBundleSortMs(left));
+  }
+
   return {
     addTaskToWorkspaceTaskBoard,
     deleteWorkspaceFile,
@@ -807,6 +967,7 @@ export function createWorkspaceOperations(deps: WorkspaceOpsDeps) {
     listWorkspaceTaskPaths,
     listWorkspaceTasks,
     listWorkspaceTrackedAndUntrackedFiles,
+    listImportedContextBundles,
     listWorkspaceDirectories,
     createWorkspaceDirectory,
     moveWorkspaceFile,
