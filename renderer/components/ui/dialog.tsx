@@ -61,8 +61,8 @@ export function DialogTitle({ children }: { children: ReactNode }) {
   return <h2 className="text-xl font-semibold">{children}</h2>;
 }
 
-export function DialogDescription({ children }: { children: ReactNode }) {
-  return <p className="text-sm text-muted-foreground">{children}</p>;
+export function DialogDescription({ children, className }: PropsWithChildren<{ className?: string }>) {
+  return <p className={cn("text-sm text-muted-foreground", className)}>{children}</p>;
 }
 
 export function DialogFooter({ children }: PropsWithChildren) {
