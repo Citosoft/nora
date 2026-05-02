@@ -13,7 +13,7 @@ export type UseAppToolInstallFlowsArgs = {
   safely: (action: () => Promise<AppState>) => Promise<AppState | null>;
   runWithStatus: (message: string, action: () => Promise<AppState>) => Promise<AppState | null>;
   setActiveView: Dispatch<SetStateAction<"main" | "settings">>;
-  showToast: (toast: Omit<AppToast, "id">) => void;
+  showToast: (toast: Omit<AppToast, "id">) => number;
   captureError: (error: unknown) => void;
 };
 

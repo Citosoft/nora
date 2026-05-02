@@ -260,6 +260,36 @@ export function initializeAutoUpdates(): void {
       });
     });
 
+    // `electron` typings narrow `autoUpdater.on` to a small event union; `download-progress` is emitted at runtime.
+    const autoUpdaterForProgress = autoUpdater as unknown as {
+      on(
+        event: "download-progress",
+        listener: (progress: { percent?: number; total?: number; transferred?: number }) => void
+      ): typeof autoUpdater;
+    };
+
+    autoUpdaterForProgress.on("download-progress", (progress) => {
+      if (isSimulationActive()) {
+        return;
+      }
+
+      if (autoUpdateStatus.kind !== "downloading") {
+        return;
+      }
+
+      const current = autoUpdateStatus;
+      const raw = progress.percent;
+      if (typeof raw !== "number" || !Number.isFinite(raw)) {
+        return;
+      }
+
+      const downloadProgressPercent = Math.min(100, Math.max(0, Math.round(raw)));
+      setAutoUpdateStatus({
+        ...current,
+        downloadProgressPercent
+      });
+    });
+
     autoUpdater.on("update-not-available", () => {
       if (isSimulationActive()) {
         return;

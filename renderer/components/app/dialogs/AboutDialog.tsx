@@ -196,7 +196,7 @@ export function AboutDialog({
                 <div className="rounded-lg border border-dashed border-border/70 bg-background/60 px-4 py-3 text-left">
                   <div className="text-sm font-medium text-foreground">Local update testing</div>
                   <div className="mt-1 text-sm text-muted-foreground">
-                    Simulate updater states locally to verify the banner and install flow without publishing a release.
+                    Simulate updater states locally to verify the toast and install flow without publishing a release.
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {AUTO_UPDATE_TEST_ACTIONS.map((action) => (

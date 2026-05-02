@@ -83,7 +83,15 @@ export type AutoUpdateStatus =
       latestVersion: string | null;
     }
   | {
-      kind: "downloading" | "downloaded";
+      kind: "downloading";
+      currentVersion: string;
+      latestVersion: string | null;
+      releaseNotes: string | null;
+      /** 0–100 from the updater; omitted until the first `download-progress` event. */
+      downloadProgressPercent?: number;
+    }
+  | {
+      kind: "downloaded";
       currentVersion: string;
       latestVersion: string | null;
       releaseNotes: string | null;

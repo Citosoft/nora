@@ -40,9 +40,6 @@ type UseAppPreLaunchViewPropsArgs = {
   defaultIdeId: string | null;
   openAddWorkspaceModal: () => Promise<AppState | null>;
   openStartupDependenciesDialog: () => void;
-  autoUpdateStatus: AppPreLaunchViewProps["topBannersProps"]["autoUpdateStatus"];
-  isInstallingDownloadedUpdate: boolean;
-  handleInstallDownloadedUpdate: () => void;
   linuxUpdateStatus: AppPreLaunchViewProps["topBannersProps"]["linuxUpdateStatus"];
   handleCopyLinuxUpdateCommand: () => void;
   handleOpenLinuxRelease: () => void;
@@ -113,9 +110,6 @@ export function useAppPreLaunchViewProps(args: UseAppPreLaunchViewPropsArgs): {
     defaultIdeId,
     openAddWorkspaceModal,
     openStartupDependenciesDialog,
-    autoUpdateStatus,
-    isInstallingDownloadedUpdate,
-    handleInstallDownloadedUpdate,
     linuxUpdateStatus,
     handleCopyLinuxUpdateCommand,
     handleOpenLinuxRelease,
@@ -216,9 +210,6 @@ export function useAppPreLaunchViewProps(args: UseAppPreLaunchViewPropsArgs): {
           })
         : null,
       topBannersProps: buildPreLaunchTopBannersProps({
-        autoUpdateStatus,
-        isInstallingDownloadedUpdate,
-        onInstallDownloadedUpdate: handleInstallDownloadedUpdate,
         linuxUpdateStatus,
         onCopyLinuxUpdateCommand: handleCopyLinuxUpdateCommand,
         onOpenLinuxRelease: handleOpenLinuxRelease,
@@ -339,7 +330,6 @@ export function useAppPreLaunchViewProps(args: UseAppPreLaunchViewPropsArgs): {
     accentColor,
     activeView,
     appSettings,
-    autoUpdateStatus,
     clearSimulatedMissingDependencies,
     completeOnboarding,
     copyStartupDependencyInstructions,
@@ -351,7 +341,6 @@ export function useAppPreLaunchViewProps(args: UseAppPreLaunchViewPropsArgs): {
     focusLocalTerminalDock,
     handleChooseLocalWorkspace,
     handleCopyLinuxUpdateCommand,
-    handleInstallDownloadedUpdate,
     handleOpenLinuxRelease,
     handleOpenRecentWorkspace,
     handleOpenWorkspaceBrowser,
@@ -361,7 +350,6 @@ export function useAppPreLaunchViewProps(args: UseAppPreLaunchViewPropsArgs): {
     installOnboardingTool,
     installStartupDependencyWithRefresh,
     isAddingWorkspace,
-    isInstallingDownloadedUpdate,
     isLoadingInstalledIdes,
     isOnboardingOpen,
     isRefreshingOnboardingTools,

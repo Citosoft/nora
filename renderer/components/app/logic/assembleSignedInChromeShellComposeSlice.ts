@@ -85,9 +85,6 @@ export const assembleSignedInChromeShellComposeSlice = (s: SignedInChromeShellAs
       }
     },
     topBanners: {
-      autoUpdateStatus: chromeShell.autoUpdateStatus,
-      isInstallingDownloadedUpdate: chromeShell.isInstallingDownloadedUpdate,
-      onInstallDownloadedUpdate: chromeShell.handleInstallDownloadedUpdate,
       linuxUpdateStatus: chromeShell.linuxUpdateStatus,
       onCopyLinuxUpdateCommand: chromeShell.handleCopyLinuxUpdateCommand,
       onOpenLinuxRelease: chromeShell.handleOpenLinuxRelease,

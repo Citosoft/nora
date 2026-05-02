@@ -53,18 +53,12 @@ export function buildPreLaunchTitleBarCommonInput(args: {
 }
 
 export function buildPreLaunchTopBannersProps(args: {
-  autoUpdateStatus: AppMainChromeTopBannersProps["autoUpdateStatus"];
-  isInstallingDownloadedUpdate: boolean;
-  onInstallDownloadedUpdate: () => void;
   linuxUpdateStatus: AppMainChromeTopBannersProps["linuxUpdateStatus"];
   onCopyLinuxUpdateCommand: () => void;
   onOpenLinuxRelease: () => void;
   onDismissLinuxUpdate: () => void;
 }): AppMainChromeTopBannersProps {
   return {
-    autoUpdateStatus: args.autoUpdateStatus,
-    isInstallingDownloadedUpdate: args.isInstallingDownloadedUpdate,
-    onInstallDownloadedUpdate: args.onInstallDownloadedUpdate,
     linuxUpdateStatus: args.linuxUpdateStatus,
     onCopyLinuxUpdateCommand: args.onCopyLinuxUpdateCommand,
     onOpenLinuxRelease: args.onOpenLinuxRelease,

@@ -8,7 +8,8 @@ export function useAppRootShellFrame(): {
   statusEntries: StatusBarEntry[];
   flashStatus: (message: string, durationMs?: number) => void;
   toasts: AppToast[];
-  showToast: (toast: Omit<AppToast, "id">) => void;
+  showToast: (toast: Omit<AppToast, "id">) => number;
+  updateToast: (toastId: number, patch: Partial<Omit<AppToast, "id">>) => void;
   dismissToast: (toastId: number) => void;
 } {
   const [statusEntries, setStatusEntries] = useState<StatusBarEntry[]>([]);
@@ -34,7 +35,7 @@ export function useAppRootShellFrame(): {
     }, durationMs);
   }, [statusBar]);
 
-  const showToast = useCallback((toast: Omit<AppToast, "id">): void => {
+  const showToast = useCallback((toast: Omit<AppToast, "id">): number => {
     const nextId = ++toastIdRef.current;
     console.log("[nora renderer] toast show", {
       id: nextId,
@@ -43,6 +44,13 @@ export function useAppRootShellFrame(): {
       variant: toast.variant
     });
     setToasts((current) => [...current, { ...toast, id: nextId }]);
+    return nextId;
+  }, []);
+
+  const updateToast = useCallback((toastId: number, patch: Partial<Omit<AppToast, "id">>): void => {
+    setToasts((current) =>
+      current.map((toast) => (toast.id === toastId ? { ...toast, ...patch } : toast))
+    );
   }, []);
 
   const dismissToast = useCallback((toastId: number): void => {
@@ -55,6 +63,7 @@ export function useAppRootShellFrame(): {
     flashStatus,
     toasts,
     showToast,
+    updateToast,
     dismissToast
   };
 }

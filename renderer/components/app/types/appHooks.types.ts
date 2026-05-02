@@ -10,6 +10,7 @@ import type {
   WorkspaceTasksState
 } from "@/components/app/types";
 import type { StatusBarContextValue, TaskCenterTaskReference } from "@/components/app/types/component.types";
+import type { AppToast } from "@/components/app/types/appToast.types";
 import type {
   AiModelCatalogEntry,
   AiProvider,
@@ -144,6 +145,9 @@ export type UseBrowserCookieImportResult = {
 
 export type UseAppAutoUpdateArgs = {
   captureError: (error: unknown) => void;
+  showToast: (toast: Omit<AppToast, "id">) => number;
+  dismissToast: (toastId: number) => void;
+  updateToast: (toastId: number, patch: Partial<Omit<AppToast, "id">>) => void;
 };
 
 export type UseAppAutoUpdateResult = {

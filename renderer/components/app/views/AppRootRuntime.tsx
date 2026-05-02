@@ -118,7 +118,8 @@ function AppRootRuntimeContent({
     statusEntries,
     toasts,
     dismissToast,
-    showToast
+    showToast,
+    updateToast
   } = shellFrame;
   const analyticsAllowedInCurrentRun = dialogs.analyticsRuntimeConfig?.analyticsAllowedInCurrentRun ?? __NORA_IS_PRODUCTION__;
 
@@ -128,7 +129,12 @@ function AppRootRuntimeContent({
   });
 
   const issueReporter = useAppIssueReporter(captureError);
-  const autoUpdate = useAppAutoUpdate({ captureError });
+  const autoUpdate = useAppAutoUpdate({
+    captureError,
+    showToast,
+    dismissToast,
+    updateToast
+  });
   const aiModels = useAiModelCatalog({
     apiKeys: preferences.appSettings.ai.apiKeys,
     modelByProvider: preferences.appSettings.ai.modelByProvider,
@@ -357,9 +363,6 @@ function AppRootRuntimeContent({
     defaultIdeId: preferences.defaultIdeId,
     openAddWorkspaceModal: workspaceLifecycle.openAddWorkspaceModal,
     openStartupDependenciesDialog: dialogs.openStartupDependenciesDialog,
-    autoUpdateStatus: autoUpdate.autoUpdateStatus,
-    isInstallingDownloadedUpdate: autoUpdate.isInstallingDownloadedUpdate,
-    handleInstallDownloadedUpdate: autoUpdate.handleInstallDownloadedUpdate,
     linuxUpdateStatus: linuxUpdateNotice.linuxUpdateStatus,
     handleCopyLinuxUpdateCommand,
     handleOpenLinuxRelease,

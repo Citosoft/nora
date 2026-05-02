@@ -15,9 +15,6 @@ export function useAppChromeComposition(args: AppChromeCompositionArgs): AppChro
   return {
     titleBar: createElement(AppTitleBar, buildTitleBarProps(args.titleBar)),
     topBanners: createElement(AppMainChromeTopBanners, {
-      autoUpdateStatus: args.topBanners.autoUpdateStatus,
-      isInstallingDownloadedUpdate: args.topBanners.isInstallingDownloadedUpdate,
-      onInstallDownloadedUpdate: args.topBanners.onInstallDownloadedUpdate,
       linuxUpdateStatus: args.topBanners.linuxUpdateStatus,
       onCopyLinuxUpdateCommand: args.topBanners.onCopyLinuxUpdateCommand,
       onOpenLinuxRelease: args.topBanners.onOpenLinuxRelease,

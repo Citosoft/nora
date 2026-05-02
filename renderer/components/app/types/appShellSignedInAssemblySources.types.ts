@@ -226,9 +226,6 @@ export type AppShellSignedInChromeShellSources = {
   openCreateAgentModal: () => void;
   openWorkspaceBrowserFromTitleBar: () => void;
   openCreateTerminalModal: () => void;
-  autoUpdateStatus: AppChromeShellComposeSlice["topBanners"]["autoUpdateStatus"];
-  isInstallingDownloadedUpdate: boolean;
-  handleInstallDownloadedUpdate: AppChromeShellComposeSlice["topBanners"]["onInstallDownloadedUpdate"];
   linuxUpdateStatus: AppChromeShellComposeSlice["topBanners"]["linuxUpdateStatus"];
   handleCopyLinuxUpdateCommand: AppChromeShellComposeSlice["topBanners"]["onCopyLinuxUpdateCommand"];
   handleOpenLinuxRelease: AppChromeShellComposeSlice["topBanners"]["onOpenLinuxRelease"];
