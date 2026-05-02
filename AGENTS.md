@@ -152,22 +152,25 @@ These rules apply to **first-party** source under `main/`, `renderer/`, `shared/
 - Maintain versioned changelog files as a first-class release artifact.
 - For every agent-made change, add one concise changelog line describing that specific change.
 - When iterating on the same user-visible change within a task, update the existing changelog line for that change instead of adding additional superseded tweak-by-tweak lines.
+- Group lines in each changelog file by **kind of change**, using markdown `###` headings so readers and automation can scan quickly. Use at least **Features** (user-visible additions or meaningful capability) and **Fixes** (bug fixes and broken-behavior corrections). Add **Improvements** when useful for polish, UX, or refactors that are not strictly fixes or net-new features. Place each new line under the correct section; add the section heading if the file does not have it yet. Keep a blank line after each heading and between sections.
 - Do not batch changelog updates; update the changelog incrementally as changes are made.
-- Use one changelog file per version (for example, `changelogs/v1.4.0.md`).
-- When creating a new tag for a release version, also create a blank changelog file for the next planned version in the same commit or release workflow step.
+- Use one changelog file per **upcoming** release version—the SemVer of the **next** release that will include the change—not a version that has already shipped. For example, if `1.4.0` is already released, new lines belong in `changelogs/v1.4.1.md` (or whatever the next release number is), not in `v1.4.0.md`.
+- Name that file from root `package.json` `version` when it already names the open release (append to `changelogs/v<version>.md`). If `package.json` still matches the last shipped tag, use the next patch (or the blank changelog from the release workflow) so the filename matches the version users will see when the work ships.
+- When creating a new tag for a release version, also create a blank changelog file for the following planned version in the same commit or release workflow step.
 - Keep this workflow consistent so automation can reliably read changelog files and publish website updates.
-- Dont write changelog info for internal changes such as documentation generaiton. it should only be updated for features and fixes
+- Don't write changelog info for internal changes such as documentation generation; it should only be updated for user-visible features, fixes, and improvements.
 
 ## Changelog Enforcement
 
 - Update changelog files automatically as part of each agent-made change.
-- Add exactly one line per change, with wording that is specific and user-visible.
-- If the current version changelog file does not exist, create it before completing the change.
+- Add exactly one line per change, with wording that is specific and user-visible, under the correct **Features**, **Fixes**, or **Improvements** section (or whichever sections the file already uses, extended consistently).
+- If the changelog file for that **upcoming** release version does not exist, create it before completing the change, including any `###` section headings required for the lines you add.
 - Before final response, run a completion check:
-  1. Confirm the changelog file exists for the current release version.
-  2. Confirm each agent-made change in the task has exactly one changelog line.
+  1. Confirm the changelog file exists for the **upcoming** release version (next ship), not a prior released version.
+  2. Confirm each agent-made change in the task has exactly one changelog line in the appropriate group.
   3. Confirm changelog lines are concise and map to user-visible behavior.
-  4. If releasing or tagging, also create the next-version blank changelog file.
+  4. Confirm each line sits under the correct change-type section (Features vs Fixes vs Improvements).
+  5. If releasing or tagging, also create the blank changelog file for the version after that.
 
 ## Implementation Standard
 
