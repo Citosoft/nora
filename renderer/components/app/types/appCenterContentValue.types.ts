@@ -127,6 +127,7 @@ export type AppCenterContentValueArgs = {
   isCenterFullDiffExpanded: boolean;
   loadForgeWorkItemDetail: (kind: ForgeWorkItemKind, number: number, repoOverride?: { host: string; fullName: string } | null) => Promise<void>;
   openAiChat: (projectId: string) => void;
+  openFileEditor: (pathName: string, options?: { selectChange?: boolean; rootPath?: string | null }) => Promise<void>;
   openForgeViewer: (projectId: string, kind: ForgeWorkItemKind | "workflow_run", number: number, title: string, repoOverride?: { host: string; fullName: string } | null) => void;
   openSettingsPage: (group?: SettingsGroup) => void;
   performForgeWorkItemAction: (action: ForgeWorkItemAction) => void | Promise<void>;

@@ -20,7 +20,11 @@ import type {
   WorkspaceTasksState
 } from "@/components/app/types";
 import type { FileEditorAgentSendTarget } from "@/components/app/types/fileEditor.types";
-import type { TaskCenterTaskReference, WorkspaceSessionTab } from "@/components/app/types/workflow.types";
+import type {
+  OpenWorkspaceFileEditorOptions,
+  TaskCenterTaskReference,
+  WorkspaceSessionTab
+} from "@/components/app/types/workflow.types";
 import type {
   AgentCatalogEntry,
   AgentSession,
@@ -89,6 +93,7 @@ export type FileEditorPanelProps = {
   onSave: () => void;
   onRevert: () => void;
   onSelectTab: (path: string) => void;
+  onOpenFileEditor: (path: string, options?: import("@/components/app/types/workflow.types").OpenWorkspaceFileEditorOptions) => Promise<void>;
   onCloseTab: (path: string) => void;
   onClose: () => void;
 };
@@ -422,6 +427,7 @@ export type WorkspaceSessionPanelProps = {
   onUpdateAiChatTabReasoningMode: (tabId: string, mode: AiChatReasoningLevel) => void;
   onFocusForgeViewerTab: (tabId: string) => void;
   onCloseForgeViewerTab: (tabId: string) => void;
+  onOpenFileEditor: (path: string, options?: OpenWorkspaceFileEditorOptions) => Promise<void>;
   onFocusFileEditorTab: (path: string) => void;
   onCloseFileEditorTab: (path: string) => void;
   onSetActiveWorkspaceContentTab: (next: "file" | "diff" | null) => void;

@@ -3,11 +3,17 @@ import {
   useWorkspaceSessionPanelData
 } from "@/components/app/context/workspaceSessionPanelContext";
 import { noraAgentClient } from "@/components/app/clients/noraAgentClient";
+import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
 import { useFileEditorMonacoWorkspaceSupport } from "@/components/app/hooks/useFileEditorMonacoWorkspaceSupport";
 import { useSessionCenterPorts } from "@/components/app/hooks/useSessionCenterPorts";
 import { handoffPromptToAgent } from "@/components/app/logic/agentHandoff";
 import { joinWorkspacePath } from "@/components/app/logic/appUtils";
+import { normalizeBrowserUrl } from "@/components/app/logic/browserTabs";
 import { buildFileEditorBreadcrumbs, getFileEditorLeafName } from "@/components/app/logic/fileEditorPath";
+import {
+  isWorkspaceImageLinkTarget,
+  resolveWorkspaceMarkdownLinkTarget
+} from "@/components/app/logic/markdownLinkTargets";
 import {
   buildMonacoModelPath,
   configureMonacoTypeScript,
@@ -16,15 +22,16 @@ import {
 } from "@/components/app/logic/fileEditorMonaco";
 import { MarkdownRenderer } from "@/components/app/shared/MarkdownRenderer";
 import type { FileEditorPanelProps } from "@/components/app/types/component.types";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import type { BeforeMount, Monaco, OnMount } from "@monaco-editor/react";
 import Editor from "@monaco-editor/react";
 import { AlertCircle, Eye, Image as ImageIcon, LoaderCircle, PencilLine, X } from "lucide-react";
 import type { editor } from "monaco-editor";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 type FileEditorPanelContextProps = Partial<FileEditorPanelProps>;
+
+type MarkdownEditorTabView = "preview" | "edit";
 
 function getMultiSelectionText(ed: editor.ICodeEditor): string | null {
   const model = ed.getModel();
@@ -65,6 +72,9 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
   const onSave = props.onSave ?? sessionActions.onSaveActiveFileEditor;
   const onSelectTab = props.onSelectTab ?? sessionActions.onFocusFileEditorTab;
   const onCloseTab = props.onCloseTab ?? sessionActions.onCloseFileEditorTab;
+  const onOpenFileEditor = props.onOpenFileEditor;
+  const onOpenWorkspaceBrowser = props.onOpenWorkspaceBrowser ?? sessionActions.onOpenWorkspaceBrowser;
+  const onSetActiveWorkspaceContentTab = props.onSetActiveWorkspaceContentTab ?? sessionActions.onSetActiveWorkspaceContentTab;
 
   if (!tabs.length || !activePath) {
     return null;
@@ -85,7 +95,7 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
   const language = useMemo(() => resolveMonacoLanguageId(pathName), [pathName]);
   const disposeSendActionsRef = useRef<(() => void) | null>(null);
   const [monacoEditor, setMonacoEditor] = useState<editor.IStandaloneCodeEditor | null>(null);
-  const [markdownView, setMarkdownView] = useState<"preview" | "edit">("preview");
+  const [markdownViewByTabPath, setMarkdownViewByTabPath] = useState<Record<string, MarkdownEditorTabView>>({});
   const isMarkdownFile = !isImage && /\.(md|markdown)$/i.test(pathName);
   const monacoRef = useRef<Monaco | null>(null);
   const editorRootPath = activeTab?.rootPath ?? sessionData.project?.rootPath ?? null;
@@ -113,11 +123,87 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
     [isReadOnlyTab]
   );
 
-  useEffect(() => {
-    if (isMarkdownFile) {
-      setMarkdownView("preview");
+  const markdownView = useMemo<MarkdownEditorTabView>(() => {
+    if (!isMarkdownFile || isReadOnlyTab) {
+      return "edit";
     }
-  }, [pathName, isMarkdownFile]);
+    return markdownViewByTabPath[pathName] ?? "edit";
+  }, [isMarkdownFile, isReadOnlyTab, markdownViewByTabPath, pathName]);
+
+  const setMarkdownView = useCallback(
+    (mode: MarkdownEditorTabView) => {
+      if (!isMarkdownFile || isReadOnlyTab) {
+        return;
+      }
+      setMarkdownViewByTabPath((prev) => ({ ...prev, [pathName]: mode }));
+    },
+    [isMarkdownFile, isReadOnlyTab, pathName]
+  );
+
+  useEffect(() => {
+    const openPaths = new Set(tabs.map((tab) => tab.path));
+    setMarkdownViewByTabPath((prev) => {
+      const staleKeys = Object.keys(prev).filter((path) => !openPaths.has(path));
+      if (staleKeys.length === 0) {
+        return prev;
+      }
+      const next = { ...prev };
+      for (const path of staleKeys) {
+        delete next[path];
+      }
+      return next;
+    });
+  }, [tabs]);
+
+  useEffect(() => {
+    if (isMarkdownFile && markdownView === "preview") {
+      setMonacoEditor(null);
+    }
+  }, [isMarkdownFile, markdownView]);
+
+  const handleMarkdownLinkClick = async (href: string) => {
+    const projectId = sessionData.project?.id ?? null;
+    if (!projectId) {
+      return;
+    }
+
+    const workspaceLinkTarget = resolveWorkspaceMarkdownLinkTarget(pathName, href);
+    if (workspaceLinkTarget && onOpenFileEditor) {
+      const rootPath = editorRootPath ?? sessionData.project?.rootPath ?? null;
+
+      try {
+        if (isWorkspaceImageLinkTarget(workspaceLinkTarget)) {
+          await noraWorkspaceClient.readWorkspaceImageFile({
+            projectId,
+            path: workspaceLinkTarget,
+            rootPath: rootPath || undefined
+          });
+        } else {
+          await noraWorkspaceClient.readWorkspaceFile({
+            projectId,
+            path: workspaceLinkTarget,
+            rootPath: rootPath || undefined
+          });
+        }
+
+        await onOpenFileEditor(workspaceLinkTarget, {
+          selectChange: false,
+          rootPath
+        });
+        return;
+      } catch {
+        // fall through to browser handling when the link does not resolve in the workspace
+      }
+    }
+
+    const normalizedUrl = normalizeBrowserUrl(href);
+    if (!normalizedUrl) {
+      return;
+    }
+
+    onSetActiveWorkspaceContentTab(null);
+    onOpenWorkspaceBrowser(projectId, normalizedUrl);
+  };
 
   const sendTargetsKey = useMemo(
     () => (agentSendTargets ?? []).map((target) => `${target.id}\n${target.label}`).join("\0"),
@@ -234,19 +320,55 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
   return (
     <div className="center-column-surface flex h-full min-h-0 flex-col bg-card/95">
       <div className="border-b border-border/50 px-3 py-2">
-        <div className="flex min-w-0 items-center gap-1 overflow-hidden text-xs text-muted-foreground" title={pathName}>
-          {breadcrumbs.map((segment, index) => {
-            const isLast = index === breadcrumbs.length - 1;
-            return (
-              <div key={`${segment}-${index}`} className="flex min-w-0 items-center gap-1">
-                {index > 0 ? <span className="shrink-0 text-muted-foreground/60">/</span> : null}
-                <span className={cn("shrink-0 whitespace-nowrap", isLast ? "truncate font-medium text-foreground" : "")}>
-                  {segment}
-                </span>
-                {isLast && isDirty ? <span className="shrink-0 text-primary">•</span> : null}
-              </div>
-            );
-          })}
+        <div className="flex min-w-0 items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-xs text-muted-foreground" title={pathName}>
+            {breadcrumbs.map((segment, index) => {
+              const isLast = index === breadcrumbs.length - 1;
+              return (
+                <div key={`${segment}-${index}`} className="flex min-w-0 items-center gap-1">
+                  {index > 0 ? <span className="shrink-0 text-muted-foreground/60">/</span> : null}
+                  <span className={cn("shrink-0 whitespace-nowrap", isLast ? "truncate font-medium text-foreground" : "")}>
+                    {segment}
+                  </span>
+                  {isLast && isDirty ? <span className="shrink-0 text-primary">•</span> : null}
+                </div>
+              );
+            })}
+          </div>
+          {!isLoading && isMarkdownFile && !isReadOnlyTab ? (
+            <div
+              className="inline-flex shrink-0 items-center rounded-[4px] border border-border/60 bg-background/40 p-1"
+              role="tablist"
+              aria-label="Markdown view"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={markdownView === "preview"}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-[3px] px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  markdownView === "preview" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
+                )}
+                onClick={() => setMarkdownView("preview")}
+              >
+                <Eye className="size-3.5 shrink-0" aria-hidden />
+                Preview
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={markdownView === "edit"}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-[3px] px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  markdownView === "edit" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
+                )}
+                onClick={() => setMarkdownView("edit")}
+              >
+                <PencilLine className="size-3.5 shrink-0" aria-hidden />
+                Edit
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
       {showTabStrip ? (
@@ -321,54 +443,10 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
                 Unable to preview this image.
               </div>
             )
-            ) : isMarkdownFile && isReadOnlyTab ? (
-            <div className="flex h-full min-h-0 flex-col px-3 pb-3 pt-3">
-              <div className="thin-scrollbar h-full min-h-0 flex-1 overflow-auto rounded-[8px] bg-background/55 px-4 py-4">
-                <MarkdownRenderer>{content}</MarkdownRenderer>
-              </div>
+            ) : isMarkdownFile && (isReadOnlyTab || markdownView === "preview") ? (
+            <div className="thin-scrollbar h-full min-h-0 overflow-auto px-4 py-4">
+              <MarkdownRenderer onLinkClick={handleMarkdownLinkClick}>{content}</MarkdownRenderer>
             </div>
-          ) : isMarkdownFile ? (
-            <Tabs
-              value={markdownView}
-              onValueChange={(value) => setMarkdownView(value === "edit" ? "edit" : "preview")}
-              className="flex h-full min-h-0 flex-col px-3 pb-3 pt-3"
-            >
-              <TabsList className="mb-2 h-9 w-fit shrink-0">
-                <TabsTrigger value="preview" className="inline-flex items-center gap-1.5">
-                  <Eye className="size-3.5" aria-hidden />
-                  Preview
-                </TabsTrigger>
-                <TabsTrigger value="edit" className="inline-flex items-center gap-1.5">
-                  <PencilLine className="size-3.5" aria-hidden />
-                  Edit
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="preview" className="mt-0 min-h-0 flex-1 overflow-hidden data-[state=inactive]:hidden">
-                <div className="thin-scrollbar h-full min-h-0 overflow-auto rounded-[8px] bg-background/55 px-4 py-4">
-                  <MarkdownRenderer>{content}</MarkdownRenderer>
-                </div>
-              </TabsContent>
-              <TabsContent value="edit" className="mt-0 min-h-0 flex-1 overflow-hidden p-0 data-[state=inactive]:hidden">
-                <div className="h-full min-h-0">
-                  <Editor
-                    beforeMount={handleEditorBeforeMount}
-                    path={monacoModelPath}
-                    language={language}
-                    value={content}
-                    theme={monacoTheme}
-                    onMount={handleEditorMount}
-                    onChange={(value) => onChange(value ?? "")}
-                    options={editorOptions}
-                    loading={
-                      <div className={cn("flex h-full items-center justify-center gap-3 text-sm text-muted-foreground")}>
-                        <LoaderCircle className="size-4 animate-spin" />
-                        Loading editor...
-                      </div>
-                    }
-                  />
-                </div>
-              </TabsContent>
-            </Tabs>
           ) : (
             <Editor
               beforeMount={handleEditorBeforeMount}

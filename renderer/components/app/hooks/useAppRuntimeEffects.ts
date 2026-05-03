@@ -1,6 +1,7 @@
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { noraTerminalClient } from "@/components/app/clients/noraTerminalClient";
 import { writeStoredWorkspaceContentState } from "@/components/app/logic/appPersistence";
+import { prunePreservedTerminalSessions } from "@/components/app/logic/terminalSessionRegistry";
 import type { StoredWorkspaceContentState } from "@/components/app/types";
 import type { UseAppRuntimeEffectsArgs } from "@/components/app/types/appRuntimeEffects.types";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
@@ -12,6 +13,7 @@ export function useAppRuntimeEffects({
   setFileEditorState,
   setUiState,
   setAppClosingState,
+  localTerminalState,
   setLocalTerminalState,
   workspaceLoading,
   isAddingWorkspace,
@@ -87,6 +89,18 @@ export function useAppRuntimeEffects({
       unsubscribe();
     };
   }, [setLocalTerminalState]);
+
+  useEffect(() => {
+    prunePreservedTerminalSessions([
+      ...(snapshot?.agents.map((agent) => agent.id) ?? []),
+      ...(snapshot?.terminals.map((terminal) => terminal.id) ?? []),
+      ...(localTerminalState ? [localTerminalState.id] : [])
+    ]);
+  }, [
+    localTerminalState?.id,
+    snapshot?.agents.map((agent) => agent.id).join("\n"),
+    snapshot?.terminals.map((terminal) => terminal.id).join("\n")
+  ]);
 
   useEffect(() => {
     if (!snapshot?.project || workspaceLoading || isAddingWorkspace) {

@@ -552,6 +552,7 @@ function SignedInAppRootContent({
     setFileEditorState: sessionActions.setFileEditorState,
     setUiState,
     setAppClosingState,
+    localTerminalState,
     setLocalTerminalState,
     workspaceLoading: props.workspaceLoading.workspaceLoading,
     isAddingWorkspace,

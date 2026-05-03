@@ -491,6 +491,7 @@ export function WorkspaceSessionPanel() {
     onFocusBrowserTab,
     onCloseBrowserTab,
     onOpenAiChat,
+    onOpenFileEditor,
     onFocusAiChatTab,
     onCloseAiChatTab,
     onFocusForgeViewerTab,
@@ -590,6 +591,7 @@ export function WorkspaceSessionPanel() {
   const openWorkspaceTerminalPresets = useCallback((projectId: string) => openWorkspaceTerminalPresetsRef.current(projectId), []);
   const openWorkspaceBrowser = useCallback((projectId: string, url?: string) => openWorkspaceBrowserRef.current(projectId, url), []);
   const openAiChat = useCallback((projectId: string) => openAiChatRef.current(projectId), []);
+  const openFileEditor = useCallback((pathName: string, options?: { selectChange?: boolean; rootPath?: string | null }) => onOpenFileEditor(pathName, options), [onOpenFileEditor]);
   const openWorkspaceSwitcher = useCallback(() => openWorkspaceSwitcherRef.current(), []);
   const openTaskBoard = useCallback(() => openTaskBoardRef.current(), []);
   const openSpecBrowser = useCallback(() => openSpecBrowserRef.current(), []);
@@ -738,6 +740,7 @@ export function WorkspaceSessionPanel() {
           }
           agentSendTargets={fileEditorAgentSendTargets}
           onExitFileEditorForAgentHandoff={handleExitFileEditorForAgentHandoff}
+          onOpenFileEditor={openFileEditor}
           onClose={() => onCloseFileEditorTab(activeFileEditorTab.path)}
         />
       );

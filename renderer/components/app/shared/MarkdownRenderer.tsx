@@ -1,8 +1,11 @@
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-export const markdownComponents: Components = {
+type MarkdownRendererLinkClickHandler = (href: string) => void;
+
+function buildMarkdownComponents(onLinkClick?: MarkdownRendererLinkClickHandler): Components {
+  return {
   h1: ({ children }: { children?: ReactNode }) => <h1 className="mt-5 text-2xl font-semibold tracking-tight text-foreground first:mt-0">{children}</h1>,
   h2: ({ children }: { children?: ReactNode }) => <h2 className="mt-4 text-xl font-semibold tracking-tight text-foreground first:mt-0">{children}</h2>,
   h3: ({ children }: { children?: ReactNode }) => <h3 className="mt-4 text-lg font-semibold text-foreground first:mt-0">{children}</h3>,
@@ -10,11 +13,22 @@ export const markdownComponents: Components = {
   ul: ({ children }: { children?: ReactNode }) => <ul className="mt-3 list-disc space-y-2 pl-6 text-sm leading-7 text-foreground first:mt-0">{children}</ul>,
   ol: ({ children }: { children?: ReactNode }) => <ol className="mt-3 list-decimal space-y-2 pl-6 text-sm leading-7 text-foreground first:mt-0">{children}</ol>,
   li: ({ children }: { children?: ReactNode }) => <li className="pl-1 marker:text-muted-foreground">{children}</li>,
-  a: ({ children, href }: { children?: ReactNode; href?: string }) => (
-    <a className="text-primary underline underline-offset-4" href={href}>
-      {children}
-    </a>
-  ),
+  a: ({ children, href }: { children?: ReactNode; href?: string }) => {
+    const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
+      if (!href || !onLinkClick || href.startsWith("#")) {
+        return;
+      }
+
+      event.preventDefault();
+      onLinkClick(href);
+    };
+
+    return (
+      <a className="text-primary underline underline-offset-4" href={href} onClick={handleClick}>
+        {children}
+      </a>
+    );
+  },
   blockquote: ({ children }: { children?: ReactNode }) => (
     <blockquote className="mt-4 border-l-2 border-border pl-4 italic text-muted-foreground first:mt-0">{children}</blockquote>
   ),
@@ -49,17 +63,19 @@ export const markdownComponents: Components = {
 
     return <input type="checkbox" checked={checked} disabled={disabled ?? true} readOnly className="mr-2 translate-y-[1px]" />;
   }
-};
+  };
+}
 
 type MarkdownRendererProps = {
   children: string;
   className?: string;
+  onLinkClick?: MarkdownRendererLinkClickHandler;
 };
 
-export function MarkdownRenderer({ children, className }: MarkdownRendererProps) {
+export function MarkdownRenderer({ children, className, onLinkClick }: MarkdownRendererProps) {
   return (
     <div className={className}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={buildMarkdownComponents(onLinkClick)}>
         {children}
       </ReactMarkdown>
     </div>

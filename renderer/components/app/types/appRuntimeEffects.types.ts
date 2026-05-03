@@ -8,6 +8,7 @@ export type UseAppRuntimeEffectsArgs = {
   setFileEditorState: Dispatch<SetStateAction<FileEditorState | null>>;
   setUiState: Dispatch<SetStateAction<UiState>>;
   setAppClosingState: Dispatch<SetStateAction<{ detail: string; command: string | null } | null>>;
+  localTerminalState: LocalTerminalState | null;
   setLocalTerminalState: Dispatch<SetStateAction<LocalTerminalState | null>>;
   workspaceLoading: WorkspaceLoadingState | null;
   isAddingWorkspace: boolean;

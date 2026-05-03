@@ -92,7 +92,7 @@ const TERMINAL_PREVIEW_PALETTES: Record<Exclude<TerminalThemeId, "app">, Termina
 };
 
 export function normalizeBufferedTerminalOutput(buffer: string): string {
-  return buffer.replace(/\r(?!\n)/g, "\r\n");
+  return buffer;
 }
 
 export function getTerminalFontFamily(terminalFontId: TerminalFontId): string {

@@ -67,6 +67,7 @@ export const createWorkspaceSessionPanelValue = (d: WorkspaceSessionPanelBuildDe
   onOpenWorkspaceTerminalPresets: (projectId) => d.uiCommands.openWorkspaceTerminalPresetsDialog(projectId),
   onOpenWorkspaceBrowser: d.handleOpenWorkspaceBrowser,
   onOpenAiChat: d.openAiChat,
+  onOpenFileEditor: d.openFileEditor,
   onOpenWorkspaceSwitcher: d.uiCommands.openWorkspaceSwitcherDialog,
   onOpenTaskBoard: () => {
     d.setActiveWorkspaceContentTab(null);
@@ -425,6 +426,7 @@ export function WorkspaceSessionPanelProvider({
     onCloseBrowserTab: value.onCloseBrowserTab,
     onUpdateBrowserTab: value.onUpdateBrowserTab,
     onOpenAiChat: value.onOpenAiChat,
+    onOpenFileEditor: value.onOpenFileEditor,
     onSelectAiChatProviderModel: value.onSelectAiChatProviderModel,
     onOpenAiSettings: value.onOpenAiSettings,
     onFocusAiChatTab: value.onFocusAiChatTab,

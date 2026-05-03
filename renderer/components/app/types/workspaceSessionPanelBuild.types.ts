@@ -82,6 +82,7 @@ export type WorkspaceSessionPanelOrchestrationDeps = {
   ) => Promise<void>;
   openAddWorkspaceModal: WorkspaceSessionPanelProps["onChooseProject"];
   openAiChat: WorkspaceSessionPanelProps["onOpenAiChat"];
+  openFileEditor: WorkspaceSessionPanelProps["onOpenFileEditor"];
   openForgeViewer: (
     projectId: string,
     kind: ForgeWorkItemKind | "workflow_run",

@@ -170,6 +170,7 @@ export function deriveAppMainCenterContentValue(
     loadForgeWorkItemDetail: args.loadForgeWorkItemDetail,
     openAddWorkspaceModal: args.openAddWorkspaceModal,
     openAiChat: args.openAiChat,
+    openFileEditor: args.openFileEditor,
     openForgeViewer: args.openForgeViewer,
     openSettingsPage: args.openSettingsPage,
     performForgeWorkItemAction: args.performForgeWorkItemAction,

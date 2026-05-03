@@ -6,6 +6,7 @@ type SignedInCenterContentAssemblySlice = Pick<
   | "core"
   | "workspaceCatalog"
   | "workspaceContent"
+  | "changesFileHandlers"
   | "chromeShell"
   | "sessionSurface"
   | "centerTabs"
@@ -46,6 +47,9 @@ export const assembleSignedInCenterContentBuild = (s: SignedInCenterContentAssem
     openSettingsPage: core.openSettingsPage,
     windowUiStatePlatform: core.windowUiState.platform,
     createTerminalWithStatus: core.createTerminalWithStatus,
+    openFileEditor: async (pathName, options) => {
+      await s.changesFileHandlers.openFileEditor(pathName, options ?? {});
+    },
     ...sessionSurface,
     ...centerTabs,
     ...forgeForCenter,
