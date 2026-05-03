@@ -1,11 +1,70 @@
+import { noraSessionClient } from "@/components/app/clients/noraSessionClient";
 import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
 import { getFocusedWorkspace } from "@/components/app/logic/appUtils";
+import { performWorkspaceSessionTabClose } from "@/components/app/logic/performWorkspaceSessionTabClose";
+import { requestCloseFileEditorTab } from "@/components/app/logic/requestCloseFileEditorTab";
+import { buildDestroyTerminalGuardMessage } from "@/components/app/logic/sessionCloseGuard";
 import { createQuickTerminalPayload } from "@/components/app/logic/terminalQuickLaunch";
-import { getActiveWorkspaceSessionTabId, getAdjacentWorkspaceSessionTab, getWorkspaceSessionTabs } from "@/components/app/logic/workspaceSessionTabs";
+import {
+  getActiveWorkspaceSessionTabId,
+  getAdjacentWorkspaceSessionTab,
+  getWorkspaceSessionTabId,
+  getWorkspaceSessionTabToFocusAfterClose,
+  getWorkspaceSessionTabs
+} from "@/components/app/logic/workspaceSessionTabs";
 import type { KeyboardShortcutActionsBuildDeps } from "@/components/app/types/keyboardShortcutActionsBuild.types";
 import type { ShortcutActionMap, WorkspaceSessionTab } from "@/components/app/types/workflow.types";
 
 export const buildKeyboardShortcutActions = (d: KeyboardShortcutActionsBuildDeps): ShortcutActionMap => {
+  const resolveExpandedDiffPath = (): string | null =>
+    d.isCenterDiffExpanded
+      ? d.isCenterFullDiffExpanded
+        ? "__all_changes__"
+        : (d.selectedChange?.path ?? null)
+      : null;
+
+  const resolveActiveFileEditorPath = (): string | null => {
+    const state = d.fileEditorState;
+    if (!state) {
+      return null;
+    }
+    return state.tabs.find((tab) => tab.path === state.activePath)?.path ?? state.tabs[0]?.path ?? null;
+  };
+
+  const resolveSessionTabs = (): {
+    workspace: ReturnType<typeof getFocusedWorkspace>;
+    tabs: WorkspaceSessionTab[];
+    activeTabId: string | null;
+  } | null => {
+    if (!d.snapshot) {
+      return null;
+    }
+    const workspace = getFocusedWorkspace(d.snapshot);
+    const expandedDiffPath = resolveExpandedDiffPath();
+    const tabs = getWorkspaceSessionTabs(
+      workspace,
+      d.uiState.browserTabs,
+      d.uiState.aiChatTabs,
+      d.uiState.forgeViewerTabs,
+      d.sessionSurfaceSplitViews,
+      d.fileEditorState?.tabs ?? [],
+      expandedDiffPath,
+      d.isCenterFullDiffExpanded ? (d.snapshot.changes?.length ?? 0) : undefined
+    );
+    const activeTabId = getActiveWorkspaceSessionTabId({
+      activeViewId: d.workspaceSessionActiveViewId,
+      activeWorkspaceContentTab: d.activeWorkspaceContentTab,
+      activeFileEditorPath: resolveActiveFileEditorPath(),
+      expandedDiffPath,
+      activeForgeViewerTabId: d.uiState.focusedForgeViewerTabId,
+      activeAiChatTabId: d.uiState.focusedAiChatTabId,
+      activeBrowserTabId: d.uiState.focusedBrowserTabId,
+      activeAgentId: d.snapshot.focusedAgentId,
+      activeTerminalId: d.snapshot.focusedTerminalId
+    });
+    return { workspace, tabs, activeTabId };
+  };
+
   const focusWorkspaceSessionTab = (tab: WorkspaceSessionTab): void => {
     d.setActiveView("main");
     switch (tab.kind) {
@@ -40,35 +99,101 @@ export const buildKeyboardShortcutActions = (d: KeyboardShortcutActionsBuildDeps
   };
 
   const focusAdjacentWorkspaceSessionTab = (direction: -1 | 1): void => {
-    if (!d.snapshot) {
+    const ctx = resolveSessionTabs();
+    if (!ctx) {
       return;
     }
-    const expandedDiffPath = d.isCenterDiffExpanded && d.selectedChange ? d.selectedChange.path : null;
-    const tabs = getWorkspaceSessionTabs(
-      getFocusedWorkspace(d.snapshot),
-      d.uiState.browserTabs,
-      d.uiState.aiChatTabs,
-      d.uiState.forgeViewerTabs,
-      [],
-      d.fileEditorState?.tabs ?? [],
-      expandedDiffPath
-    );
-    const activeTabId = getActiveWorkspaceSessionTabId({
-      activeViewId: null,
-      activeWorkspaceContentTab: d.activeWorkspaceContentTab,
-      activeFileEditorPath: d.fileEditorState?.activePath ?? null,
-      expandedDiffPath,
-      activeForgeViewerTabId: d.uiState.focusedForgeViewerTabId,
-      activeAiChatTabId: d.uiState.focusedAiChatTabId,
-      activeBrowserTabId: d.uiState.focusedBrowserTabId,
-      activeAgentId: d.snapshot.focusedAgentId,
-      activeTerminalId: d.snapshot.focusedTerminalId
-    });
+    const { tabs, activeTabId } = ctx;
     const nextTab = getAdjacentWorkspaceSessionTab(tabs, activeTabId, direction);
     if (!nextTab) {
       return;
     }
     focusWorkspaceSessionTab(nextTab);
+  };
+
+  const closeActiveWorkspaceSessionTab = (): void => {
+    const ctx = resolveSessionTabs();
+    if (!ctx) {
+      return;
+    }
+    const { workspace, tabs, activeTabId } = ctx;
+    const tab = tabs.find((item) => getWorkspaceSessionTabId(item) === activeTabId) ?? null;
+    if (!tab) {
+      return;
+    }
+    const closedStableId = getWorkspaceSessionTabId(tab);
+    const closingActiveSessionTab = closedStableId === activeTabId;
+    const tabToFocusAfter = closingActiveSessionTab
+      ? getWorkspaceSessionTabToFocusAfterClose(tabs, closedStableId)
+      : null;
+    const refocusNeighborAfterClose = (): void => {
+      if (!tabToFocusAfter) {
+        return;
+      }
+      window.setTimeout(() => {
+        focusWorkspaceSessionTab(tabToFocusAfter);
+      }, 0);
+    };
+
+    performWorkspaceSessionTabClose(tab, {
+      closeAgent: (agentId) => {
+        d.uiCommands.setDestroyAgentId(agentId);
+      },
+      closeTerminal: (sessionId) => {
+        const terminal = workspace?.terminals.find((item) => item.id === sessionId) ?? null;
+        const confirmMessage = terminal ? buildDestroyTerminalGuardMessage(terminal, Date.now()) : null;
+        if (confirmMessage && !window.confirm(confirmMessage)) {
+          return;
+        }
+        void d.safely(() => noraSessionClient.destroyTerminal(sessionId)).then((result) => {
+          if (result) {
+            refocusNeighborAfterClose();
+          }
+        });
+      },
+      closeBrowser: (tabId) => {
+        d.closeBrowserTab(tabId);
+      },
+      closeForge: (tabId) => {
+        d.closeForgeViewerTab(tabId);
+      },
+      closeAiChat: (tabId) => {
+        d.closeAiChatTab(tabId);
+      },
+      deleteSplitView: (viewId) => {
+        void d.deleteWorkspaceSplitViewById(viewId).then((deleted) => {
+          if (deleted) {
+            refocusNeighborAfterClose();
+          }
+        });
+      },
+      closeFileEditorAtPath: (pathName) => {
+        requestCloseFileEditorTab({
+          pathName,
+          fileEditorState: d.fileEditorState,
+          isDiffExpanded: d.isCenterDiffExpanded,
+          setFileEditorState: d.setFileEditorState,
+          setActiveWorkspaceContentTab: d.setActiveWorkspaceContentTab
+        });
+      },
+      closeDiff: () => {
+        if (d.isCenterFullDiffExpanded) {
+          d.setIsCenterFullDiffExpanded(false);
+          d.setIsCenterDiffExpanded(false);
+          d.setActiveWorkspaceContentTab((d.fileEditorState?.tabs.length ?? 0) > 0 ? "file" : null);
+          return;
+        }
+        d.setIsCenterDiffExpanded(false);
+        d.setIsCenterFullDiffExpanded(false);
+        d.setActiveWorkspaceContentTab((d.fileEditorState?.tabs.length ?? 0) > 0 ? "file" : null);
+      }
+    });
+
+    if (tab.kind === "agent" || tab.kind === "terminal" || tab.kind === "view") {
+      return;
+    }
+
+    refocusNeighborAfterClose();
   };
 
   const openRecentWorkspaceByIndex = (index: number): void => {
@@ -158,6 +283,9 @@ export const buildKeyboardShortcutActions = (d: KeyboardShortcutActionsBuildDeps
     },
     "focus-next-session-tab": () => {
       focusAdjacentWorkspaceSessionTab(1);
+    },
+    "close-active-session-tab": () => {
+      closeActiveWorkspaceSessionTab();
     },
     "open-keyboard-shortcuts": () => {
       d.uiCommands.openKeyboardShortcutsDialog();

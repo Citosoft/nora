@@ -58,7 +58,7 @@ import type {
   WorkspaceTaskBoard,
   WorkspaceTaskSummary
 } from "@shared/appTypes";
-import type { ReactNode } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 
 export type AgentContextCardProps = {
   state: import("@shared/appTypes").AgentContextState | null;
@@ -96,6 +96,8 @@ export type FileEditorPanelProps = {
   onOpenFileEditor: (path: string, options?: import("@/components/app/types/workflow.types").OpenWorkspaceFileEditorOptions) => Promise<void>;
   onCloseTab: (path: string) => void;
   onClose: () => void;
+  onOpenWorkspaceBrowser?: (projectId: string, url?: string) => void;
+  onSetActiveWorkspaceContentTab?: Dispatch<SetStateAction<"file" | "diff" | null>>;
 };
 
 export type FileTreePanelProps = {
@@ -441,7 +443,7 @@ export type WorkspaceSessionPanelProps = {
   onClearTerminal: (sessionId: string) => Promise<AppState | null>;
   onDestroyRequest: (agentId: string) => void;
   onDestroyTerminal: (sessionId: string) => Promise<AppState | null>;
-  onDeleteViewById: (viewId: string) => Promise<void>;
+  onDeleteViewById: (viewId: string) => Promise<boolean>;
   onExitSplitView: () => void;
   onFocusAgent: (agentId: string) => void;
   onFocusTerminal: (terminalId: string) => void;

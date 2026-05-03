@@ -1,4 +1,4 @@
-import { AGENT_ROLE_OPTIONS, getAgentRolePrompt } from "@/components/app/logic/agentRoles";
+import { AGENT_ROLE_OPTIONS, getAgentRoleLabel, getAgentRolePrompt } from "@/components/app/logic/agentRoles";
 import { createLaunchTargetFormState, launchTargetModeFromTarget, resolveSupportedLaunchTargetMode } from "@/components/app/logic/createAgentLaunchTarget";
 import { useWorkspaceAgentContextSources } from "@/components/app/hooks/useWorkspaceAgentContextSources";
 import { AgentContextPicker } from "@/components/app/shared/AgentContextPicker";
@@ -77,6 +77,15 @@ function findPreparePresetEntryByCommand(entries: PreparePresetEntry[], command:
   return entries.find((entry) => entry.command === normalizedCommand) ?? null;
 }
 
+function buildDefaultAgentDisplayName(toolLabel: string, roleId: AgentRoleId): string {
+  const rolePart = getAgentRoleLabel(roleId);
+  const trimmedTool = toolLabel.trim();
+  if (!trimmedTool) {
+    return rolePart;
+  }
+  return `${trimmedTool} ${rolePart}`;
+}
+
 export function CreateAgentDialog({
   open,
   project,
@@ -139,6 +148,14 @@ export function CreateAgentDialog({
     () => agentSkillCatalogs.find((catalog) => catalog.toolId === formState.toolId) || null,
     [agentSkillCatalogs, formState.toolId]
   );
+  const selectedTool = useMemo(
+    () => detectedTools.find((tool) => tool.id === formState.toolId) ?? null,
+    [detectedTools, formState.toolId]
+  );
+  const defaultAgentDisplayName = useMemo(
+    () => buildDefaultAgentDisplayName(selectedTool?.label ?? "", selectedRoleId),
+    [selectedTool, selectedRoleId]
+  );
 
   const selectedExistingWorktree = (() => {
     const target = formState.target;
@@ -166,8 +183,9 @@ export function CreateAgentDialog({
       const initialPreparePreset = initialMode === "new"
         ? findPreparePresetEntryByCommand(preparePresetEntries, defaultWorktreePrepareCommand)
         : null;
+      const initialToolId = defaults?.toolId ?? detectedTools[0]?.id ?? "";
       setFormState({
-        toolId: defaults?.toolId ?? detectedTools[0]?.id ?? "",
+        toolId: initialToolId,
         name: "",
         task: defaultTask?.title ?? "",
         commandOverride: "",
@@ -341,39 +359,32 @@ export function CreateAgentDialog({
             <div className="space-y-8 pt-6">
               {currentStepIndex === 0 ? (
                 <div className="space-y-6">
-                  <div className="grid gap-5 sm:grid-cols-2">
-                    <Field label="Agent CLI">
-                      <Select
-                        value={formState.toolId}
-                        onChange={(event) => setFormState((current) => ({ ...current, toolId: event.target.value }))}
-                      >
-                        {detectedTools.map((tool) => (
-                          <option key={tool.id} value={tool.id}>
-                            <span className="flex min-w-0 items-center gap-2">
-                              <AgentToolIcon
-                                toolId={tool.id}
-                                label={tool.label}
-                                className="size-5 shrink-0 rounded-sm"
-                                imageClassName="size-4 rounded-sm"
-                              />
-                              <span className="min-w-0 truncate">
-                                {tool.label}
-                                {tool.detectedCommand ? ` (${tool.detectedCommand})` : ""}
-                              </span>
+                  <Field label="Agent CLI">
+                    <Select
+                      value={formState.toolId}
+                      onChange={(event) =>
+                        setFormState((current) => ({ ...current, toolId: event.target.value }))
+                      }
+                    >
+                      {detectedTools.map((tool) => (
+                        <option key={tool.id} value={tool.id}>
+                          <span className="flex min-w-0 items-center gap-2">
+                            <AgentToolIcon
+                              toolId={tool.id}
+                              label={tool.label}
+                              className="size-5 shrink-0 rounded-sm"
+                              imageClassName="size-4 rounded-sm"
+                            />
+                            <span className="min-w-0 truncate">
+                              {tool.label}
+                              {tool.detectedCommand ? ` (${tool.detectedCommand})` : ""}
                             </span>
-                          </option>
-                        ))}
-                      </Select>
-                    </Field>
-                    <Field label="Agent name">
-                      <Input
-                        value={formState.name}
-                        onChange={(event) => setFormState((current) => ({ ...current, name: event.target.value }))}
-                        placeholder="Planner"
-                      />
-                    </Field>
-                  </div>
-                  <div className="grid gap-5 sm:grid-cols-3">
+                          </span>
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <div className="grid gap-5 sm:grid-cols-2">
                     <Field label="Role">
                       <Select
                         value={selectedRoleId}
@@ -389,6 +400,16 @@ export function CreateAgentDialog({
                         ))}
                       </Select>
                     </Field>
+                    <Field label="Agent name">
+                      <Input
+                        value={formState.name}
+                        onChange={(event) => setFormState((current) => ({ ...current, name: event.target.value }))}
+                        placeholder={defaultAgentDisplayName}
+                        aria-label={`Agent name; leave blank for ${defaultAgentDisplayName}`}
+                      />
+                    </Field>
+                  </div>
+                  <div className="grid gap-5 sm:grid-cols-2">
                     <Field label="Task">
                       <Select
                         value={selectedTaskPath}
@@ -662,9 +683,13 @@ export function CreateAgentDialog({
                   launchTargetMode === "new" && branchNameValue
                     ? { prefix: branchPrefix, name: branchNameValue }
                     : null;
+                const resolvedAgentName =
+                  formState.name.trim() ||
+                  buildDefaultAgentDisplayName(selectedTool?.label ?? "", selectedRoleId);
                 onCreateAgent(
                   {
                     ...formState,
+                    name: resolvedAgentName,
                     launchSource: "dialog",
                     task: getAgentRolePrompt(selectedRoleId, formState.task),
                     contextSelections,

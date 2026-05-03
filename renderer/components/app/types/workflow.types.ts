@@ -54,7 +54,26 @@ export type AgentRoleOption = {
   promptPrefix: string;
 };
 
-export type ShortcutKey = "mod" | "shift" | "alt" | "b" | "k" | "t" | "a" | "j" | "o" | "," | "[" | "]" | "/" | "1" | "2" | "3" | "4" | "5";
+export type ShortcutKey =
+  | "mod"
+  | "shift"
+  | "alt"
+  | "b"
+  | "k"
+  | "t"
+  | "a"
+  | "j"
+  | "o"
+  | ","
+  | "["
+  | "]"
+  | "/"
+  | "1"
+  | "2"
+  | "3"
+  | "4"
+  | "5"
+  | "w";
 
 export type ShortcutDefinition = {
   id:
@@ -73,6 +92,7 @@ export type ShortcutDefinition = {
     | "focus-local-terminal-dock"
     | "focus-next-session-tab"
     | "focus-previous-session-tab"
+    | "close-active-session-tab"
     | "open-recent-workspace-1"
     | "open-recent-workspace-2"
     | "open-recent-workspace-3"

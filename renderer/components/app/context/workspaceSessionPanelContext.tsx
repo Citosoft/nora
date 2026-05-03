@@ -1,10 +1,6 @@
 import { noraSessionClient } from "@/components/app/clients/noraSessionClient";
 import { noraToolingManagementClient } from "@/components/app/clients/noraToolingManagementClient";
-import {
-  buildCloseDirtyFileEditorTabMessage,
-  closeFileEditorTab,
-  findFileEditorTab
-} from "@/components/app/logic/fileEditorTabs";
+import { requestCloseFileEditorTab } from "@/components/app/logic/requestCloseFileEditorTab";
 import { buildDestroyTerminalGuardMessage } from "@/components/app/logic/sessionCloseGuard";
 import type { WorkspaceSessionPanelProps } from "@/components/app/types/panel.types";
 import type { WorkspaceSessionPanelBuildDeps } from "@/components/app/types/workspaceSessionPanelBuild.types";
@@ -144,19 +140,13 @@ export const createWorkspaceSessionPanelValue = (d: WorkspaceSessionPanelBuildDe
     );
   },
   onCloseFileEditorTab: (pathName) => {
-    const closingTab = findFileEditorTab(d.fileEditorState, pathName);
-    const confirmMessage = closingTab ? buildCloseDirtyFileEditorTabMessage(closingTab) : null;
-    if (confirmMessage && !window.confirm(confirmMessage)) {
-      return;
-    }
-
-    const nextFileEditorState = closeFileEditorTab(d.fileEditorState, pathName);
-    d.setFileEditorState((current) => closeFileEditorTab(current, pathName));
-    d.setActiveWorkspaceContentTab((current) =>
-      current === "file"
-        ? ((nextFileEditorState?.tabs.length ?? 0) > 0 ? "file" : (d.isDiffExpanded ? "diff" : null))
-        : current
-    );
+    requestCloseFileEditorTab({
+      pathName,
+      fileEditorState: d.fileEditorState,
+      isDiffExpanded: d.isDiffExpanded,
+      setFileEditorState: d.setFileEditorState,
+      setActiveWorkspaceContentTab: d.setActiveWorkspaceContentTab
+    });
   },
   onSetActiveWorkspaceContentTab: d.setActiveWorkspaceContentTab,
   onChangeActiveFileEditorContent: (value) =>

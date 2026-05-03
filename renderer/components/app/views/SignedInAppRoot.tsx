@@ -149,21 +149,28 @@ function SignedInAppRootContent({
       buildKeyboardShortcutActions({
         activeWorkspaceContentTab,
         appSettingsTerminalQuickLaunchDefaults: props.preferences.appSettings.terminalQuickLaunchDefaults,
+        closeAiChatTab: props.centerTabs.closeAiChatTab,
+        closeBrowserTab: props.browserTabs.closeBrowserTab,
+        closeForgeViewerTab: props.centerTabs.closeForgeViewerTab,
         createTerminalWithStatus: sessionActions.createTerminalWithStatus,
         defaultTerminalShellId: props.defaultTerminalShellId,
+        deleteWorkspaceSplitViewById: layout.workspaceSessionViews.deleteViewById,
         fileEditorState: sessionActions.fileEditorState,
         focusLocalTerminalDock,
         handleOpenWorkspaceBrowser: props.centerTabs.handleOpenWorkspaceBrowser,
         isCenterDiffExpanded,
+        isCenterFullDiffExpanded,
         openSettingsPage: props.navigation.openSettingsPage,
         openStartupDependenciesDialog: dialogs.openStartupDependenciesDialog,
         sessionFocusCommands,
+        sessionSurfaceSplitViews: layout.activeSplitViewCollection.views,
         safely: props.safely,
         selectedChange: layout.selectedChange,
         setActiveView,
         setActiveWorkspaceContentTab,
         setFileEditorState: sessionActions.setFileEditorState,
         setIsCenterDiffExpanded,
+        setIsCenterFullDiffExpanded,
         setIsChangesSidebarCollapsed,
         setIsLocalTerminalDockCollapsed,
         setIsWorkspaceSidebarCollapsed,
@@ -174,7 +181,8 @@ function SignedInAppRootContent({
           openCreateAgentDialog: props.uiCommands.openCreateAgentDialog,
           openCreateTerminalDialog: props.uiCommands.openCreateTerminalDialog,
           openKeyboardShortcutsDialog: props.uiCommands.openKeyboardShortcutsDialog,
-          openWorkspaceSwitcherDialog: props.uiCommands.openWorkspaceSwitcherDialog
+          openWorkspaceSwitcherDialog: props.uiCommands.openWorkspaceSwitcherDialog,
+          setDestroyAgentId: props.uiCommands.setDestroyAgentId
         },
         uiState: {
           aiChatTabs: uiState.aiChatTabs,
@@ -183,13 +191,18 @@ function SignedInAppRootContent({
           focusedBrowserTabId: uiState.focusedBrowserTabId,
           focusedForgeViewerTabId: uiState.focusedForgeViewerTabId,
           forgeViewerTabs: uiState.forgeViewerTabs
-        }
+        },
+        workspaceSessionActiveViewId: layout.workspaceSessionViews.activeViewId
       }),
     [
       activeWorkspaceContentTab,
       props.preferences.appSettings.terminalQuickLaunchDefaults,
+      props.centerTabs.closeAiChatTab,
+      props.browserTabs.closeBrowserTab,
+      props.centerTabs.closeForgeViewerTab,
       sessionActions.createTerminalWithStatus,
       props.defaultTerminalShellId,
+      layout.workspaceSessionViews.deleteViewById,
       sessionActions.fileEditorState,
       focusLocalTerminalDock,
       props.centerTabs.handleOpenWorkspaceBrowser,
@@ -198,12 +211,14 @@ function SignedInAppRootContent({
       props.navigation.openSettingsPage,
       dialogs.openStartupDependenciesDialog,
       sessionFocusCommands,
+      layout.activeSplitViewCollection.views,
       props.safely,
       layout.selectedChange,
       setActiveView,
       setActiveWorkspaceContentTab,
       sessionActions.setFileEditorState,
       setIsCenterDiffExpanded,
+      setIsCenterFullDiffExpanded,
       setIsChangesSidebarCollapsed,
       setIsLocalTerminalDockCollapsed,
       setIsWorkspaceSidebarCollapsed,
@@ -213,13 +228,15 @@ function SignedInAppRootContent({
       props.uiCommands.openCreateTerminalDialog,
       props.uiCommands.openKeyboardShortcutsDialog,
       props.uiCommands.openWorkspaceSwitcherDialog,
+      props.uiCommands.setDestroyAgentId,
       snapshot,
       uiState.aiChatTabs,
       uiState.browserTabs,
       uiState.focusedAiChatTabId,
       uiState.focusedBrowserTabId,
       uiState.focusedForgeViewerTabId,
-      uiState.forgeViewerTabs
+      uiState.forgeViewerTabs,
+      layout.workspaceSessionViews.activeViewId
     ]
   );
 

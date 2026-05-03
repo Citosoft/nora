@@ -87,6 +87,18 @@ export function getAdjacentWorkspaceSessionTab(
   return tabs[nextIndex] ?? null;
 }
 
+/** Prefer the tab to the right of the removed tab in the given order; otherwise the tab to the left. */
+export function getWorkspaceSessionTabToFocusAfterClose(
+  orderedTabs: WorkspaceSessionTab[],
+  closedStableTabId: string
+): WorkspaceSessionTab | null {
+  const index = orderedTabs.findIndex((tab) => getWorkspaceSessionTabId(tab) === closedStableTabId);
+  if (index < 0) {
+    return null;
+  }
+  return orderedTabs[index + 1] ?? orderedTabs[index - 1] ?? null;
+}
+
 export function getWorkspaceSessionTabs(
   workspace: WorkspaceSummary | null,
   browserTabs: BrowserTabState[],

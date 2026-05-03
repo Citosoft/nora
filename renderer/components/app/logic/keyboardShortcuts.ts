@@ -45,6 +45,14 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
     keys: ["mod", "shift", "]"]
   },
   {
+    id: "close-active-session-tab",
+    title: "Close Active Session Tab",
+    description: "Close the focused workspace session tab (agent, terminal, browser, editor, diff, or split view).",
+    category: "Workbench",
+    keys: ["mod", "w"],
+    allowInEditable: true
+  },
+  {
     id: "open-create-terminal",
     title: "New Terminal",
     description: "Open a new terminal in the current workspace using your default shell and quick-launch settings.",

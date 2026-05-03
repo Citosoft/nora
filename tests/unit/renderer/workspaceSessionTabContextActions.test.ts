@@ -1,4 +1,5 @@
 import { getWorkspaceSessionTabsToClose, isBulkClosableWorkspaceSessionTab } from "@/components/app/logic/workspaceSessionTabContextActions";
+import { getWorkspaceSessionTabId, getWorkspaceSessionTabToFocusAfterClose } from "@/components/app/logic/workspaceSessionTabs";
 import type { WorkspaceSessionTab } from "@/components/app/types/workflow.types";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -64,4 +65,19 @@ test("getWorkspaceSessionTabsToClose returns only non-agent tabs on the right", 
 test("getWorkspaceSessionTabsToClose returns only non-agent tabs on the left", () => {
   const targets = getWorkspaceSessionTabsToClose(tabs, FILE_TAB, "close-left");
   assert.deepEqual(targets, [TERMINAL_TAB, BROWSER_TAB]);
+});
+
+test("getWorkspaceSessionTabToFocusAfterClose prefers the tab to the right", () => {
+  const next = getWorkspaceSessionTabToFocusAfterClose(tabs, getWorkspaceSessionTabId(TERMINAL_TAB));
+  assert.equal(next, BROWSER_TAB);
+});
+
+test("getWorkspaceSessionTabToFocusAfterClose falls back to the left when closing the last tab", () => {
+  const next = getWorkspaceSessionTabToFocusAfterClose(tabs, getWorkspaceSessionTabId(FILE_TAB));
+  assert.equal(next, BROWSER_TAB);
+});
+
+test("getWorkspaceSessionTabToFocusAfterClose returns null for a single tab", () => {
+  const next = getWorkspaceSessionTabToFocusAfterClose([AGENT_TAB], getWorkspaceSessionTabId(AGENT_TAB));
+  assert.equal(next, null);
 });

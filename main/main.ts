@@ -25,6 +25,7 @@ import { createMainWindowNotifications } from "./helpers/mainWindowNotifications
 import { createMainUserInteractionsController } from "./helpers/mainUserInteractions";
 import { handleSquirrelLifecycle, loadEnvFile } from "./helpers/startupRuntime";
 import { configureWebviewGuests, isAllowedBrowserGuestUrl } from "./helpers/webviewSecurity";
+import { attachCloseSessionTabShortcutForwarding } from "./helpers/closeSessionTabShortcutForwarding";
 import {
   attachWindowStateListeners as attachWindowStateListenersHelper,
   focusMainWindow as focusMainWindowHelper,
@@ -311,6 +312,7 @@ function createWindow(): void {
 
   mainWindow.setMenuBarVisibility(false);
   attachWindowStateListeners(mainWindow);
+  attachCloseSessionTabShortcutForwarding(mainWindow);
   mainWindow.maximize();
 
   void mainWindow.loadFile(path.join(__dirname, "..", "renderer", "index.html"));

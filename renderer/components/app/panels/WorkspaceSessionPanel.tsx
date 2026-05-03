@@ -9,19 +9,18 @@ import { resolvePreferredTerminalShellId } from "@/components/app/logic/terminal
 import { isWorkspaceSpecMarkdownPath } from "@/components/app/logic/workspaceNoraPaths";
 import { getWorkspaceSessionTabsToClose } from "@/components/app/logic/workspaceSessionTabContextActions";
 import {
+  buildWorkspaceSessionCenterSlots,
+  resolveActiveWorkspaceSessionCenterSlotId
+} from "@/components/app/logic/workspaceSessionCenterSlots";
+import { performWorkspaceSessionTabClose } from "@/components/app/logic/performWorkspaceSessionTabClose";
+import {
   getActiveWorkspaceSessionTabId,
   getWorkspaceSessionTabId,
+  getWorkspaceSessionTabToFocusAfterClose,
   getWorkspaceSessionTabs
 } from "@/components/app/logic/workspaceSessionTabs";
-import { AiChatPanel } from "@/components/app/panels/AiChatPanel";
-import { BrowserTabPanel } from "@/components/app/panels/BrowserTabPanel";
 import { SessionTabPane, SessionTabStack } from "@/components/app/panels/SessionTabStack";
-import { DiffViewer } from "@/components/app/panels/DiffViewer";
-import { FileEditorPanel } from "@/components/app/panels/FileEditorPanel";
-import { FocusedAgentPanel } from "@/components/app/panels/FocusedAgentPanel";
-import { ForgeDetailPanel } from "@/components/app/panels/ForgePanel";
-import { ForgeWorkflowRunPanel } from "@/components/app/panels/ForgeWorkflowRunPanel";
-import { FullDiffViewer } from "@/components/app/panels/FullDiffViewer";
+import { WorkspaceSessionCenterSlotContent } from "@/components/app/panels/WorkspaceSessionCenterSlotContent";
 import { WorkspaceSessionToolbar } from "@/components/app/panels/WorkspaceSessionToolbar";
 import { WorkspaceSplitViewPanel } from "@/components/app/panels/WorkspaceSplitViewPanel";
 import { BusyIndicator } from "@/components/app/shared/BusyIndicator";
@@ -717,6 +716,95 @@ export function WorkspaceSessionPanel() {
     onExitSplitView();
   }, [onSetActiveWorkspaceContentTab, onExitSplitView]);
 
+  const handleCloseActiveFileEditorTab = useCallback(() => {
+    if (activeFileEditorTab) {
+      onCloseFileEditorTab(activeFileEditorTab.path);
+    }
+  }, [activeFileEditorTab, onCloseFileEditorTab]);
+
+  const forgeDetailPanelProps = useMemo(
+    () => ({
+      detail: forgeDetail,
+      detailLoading: forgeDetailLoading,
+      detailErrorMessage: forgeDetailErrorMessage,
+      actionLoading: forgeActionLoading,
+      commentLoading: forgeCommentLoading,
+      onOpenUrl: onOpenForgeUrl,
+      onOpenInViewer: null as (() => void) | null,
+      onBackToList: () => {
+        if (forgeViewerTab) {
+          onCloseForgeViewerTab(forgeViewerTab.id);
+        }
+      },
+      onRefreshDetail: onRefreshForgeItem,
+      onAction: onForgeAction,
+      onCommentSubmit: onForgeCommentSubmit,
+      onSpawnIssueAgent: onSpawnIssueAgent
+    }),
+    [
+      forgeActionLoading,
+      forgeCommentLoading,
+      forgeDetail,
+      forgeDetailErrorMessage,
+      forgeDetailLoading,
+      forgeViewerTab,
+      onCloseForgeViewerTab,
+      onForgeAction,
+      onForgeCommentSubmit,
+      onOpenForgeUrl,
+      onRefreshForgeItem,
+      onSpawnIssueAgent
+    ]
+  );
+
+  const workspaceSessionCenterSlots = useMemo(
+    () =>
+      buildWorkspaceSessionCenterSlots({
+        activeWorkspaceContentTab,
+        isDiffExpanded,
+        isFullDiffExpanded,
+        selectedDiffChange,
+        fileEditorTabCount: fileEditorState?.tabs.length ?? 0,
+        forgeViewerTabCount: forgeViewerTabs.length,
+        projectScopedAiChatTabs,
+        projectScopedBrowserTabs
+      }),
+    [
+      activeWorkspaceContentTab,
+      fileEditorState?.tabs.length,
+      forgeViewerTabs.length,
+      isDiffExpanded,
+      isFullDiffExpanded,
+      projectScopedAiChatTabs,
+      projectScopedBrowserTabs,
+      selectedDiffChange
+    ]
+  );
+
+  const activeCenterSlotId = useMemo(
+    () =>
+      resolveActiveWorkspaceSessionCenterSlotId({
+        activeWorkspaceContentTab,
+        isDiffExpanded,
+        isFullDiffExpanded,
+        selectedDiffChange,
+        activeFileEditorTab,
+        forgeViewerTab,
+        aiChatTab,
+        browserTab
+      }),
+    [
+      activeFileEditorTab,
+      activeWorkspaceContentTab,
+      aiChatTab,
+      browserTab,
+      forgeViewerTab,
+      isDiffExpanded,
+      isFullDiffExpanded,
+      selectedDiffChange
+    ]
+  );
+
   const contextValue = {
     project,
     workspace: stableWorkspace,
@@ -792,76 +880,74 @@ export function WorkspaceSessionPanel() {
     return assertUnreachable(tab);
   };
   const handleCloseTab = (tab: WorkspaceSessionTab): void => {
-    switch (tab.kind) {
-      case "agent":
-        onDestroyRequest(tab.id);
+    const closedStableId = getWorkspaceSessionTabId(tab);
+    const closingActiveSessionTab = closedStableId === activeTabId;
+    const tabToFocusAfter =
+      closingActiveSessionTab ? getWorkspaceSessionTabToFocusAfterClose(orderedSessionTabs, closedStableId) : null;
+    const refocusNeighborAfterClose = (): void => {
+      if (!tabToFocusAfter) {
         return;
-      case "terminal":
+      }
+      window.setTimeout(() => {
+        handleSelectTab(tabToFocusAfter);
+      }, 0);
+    };
+
+    performWorkspaceSessionTabClose(tab, {
+      closeAgent: (agentId) => {
+        onDestroyRequest(agentId);
+      },
+      closeTerminal: (sessionId) => {
         setClosingTerminalTabIds((current) =>
-          current.includes(tab.id) ? current : [...current, tab.id]
+          current.includes(sessionId) ? current : [...current, sessionId]
         );
-        void onDestroyTerminal(tab.id).then((result) => {
-          if (result) {
-            return;
+        void onDestroyTerminal(sessionId)
+          .then((result) => {
+            if (result) {
+              refocusNeighborAfterClose();
+              return;
+            }
+            setClosingTerminalTabIds((current) => current.filter((id) => id !== sessionId));
+          })
+          .catch(() => {
+            setClosingTerminalTabIds((current) => current.filter((id) => id !== sessionId));
+          });
+      },
+      closeBrowser: (tabId) => {
+        onCloseBrowserTab(tabId);
+      },
+      closeForge: (tabId) => {
+        onCloseForgeViewerTab(tabId);
+      },
+      closeAiChat: (tabId) => {
+        onCloseAiChatTab(tabId);
+      },
+      deleteSplitView: (viewId) => {
+        void onDeleteViewById(viewId).then((deleted) => {
+          if (deleted) {
+            refocusNeighborAfterClose();
           }
-          setClosingTerminalTabIds((current) => current.filter((id) => id !== tab.id));
-        }).catch(() => {
-          setClosingTerminalTabIds((current) => current.filter((id) => id !== tab.id));
         });
-        return;
-      case "browser":
-        onCloseBrowserTab(tab.id);
-        return;
-      case "forge":
-        onCloseForgeViewerTab(tab.id);
-        return;
-      case "ai-chat":
-        onCloseAiChatTab(tab.id);
-        return;
-      case "view":
-        void onDeleteViewById(tab.id);
-        return;
-      case "file":
-        onCloseFileEditorTab(tab.path);
-        return;
-      case "diff":
+      },
+      closeFileEditorAtPath: (pathName) => {
+        onCloseFileEditorTab(pathName);
+      },
+      closeDiff: () => {
         onSetActiveWorkspaceContentTab(activeFileEditorTab ? "file" : null);
         if (isFullDiffExpanded) {
           onCloseFullDiff();
         } else {
           onCloseExpandedDiff();
         }
-        return;
+      }
+    });
+
+    if (tab.kind === "agent" || tab.kind === "terminal" || tab.kind === "view") {
+      return;
     }
-    return assertUnreachable(tab);
+
+    refocusNeighborAfterClose();
   };
-
-  const mountFullDiff =
-    activeWorkspaceContentTab === "diff" && isDiffExpanded && isFullDiffExpanded;
-  const mountDiffViewer =
-    activeWorkspaceContentTab === "diff" &&
-    isDiffExpanded &&
-    !isFullDiffExpanded &&
-    Boolean(selectedDiffChange);
-  const mountFileEditor = (fileEditorState?.tabs.length ?? 0) > 0;
-  const mountForge = forgeViewerTabs.length > 0;
-  const mountAiChats = projectScopedAiChatTabs.length > 0;
-  const mountBrowsers = projectScopedBrowserTabs.length > 0;
-
-  const showFullDiff = mountFullDiff;
-  const showDiffViewer = mountDiffViewer;
-  const showFileEditor =
-    activeWorkspaceContentTab === "file" && Boolean(fileEditorState && activeFileEditorTab);
-  const showForge = Boolean(forgeViewerTab);
-  const showAiChat = Boolean(aiChatTab);
-  const showBrowser = Boolean(browserTab);
-  const showAgentPanel =
-    !showFullDiff &&
-    !showDiffViewer &&
-    !showFileEditor &&
-    !showForge &&
-    !showAiChat &&
-    !showBrowser;
 
   const workspaceCenterBody: ReactNode = activeView ? (
     <SessionTabStack>
@@ -877,111 +963,36 @@ export function WorkspaceSessionPanel() {
     </SessionTabStack>
   ) : (
     <SessionTabStack>
-      {mountFullDiff ? (
-        <SessionTabPane visible={showFullDiff}>
-          <FullDiffViewer changes={snapshot?.changes ?? []} resolvedTheme={resolvedTheme} />
-        </SessionTabPane>
-      ) : null}
-      {mountDiffViewer ? (
-        <SessionTabPane visible={showDiffViewer}>
-          <DiffViewer
-            change={selectedDiffChange!}
-            expanded
+      {workspaceSessionCenterSlots.map((slot) => (
+        <SessionTabPane key={slot.id} visible={activeCenterSlotId === slot.id}>
+          <WorkspaceSessionCenterSlotContent
+            slot={slot}
             resolvedTheme={resolvedTheme}
-            onClose={onCloseExpandedDiff}
-          />
-        </SessionTabPane>
-      ) : null}
-      {mountFileEditor ? (
-        <SessionTabPane visible={showFileEditor}>
-          <FileEditorPanel
-            title="File editor"
-            showTabStrip={false}
-            onGenerateTasks={
-              activeSpecEditorTab
-                ? () => {
-                    onGenerateTasksFromSpec(activeSpecEditorTab.projectId, activeSpecEditorTab.path);
-                  }
-                : null
-            }
-            agentSendTargets={fileEditorAgentSendTargets}
+            snapshotChanges={snapshot?.changes ?? []}
+            onCloseExpandedDiff={onCloseExpandedDiff}
+            activeSpecEditorTab={activeSpecEditorTab}
+            onGenerateTasksFromSpec={onGenerateTasksFromSpec}
+            fileEditorAgentSendTargets={fileEditorAgentSendTargets}
             onExitFileEditorForAgentHandoff={handleExitFileEditorForAgentHandoff}
             onOpenFileEditor={openFileEditor}
-            onClose={() => {
-              if (activeFileEditorTab) {
-                onCloseFileEditorTab(activeFileEditorTab.path);
-              }
-            }}
+            onCloseActiveFileEditorTab={handleCloseActiveFileEditorTab}
+            forgeViewerTab={forgeViewerTab}
+            forgeDetailProps={forgeDetailPanelProps}
+            stableTools={stableTools}
+            forgeOverview={forgeOverview}
+            aiSettings={aiSettings}
+            aiModelOptions={aiModelOptions}
+            aiModelLoading={aiModelLoading}
+            onSelectAiChatProviderModel={onSelectAiChatProviderModel}
+            onOpenAiSettings={onOpenAiSettings}
+            onUpdateAiChatTabReasoningMode={onUpdateAiChatTabReasoningMode}
+            onUpdateAiChatTabTitle={onUpdateAiChatTabTitle}
+            onUpdateAiChatTabMessages={onUpdateAiChatTabMessages}
+            stableAgent={stableAgent}
+            stableTerminal={stableTerminal}
           />
         </SessionTabPane>
-      ) : null}
-      {mountForge ? (
-        <SessionTabPane visible={showForge}>
-          {forgeViewerTab ? (
-            forgeViewerTab.kind === "workflow_run" ? (
-              <ForgeWorkflowRunPanel
-                projectId={forgeViewerTab.projectId}
-                runId={forgeViewerTab.number}
-                onOpenUrl={onOpenForgeUrl}
-              />
-            ) : (
-              <ForgeDetailPanel
-                detail={forgeDetail}
-                detailLoading={forgeDetailLoading}
-                detailErrorMessage={forgeDetailErrorMessage}
-                actionLoading={forgeActionLoading}
-                commentLoading={forgeCommentLoading}
-                resolvedTheme={resolvedTheme}
-                tools={stableTools}
-                onOpenUrl={onOpenForgeUrl}
-                onBackToList={() => onCloseForgeViewerTab(forgeViewerTab.id)}
-                onRefreshDetail={onRefreshForgeItem}
-                onAction={onForgeAction}
-                onCommentSubmit={onForgeCommentSubmit}
-                onSpawnIssueAgent={onSpawnIssueAgent}
-                repoFullName={forgeOverview?.repo?.fullName ?? null}
-                repoProvider={forgeOverview?.repo?.provider ?? "github"}
-              />
-            )
-          ) : (
-            <div className="flex flex-1 items-center justify-center bg-card/95 text-sm text-muted-foreground">
-              Open a Forge item from the sidebar to load details here.
-            </div>
-          )}
-        </SessionTabPane>
-      ) : null}
-      {mountAiChats
-        ? projectScopedAiChatTabs.map((chatTab) => (
-            <SessionTabPane key={chatTab.id} visible={Boolean(showAiChat && aiChatTab?.id === chatTab.id)}>
-              <AiChatPanel
-                tabId={chatTab.id}
-                reasoningMode={chatTab.reasoningMode}
-                messages={chatTab.messages}
-                onReasoningModeChange={(mode) => onUpdateAiChatTabReasoningMode(chatTab.id, mode)}
-                onSetChatTitle={(title) => onUpdateAiChatTabTitle(chatTab.id, title)}
-                onMessagesChange={(nextMessages) => onUpdateAiChatTabMessages(chatTab.id, () => nextMessages)}
-                aiSettings={aiSettings}
-                aiModelOptions={aiModelOptions}
-                aiModelLoading={aiModelLoading}
-                onSelectAiChatProviderModel={onSelectAiChatProviderModel}
-                onOpenAiSettings={onOpenAiSettings}
-              />
-            </SessionTabPane>
-          ))
-        : null}
-      {mountBrowsers
-        ? projectScopedBrowserTabs.map((browserTabState) => (
-            <SessionTabPane
-              key={browserTabState.id}
-              visible={Boolean(showBrowser && browserTab?.id === browserTabState.id)}
-            >
-              <BrowserTabPanel tab={browserTabState} />
-            </SessionTabPane>
-          ))
-        : null}
-      <SessionTabPane visible={showAgentPanel}>
-        <FocusedAgentPanel agent={stableAgent} terminal={stableTerminal} />
-      </SessionTabPane>
+      ))}
     </SessionTabStack>
   );
 

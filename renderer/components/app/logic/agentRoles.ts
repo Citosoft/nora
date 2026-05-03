@@ -28,6 +28,10 @@ export const AGENT_ROLE_OPTIONS: AgentRoleOption[] = [
   }
 ];
 
+export function getAgentRoleLabel(roleId: AgentRoleId): string {
+  return AGENT_ROLE_OPTIONS.find((option) => option.id === roleId)?.label ?? AGENT_ROLE_OPTIONS[0].label;
+}
+
 export function getAgentRolePrompt(roleId: AgentRoleId, task: string): string {
   const role = AGENT_ROLE_OPTIONS.find((option) => option.id === roleId) ?? AGENT_ROLE_OPTIONS[0];
   const trimmedTask = task.trim();

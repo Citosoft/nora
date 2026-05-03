@@ -99,6 +99,7 @@ function AppRootRuntimeContent({
     setActiveView,
     setSettingsGroup,
     setIsCenterDiffExpanded,
+    setIsCenterFullDiffExpanded,
     setActiveWorkspaceContentTab,
     setIsChangesSidebarCollapsed,
     setIsLocalTerminalDockCollapsed,
@@ -252,27 +253,35 @@ function AppRootRuntimeContent({
     setUiState,
     normalizeSnapshot
   });
+  const noopDeleteWorkspaceSplitView = useCallback(async (): Promise<boolean> => false, []);
   const preLaunchKeyboardShortcutActions = useMemo((): ShortcutActionMap => {
     const ignoreFileEditorStateUpdate: Dispatch<SetStateAction<FileEditorState | null>> = () => undefined;
 
     return buildKeyboardShortcutActions({
       activeWorkspaceContentTab: null,
       appSettingsTerminalQuickLaunchDefaults: preferences.appSettings.terminalQuickLaunchDefaults,
+      closeAiChatTab: centerTabs.closeAiChatTab,
+      closeBrowserTab: browserTabs.closeBrowserTab,
+      closeForgeViewerTab: centerTabs.closeForgeViewerTab,
       createTerminalWithStatus,
       defaultTerminalShellId,
+      deleteWorkspaceSplitViewById: noopDeleteWorkspaceSplitView,
       fileEditorState: null,
       focusLocalTerminalDock,
       handleOpenWorkspaceBrowser: centerTabs.handleOpenWorkspaceBrowser,
       isCenterDiffExpanded: false,
+      isCenterFullDiffExpanded: false,
       openSettingsPage: navigation.openSettingsPage,
       openStartupDependenciesDialog: dialogs.openStartupDependenciesDialog,
       sessionFocusCommands,
+      sessionSurfaceSplitViews: [],
       safely,
       selectedChange: null,
       setActiveView,
       setActiveWorkspaceContentTab,
       setFileEditorState: ignoreFileEditorStateUpdate,
       setIsCenterDiffExpanded,
+      setIsCenterFullDiffExpanded,
       setIsChangesSidebarCollapsed,
       setIsLocalTerminalDockCollapsed,
       setIsWorkspaceSidebarCollapsed,
@@ -283,7 +292,8 @@ function AppRootRuntimeContent({
         openCreateAgentDialog: uiCommands.openCreateAgentDialog,
         openCreateTerminalDialog: uiCommands.openCreateTerminalDialog,
         openKeyboardShortcutsDialog: uiCommands.openKeyboardShortcutsDialog,
-        openWorkspaceSwitcherDialog: uiCommands.openWorkspaceSwitcherDialog
+        openWorkspaceSwitcherDialog: uiCommands.openWorkspaceSwitcherDialog,
+        setDestroyAgentId: uiCommands.setDestroyAgentId
       },
       uiState: {
         aiChatTabs: uiState.aiChatTabs,
@@ -292,10 +302,15 @@ function AppRootRuntimeContent({
         focusedBrowserTabId: uiState.focusedBrowserTabId,
         focusedForgeViewerTabId: uiState.focusedForgeViewerTabId,
         forgeViewerTabs: uiState.forgeViewerTabs
-      }
+      },
+      workspaceSessionActiveViewId: null
     });
   }, [
+    noopDeleteWorkspaceSplitView,
     preferences.appSettings.terminalQuickLaunchDefaults,
+    centerTabs.closeAiChatTab,
+    browserTabs.closeBrowserTab,
+    centerTabs.closeForgeViewerTab,
     createTerminalWithStatus,
     defaultTerminalShellId,
     focusLocalTerminalDock,
@@ -306,6 +321,7 @@ function AppRootRuntimeContent({
     safely,
     setActiveView,
     setIsCenterDiffExpanded,
+    setIsCenterFullDiffExpanded,
     setIsChangesSidebarCollapsed,
     setIsLocalTerminalDockCollapsed,
     setIsWorkspaceSidebarCollapsed,
@@ -316,6 +332,7 @@ function AppRootRuntimeContent({
     uiCommands.openCreateTerminalDialog,
     uiCommands.openKeyboardShortcutsDialog,
     uiCommands.openWorkspaceSwitcherDialog,
+    uiCommands.setDestroyAgentId,
     uiState.aiChatTabs,
     uiState.browserTabs,
     uiState.focusedAiChatTabId,

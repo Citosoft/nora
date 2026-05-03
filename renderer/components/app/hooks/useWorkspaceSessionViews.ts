@@ -153,14 +153,14 @@ export function useWorkspaceSessionViews({
     setActiveViewId(null);
   };
 
-  const deleteViewById = async (viewId: string): Promise<void> => {
+  const deleteViewById = async (viewId: string): Promise<boolean> => {
     const view = splitViewCollection.views.find((entry) => entry.id === viewId);
     if (!view) {
-      return;
+      return false;
     }
 
     if (confirmDeleteView && !window.confirm(`Delete "${view.name}"?`)) {
-      return;
+      return false;
     }
 
     await persistCollection((current) => ({
@@ -170,6 +170,7 @@ export function useWorkspaceSessionViews({
     if (activeViewId === viewId) {
       setActiveViewId(null);
     }
+    return true;
   };
 
   const addFocusedItem = async (): Promise<void> => {
