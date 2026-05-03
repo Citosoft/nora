@@ -12,7 +12,7 @@ export const WorkspaceSessionLoadingOverlay = ({
   }
 
   return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/88 px-8 backdrop-blur-sm">
+    <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/88 px-8 backdrop-blur-sm">
       <div className="w-full max-w-lg rounded-[6px] border border-border/70 bg-card/95 p-6 shadow-2xl">
         <div className="flex items-start gap-4">
           <div className="mt-0.5 rounded-[4px] border border-border/70 bg-background/70 p-2 text-primary">
