@@ -3,7 +3,7 @@
   "productName": "Nora",
   "displayName": "Nora",
   "desktopName": "nora.desktop",
-  "version": "0.1.50",
+  "version": "0.1.51",
   "description": "Multi-agent coding workspace with PTY-backed terminals, git-aware workflows, and isolated worktrees.",
   "main": "dist/main/main.js",
   "scripts": {
