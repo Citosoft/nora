@@ -23,6 +23,7 @@ import type {
   StartupDependencyReport
 } from "../../types/startupDependency.types";
 import type { AgentUsageScanRequest, LocalAgentUsageReport } from "../../types/agentUsageStats.types";
+import type { MacApplicationMenuCommand, MacApplicationMenuSyncPayload } from "../../types/macApplicationMenu.types";
 import type { DetectedUserIdentity } from "../../types/userIdentity.types";
 
 export interface WindowState {
@@ -82,6 +83,8 @@ export interface SystemBridge {
   onAppClosingProgress: (listener: (payload: AppClosingProgressPayload) => void) => () => void;
   logAnalytics: (level: "info" | "warn" | "debug" | "error", message: string) => Promise<void>;
   scanLocalAgentUsage: (request: AgentUsageScanRequest) => Promise<LocalAgentUsageReport>;
+  syncMacApplicationMenu: (payload: MacApplicationMenuSyncPayload) => Promise<void>;
+  onMacApplicationMenuCommand: (listener: (command: MacApplicationMenuCommand) => void) => () => void;
 }
 
 export interface SystemGateway extends SystemBridge {}

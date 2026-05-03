@@ -50,6 +50,7 @@ import { registerAgentUsageIpc } from "./ipc/registerAgentUsageIpc";
 import { registerSessionIpc } from "./ipc/registerSessionIpc";
 import { registerSystemIpc } from "./ipc/registerSystemIpc";
 import { registerToolingIpc } from "./ipc/registerToolingIpc";
+import { registerMacApplicationMenuIpc } from "./ipc/registerMacApplicationMenuIpc";
 import { registerWindowIpc } from "./ipc/registerWindowIpc";
 import { registerWorkspaceIpc } from "./ipc/registerWorkspaceIpc";
 import type { OrchestratorFacade } from "./types/orchestratorFacade.types";
@@ -416,6 +417,8 @@ function registerIpc(): void {
     showAgentCompletionNotification,
     analyticsRuntimeConfig
   });
+
+  registerMacApplicationMenuIpc(() => mainWindow);
 
   registerRemoteIpc({
     services,

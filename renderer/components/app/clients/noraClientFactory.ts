@@ -169,7 +169,9 @@ export const NORA_SYSTEM_CLIENT_METHODS = [
   "showAgentCompletionNotification",
   "onAppClosingProgress",
   "logAnalytics",
-  "scanLocalAgentUsage"
+  "scanLocalAgentUsage",
+  "syncMacApplicationMenu",
+  "onMacApplicationMenuCommand"
 ] as const satisfies readonly (keyof NoraBridge)[];
 
 function getNoraApi(): NoraBridge {

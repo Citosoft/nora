@@ -5,6 +5,8 @@ import type {
   SystemBridge,
   WindowState
 } from "@shared/ipc/types/systemGateway.types";
+import type { MacApplicationMenuCommand, MacApplicationMenuSyncPayload } from "@shared/types/macApplicationMenu.types";
+import { MAC_APPLICATION_MENU_COMMAND_CHANNEL } from "@shared/types/macApplicationMenu.types";
 import { clipboard } from "electron";
 
 import { invokeIpc } from "./invokeIpc";
@@ -51,6 +53,9 @@ export function createSystemBridge(): SystemBridge {
     onAppClosingProgress: (listener) =>
       subscribeToIpcEvent<AppClosingProgressPayload>("app:closing-progress", listener),
     logAnalytics: (level, message) => invokeIpc("app:log-analytics", { level, message }),
-    scanLocalAgentUsage: (request) => invokeIpc("app:scan-local-agent-usage", request)
+    scanLocalAgentUsage: (request) => invokeIpc("app:scan-local-agent-usage", request),
+    syncMacApplicationMenu: (payload: MacApplicationMenuSyncPayload) => invokeIpc("app:sync-mac-application-menu", payload),
+    onMacApplicationMenuCommand: (listener: (command: MacApplicationMenuCommand) => void) =>
+      subscribeToIpcEvent<MacApplicationMenuCommand>(MAC_APPLICATION_MENU_COMMAND_CHANNEL, listener)
   };
 }

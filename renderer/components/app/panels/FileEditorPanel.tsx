@@ -25,13 +25,13 @@ import type { FileEditorPanelProps } from "@/components/app/types/component.type
 import { cn } from "@/lib/utils";
 import type { BeforeMount, Monaco, OnMount } from "@monaco-editor/react";
 import Editor from "@monaco-editor/react";
-import { AlertCircle, Eye, Image as ImageIcon, LoaderCircle, PencilLine, X } from "lucide-react";
+import { AlertCircle, Columns2, Eye, Image as ImageIcon, LoaderCircle, PencilLine, X } from "lucide-react";
 import type { editor } from "monaco-editor";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 type FileEditorPanelContextProps = Partial<FileEditorPanelProps>;
 
-type MarkdownEditorTabView = "preview" | "edit";
+type MarkdownEditorTabView = "preview" | "edit" | "hybrid";
 
 function getMultiSelectionText(ed: editor.ICodeEditor): string | null {
   const model = ed.getModel();
@@ -317,6 +317,25 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
     };
   }, [isImage, isLoading, isReadOnlyTab, isSaving, onSave]);
 
+  const monacoFileEditor = (
+    <Editor
+      beforeMount={handleEditorBeforeMount}
+      path={monacoModelPath}
+      language={language}
+      value={content}
+      theme={monacoTheme}
+      onMount={handleEditorMount}
+      onChange={(value) => onChange(value ?? "")}
+      options={editorOptions}
+      loading={
+        <div className={cn("flex h-full items-center justify-center gap-3 text-sm text-muted-foreground")}>
+          <LoaderCircle className="size-4 animate-spin" />
+          Loading editor...
+        </div>
+      }
+    />
+  );
+
   return (
     <div className="center-column-surface flex h-full min-h-0 flex-col bg-card/95">
       <div className="border-b border-border/50 px-3 py-2">
@@ -353,6 +372,19 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
               >
                 <Eye className="size-3.5 shrink-0" aria-hidden />
                 Preview
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={markdownView === "hybrid"}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-[3px] px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  markdownView === "hybrid" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
+                )}
+                onClick={() => setMarkdownView("hybrid")}
+              >
+                <Columns2 className="size-3.5 shrink-0" aria-hidden />
+                Split
               </button>
               <button
                 type="button"
@@ -447,23 +479,15 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
             <div className="thin-scrollbar h-full min-h-0 overflow-auto px-4 py-4">
               <MarkdownRenderer onLinkClick={handleMarkdownLinkClick}>{content}</MarkdownRenderer>
             </div>
+          ) : isMarkdownFile && markdownView === "hybrid" ? (
+            <div className="flex h-full min-h-0 flex-row">
+              <div className="min-h-0 min-w-0 flex-1 border-r border-border/50">{monacoFileEditor}</div>
+              <div className="thin-scrollbar min-h-0 min-w-0 flex-1 overflow-auto px-4 py-4">
+                <MarkdownRenderer onLinkClick={handleMarkdownLinkClick}>{content}</MarkdownRenderer>
+              </div>
+            </div>
           ) : (
-            <Editor
-              beforeMount={handleEditorBeforeMount}
-              path={monacoModelPath}
-              language={language}
-              value={content}
-              theme={monacoTheme}
-              onMount={handleEditorMount}
-              onChange={(value) => onChange(value ?? "")}
-              options={editorOptions}
-              loading={
-                <div className={cn("flex h-full items-center justify-center gap-3 text-sm text-muted-foreground")}>
-                  <LoaderCircle className="size-4 animate-spin" />
-                  Loading editor...
-                </div>
-              }
-            />
+            monacoFileEditor
           )}
         </div>
       </div>

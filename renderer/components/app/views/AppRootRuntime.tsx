@@ -12,6 +12,7 @@ import { useAppCenterTabs } from "@/components/app/hooks/useAppCenterTabs";
 import { useAppIssueReporter } from "@/components/app/hooks/useAppIssueReporter";
 import { useAppMainOrchestration } from "@/components/app/hooks/useAppMainOrchestration";
 import { useAppNavigationActions } from "@/components/app/hooks/useAppNavigationActions";
+import { useMacApplicationMenuBridge } from "@/components/app/hooks/useMacApplicationMenuBridge";
 import { useAppPreLaunchViewProps } from "@/components/app/hooks/useAppPreLaunchViewProps";
 import { useAppPreferences } from "@/components/app/hooks/useAppPreferences";
 import { useAppRootShellFrame } from "@/components/app/hooks/useAppRootShellFrame";
@@ -25,6 +26,8 @@ import { useWorkspaceLifecycleActions } from "@/components/app/hooks/useWorkspac
 import { useWorkspaceLoading } from "@/components/app/hooks/useWorkspaceLoading";
 import { useWorkspaceSessionFocusCommands } from "@/components/app/hooks/useWorkspaceSessionFocusCommands";
 import { useWorkspaceSnapshotRefresh } from "@/components/app/hooks/useWorkspaceSnapshotRefresh";
+import type { MacApplicationMenuActionHandlers } from "@/components/app/logic/applyMacApplicationMenuCommand";
+import { buildMacApplicationMenuSyncPayload } from "@/components/app/logic/buildMacApplicationMenuSyncPayload";
 import { getWorkspacePresenceSignature } from "@/components/app/logic/appPresenceSignatures";
 import { normalizeSnapshot } from "@/components/app/logic/appUtils";
 import { appRootInitialWindowUiState } from "@/components/app/logic/appRootInitialState";
@@ -426,6 +429,64 @@ function AppRootRuntimeContent({
     clearSimulatedMissingDependencies: dialogs.clearSimulatedMissingDependencies,
     handleOpenWorkspaceBrowser: centerTabs.handleOpenWorkspaceBrowser,
     handleOpenRecentWorkspace: workspaceLifecycle.handleOpenRecentWorkspace
+  });
+  const isDarwinPlatform = bootstrap.windowUiState.platform === "darwin";
+  const preLaunchTitleBarForMacMenu =
+    shouldRenderPreLaunch && preLaunchViewProps
+      ? preLaunchViewProps.isOnboardingOpen && preLaunchViewProps.onboardingTitleBarProps
+        ? preLaunchViewProps.onboardingTitleBarProps
+        : preLaunchViewProps.loadingTitleBarProps
+      : null;
+  const preLaunchMacMenuPayload = useMemo(() => {
+    if (!isDarwinPlatform || !preLaunchTitleBarForMacMenu || !preLaunchViewProps) {
+      return null;
+    }
+
+    return buildMacApplicationMenuSyncPayload({
+      phase: "pre-launch",
+      hasActiveWorkspace: preLaunchTitleBarForMacMenu.hasActiveWorkspace,
+      canOpenProjectInIde: preLaunchTitleBarForMacMenu.canOpenProjectInIde,
+      activeProjectRoot: preLaunchViewProps.snapshot?.project?.rootPath ?? null,
+      preferredIde: preLaunchTitleBarForMacMenu.preferredIde,
+      installedIdes: preLaunchTitleBarForMacMenu.installedIdes,
+      defaultIdeId: preLaunchTitleBarForMacMenu.defaultIdeId,
+      recentWorkspaces: preLaunchTitleBarForMacMenu.recentWorkspaces
+    });
+  }, [isDarwinPlatform, preLaunchTitleBarForMacMenu, preLaunchViewProps]);
+  const preLaunchMacMenuHandlers = useMemo((): MacApplicationMenuActionHandlers | null => {
+    if (!preLaunchTitleBarForMacMenu) {
+      return null;
+    }
+
+    const titleBar = preLaunchTitleBarForMacMenu;
+    return {
+      addWorkspace: titleBar.onAddWorkspace,
+      addRemoteWorkspace: titleBar.onAddRemoteWorkspace,
+      openInIde: (ideId) => {
+        titleBar.onOpenProjectInIde(ideId);
+      },
+      newTerminal: titleBar.onCreateTerminal,
+      newAgent: titleBar.onCreateAgent,
+      newBrowser: titleBar.onCreateBrowser,
+      refreshWorkspace: titleBar.onRefreshWorkspace,
+      closeWorkspace: titleBar.onCloseWorkspace,
+      openRecentWorkspace: titleBar.onOpenRecentWorkspace,
+      toggleWorkspaceSidebar: titleBar.onToggleWorkspaceSidebar,
+      toggleChangesSidebar: titleBar.onToggleChangesSidebar,
+      toggleLocalTerminalDock: titleBar.onToggleLocalTerminalDock,
+      focusLocalTerminalDock: titleBar.onFocusLocalTerminalDock,
+      focusPreviousSessionTab: titleBar.onFocusPreviousSessionTab,
+      focusNextSessionTab: titleBar.onFocusNextSessionTab,
+      openKeyboardShortcuts: titleBar.onOpenKeyboardShortcuts,
+      openStartupDependencies: titleBar.onOpenStartupDependencies,
+      submitIssue: titleBar.onSubmitIssue,
+      openAbout: titleBar.onOpenAbout
+    };
+  }, [preLaunchTitleBarForMacMenu]);
+  useMacApplicationMenuBridge({
+    enabled: isDarwinPlatform && shouldRenderPreLaunch,
+    payload: preLaunchMacMenuPayload,
+    handlers: preLaunchMacMenuHandlers
   });
   const preRender = shouldRenderPreLaunch && preLaunchViewProps ? (
     <AppPreLaunchView {...preLaunchViewProps} />

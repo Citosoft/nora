@@ -1,5 +1,6 @@
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { noraToolingClient } from "@/components/app/clients/noraToolingClient";
+import { noraWorkspaceManagementClient } from "@/components/app/clients/noraWorkspaceManagementClient";
 import { useAppRootDialogs } from "@/components/app/context/appRootDialogsContext";
 import {
   AppRootWorkspaceSessionProvider,
@@ -15,6 +16,7 @@ import { useAppRootModalExtrasSources } from "@/components/app/hooks/useAppRootM
 import { useAppRootSettingsRuntimeAssemblyInput } from "@/components/app/hooks/useAppRootSettingsRuntimeAssemblyInput";
 import { useAppRootSignedInProviderSlices } from "@/components/app/hooks/useAppRootSignedInProviderSlices";
 import { useAppRootWorkspaceSidebarSources } from "@/components/app/hooks/useAppRootWorkspaceSidebarSources";
+import { useMacApplicationMenuBridge } from "@/components/app/hooks/useMacApplicationMenuBridge";
 import { useAppRuntimeEffects } from "@/components/app/hooks/useAppRuntimeEffects";
 import { useForgeActionHandlers } from "@/components/app/hooks/useForgeActionHandlers";
 import { useForgeIntegration } from "@/components/app/hooks/useForgeIntegration";
@@ -25,6 +27,8 @@ import { getWorkspacePresenceSignature } from "@/components/app/logic/appPresenc
 import { buildAppRootSignedInProviderSlicesWiringInput } from "@/components/app/logic/buildAppRootSignedInProviderSlicesWiringInput";
 import { buildKeyboardShortcutActions } from "@/components/app/logic/buildKeyboardShortcutActions";
 import { SHORTCUT_DEFINITIONS } from "@/components/app/logic/keyboardShortcuts";
+import type { MacApplicationMenuActionHandlers } from "@/components/app/logic/applyMacApplicationMenuCommand";
+import { buildMacApplicationMenuSyncPayload } from "@/components/app/logic/buildMacApplicationMenuSyncPayload";
 import { getWorkspaceSwitcherEntries } from "@/components/app/logic/appUtils";
 import type { SignedInAppRootProps } from "@/components/app/types/signedInAppRoot.types";
 import type { AppRootSignedInProviderSlicesWiringInput } from "@/components/app/types/appRootSignedInProviderSlicesWiring.types";
@@ -382,6 +386,83 @@ function SignedInAppRootContent({
     setIsWorkspaceSidebarCollapsed,
     setIsLocalTerminalDockCollapsed,
     settingsGroup
+  });
+  const isDarwinPlatform = props.bootstrap.windowUiState.platform === "darwin";
+  const macApplicationMenuPayload = useMemo(() => {
+    if (!isDarwinPlatform || !snapshot) {
+      return null;
+    }
+
+    return buildMacApplicationMenuSyncPayload({
+      phase: "signed-in",
+      hasActiveWorkspace: Boolean(snapshot.project),
+      canOpenProjectInIde: derived.canOpenProjectInIde,
+      activeProjectRoot: snapshot.project?.rootPath ?? null,
+      preferredIde: derived.preferredIde,
+      installedIdes: props.bootstrap.installedIdes,
+      defaultIdeId: props.preferences.defaultIdeId,
+      recentWorkspaces: snapshot.recentProjects
+    });
+  }, [isDarwinPlatform, snapshot, derived.canOpenProjectInIde, derived.preferredIde, props.bootstrap.installedIdes, props.preferences.defaultIdeId]);
+  const macApplicationMenuHandlers = useMemo(
+    (): MacApplicationMenuActionHandlers => ({
+      addWorkspace: () => {
+        void chromeShellSources.openAddWorkspaceModal();
+      },
+      addRemoteWorkspace: props.navigation.openAddRemoteWorkspaceModal,
+      openInIde: (ideId) => {
+        void chromeShellSources.handleOpenProjectInIde(ideId);
+      },
+      newTerminal: props.navigation.openCreateTerminalModal,
+      newAgent: props.navigation.openCreateAgentModal,
+      newBrowser: chromeShellSources.openWorkspaceBrowserFromTitleBar,
+      refreshWorkspace: () => {
+        void props.safely(() => noraWorkspaceManagementClient.refreshWorkspace());
+      },
+      closeWorkspace: () => {
+        void props.safely(() => noraWorkspaceManagementClient.closeWorkspace());
+      },
+      openRecentWorkspace: (rootPath, name) => {
+        void props.workspaceLifecycle.handleOpenRecentWorkspace(rootPath, name);
+      },
+      toggleWorkspaceSidebar: () => {
+        chromeShellSources.setIsWorkspaceSidebarCollapsed((current) => !current);
+      },
+      toggleChangesSidebar: () => {
+        chromeShellSources.setIsChangesSidebarCollapsed((current) => !current);
+      },
+      toggleLocalTerminalDock: () => {
+        chromeShellSources.setIsLocalTerminalDockCollapsed((current) => !current);
+      },
+      focusLocalTerminalDock: () => {
+        void chromeShellSources.focusLocalTerminalDock();
+      },
+      focusPreviousSessionTab: () => {
+        chromeShellSources.keyboardShortcutActions["focus-previous-session-tab"]();
+      },
+      focusNextSessionTab: () => {
+        chromeShellSources.keyboardShortcutActions["focus-next-session-tab"]();
+      },
+      openKeyboardShortcuts: props.uiCommands.openKeyboardShortcutsDialog,
+      openStartupDependencies: chromeShellSources.openStartupDependenciesDialog,
+      submitIssue: chromeShellSources.handleSubmitIssue,
+      openAbout: props.uiCommands.openAboutDialog
+    }),
+    [
+      chromeShellSources,
+      props.navigation.openAddRemoteWorkspaceModal,
+      props.navigation.openCreateTerminalModal,
+      props.navigation.openCreateAgentModal,
+      props.safely,
+      props.workspaceLifecycle.handleOpenRecentWorkspace,
+      props.uiCommands.openKeyboardShortcutsDialog,
+      props.uiCommands.openAboutDialog
+    ]
+  );
+  useMacApplicationMenuBridge({
+    enabled: isDarwinPlatform,
+    payload: macApplicationMenuPayload,
+    handlers: isDarwinPlatform ? macApplicationMenuHandlers : null
   });
   const settingsRuntimeAssemblyInput = useAppRootSettingsRuntimeAssemblyInput({
     setActiveView,
