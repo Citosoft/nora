@@ -15,6 +15,7 @@ import {
 } from "@/components/app/logic/workspaceSessionTabs";
 import { AiChatPanel } from "@/components/app/panels/AiChatPanel";
 import { BrowserTabPanel } from "@/components/app/panels/BrowserTabPanel";
+import { SessionTabPane, SessionTabStack } from "@/components/app/panels/SessionTabStack";
 import { DiffViewer } from "@/components/app/panels/DiffViewer";
 import { FileEditorPanel } from "@/components/app/panels/FileEditorPanel";
 import { FocusedAgentPanel } from "@/components/app/panels/FocusedAgentPanel";
@@ -43,6 +44,7 @@ import type {
 } from "@shared/appTypes";
 import { Bot, FileDiff, FileText, GitPullRequest, Globe, LayoutPanelTop, MessageSquare, Plus, TerminalSquare, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
 
 function assertUnreachable(value: never): never {
@@ -448,6 +450,9 @@ export function WorkspaceSessionPanel() {
     browserTabs,
     aiChatTab,
     aiChatTabs,
+    aiSettings,
+    aiModelOptions,
+    aiModelLoading,
     forgeOverview,
     forgeDetail,
     forgeDetailLoading,
@@ -492,8 +497,13 @@ export function WorkspaceSessionPanel() {
     onCloseBrowserTab,
     onOpenAiChat,
     onOpenFileEditor,
+    onSelectAiChatProviderModel,
+    onOpenAiSettings,
     onFocusAiChatTab,
     onCloseAiChatTab,
+    onUpdateAiChatTabMessages,
+    onUpdateAiChatTabReasoningMode,
+    onUpdateAiChatTabTitle,
     onFocusForgeViewerTab,
     onCloseForgeViewerTab,
     onOpenForgeUrl,
@@ -521,6 +531,15 @@ export function WorkspaceSessionPanel() {
   const stableProjectScripts = useMemo(() => projectScripts, [getProjectScriptsSignature(projectScripts)]);
   const stableTools = useMemo(() => tools, [getToolsSignature(tools)]);
   const stableBrowserTabs = useMemo(() => browserTabs, [getBrowserTabsSignature(browserTabs)]);
+  const projectScopedBrowserTabs = useMemo(
+    () =>
+      !project?.id ? stableBrowserTabs : stableBrowserTabs.filter((t) => t.projectId === project.id),
+    [project?.id, stableBrowserTabs]
+  );
+  const projectScopedAiChatTabs = useMemo(
+    () => (!project?.id ? aiChatTabs : aiChatTabs.filter((t) => t.projectId === project.id)),
+    [aiChatTabs, project?.id]
+  );
 
   const chooseProjectRef = useRef(onChooseProject);
   const refreshCatalogRef = useRef(onRefreshCatalog);
@@ -697,97 +716,7 @@ export function WorkspaceSessionPanel() {
     onSetActiveWorkspaceContentTab(null);
     onExitSplitView();
   }, [onSetActiveWorkspaceContentTab, onExitSplitView]);
-  const renderActiveWorkspaceContent = () => {
-    if (activeView) {
-      return (
-        <>
-          <div className="border-b border-border/60 bg-background/40 px-4 py-2 text-xs text-muted-foreground">
-            Focus an agent or terminal from the left sidebar, then use <span className="font-medium text-foreground">{addFocusedLabel}</span> to add it to this view.
-          </div>
-          <WorkspaceSplitViewPanel view={activeView} />
-        </>
-      );
-    }
-    if (activeWorkspaceContentTab === "diff" && isDiffExpanded && isFullDiffExpanded) {
-      return (
-        <FullDiffViewer
-          changes={snapshot?.changes ?? []}
-          resolvedTheme={resolvedTheme}
-        />
-      );
-    }
-    if (activeWorkspaceContentTab === "diff" && isDiffExpanded && selectedDiffChange) {
-      return (
-        <DiffViewer
-          change={selectedDiffChange}
-          expanded
-          resolvedTheme={resolvedTheme}
-          onClose={onCloseExpandedDiff}
-        />
-      );
-    }
-    if (activeWorkspaceContentTab === "file" && fileEditorState && activeFileEditorTab) {
-      return (
-        <FileEditorPanel
-          title="File editor"
-          showTabStrip={false}
-          onGenerateTasks={
-            activeSpecEditorTab
-              ? () => {
-                  onGenerateTasksFromSpec(activeSpecEditorTab.projectId, activeSpecEditorTab.path);
-                }
-              : null
-          }
-          agentSendTargets={fileEditorAgentSendTargets}
-          onExitFileEditorForAgentHandoff={handleExitFileEditorForAgentHandoff}
-          onOpenFileEditor={openFileEditor}
-          onClose={() => onCloseFileEditorTab(activeFileEditorTab.path)}
-        />
-      );
-    }
-    if (forgeViewerTab) {
-      if (forgeViewerTab.kind === "workflow_run") {
-        return (
-          <ForgeWorkflowRunPanel
-            projectId={forgeViewerTab.projectId}
-            runId={forgeViewerTab.number}
-            onOpenUrl={onOpenForgeUrl}
-          />
-        );
-      }
-      return (
-        <ForgeDetailPanel
-          detail={forgeDetail}
-          detailLoading={forgeDetailLoading}
-          detailErrorMessage={forgeDetailErrorMessage}
-          actionLoading={forgeActionLoading}
-          commentLoading={forgeCommentLoading}
-          resolvedTheme={resolvedTheme}
-          tools={stableTools}
-          onOpenUrl={onOpenForgeUrl}
-          onBackToList={() => onCloseForgeViewerTab(forgeViewerTab.id)}
-          onRefreshDetail={onRefreshForgeItem}
-          onAction={onForgeAction}
-          onCommentSubmit={onForgeCommentSubmit}
-          onSpawnIssueAgent={onSpawnIssueAgent}
-          repoFullName={forgeOverview?.repo?.fullName ?? null}
-          repoProvider={forgeOverview?.repo?.provider ?? "github"}
-        />
-      );
-    }
-    if (aiChatTab) {
-      return <AiChatPanel />;
-    }
-    if (browserTab) {
-      return <BrowserTabPanel />;
-    }
-    return (
-      <FocusedAgentPanel
-        agent={stableAgent}
-        terminal={stableTerminal}
-      />
-    );
-  };
+
   const contextValue = {
     project,
     workspace: stableWorkspace,
@@ -907,6 +836,155 @@ export function WorkspaceSessionPanel() {
     return assertUnreachable(tab);
   };
 
+  const mountFullDiff =
+    activeWorkspaceContentTab === "diff" && isDiffExpanded && isFullDiffExpanded;
+  const mountDiffViewer =
+    activeWorkspaceContentTab === "diff" &&
+    isDiffExpanded &&
+    !isFullDiffExpanded &&
+    Boolean(selectedDiffChange);
+  const mountFileEditor = (fileEditorState?.tabs.length ?? 0) > 0;
+  const mountForge = forgeViewerTabs.length > 0;
+  const mountAiChats = projectScopedAiChatTabs.length > 0;
+  const mountBrowsers = projectScopedBrowserTabs.length > 0;
+
+  const showFullDiff = mountFullDiff;
+  const showDiffViewer = mountDiffViewer;
+  const showFileEditor =
+    activeWorkspaceContentTab === "file" && Boolean(fileEditorState && activeFileEditorTab);
+  const showForge = Boolean(forgeViewerTab);
+  const showAiChat = Boolean(aiChatTab);
+  const showBrowser = Boolean(browserTab);
+  const showAgentPanel =
+    !showFullDiff &&
+    !showDiffViewer &&
+    !showFileEditor &&
+    !showForge &&
+    !showAiChat &&
+    !showBrowser;
+
+  const workspaceCenterBody: ReactNode = activeView ? (
+    <SessionTabStack>
+      <SessionTabPane visible>
+        <>
+          <div className="border-b border-border/60 bg-background/40 px-4 py-2 text-xs text-muted-foreground">
+            Focus an agent or terminal from the left sidebar, then use{" "}
+            <span className="font-medium text-foreground">{addFocusedLabel}</span> to add it to this view.
+          </div>
+          <WorkspaceSplitViewPanel view={activeView} />
+        </>
+      </SessionTabPane>
+    </SessionTabStack>
+  ) : (
+    <SessionTabStack>
+      {mountFullDiff ? (
+        <SessionTabPane visible={showFullDiff}>
+          <FullDiffViewer changes={snapshot?.changes ?? []} resolvedTheme={resolvedTheme} />
+        </SessionTabPane>
+      ) : null}
+      {mountDiffViewer ? (
+        <SessionTabPane visible={showDiffViewer}>
+          <DiffViewer
+            change={selectedDiffChange!}
+            expanded
+            resolvedTheme={resolvedTheme}
+            onClose={onCloseExpandedDiff}
+          />
+        </SessionTabPane>
+      ) : null}
+      {mountFileEditor ? (
+        <SessionTabPane visible={showFileEditor}>
+          <FileEditorPanel
+            title="File editor"
+            showTabStrip={false}
+            onGenerateTasks={
+              activeSpecEditorTab
+                ? () => {
+                    onGenerateTasksFromSpec(activeSpecEditorTab.projectId, activeSpecEditorTab.path);
+                  }
+                : null
+            }
+            agentSendTargets={fileEditorAgentSendTargets}
+            onExitFileEditorForAgentHandoff={handleExitFileEditorForAgentHandoff}
+            onOpenFileEditor={openFileEditor}
+            onClose={() => {
+              if (activeFileEditorTab) {
+                onCloseFileEditorTab(activeFileEditorTab.path);
+              }
+            }}
+          />
+        </SessionTabPane>
+      ) : null}
+      {mountForge ? (
+        <SessionTabPane visible={showForge}>
+          {forgeViewerTab ? (
+            forgeViewerTab.kind === "workflow_run" ? (
+              <ForgeWorkflowRunPanel
+                projectId={forgeViewerTab.projectId}
+                runId={forgeViewerTab.number}
+                onOpenUrl={onOpenForgeUrl}
+              />
+            ) : (
+              <ForgeDetailPanel
+                detail={forgeDetail}
+                detailLoading={forgeDetailLoading}
+                detailErrorMessage={forgeDetailErrorMessage}
+                actionLoading={forgeActionLoading}
+                commentLoading={forgeCommentLoading}
+                resolvedTheme={resolvedTheme}
+                tools={stableTools}
+                onOpenUrl={onOpenForgeUrl}
+                onBackToList={() => onCloseForgeViewerTab(forgeViewerTab.id)}
+                onRefreshDetail={onRefreshForgeItem}
+                onAction={onForgeAction}
+                onCommentSubmit={onForgeCommentSubmit}
+                onSpawnIssueAgent={onSpawnIssueAgent}
+                repoFullName={forgeOverview?.repo?.fullName ?? null}
+                repoProvider={forgeOverview?.repo?.provider ?? "github"}
+              />
+            )
+          ) : (
+            <div className="flex flex-1 items-center justify-center bg-card/95 text-sm text-muted-foreground">
+              Open a Forge item from the sidebar to load details here.
+            </div>
+          )}
+        </SessionTabPane>
+      ) : null}
+      {mountAiChats
+        ? projectScopedAiChatTabs.map((chatTab) => (
+            <SessionTabPane key={chatTab.id} visible={Boolean(showAiChat && aiChatTab?.id === chatTab.id)}>
+              <AiChatPanel
+                tabId={chatTab.id}
+                reasoningMode={chatTab.reasoningMode}
+                messages={chatTab.messages}
+                onReasoningModeChange={(mode) => onUpdateAiChatTabReasoningMode(chatTab.id, mode)}
+                onSetChatTitle={(title) => onUpdateAiChatTabTitle(chatTab.id, title)}
+                onMessagesChange={(nextMessages) => onUpdateAiChatTabMessages(chatTab.id, () => nextMessages)}
+                aiSettings={aiSettings}
+                aiModelOptions={aiModelOptions}
+                aiModelLoading={aiModelLoading}
+                onSelectAiChatProviderModel={onSelectAiChatProviderModel}
+                onOpenAiSettings={onOpenAiSettings}
+              />
+            </SessionTabPane>
+          ))
+        : null}
+      {mountBrowsers
+        ? projectScopedBrowserTabs.map((browserTabState) => (
+            <SessionTabPane
+              key={browserTabState.id}
+              visible={Boolean(showBrowser && browserTab?.id === browserTabState.id)}
+            >
+              <BrowserTabPanel tab={browserTabState} />
+            </SessionTabPane>
+          ))
+        : null}
+      <SessionTabPane visible={showAgentPanel}>
+        <FocusedAgentPanel agent={stableAgent} terminal={stableTerminal} />
+      </SessionTabPane>
+    </SessionTabStack>
+  );
+
   return (
     <WorkspaceSessionProvider value={contextValue}>
       <div className="flex h-full min-h-0 flex-col">
@@ -959,9 +1037,7 @@ export function WorkspaceSessionPanel() {
             <WorkspaceSessionToolbar />
           </div>
         ) : null}
-        <div className="min-h-0 flex-1 overflow-hidden">
-          {renderActiveWorkspaceContent()}
-        </div>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{workspaceCenterBody}</div>
       </div>
     </WorkspaceSessionProvider>
   );
