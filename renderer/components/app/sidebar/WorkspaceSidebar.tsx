@@ -78,6 +78,8 @@ export const WorkspaceSidebar = () => {
     onFocusWorkspaceTerminal,
     onRestartAgent,
     onDestroyAgentRequest,
+    onRenameTerminal,
+    onDestroyTerminal,
     onOpenTask,
     onCreateTask,
     onOpenSpec,
@@ -105,23 +107,27 @@ export const WorkspaceSidebar = () => {
     activeNoteMenu,
     activeWorkspaceMenu,
     activeAgentMenu,
+    activeTerminalMenu,
     taskMenuRef,
     specMenuRef,
     noteMenuRef,
     workspaceMenuRef,
     agentMenuRef,
+    terminalMenuRef,
     openTaskMenu,
     openSpecMenu,
     openNoteMenu,
     openWorkspaceMenu,
     openAgentSessionMenu,
+    openTerminalSessionMenu,
     openSessionPopover,
     scheduleSessionPopoverClose,
     setActiveTaskMenu,
     setActiveSpecMenu,
     setActiveNoteMenu,
     setActiveWorkspaceMenu,
-    setActiveAgentMenu
+    setActiveAgentMenu,
+    setActiveTerminalMenu
   } = useWorkspaceSidebarOverlays();
 
   const {
@@ -299,6 +305,7 @@ export const WorkspaceSidebar = () => {
                           openSessionPopover={openSessionPopover}
                           scheduleSessionPopoverClose={scheduleSessionPopoverClose}
                           openAgentSessionMenu={openAgentSessionMenu}
+                          openTerminalSessionMenu={openTerminalSessionMenu}
                           openTaskMenu={openTaskMenu}
                           openSpecMenu={openSpecMenu}
                           openNoteMenu={openNoteMenu}
@@ -404,16 +411,19 @@ export const WorkspaceSidebar = () => {
         activeNoteMenu={activeNoteMenu}
         activeWorkspaceMenu={activeWorkspaceMenu}
         activeAgentMenu={activeAgentMenu}
+        activeTerminalMenu={activeTerminalMenu}
         taskMenuRef={taskMenuRef}
         specMenuRef={specMenuRef}
         noteMenuRef={noteMenuRef}
         workspaceMenuRef={workspaceMenuRef}
         agentMenuRef={agentMenuRef}
+        terminalMenuRef={terminalMenuRef}
         setActiveTaskMenu={setActiveTaskMenu}
         setActiveSpecMenu={setActiveSpecMenu}
         setActiveNoteMenu={setActiveNoteMenu}
         setActiveWorkspaceMenu={setActiveWorkspaceMenu}
         setActiveAgentMenu={setActiveAgentMenu}
+        setActiveTerminalMenu={setActiveTerminalMenu}
         onToggleTaskComplete={onToggleTaskComplete}
         onDeleteTask={onDeleteTask}
         onGenerateTasksFromSpec={onGenerateTasksFromSpec}
@@ -432,6 +442,8 @@ export const WorkspaceSidebar = () => {
         onFocusWorkspaceAgent={onFocusWorkspaceAgent}
         onRestartAgent={onRestartAgent}
         onDestroyAgentRequest={onDestroyAgentRequest}
+        onRenameTerminal={onRenameTerminal}
+        onDestroyTerminal={onDestroyTerminal}
       />
     </Card>
   );

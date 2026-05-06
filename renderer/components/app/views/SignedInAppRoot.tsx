@@ -470,6 +470,8 @@ function SignedInAppRootContent({
     updateThemeMode: props.preferences.updateThemeMode,
     accentColor: props.preferences.accentColor,
     updateAccentColor: props.preferences.updateAccentColor,
+    uiFontId: props.preferences.uiFontId,
+    updateUiFont: props.preferences.updateUiFont,
     terminalThemeId: props.preferences.terminalThemeId,
     updateTerminalTheme: props.preferences.updateTerminalTheme,
     terminalFontId: props.preferences.terminalFontId,

@@ -125,6 +125,7 @@ export function WorkbenchSettingsSection() {
               );
             }}
           >
+            <option value="2x1">2 x 1</option>
             <option value="1x2">1 x 2</option>
             <option value="2x2">2 x 2</option>
             <option value="3x2">3 x 2</option>

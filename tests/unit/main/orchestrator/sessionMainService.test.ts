@@ -162,6 +162,7 @@ function createDeps(args: {
     appendAgentContextEntries: async (_agent, entries) => {
       args.appendedEntries.push(entries);
     },
+    updateTerminal: () => undefined,
     writeAgentContextBundle:
       args.writeAgentContextBundle ??
       (async (agent, bundleId, content) => {

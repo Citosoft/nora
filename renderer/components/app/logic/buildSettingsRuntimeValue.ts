@@ -9,6 +9,8 @@ export const buildSettingsRuntimeValue = (d: BuildSettingsRuntimeValueDeps): Set
   updateThemeMode: d.updateThemeMode,
   accentColor: d.accentColor,
   updateAccentColor: d.updateAccentColor,
+  uiFontId: d.uiFontId,
+  updateUiFont: d.updateUiFont,
   terminalThemeId: d.terminalThemeId,
   updateTerminalTheme: d.updateTerminalTheme,
   terminalFontId: d.terminalFontId,

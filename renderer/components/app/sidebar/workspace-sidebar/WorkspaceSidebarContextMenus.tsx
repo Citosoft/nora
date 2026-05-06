@@ -2,7 +2,7 @@ import { resolveTaskCompletionTogglePath } from "@/components/app/logic/appUtils
 import { WorkspaceWorkspaceActionsMenuItems } from "@/components/app/sidebar/workspace-sidebar/WorkspaceWorkspaceActionsMenuItems";
 import type { WorkspaceSidebarContextMenusProps } from "@/components/app/types/workspaceSidebarContextMenus.types";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { ExternalLink, FileText, FolderKanban, RefreshCcw, TerminalSquare, Trash2 } from "lucide-react";
+import { ExternalLink, FileText, FolderKanban, Pencil, RefreshCcw, TerminalSquare, Trash2 } from "lucide-react";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
 
 export const WorkspaceSidebarContextMenus = ({
@@ -17,16 +17,19 @@ export const WorkspaceSidebarContextMenus = ({
   activeNoteMenu,
   activeWorkspaceMenu,
   activeAgentMenu,
+  activeTerminalMenu,
   taskMenuRef,
   specMenuRef,
   noteMenuRef,
   workspaceMenuRef,
   agentMenuRef,
+  terminalMenuRef,
   setActiveTaskMenu,
   setActiveSpecMenu,
   setActiveNoteMenu,
   setActiveWorkspaceMenu,
   setActiveAgentMenu,
+  setActiveTerminalMenu,
   onToggleTaskComplete,
   onDeleteTask,
   onGenerateTasksFromSpec,
@@ -44,7 +47,9 @@ export const WorkspaceSidebarContextMenus = ({
   onFocusAgent,
   onFocusWorkspaceAgent,
   onRestartAgent,
-  onDestroyAgentRequest
+  onDestroyAgentRequest,
+  onRenameTerminal,
+  onDestroyTerminal
 }: WorkspaceSidebarContextMenusProps) => {
   const snapshot = useCanonicalAppSnapshot();
   if (!snapshot) {
@@ -215,6 +220,38 @@ export const WorkspaceSidebarContextMenus = ({
           >
             <Trash2 className="size-4" />
             Destroy session
+          </DropdownMenuItem>
+        </div>
+      ) : null}
+      {activeTerminalMenu ? (
+        <div
+          ref={terminalMenuRef}
+          className="fixed z-20 w-56 rounded-[4px] border border-border/70 bg-popover/95 p-1 shadow-2xl backdrop-blur"
+          style={{ top: activeTerminalMenu.top, left: activeTerminalMenu.left }}
+        >
+          <DropdownMenuItem
+            onSelect={() => {
+              const nextName = window.prompt("Rename terminal", activeTerminalMenu.terminalName);
+              setActiveTerminalMenu(null);
+              if (nextName === null || nextName.trim() === activeTerminalMenu.terminalName.trim()) {
+                return;
+              }
+              void onRenameTerminal(activeTerminalMenu.terminalId, nextName);
+            }}
+          >
+            <Pencil className="size-4" />
+            Rename terminal
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            destructive
+            onSelect={() => {
+              const { terminalId } = activeTerminalMenu;
+              setActiveTerminalMenu(null);
+              void onDestroyTerminal(terminalId);
+            }}
+          >
+            <Trash2 className="size-4" />
+            Close terminal
           </DropdownMenuItem>
         </div>
       ) : null}

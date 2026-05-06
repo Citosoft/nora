@@ -6,6 +6,7 @@ export function createSessionService(deps: SessionServiceDeps): SessionService {
   return {
     createAgent: deps.createAgent,
     createTerminal: deps.createTerminal,
+    renameTerminal: deps.renameTerminal,
     openLocalTerminal: deps.openLocalTerminal,
     clearAgentContext: deps.clearAgentContext,
     clearAgentTerminal: deps.clearAgentTerminal,

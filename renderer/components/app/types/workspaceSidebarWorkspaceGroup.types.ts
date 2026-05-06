@@ -51,6 +51,7 @@ export type WorkspaceSidebarWorkspaceGroupProps = {
   openSessionPopover: (sessionId: string) => void;
   scheduleSessionPopoverClose: () => void;
   openAgentSessionMenu: (workspaceId: string, agent: AgentSession, pullRequestWebUrl: string | null, event: MouseEvent<Element>) => void;
+  openTerminalSessionMenu: (workspaceId: string, terminal: TerminalSession, event: MouseEvent<Element>) => void;
   openTaskMenu: (task: TaskListEntry, event: MouseEvent<HTMLButtonElement>) => void;
   openSpecMenu: (spec: SpecListEntry, event: MouseEvent<HTMLButtonElement>) => void;
   openNoteMenu: (note: NoteListEntry, event: MouseEvent<HTMLButtonElement>) => void;

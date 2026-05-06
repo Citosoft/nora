@@ -1,7 +1,8 @@
 import type { NoteListEntry, SpecListEntry, TaskListEntry } from "@/components/app/types/component.types";
 import type { WorkspaceSidebarAgentContextMenuState } from "@/components/app/types/workspaceSidebarAgentContextMenu.types";
+import type { WorkspaceSidebarTerminalContextMenuState } from "@/components/app/types/workspaceSidebarTerminalContextMenu.types";
 import type { UseWorkspaceSidebarOverlaysResult } from "@/components/app/types/useWorkspaceSidebarOverlays.types";
-import type { AgentSession } from "@shared/appTypes";
+import type { AgentSession, TerminalSession } from "@shared/appTypes";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 
 export const useWorkspaceSidebarOverlays = (): UseWorkspaceSidebarOverlaysResult => {
@@ -28,11 +29,13 @@ export const useWorkspaceSidebarOverlays = (): UseWorkspaceSidebarOverlaysResult
     left: number;
   } | null>(null);
   const [activeAgentMenu, setActiveAgentMenu] = useState<WorkspaceSidebarAgentContextMenuState | null>(null);
+  const [activeTerminalMenu, setActiveTerminalMenu] = useState<WorkspaceSidebarTerminalContextMenuState | null>(null);
   const taskMenuRef = useRef<HTMLDivElement | null>(null);
   const specMenuRef = useRef<HTMLDivElement | null>(null);
   const noteMenuRef = useRef<HTMLDivElement | null>(null);
   const workspaceMenuRef = useRef<HTMLDivElement | null>(null);
   const agentMenuRef = useRef<HTMLDivElement | null>(null);
+  const terminalMenuRef = useRef<HTMLDivElement | null>(null);
   const sessionPopoverCloseTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -53,6 +56,7 @@ export const useWorkspaceSidebarOverlays = (): UseWorkspaceSidebarOverlaysResult
         setActiveNoteMenu(null);
         setActiveWorkspaceMenu(null);
         setActiveAgentMenu(null);
+        setActiveTerminalMenu(null);
         setActiveSessionPopoverId(null);
       }
     };
@@ -173,6 +177,28 @@ export const useWorkspaceSidebarOverlays = (): UseWorkspaceSidebarOverlaysResult
     };
   }, [activeAgentMenu]);
 
+  useEffect(() => {
+    if (!activeTerminalMenu) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!terminalMenuRef.current) {
+        return;
+      }
+
+      const target = event.target;
+      if (target instanceof Node && !terminalMenuRef.current.contains(target)) {
+        setActiveTerminalMenu(null);
+      }
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [activeTerminalMenu]);
+
   useEffect(
     () => () => {
       if (sessionPopoverCloseTimeoutRef.current !== null) {
@@ -250,6 +276,23 @@ export const useWorkspaceSidebarOverlays = (): UseWorkspaceSidebarOverlaysResult
     });
   };
 
+  const openTerminalSessionMenu = (
+    workspaceId: string,
+    terminal: TerminalSession,
+    event: MouseEvent<Element>
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const menuWidth = 220;
+    setActiveTerminalMenu({
+      workspaceId,
+      terminalId: terminal.id,
+      terminalName: terminal.name,
+      top: Math.min(event.clientY, window.innerHeight - 100),
+      left: Math.min(event.clientX, window.innerWidth - menuWidth - 16)
+    });
+  };
+
   const openSessionPopover = (sessionId: string) => {
     if (sessionPopoverCloseTimeoutRef.current !== null) {
       window.clearTimeout(sessionPopoverCloseTimeoutRef.current);
@@ -277,22 +320,26 @@ export const useWorkspaceSidebarOverlays = (): UseWorkspaceSidebarOverlaysResult
     activeNoteMenu,
     activeWorkspaceMenu,
     activeAgentMenu,
+    activeTerminalMenu,
     taskMenuRef,
     specMenuRef,
     noteMenuRef,
     workspaceMenuRef,
     agentMenuRef,
+    terminalMenuRef,
     openTaskMenu,
     openSpecMenu,
     openNoteMenu,
     openWorkspaceMenu,
     openAgentSessionMenu,
+    openTerminalSessionMenu,
     openSessionPopover,
     scheduleSessionPopoverClose,
     setActiveTaskMenu,
     setActiveSpecMenu,
     setActiveNoteMenu,
     setActiveWorkspaceMenu,
-    setActiveAgentMenu
+    setActiveAgentMenu,
+    setActiveTerminalMenu
   };
 };

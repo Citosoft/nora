@@ -31,6 +31,9 @@ export function registerSessionIpc({ services, withSnapshot }: RegisterSessionIp
   ipcMain.handle("app:create-terminal", (_event, payload: CreateTerminalPayload) =>
     withSnapshot(() => services.session.createTerminal(payload))
   );
+  ipcMain.handle("app:rename-terminal", (_event, sessionId: string, name: string) =>
+    withSnapshot(() => services.session.renameTerminal(sessionId, name))
+  );
   ipcMain.handle("app:open-local-terminal", (_event, shellId?: string) =>
     services.session.openLocalTerminal(shellId)
   );

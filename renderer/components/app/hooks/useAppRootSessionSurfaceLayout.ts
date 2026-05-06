@@ -16,6 +16,7 @@ import { useCallback } from "react";
 export const useAppRootSessionSurfaceLayout = ({
   uiState,
   fileEditorState,
+  activeWorkspaceContentTab,
   isCenterDiffExpanded,
   isCenterFullDiffExpanded,
   selectedChange,
@@ -51,6 +52,12 @@ export const useAppRootSessionSurfaceLayout = ({
           (tab) => tab.id === uiState.focusedAiChatTabId && tab.projectId === focusedWorkspace.project.id
         ) ?? null
       : null;
+  const activeFileEditorTab =
+    focusedWorkspace && fileEditorState
+      ? fileEditorState.tabs.find(
+          (tab) => tab.path === fileEditorState.activePath && tab.projectId === focusedWorkspace.project.id
+        ) ?? fileEditorState.tabs.find((tab) => tab.projectId === focusedWorkspace.project.id) ?? null
+      : null;
   const hasActiveWorkspace = !!snapshot?.project;
   const activeSplitViewCollection =
     snapshot?.project
@@ -81,6 +88,9 @@ export const useAppRootSessionSurfaceLayout = ({
     projectId: snapshot?.project?.id ?? null,
     agent: focusedAgent,
     terminal: focusedTerminal,
+    browserTab: focusedBrowserTab,
+    activeFileEditorTab,
+    activeWorkspaceContentTab,
     defaultGridColumns,
     defaultGridRows,
     rememberLastViewPerWorkspace,

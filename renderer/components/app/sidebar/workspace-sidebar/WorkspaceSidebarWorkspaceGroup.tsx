@@ -1,4 +1,5 @@
 import { createQuickTerminalDialogDefaults, createQuickTerminalPayload } from "@/components/app/logic/terminalQuickLaunch";
+import { setWorkspaceRelativePathDragData } from "@/components/app/logic/workspacePathDrag";
 import { createScriptTerminalDefaults, formatWorkspaceScriptActionLabel, getPreferredWorkspaceScripts } from "@/components/app/logic/workspaceScripts";
 import { setWorkspaceTaskDragData } from "@/components/app/logic/workspaceTaskDrag";
 import { WorkspaceProjectIcon } from "@/components/app/shared/Tooling";
@@ -67,6 +68,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
   openSessionPopover,
   scheduleSessionPopoverClose,
   openAgentSessionMenu,
+  openTerminalSessionMenu,
   openTaskMenu,
   openSpecMenu,
   openNoteMenu,
@@ -133,6 +135,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
       openSessionPopover,
       scheduleSessionPopoverClose,
       openAgentSessionMenu,
+      openTerminalSessionMenu,
       onFocusAgent,
       onFocusTerminal,
       onFocusWorkspaceAgent,
@@ -481,6 +484,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                             taskPath: task.path,
                             taskTitle: task.title
                           });
+                          setWorkspaceRelativePathDragData(event.dataTransfer, task.path, "file");
                         }}
                         className="flex w-full min-w-0 items-start gap-2 rounded-[4px] border border-transparent px-2 py-1.5 text-left transition hover:bg-accent/40"
                         title={`${task.projectName}\n${task.path}`}
@@ -554,8 +558,12 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                       <button
                         key={`${spec.projectId}:${spec.path}`}
                         type="button"
+                        draggable
                         onClick={() => onOpenSpec(spec.projectId, spec.path)}
                         onContextMenu={(event) => openSpecMenu(spec, event)}
+                        onDragStart={(event) => {
+                          setWorkspaceRelativePathDragData(event.dataTransfer, spec.path, "file");
+                        }}
                         className="flex w-full min-w-0 items-start gap-2 rounded-[4px] border border-transparent px-2 py-1.5 text-left transition hover:bg-accent/40"
                         title={`${spec.projectName}\n${spec.path}`}
                       >
@@ -621,8 +629,12 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                       <button
                         key={`${note.projectId}:${note.path}`}
                         type="button"
+                        draggable
                         onClick={() => onOpenNote(note.projectId, note.path)}
                         onContextMenu={(event) => openNoteMenu(note, event)}
+                        onDragStart={(event) => {
+                          setWorkspaceRelativePathDragData(event.dataTransfer, note.path, "file");
+                        }}
                         className="flex w-full min-w-0 items-start gap-2 rounded-[4px] border border-transparent px-2 py-1.5 text-left transition hover:bg-accent/40"
                         title={`${note.projectName}\n${note.path}`}
                       >

@@ -35,6 +35,8 @@ export const buildAppShellSettingsRuntimeAssemblyInputFromDeps = (
     updateThemeMode: deps.updateThemeMode,
     accentColor: deps.accentColor,
     updateAccentColor: deps.updateAccentColor,
+    uiFontId: deps.uiFontId,
+    updateUiFont: deps.updateUiFont,
     terminalThemeId: deps.terminalThemeId,
     updateTerminalTheme: deps.updateTerminalTheme,
     terminalFontId: deps.terminalFontId,

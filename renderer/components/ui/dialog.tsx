@@ -11,7 +11,7 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-6 backdrop-blur-sm"
+      className="fixed inset-0 z-[30000] grid place-items-center bg-background/80 p-6 backdrop-blur-sm"
       onClick={() => onOpenChange(false)}
     >
       <div onClick={(event) => event.stopPropagation()}>{children}</div>

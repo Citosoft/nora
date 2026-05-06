@@ -21,6 +21,7 @@ export type SessionMainServiceDeps = {
   getAgentTerminalActionDependencies: () => AgentTerminalActionDeps;
   getSessionActionDependencies: () => SessionActionDeps;
   getSnapshot: () => AppState;
+  updateTerminal: (terminalId: string, partial: Partial<import("@shared/appTypes").TerminalSession>) => void;
   nowIso: () => string;
   randomId: () => string;
   readAgentContextEntries: (agent: AgentSession) => Promise<AgentContextEntry[]>;

@@ -1,3 +1,4 @@
+import { setWorkspaceSplitViewItemDragData } from "@/components/app/logic/workspaceSplitViewDrag";
 import { isAgentBusyAt } from "@/components/app/logic/agentBusy";
 import {
   formatWorkspaceSessionTimestamp,
@@ -32,6 +33,7 @@ export type WorkspaceSidebarWorkspaceSessionRowProps = {
   openSessionPopover: (sessionId: string) => void;
   scheduleSessionPopoverClose: () => void;
   openAgentSessionMenu: (workspaceId: string, agent: AgentSession, pullRequestWebUrl: string | null, event: MouseEvent<Element>) => void;
+  openTerminalSessionMenu: (workspaceId: string, terminal: TerminalSession, event: MouseEvent<Element>) => void;
   onFocusAgent: (agentId: string) => void;
   onFocusTerminal: (terminalId: string) => void;
   onFocusWorkspaceAgent: (workspaceId: string, agentId: string) => void;
@@ -52,6 +54,7 @@ export const WorkspaceSidebarWorkspaceSessionRow = ({
   openSessionPopover,
   scheduleSessionPopoverClose,
   openAgentSessionMenu,
+  openTerminalSessionMenu,
   onFocusAgent,
   onFocusTerminal,
   onFocusWorkspaceAgent,
@@ -188,17 +191,36 @@ export const WorkspaceSidebarWorkspaceSessionRow = ({
       <PopoverTrigger asChild>
         <button
           type="button"
+          draggable
           onMouseEnter={() => openSessionPopover(item.id)}
           onMouseLeave={scheduleSessionPopoverClose}
           onFocus={() => openSessionPopover(item.id)}
           onBlur={scheduleSessionPopoverClose}
+          onDragStart={(event) => {
+            setWorkspaceSplitViewItemDragData(event.dataTransfer, {
+              projectId: workspaceId,
+              item:
+                kind === "agent"
+                  ? {
+                      kind: "agent",
+                      agentId: item.id,
+                      sessionId: item.sessionId
+                    }
+                  : {
+                      kind: "terminal",
+                      terminalId: item.id,
+                      sessionId: item.sessionId
+                    }
+            });
+          }}
           onContextMenu={(event) => {
-            if (kind !== "agent") {
+            if (kind === "agent") {
+              const branchPr = pullRequestStatusByWorkspaceBranch[`${workspaceId}:${item.branch.trim()}`] ?? null;
+              const prUrl = branchPr && workspaceSidebarHasPullRequestState(branchPr.state) ? branchPr.webUrl ?? null : null;
+              openAgentSessionMenu(workspaceId, item, prUrl, event);
               return;
             }
-            const branchPr = pullRequestStatusByWorkspaceBranch[`${workspaceId}:${item.branch.trim()}`] ?? null;
-            const prUrl = branchPr && workspaceSidebarHasPullRequestState(branchPr.state) ? branchPr.webUrl ?? null : null;
-            openAgentSessionMenu(workspaceId, item, prUrl, event);
+            openTerminalSessionMenu(workspaceId, item, event);
           }}
           onClick={() =>
             kind === "agent"

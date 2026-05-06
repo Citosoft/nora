@@ -1,10 +1,12 @@
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
+import { shouldOpenAnalyticsConsentDialog } from "@/components/app/logic/startupDialogVisibility";
 import type { UseAnalyticsConsentPromptArgs, UseAnalyticsConsentPromptResult } from "@/components/app/types/component.types";
 import { setAnalyticsConsentStatus, setAnalyticsRuntimeAllowed } from "@/lib/analytics";
 import { useCallback, useEffect, useState } from "react";
 
 export function useAnalyticsConsentPrompt({
   appSettings,
+  isAppSettingsLoaded,
   isOnboardingOpen,
   updateAnalyticsConsentStatus,
   captureError
@@ -31,10 +33,12 @@ export function useAnalyticsConsentPrompt({
 
   useEffect(() => {
     setAnalyticsConsentStatus(appSettings.analyticsConsentStatus);
-    setIsAnalyticsConsentDialogOpen(
-      appSettings.analyticsConsentStatus === "unknown" && !isOnboardingOpen
-    );
-  }, [appSettings.analyticsConsentStatus, isOnboardingOpen]);
+    setIsAnalyticsConsentDialogOpen(shouldOpenAnalyticsConsentDialog(
+      isAppSettingsLoaded,
+      appSettings.analyticsConsentStatus,
+      isOnboardingOpen
+    ));
+  }, [appSettings.analyticsConsentStatus, isAppSettingsLoaded, isOnboardingOpen]);
 
   const allowAnalyticsConsent = useCallback((): void => {
     setIsAnalyticsConsentDialogOpen(false);

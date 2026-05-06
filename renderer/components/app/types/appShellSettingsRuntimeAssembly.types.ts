@@ -9,6 +9,8 @@ export type AppShellSettingsRuntimeAssemblyInput = {
     | "updateThemeMode"
     | "accentColor"
     | "updateAccentColor"
+    | "uiFontId"
+    | "updateUiFont"
     | "terminalThemeId"
     | "updateTerminalTheme"
     | "terminalFontId"

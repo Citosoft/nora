@@ -476,7 +476,6 @@ export function WorkspaceSessionPanel() {
     showSessionTabs,
     activeView,
     activeWorkspaceContentTab,
-    addFocusedLabel
   } = useWorkspaceSessionPanelData();
   const {
     onChooseProject,
@@ -952,13 +951,7 @@ export function WorkspaceSessionPanel() {
   const workspaceCenterBody: ReactNode = activeView ? (
     <SessionTabStack>
       <SessionTabPane visible>
-        <>
-          <div className="border-b border-border/60 bg-background/40 px-4 py-2 text-xs text-muted-foreground">
-            Focus an agent or terminal from the left sidebar, then use{" "}
-            <span className="font-medium text-foreground">{addFocusedLabel}</span> to add it to this view.
-          </div>
-          <WorkspaceSplitViewPanel view={activeView} />
-        </>
+        <WorkspaceSplitViewPanel view={activeView} />
       </SessionTabPane>
     </SessionTabStack>
   ) : (

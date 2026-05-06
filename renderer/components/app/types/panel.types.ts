@@ -402,8 +402,6 @@ export type WorkspaceSessionPanelProps = {
   activeWorkspaceContentTab: "file" | "diff" | null;
   activeGridColumns: WorkspaceSplitView["gridColumns"];
   activeGridRows: WorkspaceSplitView["gridRows"];
-  addFocusedLabel: string;
-  canAddCurrentItem: boolean;
   onChooseProject: () => Promise<AppState | null>;
   onRefreshCatalog: () => Promise<AppState | null>;
   onCreateInWorkspace: (defaults: CreateAgentDialogDefaults) => void;
@@ -434,8 +432,11 @@ export type WorkspaceSessionPanelProps = {
   onCloseFileEditorTab: (path: string) => void;
   onSetActiveWorkspaceContentTab: (next: "file" | "diff" | null) => void;
   onChangeActiveFileEditorContent: (value: string) => void;
+  onChangeFileEditorTabContent: (path: string, value: string) => void;
   onSaveActiveFileEditor: () => void;
+  onSaveFileEditorTab: (path: string) => void;
   onRevertActiveFileEditor: () => void;
+  onRevertFileEditorTab: (path: string) => void;
   onCloseExpandedDiff: () => void;
   onCloseFullDiff: () => void;
   onRestart: (agentId: string) => Promise<AppState | null>;
@@ -448,7 +449,6 @@ export type WorkspaceSessionPanelProps = {
   onFocusAgent: (agentId: string) => void;
   onFocusTerminal: (terminalId: string) => void;
   onGridPresetChange: (gridColumns: WorkspaceSplitView["gridColumns"], gridRows: WorkspaceSplitView["gridRows"]) => void;
-  onAddFocused: () => void;
   onRenameActiveView: (name: string) => void;
   onDeleteActiveView: () => void;
   onRefreshForge: () => void;
@@ -459,6 +459,7 @@ export type WorkspaceSessionPanelProps = {
   onForgeAction: (action: ForgeWorkItemAction) => void;
   onForgeCommentSubmit: (payload: ForgeAddCommentPayload) => Promise<void>;
   onSpawnIssueAgent: (toolId: string) => Promise<void>;
+  onAddItemToView: (item: WorkspaceSplitViewItemReference) => void;
   onAddItemToSlot: (item: WorkspaceSplitViewItemReference, column: number, row: number) => void;
   onMoveTile: (tileId: string, deltaColumn: number, deltaRow: number) => void;
   onMoveTileToPosition: (tileId: string, column: number, row: number) => void;
@@ -486,10 +487,7 @@ export type WorkspaceSessionToolbarProps = {
   activeViewId: string | null;
   activeGridColumns: WorkspaceSplitView["gridColumns"];
   activeGridRows: WorkspaceSplitView["gridRows"];
-  addFocusedLabel: string;
-  canAddCurrentItem: boolean;
   onGridPresetChange: (gridColumns: WorkspaceSplitView["gridColumns"], gridRows: WorkspaceSplitView["gridRows"]) => void;
-  onAddFocused: () => void;
   onRenameView: (name: string) => void;
   onDeleteView: () => void;
 };

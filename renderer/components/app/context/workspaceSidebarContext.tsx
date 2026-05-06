@@ -121,6 +121,7 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
       ),
     onRestartAgent: (agentId) => d.safely(() => noraSessionClient.restartAgent(agentId)),
     onDestroyAgentRequest: (agentId) => d.uiCommands.setDestroyAgentId(agentId),
+    onRenameTerminal: (sessionId, nextName) => d.safely(() => noraSessionClient.renameTerminal(sessionId, nextName)),
     onFocusWorkspaceTerminal: (projectId, sessionId) =>
       d.focusWorkspaceWithRecovery(projectId).then((next) =>
         next
@@ -141,6 +142,7 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
               d.safely(() => noraSessionClient.focusTerminal(sessionId)))
           : null
       ),
+    onDestroyTerminal: (sessionId) => d.safely(() => noraSessionClient.destroyTerminal(sessionId)),
     onOpenTask,
     onCreateTask: (projectId) => {
       void d.createWorkspaceTask(projectId);

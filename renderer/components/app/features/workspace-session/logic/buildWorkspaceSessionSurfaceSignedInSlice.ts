@@ -9,8 +9,6 @@ export const buildWorkspaceSessionSurfaceSignedInSlice = (
     activeGridColumns: v.activeGridColumns,
     activeGridRows: v.activeGridRows,
     activeView: v.activeView,
-    addFocusedLabel: v.addFocusedLabel,
-    canAddCurrentItem: v.canAddCurrentItem,
     activeSplitViewCollection: input.activeSplitViewCollection,
     activeWorkspaceContentTab: input.activeWorkspaceContentTab,
     fileEditorState: input.fileEditorState,

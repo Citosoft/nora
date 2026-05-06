@@ -1,5 +1,6 @@
 import type { NoteListEntry, SpecListEntry, TaskListEntry } from "@/components/app/types/component.types";
 import type { WorkspaceSidebarAgentContextMenuState } from "@/components/app/types/workspaceSidebarAgentContextMenu.types";
+import type { WorkspaceSidebarTerminalContextMenuState } from "@/components/app/types/workspaceSidebarTerminalContextMenu.types";
 import type { CreateTerminalDialogDefaults } from "@/components/app/types";
 import type {
   AppState,
@@ -22,16 +23,19 @@ export type WorkspaceSidebarContextMenusProps = {
   activeNoteMenu: { note: NoteListEntry; top: number; left: number } | null;
   activeWorkspaceMenu: { workspaceId: string; top: number; left: number } | null;
   activeAgentMenu: WorkspaceSidebarAgentContextMenuState | null;
+  activeTerminalMenu: WorkspaceSidebarTerminalContextMenuState | null;
   taskMenuRef: RefObject<HTMLDivElement | null>;
   specMenuRef: RefObject<HTMLDivElement | null>;
   noteMenuRef: RefObject<HTMLDivElement | null>;
   workspaceMenuRef: RefObject<HTMLDivElement | null>;
   agentMenuRef: RefObject<HTMLDivElement | null>;
+  terminalMenuRef: RefObject<HTMLDivElement | null>;
   setActiveTaskMenu: (value: { task: TaskListEntry; top: number; left: number } | null) => void;
   setActiveSpecMenu: (value: { spec: SpecListEntry; top: number; left: number } | null) => void;
   setActiveNoteMenu: (value: { note: NoteListEntry; top: number; left: number } | null) => void;
   setActiveWorkspaceMenu: (value: { workspaceId: string; top: number; left: number } | null) => void;
   setActiveAgentMenu: (value: WorkspaceSidebarAgentContextMenuState | null) => void;
+  setActiveTerminalMenu: (value: WorkspaceSidebarTerminalContextMenuState | null) => void;
   onToggleTaskComplete: (projectId: string, path: string, nextPath: string) => void | Promise<void>;
   onDeleteTask: (projectId: string, path: string) => void | Promise<void>;
   onGenerateTasksFromSpec: (projectId: string, path: string) => void;
@@ -50,4 +54,6 @@ export type WorkspaceSidebarContextMenusProps = {
   onFocusWorkspaceAgent: (workspaceId: string, agentId: string) => void | Promise<AppState | null>;
   onRestartAgent: (agentId: string) => void | Promise<AppState | null>;
   onDestroyAgentRequest: (agentId: string) => void;
+  onRenameTerminal: (sessionId: string, nextName: string) => void | Promise<AppState | null>;
+  onDestroyTerminal: (sessionId: string) => void | Promise<AppState | null>;
 };

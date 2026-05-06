@@ -18,6 +18,8 @@ export type BuildSettingsRuntimeValueDeps = {
   updateThemeMode: SettingsRuntimeValue["updateThemeMode"];
   accentColor: SettingsRuntimeValue["accentColor"];
   updateAccentColor: SettingsRuntimeValue["updateAccentColor"];
+  uiFontId: SettingsRuntimeValue["uiFontId"];
+  updateUiFont: SettingsRuntimeValue["updateUiFont"];
   terminalThemeId: SettingsRuntimeValue["terminalThemeId"];
   updateTerminalTheme: SettingsRuntimeValue["updateTerminalTheme"];
   terminalFontId: SettingsRuntimeValue["terminalFontId"];

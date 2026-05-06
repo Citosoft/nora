@@ -23,6 +23,7 @@ import type { WorkspaceSessionViewsHandle } from "@/components/app/types/workspa
 export type UseAppRootSessionSurfaceLayoutArgs = {
   uiState: UiState;
   fileEditorState: FileEditorState | null;
+  activeWorkspaceContentTab: "file" | "diff" | null;
   isCenterDiffExpanded: boolean;
   isCenterFullDiffExpanded: boolean;
   selectedChange: ChangeEntry | null;

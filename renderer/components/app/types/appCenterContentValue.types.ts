@@ -97,14 +97,12 @@ export type AppCenterContentValueArgs = {
   activeSplitViewCollection: WorkspaceSplitViewCollection;
   activeWorkspaceContentTab: "file" | "diff" | null;
   addForgeWorkItemComment: (payload: ForgeAddCommentPayload) => Promise<void>;
-  addFocusedLabel: string;
   focusedAgent: AgentSession | null;
   focusedAiChatTab: AiChatTabState | null;
   aiModelLoading: UseAiModelCatalogResult["aiModelLoading"];
   aiModelOptions: UseAiModelCatalogResult["aiModelOptions"];
   appSettings: AppSettings;
   focusedBrowserTab: BrowserTabState | null;
-  canAddCurrentItem: boolean;
   closeAiChatTab: (tabId: string) => void;
   closeBrowserTab: (tabId: string) => void;
   closeForgeViewerTab: (tabId: string) => void;
@@ -134,7 +132,7 @@ export type AppCenterContentValueArgs = {
   windowUiStatePlatform: WindowUiState["platform"];
   refreshForgeOverview: () => void;
   resolveGitlabForgeRepoOverride: (item: ForgeWorkItemSummary) => { host: string; fullName: string } | null;
-  saveFileEditor: () => void | Promise<void>;
+  saveFileEditor: (pathName?: string) => void | Promise<void>;
   selectedChange: ChangeEntry | null;
   setActiveWorkspaceContentTab: Dispatch<SetStateAction<"file" | "diff" | null>>;
   setFileEditorState: Dispatch<SetStateAction<FileEditorState | null>>;

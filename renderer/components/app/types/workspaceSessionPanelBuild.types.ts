@@ -18,7 +18,6 @@ type WorkspaceSessionPanelDataDepsKeys =
   | "activeGridRows"
   | "activeView"
   | "activeWorkspaceContentTab"
-  | "addFocusedLabel"
   | "agent"
   | "appSettings"
   | "aiChatTab"
@@ -28,7 +27,6 @@ type WorkspaceSessionPanelDataDepsKeys =
   | "aiSettings"
   | "browserTab"
   | "browserTabs"
-  | "canAddCurrentItem"
   | "fileEditorState"
   | "forgeActionLoading"
   | "forgeCommentLoading"
@@ -95,7 +93,7 @@ export type WorkspaceSessionPanelOrchestrationDeps = {
   refreshForgeOverview: WorkspaceSessionPanelProps["onRefreshForge"];
   resolveGitlabForgeRepoOverride: (item: ForgeWorkItemSummary) => { host: string; fullName: string } | null;
   safely: (action: () => Promise<AppState>) => Promise<AppState | null>;
-  saveFileEditor: () => void | Promise<void>;
+  saveFileEditor: (pathName?: string) => void | Promise<void>;
   setActiveWorkspaceContentTab: Dispatch<SetStateAction<"file" | "diff" | null>>;
   setFileEditorState: Dispatch<SetStateAction<FileEditorState | null>>;
   setGenerateTasksRequest: Dispatch<SetStateAction<{ projectId: string; specPath: string; nonce: number } | null>>;

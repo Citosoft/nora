@@ -16,8 +16,10 @@ import type {
   StoredWorkspaceSplitViewSelections,
   TerminalFontId,
   TerminalThemeId,
-  ThemeMode
+  ThemeMode,
+  UiFontId
 } from "@/components/app/types";
+import { isUiFontId } from "@/components/app/logic/appUiFonts";
 import { isAiChatReasoningLevel } from "@/components/app/types";
 import { clampRounded } from "@shared/math";
 
@@ -25,6 +27,7 @@ const THEME_STORAGE_KEY = "nora-theme-mode";
 const ACCENT_STORAGE_KEY = "nora-accent-color";
 const TERMINAL_THEME_STORAGE_KEY = "nora-terminal-theme";
 const TERMINAL_FONT_STORAGE_KEY = "nora-terminal-font";
+const UI_FONT_STORAGE_KEY = "nora-ui-font";
 const DEFAULT_IDE_STORAGE_KEY = "nora-default-ide";
 const USER_DISPLAY_NAME_STORAGE_KEY = "nora-user-display-name";
 const UI_LAYOUT_STORAGE_KEY = "nora-ui-layout";
@@ -540,6 +543,11 @@ export function readStoredForceMacTitleBarPreview(): boolean {
   return window.localStorage.getItem(FORCE_MAC_TITLE_BAR_PREVIEW_STORAGE_KEY) === "true";
 }
 
+export function readStoredUiFontId(): UiFontId {
+  const stored = window.localStorage.getItem(UI_FONT_STORAGE_KEY);
+  return stored && isUiFontId(stored) ? stored : "inter";
+}
+
 export function readStoredStartupDependenciesDismissed(): boolean {
   return window.localStorage.getItem(STARTUP_DEPENDENCIES_DISMISSED_STORAGE_KEY) === "true";
 }
@@ -562,6 +570,10 @@ export function writeStoredTerminalThemeId(themeId: TerminalThemeId): void {
 
 export function writeStoredTerminalFontId(fontId: TerminalFontId): void {
   window.localStorage.setItem(TERMINAL_FONT_STORAGE_KEY, fontId);
+}
+
+export function writeStoredUiFontId(uiFontId: UiFontId): void {
+  window.localStorage.setItem(UI_FONT_STORAGE_KEY, uiFontId);
 }
 
 export function writeStoredDefaultIdeId(ideId: string | null): void {

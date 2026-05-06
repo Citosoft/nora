@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,6 +7,14 @@
 @font-face {
   font-family: "Inter";
   src: url("./fonts/Inter-Variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Geist";
+  src: url("./fonts/Geist-Variable.woff2") format("woff2");
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
@@ -32,9 +42,11 @@
     --input: 214 22% 86%;
     --ring: 161 67% 37%;
     --radius: 0.95rem;
-    --button-default-bg: 161 55% 92%;
-    --button-default-border: 161 40% 78%;
-    --button-default-hover: 161 50% 88%;
+    --app-ui-font: "Inter";
+    --button-default-bg: 156 31% 92%;
+    --button-default-border: 156 18% 76%;
+    --button-default-hover: 156 28% 88%;
+    --button-default-active: 156 26% 84%;
     --button-outline-bg: 210 8% 94%;
     --button-outline-border: 215 10% 78%;
     --button-outline-hover: 210 8% 90%;
@@ -63,9 +75,10 @@
     --input: 0 0% 18%;
     --ring: 153 74% 64%;
     --radius: 0.95rem;
-    --button-default-bg: 153 28% 22%;
-    --button-default-border: 153 42% 34%;
-    --button-default-hover: 153 30% 26%;
+    --button-default-bg: 153 18% 19%;
+    --button-default-border: 153 20% 27%;
+    --button-default-hover: 153 18% 23%;
+    --button-default-active: 153 18% 26%;
     --button-outline-bg: 0 0% 12%;
     --button-outline-border: 0 0% 16%;
     --button-outline-hover: 0 0% 15%;
@@ -93,7 +106,7 @@
     background-image:
       radial-gradient(circle at top left, var(--body-gradient-a), transparent 22%),
       radial-gradient(circle at bottom right, var(--body-gradient-b), transparent 24%);
-    font-family: "Inter", "Segoe UI", sans-serif;
+    font-family: var(--app-ui-font), "Segoe UI", sans-serif;
   }
 }
 
@@ -101,10 +114,15 @@
   .button-default-surface {
     background-color: hsl(var(--button-default-bg));
     border-color: hsl(var(--button-default-border));
+    box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.04);
   }
 
   .button-default-surface:hover {
     background-color: hsl(var(--button-default-hover));
+  }
+
+  .button-default-surface:active {
+    background-color: hsl(var(--button-default-active));
   }
 
   .button-outline-surface {

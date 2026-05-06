@@ -14,4 +14,5 @@ await cp("renderer/icon.icns", "dist/renderer/icon.icns");
 await cp("renderer/icon.ico", "dist/renderer/icon.ico");
 await cp("renderer/icon-256.png", "dist/renderer/icon-256.png");
 await cp("renderer/fonts/Inter-Variable.woff2", "dist/renderer/fonts/Inter-Variable.woff2");
+await cp("renderer/fonts/Geist-Variable.woff2", "dist/renderer/fonts/Geist-Variable.woff2");
 await cp("THIRD_PARTY_NOTICES.md", "dist/renderer/THIRD_PARTY_NOTICES.md");

@@ -37,6 +37,21 @@ export class SessionMainService implements SessionService {
   createTerminal = (payload: CreateTerminalPayload): Promise<AppState> =>
     this.d.sessionCreation.createTerminal(payload);
 
+  renameTerminal = async (sessionId: string, name: string): Promise<AppState> => {
+    const terminal = this.d.getSnapshot().terminals.find((entry) => entry.id === sessionId) ?? null;
+    if (!terminal) {
+      throw new Error("Terminal session could not be found.");
+    }
+
+    const normalizedName = name.trim();
+    if (!normalizedName) {
+      throw new Error("Terminal name cannot be empty.");
+    }
+
+    this.d.updateTerminal(sessionId, { name: normalizedName });
+    return this.d.getSnapshot();
+  };
+
   openLocalTerminal = (shellId?: string): Promise<LocalTerminalState> =>
     this.d.localTerminal.openLocalTerminal(shellId);
 

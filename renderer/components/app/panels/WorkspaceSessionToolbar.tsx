@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import type { WorkspaceSplitView } from "@shared/appTypes";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export function WorkspaceSessionToolbar() {
@@ -17,13 +17,10 @@ export function WorkspaceSessionToolbar() {
     splitViewsErrorMessage,
     activeView: activeSplitView,
     activeGridColumns,
-    activeGridRows,
-    addFocusedLabel,
-    canAddCurrentItem
+    activeGridRows
   } = useWorkspaceSessionPanelData();
   const {
     onGridPresetChange,
-    onAddFocused,
     onRenameActiveView,
     onDeleteActiveView
   } = useWorkspaceSessionPanelActions();
@@ -63,10 +60,6 @@ export function WorkspaceSessionToolbar() {
               </option>
             ))}
           </Select>
-          <Button variant="outline" size="sm" onClick={onAddFocused} disabled={!canAddCurrentItem}>
-            <Plus className="size-4" />
-            {addFocusedLabel}
-          </Button>
           {isRenaming ? (
             <>
               <Input

@@ -51,8 +51,6 @@ export const createWorkspaceSessionPanelValue = (d: WorkspaceSessionPanelBuildDe
   activeWorkspaceContentTab: d.activeWorkspaceContentTab,
   activeGridColumns: d.activeGridColumns,
   activeGridRows: d.activeGridRows,
-  addFocusedLabel: d.addFocusedLabel,
-  canAddCurrentItem: d.canAddCurrentItem,
   onChooseProject: d.openAddWorkspaceModal,
   onRefreshCatalog: () => d.safely(() => noraToolingManagementClient.refreshToolCatalog()),
   onCreateInWorkspace: (defaults) => d.uiCommands.openCreateAgentDialog(defaults),
@@ -160,8 +158,22 @@ export const createWorkspaceSessionPanelValue = (d: WorkspaceSessionPanelBuildDe
           }
         : current
     ),
+  onChangeFileEditorTabContent: (pathName, value) =>
+    d.setFileEditorState((current) =>
+      current
+        ? {
+            ...current,
+            tabs: current.tabs.map((tab) =>
+              tab.path === pathName ? { ...tab, content: value } : tab
+            )
+          }
+        : current
+    ),
   onSaveActiveFileEditor: () => {
     void d.saveFileEditor();
+  },
+  onSaveFileEditorTab: (pathName) => {
+    void d.saveFileEditor(pathName);
   },
   onRevertActiveFileEditor: () =>
     d.setFileEditorState((current) =>
@@ -170,6 +182,23 @@ export const createWorkspaceSessionPanelValue = (d: WorkspaceSessionPanelBuildDe
             ...current,
             tabs: current.tabs.map((tab) =>
               tab.path === current.activePath
+                ? {
+                    ...tab,
+                    content: tab.savedContent,
+                    errorMessage: null
+                  }
+                : tab
+            )
+          }
+        : current
+    ),
+  onRevertFileEditorTab: (pathName) =>
+    d.setFileEditorState((current) =>
+      current
+        ? {
+            ...current,
+            tabs: current.tabs.map((tab) =>
+              tab.path === pathName
                 ? {
                     ...tab,
                     content: tab.savedContent,
@@ -207,9 +236,6 @@ export const createWorkspaceSessionPanelValue = (d: WorkspaceSessionPanelBuildDe
   onExitSplitView: () => d.workspaceSessionViews.setActiveViewId(null),
   onGridPresetChange: (gridColumns, gridRows) => {
     void d.workspaceSessionViews.setGridPreset(gridColumns, gridRows);
-  },
-  onAddFocused: () => {
-    void d.workspaceSessionViews.addFocusedItem();
   },
   onRenameActiveView: (name) => {
     void d.workspaceSessionViews.renameActiveView(name);
@@ -275,6 +301,9 @@ export const createWorkspaceSessionPanelValue = (d: WorkspaceSessionPanelBuildDe
   onSpawnIssueAgent: async (toolId) => {
     await d.handleSpawnForgeIssueAgent(toolId);
   },
+  onAddItemToView: (item) => {
+    void d.workspaceSessionViews.addItem(item);
+  },
   onAddItemToSlot: (item, column, row) => {
     void d.workspaceSessionViews.addItemToSlot(item, column, row);
   },
@@ -335,8 +364,6 @@ type WorkspaceSessionPanelData = Pick<
   | "activeWorkspaceContentTab"
   | "activeGridColumns"
   | "activeGridRows"
-  | "addFocusedLabel"
-  | "canAddCurrentItem"
 >;
 
 type WorkspaceSessionPanelActions = Omit<WorkspaceSessionPanelProps, keyof WorkspaceSessionPanelData>;
@@ -392,9 +419,7 @@ export function WorkspaceSessionPanelProvider({
     activeView: value.activeView,
     activeWorkspaceContentTab: value.activeWorkspaceContentTab,
     activeGridColumns: value.activeGridColumns,
-    activeGridRows: value.activeGridRows,
-    addFocusedLabel: value.addFocusedLabel,
-    canAddCurrentItem: value.canAddCurrentItem
+    activeGridRows: value.activeGridRows
   };
   const actionsValue: WorkspaceSessionPanelActions = {
     onChooseProject: value.onChooseProject,
@@ -430,8 +455,11 @@ export function WorkspaceSessionPanelProvider({
     onCloseFileEditorTab: value.onCloseFileEditorTab,
     onSetActiveWorkspaceContentTab: value.onSetActiveWorkspaceContentTab,
     onChangeActiveFileEditorContent: value.onChangeActiveFileEditorContent,
+    onChangeFileEditorTabContent: value.onChangeFileEditorTabContent,
     onSaveActiveFileEditor: value.onSaveActiveFileEditor,
+    onSaveFileEditorTab: value.onSaveFileEditorTab,
     onRevertActiveFileEditor: value.onRevertActiveFileEditor,
+    onRevertFileEditorTab: value.onRevertFileEditorTab,
     onCloseExpandedDiff: value.onCloseExpandedDiff,
     onCloseFullDiff: value.onCloseFullDiff,
     onRestart: value.onRestart,
@@ -444,7 +472,6 @@ export function WorkspaceSessionPanelProvider({
     onFocusAgent: value.onFocusAgent,
     onFocusTerminal: value.onFocusTerminal,
     onGridPresetChange: value.onGridPresetChange,
-    onAddFocused: value.onAddFocused,
     onRenameActiveView: value.onRenameActiveView,
     onDeleteActiveView: value.onDeleteActiveView,
     onRefreshForge: value.onRefreshForge,
@@ -455,6 +482,7 @@ export function WorkspaceSessionPanelProvider({
     onForgeAction: value.onForgeAction,
     onForgeCommentSubmit: value.onForgeCommentSubmit,
     onSpawnIssueAgent: value.onSpawnIssueAgent,
+    onAddItemToView: value.onAddItemToView,
     onAddItemToSlot: value.onAddItemToSlot,
     onMoveTile: value.onMoveTile,
     onMoveTileToPosition: value.onMoveTileToPosition,

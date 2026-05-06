@@ -10,6 +10,7 @@ import type {
 export const useAppRootDialogsState = ({
   setUiState,
   appSettings,
+  isAppSettingsLoaded,
   captureError,
   activeView,
   focusedBrowserTabId,
@@ -22,6 +23,7 @@ export const useAppRootDialogsState = ({
   const startupDependencies = useStartupDependencies({ setUiState });
   const analyticsConsent = useAnalyticsConsentPrompt({
     appSettings,
+    isAppSettingsLoaded,
     isOnboardingOpen: startupDependencies.isOnboardingOpen,
     updateAnalyticsConsentStatus,
     captureError

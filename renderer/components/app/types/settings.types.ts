@@ -1,4 +1,4 @@
-import type { AccentColor, ResolvedTheme, TerminalFontId, TerminalThemeId } from "@/components/app/types";
+import type { AccentColor, ResolvedTheme, TerminalFontId, TerminalThemeId, UiFontId } from "@/components/app/types";
 import type {
   AgentCatalogEntry,
   AgentLaunchTargetPreference,
@@ -31,6 +31,8 @@ export type SettingsRuntimeValue = {
   updateThemeMode: (mode: "system" | "light" | "dark") => void;
   accentColor: AccentColor;
   updateAccentColor: (accentColor: AccentColor) => void;
+  uiFontId: UiFontId;
+  updateUiFont: (fontId: UiFontId) => void;
   terminalThemeId: TerminalThemeId;
   updateTerminalTheme: (themeId: TerminalThemeId) => void;
   terminalFontId: TerminalFontId;
