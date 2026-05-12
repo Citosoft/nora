@@ -15,6 +15,7 @@ export type DropdownMenuProps = {
 export type DropdownMenuItemProps = {
   children: ReactNode;
   destructive?: boolean;
+  className?: string;
   onSelect?: () => void;
 };
 

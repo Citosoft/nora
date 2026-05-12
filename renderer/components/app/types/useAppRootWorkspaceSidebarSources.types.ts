@@ -17,7 +17,7 @@ export type UseAppRootWorkspaceSidebarSourcesArgs = Omit<
     | "setDestroyAgentId"
     | "setInstallCommandDraft"
   >;
-  uiState: Pick<UiState, "aiChatTabs" | "focusedAiChatTabId" | "installCommandDrafts">;
+  uiState: Pick<UiState, "aiChatTabs" | "focusedAiChatTabId" | "focusedBrowserTabId" | "focusedForgeViewerTabId" | "installCommandDrafts">;
 };
 
 export type UseAppRootWorkspaceSidebarSourcesResult = AppShellSignedInWorkspaceSidebarRestSources | null;

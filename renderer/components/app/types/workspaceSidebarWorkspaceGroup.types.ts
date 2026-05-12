@@ -35,6 +35,12 @@ export type WorkspaceSidebarWorkspaceGroupProps = {
   workspaceNotes: NoteListEntry[];
   aiChatTabs: AiChatTabState[];
   focusedAiChatTabId: string | null;
+  focusedBrowserTabId: string | null;
+  focusedForgeViewerTabId: string | null;
+  activeWorkspaceContentTab: "file" | "diff" | null;
+  isTaskBoardOpen: boolean;
+  isSpecBrowserOpen: boolean;
+  isNoteBrowserOpen: boolean;
   isCreatingTask: boolean;
   isCreatingSpec: boolean;
   isCreatingNote: boolean;
@@ -68,6 +74,11 @@ export type WorkspaceSidebarWorkspaceGroupProps = {
   onFocusTerminal: (terminalId: string) => void;
   onFocusWorkspaceAgent: (workspaceId: string, agentId: string) => void;
   onFocusWorkspaceTerminal: (workspaceId: string, terminalId: string) => void;
+  editingTerminalSessionId: string | null;
+  editingTerminalNameDraft: string;
+  onEditingTerminalNameDraftChange: (nextName: string) => void;
+  onSubmitTerminalRename: (sessionId: string, currentName: string) => void;
+  onCancelTerminalRename: () => void;
   onOpenTask: (projectId: string, path: string) => void;
   onCreateTask: (projectId: string) => void;
   onOpenTaskBoard: () => void;

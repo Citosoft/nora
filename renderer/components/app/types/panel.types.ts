@@ -430,7 +430,7 @@ export type WorkspaceSessionPanelProps = {
   onOpenFileEditor: (path: string, options?: OpenWorkspaceFileEditorOptions) => Promise<void>;
   onFocusFileEditorTab: (path: string) => void;
   onCloseFileEditorTab: (path: string) => void;
-  onSetActiveWorkspaceContentTab: (next: "file" | "diff" | null) => void;
+  onSetActiveWorkspaceContentTab: Dispatch<SetStateAction<"file" | "diff" | null>>;
   onChangeActiveFileEditorContent: (value: string) => void;
   onChangeFileEditorTabContent: (path: string, value: string) => void;
   onSaveActiveFileEditor: () => void;
@@ -470,6 +470,7 @@ export type WorkspaceSessionPanelProps = {
 export type WorkspaceSessionTabsProps = {
   tabs: WorkspaceSessionTab[];
   activeTabId: string | null;
+  platform: WindowUiState["platform"];
   tools: AgentCatalogEntry[];
   onSelect: (tab: WorkspaceSessionTab) => void;
   onClose: (tab: WorkspaceSessionTab) => void;

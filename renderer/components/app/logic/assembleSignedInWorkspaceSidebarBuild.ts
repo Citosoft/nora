@@ -38,10 +38,13 @@ export const assembleSignedInWorkspaceSidebarBuild = (
     workspaceSidebarUiState: {
       aiChatTabs: core.uiState.aiChatTabs,
       focusedAiChatTabId: core.uiState.focusedAiChatTabId,
+      focusedBrowserTabId: core.uiState.focusedBrowserTabId,
+      focusedForgeViewerTabId: core.uiState.focusedForgeViewerTabId,
       installCommandDrafts: core.uiState.installCommandDrafts
     },
     terminalPresets: core.appSettings.terminalPresets,
     terminalQuickLaunchDefaults: core.appSettings.terminalQuickLaunchDefaults,
+    activeWorkspaceContentTab: sessionSurface.activeWorkspaceContentTab,
     setWorkspaceSessionActiveViewId: sessionSurface.workspaceSessionViews.setActiveViewId
   };
 };

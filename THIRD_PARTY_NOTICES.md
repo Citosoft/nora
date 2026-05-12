@@ -2,7 +2,7 @@
 
 This product includes third-party open-source software.
 
-Generated: 2026-05-06T12:13:27.791Z
+Generated: 2026-05-07T12:41:45.115Z
 
 | Package | Version | License |
 | --- | --- | --- |
@@ -13,6 +13,7 @@ Generated: 2026-05-06T12:13:27.791Z
 | @icons-pack/react-simple-icons | 13.13.0 | MIT |
 | @monaco-editor/react | 4.7.0 | MIT |
 | @posthog/react | 1.9.0 | MIT |
+| @radix-ui/react-context-menu | 2.2.16 | MIT |
 | @radix-ui/react-popover | 1.1.15 | MIT |
 | @radix-ui/react-select | 2.2.6 | MIT |
 | @radix-ui/react-tabs | 1.1.13 | MIT |

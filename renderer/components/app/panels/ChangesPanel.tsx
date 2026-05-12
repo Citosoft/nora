@@ -1432,35 +1432,37 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                     <FolderGit2 className="size-3.5 shrink-0" />
                     <span className="whitespace-nowrap">Changed</span>
                   </div>
-                  <div className="min-h-6 min-w-0 flex-1 overflow-x-auto">
-                    <div className="flex w-max min-w-0 items-center justify-end gap-1 sm:gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 shrink-0 px-2 text-[11px]"
-                        onClick={onOpenFullDiff}
-                        disabled={!snapshot.changes.length}
-                      >
-                        Open full diff
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 shrink-0 px-2 text-[11px]"
-                        onClick={() => setSelectedCommitPaths(snapshot.changes.map((change) => change.path))}
-                        disabled={!snapshot.changes.length}
-                      >
-                        Select all
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 shrink-0 px-2 text-[11px]"
-                        onClick={() => setSelectedCommitPaths([])}
-                        disabled={!snapshot.changes.length}
-                      >
-                        Select none
-                      </Button>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 flex-nowrap items-center justify-end gap-2">
+                      <div className="flex shrink-0 items-center gap-0 rounded-[6px] border border-border/70 bg-background/40">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 shrink-0 rounded-none border-0 border-r border-border/70 px-2 text-[10px] font-semibold"
+                          onClick={onOpenFullDiff}
+                          disabled={!snapshot.changes.length}
+                        >
+                          Full diff
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 shrink-0 rounded-none border-0 border-r border-border/70 px-2 text-[10px] font-semibold"
+                          onClick={() => setSelectedCommitPaths(snapshot.changes.map((change) => change.path))}
+                          disabled={!snapshot.changes.length}
+                        >
+                          All
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 shrink-0 rounded-none border-0 px-2 text-[10px] font-semibold"
+                          onClick={() => setSelectedCommitPaths([])}
+                          disabled={!snapshot.changes.length}
+                        >
+                          None
+                        </Button>
+                      </div>
                       <div className="flex shrink-0 items-center px-0.5 text-[11px] tabular-nums text-muted-foreground">
                         {snapshot.changes.length}
                       </div>
@@ -1563,4 +1565,3 @@ export function ChangesPanel() {
 
   return <ChangesPanelInner snapshot={snapshot} />;
 }
-

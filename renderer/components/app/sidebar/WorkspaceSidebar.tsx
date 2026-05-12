@@ -23,8 +23,11 @@ import { WorkspaceSidebarWorkspacesHeader } from "@/components/app/sidebar/works
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
+import { useState } from "react";
 
 export const WorkspaceSidebar = () => {
+  const [editingTerminalSessionId, setEditingTerminalSessionId] = useState<string | null>(null);
+  const [editingTerminalNameDraft, setEditingTerminalNameDraft] = useState("");
   const snapshot = useCanonicalAppSnapshot();
   const {
     githubToken,
@@ -41,6 +44,12 @@ export const WorkspaceSidebar = () => {
     workspaceNotes,
     aiChatTabs,
     focusedAiChatTabId,
+    focusedBrowserTabId,
+    focusedForgeViewerTabId,
+    activeWorkspaceContentTab,
+    isTaskBoardOpen,
+    isSpecBrowserOpen,
+    isNoteBrowserOpen,
     isCreatingTask,
     isCreatingSpec,
     isCreatingNote
@@ -108,12 +117,6 @@ export const WorkspaceSidebar = () => {
     activeWorkspaceMenu,
     activeAgentMenu,
     activeTerminalMenu,
-    taskMenuRef,
-    specMenuRef,
-    noteMenuRef,
-    workspaceMenuRef,
-    agentMenuRef,
-    terminalMenuRef,
     openTaskMenu,
     openSpecMenu,
     openNoteMenu,
@@ -209,6 +212,24 @@ export const WorkspaceSidebar = () => {
       ...buildWorkspaceCollapseAllMap(workspaceGroupIds, nextCollapsedState)
     }));
   };
+  const handleBeginTerminalRename = (sessionId: string, currentName: string) => {
+    setEditingTerminalSessionId(sessionId);
+    setEditingTerminalNameDraft(currentName);
+  };
+  const handleCancelTerminalRename = () => {
+    setEditingTerminalSessionId(null);
+    setEditingTerminalNameDraft("");
+  };
+  const handleSubmitTerminalRename = (sessionId: string, currentName: string) => {
+    const nextName = editingTerminalNameDraft.trim();
+    const previousName = currentName.trim();
+    if (!nextName || nextName === previousName) {
+      handleCancelTerminalRename();
+      return;
+    }
+    void onRenameTerminal(sessionId, nextName);
+    handleCancelTerminalRename();
+  };
 
   return (
     <Card
@@ -289,6 +310,12 @@ export const WorkspaceSidebar = () => {
                           workspaceNotes={workspaceNotes}
                           aiChatTabs={aiChatTabs}
                           focusedAiChatTabId={focusedAiChatTabId}
+                          focusedBrowserTabId={focusedBrowserTabId}
+                          focusedForgeViewerTabId={focusedForgeViewerTabId}
+                          activeWorkspaceContentTab={activeWorkspaceContentTab}
+                          isTaskBoardOpen={isTaskBoardOpen}
+                          isSpecBrowserOpen={isSpecBrowserOpen}
+                          isNoteBrowserOpen={isNoteBrowserOpen}
                           isCreatingTask={isCreatingTask}
                           isCreatingSpec={isCreatingSpec}
                           isCreatingNote={isCreatingNote}
@@ -322,6 +349,11 @@ export const WorkspaceSidebar = () => {
                           onFocusTerminal={onFocusTerminal}
                           onFocusWorkspaceAgent={onFocusWorkspaceAgent}
                           onFocusWorkspaceTerminal={onFocusWorkspaceTerminal}
+                          editingTerminalSessionId={editingTerminalSessionId}
+                          editingTerminalNameDraft={editingTerminalNameDraft}
+                          onEditingTerminalNameDraftChange={setEditingTerminalNameDraft}
+                          onSubmitTerminalRename={handleSubmitTerminalRename}
+                          onCancelTerminalRename={handleCancelTerminalRename}
                           onOpenTask={onOpenTask}
                           onCreateTask={onCreateTask}
                           onOpenTaskBoard={onOpenTaskBoard}
@@ -412,12 +444,6 @@ export const WorkspaceSidebar = () => {
         activeWorkspaceMenu={activeWorkspaceMenu}
         activeAgentMenu={activeAgentMenu}
         activeTerminalMenu={activeTerminalMenu}
-        taskMenuRef={taskMenuRef}
-        specMenuRef={specMenuRef}
-        noteMenuRef={noteMenuRef}
-        workspaceMenuRef={workspaceMenuRef}
-        agentMenuRef={agentMenuRef}
-        terminalMenuRef={terminalMenuRef}
         setActiveTaskMenu={setActiveTaskMenu}
         setActiveSpecMenu={setActiveSpecMenu}
         setActiveNoteMenu={setActiveNoteMenu}
@@ -442,7 +468,7 @@ export const WorkspaceSidebar = () => {
         onFocusWorkspaceAgent={onFocusWorkspaceAgent}
         onRestartAgent={onRestartAgent}
         onDestroyAgentRequest={onDestroyAgentRequest}
-        onRenameTerminal={onRenameTerminal}
+        onBeginTerminalRename={handleBeginTerminalRename}
         onDestroyTerminal={onDestroyTerminal}
       />
     </Card>

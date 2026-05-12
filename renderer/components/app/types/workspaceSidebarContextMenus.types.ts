@@ -9,7 +9,6 @@ import type {
   TerminalQuickLaunchDefaults,
   WorkspaceSummary
 } from "@shared/appTypes";
-import type { RefObject } from "react";
 
 export type WorkspaceSidebarContextMenusProps = {
   workspaceGroups: WorkspaceSummary[];
@@ -24,12 +23,6 @@ export type WorkspaceSidebarContextMenusProps = {
   activeWorkspaceMenu: { workspaceId: string; top: number; left: number } | null;
   activeAgentMenu: WorkspaceSidebarAgentContextMenuState | null;
   activeTerminalMenu: WorkspaceSidebarTerminalContextMenuState | null;
-  taskMenuRef: RefObject<HTMLDivElement | null>;
-  specMenuRef: RefObject<HTMLDivElement | null>;
-  noteMenuRef: RefObject<HTMLDivElement | null>;
-  workspaceMenuRef: RefObject<HTMLDivElement | null>;
-  agentMenuRef: RefObject<HTMLDivElement | null>;
-  terminalMenuRef: RefObject<HTMLDivElement | null>;
   setActiveTaskMenu: (value: { task: TaskListEntry; top: number; left: number } | null) => void;
   setActiveSpecMenu: (value: { spec: SpecListEntry; top: number; left: number } | null) => void;
   setActiveNoteMenu: (value: { note: NoteListEntry; top: number; left: number } | null) => void;
@@ -54,6 +47,6 @@ export type WorkspaceSidebarContextMenusProps = {
   onFocusWorkspaceAgent: (workspaceId: string, agentId: string) => void | Promise<AppState | null>;
   onRestartAgent: (agentId: string) => void | Promise<AppState | null>;
   onDestroyAgentRequest: (agentId: string) => void;
-  onRenameTerminal: (sessionId: string, nextName: string) => void | Promise<AppState | null>;
+  onBeginTerminalRename: (sessionId: string, currentName: string) => void;
   onDestroyTerminal: (sessionId: string) => void | Promise<AppState | null>;
 };

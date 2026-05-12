@@ -52,6 +52,12 @@ export const WorkspaceSidebarWorkspaceGroup = ({
   workspaceNotes,
   aiChatTabs,
   focusedAiChatTabId,
+  focusedBrowserTabId,
+  focusedForgeViewerTabId,
+  activeWorkspaceContentTab,
+  isTaskBoardOpen,
+  isSpecBrowserOpen,
+  isNoteBrowserOpen,
   isCreatingTask,
   isCreatingSpec,
   isCreatingNote,
@@ -85,6 +91,11 @@ export const WorkspaceSidebarWorkspaceGroup = ({
   onFocusTerminal,
   onFocusWorkspaceAgent,
   onFocusWorkspaceTerminal,
+  editingTerminalSessionId,
+  editingTerminalNameDraft,
+  onEditingTerminalNameDraftChange,
+  onSubmitTerminalRename,
+  onCancelTerminalRename,
   onOpenTask,
   onCreateTask,
   onOpenTaskBoard,
@@ -105,6 +116,12 @@ export const WorkspaceSidebarWorkspaceGroup = ({
 
   const isRemoving = removingWorkspaceRootSet.has(workspace.project.rootPath);
   const isFocused = snapshot.project?.id === workspace.project.id;
+  const renderSubitemStatusDot = (className?: string) => (
+    <span
+      className={cn("mt-1 inline-flex size-2.5 shrink-0 rounded-full border border-background/80 bg-muted-foreground/45", className)}
+      aria-hidden="true"
+    />
+  );
     const directSshLocation = workspace.project.location?.kind === "ssh" ? workspace.project.location : null;
     const isDirectSshWorkspace = directSshLocation !== null;
     const directSshLabel = directSshLocation
@@ -130,6 +147,13 @@ export const WorkspaceSidebarWorkspaceGroup = ({
       agentsNeedingAttention,
       focusedAgent,
       focusedTerminal,
+      focusedAiChatTabId,
+      focusedBrowserTabId,
+      focusedForgeViewerTabId,
+      activeWorkspaceContentTab,
+      isTaskBoardOpen,
+      isSpecBrowserOpen,
+      isNoteBrowserOpen,
       activeSessionPopoverId,
       setActiveSessionPopoverId,
       openSessionPopover,
@@ -139,7 +163,12 @@ export const WorkspaceSidebarWorkspaceGroup = ({
       onFocusAgent,
       onFocusTerminal,
       onFocusWorkspaceAgent,
-      onFocusWorkspaceTerminal
+      onFocusWorkspaceTerminal,
+      editingTerminalSessionId,
+      editingTerminalNameDraft,
+      onEditingTerminalNameDraftChange,
+      onSubmitTerminalRename,
+      onCancelTerminalRename
     };
     const workspaceTaskEntries = workspaceTasks.filter((task) => task.projectId === workspace.project.id);
     const workspaceSpecEntries = workspaceSpecs.filter((spec) => spec.projectId === workspace.project.id);
@@ -489,7 +518,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                         className="flex w-full min-w-0 items-start gap-2 rounded-[4px] border border-transparent px-2 py-1.5 text-left transition hover:bg-accent/40"
                         title={`${task.projectName}\n${task.path}`}
                       >
-                        <FileText className="mt-0.5 size-4 shrink-0 text-primary" />
+                        {renderSubitemStatusDot(task.completed ? "bg-emerald-500/90" : "bg-primary/80")}
                         <div className="min-w-0 flex-1">
                           <div
                             className={cn(
@@ -567,7 +596,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                         className="flex w-full min-w-0 items-start gap-2 rounded-[4px] border border-transparent px-2 py-1.5 text-left transition hover:bg-accent/40"
                         title={`${spec.projectName}\n${spec.path}`}
                       >
-                        <ScrollText className="mt-0.5 size-4 shrink-0 text-primary" />
+                        {renderSubitemStatusDot("bg-primary/80")}
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-sm font-medium text-foreground">{spec.title}</div>
                         </div>
@@ -638,7 +667,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                         className="flex w-full min-w-0 items-start gap-2 rounded-[4px] border border-transparent px-2 py-1.5 text-left transition hover:bg-accent/40"
                         title={`${note.projectName}\n${note.path}`}
                       >
-                        <StickyNote className="mt-0.5 size-4 shrink-0 text-primary" />
+                        {renderSubitemStatusDot("bg-primary/80")}
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-sm font-medium text-foreground">{note.title}</div>
                         </div>
@@ -700,7 +729,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                           )}
                           title={chat.title}
                         >
-                          <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" />
+                          {renderSubitemStatusDot(isActive ? "bg-primary" : "bg-muted-foreground/45")}
                           <div className="min-w-0 flex-1">
                             <div className="truncate text-sm font-medium text-foreground">{chat.title}</div>
                           </div>

@@ -205,6 +205,12 @@ export type WorkspaceSidebarProps = {
   workspaceNotes: Array<WorkspaceNoteSummary & { projectId: string; projectName: string; projectRootPath: string }>;
   aiChatTabs: AiChatTabState[];
   focusedAiChatTabId: string | null;
+  focusedBrowserTabId: string | null;
+  focusedForgeViewerTabId: string | null;
+  activeWorkspaceContentTab: "file" | "diff" | null;
+  isTaskBoardOpen: boolean;
+  isSpecBrowserOpen: boolean;
+  isNoteBrowserOpen: boolean;
   installCommandDrafts: Record<string, string>;
   onChooseProject: () => void;
   onCloseProject: () => void;

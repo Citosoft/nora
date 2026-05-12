@@ -30,12 +30,6 @@ export const useWorkspaceSidebarOverlays = (): UseWorkspaceSidebarOverlaysResult
   } | null>(null);
   const [activeAgentMenu, setActiveAgentMenu] = useState<WorkspaceSidebarAgentContextMenuState | null>(null);
   const [activeTerminalMenu, setActiveTerminalMenu] = useState<WorkspaceSidebarTerminalContextMenuState | null>(null);
-  const taskMenuRef = useRef<HTMLDivElement | null>(null);
-  const specMenuRef = useRef<HTMLDivElement | null>(null);
-  const noteMenuRef = useRef<HTMLDivElement | null>(null);
-  const workspaceMenuRef = useRef<HTMLDivElement | null>(null);
-  const agentMenuRef = useRef<HTMLDivElement | null>(null);
-  const terminalMenuRef = useRef<HTMLDivElement | null>(null);
   const sessionPopoverCloseTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -66,138 +60,6 @@ export const useWorkspaceSidebarOverlays = (): UseWorkspaceSidebarOverlaysResult
       window.removeEventListener("keydown", handleEscape);
     };
   }, []);
-
-  useEffect(() => {
-    if (!activeTaskMenu) {
-      return;
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!taskMenuRef.current) {
-        return;
-      }
-
-      const target = event.target;
-      if (target instanceof Node && !taskMenuRef.current.contains(target)) {
-        setActiveTaskMenu(null);
-      }
-    };
-
-    window.addEventListener("pointerdown", handlePointerDown);
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, [activeTaskMenu]);
-
-  useEffect(() => {
-    if (!activeSpecMenu) {
-      return;
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!specMenuRef.current) {
-        return;
-      }
-
-      const target = event.target;
-      if (target instanceof Node && !specMenuRef.current.contains(target)) {
-        setActiveSpecMenu(null);
-      }
-    };
-
-    window.addEventListener("pointerdown", handlePointerDown);
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, [activeSpecMenu]);
-
-  useEffect(() => {
-    if (!activeNoteMenu) {
-      return;
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!noteMenuRef.current) {
-        return;
-      }
-
-      const target = event.target;
-      if (target instanceof Node && !noteMenuRef.current.contains(target)) {
-        setActiveNoteMenu(null);
-      }
-    };
-
-    window.addEventListener("pointerdown", handlePointerDown);
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, [activeNoteMenu]);
-
-  useEffect(() => {
-    if (!activeWorkspaceMenu) {
-      return;
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!workspaceMenuRef.current) {
-        return;
-      }
-
-      const target = event.target;
-      if (target instanceof Node && !workspaceMenuRef.current.contains(target)) {
-        setActiveWorkspaceMenu(null);
-      }
-    };
-
-    window.addEventListener("pointerdown", handlePointerDown);
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, [activeWorkspaceMenu]);
-
-  useEffect(() => {
-    if (!activeAgentMenu) {
-      return;
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!agentMenuRef.current) {
-        return;
-      }
-
-      const target = event.target;
-      if (target instanceof Node && !agentMenuRef.current.contains(target)) {
-        setActiveAgentMenu(null);
-      }
-    };
-
-    window.addEventListener("pointerdown", handlePointerDown);
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, [activeAgentMenu]);
-
-  useEffect(() => {
-    if (!activeTerminalMenu) {
-      return;
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!terminalMenuRef.current) {
-        return;
-      }
-
-      const target = event.target;
-      if (target instanceof Node && !terminalMenuRef.current.contains(target)) {
-        setActiveTerminalMenu(null);
-      }
-    };
-
-    window.addEventListener("pointerdown", handlePointerDown);
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, [activeTerminalMenu]);
 
   useEffect(
     () => () => {
@@ -321,12 +183,6 @@ export const useWorkspaceSidebarOverlays = (): UseWorkspaceSidebarOverlaysResult
     activeWorkspaceMenu,
     activeAgentMenu,
     activeTerminalMenu,
-    taskMenuRef,
-    specMenuRef,
-    noteMenuRef,
-    workspaceMenuRef,
-    agentMenuRef,
-    terminalMenuRef,
     openTaskMenu,
     openSpecMenu,
     openNoteMenu,

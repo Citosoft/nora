@@ -35,6 +35,12 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
     workspaceNotes: d.workspaceNotes,
     aiChatTabs: d.workspaceSidebarUiState.aiChatTabs,
     focusedAiChatTabId: d.workspaceSidebarUiState.focusedAiChatTabId,
+    focusedBrowserTabId: d.workspaceSidebarUiState.focusedBrowserTabId,
+    focusedForgeViewerTabId: d.workspaceSidebarUiState.focusedForgeViewerTabId,
+    activeWorkspaceContentTab: d.activeWorkspaceContentTab,
+    isTaskBoardOpen: d.isTaskBoardOpen,
+    isSpecBrowserOpen: d.isSpecBrowserOpen,
+    isNoteBrowserOpen: d.isNoteBrowserOpen,
     installCommandDrafts: d.workspaceSidebarUiState.installCommandDrafts,
     onChooseProject: () => {
       void d.openAddWorkspaceModal();
@@ -253,6 +259,12 @@ type WorkspaceSidebarRuntimeValue = Pick<
   | "workspaceNotes"
   | "aiChatTabs"
   | "focusedAiChatTabId"
+  | "focusedBrowserTabId"
+  | "focusedForgeViewerTabId"
+  | "activeWorkspaceContentTab"
+  | "isTaskBoardOpen"
+  | "isSpecBrowserOpen"
+  | "isNoteBrowserOpen"
   | "installCommandDrafts"
   | "isCreatingTask"
   | "isCreatingSpec"
@@ -304,6 +316,12 @@ export function WorkspaceSidebarProvider({
     workspaceNotes: value.workspaceNotes,
     aiChatTabs: value.aiChatTabs,
     focusedAiChatTabId: value.focusedAiChatTabId,
+    focusedBrowserTabId: value.focusedBrowserTabId,
+    focusedForgeViewerTabId: value.focusedForgeViewerTabId,
+    activeWorkspaceContentTab: value.activeWorkspaceContentTab,
+    isTaskBoardOpen: value.isTaskBoardOpen,
+    isSpecBrowserOpen: value.isSpecBrowserOpen,
+    isNoteBrowserOpen: value.isNoteBrowserOpen,
     installCommandDrafts: value.installCommandDrafts,
     isCreatingTask: value.isCreatingTask,
     isCreatingSpec: value.isCreatingSpec,
@@ -346,6 +364,8 @@ export function WorkspaceSidebarProvider({
     onFocusWorkspaceTerminal: value.onFocusWorkspaceTerminal,
     onRestartAgent: value.onRestartAgent,
     onDestroyAgentRequest: value.onDestroyAgentRequest,
+    onRenameTerminal: value.onRenameTerminal,
+    onDestroyTerminal: value.onDestroyTerminal,
     onOpenTask: value.onOpenTask,
     onCreateTask: value.onCreateTask,
     onOpenSpec: value.onOpenSpec,

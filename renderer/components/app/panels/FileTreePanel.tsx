@@ -11,23 +11,15 @@ import {
 import { setWorkspaceRelativePathDragData } from "@/components/app/logic/workspacePathDrag";
 import type { FileTreeNode, FileTreePanelProps } from "@/components/app/types/component.types";
 import { Button } from "@/components/ui/button";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { WorkspaceFileIcon } from "@/lib/WorkspaceFileIcon";
 import type { ChangeEntry } from "@shared/appTypes";
 import { ChevronDown, ChevronRight, FilePenLine, FilePlus, Folder, FolderOpen, FolderPlus, LoaderCircle, Search, Trash2, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from "react";
-
-type FileTreeContextMenuState = {
-  path: string;
-  name: string;
-  kind: "file" | "directory";
-  top: number;
-  left: number;
-};
+import { useEffect, useMemo, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 
 type InlineRenameState =
   | {
@@ -143,7 +135,10 @@ function FileTreeNodeRow({
   onInlineRenameChange,
   onInlineRenameSubmit,
   onInlineRenameCancel,
-  onOpenContextMenu,
+  onStartInlineRename,
+  onStartCreateDirectory,
+  onStartCreateFile,
+  onDeletePath,
   onDropTargetChange,
   onToggleDirectory,
   onOpenFile
@@ -160,7 +155,10 @@ function FileTreeNodeRow({
   onInlineRenameChange: (value: string) => void;
   onInlineRenameSubmit: () => Promise<void>;
   onInlineRenameCancel: () => void;
-  onOpenContextMenu: (node: Pick<FileTreeNode, "path" | "name" | "kind">, event: ReactMouseEvent<HTMLButtonElement>) => void;
+  onStartInlineRename: (pathName: string) => void;
+  onStartCreateDirectory: (parentPath: string) => void;
+  onStartCreateFile: (parentPath: string) => void;
+  onDeletePath: (pathName: string, kind: "file" | "directory") => void;
   onDropTargetChange: (directoryPath: string | null) => void;
   onToggleDirectory: (pathName: string) => void;
   onOpenFile: (pathName: string) => void;
@@ -181,139 +179,171 @@ function FileTreeNodeRow({
     }
   };
 
+  const rowButton = (
+    <button
+      type="button"
+      draggable={!isInlineRenaming}
+      className={cn(
+        "flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition hover:bg-accent/30",
+        activePath === node.path ? "bg-primary/10 text-foreground" : "text-foreground hover:text-foreground",
+        isDropTarget ? "bg-primary/15 text-foreground ring-1 ring-primary/40" : null
+      )}
+      style={{ paddingLeft: `${12 + depth * 16}px` }}
+      onDragStart={(event) => {
+        if (isInlineRenaming) {
+          return;
+        }
+        setWorkspaceRelativePathDragData(event.dataTransfer, node.path, node.kind);
+      }}
+      onClick={() => {
+        if (isInlineRenaming) {
+          return;
+        }
+        if (node.kind === "directory") {
+          onToggleDirectory(node.path);
+          return;
+        }
+        onOpenFile(node.path);
+      }}
+      onDragOver={(event) => {
+        if (node.kind !== "directory" || !hasDroppedBrowserImageCandidate(event)) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        event.dataTransfer.dropEffect = "copy";
+        onDropTargetChange(node.path);
+      }}
+      onDragLeave={() => {
+        if (node.kind === "directory" && dropTargetDirectoryPath === node.path) {
+          onDropTargetChange(null);
+        }
+      }}
+      onDrop={(event) => {
+        if (node.kind !== "directory" || !hasDroppedBrowserImageCandidate(event)) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        console.log("[nora renderer] file tree image drop received", {
+          directoryPath: node.path,
+          debug: getDropDebugData(event)
+        });
+        onDropTargetChange(null);
+        void extractDroppedBrowserImage(event)
+          .then((droppedImage) => {
+            if (!droppedImage) {
+              console.warn("[nora renderer] file tree image drop could not be parsed", {
+                directoryPath: node.path,
+                debug: getDropDebugData(event)
+              });
+              return;
+            }
+            console.log("[nora renderer] file tree image drop parsed", {
+              directoryPath: node.path,
+              payload: droppedImage
+            });
+            return onImportImageToDirectory(node.path, droppedImage);
+          })
+          .catch((error: unknown) => {
+            console.error("[nora renderer] file tree image drop import failed", {
+              directoryPath: node.path,
+              error
+            });
+          });
+      }}
+      title={node.path}
+    >
+      {node.kind === "directory"
+        ? (
+          <>
+            {isExpanded ? <ChevronDown className="size-4 shrink-0" /> : <ChevronRight className="size-4 shrink-0" />}
+            {isExpanded ? <FolderOpen className="size-4 shrink-0 text-primary" /> : <Folder className="size-4 shrink-0 text-primary" />}
+          </>
+        )
+        : (
+          <>
+            <span className="size-4 shrink-0" />
+            <WorkspaceFileIcon path={node.path} className="size-4 shrink-0" isActive={activePath === node.path} />
+          </>
+        )}
+      {isInlineRenaming && inlineRename ? (
+        <div className="min-w-0 flex-1" onClick={(event) => event.stopPropagation()}>
+          <Input
+            value={inlineRename.draft}
+            onChange={(event) => onInlineRenameChange(event.target.value)}
+            onFocus={(event) => {
+              if (inlineRename.mode === "create-directory" || inlineRename.mode === "create-file") {
+                event.currentTarget.select();
+              }
+            }}
+            onKeyDown={handleInlineRenameKeyDown}
+            onBlur={() => {
+              void onInlineRenameSubmit();
+            }}
+            autoFocus
+            className={cn(
+              "h-8",
+              inlineRename.errorMessage ? "border-destructive focus-visible:ring-destructive" : null
+            )}
+            aria-label={
+              inlineRename.mode === "create-directory"
+                ? "New folder name"
+                : inlineRename.mode === "create-file"
+                  ? "New file name"
+                  : `Rename ${node.name}`
+            }
+          />
+          {inlineRename.errorMessage ? (
+            <div className="pt-1 text-xs text-destructive">{inlineRename.errorMessage}</div>
+          ) : null}
+        </div>
+      ) : (
+        <span className="truncate">{node.name}</span>
+      )}
+      {changeSummary ? (
+        <span className="ml-auto flex shrink-0 items-center gap-2 text-[11px] text-muted-foreground">
+          <span className="text-emerald-500">+{changeSummary.additions}</span>
+          <span className="text-destructive">-{changeSummary.deletions}</span>
+        </span>
+      ) : null}
+    </button>
+  );
+
   return (
     <>
-      <button
-        type="button"
-        draggable={!isInlineRenaming}
-        className={cn(
-          "flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition hover:bg-accent/30",
-          activePath === node.path ? "bg-primary/10 text-foreground" : "text-foreground hover:text-foreground",
-          isDropTarget ? "bg-primary/15 text-foreground ring-1 ring-primary/40" : null
-        )}
-        style={{ paddingLeft: `${12 + depth * 16}px` }}
-        onDragStart={(event) => {
-          if (isInlineRenaming) {
-            return;
-          }
-          setWorkspaceRelativePathDragData(event.dataTransfer, node.path, node.kind);
-        }}
-        onClick={() => {
-          if (isInlineRenaming) {
-            return;
-          }
-          if (node.kind === "directory") {
-            onToggleDirectory(node.path);
-            return;
-          }
-          onOpenFile(node.path);
-        }}
-        onContextMenu={(event) => {
-          onOpenContextMenu(node, event);
-        }}
-        onDragOver={(event) => {
-          if (node.kind !== "directory" || !hasDroppedBrowserImageCandidate(event)) {
-            return;
-          }
-          event.preventDefault();
-          event.stopPropagation();
-          event.dataTransfer.dropEffect = "copy";
-          onDropTargetChange(node.path);
-        }}
-        onDragLeave={() => {
-          if (node.kind === "directory" && dropTargetDirectoryPath === node.path) {
-            onDropTargetChange(null);
-          }
-        }}
-        onDrop={(event) => {
-          if (node.kind !== "directory" || !hasDroppedBrowserImageCandidate(event)) {
-            return;
-          }
-          event.preventDefault();
-          event.stopPropagation();
-          console.log("[nora renderer] file tree image drop received", {
-            directoryPath: node.path,
-            debug: getDropDebugData(event)
-          });
-          onDropTargetChange(null);
-          void extractDroppedBrowserImage(event)
-            .then((droppedImage) => {
-              if (!droppedImage) {
-                console.warn("[nora renderer] file tree image drop could not be parsed", {
-                  directoryPath: node.path,
-                  debug: getDropDebugData(event)
-                });
-                return;
-              }
-              console.log("[nora renderer] file tree image drop parsed", {
-                directoryPath: node.path,
-                payload: droppedImage
-              });
-              return onImportImageToDirectory(node.path, droppedImage);
-            })
-            .catch((error: unknown) => {
-              console.error("[nora renderer] file tree image drop import failed", {
-                directoryPath: node.path,
-                error
-              });
-            });
-        }}
-        title={node.path}
-      >
-        {node.kind === "directory"
-          ? (
+      <ContextMenu>
+        <ContextMenuTrigger asChild>{rowButton}</ContextMenuTrigger>
+        <ContextMenuContent className="w-56">
+          {node.kind === "directory" ? (
             <>
-              {isExpanded ? <ChevronDown className="size-4 shrink-0" /> : <ChevronRight className="size-4 shrink-0" />}
-              {isExpanded ? <FolderOpen className="size-4 shrink-0 text-primary" /> : <Folder className="size-4 shrink-0 text-primary" />}
+              <ContextMenuItem onSelect={() => onStartCreateFile(node.path)}>
+                <FilePlus className="size-4" />
+                New file
+              </ContextMenuItem>
+              <ContextMenuItem onSelect={() => onStartCreateDirectory(node.path)}>
+                <FolderPlus className="size-4" />
+                New folder
+              </ContextMenuItem>
+              <ContextMenuItem destructive onSelect={() => onDeletePath(node.path, "directory")}>
+                <Trash2 className="size-4" />
+                Delete folder
+              </ContextMenuItem>
             </>
-          )
-          : (
+          ) : (
             <>
-              <span className="size-4 shrink-0" />
-              <WorkspaceFileIcon path={node.path} className="size-4 shrink-0" isActive={activePath === node.path} />
+              <ContextMenuItem onSelect={() => onStartInlineRename(node.path)}>
+                <FilePenLine className="size-4" />
+                Rename file
+              </ContextMenuItem>
+              <ContextMenuItem destructive onSelect={() => onDeletePath(node.path, "file")}>
+                <Trash2 className="size-4" />
+                Delete file
+              </ContextMenuItem>
             </>
           )}
-        {isInlineRenaming && inlineRename ? (
-          <div className="min-w-0 flex-1" onClick={(event) => event.stopPropagation()}>
-            <Input
-              value={inlineRename.draft}
-              onChange={(event) => onInlineRenameChange(event.target.value)}
-              onFocus={(event) => {
-                if (inlineRename.mode === "create-directory" || inlineRename.mode === "create-file") {
-                  event.currentTarget.select();
-                }
-              }}
-              onKeyDown={handleInlineRenameKeyDown}
-              onBlur={() => {
-                void onInlineRenameSubmit();
-              }}
-              autoFocus
-              className={cn(
-                "h-8",
-                inlineRename.errorMessage ? "border-destructive focus-visible:ring-destructive" : null
-              )}
-              aria-label={
-                inlineRename.mode === "create-directory"
-                  ? "New folder name"
-                  : inlineRename.mode === "create-file"
-                    ? "New file name"
-                    : `Rename ${node.name}`
-              }
-            />
-            {inlineRename.errorMessage ? (
-              <div className="pt-1 text-xs text-destructive">{inlineRename.errorMessage}</div>
-            ) : null}
-          </div>
-        ) : (
-          <span className="truncate">{node.name}</span>
-        )}
-        {changeSummary ? (
-          <span className="ml-auto flex shrink-0 items-center gap-2 text-[11px] text-muted-foreground">
-            <span className="text-emerald-500">+{changeSummary.additions}</span>
-            <span className="text-destructive">-{changeSummary.deletions}</span>
-          </span>
-        ) : null}
-      </button>
+        </ContextMenuContent>
+      </ContextMenu>
       {node.kind === "directory" && isExpanded
         ? node.children.map((child) => (
             <FileTreeNodeRow
@@ -330,7 +360,10 @@ function FileTreeNodeRow({
               onInlineRenameChange={onInlineRenameChange}
               onInlineRenameSubmit={onInlineRenameSubmit}
               onInlineRenameCancel={onInlineRenameCancel}
-              onOpenContextMenu={onOpenContextMenu}
+              onStartInlineRename={onStartInlineRename}
+              onStartCreateDirectory={onStartCreateDirectory}
+              onStartCreateFile={onStartCreateFile}
+              onDeletePath={onDeletePath}
               onDropTargetChange={onDropTargetChange}
               onToggleDirectory={onToggleDirectory}
               onOpenFile={onOpenFile}
@@ -363,7 +396,6 @@ export function FileTreePanel({
 }: FileTreePanelProps) {
   const [expandedDirectories, setExpandedDirectories] = useState<Record<string, boolean>>({});
   const [dropTargetDirectoryPath, setDropTargetDirectoryPath] = useState<string | null>(null);
-  const [contextMenu, setContextMenu] = useState<FileTreeContextMenuState | null>(null);
   const [createdDirectoryPaths, setCreatedDirectoryPaths] = useState<string[]>([]);
   const [transientDirectoryPath, setTransientDirectoryPath] = useState<string | null>(null);
   const [transientFilePath, setTransientFilePath] = useState<string | null>(null);
@@ -371,7 +403,6 @@ export function FileTreePanel({
   const [isRenamingFile, setIsRenamingFile] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ path: string; kind: "file" | "directory" } | null>(null);
   const [isDeletingFile, setIsDeletingFile] = useState(false);
-  const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const treeDirectoryPaths = useMemo(() => {
     const unique = new Set<string>([...directoryPaths, ...createdDirectoryPaths]);
     if (transientDirectoryPath) {
@@ -388,43 +419,6 @@ export function FileTreePanel({
   const fileTree = useMemo(() => buildFileTree(treeFilePaths, treeDirectoryPaths), [treeFilePaths, treeDirectoryPaths]);
   const trimmedSearchQuery = searchQuery.trim();
 
-  useEffect(() => {
-    if (!contextMenu) {
-      return;
-    }
-
-    const closeContextMenu = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) {
-        return;
-      }
-
-      if (!contextMenuRef.current?.contains(target)) {
-        setContextMenu(null);
-      }
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setContextMenu(null);
-      }
-    };
-
-    const handleViewportChange = () => {
-      setContextMenu(null);
-    };
-
-    window.addEventListener("pointerdown", closeContextMenu);
-    window.addEventListener("keydown", handleEscape);
-    window.addEventListener("scroll", handleViewportChange, true);
-    window.addEventListener("resize", handleViewportChange);
-    return () => {
-      window.removeEventListener("pointerdown", closeContextMenu);
-      window.removeEventListener("keydown", handleEscape);
-      window.removeEventListener("scroll", handleViewportChange, true);
-      window.removeEventListener("resize", handleViewportChange);
-    };
-  }, [contextMenu]);
 
   useEffect(() => {
     if (!activePath) {
@@ -469,20 +463,7 @@ export function FileTreePanel({
     }));
   };
 
-  const openContextMenu = (node: Pick<FileTreeNode, "path" | "name" | "kind">, event: ReactMouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setContextMenu({
-      path: node.path,
-      name: node.name,
-      kind: node.kind,
-      top: event.clientY,
-      left: event.clientX
-    });
-  };
-
   const startInlineRename = (pathName: string) => {
-    setContextMenu(null);
     setInlineRename({
       mode: "rename-file",
       path: pathName,
@@ -492,7 +473,6 @@ export function FileTreePanel({
   };
 
   const startCreateDirectory = (parentPath: string) => {
-    setContextMenu(null);
     setExpandedDirectories((current) => ({ ...current, [parentPath]: true }));
     const siblingNames = listSiblingNames(files, treeDirectoryPaths, parentPath);
     const defaultDirectoryName = getDefaultNewFolderName(siblingNames);
@@ -509,7 +489,6 @@ export function FileTreePanel({
     });
   };
   const startCreateFile = (parentPath: string) => {
-    setContextMenu(null);
     setExpandedDirectories((current) => ({ ...current, [parentPath]: true }));
     const siblingNames = listSiblingNames(files, treeDirectoryPaths, parentPath);
     const defaultFileName = getDefaultNewFileName(siblingNames);
@@ -804,7 +783,10 @@ export function FileTreePanel({
               }}
               onInlineRenameSubmit={submitInlineRename}
               onInlineRenameCancel={cancelInlineRename}
-              onOpenContextMenu={openContextMenu}
+              onStartInlineRename={startInlineRename}
+              onStartCreateDirectory={startCreateDirectory}
+              onStartCreateFile={startCreateFile}
+              onDeletePath={(pathName, kind) => setDeleteTarget({ path: pathName, kind })}
               onDropTargetChange={setDropTargetDirectoryPath}
               onToggleDirectory={toggleDirectory}
               onOpenFile={onOpenFile}
@@ -812,53 +794,6 @@ export function FileTreePanel({
           ))
         )}
       </div>
-      {contextMenu ? (
-        <div
-          ref={contextMenuRef}
-          className="fixed z-20 w-56 rounded-[4px] border border-border/70 bg-popover/95 p-1 shadow-2xl backdrop-blur"
-          style={{ top: contextMenu.top, left: contextMenu.left }}
-        >
-          {contextMenu.kind === "directory" ? (
-            <>
-              <DropdownMenuItem onSelect={() => startCreateFile(contextMenu.path)}>
-                <FilePlus className="size-4" />
-                New file
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => startCreateDirectory(contextMenu.path)}>
-                <FolderPlus className="size-4" />
-                New folder
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                destructive
-                onSelect={() => {
-                  setContextMenu(null);
-                  setDeleteTarget({ path: contextMenu.path, kind: "directory" });
-                }}
-              >
-                <Trash2 className="size-4" />
-                Delete folder
-              </DropdownMenuItem>
-            </>
-          ) : (
-            <>
-              <DropdownMenuItem onSelect={() => startInlineRename(contextMenu.path)}>
-                <FilePenLine className="size-4" />
-                Rename file
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                destructive
-                onSelect={() => {
-                  setContextMenu(null);
-                  setDeleteTarget({ path: contextMenu.path, kind: "file" });
-                }}
-              >
-                <Trash2 className="size-4" />
-                Delete file
-              </DropdownMenuItem>
-            </>
-          )}
-        </div>
-      ) : null}
       <Dialog open={deleteTarget !== null} onOpenChange={(open) => {
         if (!open && !isDeletingFile) {
           setDeleteTarget(null);

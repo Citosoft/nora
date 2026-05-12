@@ -14,6 +14,7 @@ import type { BrowserTabState } from "@/components/app/types";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import { isAgentToolAvailable } from "@shared/agentToolState";
 import type { AgentCatalogEntry, AgentSession, CreateAgentPayload } from "@shared/appTypes";
@@ -75,6 +76,7 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
   const [reloadNonce, setReloadNonce] = useState(0);
   const [selectionMenu, setSelectionMenu] = useState<SelectionContextMenuState | null>(null);
   const webviewRef = useRef<HTMLWebViewElement | null>(null);
+  const selectionMenuTriggerRef = useRef<HTMLSpanElement | null>(null);
   const addressInputRef = useRef<HTMLInputElement | null>(null);
   const canGoBack = tab.historyIndex > 0;
   const canGoForward = tab.historyIndex < tab.history.length - 1;
@@ -104,6 +106,21 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
     const rafId = requestAnimationFrame(focusAddress);
     return () => cancelAnimationFrame(rafId);
   }, [currentUrl, tab.id]);
+
+  useEffect(() => {
+    if (!selectionMenuTriggerRef.current || !selectionMenu) {
+      return;
+    }
+    selectionMenuTriggerRef.current.dispatchEvent(
+      new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        button: 2,
+        clientX: selectionMenu.x,
+        clientY: selectionMenu.y
+      })
+    );
+  }, [selectionMenu]);
 
   useEffect(() => {
     const webview = webviewRef.current;
@@ -584,79 +601,68 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
               </div>
             ) : null}
             {selectionMenu ? (
-              <div
-                data-browser-selection-menu="true"
-                className="fixed z-[9999] min-w-72 rounded-[6px] border border-border/70 bg-popover/95 p-1 shadow-xl backdrop-blur"
-                style={{
-                  left: Math.max(12, Math.min(selectionMenu.x, window.innerWidth - 320)),
-                  top: Math.max(12, Math.min(selectionMenu.y, window.innerHeight - 16))
-                }}
-                onClick={(event) => {
-                  event.stopPropagation();
-                }}
-              >
-                <div className="px-2 py-1 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Selection Actions</div>
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between gap-2 rounded-[4px] px-3 py-2 text-left text-sm text-popover-foreground transition hover:bg-accent/60"
-                  onClick={() => {
-                    void handleCreateTaskFromSelection();
-                  }}
-                >
-                  <span>Create task from selection</span>
-                </button>
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between gap-2 rounded-[4px] px-3 py-2 text-left text-sm text-popover-foreground transition hover:bg-accent/60"
-                  onClick={() => {
-                    void handleCreateSpecFromSelection();
-                  }}
-                >
-                  <span>Create spec from selection</span>
-                </button>
-                <div className="my-1 border-t border-border/60" />
-                {availableTools.map((tool) => (
-                  <button
-                    key={`spawn-${tool.id}`}
-                    type="button"
-                    className="flex w-full items-center gap-2 rounded-[4px] px-3 py-2 text-left text-sm text-popover-foreground transition hover:bg-accent/60"
-                    onClick={() => {
-                      void handleSpawnAgentWithSelection(tool.id);
+              <ContextMenu onOpenChange={(open) => {
+                if (!open) {
+                  setSelectionMenu(null);
+                }
+              }}>
+                <ContextMenuTrigger asChild>
+                  <span
+                    ref={selectionMenuTriggerRef}
+                    data-browser-selection-menu="true"
+                    className="fixed h-px w-px"
+                    style={{
+                      left: Math.max(12, Math.min(selectionMenu.x, window.innerWidth - 320)),
+                      top: Math.max(12, Math.min(selectionMenu.y, window.innerHeight - 16))
                     }}
-                  >
-                    <AgentToolIcon
-                      toolId={tool.id}
-                      label={tool.label}
-                      className="size-5 shrink-0 rounded-sm"
-                      imageClassName="size-4 rounded-sm"
-                    />
-                    <span className="min-w-0 flex-1">Spawn {tool.label} agent with selection</span>
-                  </button>
-                ))}
-                {runningAgents.length ? (
-                  <>
-                    <div className="my-1 border-t border-border/60" />
-                    {runningAgents.map((agent) => (
-                      <button
-                        key={`inject-${agent.id}`}
-                        type="button"
-                        className="flex w-full items-center gap-2 rounded-[4px] px-3 py-2 text-left text-sm text-popover-foreground transition hover:bg-accent/60"
-                        onClick={() => {
+                  />
+                </ContextMenuTrigger>
+                <ContextMenuContent className="min-w-72">
+                  <div className="px-2 py-1 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Selection Actions</div>
+                  <ContextMenuItem onSelect={() => {
+                    void handleCreateTaskFromSelection();
+                  }}>
+                    <span>Create task from selection</span>
+                  </ContextMenuItem>
+                  <ContextMenuItem onSelect={() => {
+                    void handleCreateSpecFromSelection();
+                  }}>
+                    <span>Create spec from selection</span>
+                  </ContextMenuItem>
+                  <div className="my-1 border-t border-border/60" />
+                  {availableTools.map((tool) => (
+                    <ContextMenuItem key={`spawn-${tool.id}`} onSelect={() => {
+                      void handleSpawnAgentWithSelection(tool.id);
+                    }}>
+                      <AgentToolIcon
+                        toolId={tool.id}
+                        label={tool.label}
+                        className="size-5 shrink-0 rounded-sm"
+                        imageClassName="size-4 rounded-sm"
+                      />
+                      <span className="min-w-0 flex-1">Spawn {tool.label} agent with selection</span>
+                    </ContextMenuItem>
+                  ))}
+                  {runningAgents.length ? (
+                    <>
+                      <div className="my-1 border-t border-border/60" />
+                      {runningAgents.map((agent) => (
+                        <ContextMenuItem key={`inject-${agent.id}`} onSelect={() => {
                           void handleInjectSelectionToAgent(agent.id);
-                        }}
-                      >
-                        <AgentToolIcon
-                          toolId={agent.toolId}
-                          label={agent.toolLabel}
-                          className="size-5 shrink-0 rounded-sm"
-                          imageClassName="size-4 rounded-sm"
-                        />
-                        <span className="min-w-0 flex-1 truncate">Inject into {agent.name}</span>
-                      </button>
-                    ))}
-                  </>
-                ) : null}
-              </div>
+                        }}>
+                          <AgentToolIcon
+                            toolId={agent.toolId}
+                            label={agent.toolLabel}
+                            className="size-5 shrink-0 rounded-sm"
+                            imageClassName="size-4 rounded-sm"
+                          />
+                          <span className="min-w-0 flex-1 truncate">Inject into {agent.name}</span>
+                        </ContextMenuItem>
+                      ))}
+                    </>
+                  ) : null}
+                </ContextMenuContent>
+              </ContextMenu>
             ) : null}
           </div>
         )}

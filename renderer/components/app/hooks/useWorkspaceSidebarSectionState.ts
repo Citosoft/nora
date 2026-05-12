@@ -9,7 +9,7 @@ function toggleSectionState(
 ) {
   setState((current) => ({
     ...current,
-    [workspaceId]: !current[workspaceId]
+    [workspaceId]: !(current[workspaceId] ?? true)
   }));
 }
 
