@@ -1001,10 +1001,10 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                         <History className="size-4" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium" title={selectedCommit.subject}>
+                        <div className="whitespace-normal break-words text-sm font-medium leading-snug" title={selectedCommit.subject}>
                           {selectedCommit.subject}
                         </div>
-                        <div className="mt-1 truncate text-[11px] text-muted-foreground" title={commitSubtitle(selectedCommit)}>
+                        <div className="mt-1 whitespace-normal break-words text-[11px] leading-snug text-muted-foreground" title={commitSubtitle(selectedCommit)}>
                           {commitSubtitle(selectedCommit)}
                         </div>
                       </div>
@@ -1572,7 +1572,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                 <div className="flex min-w-0 flex-nowrap items-center gap-2">
                   <div className="flex shrink-0 items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                     <FolderGit2 className="size-3.5 shrink-0" />
-                    <span className="whitespace-nowrap">Changed</span>
+                    <span className="whitespace-nowrap">{isInspectingCommit ? "Files" : "Changed"}</span>
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 flex-nowrap items-center justify-end gap-2">
@@ -1586,24 +1586,28 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                         >
                           Full diff
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-6 shrink-0 rounded-none border-0 border-r border-border/70 px-2 text-[10px] font-semibold"
-                          onClick={() => setSelectedCommitPaths(snapshot.changes.map((change) => change.path))}
-                          disabled={!snapshot.changes.length}
-                        >
-                          All
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-6 shrink-0 rounded-none border-0 px-2 text-[10px] font-semibold"
-                          onClick={() => setSelectedCommitPaths([])}
-                          disabled={!snapshot.changes.length}
-                        >
-                          None
-                        </Button>
+                        {!isInspectingCommit ? (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 shrink-0 rounded-none border-0 border-r border-border/70 px-2 text-[10px] font-semibold"
+                              onClick={() => setSelectedCommitPaths(snapshot.changes.map((change) => change.path))}
+                              disabled={!snapshot.changes.length}
+                            >
+                              All
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 shrink-0 rounded-none border-0 px-2 text-[10px] font-semibold"
+                              onClick={() => setSelectedCommitPaths([])}
+                              disabled={!snapshot.changes.length}
+                            >
+                              None
+                            </Button>
+                          </>
+                        ) : null}
                       </div>
                       <div className="flex shrink-0 items-center px-0.5 text-[11px] tabular-nums text-muted-foreground">
                         {snapshot.changes.length}
@@ -1634,18 +1638,20 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                       )}
                     >
                       <div className="flex items-center gap-3">
-                        <label
-                          className="grid size-5 shrink-0 place-items-center"
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          <input
-                            type="checkbox"
-                            className="size-3.5 rounded-[4px] border border-input bg-background"
-                            checked={selectedPathSet.has(change.path)}
-                            onChange={() => toggleCommitPath(change.path)}
-                            aria-label={`Include ${change.path} in commit`}
-                          />
-                        </label>
+                        {!isInspectingCommit ? (
+                          <label
+                            className="grid size-5 shrink-0 place-items-center"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <input
+                              type="checkbox"
+                              className="size-3.5 rounded-[4px] border border-input bg-background"
+                              checked={selectedPathSet.has(change.path)}
+                              onChange={() => toggleCommitPath(change.path)}
+                              aria-label={`Include ${change.path} in commit`}
+                            />
+                          </label>
+                        ) : null}
                         <button
                           type="button"
                           onClick={() => void onSelectChange(change.path)}
@@ -1670,33 +1676,37 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                             </div>
                           </div>
                         </button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="shrink-0 text-destructive hover:text-destructive"
-                          tooltip={change.status.trim() === "??" ? "Delete untracked file" : "Discard file changes"}
-                          onClick={() => void handleDiscardChange(change)}
-                          aria-label={change.status.trim() === "??" ? `Delete ${change.path}` : `Discard changes in ${change.path}`}
-                          disabled={discardingChangePath === change.path}
-                        >
-                          {discardingChangePath === change.path ? (
-                            <LoaderCircle className="size-4 animate-spin" />
-                          ) : (
-                            <Undo2 className="size-4" />
-                          )}
-                        </Button>
-                        {canEditChange(change) ? (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="shrink-0"
-                            tooltip="Edit file"
-                            onClick={() => onEditChange(change.path)}
-                            aria-label={`Edit ${change.path}`}
-                            disabled={discardingChangePath === change.path}
-                          >
-                            <FilePenLine className="size-4" />
-                          </Button>
+                        {!isInspectingCommit ? (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="shrink-0 text-destructive hover:text-destructive"
+                              tooltip={change.status.trim() === "??" ? "Delete untracked file" : "Discard file changes"}
+                              onClick={() => void handleDiscardChange(change)}
+                              aria-label={change.status.trim() === "??" ? `Delete ${change.path}` : `Discard changes in ${change.path}`}
+                              disabled={discardingChangePath === change.path}
+                            >
+                              {discardingChangePath === change.path ? (
+                                <LoaderCircle className="size-4 animate-spin" />
+                              ) : (
+                                <Undo2 className="size-4" />
+                              )}
+                            </Button>
+                            {canEditChange(change) ? (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="shrink-0"
+                                tooltip="Edit file"
+                                onClick={() => onEditChange(change.path)}
+                                aria-label={`Edit ${change.path}`}
+                                disabled={discardingChangePath === change.path}
+                              >
+                                <FilePenLine className="size-4" />
+                              </Button>
+                            ) : null}
+                          </>
                         ) : null}
                       </div>
                     </div>
