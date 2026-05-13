@@ -127,12 +127,38 @@ function importedContextBundleHeadline(entry: ContextBundleHeadlineFields): stri
   return "Imported context";
 }
 
-function buildContextGroupTooltipContent(groupTitle: string): string {
-  return `${groupTitle}\n\nClick to start a new agent with this conversation group attached.`;
+function buildContextGroupTooltipContent(args: {
+  groupTitle: string;
+  sourceAgentName: string;
+  contextFilePath: string;
+  eventCount: number;
+}) {
+  return (
+    <div className="space-y-1">
+      <div><span className="font-semibold">Group:</span> {args.groupTitle}</div>
+      <div><span className="font-semibold">Source agent:</span> {args.sourceAgentName}</div>
+      <div><span className="font-semibold">Context events:</span> {args.eventCount.toLocaleString()}</div>
+      <div><span className="font-semibold">Context file:</span> {args.contextFilePath}</div>
+      <div className="pt-1 text-[11px]">Click to prefill a new agent with this context group.</div>
+    </div>
+  );
 }
 
-function buildExternalHarnessTooltipContent(sessionLabel: string): string {
-  return `${sessionLabel}\n\nClick to start a new agent with this transcript attached.`;
+function buildExternalHarnessTooltipContent(args: {
+  sessionLabel: string;
+  workspacePath: string;
+  primaryArtifactPath: string;
+  conversationId: string;
+}) {
+  return (
+    <div className="space-y-1">
+      <div><span className="font-semibold">Session:</span> {args.sessionLabel}</div>
+      <div><span className="font-semibold">Conversation:</span> {args.conversationId}</div>
+      <div><span className="font-semibold">Workspace:</span> {args.workspacePath}</div>
+      <div><span className="font-semibold">Transcript file:</span> {args.primaryArtifactPath}</div>
+      <div className="pt-1 text-[11px]">Click to prefill a new agent with this transcript.</div>
+    </div>
+  );
 }
 
 function buildImportedBundleTooltipContent(
@@ -667,10 +693,24 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
 
   const commitSubtitle = (entry: CommitHistoryEntry) =>
     `${entry.author} · ${formatCommitTimestamp(entry.authoredAt)} · ${entry.shortHash}`;
-  const activeSidebarTabClass = "bg-muted text-foreground";
+  const activeSidebarTabClass = resolvedTheme === "light"
+    ? "bg-white text-slate-900 shadow-[0_1px_1px_rgba(15,23,42,0.08)]"
+    : "bg-muted text-foreground";
+  const inactiveSidebarTabClass = resolvedTheme === "light"
+    ? "text-slate-600 hover:text-slate-900"
+    : "text-muted-foreground hover:text-foreground";
+  const contextSubTabTriggerClass = resolvedTheme === "light"
+    ? "gap-1.5 px-2.5 py-1.5 text-xs text-slate-600 hover:text-slate-900 data-[state=active]:bg-white data-[state=active]:text-slate-900"
+    : "gap-1.5 px-2.5 py-1.5 text-xs";
+  const detectedContextCardClass = resolvedTheme === "light"
+    ? "rounded-[4px] border border-slate-300/90 bg-white"
+    : "rounded-[4px] border border-border/60 bg-card/40";
+  const detectedContextActionClass = resolvedTheme === "light"
+    ? "w-full rounded-md border border-slate-300/90 bg-white px-2 py-2 text-left outline-none transition-colors hover:border-slate-400 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+    : "w-full rounded-md border border-border/60 bg-background/30 px-2 py-2 text-left outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
   return (
-    <section className={cn("flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-card/95", collapsed && "changes-sidebar-collapsed-surface")}>
+    <section className={cn("workspace-shell-surface flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-card/95", collapsed && "changes-sidebar-collapsed-surface")}>
       {!collapsed ? (
         <CardHeader className="min-w-0 border-b border-border/60 px-0 py-2">
           <div className="mb-2 flex items-center gap-3 px-4">
@@ -680,7 +720,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                   type="button"
                   className={cn(
                     "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[3px] px-2 py-1.5 text-[11px] font-medium transition sm:gap-1.5 sm:px-3 sm:text-xs",
-                    activeTab === "git" ? activeSidebarTabClass : "text-muted-foreground hover:text-foreground"
+                    activeTab === "git" ? activeSidebarTabClass : inactiveSidebarTabClass
                   )}
                   onClick={() => onActiveTabChange("git")}
                 >
@@ -712,7 +752,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                   type="button"
                   className={cn(
                     "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[3px] px-2 py-1.5 text-[11px] font-medium transition sm:gap-1.5 sm:px-3 sm:text-xs",
-                    activeTab === "files" ? activeSidebarTabClass : "text-muted-foreground hover:text-foreground"
+                    activeTab === "files" ? activeSidebarTabClass : inactiveSidebarTabClass
                   )}
                   onClick={() => onActiveTabChange("files")}
                 >
@@ -723,7 +763,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                   type="button"
                   className={cn(
                     "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[3px] px-2 py-1.5 text-[11px] font-medium transition sm:gap-1.5 sm:px-3 sm:text-xs",
-                    activeTab === "context" ? activeSidebarTabClass : "text-muted-foreground hover:text-foreground"
+                    activeTab === "context" ? activeSidebarTabClass : inactiveSidebarTabClass
                   )}
                   onClick={() => onActiveTabChange("context")}
                   title="Workspace agent context you can attach to a new agent, and files under .nora/imported_context"
@@ -735,7 +775,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                   type="button"
                   className={cn(
                     "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[3px] px-2 py-1.5 text-[11px] font-medium transition sm:gap-1.5 sm:px-3 sm:text-xs",
-                    activeTab === "vercel" ? activeSidebarTabClass : "text-muted-foreground hover:text-foreground"
+                    activeTab === "vercel" ? activeSidebarTabClass : inactiveSidebarTabClass
                   )}
                   onClick={() => onActiveTabChange("vercel")}
                 >
@@ -746,7 +786,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                   type="button"
                   className={cn(
                     "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[3px] px-2 py-1.5 text-[11px] font-medium transition sm:gap-1.5 sm:px-3 sm:text-xs",
-                    activeTab === "forge" ? activeSidebarTabClass : "text-muted-foreground hover:text-foreground"
+                    activeTab === "forge" ? activeSidebarTabClass : inactiveSidebarTabClass
                   )}
                   onClick={() => onActiveTabChange("forge")}
                 >
@@ -1109,11 +1149,11 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                 >
                   <div className="shrink-0 border-b border-border/50 px-3 pt-2">
                     <TabsList className="mb-2 h-auto w-full flex-wrap justify-start gap-1">
-                      <TabsTrigger value="detected" className="gap-1.5 px-2.5 py-1.5 text-xs">
+                      <TabsTrigger value="detected" className={contextSubTabTriggerClass}>
                         <span>Detected</span>
                         <span className="tabular-nums opacity-80">({detectedContextSurfaceCount})</span>
                       </TabsTrigger>
-                      <TabsTrigger value="imported" className="gap-1.5 px-2.5 py-1.5 text-xs">
+                      <TabsTrigger value="imported" className={contextSubTabTriggerClass}>
                         <span>Imported</span>
                         <span className="tabular-nums opacity-80">({importedBundlesUnique.length})</span>
                       </TabsTrigger>
@@ -1149,7 +1189,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                               {sortedAgentContextSources.map((source) => (
                                 <div
                                   key={source.agentId}
-                                  className="rounded-[4px] border border-border/60 bg-card/40"
+                                  className={detectedContextCardClass}
                                 >
                                   <div className="border-b border-border/60 px-3 py-2">
                                     <div className="flex min-w-0 items-stretch gap-2">
@@ -1173,10 +1213,20 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                                   </div>
                                   <div className="space-y-2 p-3">
                                     {source.entryGroups.map((group) => (
-                                      <Tooltip key={group.id} content={buildContextGroupTooltipContent(group.title)}>
+                                      <Tooltip
+                                        key={group.id}
+                                        content={buildContextGroupTooltipContent({
+                                          groupTitle: group.title,
+                                          sourceAgentName: source.agentName,
+                                          contextFilePath: source.contextFilePath,
+                                          eventCount: group.entryIds.length
+                                        })}
+                                        sideOffset={4}
+                                        followCursor
+                                      >
                                         <button
                                           type="button"
-                                          className="w-full rounded-md border border-border/60 bg-background/30 px-2 py-2 text-left outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                                          className={detectedContextActionClass}
                                           aria-label={`New agent with context: ${source.agentName} — ${group.title}`}
                                           onClick={() => handleOpenCreateAgentFromContextGroup(source, group)}
                                         >
@@ -1230,12 +1280,19 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                               {externalHarnessSessions.map((session) => (
                                 <Tooltip
                                   key={`${session.toolId}:${session.primaryArtifactPath}`}
-                                  content={buildExternalHarnessTooltipContent(session.sessionLabel)}
+                                  content={buildExternalHarnessTooltipContent({
+                                    sessionLabel: session.sessionLabel,
+                                    workspacePath: session.workspacePath,
+                                    primaryArtifactPath: session.primaryArtifactPath,
+                                    conversationId: session.conversationId
+                                  })}
+                                  sideOffset={4}
+                                  followCursor
                                 >
                                   <button
                                     type="button"
                                     disabled={openingExternalHarnessArtifactPath === session.primaryArtifactPath}
-                                    className="w-full rounded-md border border-border/60 bg-background/30 px-2 py-2 text-left outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-60"
+                                    className={cn(detectedContextActionClass, "disabled:pointer-events-none disabled:opacity-60")}
                                     aria-label={`New agent with external CLI context: ${session.sessionLabel}`}
                                     onClick={() => void handleOpenCreateAgentFromExternalHarness(session)}
                                   >

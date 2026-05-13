@@ -1,4 +1,5 @@
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
+import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { WorkspaceProjectIcon } from "@/components/app/shared/Tooling";
 import type { ChatbotShortcut } from "@/components/app/types/chatbot.types";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { ActiveRemoteMount, WorkspaceSummary } from "@shared/appTypes";
-import { ChevronLeft, ChevronRight, Ellipsis, FolderGit2, Globe, HardDrive, LoaderCircle, MonitorPlay, Plus, RefreshCcw, Sparkles, StickyNote, Trash2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Ellipsis, FolderGit2, HardDrive, LoaderCircle, MonitorPlay, Plus, RefreshCcw, Sparkles, StickyNote, Trash2, X } from "lucide-react";
 import type { ReactNode } from "react";
 
 function formatRemoteMountBadgeLabel(localMount: string | null): string {
@@ -350,9 +351,12 @@ export function WorkspaceSidebarChatbotsSection(props: {
                   : "cursor-not-allowed border-border/50 bg-background/20 opacity-60"
               )}
             >
-              <div className="grid size-6 shrink-0 place-items-center rounded-[4px] border border-border/60 bg-background/60 text-primary">
-                <Globe className="size-3.5" />
-              </div>
+              <AgentToolIcon
+                toolId={shortcut.id}
+                label={shortcut.label}
+                className="size-6 shrink-0 rounded-[4px] bg-background/60"
+                imageClassName="size-3.5 rounded-none"
+              />
               <div className="min-w-0 flex flex-1 items-center gap-2">
                 <div className="truncate text-sm font-medium text-foreground">{shortcut.label}</div>
                 <div className="truncate text-[11px] text-muted-foreground">{shortcut.hostLabel}</div>
@@ -383,9 +387,9 @@ function SectionHeader({
 }) {
   return (
     <div className="flex items-center justify-between bg-background/70 px-4 pb-2.5 pt-1.5">
-      <div className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">{title}</div>
+      <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/80">{title}</div>
       <div className="flex items-center gap-2">
-        <div className="text-xs text-muted-foreground">{detail}</div>
+        <div className="text-[11px] font-semibold text-foreground/70">{detail}</div>
         <Button variant="ghost" size="icon" className="size-7" onClick={onToggleCollapsed} aria-label={isCollapsed ? `Expand ${title.toLowerCase()} section` : `Collapse ${title.toLowerCase()} section`}>
           {isCollapsed ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4 rotate-[-90deg]" />}
         </Button>

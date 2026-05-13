@@ -75,13 +75,13 @@
     --input: 0 0% 18%;
     --ring: 153 74% 64%;
     --radius: 0.95rem;
-    --button-default-bg: 153 18% 19%;
-    --button-default-border: 153 20% 27%;
-    --button-default-hover: 153 18% 23%;
-    --button-default-active: 153 18% 26%;
-    --button-outline-bg: 0 0% 12%;
-    --button-outline-border: 0 0% 16%;
-    --button-outline-hover: 0 0% 15%;
+    --button-default-bg: 153 18% 13%;
+    --button-default-border: 153 18% 20%;
+    --button-default-hover: 153 18% 16%;
+    --button-default-active: 153 18% 19%;
+    --button-outline-bg: 0 0% 8%;
+    --button-outline-border: 0 0% 13%;
+    --button-outline-hover: 0 0% 11%;
     --body-gradient-a: rgba(98, 227, 168, 0.1);
     --body-gradient-b: rgba(255, 255, 255, 0.035);
   }
@@ -182,8 +182,8 @@
   }
 
   :root[data-theme="light"] .titlebar-dropdown-menu {
-    background-color: hsl(0 0% 100%) !important;
-    border-color: hsl(214 24% 76%) !important;
+    background-color: hsl(210 16% 93% / 0.92) !important;
+    border-color: hsl(214 18% 80%) !important;
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
     box-shadow: 0 16px 32px rgba(16, 24, 40, 0.18);
@@ -195,6 +195,45 @@
 
   :root[data-theme="light"] .center-column-surface {
     box-shadow: none !important;
+  }
+
+  :root[data-theme="light"] .workspace-shell-surface {
+    background-color: hsl(210 16% 93% / 0.92) !important;
+    border-color: hsl(214 18% 80%) !important;
+  }
+
+  :root[data-theme="light"] .workspace-shell-surface .text-muted-foreground {
+    color: hsl(215 20% 36%) !important;
+  }
+
+  :root[data-theme="light"] .workspace-shell-control-border {
+    border-color: hsl(214 18% 80%) !important;
+  }
+
+  :root[data-theme="light"] .center-column-host {
+    border-color: hsl(214 18% 80%) !important;
+  }
+
+  :root[data-theme="light"] .workspace-shell-footer-surface {
+    border-color: hsl(214 18% 80%) !important;
+    color: hsl(215 28% 27%) !important;
+  }
+
+  :root[data-theme="light"] .workspace-shell-footer-surface .text-muted-foreground {
+    color: hsl(215 22% 33%) !important;
+  }
+
+  :root[data-theme="light"] .footer-tool-status-popover {
+    border-color: hsl(214 22% 70%) !important;
+    color: hsl(215 30% 22%) !important;
+  }
+
+  :root[data-theme="light"] .footer-tool-status-popover .text-muted-foreground {
+    color: hsl(215 24% 30%) !important;
+  }
+
+  :root[data-theme="light"] .workspace-centers-content-surface {
+    background-color: hsl(210 20% 96%) !important;
   }
 
   :root[data-theme="dark"] .center-column-surface {

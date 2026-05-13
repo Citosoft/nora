@@ -268,7 +268,7 @@ export const WorkspaceSidebarWorkspaceSessionRow = ({
           />
         ) : (
           <>
-            <div className="truncate text-sm font-medium">{item.name}</div>
+            <div className="truncate text-[13px] font-medium">{item.name}</div>
             <div className="truncate text-xs text-muted-foreground">
               {kind === "agent" && isAgentBusy && item.lastTerminalLine
                 ? item.lastTerminalLine

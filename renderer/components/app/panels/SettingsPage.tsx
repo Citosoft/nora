@@ -61,7 +61,7 @@ export function SettingsPage({ initialGroup }: SettingsPageProps) {
   }, [initialGroup]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background">
+    <div className="flex h-full min-h-0 flex-col bg-white dark:bg-background">
       <div className="border-b border-border/60 px-8 py-6">
         <div className="flex items-start justify-between gap-4">
           <div>

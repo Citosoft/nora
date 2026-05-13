@@ -97,6 +97,7 @@ export function CreateAgentDialog({
   activeBranch,
   defaultLaunchTargetMode,
   defaultWorktreePrepareCommand,
+  preferredAgentToolId,
   defaults,
   workspaceTerminalPresets,
   globalTerminalPresets,
@@ -183,7 +184,10 @@ export function CreateAgentDialog({
       const initialPreparePreset = initialMode === "new"
         ? findPreparePresetEntryByCommand(preparePresetEntries, defaultWorktreePrepareCommand)
         : null;
-      const initialToolId = defaults?.toolId ?? detectedTools[0]?.id ?? "";
+      const initialToolId = defaults?.toolId
+        ?? (preferredAgentToolId && detectedTools.some((tool) => tool.id === preferredAgentToolId) ? preferredAgentToolId : null)
+        ?? detectedTools[0]?.id
+        ?? "";
       setFormState({
         toolId: initialToolId,
         name: "",
@@ -215,6 +219,7 @@ export function CreateAgentDialog({
     defaults,
     defaultLaunchTargetMode,
     defaultWorktreePrepareCommand,
+    preferredAgentToolId,
     availableTasks,
     worktrees,
     projectBranches,
@@ -292,6 +297,27 @@ export function CreateAgentDialog({
       !!selectedExistingWorktree?.writerAgentId
     ) ||
     isWorkspaceStepBlocked;
+  const handleStartAgent = () => {
+    const branchNameValue = branchName.trim();
+    const worktreeBranch =
+      launchTargetMode === "new" && branchNameValue
+        ? { prefix: branchPrefix, name: branchNameValue }
+        : null;
+    const resolvedAgentName =
+      formState.name.trim() ||
+      buildDefaultAgentDisplayName(selectedTool?.label ?? "", selectedRoleId);
+    onCreateAgent(
+      {
+        ...formState,
+        name: resolvedAgentName,
+        launchSource: "dialog",
+        task: getAgentRolePrompt(selectedRoleId, formState.task),
+        contextSelections,
+        worktreeBranch
+      },
+      selectedTaskPath || null
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -302,7 +328,7 @@ export function CreateAgentDialog({
       >
         <DialogBody className="min-h-0 overflow-y-auto px-6 pb-4 pt-3">
           <div className="flex min-h-0 flex-col gap-5">
-            <div className="rounded-md border border-border/60 bg-muted/15 px-3 py-2.5 text-sm leading-relaxed text-muted-foreground">
+            <div className="rounded-md border border-border/60 bg-muted/15 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
               Start a new AI agent in its own terminal for this project. Use the steps to pick which CLI to run, which
               checkout or worktree it should use, and any optional conversation context—from other Nora agents or
               matching local CLI transcripts for this folder.
@@ -670,6 +696,7 @@ export function CreateAgentDialog({
           ) : null}
           {currentStepIndex < CREATE_AGENT_WIZARD_STEPS.length - 1 ? (
             <Button
+              variant="outline"
               onClick={() => setCurrentStepIndex((current) => Math.min(CREATE_AGENT_WIZARD_STEPS.length - 1, current + 1))}
               disabled={(currentStepIndex === 0 && (!detectedTools.length || !formState.toolId)) || (currentStepIndex === 1 && isWorkspaceStepBlocked)}
             >
@@ -677,32 +704,19 @@ export function CreateAgentDialog({
             </Button>
           ) : (
             <Button
-              onClick={() => {
-                const branchNameValue = branchName.trim();
-                const worktreeBranch =
-                  launchTargetMode === "new" && branchNameValue
-                    ? { prefix: branchPrefix, name: branchNameValue }
-                    : null;
-                const resolvedAgentName =
-                  formState.name.trim() ||
-                  buildDefaultAgentDisplayName(selectedTool?.label ?? "", selectedRoleId);
-                onCreateAgent(
-                  {
-                    ...formState,
-                    name: resolvedAgentName,
-                    launchSource: "dialog",
-                    task: getAgentRolePrompt(selectedRoleId, formState.task),
-                    contextSelections,
-                    worktreeBranch
-                  },
-                  selectedTaskPath || null
-                );
-              }}
+              onClick={handleStartAgent}
               disabled={isLaunchBlocked}
             >
               Launch agent
             </Button>
           )}
+          <Button
+            onClick={handleStartAgent}
+            disabled={isLaunchBlocked}
+            className="!border-emerald-800 !bg-emerald-700 !text-white hover:!border-emerald-700 hover:!bg-emerald-600 focus-visible:ring-emerald-600/60"
+          >
+            Start agent
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

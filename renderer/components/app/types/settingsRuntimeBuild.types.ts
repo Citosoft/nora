@@ -52,6 +52,7 @@ export type BuildSettingsRuntimeValueDeps = {
   updateHardwareAccelerationEnabled: (enabled: boolean) => Promise<void>;
   updateWorkspaceStateStorageMode: (mode: AppSettings["workspaceStateStorageMode"]) => Promise<void>;
   updateDefaultAgentLaunchTarget: (defaultAgentLaunchTarget: AppSettings["defaultAgentLaunchTarget"]) => Promise<void>;
+  updatePreferredAgentToolId: (preferredAgentToolId: AppSettings["preferredAgentToolId"]) => Promise<void>;
   updateSplitViewPreferences: (next: {
     defaultSplitViewGridColumns: AppSettings["defaultSplitViewGridColumns"];
     defaultSplitViewGridRows: AppSettings["defaultSplitViewGridRows"];

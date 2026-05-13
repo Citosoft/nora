@@ -17,7 +17,10 @@ export function toolLogoUrl(toolId: string): string {
     codex: "openai.com",
     claude: "anthropic.com",
     gemini: "gemini.google.com",
-    cursor: "cursor.com"
+    cursor: "cursor.com",
+    chatgpt: "chatgpt.com",
+    perplexity: "perplexity.ai",
+    grok: "grok.com"
   };
 
   const domain = domainByTool[toolId] ?? "example.com";

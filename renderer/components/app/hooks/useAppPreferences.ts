@@ -313,6 +313,13 @@ export function useAppPreferences(): AppPreferences {
     }));
   };
 
+  const updatePreferredAgentToolId = async (preferredAgentToolId: AppSettings["preferredAgentToolId"]) => {
+    await saveAppSettings((current) => ({
+      ...current,
+      preferredAgentToolId
+    }));
+  };
+
   const updateLinuxAptSetupPromptDismissed = async (dismissed: boolean) => {
     await saveAppSettings((current) => ({
       ...current,
@@ -468,6 +475,7 @@ export function useAppPreferences(): AppPreferences {
     updateHardwareAccelerationEnabled,
     updateWorkspaceStateStorageMode,
     updateDefaultAgentLaunchTarget,
+    updatePreferredAgentToolId,
     updateLinuxAptSetupPromptDismissed,
     updateSplitViewPreferences,
     updateBrowserPreferences,

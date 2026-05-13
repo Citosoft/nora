@@ -423,13 +423,13 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
   return (
     <Card className="center-column-surface h-full min-h-0 rounded-none border-x-0 border-t-0 bg-card/95">
       <CardContent className="grid h-full grid-rows-[auto_minmax(0,1fr)] p-0">
-        <div className="border-b border-border/60 bg-background/60 px-4 py-3">
+        <div className="workspace-shell-surface border-b border-border/60 bg-background/60 px-4 py-3">
           <div className="flex items-center gap-2">
-            <div className="flex shrink-0 overflow-hidden rounded-[6px] border border-border/70 bg-background/40">
+            <div className="workspace-shell-control-border flex shrink-0 overflow-hidden rounded-[6px] border border-border/70 bg-background/40">
               <Button
                 variant="outline"
                 size="icon"
-                className="button-default-surface h-10 w-10 shrink-0 rounded-none border-0 border-r border-border/70 shadow-none"
+                className="button-default-surface workspace-shell-control-border h-10 w-10 shrink-0 rounded-none border-0 border-r border-border/70 shadow-none"
                 onClick={() => {
                   if (webviewRef.current?.canGoBack()) {
                     webviewRef.current.goBack();
@@ -450,7 +450,7 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
               <Button
                 variant="outline"
                 size="icon"
-                className="h-10 w-10 shrink-0 rounded-none border-0 border-r border-border/70 shadow-none"
+                className="workspace-shell-control-border h-10 w-10 shrink-0 rounded-none border-0 border-r border-border/70 shadow-none"
                 onClick={() => {
                   if (webviewRef.current?.canGoForward()) {
                     webviewRef.current.goForward();
@@ -487,7 +487,7 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
             </div>
             <div
               className={cn(
-                "relative flex min-w-0 flex-1 items-stretch overflow-hidden rounded-[6px] border border-border/70 bg-background/40",
+                "workspace-shell-control-border relative flex min-w-0 flex-1 items-stretch overflow-hidden rounded-[6px] border border-border/70 bg-background/40",
                 "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background"
               )}
             >
@@ -510,16 +510,16 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
               <Button
                 variant="outline"
                 onClick={navigateToInput}
-                className="button-default-surface h-10 shrink-0 rounded-none border-0 border-l border-border/70 px-4 text-[12px] font-semibold shadow-none"
+                className="button-default-surface workspace-shell-control-border h-10 shrink-0 rounded-none border-0 border-l border-border/70 px-4 text-[12px] font-semibold shadow-none"
               >
                 Go
               </Button>
             </div>
-            <div className="flex shrink-0 overflow-hidden rounded-[6px] border border-border/70 bg-background/40">
+            <div className="workspace-shell-control-border flex shrink-0 overflow-hidden rounded-[6px] border border-border/70 bg-background/40">
               <Button
                 variant="outline"
                 size="icon"
-                className="button-default-surface h-10 w-10 shrink-0 rounded-none border-0 border-r border-border/70 shadow-none"
+                className="button-default-surface workspace-shell-control-border h-10 w-10 shrink-0 rounded-none border-0 border-r border-border/70 shadow-none"
                 onClick={() => {
                   if (currentUrl === "about:blank") {
                     return;

@@ -330,6 +330,7 @@ export type AppPreferences = {
   updateHardwareAccelerationEnabled: (enabled: boolean) => Promise<void>;
   updateWorkspaceStateStorageMode: (mode: AppSettings["workspaceStateStorageMode"]) => Promise<void>;
   updateDefaultAgentLaunchTarget: (launchTarget: AppSettings["defaultAgentLaunchTarget"]) => Promise<void>;
+  updatePreferredAgentToolId: (toolId: AppSettings["preferredAgentToolId"]) => Promise<void>;
   updateLinuxAptSetupPromptDismissed: (dismissed: boolean) => Promise<void>;
   updateSplitViewPreferences: (
     nextSplitViewSettings: Pick<

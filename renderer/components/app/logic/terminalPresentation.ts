@@ -28,7 +28,7 @@ const APP_DARK_TERMINAL_THEME = {
 } as const;
 
 const APP_LIGHT_TERMINAL_THEME = {
-  background: "#fffdf8",
+  background: "#ffffff",
   foreground: "#1f2937",
   black: "#334155",
   red: "#dc2626",
@@ -129,7 +129,9 @@ export function resolveTerminalTheme(
   rootStyles: CSSStyleDeclaration
 ): ITheme {
   if (terminalThemeId === "app") {
-    const background = `hsl(${rootStyles.getPropertyValue("--background").trim()})`;
+    const background = resolvedTheme === "light"
+      ? "#ffffff"
+      : `hsl(${rootStyles.getPropertyValue("--background").trim()})`;
     const foreground = `hsl(${rootStyles.getPropertyValue("--foreground").trim()})`;
     const cursor = `hsl(${rootStyles.getPropertyValue("--primary").trim()})`;
     const previewPalette = getTerminalPreviewPalette("app", resolvedTheme);

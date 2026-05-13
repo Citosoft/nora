@@ -320,33 +320,21 @@ export const WorkspaceSidebarWorkspaceGroup = ({
           <div className="border-t border-border/40 bg-background/10 pl-1.5">
             <div className="py-2 pl-5 pr-4">
               <div className="flex items-center justify-between gap-3">
-                <WorkspaceSidebarChildSectionLabel icon={<Bot className="size-3.5" />} label="Agents" />
+                <WorkspaceSidebarChildSectionLabel icon={<Bot className="size-3.5" />} label="Agents" count={workspace.agents.length} />
                 <div className="flex items-center gap-1">
-                  <div className="text-xs text-muted-foreground">{workspace.agents.length}</div>
-                  <DropdownMenu
-                    align="end"
-                    trigger={(
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-7"
-                        aria-label={`Create agent for ${workspace.project.name}`}
-                      >
-                        <Plus className="size-4" />
-                      </Button>
-                    )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7"
+                    aria-label={`Create agent for ${workspace.project.name}`}
+                    onClick={() =>
+                      workspace.project.id === snapshot.project?.id
+                        ? onOpenCreateAgent()
+                        : onFocusWorkspace(workspace.project.id)
+                    }
                   >
-                    <DropdownMenuItem
-                      onSelect={() =>
-                        workspace.project.id === snapshot.project?.id
-                          ? onOpenCreateAgent()
-                          : onFocusWorkspace(workspace.project.id)
-                      }
-                    >
-                      <Plus className="size-4" />
-                      New agent
-                    </DropdownMenuItem>
-                  </DropdownMenu>
+                    <Plus className="size-4" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -382,9 +370,12 @@ export const WorkspaceSidebarWorkspaceGroup = ({
             )}
             <div className="py-2 pl-5 pr-4">
               <div className="flex items-center justify-between gap-3">
-                <WorkspaceSidebarChildSectionLabel icon={<TerminalSquare className="size-3.5" />} label="Terminals" />
+                <WorkspaceSidebarChildSectionLabel
+                  icon={<TerminalSquare className="size-3.5" />}
+                  label="Terminals"
+                  count={workspace.terminals.length}
+                />
                 <div className="flex items-center gap-1">
-                  <div className="text-xs text-muted-foreground">{workspace.terminals.length}</div>
                   <DropdownMenu
                     align="end"
                     trigger={(
@@ -462,6 +453,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                 <WorkspaceSidebarChildSectionLabel
                   icon={<FolderKanban className="size-3.5" />}
                   label="Tasks"
+                  count={workspaceTaskEntries.length}
                   onOpenCenter={() => {
                     onFocusWorkspace(workspace.project.id);
                     onOpenTaskBoard();
@@ -469,7 +461,6 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                   openCenterAriaLabel={`Open task center for ${workspace.project.name}`}
                 />
                 <div className="flex items-center gap-1">
-                  <div className="text-xs text-muted-foreground">{workspaceTaskEntries.length}</div>
                   <Button variant="ghost" size="icon" className="size-7" onClick={onOpenTaskBoard} aria-label="Open task center">
                     <FolderKanban className="size-4" />
                   </Button>
@@ -522,7 +513,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                         <div className="min-w-0 flex-1">
                           <div
                             className={cn(
-                              "truncate text-sm font-medium",
+                              "truncate text-[13px] font-medium",
                               task.completed ? "text-emerald-600 line-through decoration-emerald-500 decoration-2" : "text-foreground"
                             )}
                           >
@@ -545,6 +536,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                 <WorkspaceSidebarChildSectionLabel
                   icon={<ScrollText className="size-3.5" />}
                   label="Specs"
+                  count={workspaceSpecEntries.length}
                   onOpenCenter={() => {
                     onFocusWorkspace(workspace.project.id);
                     onOpenSpecBrowser();
@@ -552,7 +544,6 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                   openCenterAriaLabel={`Open spec center for ${workspace.project.name}`}
                 />
                 <div className="flex items-center gap-1">
-                  <div className="text-xs text-muted-foreground">{workspaceSpecEntries.length}</div>
                   <Button variant="ghost" size="icon" className="size-7" onClick={onOpenSpecBrowser} aria-label="Open specs browser">
                     <FileText className="size-4" />
                   </Button>
@@ -598,7 +589,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                       >
                         {renderSubitemStatusDot("bg-primary/80")}
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-medium text-foreground">{spec.title}</div>
+                          <div className="truncate text-[13px] font-medium text-foreground">{spec.title}</div>
                         </div>
                       </button>
                     ))}
@@ -616,6 +607,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                 <WorkspaceSidebarChildSectionLabel
                   icon={<StickyNote className="size-3.5" />}
                   label="Notes"
+                  count={workspaceNoteEntries.length}
                   onOpenCenter={() => {
                     onFocusWorkspace(workspace.project.id);
                     onOpenNoteBrowser();
@@ -623,7 +615,6 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                   openCenterAriaLabel={`Open notes center for ${workspace.project.name}`}
                 />
                 <div className="flex items-center gap-1">
-                  <div className="text-xs text-muted-foreground">{workspaceNoteEntries.length}</div>
                   <Button variant="ghost" size="icon" className="size-7" onClick={onOpenNoteBrowser} aria-label="Open notes browser">
                     <FileText className="size-4" />
                   </Button>
@@ -669,7 +660,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                       >
                         {renderSubitemStatusDot("bg-primary/80")}
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-medium text-foreground">{note.title}</div>
+                          <div className="truncate text-[13px] font-medium text-foreground">{note.title}</div>
                         </div>
                       </button>
                     ))}
@@ -684,9 +675,12 @@ export const WorkspaceSidebarWorkspaceGroup = ({
             </div>
             <div className="py-2 pl-5 pr-4">
               <div className="flex items-center justify-between gap-3">
-                <WorkspaceSidebarChildSectionLabel icon={<Sparkles className="size-3.5" />} label="AI chats" />
+                <WorkspaceSidebarChildSectionLabel
+                  icon={<Sparkles className="size-3.5" />}
+                  label="AI chats"
+                  count={workspaceAiChatEntries.length}
+                />
                 <div className="flex items-center gap-1">
-                  <div className="text-xs text-muted-foreground">{workspaceAiChatEntries.length}</div>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -731,7 +725,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                         >
                           {renderSubitemStatusDot(isActive ? "bg-primary" : "bg-muted-foreground/45")}
                           <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-medium text-foreground">{chat.title}</div>
+                            <div className="truncate text-[13px] font-medium text-foreground">{chat.title}</div>
                           </div>
                         </button>
                       );

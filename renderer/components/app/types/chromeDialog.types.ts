@@ -112,6 +112,7 @@ export type CreateAgentDialogProps = {
   activeBranch: string;
   defaultLaunchTargetMode: LaunchTargetMode;
   defaultWorktreePrepareCommand: string | null;
+  preferredAgentToolId: string | null;
   defaults: CreateAgentDialogDefaults | null;
   workspaceTerminalPresets: TerminalPreset[];
   globalTerminalPresets: TerminalPreset[];

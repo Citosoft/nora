@@ -73,6 +73,7 @@ export const buildAppShellSettingsRuntimeAssemblyInputFromDeps = (
     updateHardwareAccelerationEnabled: deps.updateHardwareAccelerationEnabled,
     updateWorkspaceStateStorageMode: deps.updateWorkspaceStateStorageMode,
     updateDefaultAgentLaunchTarget: deps.updateDefaultAgentLaunchTarget,
+    updatePreferredAgentToolId: deps.updatePreferredAgentToolId,
     updateSplitViewPreferences: deps.updateSplitViewPreferences,
     canPreviewMacTitleBarChrome: deps.canPreviewMacTitleBarChrome,
     forceMacTitleBarPreview: deps.forceMacTitleBarPreview,

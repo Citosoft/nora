@@ -18,7 +18,7 @@ export function SpecBrowserPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
-      <div className="border-b border-border/60 px-6 py-3">
+      <div className="workspace-shell-surface border-b border-border/60 px-6 py-3">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             <ScrollText className="size-4 shrink-0" />
@@ -32,9 +32,9 @@ export function SpecBrowserPanel({
           <Badge variant="outline">{totalSpecCount} specs</Badge>
         </div>
       </div>
-      <ScrollArea className="h-full px-6 py-5">
+      <ScrollArea className="workspace-centers-content-surface h-full bg-background px-6 py-5">
         <div className="space-y-5">
-          <Card className="border-primary/20 bg-primary/5">
+          <Card className="border-primary/20 bg-primary/5 !shadow-none">
             <div className="px-5 py-4">
               <div className="flex items-start gap-3">
                 <div className="mt-0.5 rounded-[4px] border border-primary/20 bg-background/80 p-2 text-primary">
@@ -56,7 +56,7 @@ export function SpecBrowserPanel({
           </Card>
           {workspaces.length ? (
             workspaces.map((workspace) => (
-              <Card key={workspace.projectId} className="overflow-hidden">
+              <Card key={workspace.projectId} className="overflow-hidden !shadow-none">
                 <div className="border-b border-border/60 px-5 py-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>

@@ -49,6 +49,7 @@ export type AppShellSettingsRuntimeAssemblyInput = {
     | "updateHardwareAccelerationEnabled"
     | "updateWorkspaceStateStorageMode"
     | "updateDefaultAgentLaunchTarget"
+    | "updatePreferredAgentToolId"
     | "updateSplitViewPreferences"
     | "canPreviewMacTitleBarChrome"
     | "forceMacTitleBarPreview"

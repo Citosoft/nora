@@ -62,7 +62,7 @@ export function WorkspaceSessionTabs({
   }, []);
 
   return (
-    <div className="border-b border-border/60 bg-background/70">
+    <div className="workspace-shell-surface border-b border-border/60 bg-background/70">
       <div className="thin-scrollbar flex min-h-0 items-stretch overflow-x-auto">
         <div className="flex min-h-0 items-stretch">
           {tabs.map((tab) => {
@@ -79,10 +79,10 @@ export function WorkspaceSessionTabs({
                   <Button
                     variant="ghost"
                     className={cn(
-                      "h-[42px] shrink-0 gap-2 rounded-none border-y-0 border-l-0 px-3 text-sm",
+                      "h-[42px] shrink-0 gap-2 rounded-none border-b-0 border-l-0 border-t-2 px-3 text-sm",
                       isActive
-                        ? "border-r border-border bg-accent/70 text-foreground"
-                        : "border-r border-border/60 bg-transparent text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+                        ? "border-r border-border border-t-primary bg-accent/70 text-foreground"
+                        : "border-r border-border/60 border-t-transparent bg-transparent text-muted-foreground hover:bg-accent/40 hover:text-foreground"
                     )}
                     onClick={() => onSelect(tab)}
                   >

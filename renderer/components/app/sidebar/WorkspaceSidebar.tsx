@@ -234,7 +234,7 @@ export const WorkspaceSidebar = () => {
   return (
     <Card
       className={cn(
-        "h-full min-h-0 overflow-hidden rounded-none border-0 bg-card/95 shadow-none dark:bg-muted/35",
+        "workspace-shell-surface h-full min-h-0 overflow-hidden rounded-none border-0 bg-card/95 shadow-none dark:bg-muted/35",
         collapsed && "workspace-sidebar-collapsed-surface"
       )}
     >

@@ -66,6 +66,7 @@ export type SettingsRuntimeValue = {
   updateHardwareAcceleration: (enabled: boolean) => void;
   updateWorkspaceStateStorageMode: (mode: AppSettings["workspaceStateStorageMode"]) => void;
   updateDefaultAgentLaunchTarget: (launchTarget: AgentLaunchTargetPreference) => void;
+  updatePreferredAgentToolId: (toolId: AppSettings["preferredAgentToolId"]) => void;
   updateDefaultSplitViewGrid: (gridColumns: AppSettings["defaultSplitViewGridColumns"], gridRows: AppSettings["defaultSplitViewGridRows"]) => void;
   updateRememberLastSplitViewPerWorkspace: (enabled: boolean) => void;
   updateConfirmSplitViewDelete: (enabled: boolean) => void;

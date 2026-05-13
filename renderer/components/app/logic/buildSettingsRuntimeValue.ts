@@ -60,6 +60,9 @@ export const buildSettingsRuntimeValue = (d: BuildSettingsRuntimeValueDeps): Set
   updateDefaultAgentLaunchTarget: (defaultAgentLaunchTarget) => {
     void d.updateDefaultAgentLaunchTarget(defaultAgentLaunchTarget).catch(d.captureError);
   },
+  updatePreferredAgentToolId: (preferredAgentToolId) => {
+    void d.updatePreferredAgentToolId(preferredAgentToolId).catch(d.captureError);
+  },
   updateDefaultSplitViewGrid: (defaultSplitViewGridColumns, defaultSplitViewGridRows) => {
     void d.updateSplitViewPreferences({
       defaultSplitViewGridColumns,

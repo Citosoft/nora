@@ -96,7 +96,7 @@ export const FocusedAgentInputComposer = ({
           ) : null}
         </div>
       ) : null}
-      <div className="flex items-center gap-1 rounded-[18px] border border-border/45 bg-background/25 px-2.5 py-1.5">
+      <div className="flex items-center gap-1 rounded-[18px] border border-slate-400/80 bg-background/25 px-2.5 py-1.5 dark:border-border/45">
         {agent ? (
           <Popover>
             <PopoverTrigger asChild>
