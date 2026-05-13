@@ -42,9 +42,11 @@ export function createWorkspaceService(deps: WorkspaceServiceDeps): WorkspaceSer
     writeWorkspaceFile: deps.writeWorkspaceFile,
     importWorkspaceBinaryFile: deps.importWorkspaceBinaryFile,
     selectChange: deps.selectChange,
+    discardChange: deps.discardChange,
     inspectCommit: deps.inspectCommit,
     clearCommitInspection: deps.clearCommitInspection,
     commitChanges: deps.commitChanges,
+    pullChanges: deps.pullChanges,
     pushChanges: deps.pushChanges
   };
 }

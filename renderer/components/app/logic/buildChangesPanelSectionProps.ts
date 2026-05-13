@@ -112,6 +112,7 @@ export const buildChangesPanelSectionProps = (
       d.setIsCenterDiffExpanded(true);
       d.setActiveWorkspaceContentTab("diff");
     },
+    onDiscardChange: (pathName) => d.safely(() => noraWorkspaceClient.discardChange(pathName)),
     onOpenFullDiff: () => {
       d.setTaskEditorState(null);
       d.setIsTaskBoardOpen(false);
@@ -129,6 +130,7 @@ export const buildChangesPanelSectionProps = (
         return null;
       }
     },
+    onPullChanges: () => d.safely(() => noraWorkspaceClient.pullChanges()),
     onPushChanges: () => d.safely(() => noraWorkspaceClient.pushChanges()),
     onEditChange: (pathName) => {
       void d.openFileEditor(pathName, {

@@ -18,7 +18,7 @@ import type {
   ForgeWorkItemKind,
   ForgeWorkItemSummary
 } from "@shared/appTypes";
-import { Activity, ArrowLeft, ExternalLink, FileDiff, GitPullRequest, MessageSquare, Plus, RefreshCcw, Tags } from "lucide-react";
+import { Activity, ArrowLeft, ExternalLink, FileDiff, GitBranch, GitPullRequest, MessageSquare, Plus, RefreshCcw, Tags } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 type ForgeListTab = "pull_requests" | "issues" | "actions";
@@ -70,6 +70,21 @@ function ActiveWorkflowRunBadge({ label }: { label: string }) {
       </span>
       {label}
     </Badge>
+  );
+}
+
+function ForgeBranchSummary({ item }: { item: ForgeWorkItemSummary }) {
+  if (!item.sourceBranch && !item.targetBranch) {
+    return null;
+  }
+
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+      <GitBranch className="size-3 shrink-0 opacity-75" aria-hidden />
+      <span className="font-mono text-[11px] text-foreground/80">
+        {item.sourceBranch || "?"} {"->"} {item.targetBranch || "?"}
+      </span>
+    </div>
   );
 }
 
@@ -133,6 +148,7 @@ function ForgeWorkItemList({
               className="w-full rounded-[6px] border border-border/50 bg-background/50 px-3 py-2 text-left transition hover:border-primary/40 hover:bg-accent/30"
             >
               <div className="whitespace-normal break-words text-sm font-medium text-foreground">#{item.number} {item.title}</div>
+              <ForgeBranchSummary item={item} />
               <div className="mt-1 text-xs text-muted-foreground">
                 {[item.sourceRepository, item.author || "Unknown", item.state, new Date(item.updatedAt).toLocaleString()].filter(Boolean).join(" · ")}
               </div>
@@ -514,6 +530,7 @@ export function ForgeDetailPanel({
                 {detail.item.author ? <Badge variant="outline">{detail.item.author}</Badge> : null}
                 <Badge variant="outline">{new Date(detail.item.updatedAt).toLocaleString()}</Badge>
               </div>
+              {detail.kind === "pull_request" ? <ForgeBranchSummary item={detail.item} /> : null}
               {detail.kind === "issue" ? (
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <div className="mr-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">

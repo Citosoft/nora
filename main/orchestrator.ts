@@ -68,6 +68,7 @@ import {
 import {
   commitChangesWithValidation,
   getActiveChangesRoot,
+  pullChangesWithValidation,
   pushChangesWithValidation,
   stopAllAgents as stopAllAgentsAction
 } from "./orchestrator/sessionActions";
@@ -161,7 +162,9 @@ import {
   listWorkspaceTrackedAndUntrackedFiles,
   moveWorkspaceFile,
   performForgeWorkItemActionForRepo,
+  pullWorkspaceChanges,
   pushWorkspaceChanges,
+  discardWorkspaceChange,
   readCommitChanges,
   readCommitEntry,
   readCommitHistory,
@@ -756,7 +759,8 @@ export class Orchestrator implements OrchestratorFacade {
       removeWorkspaceTaskBoardPosition,
       writeWorkspaceTextFileOperation: writeWorkspaceTextFile,
       writeWorkspaceBinaryFileOperation: writeWorkspaceBinaryFile,
-      createWorkspaceDirectoryOperation: createWorkspaceDirectory
+      createWorkspaceDirectoryOperation: createWorkspaceDirectory,
+      discardWorkspaceChangeOperation: discardWorkspaceChange
     });
     this.workspaceLifecycleHelpers = createWorkspaceLifecycleHelpers({
       getSnapshot: () => this.getSnapshot(),
@@ -835,6 +839,7 @@ export class Orchestrator implements OrchestratorFacade {
       refresh: this.workspaceRefreshHelpers,
       mutations: this.workspaceMutationHelpers,
       commitChanges: (payload) => commitChangesWithValidation(this.createSessionActionsDependencies(), payload),
+      pullChanges: () => pullChangesWithValidation(this.createSessionActionsDependencies()),
       pushChanges: () => pushChangesWithValidation(this.createSessionActionsDependencies())
     });
     this.sessionMainService = new SessionMainService({
@@ -996,6 +1001,10 @@ export class Orchestrator implements OrchestratorFacade {
     return this.workspaceMainService.commitChanges(payload);
   }
 
+  async pullChanges(): Promise<AppState> {
+    return this.workspaceMainService.pullChanges();
+  }
+
   async pushChanges(): Promise<AppState> {
     return this.workspaceMainService.pushChanges();
   }
@@ -1095,6 +1104,7 @@ export class Orchestrator implements OrchestratorFacade {
       getSnapshot: () => this.getSnapshot(),
       refreshProjectState: () => this.refreshProjectState(),
       commitWorkspaceChanges,
+      pullWorkspaceChanges,
       pushWorkspaceChanges,
       appendAgentSystemMessage: (agentId: string, message: string) =>
         this.terminalMutationFacade.appendAgentSystemMessage(agentId, message),

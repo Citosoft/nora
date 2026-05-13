@@ -53,10 +53,12 @@ export function createWorkspaceBridge(): WorkspaceBridge {
     statWorkspacePath: (payload) => invokeIpc("app:stat-workspace-path", payload),
     getWorkspaceGitStatusSummary: (payload) => invokeIpc("app:get-workspace-git-status-summary", payload),
     selectChange: (pathName) => invokeIpc("app:select-change", pathName),
+    discardChange: (pathName) => invokeIpc("app:discard-change", pathName),
     inspectCommit: (hash) => invokeIpc("app:inspect-commit", hash),
     clearCommitInspection: () => invokeIpc("app:clear-commit-inspection"),
     commitChanges: (payload) => invokeIpc("app:commit-changes", payload),
     generateCommitMessage: (payload) => invokeIpc("app:generate-commit-message", payload),
+    pullChanges: () => invokeIpc("app:pull-changes"),
     pushChanges: () => invokeIpc("app:push-changes"),
     onWorkspaceLoadingProgress: (listener) =>
       subscribeToIpcEvent<WorkspaceLoadingProgressPayload>("workspace:loading-progress", listener)

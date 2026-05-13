@@ -91,10 +91,12 @@ export type ChangesPanelChromeSlice = {
   onActiveTabChange: (tab: "git" | "files" | "context" | "forge" | "vercel") => void;
   onRefreshChanges: () => Promise<void>;
   onSelectChange: (pathName: string) => Promise<void>;
+  onDiscardChange: (pathName: string) => Promise<AppState | null>;
   onOpenFullDiff: () => void;
   onCommitChanges: (message: string, paths?: string[]) => Promise<AppState | null>;
   canGenerateAiCommitMessage: boolean;
   onGenerateCommitMessage: (paths?: string[]) => Promise<GenerateCommitMessageResult | null>;
+  onPullChanges: () => Promise<AppState | null>;
   onPushChanges: () => Promise<AppState | null>;
   onEditChange: (pathName: string) => void;
   onInspectCommit: (hash: string) => Promise<AppState | null>;

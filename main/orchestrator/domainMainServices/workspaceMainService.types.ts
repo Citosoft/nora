@@ -15,5 +15,6 @@ export type WorkspaceMainServiceDeps = {
   refresh: WorkspaceRefreshHelpers;
   mutations: WorkspaceMutationHelpers;
   commitChanges: (payload: CommitChangesPayload) => Promise<AppState>;
+  pullChanges: () => Promise<AppState>;
   pushChanges: () => Promise<AppState>;
 };

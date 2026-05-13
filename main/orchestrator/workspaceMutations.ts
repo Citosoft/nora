@@ -104,6 +104,29 @@ export function createWorkspaceMutationHelpers(deps: WorkspaceMutationDeps): Wor
     return deps.getSnapshot();
   }
 
+  async function discardChange(pathName: string): Promise<AppState> {
+    const snapshot = deps.getSnapshot();
+    const currentProject = snapshot.project;
+    if (!currentProject) {
+      throw new Error("Choose a project before discarding file changes.");
+    }
+
+    const change = snapshot.changes.find((entry) => entry.path === pathName);
+    if (!change) {
+      throw new Error(`No pending git change was found for ${pathName}.`);
+    }
+
+    const project = await deps.resolveProjectSummaryById(currentProject.id);
+    const target = deps.resolveWorkspaceFileTarget(project, snapshot.changesRoot || project.rootPath);
+    await deps.discardWorkspaceChangeOperation(target, pathName, change.status);
+
+    deps.setState({
+      selectedChangePath: snapshot.selectedChangePath === pathName ? null : snapshot.selectedChangePath,
+      errorMessage: null
+    });
+    return deps.refreshProjectState();
+  }
+
   async function inspectCommit(hash: string): Promise<AppState> {
     deps.setState({
       selectedCommitHash: hash,
@@ -131,6 +154,7 @@ export function createWorkspaceMutationHelpers(deps: WorkspaceMutationDeps): Wor
     writeWorkspaceFile,
     importWorkspaceBinaryFile,
     selectChange,
+    discardChange,
     inspectCommit,
     clearCommitInspection
   };

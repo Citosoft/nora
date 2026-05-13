@@ -146,6 +146,7 @@ function createDeps(args: {
       getSnapshot: () => args.snapshot,
       refreshProjectState: async () => args.snapshot,
       commitWorkspaceChanges: async () => undefined,
+      pullWorkspaceChanges: async () => undefined,
       pushWorkspaceChanges: async () => undefined,
       appendAgentSystemMessage: () => undefined,
       stopAllAgents: async () => undefined,

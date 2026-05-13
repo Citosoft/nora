@@ -110,10 +110,12 @@ export interface WorkspaceBridge {
     payload: { projectId: string; rootPath?: string }
   ) => Promise<WorkspaceGitStatusSummary>;
   selectChange: (pathName: string) => Promise<AppState>;
+  discardChange: (pathName: string) => Promise<AppState>;
   inspectCommit: (hash: string) => Promise<AppState>;
   clearCommitInspection: () => Promise<AppState>;
   commitChanges: (payload: CommitChangesPayload) => Promise<AppState>;
   generateCommitMessage: (payload?: GenerateCommitMessagePayload) => Promise<GenerateCommitMessageResult>;
+  pullChanges: () => Promise<AppState>;
   pushChanges: () => Promise<AppState>;
   onWorkspaceLoadingProgress: (listener: (payload: WorkspaceLoadingProgressPayload) => void) => () => void;
 }

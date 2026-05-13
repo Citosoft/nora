@@ -241,6 +241,9 @@ export interface WorkspacePathStatResult {
 
 export interface WorkspaceGitStatusSummary {
   branch: string | null;
+  upstreamBranch: string | null;
+  aheadCount: number;
+  behindCount: number;
   lines: string[];
   truncated: boolean;
 }

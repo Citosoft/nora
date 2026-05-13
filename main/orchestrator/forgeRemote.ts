@@ -23,6 +23,8 @@ type CountDiffLinesFn = (diff: string, prefix: string) => number;
 export function createForgeRemoteOps(countDiffLines: CountDiffLinesFn) {
   function mapGithubPullRequest(item: JsonObject): ForgeWorkItemSummary {
     const user = getJsonObject(item.user);
+    const head = getJsonObject(item.head);
+    const base = getJsonObject(item.base);
     return {
       id: `github-pr-${getNumber(item.number) ?? 0}`,
       number: getNumber(item.number) ?? 0,
@@ -30,6 +32,8 @@ export function createForgeRemoteOps(countDiffLines: CountDiffLinesFn) {
       state: getString(item.state) ?? "",
       author: getString(user?.login),
       sourceRepository: null,
+      sourceBranch: getString(head?.ref),
+      targetBranch: getString(base?.ref),
       updatedAt: getString(item.updated_at) ?? "",
       webUrl: getString(item.html_url) ?? ""
     };
@@ -44,6 +48,8 @@ export function createForgeRemoteOps(countDiffLines: CountDiffLinesFn) {
       state: getString(item.state) ?? "",
       author: getString(user?.login),
       sourceRepository: null,
+      sourceBranch: null,
+      targetBranch: null,
       updatedAt: getString(item.updated_at) ?? "",
       webUrl: getString(item.html_url) ?? ""
     };
@@ -61,6 +67,8 @@ export function createForgeRemoteOps(countDiffLines: CountDiffLinesFn) {
       state: getString(item.state) ?? "",
       author: getString(author?.username),
       sourceRepository,
+      sourceBranch: getString(item.source_branch),
+      targetBranch: getString(item.target_branch),
       updatedAt: getString(item.updated_at) ?? "",
       webUrl: getString(item.web_url) ?? ""
     };
@@ -78,6 +86,8 @@ export function createForgeRemoteOps(countDiffLines: CountDiffLinesFn) {
       state: getString(item.state) ?? "",
       author: getString(author?.username),
       sourceRepository,
+      sourceBranch: null,
+      targetBranch: null,
       updatedAt: getString(item.updated_at) ?? "",
       webUrl: getString(item.web_url) ?? ""
     };

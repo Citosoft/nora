@@ -229,9 +229,13 @@ export function registerWorkspaceIpc({
   ipcMain.handle("app:list-ai-models", (_event, payload: ListAiModelsPayload): Promise<ListAiModelsResult> =>
     listProviderModels(payload.provider, payload.apiKey)
   );
+  ipcMain.handle("app:pull-changes", () => withSnapshot(() => services.workspace.pullChanges()));
   ipcMain.handle("app:push-changes", () => withSnapshot(() => services.workspace.pushChanges()));
   ipcMain.handle("app:select-change", (_event, pathName: string) =>
     withSnapshot(() => Promise.resolve(services.workspace.selectChange(pathName)))
+  );
+  ipcMain.handle("app:discard-change", (_event, pathName: string) =>
+    withSnapshot(() => services.workspace.discardChange(pathName))
   );
   ipcMain.handle("app:inspect-commit", (_event, hash: string) =>
     withSnapshot(() => services.workspace.inspectCommit(hash))

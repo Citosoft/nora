@@ -177,13 +177,52 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
     try {
       const { stdout: branchStdout } = await deps.execGit(target, ["rev-parse", "--abbrev-ref", "HEAD"], 64 * 1024);
       const branch = branchStdout.trim() || null;
+      let upstreamBranch: string | null = null;
+      let aheadCount = 0;
+      let behindCount = 0;
+      try {
+        const { stdout: upstreamStdout } = await deps.execGit(
+          target,
+          ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"],
+          64 * 1024
+        );
+        upstreamBranch = upstreamStdout.trim() || null;
+        if (upstreamBranch) {
+          const remoteName = upstreamBranch.split("/")[0]?.trim() || null;
+          if (remoteName) {
+            try {
+              await deps.execGit(target, ["fetch", "--quiet", remoteName], 1024 * 1024);
+            } catch {
+              // Fall back to the last fetched upstream ref if a background fetch is unavailable.
+            }
+          }
+          const { stdout: countsStdout } = await deps.execGit(
+            target,
+            ["rev-list", "--left-right", "--count", "@{upstream}...HEAD"],
+            64 * 1024
+          );
+          const [behindRaw = "0", aheadRaw = "0"] = countsStdout.trim().split(/\s+/);
+          behindCount = Number.parseInt(behindRaw, 10);
+          aheadCount = Number.parseInt(aheadRaw, 10);
+          if (!Number.isFinite(behindCount)) {
+            behindCount = 0;
+          }
+          if (!Number.isFinite(aheadCount)) {
+            aheadCount = 0;
+          }
+        }
+      } catch {
+        upstreamBranch = null;
+        aheadCount = 0;
+        behindCount = 0;
+      }
       const { stdout: statusStdout } = await deps.execGit(target, ["status", "--short"], 1024 * 1024);
       const rawLines = statusStdout.split(/\r?\n/).map((line) => line.trimEnd()).filter(Boolean);
       const truncated = rawLines.length > deps.maxWorkspaceGitStatusLines;
       const lines = rawLines.slice(0, deps.maxWorkspaceGitStatusLines);
-      return { branch, lines, truncated };
+      return { branch, upstreamBranch, aheadCount, behindCount, lines, truncated };
     } catch {
-      return { branch: null, lines: [], truncated: false };
+      return { branch: null, upstreamBranch: null, aheadCount: 0, behindCount: 0, lines: [], truncated: false };
     }
   };
 

@@ -60,6 +60,24 @@ const pushWorkspaceChanges = async (target: WorkspaceTarget, execGit: WorkspaceG
   await execGit(target, pushArgs);
 };
 
+const pullWorkspaceChanges = async (target: WorkspaceTarget, execGit: WorkspaceGitExec): Promise<void> => {
+  await execGit(target, ["pull", "--no-rebase", "--no-edit"]);
+};
+
+const discardWorkspaceChange = async (
+  target: WorkspaceTarget,
+  relativePath: string,
+  gitStatus: string,
+  execGit: WorkspaceGitExec
+): Promise<void> => {
+  if (gitStatus.trim() === "??") {
+    await execGit(target, ["clean", "-f", "--", relativePath]);
+    return;
+  }
+
+  await execGit(target, ["restore", "--source=HEAD", "--staged", "--worktree", "--", relativePath]);
+};
+
 const readCurrentBranch = async (target: WorkspaceTarget, execGit: WorkspaceGitExec): Promise<string> => {
   const { stdout } = await execGit(target, ["rev-parse", "--abbrev-ref", "HEAD"]);
   return stdout.trim();
@@ -201,7 +219,10 @@ export const createWorkspaceGitBindings = (execGit: WorkspaceGitExec) => ({
   getWorkspaceForgeRepo: (target: WorkspaceTarget) => getWorkspaceForgeRepo(target, execGit),
   commitWorkspaceChanges: (target: WorkspaceTarget, message: string, selectedPaths: string[] | null) =>
     commitWorkspaceChanges(target, message, selectedPaths, execGit),
+  pullWorkspaceChanges: (target: WorkspaceTarget) => pullWorkspaceChanges(target, execGit),
   pushWorkspaceChanges: (target: WorkspaceTarget) => pushWorkspaceChanges(target, execGit),
+  discardWorkspaceChange: (target: WorkspaceTarget, relativePath: string, gitStatus: string) =>
+    discardWorkspaceChange(target, relativePath, gitStatus, execGit),
   readCurrentBranch: (target: WorkspaceTarget) => readCurrentBranch(target, execGit),
   readGitChanges: (target: WorkspaceTarget) => readGitChanges(target, execGit),
   readCommitHistory: (target: WorkspaceTarget) => readCommitHistory(target, execGit),

@@ -97,7 +97,7 @@ export function ForgeWorkflowRunPanel({
     formatForgeWorkflowDurationOnlyLine(getForgeWorkflowTimingParts(startedAt, completedAt, status, nowMs));
 
   return (
-    <div className="center-column-surface flex h-full min-h-0 flex-col">
+    <div className="center-column-surface flex h-full min-h-0 flex-col bg-white dark:bg-transparent">
       <div className="flex min-h-0 flex-1 flex-col px-5 py-4">
         {isLoading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -160,7 +160,7 @@ export function ForgeWorkflowRunPanel({
               </div>
             </header>
 
-            <Card className="shrink-0 border-border/60 bg-card/50 p-4 shadow-panel">
+            <Card className="shrink-0 border-border/60 bg-white p-4 !shadow-none dark:bg-card/50">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Stages</h3>
                 <span className="text-xs tabular-nums text-muted-foreground">
@@ -182,7 +182,7 @@ export function ForgeWorkflowRunPanel({
                             "flex w-[12.5rem] shrink-0 snap-start flex-col rounded-[6px] border px-3 py-2.5 text-left transition-all",
                             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                             isActive
-                              ? "border-primary/45 bg-accent/45 shadow-sm ring-1 ring-primary/15"
+                              ? "border-primary/45 bg-accent/45 ring-1 ring-primary/15"
                               : "border-border/60 bg-background/40 hover:border-primary/28 hover:bg-accent/20"
                           )}
                         >
@@ -216,7 +216,7 @@ export function ForgeWorkflowRunPanel({
             </Card>
 
             {selectedJob ? (
-              <Card className="shrink-0 border-border/60 bg-card/50 p-4 shadow-panel">
+              <Card className="shrink-0 border-border/60 bg-white p-4 !shadow-none dark:bg-card/50">
                 <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/45 pb-4">
                   <div className="flex min-w-0 items-start gap-3">
                     <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/55">

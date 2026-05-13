@@ -50,10 +50,12 @@ export const NORA_WORKSPACE_CLIENT_METHODS = [
   "statWorkspacePath",
   "getWorkspaceGitStatusSummary",
   "selectChange",
+  "discardChange",
   "inspectCommit",
   "clearCommitInspection",
   "commitChanges",
   "generateCommitMessage",
+  "pullChanges",
   "pushChanges",
   "onWorkspaceLoadingProgress"
 ] as const satisfies readonly (keyof NoraBridge)[];

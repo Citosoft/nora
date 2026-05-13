@@ -37,6 +37,8 @@ export interface ForgeWorkItemSummary {
   state: string;
   author: string | null;
   sourceRepository: string | null;
+  sourceBranch: string | null;
+  targetBranch: string | null;
   updatedAt: string;
   webUrl: string;
 }

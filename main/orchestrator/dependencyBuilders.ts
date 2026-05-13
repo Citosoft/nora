@@ -6,6 +6,7 @@ export function buildSessionActionsDependencies(params: {
   getSnapshot: () => AppState;
   refreshProjectState: () => Promise<AppState>;
   commitWorkspaceChanges: (target: WorkspaceTarget, message: string, paths: string[] | null) => Promise<void>;
+  pullWorkspaceChanges: (target: WorkspaceTarget) => Promise<void>;
   pushWorkspaceChanges: (target: WorkspaceTarget) => Promise<void>;
   appendAgentSystemMessage: (agentId: string, message: string) => void;
   stopAllAgents: () => Promise<void>;
@@ -19,6 +20,7 @@ export function buildSessionActionsDependencies(params: {
     "getSnapshot",
     "refreshProjectState",
     "commitWorkspaceChanges",
+    "pullWorkspaceChanges",
     "pushWorkspaceChanges",
     "appendAgentSystemMessage",
     "stopAllAgents",

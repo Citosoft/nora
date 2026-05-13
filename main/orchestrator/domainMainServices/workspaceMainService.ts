@@ -180,11 +180,15 @@ export class WorkspaceMainService implements WorkspaceService {
 
   selectChange = (pathName: string): AppState => this.d.mutations.selectChange(pathName);
 
+  discardChange = (pathName: string): Promise<AppState> => this.d.mutations.discardChange(pathName);
+
   inspectCommit = (hash: string): Promise<AppState> => this.d.mutations.inspectCommit(hash);
 
   clearCommitInspection = (): Promise<AppState> => this.d.mutations.clearCommitInspection();
 
   commitChanges = (payload: CommitChangesPayload): Promise<AppState> => this.d.commitChanges(payload);
+
+  pullChanges = (): Promise<AppState> => this.d.pullChanges();
 
   pushChanges = (): Promise<AppState> => this.d.pushChanges();
 }

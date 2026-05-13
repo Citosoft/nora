@@ -54,6 +54,11 @@ export interface WorkspaceMutationDeps {
     projectId: string,
     relativePath: string
   ) => Promise<void>;
+  discardWorkspaceChangeOperation: (
+    target: WorkspaceTarget,
+    relativePath: string,
+    gitStatus: string
+  ) => Promise<void>;
 }
 
 export interface WorkspaceMutationHelpers {
@@ -63,6 +68,7 @@ export interface WorkspaceMutationHelpers {
   writeWorkspaceFile: (payload: WriteWorkspaceFilePayload) => Promise<AppState>;
   importWorkspaceBinaryFile: (payload: { projectId: string; path: string; content: Buffer; rootPath?: string }) => Promise<AppState>;
   selectChange: (pathName: string) => AppState;
+  discardChange: (pathName: string) => Promise<AppState>;
   inspectCommit: (hash: string) => Promise<AppState>;
   clearCommitInspection: () => Promise<AppState>;
 }

@@ -5,6 +5,7 @@ type SessionActionsDependencies = {
   getSnapshot: () => AppState;
   refreshProjectState: () => Promise<AppState>;
   commitWorkspaceChanges: (target: WorkspaceTarget, message: string, paths: string[] | null) => Promise<void>;
+  pullWorkspaceChanges: (target: WorkspaceTarget) => Promise<void>;
   pushWorkspaceChanges: (target: WorkspaceTarget) => Promise<void>;
   appendAgentSystemMessage: (agentId: string, message: string) => void;
   stopAllAgents: () => Promise<void>;
@@ -71,6 +72,23 @@ export async function pushChangesWithValidation(deps: SessionActionsDependencies
 
   const changesRoot = getActiveChangesRoot(state);
   await deps.pushWorkspaceChanges({ path: changesRoot, location: state.project.location });
+  return deps.refreshProjectState();
+}
+
+export async function pullChangesWithValidation(deps: SessionActionsDependencies): Promise<AppState> {
+  const state = deps.getSnapshot();
+  if (!state.project) {
+    throw new Error("Choose a project before pulling changes.");
+  }
+
+  const changesRoot = getActiveChangesRoot(state);
+  try {
+    await deps.pullWorkspaceChanges({ path: changesRoot, location: state.project.location });
+  } catch (error: unknown) {
+    await deps.refreshProjectState().catch(() => null);
+    throw error;
+  }
+
   return deps.refreshProjectState();
 }
 

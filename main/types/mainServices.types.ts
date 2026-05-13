@@ -164,9 +164,11 @@ export interface WorkspaceService {
   writeWorkspaceFile: (payload: WriteWorkspaceFilePayload) => Promise<AppState>;
   importWorkspaceBinaryFile: (payload: { projectId: string; path: string; content: Buffer; rootPath?: string }) => Promise<AppState>;
   selectChange: (pathName: string) => AppState;
+  discardChange: (pathName: string) => Promise<AppState>;
   inspectCommit: (hash: string) => Promise<AppState>;
   clearCommitInspection: () => Promise<AppState>;
   commitChanges: (payload: CommitChangesPayload) => Promise<AppState>;
+  pullChanges: () => Promise<AppState>;
   pushChanges: () => Promise<AppState>;
 }
 

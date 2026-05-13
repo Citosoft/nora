@@ -259,10 +259,12 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
     onActiveTabChange,
     onRefreshChanges,
     onSelectChange,
+    onDiscardChange,
     onOpenFullDiff,
     onCommitChanges,
     canGenerateAiCommitMessage,
     onGenerateCommitMessage,
+    onPullChanges,
     onPushChanges,
     onEditChange,
     onInspectCommit,
@@ -273,7 +275,9 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
   const [isCommitting, setIsCommitting] = useState(false);
   const [isGeneratingCommitMessage, setIsGeneratingCommitMessage] = useState(false);
   const [generatedCommitProvider, setGeneratedCommitProvider] = useState<string | null>(null);
+  const [isPulling, setIsPulling] = useState(false);
   const [isPushing, setIsPushing] = useState(false);
+  const [gitStatusBehindCount, setGitStatusBehindCount] = useState(0);
   const [fileSearchQuery, setFileSearchQuery] = useState("");
   const [fileSearchResults, setFileSearchResults] = useState<WorkspaceSearchResult[]>([]);
   const [isSearchingFiles, setIsSearchingFiles] = useState(false);
@@ -281,6 +285,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
   const [isRecentCommitsCollapsed, setIsRecentCommitsCollapsed] = useState(false);
   const [isChangedFilesCollapsed, setIsChangedFilesCollapsed] = useState(false);
   const [isRefreshingChanges, setIsRefreshingChanges] = useState(false);
+  const [discardingChangePath, setDiscardingChangePath] = useState<string | null>(null);
   const [selectedCommitPaths, setSelectedCommitPaths] = useState<string[] | null>(null);
   const [importedBundles, setImportedBundles] = useState<ImportedContextBundleSummary[]>([]);
   const [importedLoading, setImportedLoading] = useState(false);
@@ -290,6 +295,23 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
   const refreshInFlightRef = useRef(false);
   const onRefreshChangesRef = useRef(onRefreshChanges);
   onRefreshChangesRef.current = onRefreshChanges;
+
+  const loadGitStatusSummary = useCallback(async () => {
+    if (!snapshot.project || activeTab !== "git" || collapsed) {
+      setGitStatusBehindCount(0);
+      return;
+    }
+
+    try {
+      const summary = await noraWorkspaceClient.getWorkspaceGitStatusSummary({
+        projectId: snapshot.project.id,
+        rootPath: snapshot.changesRoot || undefined
+      });
+      setGitStatusBehindCount(summary.behindCount);
+    } catch {
+      setGitStatusBehindCount(0);
+    }
+  }, [activeTab, collapsed, snapshot.changesRoot, snapshot.project]);
 
   const loadImportedBundles = useCallback(async () => {
     if (!snapshot.project || !snapshot.changesRoot) {
@@ -525,6 +547,11 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
     change.status !== "deleted" &&
     !change.path.includes(" -> ");
 
+  const discardChangePrompt = (change: ChangeEntry): string =>
+    change.status.trim() === "??"
+      ? `Delete the untracked file "${change.path}"? This cannot be undone.`
+      : `Discard all changes in "${change.path}" and restore it from HEAD?`;
+
   const handleCommit = async () => {
     const message = commitMessage.trim();
     if (!message || isCommitting || selectedChangeCount === 0) {
@@ -587,8 +614,45 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
     try {
       await onPushChanges();
       onRefreshForge();
+      await loadGitStatusSummary();
     } finally {
       setIsPushing(false);
+      statusBar.endStatus(statusId);
+    }
+  };
+
+  const handlePull = async () => {
+    if (isPulling) {
+      return;
+    }
+
+    setIsPulling(true);
+    const statusId = statusBar.beginStatus("Pulling branch", true);
+    try {
+      await onPullChanges();
+      onRefreshForge();
+      await loadGitStatusSummary();
+    } finally {
+      setIsPulling(false);
+      statusBar.endStatus(statusId);
+    }
+  };
+
+  const handleDiscardChange = async (change: ChangeEntry) => {
+    if (discardingChangePath) {
+      return;
+    }
+    const ok = window.confirm(discardChangePrompt(change));
+    if (!ok) {
+      return;
+    }
+
+    setDiscardingChangePath(change.path);
+    const statusId = statusBar.beginStatus(`Discarding ${change.path}`, true);
+    try {
+      await onDiscardChange(change.path);
+    } finally {
+      setDiscardingChangePath(null);
       statusBar.endStatus(statusId);
     }
   };
@@ -649,12 +713,17 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
     const statusId = statusBar.beginStatus("Refreshing git changes", true);
     try {
       await onRefreshChangesRef.current();
+      await loadGitStatusSummary();
     } finally {
       refreshInFlightRef.current = false;
       setIsRefreshingChanges(false);
       statusBar.endStatus(statusId);
     }
-  }, [statusBar]);
+  }, [loadGitStatusSummary, statusBar]);
+
+  useEffect(() => {
+    void loadGitStatusSummary();
+  }, [loadGitStatusSummary]);
 
   useEffect(() => {
     if (activeTab !== "git" || collapsed || !snapshot.project) {
@@ -979,7 +1048,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                         ) : null}
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-0 rounded-[6px] border border-border/70 bg-background/40">
+                    <div className="grid grid-cols-4 gap-0 rounded-[6px] border border-border/70 bg-background/40">
                       <Button
                         variant="outline"
                         className="button-default-surface h-8 w-full justify-center gap-1.5 rounded-none border-0 border-r border-border/70 px-3 text-[11px] font-semibold tracking-normal"
@@ -989,6 +1058,22 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                       >
                         {isCommitting ? null : <FileText className="size-3.5" />}
                         <span>{isCommitting ? "Working" : "Commit"}</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="h-8 w-full justify-center gap-1.5 rounded-none border-0 border-r border-border/70 px-3 text-[11px] font-semibold tracking-normal"
+                        disabled={!snapshot.project || isPulling || isInspectingCommit || gitStatusBehindCount < 1}
+                        onClick={() => void handlePull()}
+                        tooltip={
+                          isInspectingCommit
+                            ? "Return to working tree before pulling"
+                            : gitStatusBehindCount > 0
+                              ? `Pull ${gitStatusBehindCount} remote commit${gitStatusBehindCount === 1 ? "" : "s"}`
+                              : "No remote changes to pull"
+                        }
+                      >
+                        {isPulling ? null : <RefreshCcw className="size-3.5" />}
+                        <span>{isPulling ? "Working" : "Pull"}</span>
                       </Button>
                       <Button
                         variant="outline"
@@ -1585,6 +1670,21 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                             </div>
                           </div>
                         </button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0 text-destructive hover:text-destructive"
+                          tooltip={change.status.trim() === "??" ? "Delete untracked file" : "Discard file changes"}
+                          onClick={() => void handleDiscardChange(change)}
+                          aria-label={change.status.trim() === "??" ? `Delete ${change.path}` : `Discard changes in ${change.path}`}
+                          disabled={discardingChangePath === change.path}
+                        >
+                          {discardingChangePath === change.path ? (
+                            <LoaderCircle className="size-4 animate-spin" />
+                          ) : (
+                            <Undo2 className="size-4" />
+                          )}
+                        </Button>
                         {canEditChange(change) ? (
                           <Button
                             variant="ghost"
@@ -1593,6 +1693,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                             tooltip="Edit file"
                             onClick={() => onEditChange(change.path)}
                             aria-label={`Edit ${change.path}`}
+                            disabled={discardingChangePath === change.path}
                           >
                             <FilePenLine className="size-4" />
                           </Button>
