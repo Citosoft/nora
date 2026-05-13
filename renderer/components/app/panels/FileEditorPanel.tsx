@@ -11,9 +11,15 @@ import { joinWorkspacePath } from "@/components/app/logic/appUtils";
 import { normalizeBrowserUrl } from "@/components/app/logic/browserTabs";
 import { buildFileEditorBreadcrumbs, getFileEditorLeafName } from "@/components/app/logic/fileEditorPath";
 import {
+  buildWorkspaceMarkdownLink,
   isWorkspaceImageLinkTarget,
   resolveWorkspaceMarkdownLinkTarget
 } from "@/components/app/logic/markdownLinkTargets";
+import {
+  dataTransferDeclaresWorkspaceRelativePath,
+  readWorkspaceRelativePathFromDataTransfer
+} from "@/components/app/logic/workspacePathDrag";
+import { isWorkspaceNoteMarkdownPath, isWorkspaceSpecMarkdownPath } from "@/components/app/logic/workspaceNoraPaths";
 import {
   buildMonacoModelPath,
   configureMonacoTypeScript,
@@ -27,7 +33,7 @@ import type { BeforeMount, Monaco, OnMount } from "@monaco-editor/react";
 import Editor from "@monaco-editor/react";
 import { AlertCircle, Columns2, Eye, Image as ImageIcon, LoaderCircle, PencilLine, X } from "lucide-react";
 import type { editor } from "monaco-editor";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent } from "react";
 
 type FileEditorPanelContextProps = Partial<FileEditorPanelProps>;
 
@@ -97,6 +103,10 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
   const [monacoEditor, setMonacoEditor] = useState<editor.IStandaloneCodeEditor | null>(null);
   const [markdownViewByTabPath, setMarkdownViewByTabPath] = useState<Record<string, MarkdownEditorTabView>>({});
   const isMarkdownFile = !isImage && /\.(md|markdown)$/i.test(pathName);
+  const supportsWorkspaceFileLinkDrop =
+    !isImage &&
+    !isReadOnlyTab &&
+    (isWorkspaceNoteMarkdownPath(pathName) || isWorkspaceSpecMarkdownPath(pathName));
   const monacoRef = useRef<Monaco | null>(null);
   const editorRootPath = activeTab?.rootPath ?? sessionData.project?.rootPath ?? null;
   const projectRootPath = sessionData.project?.rootPath ?? null;
@@ -336,6 +346,61 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
     />
   );
 
+  const handleEditorDragOverCapture = useCallback((event: ReactDragEvent<HTMLDivElement>) => {
+    if (!supportsWorkspaceFileLinkDrop || !dataTransferDeclaresWorkspaceRelativePath(event.dataTransfer)) {
+      return;
+    }
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+  }, [supportsWorkspaceFileLinkDrop]);
+
+  const handleEditorDropCapture = useCallback((event: ReactDragEvent<HTMLDivElement>) => {
+    if (!supportsWorkspaceFileLinkDrop || !monacoEditor) {
+      return;
+    }
+
+    const droppedPath = readWorkspaceRelativePathFromDataTransfer(event.dataTransfer);
+    if (!droppedPath) {
+      return;
+    }
+
+    const markdownLink = buildWorkspaceMarkdownLink(pathName, droppedPath);
+    const model = monacoEditor.getModel();
+    if (!markdownLink || !model) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const dropPosition = monacoEditor.getTargetAtClientPoint(event.clientX, event.clientY)?.position ?? null;
+    const targetRange = dropPosition
+      ? {
+          startLineNumber: dropPosition.lineNumber,
+          startColumn: dropPosition.column,
+          endLineNumber: dropPosition.lineNumber,
+          endColumn: dropPosition.column
+        }
+      : monacoEditor.getSelection();
+    if (!targetRange) {
+      return;
+    }
+
+    const insertedTextStartOffset = model.getOffsetAt({
+      lineNumber: targetRange.startLineNumber,
+      column: targetRange.startColumn
+    });
+    monacoEditor.executeEdits("nora.workspace-file-link-drop", [
+      {
+        range: targetRange,
+        text: markdownLink,
+        forceMoveMarkers: true
+      }
+    ]);
+    monacoEditor.focus();
+    monacoEditor.setPosition(model.getPositionAt(insertedTextStartOffset + markdownLink.length));
+  }, [monacoEditor, pathName, supportsWorkspaceFileLinkDrop]);
+
   return (
     <div className="center-column-surface flex h-full min-h-0 flex-col bg-card/95">
       <div className="border-b border-border/50 px-3 py-2">
@@ -481,13 +546,21 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
             </div>
           ) : isMarkdownFile && markdownView === "hybrid" ? (
             <div className="flex h-full min-h-0 flex-row">
-              <div className="min-h-0 min-w-0 flex-1 border-r border-border/50">{monacoFileEditor}</div>
+              <div
+                className="min-h-0 min-w-0 flex-1 border-r border-border/50"
+                onDragOverCapture={handleEditorDragOverCapture}
+                onDropCapture={handleEditorDropCapture}
+              >
+                {monacoFileEditor}
+              </div>
               <div className="thin-scrollbar min-h-0 min-w-0 flex-1 overflow-auto px-4 py-4">
                 <MarkdownRenderer onLinkClick={handleMarkdownLinkClick}>{content}</MarkdownRenderer>
               </div>
             </div>
           ) : (
-            monacoFileEditor
+            <div className="h-full min-h-0" onDragOverCapture={handleEditorDragOverCapture} onDropCapture={handleEditorDropCapture}>
+              {monacoFileEditor}
+            </div>
           )}
         </div>
       </div>
