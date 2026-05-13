@@ -1,4 +1,5 @@
 import {
+  dataTransferDeclaresWorkspaceRelativePath,
   dataTransferDeclaresPathOrFileDrop,
   formatWorkspacePathReference,
   NORA_WORKSPACE_RELATIVE_PATH_MIME,
@@ -43,10 +44,12 @@ test("dataTransferDeclaresPathOrFileDrop uses types (getData empty during dragov
     getData: () => ""
   } as unknown as DataTransfer;
   assert.equal(dataTransferDeclaresPathOrFileDrop(dt2), true);
+  assert.equal(dataTransferDeclaresWorkspaceRelativePath(dt2), true);
 
   const dt3 = {
     types: ["text/plain"],
     getData: () => ""
   } as unknown as DataTransfer;
   assert.equal(dataTransferDeclaresPathOrFileDrop(dt3), false);
+  assert.equal(dataTransferDeclaresWorkspaceRelativePath(dt3), false);
 });

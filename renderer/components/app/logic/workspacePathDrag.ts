@@ -27,6 +27,10 @@ export function readWorkspaceRelativePathFromDataTransfer(dataTransfer: DataTran
   return null;
 }
 
+export function dataTransferDeclaresWorkspaceRelativePath(dataTransfer: DataTransfer): boolean {
+  return Array.from(dataTransfer.types).includes(NORA_WORKSPACE_RELATIVE_PATH_MIME);
+}
+
 /**
  * Use during `dragover` / `dragenter` only. `getData()` is unavailable until `drop`
  * in Chromium/Electron, so we must rely on `types` to allow the drop (copy cursor).
@@ -36,7 +40,7 @@ export function dataTransferDeclaresPathOrFileDrop(dataTransfer: DataTransfer): 
   if (types.some((type) => type.toLowerCase() === "files")) {
     return true;
   }
-  if (types.includes(NORA_WORKSPACE_RELATIVE_PATH_MIME)) {
+  if (dataTransferDeclaresWorkspaceRelativePath(dataTransfer)) {
     return true;
   }
   return false;
