@@ -1,5 +1,7 @@
 import {
+  buildWorkspaceMarkdownLink,
   isWorkspaceImageLinkTarget,
+  resolveWorkspaceMarkdownLinkHref,
   resolveWorkspaceMarkdownLinkTarget
 } from "@/components/app/logic/markdownLinkTargets";
 import assert from "node:assert/strict";
@@ -26,6 +28,20 @@ test("resolveWorkspaceMarkdownLinkTarget rejects links that escape the workspace
 test("resolveWorkspaceMarkdownLinkTarget ignores browser-style links and hash links", () => {
   assert.equal(resolveWorkspaceMarkdownLinkTarget("docs/guide/intro.md", "https://example.com"), null);
   assert.equal(resolveWorkspaceMarkdownLinkTarget("docs/guide/intro.md", "#section"), null);
+});
+
+test("resolveWorkspaceMarkdownLinkHref computes a relative href from a note to a dropped workspace file", () => {
+  assert.equal(
+    resolveWorkspaceMarkdownLinkHref(".nora/notes/plan.md", "renderer/components/app/panels/FileEditorPanel.tsx"),
+    "../../renderer/components/app/panels/FileEditorPanel.tsx"
+  );
+});
+
+test("buildWorkspaceMarkdownLink formats the dropped file as a markdown link", () => {
+  assert.equal(
+    buildWorkspaceMarkdownLink(".nora/specs/launch.md", "docs/release plan.md"),
+    "[release plan.md](<../../docs/release plan.md>)"
+  );
 });
 
 test("isWorkspaceImageLinkTarget recognizes image paths", () => {
