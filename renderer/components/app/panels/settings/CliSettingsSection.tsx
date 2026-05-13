@@ -2,6 +2,7 @@ import { useSettingsRuntime } from "@/components/app/hooks/useSettingsRuntime";
 import { createAgentSkillCatalogMap } from "@/components/app/logic/agentSkills";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { isAgentToolAvailable } from "@shared/agentToolState";
 import { Bot, ChevronDown } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -10,11 +11,24 @@ export function CliSettingsSection() {
   const {
     agentCatalog,
     agentSkillCatalogs,
+    appSettings,
+    updatePreferredAgentToolId,
     toggleToolEnabled,
     refreshAgentCatalog,
     removeToolSkill
   } = useSettingsRuntime();
   const detectedTools = agentCatalog.filter((tool) => tool.detected);
+  const availableDetectedTools = useMemo(
+    () => detectedTools.filter((tool) => isAgentToolAvailable(tool)),
+    [detectedTools]
+  );
+  const selectedPreferredAgentToolId = useMemo(
+    () =>
+      appSettings.preferredAgentToolId && availableDetectedTools.some((tool) => tool.id === appSettings.preferredAgentToolId)
+        ? appSettings.preferredAgentToolId
+        : "",
+    [appSettings.preferredAgentToolId, availableDetectedTools]
+  );
   const [expandedToolIds, setExpandedToolIds] = useState<Set<string>>(new Set());
   const skillCatalogByToolId = useMemo(
     () => createAgentSkillCatalogMap(agentSkillCatalogs),
@@ -50,6 +64,68 @@ export function CliSettingsSection() {
       </div>
 
       <div className="mt-6 space-y-3">
+        <div className="rounded-[6px] border border-border/60 bg-card/40 px-4 py-4">
+          <div className="mb-2 text-sm font-medium text-foreground">Preferred Agent CLI</div>
+          <div className="mb-3 text-sm text-muted-foreground">
+            Choose which detected CLI Nora should preselect by default in the New Agent dialog.
+          </div>
+          <DropdownMenu
+            align="start"
+            widthClassName="w-[280px]"
+            trigger={(
+              <button
+                type="button"
+                className="flex h-10 w-full items-center justify-between rounded-[5px] border border-input bg-background px-3 py-2 text-sm ring-offset-background transition hover:bg-accent/40"
+                aria-label="Choose preferred agent CLI"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  {selectedPreferredAgentToolId ? (
+                    <AgentToolIcon
+                      toolId={selectedPreferredAgentToolId}
+                      label={availableDetectedTools.find((tool) => tool.id === selectedPreferredAgentToolId)?.label || "Preferred CLI"}
+                      className="size-4 shrink-0 rounded-sm"
+                      imageClassName="size-3 rounded-sm"
+                    />
+                  ) : (
+                    <Bot className="size-4 text-primary" />
+                  )}
+                  <span className="truncate">
+                    {selectedPreferredAgentToolId
+                      ? (availableDetectedTools.find((tool) => tool.id === selectedPreferredAgentToolId)?.label || "Preferred CLI")
+                      : "Automatic (first detected)"}
+                  </span>
+                </span>
+                <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+              </button>
+            )}
+          >
+            <DropdownMenuItem onSelect={() => updatePreferredAgentToolId(null)}>
+              <Bot className="size-4 text-primary" />
+              <span className="truncate">Automatic (first detected)</span>
+              {!selectedPreferredAgentToolId ? (
+                <span className="ml-auto rounded-[4px] bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-primary">
+                  Current
+                </span>
+              ) : null}
+            </DropdownMenuItem>
+            {availableDetectedTools.map((tool) => (
+              <DropdownMenuItem key={tool.id} onSelect={() => updatePreferredAgentToolId(tool.id)}>
+                <AgentToolIcon
+                  toolId={tool.id}
+                  label={tool.label}
+                  className="size-4 shrink-0 rounded-sm"
+                  imageClassName="size-3 rounded-sm"
+                />
+                <span className="truncate">{tool.label}</span>
+                {selectedPreferredAgentToolId === tool.id ? (
+                  <span className="ml-auto rounded-[4px] bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-primary">
+                    Current
+                  </span>
+                ) : null}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenu>
+        </div>
         {agentCatalog.map((tool) => {
           const skillCatalog = skillCatalogByToolId.get(tool.id) || null;
           const statusLabel = !tool.detected

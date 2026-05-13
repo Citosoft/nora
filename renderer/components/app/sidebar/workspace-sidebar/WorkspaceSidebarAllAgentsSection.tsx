@@ -207,7 +207,7 @@ export const WorkspaceSidebarAllAgentsSection = ({
                             imageClassName="size-4 rounded-sm"
                           />
                           <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-medium text-foreground">{entry.agent.name}</div>
+                            <div className="truncate text-[13px] font-medium text-foreground">{entry.agent.name}</div>
                             <div className="truncate text-xs text-muted-foreground">
                               {allAgentsGroupBy === "workspace"
                                 ? entry.agent.branch

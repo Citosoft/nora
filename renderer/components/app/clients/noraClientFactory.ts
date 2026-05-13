@@ -77,6 +77,7 @@ export const NORA_AGENT_CLIENT_METHODS = [
 
 export const NORA_TERMINAL_CLIENT_METHODS = [
   "createTerminal",
+  "renameTerminal",
   "focusTerminal",
   "restartTerminal",
   "clearTerminal",

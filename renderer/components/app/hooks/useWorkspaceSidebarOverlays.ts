@@ -1,7 +1,8 @@
 import type { NoteListEntry, SpecListEntry, TaskListEntry } from "@/components/app/types/component.types";
 import type { WorkspaceSidebarAgentContextMenuState } from "@/components/app/types/workspaceSidebarAgentContextMenu.types";
+import type { WorkspaceSidebarTerminalContextMenuState } from "@/components/app/types/workspaceSidebarTerminalContextMenu.types";
 import type { UseWorkspaceSidebarOverlaysResult } from "@/components/app/types/useWorkspaceSidebarOverlays.types";
-import type { AgentSession } from "@shared/appTypes";
+import type { AgentSession, TerminalSession } from "@shared/appTypes";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 
 export const useWorkspaceSidebarOverlays = (): UseWorkspaceSidebarOverlaysResult => {
@@ -28,11 +29,7 @@ export const useWorkspaceSidebarOverlays = (): UseWorkspaceSidebarOverlaysResult
     left: number;
   } | null>(null);
   const [activeAgentMenu, setActiveAgentMenu] = useState<WorkspaceSidebarAgentContextMenuState | null>(null);
-  const taskMenuRef = useRef<HTMLDivElement | null>(null);
-  const specMenuRef = useRef<HTMLDivElement | null>(null);
-  const noteMenuRef = useRef<HTMLDivElement | null>(null);
-  const workspaceMenuRef = useRef<HTMLDivElement | null>(null);
-  const agentMenuRef = useRef<HTMLDivElement | null>(null);
+  const [activeTerminalMenu, setActiveTerminalMenu] = useState<WorkspaceSidebarTerminalContextMenuState | null>(null);
   const sessionPopoverCloseTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -53,6 +50,7 @@ export const useWorkspaceSidebarOverlays = (): UseWorkspaceSidebarOverlaysResult
         setActiveNoteMenu(null);
         setActiveWorkspaceMenu(null);
         setActiveAgentMenu(null);
+        setActiveTerminalMenu(null);
         setActiveSessionPopoverId(null);
       }
     };
@@ -62,116 +60,6 @@ export const useWorkspaceSidebarOverlays = (): UseWorkspaceSidebarOverlaysResult
       window.removeEventListener("keydown", handleEscape);
     };
   }, []);
-
-  useEffect(() => {
-    if (!activeTaskMenu) {
-      return;
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!taskMenuRef.current) {
-        return;
-      }
-
-      const target = event.target;
-      if (target instanceof Node && !taskMenuRef.current.contains(target)) {
-        setActiveTaskMenu(null);
-      }
-    };
-
-    window.addEventListener("pointerdown", handlePointerDown);
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, [activeTaskMenu]);
-
-  useEffect(() => {
-    if (!activeSpecMenu) {
-      return;
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!specMenuRef.current) {
-        return;
-      }
-
-      const target = event.target;
-      if (target instanceof Node && !specMenuRef.current.contains(target)) {
-        setActiveSpecMenu(null);
-      }
-    };
-
-    window.addEventListener("pointerdown", handlePointerDown);
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, [activeSpecMenu]);
-
-  useEffect(() => {
-    if (!activeNoteMenu) {
-      return;
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!noteMenuRef.current) {
-        return;
-      }
-
-      const target = event.target;
-      if (target instanceof Node && !noteMenuRef.current.contains(target)) {
-        setActiveNoteMenu(null);
-      }
-    };
-
-    window.addEventListener("pointerdown", handlePointerDown);
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, [activeNoteMenu]);
-
-  useEffect(() => {
-    if (!activeWorkspaceMenu) {
-      return;
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!workspaceMenuRef.current) {
-        return;
-      }
-
-      const target = event.target;
-      if (target instanceof Node && !workspaceMenuRef.current.contains(target)) {
-        setActiveWorkspaceMenu(null);
-      }
-    };
-
-    window.addEventListener("pointerdown", handlePointerDown);
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, [activeWorkspaceMenu]);
-
-  useEffect(() => {
-    if (!activeAgentMenu) {
-      return;
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!agentMenuRef.current) {
-        return;
-      }
-
-      const target = event.target;
-      if (target instanceof Node && !agentMenuRef.current.contains(target)) {
-        setActiveAgentMenu(null);
-      }
-    };
-
-    window.addEventListener("pointerdown", handlePointerDown);
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, [activeAgentMenu]);
 
   useEffect(
     () => () => {
@@ -250,6 +138,23 @@ export const useWorkspaceSidebarOverlays = (): UseWorkspaceSidebarOverlaysResult
     });
   };
 
+  const openTerminalSessionMenu = (
+    workspaceId: string,
+    terminal: TerminalSession,
+    event: MouseEvent<Element>
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const menuWidth = 220;
+    setActiveTerminalMenu({
+      workspaceId,
+      terminalId: terminal.id,
+      terminalName: terminal.name,
+      top: Math.min(event.clientY, window.innerHeight - 100),
+      left: Math.min(event.clientX, window.innerWidth - menuWidth - 16)
+    });
+  };
+
   const openSessionPopover = (sessionId: string) => {
     if (sessionPopoverCloseTimeoutRef.current !== null) {
       window.clearTimeout(sessionPopoverCloseTimeoutRef.current);
@@ -277,22 +182,20 @@ export const useWorkspaceSidebarOverlays = (): UseWorkspaceSidebarOverlaysResult
     activeNoteMenu,
     activeWorkspaceMenu,
     activeAgentMenu,
-    taskMenuRef,
-    specMenuRef,
-    noteMenuRef,
-    workspaceMenuRef,
-    agentMenuRef,
+    activeTerminalMenu,
     openTaskMenu,
     openSpecMenu,
     openNoteMenu,
     openWorkspaceMenu,
     openAgentSessionMenu,
+    openTerminalSessionMenu,
     openSessionPopover,
     scheduleSessionPopoverClose,
     setActiveTaskMenu,
     setActiveSpecMenu,
     setActiveNoteMenu,
     setActiveWorkspaceMenu,
-    setActiveAgentMenu
+    setActiveAgentMenu,
+    setActiveTerminalMenu
   };
 };

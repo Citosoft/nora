@@ -204,6 +204,7 @@ export interface AppSettings {
   hardwareAccelerationEnabled: boolean;
   workspaceStateStorageMode: WorkspaceStateStorageMode;
   defaultAgentLaunchTarget: AgentLaunchTargetPreference;
+  preferredAgentToolId: string | null;
   defaultSplitViewGridColumns: 1 | 2 | 3 | 4;
   defaultSplitViewGridRows: 1 | 2;
   rememberLastSplitViewPerWorkspace: boolean;
@@ -224,6 +225,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   hardwareAccelerationEnabled: true,
   workspaceStateStorageMode: "repo",
   defaultAgentLaunchTarget: "new",
+  preferredAgentToolId: null,
   defaultSplitViewGridColumns: 2,
   defaultSplitViewGridRows: 2,
   rememberLastSplitViewPerWorkspace: true,

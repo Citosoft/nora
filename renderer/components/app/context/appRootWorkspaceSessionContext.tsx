@@ -47,6 +47,7 @@ export function AppRootWorkspaceSessionProvider({
   const { uiState, setUiState } = useAppRootState();
   const snapshot = useCanonicalAppSnapshot();
   const {
+    activeWorkspaceContentTab,
     isCenterDiffExpanded,
     isCenterFullDiffExpanded,
     setActiveView,
@@ -78,6 +79,7 @@ export function AppRootWorkspaceSessionProvider({
   const layout = useAppRootSessionSurfaceLayout({
     uiState,
     fileEditorState: sessionActions.fileEditorState,
+    activeWorkspaceContentTab,
     isCenterDiffExpanded,
     isCenterFullDiffExpanded,
     selectedChange,

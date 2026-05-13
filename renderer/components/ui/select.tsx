@@ -91,7 +91,7 @@ export function Select({
           sideOffset={6}
           avoidCollisions
           collisionPadding={8}
-          className="z-[10050] min-w-[var(--radix-select-trigger-width)] max-h-[min(22rem,var(--radix-select-content-available-height))] overflow-hidden rounded-[7px] border border-border/70 bg-popover text-popover-foreground shadow-lg"
+          className="z-[31000] min-w-[var(--radix-select-trigger-width)] max-h-[min(22rem,var(--radix-select-content-available-height))] overflow-hidden rounded-[7px] border border-border/70 bg-popover text-popover-foreground shadow-lg"
         >
           <SelectPrimitive.ScrollUpButton className="grid place-items-center py-1 text-muted-foreground">
             <ChevronUp className="size-4" />

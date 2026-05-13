@@ -1,4 +1,5 @@
 import { createQuickTerminalDialogDefaults, createQuickTerminalPayload } from "@/components/app/logic/terminalQuickLaunch";
+import { setWorkspaceRelativePathDragData } from "@/components/app/logic/workspacePathDrag";
 import { createScriptTerminalDefaults, formatWorkspaceScriptActionLabel, getPreferredWorkspaceScripts } from "@/components/app/logic/workspaceScripts";
 import { setWorkspaceTaskDragData } from "@/components/app/logic/workspaceTaskDrag";
 import { WorkspaceProjectIcon } from "@/components/app/shared/Tooling";
@@ -51,6 +52,12 @@ export const WorkspaceSidebarWorkspaceGroup = ({
   workspaceNotes,
   aiChatTabs,
   focusedAiChatTabId,
+  focusedBrowserTabId,
+  focusedForgeViewerTabId,
+  activeWorkspaceContentTab,
+  isTaskBoardOpen,
+  isSpecBrowserOpen,
+  isNoteBrowserOpen,
   isCreatingTask,
   isCreatingSpec,
   isCreatingNote,
@@ -67,6 +74,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
   openSessionPopover,
   scheduleSessionPopoverClose,
   openAgentSessionMenu,
+  openTerminalSessionMenu,
   openTaskMenu,
   openSpecMenu,
   openNoteMenu,
@@ -83,6 +91,11 @@ export const WorkspaceSidebarWorkspaceGroup = ({
   onFocusTerminal,
   onFocusWorkspaceAgent,
   onFocusWorkspaceTerminal,
+  editingTerminalSessionId,
+  editingTerminalNameDraft,
+  onEditingTerminalNameDraftChange,
+  onSubmitTerminalRename,
+  onCancelTerminalRename,
   onOpenTask,
   onCreateTask,
   onOpenTaskBoard,
@@ -103,6 +116,12 @@ export const WorkspaceSidebarWorkspaceGroup = ({
 
   const isRemoving = removingWorkspaceRootSet.has(workspace.project.rootPath);
   const isFocused = snapshot.project?.id === workspace.project.id;
+  const renderSubitemStatusDot = (className?: string) => (
+    <span
+      className={cn("mt-1 inline-flex size-2.5 shrink-0 rounded-full border border-background/80 bg-muted-foreground/45", className)}
+      aria-hidden="true"
+    />
+  );
     const directSshLocation = workspace.project.location?.kind === "ssh" ? workspace.project.location : null;
     const isDirectSshWorkspace = directSshLocation !== null;
     const directSshLabel = directSshLocation
@@ -128,15 +147,28 @@ export const WorkspaceSidebarWorkspaceGroup = ({
       agentsNeedingAttention,
       focusedAgent,
       focusedTerminal,
+      focusedAiChatTabId,
+      focusedBrowserTabId,
+      focusedForgeViewerTabId,
+      activeWorkspaceContentTab,
+      isTaskBoardOpen,
+      isSpecBrowserOpen,
+      isNoteBrowserOpen,
       activeSessionPopoverId,
       setActiveSessionPopoverId,
       openSessionPopover,
       scheduleSessionPopoverClose,
       openAgentSessionMenu,
+      openTerminalSessionMenu,
       onFocusAgent,
       onFocusTerminal,
       onFocusWorkspaceAgent,
-      onFocusWorkspaceTerminal
+      onFocusWorkspaceTerminal,
+      editingTerminalSessionId,
+      editingTerminalNameDraft,
+      onEditingTerminalNameDraftChange,
+      onSubmitTerminalRename,
+      onCancelTerminalRename
     };
     const workspaceTaskEntries = workspaceTasks.filter((task) => task.projectId === workspace.project.id);
     const workspaceSpecEntries = workspaceSpecs.filter((spec) => spec.projectId === workspace.project.id);
@@ -288,33 +320,21 @@ export const WorkspaceSidebarWorkspaceGroup = ({
           <div className="border-t border-border/40 bg-background/10 pl-1.5">
             <div className="py-2 pl-5 pr-4">
               <div className="flex items-center justify-between gap-3">
-                <WorkspaceSidebarChildSectionLabel icon={<Bot className="size-3.5" />} label="Agents" />
+                <WorkspaceSidebarChildSectionLabel icon={<Bot className="size-3.5" />} label="Agents" count={workspace.agents.length} />
                 <div className="flex items-center gap-1">
-                  <div className="text-xs text-muted-foreground">{workspace.agents.length}</div>
-                  <DropdownMenu
-                    align="end"
-                    trigger={(
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-7"
-                        aria-label={`Create agent for ${workspace.project.name}`}
-                      >
-                        <Plus className="size-4" />
-                      </Button>
-                    )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7"
+                    aria-label={`Create agent for ${workspace.project.name}`}
+                    onClick={() =>
+                      workspace.project.id === snapshot.project?.id
+                        ? onOpenCreateAgent()
+                        : onFocusWorkspace(workspace.project.id)
+                    }
                   >
-                    <DropdownMenuItem
-                      onSelect={() =>
-                        workspace.project.id === snapshot.project?.id
-                          ? onOpenCreateAgent()
-                          : onFocusWorkspace(workspace.project.id)
-                      }
-                    >
-                      <Plus className="size-4" />
-                      New agent
-                    </DropdownMenuItem>
-                  </DropdownMenu>
+                    <Plus className="size-4" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -350,9 +370,12 @@ export const WorkspaceSidebarWorkspaceGroup = ({
             )}
             <div className="py-2 pl-5 pr-4">
               <div className="flex items-center justify-between gap-3">
-                <WorkspaceSidebarChildSectionLabel icon={<TerminalSquare className="size-3.5" />} label="Terminals" />
+                <WorkspaceSidebarChildSectionLabel
+                  icon={<TerminalSquare className="size-3.5" />}
+                  label="Terminals"
+                  count={workspace.terminals.length}
+                />
                 <div className="flex items-center gap-1">
-                  <div className="text-xs text-muted-foreground">{workspace.terminals.length}</div>
                   <DropdownMenu
                     align="end"
                     trigger={(
@@ -430,6 +453,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                 <WorkspaceSidebarChildSectionLabel
                   icon={<FolderKanban className="size-3.5" />}
                   label="Tasks"
+                  count={workspaceTaskEntries.length}
                   onOpenCenter={() => {
                     onFocusWorkspace(workspace.project.id);
                     onOpenTaskBoard();
@@ -437,7 +461,6 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                   openCenterAriaLabel={`Open task center for ${workspace.project.name}`}
                 />
                 <div className="flex items-center gap-1">
-                  <div className="text-xs text-muted-foreground">{workspaceTaskEntries.length}</div>
                   <Button variant="ghost" size="icon" className="size-7" onClick={onOpenTaskBoard} aria-label="Open task center">
                     <FolderKanban className="size-4" />
                   </Button>
@@ -481,15 +504,16 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                             taskPath: task.path,
                             taskTitle: task.title
                           });
+                          setWorkspaceRelativePathDragData(event.dataTransfer, task.path, "file");
                         }}
                         className="flex w-full min-w-0 items-start gap-2 rounded-[4px] border border-transparent px-2 py-1.5 text-left transition hover:bg-accent/40"
                         title={`${task.projectName}\n${task.path}`}
                       >
-                        <FileText className="mt-0.5 size-4 shrink-0 text-primary" />
+                        {renderSubitemStatusDot(task.completed ? "bg-emerald-500/90" : "bg-primary/80")}
                         <div className="min-w-0 flex-1">
                           <div
                             className={cn(
-                              "truncate text-sm font-medium",
+                              "truncate text-[13px] font-medium",
                               task.completed ? "text-emerald-600 line-through decoration-emerald-500 decoration-2" : "text-foreground"
                             )}
                           >
@@ -512,6 +536,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                 <WorkspaceSidebarChildSectionLabel
                   icon={<ScrollText className="size-3.5" />}
                   label="Specs"
+                  count={workspaceSpecEntries.length}
                   onOpenCenter={() => {
                     onFocusWorkspace(workspace.project.id);
                     onOpenSpecBrowser();
@@ -519,7 +544,6 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                   openCenterAriaLabel={`Open spec center for ${workspace.project.name}`}
                 />
                 <div className="flex items-center gap-1">
-                  <div className="text-xs text-muted-foreground">{workspaceSpecEntries.length}</div>
                   <Button variant="ghost" size="icon" className="size-7" onClick={onOpenSpecBrowser} aria-label="Open specs browser">
                     <FileText className="size-4" />
                   </Button>
@@ -554,14 +578,18 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                       <button
                         key={`${spec.projectId}:${spec.path}`}
                         type="button"
+                        draggable
                         onClick={() => onOpenSpec(spec.projectId, spec.path)}
                         onContextMenu={(event) => openSpecMenu(spec, event)}
+                        onDragStart={(event) => {
+                          setWorkspaceRelativePathDragData(event.dataTransfer, spec.path, "file");
+                        }}
                         className="flex w-full min-w-0 items-start gap-2 rounded-[4px] border border-transparent px-2 py-1.5 text-left transition hover:bg-accent/40"
                         title={`${spec.projectName}\n${spec.path}`}
                       >
-                        <ScrollText className="mt-0.5 size-4 shrink-0 text-primary" />
+                        {renderSubitemStatusDot("bg-primary/80")}
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-medium text-foreground">{spec.title}</div>
+                          <div className="truncate text-[13px] font-medium text-foreground">{spec.title}</div>
                         </div>
                       </button>
                     ))}
@@ -579,6 +607,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                 <WorkspaceSidebarChildSectionLabel
                   icon={<StickyNote className="size-3.5" />}
                   label="Notes"
+                  count={workspaceNoteEntries.length}
                   onOpenCenter={() => {
                     onFocusWorkspace(workspace.project.id);
                     onOpenNoteBrowser();
@@ -586,7 +615,6 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                   openCenterAriaLabel={`Open notes center for ${workspace.project.name}`}
                 />
                 <div className="flex items-center gap-1">
-                  <div className="text-xs text-muted-foreground">{workspaceNoteEntries.length}</div>
                   <Button variant="ghost" size="icon" className="size-7" onClick={onOpenNoteBrowser} aria-label="Open notes browser">
                     <FileText className="size-4" />
                   </Button>
@@ -621,14 +649,18 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                       <button
                         key={`${note.projectId}:${note.path}`}
                         type="button"
+                        draggable
                         onClick={() => onOpenNote(note.projectId, note.path)}
                         onContextMenu={(event) => openNoteMenu(note, event)}
+                        onDragStart={(event) => {
+                          setWorkspaceRelativePathDragData(event.dataTransfer, note.path, "file");
+                        }}
                         className="flex w-full min-w-0 items-start gap-2 rounded-[4px] border border-transparent px-2 py-1.5 text-left transition hover:bg-accent/40"
                         title={`${note.projectName}\n${note.path}`}
                       >
-                        <StickyNote className="mt-0.5 size-4 shrink-0 text-primary" />
+                        {renderSubitemStatusDot("bg-primary/80")}
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-medium text-foreground">{note.title}</div>
+                          <div className="truncate text-[13px] font-medium text-foreground">{note.title}</div>
                         </div>
                       </button>
                     ))}
@@ -643,9 +675,12 @@ export const WorkspaceSidebarWorkspaceGroup = ({
             </div>
             <div className="py-2 pl-5 pr-4">
               <div className="flex items-center justify-between gap-3">
-                <WorkspaceSidebarChildSectionLabel icon={<Sparkles className="size-3.5" />} label="AI chats" />
+                <WorkspaceSidebarChildSectionLabel
+                  icon={<Sparkles className="size-3.5" />}
+                  label="AI chats"
+                  count={workspaceAiChatEntries.length}
+                />
                 <div className="flex items-center gap-1">
-                  <div className="text-xs text-muted-foreground">{workspaceAiChatEntries.length}</div>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -688,9 +723,9 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                           )}
                           title={chat.title}
                         >
-                          <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" />
+                          {renderSubitemStatusDot(isActive ? "bg-primary" : "bg-muted-foreground/45")}
                           <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-medium text-foreground">{chat.title}</div>
+                            <div className="truncate text-[13px] font-medium text-foreground">{chat.title}</div>
                           </div>
                         </button>
                       );

@@ -103,7 +103,7 @@ export function TaskBoardPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
-      <div className="border-b border-border/60 px-6 py-3">
+      <div className="workspace-shell-surface border-b border-border/60 px-6 py-3">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             <FolderKanban className="size-4 shrink-0" />
@@ -246,7 +246,7 @@ export function TaskBoardPanel({
           setIsGenerateTasksDialogOpen(false);
         }}
       />
-      <div className="min-h-0 flex-1">
+      <div className="workspace-centers-content-surface min-h-0 flex-1 bg-background">
         <Tabs value={viewMode} className="h-full">
           <TabsContent value="list" className="h-full">
             <ScrollArea className="h-full px-6 py-5">
@@ -258,7 +258,7 @@ export function TaskBoardPanel({
                     );
 
                     return (
-                      <Card key={workspace.projectId} className="overflow-hidden">
+                      <Card key={workspace.projectId} className="overflow-hidden !shadow-none">
                         <div className="border-b border-border/60 px-5 py-4">
                           <div className="flex items-center justify-between gap-3">
                             <div>
@@ -606,7 +606,7 @@ function TaskBoardCard({
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       className={cn(
-        "cursor-grab p-3 active:cursor-grabbing",
+        "cursor-grab p-3 !shadow-none active:cursor-grabbing",
         selected ? "border-primary/50 bg-primary/5" : "border-border/60 bg-background/80"
       )}
     >

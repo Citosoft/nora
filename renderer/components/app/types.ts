@@ -26,6 +26,15 @@ export type ThemeMode = "system" | "light" | "dark";
 
 export type ResolvedTheme = "light" | "dark";
 
+export type UiFontId =
+  | "inter"
+  | "geist"
+  | "manrope"
+  | "dm-sans"
+  | "space-grotesk"
+  | "outfit"
+  | "plus-jakarta-sans";
+
 export type AccentColor =
   | "silver"
   | "green"

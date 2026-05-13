@@ -10,3 +10,10 @@ test("invisible button variant has no border or background surfaces", () => {
   assert.match(source, /invisible:\s*"[^"]*bg-transparent/);
   assert.match(source, /invisible:\s*"[^"]*hover:bg-transparent/);
 });
+
+test("default button variant uses the shared default surface without drop shadow", () => {
+  const source = readFileSync(join(process.cwd(), "renderer/components/ui/button.tsx"), "utf8");
+
+  assert.match(source, /default:\s*"[^"]*button-default-surface/);
+  assert.match(source, /default:\s*"[^"]*shadow-none/);
+});

@@ -9,6 +9,8 @@ export const buildSettingsRuntimeValue = (d: BuildSettingsRuntimeValueDeps): Set
   updateThemeMode: d.updateThemeMode,
   accentColor: d.accentColor,
   updateAccentColor: d.updateAccentColor,
+  uiFontId: d.uiFontId,
+  updateUiFont: d.updateUiFont,
   terminalThemeId: d.terminalThemeId,
   updateTerminalTheme: d.updateTerminalTheme,
   terminalFontId: d.terminalFontId,
@@ -57,6 +59,9 @@ export const buildSettingsRuntimeValue = (d: BuildSettingsRuntimeValueDeps): Set
   },
   updateDefaultAgentLaunchTarget: (defaultAgentLaunchTarget) => {
     void d.updateDefaultAgentLaunchTarget(defaultAgentLaunchTarget).catch(d.captureError);
+  },
+  updatePreferredAgentToolId: (preferredAgentToolId) => {
+    void d.updatePreferredAgentToolId(preferredAgentToolId).catch(d.captureError);
   },
   updateDefaultSplitViewGrid: (defaultSplitViewGridColumns, defaultSplitViewGridRows) => {
     void d.updateSplitViewPreferences({

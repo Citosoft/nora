@@ -1,222 +1,307 @@
+import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
 import { resolveTaskCompletionTogglePath } from "@/components/app/logic/appUtils";
 import { WorkspaceWorkspaceActionsMenuItems } from "@/components/app/sidebar/workspace-sidebar/WorkspaceWorkspaceActionsMenuItems";
 import type { WorkspaceSidebarContextMenusProps } from "@/components/app/types/workspaceSidebarContextMenus.types";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { ExternalLink, FileText, FolderKanban, RefreshCcw, TerminalSquare, Trash2 } from "lucide-react";
-import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
+import { ExternalLink, FileText, FolderKanban, Pencil, RefreshCcw, TerminalSquare, Trash2 } from "lucide-react";
+import { useEffect, useRef, type ReactNode } from "react";
 
-export const WorkspaceSidebarContextMenus = ({
-  workspaceGroups,
-  focusedProjectId,
-  terminalShells,
-  preferredShellId,
-  terminalQuickLaunchDefaults,
-  runnableGlobalTerminalPresets,
-  activeTaskMenu,
-  activeSpecMenu,
-  activeNoteMenu,
-  activeWorkspaceMenu,
-  activeAgentMenu,
-  taskMenuRef,
-  specMenuRef,
-  noteMenuRef,
-  workspaceMenuRef,
-  agentMenuRef,
-  setActiveTaskMenu,
-  setActiveSpecMenu,
-  setActiveNoteMenu,
-  setActiveWorkspaceMenu,
-  setActiveAgentMenu,
-  onToggleTaskComplete,
-  onDeleteTask,
-  onGenerateTasksFromSpec,
-  onDeleteSpec,
-  onDeleteNote,
-  onOpenCreateAgent,
-  onFocusWorkspace,
-  onOpenWorkspaceBrowser,
-  onLaunchWorkspaceTerminal,
-  onOpenCreateTerminal,
-  onOpenWorkspaceTerminalPresets,
-  onCreateTask,
-  onCreateSpec,
-  onRemoveProject,
-  onFocusAgent,
-  onFocusWorkspaceAgent,
-  onRestartAgent,
-  onDestroyAgentRequest
-}: WorkspaceSidebarContextMenusProps) => {
+type MenuPosition = { top: number; left: number };
+
+function FixedPointContextMenu({
+  position,
+  onClose,
+  widthClassName,
+  children
+}: {
+  position: MenuPosition;
+  onClose: () => void;
+  widthClassName: string;
+  children: ReactNode;
+}) {
+  const triggerRef = useRef<HTMLSpanElement | null>(null);
+
+  useEffect(() => {
+    const trigger = triggerRef.current;
+    if (!trigger) {
+      return;
+    }
+    trigger.dispatchEvent(
+      new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        button: 2,
+        clientX: position.left,
+        clientY: position.top
+      })
+    );
+  }, [position.left, position.top]);
+
+  return (
+    <ContextMenu onOpenChange={(open) => {
+      if (!open) {
+        onClose();
+      }
+    }}>
+      <ContextMenuTrigger asChild>
+        <span
+          ref={triggerRef}
+          aria-hidden="true"
+          className="fixed h-px w-px"
+          style={{
+            left: position.left,
+            top: position.top
+          }}
+        />
+      </ContextMenuTrigger>
+      <ContextMenuContent className={widthClassName}>{children}</ContextMenuContent>
+    </ContextMenu>
+  );
+}
+
+export const WorkspaceSidebarContextMenus = (props: WorkspaceSidebarContextMenusProps) => {
   const snapshot = useCanonicalAppSnapshot();
   if (!snapshot) {
     return null;
   }
 
   const activeWorkspaceMenuWorkspace =
-    activeWorkspaceMenu !== null
-      ? (workspaceGroups.find((workspace) => workspace.project.id === activeWorkspaceMenu.workspaceId) ?? null)
+    props.activeWorkspaceMenu !== null
+      ? (props.workspaceGroups.find((workspace) => workspace.project.id === props.activeWorkspaceMenu?.workspaceId) ?? null)
       : null;
 
   return (
     <>
-      {activeTaskMenu ? (
-        <div
-          ref={taskMenuRef}
-          className="fixed z-20 w-56 rounded-[4px] border border-border/70 bg-popover/95 p-1 shadow-2xl backdrop-blur"
-          style={{ top: activeTaskMenu.top, left: activeTaskMenu.left }}
+      {props.activeTaskMenu ? (
+        <FixedPointContextMenu
+          position={props.activeTaskMenu}
+          onClose={() => props.setActiveTaskMenu(null)}
+          widthClassName="w-56"
         >
-          <DropdownMenuItem
+          <ContextMenuItem
             onSelect={() => {
-              const nextPath = resolveTaskCompletionTogglePath(activeTaskMenu.task.path, activeTaskMenu.task.completed);
-              setActiveTaskMenu(null);
-              void onToggleTaskComplete(activeTaskMenu.task.projectId, activeTaskMenu.task.path, nextPath);
+              const taskMenu = props.activeTaskMenu;
+              if (!taskMenu) {
+                return;
+              }
+              const nextPath = resolveTaskCompletionTogglePath(taskMenu.task.path, taskMenu.task.completed);
+              props.setActiveTaskMenu(null);
+              void props.onToggleTaskComplete(taskMenu.task.projectId, taskMenu.task.path, nextPath);
             }}
           >
             <FileText className="size-4" />
-            {activeTaskMenu.task.completed ? "Mark incomplete" : "Mark completed"}
-          </DropdownMenuItem>
-          <DropdownMenuItem
+            {props.activeTaskMenu.task.completed ? "Mark incomplete" : "Mark completed"}
+          </ContextMenuItem>
+          <ContextMenuItem
             destructive
             onSelect={() => {
-              setActiveTaskMenu(null);
-              void onDeleteTask(activeTaskMenu.task.projectId, activeTaskMenu.task.path);
+              const taskMenu = props.activeTaskMenu;
+              if (!taskMenu) {
+                return;
+              }
+              props.setActiveTaskMenu(null);
+              void props.onDeleteTask(taskMenu.task.projectId, taskMenu.task.path);
             }}
           >
             <Trash2 className="size-4" />
             Delete task
-          </DropdownMenuItem>
-        </div>
+          </ContextMenuItem>
+        </FixedPointContextMenu>
       ) : null}
-      {activeSpecMenu ? (
-        <div
-          ref={specMenuRef}
-          className="fixed z-20 w-56 rounded-[4px] border border-border/70 bg-popover/95 p-1 shadow-2xl backdrop-blur"
-          style={{ top: activeSpecMenu.top, left: activeSpecMenu.left }}
+
+      {props.activeSpecMenu ? (
+        <FixedPointContextMenu
+          position={props.activeSpecMenu}
+          onClose={() => props.setActiveSpecMenu(null)}
+          widthClassName="w-56"
         >
-          <DropdownMenuItem
+          <ContextMenuItem
             onSelect={() => {
-              const { projectId, path } = activeSpecMenu.spec;
-              setActiveSpecMenu(null);
-              onGenerateTasksFromSpec(projectId, path);
+              const specMenu = props.activeSpecMenu;
+              if (!specMenu) {
+                return;
+              }
+              const { projectId, path } = specMenu.spec;
+              props.setActiveSpecMenu(null);
+              props.onGenerateTasksFromSpec(projectId, path);
             }}
           >
             <FolderKanban className="size-4" />
             Generate tasks
-          </DropdownMenuItem>
-          <DropdownMenuItem
+          </ContextMenuItem>
+          <ContextMenuItem
             destructive
             onSelect={() => {
-              const { projectId, path } = activeSpecMenu.spec;
-              setActiveSpecMenu(null);
-              void onDeleteSpec(projectId, path);
+              const specMenu = props.activeSpecMenu;
+              if (!specMenu) {
+                return;
+              }
+              const { projectId, path } = specMenu.spec;
+              props.setActiveSpecMenu(null);
+              void props.onDeleteSpec(projectId, path);
             }}
           >
             <Trash2 className="size-4" />
             Delete spec
-          </DropdownMenuItem>
-        </div>
+          </ContextMenuItem>
+        </FixedPointContextMenu>
       ) : null}
-      {activeNoteMenu ? (
-        <div
-          ref={noteMenuRef}
-          className="fixed z-20 w-56 rounded-[4px] border border-border/70 bg-popover/95 p-1 shadow-2xl backdrop-blur"
-          style={{ top: activeNoteMenu.top, left: activeNoteMenu.left }}
+
+      {props.activeNoteMenu ? (
+        <FixedPointContextMenu
+          position={props.activeNoteMenu}
+          onClose={() => props.setActiveNoteMenu(null)}
+          widthClassName="w-56"
         >
-          <DropdownMenuItem
+          <ContextMenuItem
             destructive
             onSelect={() => {
-              const { projectId, path } = activeNoteMenu.note;
-              setActiveNoteMenu(null);
-              void onDeleteNote(projectId, path);
+              const noteMenu = props.activeNoteMenu;
+              if (!noteMenu) {
+                return;
+              }
+              const { projectId, path } = noteMenu.note;
+              props.setActiveNoteMenu(null);
+              void props.onDeleteNote(projectId, path);
             }}
           >
             <Trash2 className="size-4" />
             Delete note
-          </DropdownMenuItem>
-        </div>
+          </ContextMenuItem>
+        </FixedPointContextMenu>
       ) : null}
-      {activeWorkspaceMenu && activeWorkspaceMenuWorkspace ? (
-        <div
-          ref={workspaceMenuRef}
-          className="fixed z-20 w-64 rounded-[4px] border border-border/70 bg-popover/95 p-1 shadow-2xl backdrop-blur"
-          style={{ top: activeWorkspaceMenu.top, left: activeWorkspaceMenu.left }}
+
+      {props.activeWorkspaceMenu && activeWorkspaceMenuWorkspace ? (
+        <FixedPointContextMenu
+          position={props.activeWorkspaceMenu}
+          onClose={() => props.setActiveWorkspaceMenu(null)}
+          widthClassName="w-64"
         >
           <WorkspaceWorkspaceActionsMenuItems
             workspace={activeWorkspaceMenuWorkspace}
-            focusedProjectId={focusedProjectId}
-            terminalShells={terminalShells}
-            preferredShellId={preferredShellId}
-            terminalQuickLaunchDefaults={terminalQuickLaunchDefaults}
-            runnableGlobalTerminalPresets={runnableGlobalTerminalPresets}
-            onItemSelected={() => setActiveWorkspaceMenu(null)}
-            onOpenCreateAgent={onOpenCreateAgent}
-            onFocusWorkspace={onFocusWorkspace}
-            onOpenWorkspaceBrowser={onOpenWorkspaceBrowser}
-            onLaunchWorkspaceTerminal={onLaunchWorkspaceTerminal}
-            onOpenCreateTerminal={onOpenCreateTerminal}
-            onOpenWorkspaceTerminalPresets={onOpenWorkspaceTerminalPresets}
-            onCreateTask={onCreateTask}
-            onCreateSpec={onCreateSpec}
-            onRemoveProject={onRemoveProject}
+            focusedProjectId={props.focusedProjectId}
+            terminalShells={props.terminalShells}
+            preferredShellId={props.preferredShellId}
+            terminalQuickLaunchDefaults={props.terminalQuickLaunchDefaults}
+            runnableGlobalTerminalPresets={props.runnableGlobalTerminalPresets}
+            onItemSelected={() => props.setActiveWorkspaceMenu(null)}
+            onOpenCreateAgent={props.onOpenCreateAgent}
+            onFocusWorkspace={props.onFocusWorkspace}
+            onOpenWorkspaceBrowser={props.onOpenWorkspaceBrowser}
+            onLaunchWorkspaceTerminal={props.onLaunchWorkspaceTerminal}
+            onOpenCreateTerminal={props.onOpenCreateTerminal}
+            onOpenWorkspaceTerminalPresets={props.onOpenWorkspaceTerminalPresets}
+            onCreateTask={props.onCreateTask}
+            onCreateSpec={props.onCreateSpec}
+            onRemoveProject={props.onRemoveProject}
           />
-        </div>
+        </FixedPointContextMenu>
       ) : null}
-      {activeAgentMenu ? (
-        <div
-          ref={agentMenuRef}
-          className="fixed z-20 w-56 rounded-[4px] border border-border/70 bg-popover/95 p-1 shadow-2xl backdrop-blur"
-          style={{ top: activeAgentMenu.top, left: activeAgentMenu.left }}
+
+      {props.activeAgentMenu ? (
+        <FixedPointContextMenu
+          position={props.activeAgentMenu}
+          onClose={() => props.setActiveAgentMenu(null)}
+          widthClassName="w-56"
         >
-          <DropdownMenuItem
+          <ContextMenuItem
             onSelect={() => {
-              setActiveAgentMenu(null);
-              if (activeAgentMenu.workspaceId === snapshot.project?.id) {
-                onFocusAgent(activeAgentMenu.agentId);
+              const agentMenu = props.activeAgentMenu;
+              if (!agentMenu) {
+                return;
+              }
+              props.setActiveAgentMenu(null);
+              if (agentMenu.workspaceId === snapshot.project?.id) {
+                props.onFocusAgent(agentMenu.agentId);
               } else {
-                void onFocusWorkspaceAgent(activeAgentMenu.workspaceId, activeAgentMenu.agentId);
+                void props.onFocusWorkspaceAgent(agentMenu.workspaceId, agentMenu.agentId);
               }
             }}
           >
             <TerminalSquare className="size-4" />
             Open agent
-          </DropdownMenuItem>
-          {activeAgentMenu.prWebUrl ? (
-            <DropdownMenuItem
+          </ContextMenuItem>
+          {props.activeAgentMenu.prWebUrl ? (
+            <ContextMenuItem
               onSelect={() => {
-                const { workspaceId, prWebUrl } = activeAgentMenu;
-                setActiveAgentMenu(null);
-                if (prWebUrl) {
-                  void onOpenWorkspaceBrowser(workspaceId, prWebUrl);
+                const agentMenu = props.activeAgentMenu;
+                if (!agentMenu || !agentMenu.prWebUrl) {
+                  return;
                 }
+                props.setActiveAgentMenu(null);
+                void props.onOpenWorkspaceBrowser(agentMenu.workspaceId, agentMenu.prWebUrl);
               }}
             >
               <ExternalLink className="size-4" />
               Open pull request
-            </DropdownMenuItem>
+            </ContextMenuItem>
           ) : null}
-          {activeAgentMenu.showRestart ? (
-            <DropdownMenuItem
+          {props.activeAgentMenu.showRestart ? (
+            <ContextMenuItem
               onSelect={() => {
-                const { agentId } = activeAgentMenu;
-                setActiveAgentMenu(null);
-                void onRestartAgent(agentId);
+                const agentMenu = props.activeAgentMenu;
+                if (!agentMenu) {
+                  return;
+                }
+                props.setActiveAgentMenu(null);
+                void props.onRestartAgent(agentMenu.agentId);
               }}
             >
               <RefreshCcw className="size-4" />
               Restart session
-            </DropdownMenuItem>
+            </ContextMenuItem>
           ) : null}
-          <DropdownMenuItem
+          <ContextMenuItem
             destructive
             onSelect={() => {
-              const { agentId } = activeAgentMenu;
-              setActiveAgentMenu(null);
-              onDestroyAgentRequest(agentId);
+              const agentMenu = props.activeAgentMenu;
+              if (!agentMenu) {
+                return;
+              }
+              props.setActiveAgentMenu(null);
+              props.onDestroyAgentRequest(agentMenu.agentId);
             }}
           >
             <Trash2 className="size-4" />
             Destroy session
-          </DropdownMenuItem>
-        </div>
+          </ContextMenuItem>
+        </FixedPointContextMenu>
+      ) : null}
+
+      {props.activeTerminalMenu ? (
+        <FixedPointContextMenu
+          position={props.activeTerminalMenu}
+          onClose={() => props.setActiveTerminalMenu(null)}
+          widthClassName="w-56"
+        >
+          <ContextMenuItem
+            onSelect={() => {
+              const terminalMenu = props.activeTerminalMenu;
+              if (!terminalMenu) {
+                return;
+              }
+              props.setActiveTerminalMenu(null);
+              props.onBeginTerminalRename(terminalMenu.terminalId, terminalMenu.terminalName);
+            }}
+          >
+            <Pencil className="size-4" />
+            Rename terminal
+          </ContextMenuItem>
+          <ContextMenuItem
+            destructive
+            onSelect={() => {
+              const terminalMenu = props.activeTerminalMenu;
+              if (!terminalMenu) {
+                return;
+              }
+              props.setActiveTerminalMenu(null);
+              void props.onDestroyTerminal(terminalMenu.terminalId);
+            }}
+          >
+            <Trash2 className="size-4" />
+            Close terminal
+          </ContextMenuItem>
+        </FixedPointContextMenu>
       ) : null}
     </>
   );

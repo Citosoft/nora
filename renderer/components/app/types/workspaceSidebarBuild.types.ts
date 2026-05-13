@@ -17,6 +17,9 @@ export type WorkspaceSidebarBuildDeps = Pick<
   | "handleToggleTaskComplete"
   | "isCreatingNote"
   | "isCreatingSpec"
+  | "isNoteBrowserOpen"
+  | "isSpecBrowserOpen"
+  | "isTaskBoardOpen"
   | "openTaskEditor"
   | "openWorkspaceNote"
   | "openWorkspaceSpec"
@@ -65,6 +68,7 @@ export type WorkspaceSidebarBuildDeps = Pick<
   agentCatalog: AppState["agentCatalog"];
   terminalPresets: WorkspaceSidebarProps["terminalPresets"];
   terminalQuickLaunchDefaults: WorkspaceSidebarProps["terminalQuickLaunchDefaults"];
+  activeWorkspaceContentTab: "file" | "diff" | null;
   uiCommands: Pick<
     AppUiCommands,
     | "clearBrowserAndForgeFocus"
@@ -77,7 +81,7 @@ export type WorkspaceSidebarBuildDeps = Pick<
     | "setInstallCommandDraft"
   >;
   workspaceNotes: WorkspaceSidebarProps["workspaceNotes"];
-  workspaceSidebarUiState: Pick<UiState, "aiChatTabs" | "focusedAiChatTabId" | "installCommandDrafts">;
+  workspaceSidebarUiState: Pick<UiState, "aiChatTabs" | "focusedAiChatTabId" | "focusedBrowserTabId" | "focusedForgeViewerTabId" | "installCommandDrafts">;
   workspaceSpecs: WorkspaceSidebarProps["workspaceSpecs"];
   workspaceTasks: WorkspaceSidebarProps["workspaceTasks"];
 };

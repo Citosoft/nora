@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { BookOpen, ChevronDown, ChevronRight, CircleHelp, Code2, Copy, Keyboard, Minus, Moon, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, Settings, Square, Sun, X } from "lucide-react";
+import { BookOpen, Bot, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, Code2, Copy, FolderGit2, Globe, History, Keyboard, Minus, Moon, PanelBottom, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, RefreshCcw, Settings, Square, Sun, TerminalSquare, Wrench, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 function TitleBarControls({
@@ -176,7 +176,7 @@ export function TitleBar({
     <div
       ref={titleBarRef}
       className={[
-        "app-drag relative flex h-12 min-h-12 max-h-12 shrink-0 items-center overflow-hidden border-b border-border/60 bg-background/70 py-1.5",
+        "workspace-shell-surface app-drag relative flex h-12 min-h-12 max-h-12 shrink-0 items-center overflow-hidden border-b border-border/60 bg-background/70 py-1.5",
         useMacTitleBarChrome ? "pl-0" : "pl-1.5"
       ].join(" ")}
     >
@@ -190,12 +190,7 @@ export function TitleBar({
           onClick={onOpenAbout}
           aria-label="Open about dialog"
         >
-          <AppMark className="size-4 shrink-0 text-primary" />
-          <div className="flex items-center gap-2">
-            <div className="rounded-[4px] border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
-              Beta
-            </div>
-          </div>
+          <AppMark className="size-[18px] shrink-0 text-primary" />
         </button>
         <button
           type="button"
@@ -253,6 +248,7 @@ export function TitleBar({
                 <span>Add Workspace</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={onAddRemoteWorkspace}>
+                <Globe className="size-4" />
                 <span>Add Remote Workspace</span>
               </DropdownMenuItem>
               {hasActiveWorkspace ? (
@@ -260,22 +256,28 @@ export function TitleBar({
                   <div className="my-1 h-px bg-border/70" />
                   {canOpenProjectInIde && preferredIde ? (
                     <DropdownMenuItem onSelect={() => onOpenProjectInIde(preferredIde.id)}>
+                      <Code2 className="size-4" />
                       <span>Open in {preferredIde.name}</span>
                     </DropdownMenuItem>
                   ) : null}
                   <DropdownMenuItem onSelect={onCreateTerminal}>
+                    <TerminalSquare className="size-4" />
                     <span>New Terminal</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={onCreateAgent}>
+                    <Bot className="size-4" />
                     <span>New Agent</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={onCreateBrowser}>
+                    <Globe className="size-4" />
                     <span>New Browser</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={onRefreshWorkspace}>
+                    <RefreshCcw className="size-4" />
                     <span>Refresh Workspace</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={onCloseWorkspace}>
+                    <X className="size-4" />
                     <span>Close Workspace</span>
                   </DropdownMenuItem>
                 </>
@@ -287,6 +289,7 @@ export function TitleBar({
                 onClick={() => setShowRecentWorkspaceList((current) => !current)}
                 aria-label="Toggle recent workspace list"
               >
+                <History className="size-4" />
                 <span>Add Recent</span>
                 {showRecentWorkspaceList ? <ChevronDown className="ml-auto size-4" /> : <ChevronRight className="ml-auto size-4" />}
               </button>
@@ -297,6 +300,7 @@ export function TitleBar({
                       key={project.rootPath}
                       onSelect={() => onOpenRecentWorkspace(project.rootPath, project.name)}
                     >
+                      <FolderGit2 className="size-4 shrink-0" />
                       <div className="min-w-0">
                         <div className="truncate text-xs font-medium">{project.name}</div>
                         <div className="truncate text-[11px] text-muted-foreground">{project.rootPath}</div>
@@ -323,22 +327,28 @@ export function TitleBar({
               )}
             >
               <DropdownMenuItem onSelect={onToggleWorkspaceSidebar}>
+                <PanelLeftClose className="size-4" />
                 <span>Toggle Workspace Sidebar</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={onToggleChangesSidebar}>
+                <PanelRightClose className="size-4" />
                 <span>Toggle Changes Sidebar</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={onToggleLocalTerminalDock}>
+                <PanelBottom className="size-4" />
                 <span>Toggle Local Terminal Dock</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={onFocusLocalTerminalDock}>
+                <TerminalSquare className="size-4" />
                 <span>Focus Local Terminal Dock</span>
               </DropdownMenuItem>
               <div className="my-1 h-px bg-border/70" />
               <DropdownMenuItem onSelect={onFocusPreviousSessionTab}>
+                <ChevronLeft className="size-4" />
                 <span>Previous Session Tab</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={onFocusNextSessionTab}>
+                <ChevronRight className="size-4" />
                 <span>Next Session Tab</span>
               </DropdownMenuItem>
             </DropdownMenu>
@@ -357,18 +367,23 @@ export function TitleBar({
               )}
             >
               <DropdownMenuItem onSelect={() => void noraSystemClient.openExternalUrl(APP_DOCS_URL)}>
+                <BookOpen className="size-4" />
                 <span>Documentation</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={onOpenKeyboardShortcuts}>
+                <Keyboard className="size-4" />
                 <span>Keyboard Shortcuts</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={onOpenStartupDependencies}>
+                <Wrench className="size-4" />
                 <span>Startup Dependencies</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={onSubmitIssue}>
+                <CircleHelp className="size-4" />
                 <span>Submit Issue</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={onOpenAbout}>
+                <AppMark className="size-4 text-primary" />
                 <span>About</span>
               </DropdownMenuItem>
             </DropdownMenu>

@@ -20,13 +20,16 @@ export const orchestratorTestModules = [
 
 export const rendererHelperTestModules = [
   "tests/unit/renderer/agentContextSelections.test.ts",
+  "tests/unit/renderer/appUiFonts.test.ts",
   "tests/unit/renderer/appPersistence.onboarding.test.ts",
   "tests/unit/renderer/appStateDelta.test.ts",
+  "tests/unit/renderer/startupDialogVisibility.test.ts",
   "tests/unit/renderer/workspaceSessionTabContextActions.test.ts",
   "tests/unit/renderer/terminalQuickLaunch.test.ts",
   "tests/unit/renderer/workspaceAiChatToolUtils.test.ts",
   "tests/unit/renderer/browserTabNavigation.test.ts",
-  "tests/unit/renderer/aiChatSelection.test.ts"
+  "tests/unit/renderer/aiChatSelection.test.ts",
+  "tests/unit/renderer/workspaceSplitViewUtils.test.ts"
 ] as const;
 
 /** High-value gaps to close next (orchestration / layout / session shell). */

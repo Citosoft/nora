@@ -11,6 +11,7 @@ import {
   readStoredTerminalFontId,
   readStoredTerminalThemeId,
   readStoredThemeMode,
+  readStoredUiFontId,
   readStoredUserDisplayName,
   readStoredVercelAccountLabel,
   readStoredVercelToken,
@@ -25,18 +26,20 @@ import {
   writeStoredTerminalFontId,
   writeStoredTerminalThemeId,
   writeStoredThemeMode,
+  writeStoredUiFontId,
   writeStoredUserDisplayName,
   writeStoredVercelToken,
   writeStoredVercelWorkspaceLinks
 } from "@/components/app/logic/appPersistence";
-import { applyAccentColor, applyTheme, resolveThemeMode } from "@/components/app/logic/appTheme";
+import { applyAccentColor, applyTheme, applyUiFont, resolveThemeMode } from "@/components/app/logic/appTheme";
 import type {
   AccentColor,
   ResolvedTheme,
   StoredVercelWorkspaceLinks,
   TerminalFontId,
   TerminalThemeId,
-  ThemeMode
+  ThemeMode,
+  UiFontId
 } from "@/components/app/types";
 import type { AppPreferences } from "@/components/app/types/component.types";
 import { DEFAULT_APP_SETTINGS, type AiProvider, type AppSettings } from "@shared/appTypes";
@@ -77,6 +80,7 @@ export function useAppPreferences(): AppPreferences {
   const [accentColor, setAccentColor] = useState<AccentColor>("silver");
   const [terminalThemeId, setTerminalThemeId] = useState<TerminalThemeId>("app");
   const [terminalFontId, setTerminalFontId] = useState<TerminalFontId>("ibm-plex-mono");
+  const [uiFontId, setUiFontId] = useState<UiFontId>("inter");
   const [defaultIdeId, setDefaultIdeId] = useState<string | null>(null);
   const [forceMacTitleBarPreview, setForceMacTitleBarPreview] = useState(false);
   const [userDisplayName, setUserDisplayName] = useState("");
@@ -90,6 +94,7 @@ export function useAppPreferences(): AppPreferences {
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("dark");
   const [vercelWorkspaceLinks, setVercelWorkspaceLinks] = useState<StoredVercelWorkspaceLinks>({});
   const [appSettings, setAppSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
+  const [isAppSettingsLoaded, setIsAppSettingsLoaded] = useState(false);
   const appSettingsRef = useRef(appSettings);
   const appSettingsSaveChainRef = useRef<Promise<void>>(Promise.resolve());
   const appSettingsSaveVersionRef = useRef(0);
@@ -100,6 +105,7 @@ export function useAppPreferences(): AppPreferences {
     const storedAccentColor = readStoredAccentColor();
     const storedTerminalThemeId = readStoredTerminalThemeId();
     const storedTerminalFontId = readStoredTerminalFontId();
+    const storedUiFontId = readStoredUiFontId();
     const storedDefaultIdeId = readStoredDefaultIdeId();
     const storedForceMacTitleBarPreview = readStoredForceMacTitleBarPreview();
     const storedUserDisplayName = readStoredUserDisplayName();
@@ -116,6 +122,7 @@ export function useAppPreferences(): AppPreferences {
     setAccentColor(storedAccentColor);
     setTerminalThemeId(storedTerminalThemeId);
     setTerminalFontId(storedTerminalFontId);
+    setUiFontId(storedUiFontId);
     setDefaultIdeId(storedDefaultIdeId);
     setForceMacTitleBarPreview(storedForceMacTitleBarPreview);
     setUserDisplayName(storedUserDisplayName);
@@ -128,6 +135,7 @@ export function useAppPreferences(): AppPreferences {
     setGitlabAccountLabel(storedGitlabAccountLabel);
     setVercelAccountLabel(storedVercelAccountLabel);
     setResolvedTheme(applyTheme(storedMode, storedAccentColor));
+    applyUiFont(storedUiFontId);
 
     const handleSystemThemeChange = () => {
       setResolvedTheme(applyTheme(readStoredThemeMode(), readStoredAccentColor()));
@@ -160,6 +168,8 @@ export function useAppPreferences(): AppPreferences {
       setAppSettings(normalizeAppSettings(nextSettings));
     }).catch(() => {
       setAppSettings(DEFAULT_APP_SETTINGS);
+    }).finally(() => {
+      setIsAppSettingsLoaded(true);
     });
   }, []);
 
@@ -194,6 +204,12 @@ export function useAppPreferences(): AppPreferences {
   const updateTerminalFont = (nextFontId: TerminalFontId) => {
     writeStoredTerminalFontId(nextFontId);
     setTerminalFontId(nextFontId);
+  };
+
+  const updateUiFont = (nextUiFontId: UiFontId) => {
+    writeStoredUiFontId(nextUiFontId);
+    setUiFontId(nextUiFontId);
+    applyUiFont(nextUiFontId);
   };
 
   const updateDefaultIde = (nextIdeId: string | null) => {
@@ -294,6 +310,13 @@ export function useAppPreferences(): AppPreferences {
     await saveAppSettings((current) => ({
       ...current,
       defaultAgentLaunchTarget
+    }));
+  };
+
+  const updatePreferredAgentToolId = async (preferredAgentToolId: AppSettings["preferredAgentToolId"]) => {
+    await saveAppSettings((current) => ({
+      ...current,
+      preferredAgentToolId
     }));
   };
 
@@ -416,6 +439,7 @@ export function useAppPreferences(): AppPreferences {
     accentColor,
     terminalThemeId,
     terminalFontId,
+    uiFontId,
     defaultIdeId,
     forceMacTitleBarPreview,
     userDisplayName,
@@ -429,11 +453,13 @@ export function useAppPreferences(): AppPreferences {
     resolvedTheme,
     vercelWorkspaceLinks,
     appSettings,
+    isAppSettingsLoaded,
     toggleTheme,
     updateThemeMode,
     updateAccentColor,
     updateTerminalTheme,
     updateTerminalFont,
+    updateUiFont,
     updateDefaultIde,
     updateForceMacTitleBarPreview,
     updateUserDisplayName,
@@ -449,6 +475,7 @@ export function useAppPreferences(): AppPreferences {
     updateHardwareAccelerationEnabled,
     updateWorkspaceStateStorageMode,
     updateDefaultAgentLaunchTarget,
+    updatePreferredAgentToolId,
     updateLinuxAptSetupPromptDismissed,
     updateSplitViewPreferences,
     updateBrowserPreferences,

@@ -4,8 +4,10 @@ import type {
   BrowserTabState,
   CreateAgentDialogDefaults,
   CreateTerminalDialogDefaults,
+  FileEditorTab,
   FileEditorState,
   ResolvedTheme,
+  UiFontId,
   StoredVercelWorkspaceLinks,
   TerminalFontId,
   TerminalThemeId,
@@ -203,6 +205,12 @@ export type WorkspaceSidebarProps = {
   workspaceNotes: Array<WorkspaceNoteSummary & { projectId: string; projectName: string; projectRootPath: string }>;
   aiChatTabs: AiChatTabState[];
   focusedAiChatTabId: string | null;
+  focusedBrowserTabId: string | null;
+  focusedForgeViewerTabId: string | null;
+  activeWorkspaceContentTab: "file" | "diff" | null;
+  isTaskBoardOpen: boolean;
+  isSpecBrowserOpen: boolean;
+  isNoteBrowserOpen: boolean;
   installCommandDrafts: Record<string, string>;
   onChooseProject: () => void;
   onCloseProject: () => void;
@@ -226,6 +234,8 @@ export type WorkspaceSidebarProps = {
   onFocusWorkspaceTerminal: (projectId: string, sessionId: string) => Promise<AppState | null>;
   onRestartAgent: (agentId: string) => Promise<AppState | null>;
   onDestroyAgentRequest: (agentId: string) => void;
+  onRenameTerminal: (sessionId: string, nextName: string) => Promise<AppState | null>;
+  onDestroyTerminal: (sessionId: string) => Promise<AppState | null>;
   onOpenTask: (projectId: string, path: string) => void;
   onCreateTask: (projectId: string) => void;
   onOpenSpec: (projectId: string, path: string) => void;
@@ -284,6 +294,7 @@ export type AppPreferences = {
   accentColor: AccentColor;
   terminalThemeId: TerminalThemeId;
   terminalFontId: TerminalFontId;
+  uiFontId: UiFontId;
   defaultIdeId: string | null;
   forceMacTitleBarPreview: boolean;
   userDisplayName: string;
@@ -297,11 +308,13 @@ export type AppPreferences = {
   resolvedTheme: ResolvedTheme;
   vercelWorkspaceLinks: StoredVercelWorkspaceLinks;
   appSettings: AppSettings;
+  isAppSettingsLoaded: boolean;
   toggleTheme: () => void;
   updateThemeMode: (nextMode: ThemeMode) => void;
   updateAccentColor: (nextAccentColor: AccentColor) => void;
   updateTerminalTheme: (nextThemeId: TerminalThemeId) => void;
   updateTerminalFont: (nextFontId: TerminalFontId) => void;
+  updateUiFont: (nextUiFontId: UiFontId) => void;
   updateDefaultIde: (nextIdeId: string | null) => void;
   updateForceMacTitleBarPreview: (enabled: boolean) => void;
   updateUserDisplayName: (nextDisplayName: string) => void;
@@ -317,6 +330,7 @@ export type AppPreferences = {
   updateHardwareAccelerationEnabled: (enabled: boolean) => Promise<void>;
   updateWorkspaceStateStorageMode: (mode: AppSettings["workspaceStateStorageMode"]) => Promise<void>;
   updateDefaultAgentLaunchTarget: (launchTarget: AppSettings["defaultAgentLaunchTarget"]) => Promise<void>;
+  updatePreferredAgentToolId: (toolId: AppSettings["preferredAgentToolId"]) => Promise<void>;
   updateLinuxAptSetupPromptDismissed: (dismissed: boolean) => Promise<void>;
   updateSplitViewPreferences: (
     nextSplitViewSettings: Pick<
@@ -362,7 +376,7 @@ export type UseFileEditorStateResult = {
   fileEditorState: FileEditorState | null;
   setFileEditorState: Dispatch<SetStateAction<FileEditorState | null>>;
   openFileEditor: (pathName: string, options?: OpenWorkspaceFileEditorOptions) => Promise<void>;
-  saveFileEditor: () => Promise<void>;
+  saveFileEditor: (pathName?: string) => Promise<void>;
 };
 
 export type ShortcutActionMap = Record<ShortcutDefinition["id"], () => void>;
@@ -375,6 +389,7 @@ export type UseLinuxAptSetupPromptArgs = {
 
 export type UseAnalyticsConsentPromptArgs = {
   appSettings: AppSettings;
+  isAppSettingsLoaded: boolean;
   isOnboardingOpen: boolean;
   updateAnalyticsConsentStatus: (status: AppSettings["analyticsConsentStatus"]) => Promise<void>;
   captureError: (error: unknown) => void;
@@ -416,6 +431,9 @@ export type UseWorkspaceSessionViewsArgs = {
   projectId: string | null;
   agent: AgentSession | null;
   terminal: TerminalSession | null;
+  browserTab: BrowserTabState | null;
+  activeFileEditorTab: FileEditorTab | null;
+  activeWorkspaceContentTab: "file" | "diff" | null;
   defaultGridColumns: WorkspaceSplitView["gridColumns"];
   defaultGridRows: WorkspaceSplitView["gridRows"];
   rememberLastViewPerWorkspace: boolean;

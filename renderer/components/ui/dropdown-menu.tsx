@@ -144,6 +144,7 @@ const DropdownMenuContext = React.createContext<{ close: () => void } | null>(nu
 export function DropdownMenuItem({
   children,
   destructive = false,
+  className,
   onSelect
 }: DropdownMenuItemProps) {
   const context = React.useContext(DropdownMenuContext);
@@ -153,7 +154,8 @@ export function DropdownMenuItem({
       type="button"
       className={cn(
         "flex w-full items-center gap-2 rounded-[6px] px-3 py-2 text-left text-[12px] transition hover:bg-accent/60",
-        destructive ? "text-destructive" : "text-popover-foreground"
+        destructive ? "text-destructive" : "text-popover-foreground",
+        className
       )}
       onClick={() => {
         onSelect?.();

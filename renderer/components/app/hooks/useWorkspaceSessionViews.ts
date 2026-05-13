@@ -1,14 +1,12 @@
 import { readStoredWorkspaceSplitViewSelections, writeStoredWorkspaceSplitViewSelection } from "@/components/app/logic/appPersistence";
 import {
-  addWorkspaceSplitViewTileAtPosition,
-  appendWorkspaceSplitViewTile,
+  addWorkspaceSplitViewTileAtPositionWithAutoExpand,
+  appendWorkspaceSplitViewTileWithAutoExpand,
   createWorkspaceSplitView,
   createWorkspaceSplitViewItemReference,
   DEFAULT_WORKSPACE_SPLIT_VIEW_GRID_COLUMNS,
   DEFAULT_WORKSPACE_SPLIT_VIEW_GRID_ROWS,
   getNextWorkspaceSplitViewName,
-  getWorkspaceSplitViewCapacity,
-  isSameWorkspaceSplitViewItem,
   moveWorkspaceSplitViewTileToPosition,
   removeWorkspaceSplitViewTile,
   renameWorkspaceSplitView,
@@ -27,6 +25,9 @@ export function useWorkspaceSessionViews({
   projectId,
   agent,
   terminal,
+  browserTab,
+  activeFileEditorTab,
+  activeWorkspaceContentTab,
   defaultGridColumns,
   defaultGridRows,
   rememberLastViewPerWorkspace,
@@ -40,20 +41,13 @@ export function useWorkspaceSessionViews({
     () => splitViewCollection.views.find((view) => view.id === activeViewId) ?? null,
     [activeViewId, splitViewCollection.views]
   );
-  const currentItemReference = createWorkspaceSplitViewItemReference(agent, terminal);
-  const canAddCurrentItem = !!(
-    activeView &&
-    currentItemReference &&
-    !activeView.tiles.some((tile) => isSameWorkspaceSplitViewItem(tile.item, currentItemReference)) &&
-    activeView.tiles.length < getWorkspaceSplitViewCapacity(activeView)
+  const currentItemReference = createWorkspaceSplitViewItemReference(
+    agent,
+    terminal,
+    browserTab,
+    activeFileEditorTab,
+    activeWorkspaceContentTab
   );
-  const addFocusedLabel = !currentItemReference
-    ? "No focused session"
-    : canAddCurrentItem
-      ? "Add focused"
-      : activeView && currentItemReference && activeView.tiles.some((tile) => isSameWorkspaceSplitViewItem(tile.item, currentItemReference))
-        ? "Already in view"
-        : "View full";
   const activeGridColumns = activeView?.gridColumns ?? DEFAULT_WORKSPACE_SPLIT_VIEW_GRID_COLUMNS;
   const activeGridRows = activeView?.gridRows ?? DEFAULT_WORKSPACE_SPLIT_VIEW_GRID_ROWS;
 
@@ -173,15 +167,17 @@ export function useWorkspaceSessionViews({
     return true;
   };
 
-  const addFocusedItem = async (): Promise<void> => {
-    if (!activeView || !currentItemReference) {
+  const addItem = async (
+    item: NonNullable<ReturnType<typeof createWorkspaceSplitViewItemReference>>
+  ): Promise<void> => {
+    if (!activeView) {
       return;
     }
 
     await persistCollection((current) => ({
       ...current,
       views: current.views.map((view) =>
-        view.id === activeView.id ? appendWorkspaceSplitViewTile(view, currentItemReference) : view
+        view.id === activeView.id ? appendWorkspaceSplitViewTileWithAutoExpand(view, item) : view
       )
     }));
   };
@@ -198,7 +194,7 @@ export function useWorkspaceSessionViews({
     await persistCollection((current) => ({
       ...current,
       views: current.views.map((view) =>
-        view.id === activeView.id ? addWorkspaceSplitViewTileAtPosition(view, item, { column, row }) : view
+        view.id === activeView.id ? addWorkspaceSplitViewTileAtPositionWithAutoExpand(view, item, { column, row }) : view
       )
     }));
   };
@@ -277,13 +273,11 @@ export function useWorkspaceSessionViews({
     activeView,
     activeGridColumns,
     activeGridRows,
-    addFocusedLabel,
-    canAddCurrentItem,
     createView,
     renameActiveView,
     deleteActiveView,
     deleteViewById,
-    addFocusedItem,
+    addItem,
     addItemToSlot,
     moveTile,
     moveTileToPosition,

@@ -844,6 +844,7 @@ export class Orchestrator implements OrchestratorFacade {
       getAgentTerminalActionDependencies: () => this.createAgentTerminalActionsDependencies(),
       getSessionActionDependencies: () => this.createSessionActionsDependencies(),
       getSnapshot: () => this.getSnapshot(),
+      updateTerminal: (terminalId, partial) => this.terminalMutationFacade.updateTerminal(terminalId, partial),
       nowIso,
       randomId: () => randomUUID(),
       readAgentContextEntries: (agent) => this.terminalMutationFacade.readContextEntries(agent.contextFilePath),

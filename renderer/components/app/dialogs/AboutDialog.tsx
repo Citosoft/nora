@@ -155,7 +155,12 @@ export function AboutDialog({
           <DialogBody className="flex flex-col items-center gap-5 text-center">
             <AppMark className="size-20 text-primary" />
             <div className="space-y-2">
-              <div className="text-lg font-semibold text-foreground">{APP_NAME}</div>
+              <div className="flex items-center justify-center gap-2">
+                <div className="text-lg font-semibold text-foreground">{APP_NAME}</div>
+                <div className="rounded-[4px] border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
+                  Beta
+                </div>
+              </div>
               <div className="text-sm font-medium text-muted-foreground">Installed version {installedVersion}</div>
               <div className="max-w-md text-sm leading-6 text-muted-foreground">
                 Launch and manage multiple agent sessions with shared read access, exclusive write access, live terminal control, and git-aware workflow support.

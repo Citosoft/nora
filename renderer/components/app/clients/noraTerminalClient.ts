@@ -4,6 +4,7 @@ import { noraSessionClient } from "./noraSessionClient";
 
 type TerminalGateway = Pick<
   SessionGateway,
+  | "renameTerminal"
   | "createTerminal"
   | "focusTerminal"
   | "restartTerminal"

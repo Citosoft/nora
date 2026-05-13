@@ -94,24 +94,44 @@ function isWorkspaceSplitViewItemReference(value: unknown): value is WorkspaceSp
       typeof candidate.sessionId === "string") ||
     (candidate.kind === "terminal" &&
       typeof candidate.terminalId === "string" &&
-      typeof candidate.sessionId === "string")
+      typeof candidate.sessionId === "string") ||
+    (candidate.kind === "browser" &&
+      typeof candidate.tabId === "string") ||
+    (candidate.kind === "file" &&
+      typeof candidate.path === "string")
   );
 }
 
 function normalizeWorkspaceSplitViewItemReference(
   value: WorkspaceSplitViewItemReference
 ): WorkspaceSplitViewItemReference {
-  return value.kind === "agent"
-    ? {
+  if (value.kind === "agent") {
+    return {
         kind: "agent",
         agentId: value.agentId,
         sessionId: value.sessionId
-      }
-    : {
+      };
+  }
+
+  if (value.kind === "terminal") {
+    return {
         kind: "terminal",
         terminalId: value.terminalId,
         sessionId: value.sessionId
       };
+  }
+
+  if (value.kind === "browser") {
+    return {
+      kind: "browser",
+      tabId: value.tabId
+    };
+  }
+
+  return {
+    kind: "file",
+    path: value.path
+  };
 }
 
 function normalizeGridColumns(value: number | undefined, tiles: WorkspaceSplitView["tiles"]): 1 | 2 | 3 | 4 {

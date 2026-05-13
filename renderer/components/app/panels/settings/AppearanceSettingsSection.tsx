@@ -1,6 +1,7 @@
+import { getUiFontFamily, UI_FONT_OPTIONS } from "@/components/app/logic/appUiFonts";
 import { useSettingsRuntime } from "@/components/app/hooks/useSettingsRuntime";
 import { SettingRow, SettingsSectionHeader, TerminalThemePreview, ToggleButton } from "@/components/app/panels/settings/settingsUi";
-import type { AccentColor, TerminalFontId, TerminalThemeId } from "@/components/app/types";
+import type { AccentColor, TerminalFontId, TerminalThemeId, UiFontId } from "@/components/app/types";
 import { Select } from "@/components/ui/select";
 import { APP_SHORT_NAME } from "@shared/appMeta";
 import type { FileEditorThemeId } from "@shared/appTypes";
@@ -14,6 +15,8 @@ export function AppearanceSettingsSection() {
     updateWorkbenchLayout,
     accentColor,
     updateAccentColor,
+    uiFontId,
+    updateUiFont,
     terminalThemeId,
     updateTerminalTheme,
     terminalFontId,
@@ -91,6 +94,27 @@ export function AppearanceSettingsSection() {
                   title={option.value}
                 />
               ))}
+            </div>
+          </div>
+        }
+      />
+      <SettingRow
+        title="UI Font"
+        description={`Choose the typeface used across ${APP_SHORT_NAME}'s interface. Inter and Geist are bundled locally; the rest use modern web fonts when available.`}
+        control={
+          <div className="space-y-3">
+            <Select value={uiFontId} onChange={(event) => updateUiFont(event.target.value as UiFontId)}>
+              {UI_FONT_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+            <div
+              className="rounded-[6px] border border-border/70 bg-background/60 px-3 py-2.5 text-sm text-foreground"
+              style={{ fontFamily: `${getUiFontFamily(uiFontId)}, "Segoe UI", sans-serif` }}
+            >
+              The quick brown fox jumps over the lazy dog.
             </div>
           </div>
         }

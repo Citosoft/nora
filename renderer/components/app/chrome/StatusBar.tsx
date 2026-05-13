@@ -226,7 +226,7 @@ export function StatusBar({
   }, [loadToolUsage, prefetchedToolIds, tools]);
 
   return (
-    <div className="flex h-8 items-center justify-between border-t border-border/60 bg-card/95 px-3 text-xs text-muted-foreground">
+    <div className="workspace-shell-footer-surface flex h-8 items-center justify-between border-t border-border/60 bg-card/95 px-3 text-xs text-muted-foreground">
       <div className="flex min-w-0 items-center gap-3">
         {activeEntry?.loading ? <LoaderCircle className="size-3.5 animate-spin text-primary" /> : null}
         <div className="truncate">{activeEntry?.message ?? "Ready"}</div>
@@ -272,7 +272,7 @@ export function StatusBar({
                     ) : null}
                   </button>
                 </PopoverTrigger>
-                <PopoverContent side="top" align="end" className="w-80 space-y-3">
+                <PopoverContent side="top" align="end" className="footer-tool-status-popover w-80 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <AgentToolIcon toolId={tool.id} label={tool.label} className="size-6 rounded-[4px]" imageClassName="size-4" />
@@ -281,135 +281,135 @@ export function StatusBar({
                     {isUsageLoading ? <LoaderCircle className="size-3.5 animate-spin text-primary" /> : null}
                   </div>
                   {!tool.detected ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full justify-center"
-                      onClick={() => {
-                        if (!onInstallTool) {
-                          return;
-                        }
-                        setActionToolId(tool.id);
-                        setToolErrorById((current) => ({
-                          ...current,
-                          [tool.id]: null
-                        }));
-                        Promise.resolve(onInstallTool(tool.id))
-                          .catch((error: unknown) => {
-                            setToolErrorById((current) => ({
-                              ...current,
-                              [tool.id]: error instanceof Error ? error.message : "Unable to install CLI."
-                            }));
-                          })
-                          .finally(() => {
-                            setActionToolId((current) => (current === tool.id ? null : current));
-                          });
-                      }}
-                      disabled={tool.installStatus === "running" || isActionLoading || !onInstallTool}
-                    >
-                      {tool.installStatus === "running" || isActionLoading ? <LoaderCircle className="size-4 animate-spin" /> : <Wrench className="size-4" />}
-                      {actionLabel}
-                    </Button>
-                  ) : usageDashboardUrl ? (
-                    <div className="space-y-2">
                       <Button
                         type="button"
                         variant="outline"
                         className="w-full justify-center"
                         onClick={() => {
-                          void noraSystemClient.openExternalUrl(usageDashboardUrl);
+                          if (!onInstallTool) {
+                            return;
+                          }
+                          setActionToolId(tool.id);
+                          setToolErrorById((current) => ({
+                            ...current,
+                            [tool.id]: null
+                          }));
+                          Promise.resolve(onInstallTool(tool.id))
+                            .catch((error: unknown) => {
+                              setToolErrorById((current) => ({
+                                ...current,
+                                [tool.id]: error instanceof Error ? error.message : "Unable to install CLI."
+                              }));
+                            })
+                            .finally(() => {
+                              setActionToolId((current) => (current === tool.id ? null : current));
+                            });
                         }}
+                        disabled={tool.installStatus === "running" || isActionLoading || !onInstallTool}
                       >
-                        Open usage dashboard
+                        {tool.installStatus === "running" || isActionLoading ? <LoaderCircle className="size-4 animate-spin" /> : <Wrench className="size-4" />}
+                        {actionLabel}
                       </Button>
-                      <div className="truncate text-xs text-muted-foreground" title={usageDashboardUrl}>
-                        {usageDashboardUrl}
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 text-sm">
-                        <div className="text-muted-foreground">Hourly</div>
-                        <div className="min-w-0 space-y-1">
-                          <div className="flex items-center gap-2">
-                            <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
-                              <div
-                                className="h-full rounded-full bg-primary/80"
-                                style={{ width: `${summary.hourly.percentLeft ?? 0}%` }}
-                              />
-                            </div>
-                            <div className="w-16 shrink-0 text-right text-xs tabular-nums text-foreground">
-                              {summary.hourly.percentLeft !== null ? `${summary.hourly.percentLeft}% left` : "--"}
-                            </div>
-                          </div>
-                          <div className="truncate text-xs text-muted-foreground" title={summary.hourly.resetAt ?? "Reset time not reported"}>
-                            {summary.hourly.resetAt ? `Resets ${summary.hourly.resetAt}` : "Reset time not reported"}
-                          </div>
-                        </div>
-                        <div className="text-muted-foreground">Weekly</div>
-                        <div className="min-w-0 space-y-1">
-                          <div className="flex items-center gap-2">
-                            <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
-                              <div
-                                className="h-full rounded-full bg-primary/80"
-                                style={{ width: `${summary.weekly.percentLeft ?? 0}%` }}
-                              />
-                            </div>
-                            <div className="w-16 shrink-0 text-right text-xs tabular-nums text-foreground">
-                              {summary.weekly.percentLeft !== null ? `${summary.weekly.percentLeft}% left` : "--"}
-                            </div>
-                          </div>
-                          <div className="truncate text-xs text-muted-foreground" title={summary.weekly.resetAt ?? "Reset time not reported"}>
-                            {summary.weekly.resetAt ? `Resets ${summary.weekly.resetAt}` : "Reset time not reported"}
-                          </div>
-                        </div>
-                        <div className="text-muted-foreground">User</div>
-                        <div className="min-w-0 truncate text-foreground" title={summary.account}>{summary.account}</div>
-                      </div>
-                      <div className="flex items-center gap-2">
+                    ) : usageDashboardUrl ? (
+                      <div className="space-y-2">
                         <Button
                           type="button"
                           variant="outline"
-                          className="flex-1 justify-center"
+                          className="w-full justify-center"
                           onClick={() => {
-                            if (!onSwitchToolAccount) {
-                              return;
-                            }
-                            setActionToolId(tool.id);
-                            setToolErrorById((current) => ({
-                              ...current,
-                              [tool.id]: null
-                            }));
-                            Promise.resolve(onSwitchToolAccount(tool.id))
-                              .then(() => loadToolUsage(tool.id))
-                              .catch((error: unknown) => {
-                                setToolErrorById((current) => ({
-                                  ...current,
-                                  [tool.id]: error instanceof Error ? error.message : "Unable to switch account."
-                                }));
-                              })
-                              .finally(() => {
-                                setActionToolId((current) => (current === tool.id ? null : current));
-                              });
+                            void noraSystemClient.openExternalUrl(usageDashboardUrl);
                           }}
-                          disabled={isActionLoading || !onSwitchToolAccount}
                         >
-                          {isActionLoading ? <LoaderCircle className="size-4 animate-spin" /> : <UserRound className="size-4" />}
-                          {actionLabel}
+                          Open usage dashboard
                         </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => {
-                            void loadToolUsage(tool.id);
-                          }}
-                          disabled={isUsageLoading}
-                          aria-label={`Refresh ${tool.label} usage`}
-                        >
-                          <RefreshCcw className="size-4" />
-                        </Button>
+                        <div className="truncate text-xs text-muted-foreground" title={usageDashboardUrl}>
+                          {usageDashboardUrl}
+                        </div>
                       </div>
-                    </>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 text-sm">
+                          <div className="text-[11px] text-muted-foreground">Hourly</div>
+                          <div className="min-w-0 space-y-1">
+                            <div className="flex items-center gap-2">
+                              <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
+                                <div
+                                  className="h-full rounded-full bg-primary/80"
+                                  style={{ width: `${summary.hourly.percentLeft ?? 0}%` }}
+                                />
+                              </div>
+                              <div className="w-16 shrink-0 text-right text-xs tabular-nums text-foreground">
+                                {summary.hourly.percentLeft !== null ? `${summary.hourly.percentLeft}% left` : "--"}
+                              </div>
+                            </div>
+                            <div className="truncate text-xs text-muted-foreground" title={summary.hourly.resetAt ?? "Reset time not reported"}>
+                              {summary.hourly.resetAt ? `Resets ${summary.hourly.resetAt}` : "Reset time not reported"}
+                            </div>
+                          </div>
+                          <div className="text-[11px] text-muted-foreground">Weekly</div>
+                          <div className="min-w-0 space-y-1">
+                            <div className="flex items-center gap-2">
+                              <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
+                                <div
+                                  className="h-full rounded-full bg-primary/80"
+                                  style={{ width: `${summary.weekly.percentLeft ?? 0}%` }}
+                                />
+                              </div>
+                              <div className="w-16 shrink-0 text-right text-xs tabular-nums text-foreground">
+                                {summary.weekly.percentLeft !== null ? `${summary.weekly.percentLeft}% left` : "--"}
+                              </div>
+                            </div>
+                            <div className="truncate text-xs text-muted-foreground" title={summary.weekly.resetAt ?? "Reset time not reported"}>
+                              {summary.weekly.resetAt ? `Resets ${summary.weekly.resetAt}` : "Reset time not reported"}
+                            </div>
+                          </div>
+                          <div className="text-[11px] text-muted-foreground">User</div>
+                          <div className="min-w-0 truncate text-foreground" title={summary.account}>{summary.account}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="flex-1 justify-center"
+                            onClick={() => {
+                              if (!onSwitchToolAccount) {
+                                return;
+                              }
+                              setActionToolId(tool.id);
+                              setToolErrorById((current) => ({
+                                ...current,
+                                [tool.id]: null
+                              }));
+                              Promise.resolve(onSwitchToolAccount(tool.id))
+                                .then(() => loadToolUsage(tool.id))
+                                .catch((error: unknown) => {
+                                  setToolErrorById((current) => ({
+                                    ...current,
+                                    [tool.id]: error instanceof Error ? error.message : "Unable to switch account."
+                                  }));
+                                })
+                                .finally(() => {
+                                  setActionToolId((current) => (current === tool.id ? null : current));
+                                });
+                            }}
+                            disabled={isActionLoading || !onSwitchToolAccount}
+                          >
+                            {isActionLoading ? <LoaderCircle className="size-4 animate-spin" /> : <UserRound className="size-4" />}
+                            {actionLabel}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              void loadToolUsage(tool.id);
+                            }}
+                            disabled={isUsageLoading}
+                            aria-label={`Refresh ${tool.label} usage`}
+                          >
+                            <RefreshCcw className="size-4" />
+                          </Button>
+                        </div>
+                      </>
                   )}
                   {toolErrorById[tool.id] ? (
                     <div className="rounded-[6px] border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-xs text-destructive">

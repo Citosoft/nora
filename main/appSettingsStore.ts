@@ -58,6 +58,10 @@ function parseAppSettings(raw: string): AppSettings {
         candidate.defaultAgentLaunchTarget === "branch-new"
           ? candidate.defaultAgentLaunchTarget
           : DEFAULT_APP_SETTINGS.defaultAgentLaunchTarget,
+      preferredAgentToolId:
+        typeof candidate.preferredAgentToolId === "string" && candidate.preferredAgentToolId.trim().length > 0
+          ? candidate.preferredAgentToolId
+          : null,
       defaultSplitViewGridColumns:
         candidate.defaultSplitViewGridColumns === 1 ||
         candidate.defaultSplitViewGridColumns === 2 ||

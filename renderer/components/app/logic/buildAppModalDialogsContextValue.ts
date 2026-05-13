@@ -47,6 +47,7 @@ export const buildAppModalDialogsContextValue = (d: AppModalDialogsBuildDeps): A
     activeBranch: d.parentRepoBranch,
     defaultLaunchTargetMode: d.appSettings.defaultAgentLaunchTarget,
     defaultWorktreePrepareCommand: d.snapshot.defaultWorktreePrepareCommand,
+    preferredAgentToolId: d.appSettings.preferredAgentToolId,
     defaults: d.uiState.createAgentDefaults,
     workspaceTerminalPresets: d.snapshot.project?.workspaceTerminalPresets ?? [],
     globalTerminalPresets: d.appSettings.terminalPresets,

@@ -1,4 +1,5 @@
-import type { AccentColor, ResolvedTheme, ThemeMode } from "@/components/app/types";
+import { getUiFontFamily } from "@/components/app/logic/appUiFonts";
+import type { AccentColor, ResolvedTheme, ThemeMode, UiFontId } from "@/components/app/types";
 
 const ACCENT_PALETTES: Record<AccentColor, Record<ResolvedTheme, {
   primary: string;
@@ -190,6 +191,10 @@ export function applyAccentColor(accentColor: AccentColor, resolvedTheme: Resolv
   root.style.setProperty("--button-default-hover", palette.buttonDefaultHover);
   root.style.setProperty("--body-gradient-a", bodyGradientA);
   root.style.setProperty("--body-gradient-b", bodyGradientB);
+}
+
+export function applyUiFont(uiFontId: UiFontId): void {
+  document.documentElement.style.setProperty("--app-ui-font", getUiFontFamily(uiFontId));
 }
 
 export function applyTheme(mode: ThemeMode, accentColor: AccentColor): ResolvedTheme {

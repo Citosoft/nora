@@ -6,19 +6,22 @@ export function Tooltip({
   content,
   children,
   className,
-  side = "bottom"
-}: PropsWithChildren<{ content: ReactNode; className?: string; side?: "top" | "right" | "bottom" | "left" }>) {
+  side = "bottom",
+  sideOffset = 8,
+  followCursor = false
+}: PropsWithChildren<{ content: ReactNode; className?: string; side?: "top" | "right" | "bottom" | "left"; sideOffset?: number; followCursor?: boolean }>) {
   const triggerRef = useRef<HTMLDivElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ left: 0, top: 0 });
+  const [cursorPoint, setCursorPoint] = useState<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     if (!open) {
       return;
     }
 
-    const GAP = 8;
+    const GAP = sideOffset;
     const VIEWPORT_PADDING = 8;
 
     const computePosition = (
@@ -89,8 +92,19 @@ export function Tooltip({
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
 
-      const resolvedSide = resolveSide(side, triggerRect, tooltipWidth, tooltipHeight);
-      const next = computePosition(resolvedSide, triggerRect, tooltipWidth, tooltipHeight);
+      const rectForPositioning = followCursor && cursorPoint
+        ? ({
+            left: cursorPoint.x,
+            right: cursorPoint.x,
+            top: cursorPoint.y,
+            bottom: cursorPoint.y,
+            width: 0,
+            height: 0
+          } as DOMRect)
+        : triggerRect;
+
+      const resolvedSide = resolveSide(side, rectForPositioning, tooltipWidth, tooltipHeight);
+      const next = computePosition(resolvedSide, rectForPositioning, tooltipWidth, tooltipHeight);
       setPosition({
         left: Math.min(Math.max(next.left, VIEWPORT_PADDING), viewportWidth - tooltipWidth - VIEWPORT_PADDING),
         top: Math.min(Math.max(next.top, VIEWPORT_PADDING), viewportHeight - tooltipHeight - VIEWPORT_PADDING)
@@ -107,14 +121,25 @@ export function Tooltip({
       window.removeEventListener("scroll", updatePosition, true);
       window.removeEventListener("resize", updatePosition);
     };
-  }, [content, open, side]);
+  }, [content, open, side, sideOffset, followCursor, cursorPoint]);
 
   return (
     <>
       <div
         ref={triggerRef}
         className="min-w-0"
-        onMouseEnter={() => setOpen(true)}
+        onMouseEnter={(event) => {
+          if (followCursor) {
+            setCursorPoint({ x: event.clientX, y: event.clientY });
+          }
+          setOpen(true);
+        }}
+        onMouseMove={(event) => {
+          if (!followCursor) {
+            return;
+          }
+          setCursorPoint({ x: event.clientX, y: event.clientY });
+        }}
         onMouseLeave={() => setOpen(false)}
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
@@ -126,7 +151,7 @@ export function Tooltip({
             <div
               ref={tooltipRef}
               className={cn(
-                "pointer-events-none fixed z-[9999] min-w-40 max-w-[22rem] rounded-[5px] border border-border/70 bg-popover/95 px-2.5 py-1.5 text-xs text-popover-foreground shadow-xl whitespace-pre-wrap",
+                "pointer-events-none fixed z-[9999] min-w-40 max-w-[22rem] rounded-[5px] border border-border/70 bg-popover/95 px-2.5 py-1.5 text-xs text-popover-foreground shadow-xl whitespace-pre-wrap break-words [overflow-wrap:anywhere]",
                 className
               )}
               style={{

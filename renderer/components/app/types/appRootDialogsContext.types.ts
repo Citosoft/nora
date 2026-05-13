@@ -9,6 +9,7 @@ export type AppRootDialogsContextValue = UseAppRootDialogsStateResult & {
 
 export type AppRootDialogsProviderProps = {
   appSettings: AppSettings;
+  isAppSettingsLoaded: boolean;
   updateAnalyticsConsentStatus: (status: AppSettings["analyticsConsentStatus"]) => Promise<void>;
   updateLinuxAptSetupPromptDismissed: (dismissed: boolean) => Promise<void>;
   updateBrowserPreferences: (next: { browserDataImportPromptSeen: boolean }) => Promise<void>;

@@ -115,6 +115,14 @@ export type WorkspaceSplitViewItemReference =
       kind: "terminal";
       terminalId: string;
       sessionId: string;
+    }
+  | {
+      kind: "browser";
+      tabId: string;
+    }
+  | {
+      kind: "file";
+      path: string;
     };
 
 export interface WorkspaceSplitViewTile {

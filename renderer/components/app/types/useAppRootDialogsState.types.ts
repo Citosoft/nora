@@ -14,6 +14,7 @@ import type { Dispatch, SetStateAction } from "react";
 export type UseAppRootDialogsStateArgs = {
   setUiState: Dispatch<SetStateAction<UiState>>;
   appSettings: AppSettings;
+  isAppSettingsLoaded: boolean;
   captureError: (error: unknown) => void;
   activeView: AppView;
   focusedBrowserTabId: string | null;

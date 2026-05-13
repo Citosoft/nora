@@ -173,6 +173,7 @@ export interface WorkspaceService {
 export interface SessionService {
   createAgent: (payload: CreateAgentPayload) => Promise<AppState>;
   createTerminal: (payload: CreateTerminalPayload) => Promise<AppState>;
+  renameTerminal: (sessionId: string, name: string) => Promise<AppState>;
   openLocalTerminal: (shellId?: string) => Promise<LocalTerminalState>;
   clearAgentContext: (agentId: string) => Promise<AgentContextPreview>;
   clearAgentTerminal: (agentId: string) => Promise<AppState>;

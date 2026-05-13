@@ -1,7 +1,8 @@
 import type { NoteListEntry, SpecListEntry, TaskListEntry } from "@/components/app/types/component.types";
 import type { WorkspaceSidebarAgentContextMenuState } from "@/components/app/types/workspaceSidebarAgentContextMenu.types";
-import type { AgentSession } from "@shared/appTypes";
-import type { Dispatch, MouseEvent, RefObject, SetStateAction } from "react";
+import type { WorkspaceSidebarTerminalContextMenuState } from "@/components/app/types/workspaceSidebarTerminalContextMenu.types";
+import type { AgentSession, TerminalSession } from "@shared/appTypes";
+import type { Dispatch, MouseEvent, SetStateAction } from "react";
 
 export type UseWorkspaceSidebarOverlaysResult = {
   now: number;
@@ -12,16 +13,13 @@ export type UseWorkspaceSidebarOverlaysResult = {
   activeNoteMenu: { note: NoteListEntry; top: number; left: number } | null;
   activeWorkspaceMenu: { workspaceId: string; top: number; left: number } | null;
   activeAgentMenu: WorkspaceSidebarAgentContextMenuState | null;
-  taskMenuRef: RefObject<HTMLDivElement | null>;
-  specMenuRef: RefObject<HTMLDivElement | null>;
-  noteMenuRef: RefObject<HTMLDivElement | null>;
-  workspaceMenuRef: RefObject<HTMLDivElement | null>;
-  agentMenuRef: RefObject<HTMLDivElement | null>;
+  activeTerminalMenu: WorkspaceSidebarTerminalContextMenuState | null;
   openTaskMenu: (task: TaskListEntry, event: MouseEvent<HTMLButtonElement>) => void;
   openSpecMenu: (spec: SpecListEntry, event: MouseEvent<HTMLButtonElement>) => void;
   openNoteMenu: (note: NoteListEntry, event: MouseEvent<HTMLButtonElement>) => void;
   openWorkspaceMenu: (workspaceId: string, event: MouseEvent<HTMLDivElement | HTMLButtonElement>) => void;
   openAgentSessionMenu: (workspaceId: string, agent: AgentSession, pullRequestWebUrl: string | null, event: MouseEvent<Element>) => void;
+  openTerminalSessionMenu: (workspaceId: string, terminal: TerminalSession, event: MouseEvent<Element>) => void;
   openSessionPopover: (sessionId: string) => void;
   scheduleSessionPopoverClose: () => void;
   setActiveTaskMenu: Dispatch<SetStateAction<{ task: TaskListEntry; top: number; left: number } | null>>;
@@ -29,4 +27,5 @@ export type UseWorkspaceSidebarOverlaysResult = {
   setActiveNoteMenu: Dispatch<SetStateAction<{ note: NoteListEntry; top: number; left: number } | null>>;
   setActiveWorkspaceMenu: Dispatch<SetStateAction<{ workspaceId: string; top: number; left: number } | null>>;
   setActiveAgentMenu: Dispatch<SetStateAction<WorkspaceSidebarAgentContextMenuState | null>>;
+  setActiveTerminalMenu: Dispatch<SetStateAction<WorkspaceSidebarTerminalContextMenuState | null>>;
 };

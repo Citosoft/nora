@@ -139,8 +139,11 @@ export function useFileEditorState({
     }
   };
 
-  const saveFileEditor = async (): Promise<void> => {
-    const activeTab = fileEditorState?.tabs.find((tab) => tab.path === fileEditorState.activePath) ?? null;
+  const saveFileEditor = async (pathName?: string): Promise<void> => {
+    const targetPath = pathName ?? fileEditorState?.activePath ?? null;
+    const activeTab = targetPath
+      ? (fileEditorState?.tabs.find((tab) => tab.path === targetPath) ?? null)
+      : null;
     if (
       !fileEditorState ||
       !activeTab ||
@@ -157,7 +160,7 @@ export function useFileEditorState({
         ? {
             ...current,
             tabs: current.tabs.map((tab) =>
-              tab.path === current.activePath
+              tab.path === activeTab.path
                 ? { ...tab, isSaving: true, errorMessage: null }
                 : tab
             )

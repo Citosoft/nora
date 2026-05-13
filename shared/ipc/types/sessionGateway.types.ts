@@ -29,6 +29,7 @@ export interface SessionBridge {
   clearAgentTerminal: (agentId: string) => Promise<AppState>;
   resizeAgentTerminal: (agentId: string, cols: number, rows: number) => Promise<void>;
   createTerminal: (payload: CreateTerminalPayload) => Promise<AppState>;
+  renameTerminal: (sessionId: string, name: string) => Promise<AppState>;
   focusTerminal: (sessionId: string) => Promise<AppState>;
   restartTerminal: (sessionId: string) => Promise<AppState>;
   clearTerminal: (sessionId: string) => Promise<AppState>;

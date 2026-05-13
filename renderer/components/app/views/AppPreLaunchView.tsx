@@ -6,6 +6,7 @@ import { KeyboardShortcutsDialog as AppKeyboardShortcutsDialog } from "@/compone
 import { OnboardingDialog as AppOnboardingDialog } from "@/components/app/dialogs/OnboardingDialog";
 import { RemoteWorkspaceDialog as AppRemoteWorkspaceDialog } from "@/components/app/dialogs/RemoteWorkspaceDialog";
 import { StartupDependenciesDialog as AppStartupDependenciesDialog } from "@/components/app/dialogs/StartupDependenciesDialog";
+import { shouldRenderLoadingOnboardingDialog } from "@/components/app/logic/startupDialogVisibility";
 import type { AppPreLaunchViewProps } from "@/components/app/types/appPreLaunchView.types";
 import { AppBootstrapShell } from "@/components/app/views/AppBootstrapShell";
 import { AppMainChromeTopBanners } from "@/components/app/views/AppMainChromeTopBanners";
@@ -39,7 +40,9 @@ export function AppPreLaunchView({
               title="Nora is starting"
               subtitle="Warming up agents and syncing workspaces."
             />
-            <AppOnboardingDialog {...loadingOnboardingDialogProps} />
+            {shouldRenderLoadingOnboardingDialog(isOnboardingOpen) ? (
+              <AppOnboardingDialog {...loadingOnboardingDialogProps} />
+            ) : null}
             <AppStartupDependenciesDialog {...startupDependenciesDialogProps} />
           </>
         }

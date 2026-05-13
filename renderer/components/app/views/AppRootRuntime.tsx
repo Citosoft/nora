@@ -63,6 +63,7 @@ export function AppRootRuntime({ storedWorkspaceContentState }: AppRootRuntimePr
   return (
     <AppRootDialogsProvider
       appSettings={preferences.appSettings}
+      isAppSettingsLoaded={preferences.isAppSettingsLoaded}
       updateAnalyticsConsentStatus={preferences.updateAnalyticsConsentStatus}
       updateLinuxAptSetupPromptDismissed={preferences.updateLinuxAptSetupPromptDismissed}
       updateBrowserPreferences={preferences.updateBrowserPreferences}

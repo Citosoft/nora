@@ -105,8 +105,6 @@ export type AppShellSignedInSessionSurfaceSources = Pick<
   | "activeView"
   | "activeSplitViewCollection"
   | "activeWorkspaceContentTab"
-  | "addFocusedLabel"
-  | "canAddCurrentItem"
   | "fileEditorState"
   | "focusedAgent"
   | "focusedAiChatTab"
