@@ -70,7 +70,7 @@ export type AppModalDialogsBuildDeps = {
   appSettings: AppSettings;
   forgeOverview: ForgeOverview | null;
   isCreatePullRequestDialogOpen: boolean;
-  handleCreateForgePullRequest: (payload: { title: string; body: string; baseBranch: string }) => Promise<void>;
+  handleCreateForgePullRequest: (payload: { title: string; body: string; sourceBranch: string; baseBranch: string }) => Promise<void>;
   handleChooseLocalWorkspace: () => Promise<void>;
   openAddRemoteWorkspaceModal: () => void;
   normalizeSnapshot: (next: AppState) => AppState;

@@ -805,7 +805,7 @@ export function createForgeRemoteOps(countDiffLines: CountDiffLinesFn) {
     options: ForgeRequestOptions
   ): Promise<ForgeWorkItemDetail> {
     if (!sourceBranch || sourceBranch === "HEAD") {
-      throw new Error("The active workspace is not on a named branch.");
+      throw new Error("Choose a source branch.");
     }
     if (!payload.baseBranch.trim()) {
       throw new Error("Choose a base branch.");

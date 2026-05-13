@@ -309,7 +309,7 @@ export function useForgeIntegration({
     }
   }, [snapshot?.project, forgeWorkItemDetail, githubToken, gitlabToken, gitlabHost]);
 
-  const handleCreateForgePullRequest = useCallback(async (payload: { title: string; body: string; baseBranch: string }): Promise<void> => {
+  const handleCreateForgePullRequest = useCallback(async (payload: { title: string; body: string; sourceBranch: string; baseBranch: string }): Promise<void> => {
     if (!snapshot?.project) {
       throw new Error("Choose a project before creating a pull request.");
     }

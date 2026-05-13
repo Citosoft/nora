@@ -170,6 +170,7 @@ export interface ForgeRequestOptions {
 export type ForgeWorkItemAction = "merge" | "close" | "reopen";
 
 export interface ForgeCreatePullRequestPayload {
+  sourceBranch: string;
   title: string;
   body: string;
   baseBranch: string;

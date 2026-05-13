@@ -179,7 +179,7 @@ export const buildAppModalDialogsContextValue = (d: AppModalDialogsBuildDeps): A
     provider: d.forgeOverview?.repo?.provider ?? null,
     sourceBranch: d.activeBranch,
     baseBranch: d.snapshot.project?.baseBranch || d.snapshot.projectBranches[0] || "",
-    availableBaseBranches: d.snapshot.projectBranches.length
+    availableBranches: d.snapshot.projectBranches.length
       ? d.snapshot.projectBranches
       : d.snapshot.project?.baseBranch
         ? [d.snapshot.project.baseBranch]

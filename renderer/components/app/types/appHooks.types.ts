@@ -226,7 +226,7 @@ export type UseForgeIntegrationResult = {
   ) => Promise<void>;
   performForgeWorkItemAction: (action: ForgeWorkItemAction) => Promise<void>;
   addForgeWorkItemComment: (payload: ForgeAddCommentPayload) => Promise<void>;
-  handleCreateForgePullRequest: (payload: { title: string; body: string; baseBranch: string }) => Promise<void>;
+  handleCreateForgePullRequest: (payload: { title: string; body: string; sourceBranch: string; baseBranch: string }) => Promise<void>;
   setForgeWorkItemDetail: Dispatch<SetStateAction<ForgeWorkItemDetail | null>>;
   setForgeWorkItemDetailErrorMessage: Dispatch<SetStateAction<string | null>>;
 };

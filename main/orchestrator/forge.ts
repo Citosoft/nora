@@ -247,7 +247,7 @@ export function createForgeHelpers(deps: ForgeHelperDeps): ForgeHelpers {
       ? deps.getActiveChangesRoot(state)
       : project.rootPath;
     await deps.pushWorkspaceChanges({ path: sourcePath, location: project.location });
-    const sourceBranch = await deps.readCurrentBranch({ path: sourcePath, location: project.location });
+    const sourceBranch = payload.sourceBranch.trim() || await deps.readCurrentBranch({ path: sourcePath, location: project.location });
     return deps.createForgePullRequestForRepo(repo, sourceBranch, payload, options);
   }
 

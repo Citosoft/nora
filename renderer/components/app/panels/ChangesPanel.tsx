@@ -277,6 +277,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
   const [generatedCommitProvider, setGeneratedCommitProvider] = useState<string | null>(null);
   const [isPulling, setIsPulling] = useState(false);
   const [isPushing, setIsPushing] = useState(false);
+  const [gitStatusAheadCount, setGitStatusAheadCount] = useState(0);
   const [gitStatusBehindCount, setGitStatusBehindCount] = useState(0);
   const [fileSearchQuery, setFileSearchQuery] = useState("");
   const [fileSearchResults, setFileSearchResults] = useState<WorkspaceSearchResult[]>([]);
@@ -298,6 +299,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
 
   const loadGitStatusSummary = useCallback(async () => {
     if (!snapshot.project || activeTab !== "git" || collapsed) {
+      setGitStatusAheadCount(0);
       setGitStatusBehindCount(0);
       return;
     }
@@ -307,8 +309,10 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
         projectId: snapshot.project.id,
         rootPath: snapshot.changesRoot || undefined
       });
+      setGitStatusAheadCount(summary.aheadCount);
       setGitStatusBehindCount(summary.behindCount);
     } catch {
+      setGitStatusAheadCount(0);
       setGitStatusBehindCount(0);
     }
   }, [activeTab, collapsed, snapshot.changesRoot, snapshot.project]);
@@ -1078,9 +1082,15 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                       <Button
                         variant="outline"
                         className="h-8 w-full justify-center gap-1.5 rounded-none border-0 border-r border-border/70 px-3 text-[11px] font-semibold tracking-normal"
-                        disabled={!snapshot.project || isPushing || isInspectingCommit}
+                        disabled={!snapshot.project || isPushing || isInspectingCommit || gitStatusAheadCount < 1}
                         onClick={() => void handlePush()}
-                        tooltip="Push branch"
+                        tooltip={
+                          isInspectingCommit
+                            ? "Return to working tree before pushing"
+                            : gitStatusAheadCount > 0
+                              ? `Push ${gitStatusAheadCount} local commit${gitStatusAheadCount === 1 ? "" : "s"}`
+                              : "No local commits to push"
+                        }
                       >
                         {isPushing ? null : <ArrowUp className="size-3.5" />}
                         <span>{isPushing ? "Working" : "Push"}</span>

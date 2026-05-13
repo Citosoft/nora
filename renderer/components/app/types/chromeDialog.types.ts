@@ -127,9 +127,9 @@ export type CreatePullRequestDialogProps = {
   provider: ForgeProvider | null;
   sourceBranch: string;
   baseBranch: string;
-  availableBaseBranches: string[];
+  availableBranches: string[];
   onOpenChange: (open: boolean) => void;
-  onCreate: (payload: { title: string; body: string; baseBranch: string }) => Promise<void>;
+  onCreate: (payload: { title: string; body: string; sourceBranch: string; baseBranch: string }) => Promise<void>;
 };
 
 export type CreateTerminalDialogProps = {
