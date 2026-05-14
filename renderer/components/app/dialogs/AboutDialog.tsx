@@ -75,7 +75,8 @@ function getMinimalUpdateLabel(status: ReleaseVersionStatus | null, hasAttempted
 
 export function AboutDialog({
   open,
-  onOpenChange
+  onOpenChange,
+  focusLocalTerminalDock
 }: AboutDialogProps) {
   const [isThirdPartyNoticesOpen, setIsThirdPartyNoticesOpen] = useState(false);
   const [thirdPartyNoticesContent, setThirdPartyNoticesContent] = useState<string>("");
@@ -90,6 +91,8 @@ export function AboutDialog({
   const [isLoadingReleaseAssets, setIsLoadingReleaseAssets] = useState(false);
   const [releaseAssetsResult, setReleaseAssetsResult] = useState<LatestReleaseAssetsResult | null>(null);
   const [selectedReleaseAssetDownloadUrl, setSelectedReleaseAssetDownloadUrl] = useState<string>("");
+  const [isRunningReleaseInstaller, setIsRunningReleaseInstaller] = useState(false);
+  const [releaseInstallerError, setReleaseInstallerError] = useState<string | null>(null);
   const [isDownloadingReleaseAsset, setIsDownloadingReleaseAsset] = useState(false);
   const [releaseAssetDownloadResult, setReleaseAssetDownloadResult] = useState<ReleaseAssetDownloadResult | null>(null);
   const [releaseAssetDownloadProgress, setReleaseAssetDownloadProgress] = useState<ReleaseAssetDownloadProgressPayload | null>(null);
@@ -158,6 +161,7 @@ export function AboutDialog({
   const canDownloadUpdateFromReleasePage = updateStatus !== null
     && updateStatus.kind === "available"
     && updateStatus.releaseUrl.trim().length > 0;
+  const canRunSelfUpdate = canDownloadUpdateFromReleasePage;
   const runAutoUpdateSimulation = (target: AutoUpdateTestTarget): void => {
     setRunningAutoUpdateTestTarget(target);
     void noraSystemClient.simulateAutoUpdateStatus(target)
@@ -238,6 +242,25 @@ export function AboutDialog({
     });
   };
 
+  const handleRunReleaseInstaller = (): void => {
+    setIsRunningReleaseInstaller(true);
+    setReleaseInstallerError(null);
+
+    void noraSystemClient.runReleaseInstallerInLocalTerminal()
+      .then(async () => {
+        onOpenChange(false);
+        await focusLocalTerminalDock();
+      })
+      .catch((error: unknown) => {
+        setReleaseInstallerError(
+          error instanceof Error ? error.message : "Unable to run the installer in the local terminal."
+        );
+      })
+      .finally(() => {
+        setIsRunningReleaseInstaller(false);
+      });
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -270,15 +293,33 @@ export function AboutDialog({
                 {updateSummary.detail && (!latestVersion || updateSummary.detail !== `Latest version: ${latestVersion}`) ? (
                   <div className="text-xs text-muted-foreground">{updateSummary.detail}</div>
                 ) : null}
-                {canDownloadUpdateFromReleasePage ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={handleOpenReleaseAssetDialog}
-                  >
-                    Download latest release
-                  </Button>
+                {canDownloadUpdateFromReleasePage || canRunSelfUpdate ? (
+                  <div className="flex flex-wrap gap-2">
+                    {canDownloadUpdateFromReleasePage ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={handleOpenReleaseAssetDialog}
+                      >
+                        Download latest release
+                      </Button>
+                    ) : null}
+                    {canRunSelfUpdate ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        disabled={isRunningReleaseInstaller}
+                        onClick={handleRunReleaseInstaller}
+                      >
+                        {isRunningReleaseInstaller ? "Starting terminal..." : "Self update"}
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
+                {releaseInstallerError ? (
+                  <div className="text-xs text-destructive">{releaseInstallerError}</div>
                 ) : null}
               </div>
             </div>
@@ -434,13 +475,15 @@ export function AboutDialog({
               <div className="space-y-2 rounded-md border border-border/70 bg-muted/30 p-3">
                 <div className="text-sm font-medium text-foreground">Downloaded {releaseAssetDownloadResult.fileName}</div>
                 <div className="text-xs text-muted-foreground">{releaseAssetDownloadResult.filePath}</div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void noraSystemClient.revealFileInFolder(releaseAssetDownloadResult.filePath)}
-                >
-                  Show in folder
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void noraSystemClient.revealFileInFolder(releaseAssetDownloadResult.filePath)}
+                  >
+                    Show in folder
+                  </Button>
+                </div>
               </div>
             ) : null}
             {releaseAssetDownloadResult?.kind === "error" ? (

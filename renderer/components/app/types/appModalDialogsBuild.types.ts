@@ -101,4 +101,5 @@ export type AppModalDialogsBuildDeps = {
   windowUiStatePlatform: WindowUiState["platform"];
   workspaceSwitcherEntries: WorkspaceSummary[];
   focusWorkspaceWithRecovery: (projectId: string) => Promise<AppState | null>;
+  focusLocalTerminalDock: () => Promise<void>;
 };

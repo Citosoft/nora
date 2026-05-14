@@ -158,9 +158,11 @@ export function buildPreLaunchKeyboardShortcutsDialogProps(args: {
 export function buildPreLaunchAboutDialogProps(args: {
   uiState: UiState;
   uiCommands: AppUiCommands;
+  focusLocalTerminalDock: () => Promise<void>;
 }): AboutDialogProps {
   return {
     open: args.uiState.showAboutDialog,
-    onOpenChange: args.uiCommands.setAboutDialogOpen
+    onOpenChange: args.uiCommands.setAboutDialogOpen,
+    focusLocalTerminalDock: args.focusLocalTerminalDock
   };
 }

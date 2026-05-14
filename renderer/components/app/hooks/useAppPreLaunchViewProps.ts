@@ -318,7 +318,8 @@ export function useAppPreLaunchViewProps(args: UseAppPreLaunchViewPropsArgs): {
       }),
       aboutDialogProps: buildPreLaunchAboutDialogProps({
         uiState,
-        uiCommands
+        uiCommands,
+        focusLocalTerminalDock
       })
     };
 

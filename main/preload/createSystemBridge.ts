@@ -38,6 +38,7 @@ export function createSystemBridge(): SystemBridge {
     installDownloadedUpdate: () => invokeIpc("app:install-downloaded-update"),
     getLatestReleaseAssets: () => invokeIpc("app:get-latest-release-assets"),
     downloadReleaseAsset: (payload) => invokeIpc("app:download-release-asset", payload),
+    runReleaseInstallerInLocalTerminal: () => invokeIpc("app:run-release-installer-in-local-terminal"),
     revealFileInFolder: (filePath) => invokeIpc("app:reveal-file-in-folder", filePath),
     onReleaseAssetDownloadProgress: (listener) =>
       subscribeToIpcEvent("release-asset-download:progress", listener),

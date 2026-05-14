@@ -160,6 +160,7 @@ export const NORA_SYSTEM_CLIENT_METHODS = [
   "installDownloadedUpdate",
   "getLatestReleaseAssets",
   "downloadReleaseAsset",
+  "runReleaseInstallerInLocalTerminal",
   "revealFileInFolder",
   "onReleaseAssetDownloadProgress",
   "onAutoUpdateStatus",

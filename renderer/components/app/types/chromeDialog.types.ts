@@ -277,4 +277,5 @@ export type KeyboardShortcutsDialogProps = {
 export type AboutDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  focusLocalTerminalDock: () => Promise<void>;
 };

@@ -73,6 +73,7 @@ export interface SystemBridge {
   installDownloadedUpdate: () => Promise<void>;
   getLatestReleaseAssets: () => Promise<LatestReleaseAssetsResult>;
   downloadReleaseAsset: (payload: { downloadUrl: string; fileName: string }) => Promise<ReleaseAssetDownloadResult>;
+  runReleaseInstallerInLocalTerminal: () => Promise<void>;
   revealFileInFolder: (filePath: string) => Promise<void>;
   onReleaseAssetDownloadProgress: (listener: (payload: ReleaseAssetDownloadProgressPayload) => void) => () => void;
   onAutoUpdateStatus: (listener: (payload: AutoUpdateStatus) => void) => () => void;

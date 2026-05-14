@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { watch as watchFs } from "node:fs";
+import { createRequire } from "node:module";
 import { access, cp, mkdir, rm } from "node:fs/promises";
 import fs from "node:fs";
 import path from "node:path";
@@ -8,18 +8,19 @@ import { context } from "esbuild";
 
 const root = process.cwd();
 const isWindows = process.platform === "win32";
+const isMac = process.platform === "darwin";
+const require = createRequire(import.meta.url);
 const nodeExe = process.execPath;
 const tscCli = path.join(root, "node_modules", "typescript", "bin", "tsc");
 const tscAliasCli = path.join(root, "node_modules", "tsc-alias", "dist", "bin", "index.js");
 const tailwindCli = path.join(root, "node_modules", "tailwindcss", "lib", "cli.js");
-const generateIconsScript = path.join(root, "scripts", "generate-icons.mjs");
 const generateOAuthBuildConfigScript = path.join(root, "scripts", "generate-oauth-build-config.mjs");
-const electronExe = isWindows
-  ? path.join(root, "node_modules", "electron", "dist", "electron.exe")
-  : path.join(root, "node_modules", ".bin", "electron");
 const rendererDir = path.join(root, "renderer");
-const mainSourceDir = path.join(root, "main");
-const sharedSourceDir = path.join(root, "shared");
+const rendererIconSvgPath = path.join(root, "renderer", "icon.svg");
+const rendererIconPngPath = path.join(root, "renderer", "icon.png");
+const rendererIcon256Path = path.join(root, "renderer", "icon-256.png");
+const rendererIconIcoPath = path.join(root, "renderer", "icon.ico");
+const rendererIconIcnsPath = path.join(root, "renderer", "icon.icns");
 const distMainPath = path.join(root, "dist", "main", "main.js");
 const distPreloadPath = path.join(root, "dist", "main", "preload.js");
 const distRendererBundlePath = path.join(root, "dist", "renderer", "bundle.js");
@@ -31,6 +32,24 @@ const forwardedElectronArgs = process.argv.slice(2).filter((arg) => arg !== "--d
 let electronProcess = null;
 let restartTimer = null;
 let startTimer = null;
+let staticCopyPromise = Promise.resolve();
+
+async function resolveElectronExecutable() {
+  try {
+    const electronPath = require("electron");
+    await access(electronPath);
+    return electronPath;
+  } catch (_error) {
+    const fallbackPath = isWindows
+      ? path.join(root, "node_modules", "electron", "dist", "electron.exe")
+      : isMac
+        ? path.join(root, "node_modules", "electron", "dist", "Electron.app", "Contents", "MacOS", "Electron")
+        : path.join(root, "node_modules", "electron", "dist", "electron");
+
+    await access(fallbackPath);
+    return fallbackPath;
+  }
+}
 
 function spawnLongRunning(command, args, label, extraEnv = {}) {
   const child = spawn(command, args, {
@@ -85,26 +104,60 @@ async function copyStatic() {
   await mkdir(path.join(root, "dist", "renderer"), { recursive: true });
   await mkdir(path.join(root, "dist", "runtime"), { recursive: true });
   await runCommand(nodeExe, [generateOAuthBuildConfigScript], "oauth-build-config");
-  await runCommand(nodeExe, [generateIconsScript], "icons");
   await cp(path.join(root, "renderer", "index.html"), path.join(root, "dist", "renderer", "index.html"));
-  await cp(path.join(root, "renderer", "icon.svg"), path.join(root, "dist", "renderer", "icon.svg"));
-  await cp(path.join(root, "renderer", "icon.png"), path.join(root, "dist", "renderer", "icon.png"));
-  await cp(path.join(root, "renderer", "icon-256.png"), path.join(root, "dist", "renderer", "icon-256.png"));
-  await cp(path.join(root, "renderer", "icon.ico"), path.join(root, "dist", "renderer", "icon.ico"));
-  await cp(path.join(root, "renderer", "icon.icns"), path.join(root, "dist", "renderer", "icon.icns"));
+  await cp(rendererIconSvgPath, path.join(root, "dist", "renderer", "icon.svg"));
+  await cp(rendererIconPngPath, path.join(root, "dist", "renderer", "icon.png"));
+  await cp(rendererIcon256Path, path.join(root, "dist", "renderer", "icon-256.png"));
+  await cp(rendererIconIcoPath, path.join(root, "dist", "renderer", "icon.ico"));
+  await cp(rendererIconIcnsPath, path.join(root, "dist", "renderer", "icon.icns"));
+}
+
+function scheduleStaticCopy() {
+  staticCopyPromise = staticCopyPromise
+    .then(() => copyStatic())
+    .catch((error) => {
+      console.error(error);
+    });
+}
+
+function watchPolledFile(filePath, onChange, interval = 250) {
+  let initialized = false;
+
+  const listener = (current, previous) => {
+    if (!initialized) {
+      initialized = true;
+      return;
+    }
+    if (current.mtimeMs === previous.mtimeMs && current.size === previous.size) {
+      return;
+    }
+    onChange();
+  };
+
+  fs.watchFile(filePath, { interval }, listener);
+  return () => {
+    fs.unwatchFile(filePath, listener);
+  };
 }
 
 function watchStatic() {
-  void copyStatic();
+  scheduleStaticCopy();
 
-  const watcher = watchFs(rendererDir, { recursive: true }, (_eventType, filename) => {
-    if (filename !== "index.html" && filename !== "icon.svg") {
-      return;
+  const staticFiles = [
+    "index.html",
+    "icon.svg"
+  ];
+  const cleanupFns = staticFiles.map((filename) =>
+    watchPolledFile(path.join(rendererDir, filename), () => {
+      scheduleStaticCopy();
+    })
+  );
+
+  return () => {
+    for (const cleanup of cleanupFns) {
+      cleanup();
     }
-    void copyStatic();
-  });
-
-  return () => watcher.close();
+  };
 }
 
 function watchEnvFile() {
@@ -113,7 +166,7 @@ function watchEnvFile() {
     return () => {};
   }
 
-  const watcher = watchFs(envPath, () => {
+  return watchPolledFile(envPath, () => {
     void runCommand(nodeExe, [generateOAuthBuildConfigScript], "oauth-build-config")
       .then(() => {
         scheduleElectronRestart();
@@ -122,8 +175,6 @@ function watchEnvFile() {
         console.error(error);
       });
   });
-
-  return () => watcher.close();
 }
 
 async function watchPreloadBundle() {
@@ -182,8 +233,9 @@ function stopElectron() {
   electronProcess = null;
 }
 
-function startElectron() {
+async function startElectron() {
   stopElectron();
+  const electronExe = await resolveElectronExecutable();
   electronProcess = spawnLongRunning(
     electronExe,
     [".", ...forwardedElectronArgs],
@@ -202,7 +254,9 @@ function scheduleElectronStart() {
 
   startTimer = setTimeout(() => {
     startTimer = null;
-    startElectron();
+    void startElectron().catch((error) => {
+      console.error(error);
+    });
   }, 250);
 }
 
@@ -213,24 +267,21 @@ function scheduleElectronRestart() {
 
   restartTimer = setTimeout(() => {
     restartTimer = null;
-    startElectron();
+    void startElectron().catch((error) => {
+      console.error(error);
+    });
   }, 300);
 }
 
 function watchMainBuild() {
-  const watchers = [mainSourceDir, sharedSourceDir].map((dirPath) =>
-    watchFs(dirPath, { recursive: true }, (_eventType, filename) => {
-      const changed = typeof filename === "string" ? filename : "";
-      if (!changed.endsWith(".ts") && !changed.endsWith(".tsx")) {
-        return;
-      }
-      scheduleElectronRestart();
-    })
-  );
+  const cleanupFns = [
+    watchPolledFile(distMainPath, scheduleElectronRestart),
+    watchPolledFile(distPreloadPath, scheduleElectronRestart)
+  ];
 
   return () => {
-    for (const watcher of watchers) {
-      watcher.close();
+    for (const cleanup of cleanupFns) {
+      cleanup();
     }
   };
 }

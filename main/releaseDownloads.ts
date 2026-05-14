@@ -61,6 +61,24 @@ function sanitizeAssetFileName(name: string): string {
   return base.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, "-");
 }
 
+export function getReleaseInstallerScriptCommandForLocalTerminal(
+  platform: NodeJS.Platform = process.platform
+): string | null {
+  if (platform === "win32") {
+    return "irm https://withnora.run/install.ps1 | iex";
+  }
+
+  if (platform === "linux") {
+    return "curl -fsSL https://withnora.run/install.sh | bash";
+  }
+
+  if (platform === "darwin") {
+    return "curl -fsSL https://withnora.run/install-macos.sh | bash";
+  }
+
+  return null;
+}
+
 async function resolveUniqueFilePath(directoryPath: string, fileName: string): Promise<string> {
   const ext = path.extname(fileName);
   const stem = ext.length > 0 ? fileName.slice(0, -ext.length) : fileName;
@@ -147,6 +165,60 @@ export async function getLatestReleaseAssets(): Promise<LatestReleaseAssetsResul
   }
 }
 
+export async function readReleaseAssetResponseBytes(
+  response: Response,
+  fileName: string,
+  onProgress?: (payload: ReleaseAssetDownloadProgressPayload) => void
+): Promise<{
+  bytes: Uint8Array;
+  totalBytes: number | null;
+  emittedProgress: boolean;
+}> {
+  if (!response.body) {
+    return {
+      bytes: new Uint8Array(await response.arrayBuffer()),
+      totalBytes: null,
+      emittedProgress: false
+    };
+  }
+
+  const totalHeader = response.headers.get("content-length");
+  const parsedTotal = totalHeader ? Number.parseInt(totalHeader, 10) : Number.NaN;
+  const totalBytes = Number.isFinite(parsedTotal) && parsedTotal > 0 ? parsedTotal : null;
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let downloadedBytes = 0;
+  let emittedProgress = false;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    if (!value || value.byteLength === 0) {
+      continue;
+    }
+
+    chunks.push(value);
+    downloadedBytes += value.byteLength;
+    emittedProgress = true;
+    onProgress?.({
+      fileName,
+      downloadedBytes,
+      totalBytes,
+      percent: totalBytes !== null
+        ? Math.min(100, Math.max(0, Math.round((downloadedBytes / totalBytes) * 100)))
+        : null
+    });
+  }
+
+  return {
+    bytes: new Uint8Array(Buffer.concat(chunks.map((chunk) => Buffer.from(chunk)), downloadedBytes)),
+    totalBytes,
+    emittedProgress
+  };
+}
+
 export async function downloadReleaseAsset(
   downloadUrl: string,
   fileName: string,
@@ -176,30 +248,15 @@ export async function downloadReleaseAsset(
       };
     }
 
-    const totalHeader = response.headers.get("content-length");
-    const parsedTotal = totalHeader ? Number.parseInt(totalHeader, 10) : Number.NaN;
-    const totalBytes = Number.isFinite(parsedTotal) && parsedTotal > 0 ? parsedTotal : null;
-    const buffer = new Uint8Array(await response.arrayBuffer());
-    const bytes = buffer;
-    let downloadedBytes = 0;
-    const chunkSize = 256 * 1024;
-    while (downloadedBytes < bytes.byteLength) {
-      downloadedBytes = Math.min(bytes.byteLength, downloadedBytes + chunkSize);
-      if (onProgress) {
-        const percent = totalBytes !== null
-          ? Math.min(100, Math.max(0, Math.round((downloadedBytes / totalBytes) * 100)))
-          : Math.round((downloadedBytes / bytes.byteLength) * 100);
-        onProgress({
-          fileName: resolvedFileName,
-          downloadedBytes,
-          totalBytes,
-          percent
-        });
-      }
-    }
+    const { bytes, totalBytes: responseTotalBytes, emittedProgress } = await readReleaseAssetResponseBytes(
+      response,
+      resolvedFileName,
+      onProgress
+    );
+    const totalBytes = responseTotalBytes ?? bytes.byteLength;
     await writeFile(targetPath, bytes, { flag: "wx" });
-    if (onProgress) {
-      onProgress({
+    if (!emittedProgress || responseTotalBytes === null) {
+      onProgress?.({
         fileName: resolvedFileName,
         downloadedBytes: bytes.byteLength,
         totalBytes,

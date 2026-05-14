@@ -270,7 +270,8 @@ export const buildAppModalDialogsContextValue = (d: AppModalDialogsBuildDeps): A
   },
   about: {
     open: d.uiState.showAboutDialog,
-    onOpenChange: d.uiCommands.setAboutDialogOpen
+    onOpenChange: d.uiCommands.setAboutDialogOpen,
+    focusLocalTerminalDock: d.focusLocalTerminalDock
   },
   keyboardShortcuts: {
     open: d.uiState.showKeyboardShortcutsDialog,

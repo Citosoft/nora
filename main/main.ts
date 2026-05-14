@@ -409,6 +409,8 @@ function registerIpc(): void {
     showProjectPicker,
     showProjectPickerAtPath,
     getWindowState,
+    openLocalTerminal: () => services.session.openLocalTerminal(),
+    sendTerminalInput: (sessionId, input) => services.session.sendTerminalInput(sessionId, input),
     getAppSettings: () => appSettings,
     saveAppSettings: async (nextSettings) => {
       appSettings = await appSettingsStore.save(nextSettings);

@@ -2,7 +2,11 @@ import { importChromeBrowserDataToSession, listChromeCookieProfiles } from "@mai
 import { getInstalledIdes, openProjectInIde } from "@main/ideIntegration";
 import { getLinuxAptSetupStatus, installLinuxAptUpdates } from "@main/linuxAptUpdates";
 import { getLinuxUpdateStatus, getReleaseVersionStatus } from "@main/linuxUpdates";
-import { downloadReleaseAsset, getLatestReleaseAssets } from "@main/releaseDownloads";
+import {
+  downloadReleaseAsset,
+  getLatestReleaseAssets,
+  getReleaseInstallerScriptCommandForLocalTerminal
+} from "@main/releaseDownloads";
 import { transcribeVoiceInput } from "@main/ai/voiceTranscription";
 import type {
   AgentCompletionNotificationPayload,
@@ -38,6 +42,8 @@ interface RegisterSystemIpcDeps {
   showProjectPicker: () => Promise<AppState>;
   showProjectPickerAtPath: (defaultPath: string, title?: string) => Promise<AppState>;
   getWindowState: () => { isMaximized: boolean; platform: NodeJS.Platform };
+  openLocalTerminal: () => Promise<{ id: string }>;
+  sendTerminalInput: (sessionId: string, input: string) => Promise<void>;
   getAppSettings: () => AppSettings;
   saveAppSettings: (nextSettings: AppSettings) => Promise<AppSettings>;
   showAgentCompletionNotification: (payload: AgentCompletionNotificationPayload) => Promise<void>;
@@ -49,6 +55,8 @@ export function registerSystemIpc({
   showProjectPicker,
   showProjectPickerAtPath,
   getWindowState,
+  openLocalTerminal,
+  sendTerminalInput,
   getAppSettings,
   saveAppSettings,
   showAgentCompletionNotification,
@@ -97,6 +105,15 @@ export function registerSystemIpc({
         event.sender.send("release-asset-download:progress", progress);
       })
   );
+  ipcMain.handle("app:run-release-installer-in-local-terminal", async () => {
+    const installCommand = getReleaseInstallerScriptCommandForLocalTerminal();
+    if (!installCommand) {
+      throw new Error("This platform does not have a supported installer script command.");
+    }
+
+    const localTerminal = await openLocalTerminal();
+    await sendTerminalInput(localTerminal.id, `${installCommand}\r`);
+  });
   ipcMain.handle("app:reveal-file-in-folder", (_event, filePath: string) => {
     shell.showItemInFolder(filePath);
   });

@@ -701,6 +701,7 @@ function SignedInAppRootContent({
           createTerminalWithStatus: sessionActions.createTerminalWithStatus,
           openAddRemoteWorkspaceModal: props.navigation.openAddRemoteWorkspaceModal,
           focusWorkspaceWithRecovery: props.workspaceLoading.focusWorkspaceWithRecovery,
+          focusLocalTerminalDock,
           uiCommands: props.uiCommands
         },
         workspaceCatalog: {
