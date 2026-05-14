@@ -7,11 +7,14 @@ import type {
   AutoUpdateTestTarget,
   BrowserCookieProfileSummary,
   BrowserDataImportResult,
+  LatestReleaseAssetsResult,
   ForgeOAuthDevicePrompt,
   InstalledIde,
   LinuxAptSetupStatus,
   LinuxUpdateStatus,
   ReleaseVersionStatus,
+  ReleaseAssetDownloadProgressPayload,
+  ReleaseAssetDownloadResult,
   RemoteConnectionOptions
 } from "../../appTypes";
 import type {
@@ -68,6 +71,10 @@ export interface SystemBridge {
   getAutoUpdateTestSupport: () => Promise<AutoUpdateTestSupport>;
   simulateAutoUpdateStatus: (target: AutoUpdateTestTarget) => Promise<AutoUpdateStatus>;
   installDownloadedUpdate: () => Promise<void>;
+  getLatestReleaseAssets: () => Promise<LatestReleaseAssetsResult>;
+  downloadReleaseAsset: (payload: { downloadUrl: string; fileName: string }) => Promise<ReleaseAssetDownloadResult>;
+  revealFileInFolder: (filePath: string) => Promise<void>;
+  onReleaseAssetDownloadProgress: (listener: (payload: ReleaseAssetDownloadProgressPayload) => void) => () => void;
   onAutoUpdateStatus: (listener: (payload: AutoUpdateStatus) => void) => () => void;
   onForgeOAuthDevicePrompt: (listener: (payload: ForgeOAuthDevicePrompt) => void) => () => void;
   getInstalledIdes: () => Promise<InstalledIde[]>;

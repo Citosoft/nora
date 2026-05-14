@@ -2,6 +2,7 @@ import { importChromeBrowserDataToSession, listChromeCookieProfiles } from "@mai
 import { getInstalledIdes, openProjectInIde } from "@main/ideIntegration";
 import { getLinuxAptSetupStatus, installLinuxAptUpdates } from "@main/linuxAptUpdates";
 import { getLinuxUpdateStatus, getReleaseVersionStatus } from "@main/linuxUpdates";
+import { downloadReleaseAsset, getLatestReleaseAssets } from "@main/releaseDownloads";
 import { transcribeVoiceInput } from "@main/ai/voiceTranscription";
 import type {
   AgentCompletionNotificationPayload,
@@ -13,8 +14,10 @@ import type {
   AutoUpdateTestTarget,
   BrowserCookieProfileSummary,
   BrowserDataImportResult,
+  LatestReleaseAssetsResult,
   LinuxAptSetupStatus,
   LinuxUpdateStatus,
+  ReleaseAssetDownloadResult,
   ReleaseVersionStatus
 } from "@shared/appTypes";
 import type { StartupDependencyId } from "@shared/types/startupDependency.types";
@@ -85,6 +88,17 @@ export function registerSystemIpc({
   );
   ipcMain.handle("app:install-downloaded-update", () => {
     installDownloadedUpdate();
+  });
+  ipcMain.handle("app:get-latest-release-assets", (): Promise<LatestReleaseAssetsResult> => getLatestReleaseAssets());
+  ipcMain.handle(
+    "app:download-release-asset",
+    (event, payload: { downloadUrl: string; fileName: string }): Promise<ReleaseAssetDownloadResult> =>
+      downloadReleaseAsset(payload.downloadUrl, payload.fileName, (progress) => {
+        event.sender.send("release-asset-download:progress", progress);
+      })
+  );
+  ipcMain.handle("app:reveal-file-in-folder", (_event, filePath: string) => {
+    shell.showItemInFolder(filePath);
   });
   ipcMain.handle("app:save-app-settings", (_event, nextSettings: AppSettings) => saveAppSettings(nextSettings));
   ipcMain.handle("app:show-agent-completion-notification", (_event, payload: AgentCompletionNotificationPayload) =>

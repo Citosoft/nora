@@ -5,7 +5,14 @@ import type { AboutDialogProps } from "@/components/app/types/component.types";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader } from "@/components/ui/dialog";
 import { APP_DESCRIPTION, APP_NAME, APP_SHORT_NAME, APP_VERSION } from "@shared/appMeta";
-import type { AutoUpdateTestTarget, ReleaseVersionStatus } from "@shared/appTypes";
+import type {
+  AutoUpdateTestTarget,
+  LatestReleaseAssetsResult,
+  ReleaseAssetDownloadProgressPayload,
+  ReleaseAssetDownloadResult,
+  ReleaseAssetSummary,
+  ReleaseVersionStatus
+} from "@shared/appTypes";
 import { useEffect, useState } from "react";
 
 const AUTO_UPDATE_TEST_ACTIONS: Array<{ target: AutoUpdateTestTarget; label: string }> = [
@@ -49,6 +56,23 @@ function getUpdateStatusSummary(status: ReleaseVersionStatus | null): { label: s
   }
 }
 
+function getMinimalUpdateLabel(status: ReleaseVersionStatus | null, hasAttemptedUpdateCheck: boolean): string {
+  if (!hasAttemptedUpdateCheck || status === null) {
+    return "Checking for updates";
+  }
+
+  switch (status.kind) {
+    case "available":
+      return "Update available";
+    case "up-to-date":
+      return "Up to date";
+    case "error":
+      return "Update check failed";
+    default:
+      return "Checking for updates";
+  }
+}
+
 export function AboutDialog({
   open,
   onOpenChange
@@ -60,7 +84,15 @@ export function AboutDialog({
   const [updateStatus, setUpdateStatus] = useState<ReleaseVersionStatus | null>(null);
   const [hasAttemptedUpdateCheck, setHasAttemptedUpdateCheck] = useState(false);
   const [autoUpdateTestingEnabled, setAutoUpdateTestingEnabled] = useState(false);
+  const [isAutoUpdateTestingExpanded, setIsAutoUpdateTestingExpanded] = useState(false);
   const [runningAutoUpdateTestTarget, setRunningAutoUpdateTestTarget] = useState<AutoUpdateTestTarget | null>(null);
+  const [isReleaseAssetDialogOpen, setIsReleaseAssetDialogOpen] = useState(false);
+  const [isLoadingReleaseAssets, setIsLoadingReleaseAssets] = useState(false);
+  const [releaseAssetsResult, setReleaseAssetsResult] = useState<LatestReleaseAssetsResult | null>(null);
+  const [selectedReleaseAssetDownloadUrl, setSelectedReleaseAssetDownloadUrl] = useState<string>("");
+  const [isDownloadingReleaseAsset, setIsDownloadingReleaseAsset] = useState(false);
+  const [releaseAssetDownloadResult, setReleaseAssetDownloadResult] = useState<ReleaseAssetDownloadResult | null>(null);
+  const [releaseAssetDownloadProgress, setReleaseAssetDownloadProgress] = useState<ReleaseAssetDownloadProgressPayload | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -70,6 +102,7 @@ export function AboutDialog({
     let mounted = true;
     setHasAttemptedUpdateCheck(false);
     setUpdateStatus(null);
+    setIsAutoUpdateTestingExpanded(false);
     setRunningAutoUpdateTestTarget(null);
 
     noraSystemClient.getReleaseVersionStatus().then((status) => {
@@ -112,11 +145,19 @@ export function AboutDialog({
     };
   }, [open]);
 
+  useEffect(() => noraSystemClient.onReleaseAssetDownloadProgress((payload) => {
+    setReleaseAssetDownloadProgress(payload);
+  }), []);
+
   const installedVersion = updateStatus?.currentVersion || APP_VERSION;
   const latestVersion = updateStatus?.kind === "available" || updateStatus?.kind === "up-to-date"
     ? updateStatus.latestVersion
     : null;
   const updateSummary = hasAttemptedUpdateCheck ? getUpdateStatusSummary(updateStatus) : getUpdateStatusSummary(null);
+  const minimalUpdateLabel = getMinimalUpdateLabel(updateStatus, hasAttemptedUpdateCheck);
+  const canDownloadUpdateFromReleasePage = updateStatus !== null
+    && updateStatus.kind === "available"
+    && updateStatus.releaseUrl.trim().length > 0;
   const runAutoUpdateSimulation = (target: AutoUpdateTestTarget): void => {
     setRunningAutoUpdateTestTarget(target);
     void noraSystemClient.simulateAutoUpdateStatus(target)
@@ -145,83 +186,162 @@ export function AboutDialog({
     });
   };
 
+  const handleOpenReleaseAssetDialog = (): void => {
+    setIsReleaseAssetDialogOpen(true);
+    setIsLoadingReleaseAssets(true);
+    setReleaseAssetsResult(null);
+    setSelectedReleaseAssetDownloadUrl("");
+    setIsDownloadingReleaseAsset(false);
+    setReleaseAssetDownloadResult(null);
+    setReleaseAssetDownloadProgress(null);
+
+    void noraSystemClient.getLatestReleaseAssets().then((result) => {
+      setReleaseAssetsResult(result);
+      if (result.kind === "success" && result.assets.length > 0) {
+        setSelectedReleaseAssetDownloadUrl(result.assets[0].downloadUrl);
+      }
+    }).catch((error: unknown) => {
+      setReleaseAssetsResult({
+        kind: "error",
+        message: error instanceof Error ? error.message : "Unable to fetch release assets."
+      });
+    }).finally(() => {
+      setIsLoadingReleaseAssets(false);
+    });
+  };
+
+  const selectedReleaseAsset: ReleaseAssetSummary | null = releaseAssetsResult?.kind === "success"
+    ? releaseAssetsResult.assets.find((asset) => asset.downloadUrl === selectedReleaseAssetDownloadUrl) ?? null
+    : null;
+
+  const handleDownloadSelectedReleaseAsset = (): void => {
+    if (!selectedReleaseAsset) {
+      return;
+    }
+
+    setIsDownloadingReleaseAsset(true);
+    setReleaseAssetDownloadResult(null);
+    setReleaseAssetDownloadProgress(null);
+
+    void noraSystemClient.downloadReleaseAsset({
+      downloadUrl: selectedReleaseAsset.downloadUrl,
+      fileName: selectedReleaseAsset.name
+    }).then((result) => {
+      setReleaseAssetDownloadResult(result);
+    }).catch((error: unknown) => {
+      setReleaseAssetDownloadResult({
+        kind: "error",
+        message: error instanceof Error ? error.message : "Unable to download release asset."
+      });
+    }).finally(() => {
+      setIsDownloadingReleaseAsset(false);
+    });
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent onClose={() => onOpenChange(false)} headerTitle={`About ${APP_SHORT_NAME}`} className="max-w-[560px]">
+        <DialogContent onClose={() => onOpenChange(false)} headerTitle={`About ${APP_SHORT_NAME}`} className="max-w-[520px]">
           <DialogHeader>
-            <DialogDescription>{APP_DESCRIPTION}</DialogDescription>
+            <DialogDescription className="text-xs">
+              {APP_DESCRIPTION}
+            </DialogDescription>
           </DialogHeader>
-          <DialogBody className="flex flex-col items-center gap-5 text-center">
-            <AppMark className="size-20 text-primary" />
-            <div className="space-y-2">
-              <div className="flex items-center justify-center gap-2">
-                <div className="text-lg font-semibold text-foreground">{APP_NAME}</div>
-                <div className="rounded-[4px] border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
-                  Beta
+          <DialogBody className="grid grid-cols-2 gap-3">
+            <div className="col-span-2 rounded-md border border-border/60 bg-background/60 p-3">
+              <div className="flex items-center gap-3">
+                <AppMark className="size-10 shrink-0 text-primary" />
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-foreground">{APP_NAME}</div>
+                  <div className="text-xs text-muted-foreground">v{installedVersion}</div>
                 </div>
               </div>
-              <div className="text-sm font-medium text-muted-foreground">Installed version {installedVersion}</div>
-              <div className="max-w-md text-sm leading-6 text-muted-foreground">
-                Launch and manage multiple agent sessions with shared read access, exclusive write access, live terminal control, and git-aware workflow support.
-              </div>
-              <div className="rounded-lg border border-border/70 bg-muted/30 px-4 py-3 text-left">
-                <div className="text-sm font-medium text-foreground">{updateSummary.label}</div>
+              <div className="mt-3 space-y-2 border-t border-border/60 pt-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-muted-foreground">Update status</span>
+                  <span className="text-xs font-medium text-foreground">{minimalUpdateLabel}</span>
+                </div>
                 {latestVersion ? (
-                  <div className="mt-1 text-sm text-muted-foreground">Latest version {latestVersion}</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-muted-foreground">Latest version</span>
+                    <span className="text-xs text-foreground">{latestVersion}</span>
+                  </div>
                 ) : null}
                 {updateSummary.detail && (!latestVersion || updateSummary.detail !== `Latest version: ${latestVersion}`) ? (
-                  <div className="mt-1 text-sm text-muted-foreground">{updateSummary.detail}</div>
+                  <div className="text-xs text-muted-foreground">{updateSummary.detail}</div>
+                ) : null}
+                {canDownloadUpdateFromReleasePage ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={handleOpenReleaseAssetDialog}
+                  >
+                    Download latest release
+                  </Button>
                 ) : null}
               </div>
-              <div className="rounded-lg border border-border/70 bg-background/50 px-4 py-3 text-left">
-                <div className="text-sm font-medium text-foreground">Copyright and License</div>
-                <div className="mt-1 text-sm text-muted-foreground">
-                  Copyright (c) Citosoft. All rights reserved.
-                </div>
-                <div className="mt-1 text-sm text-muted-foreground">
-                  Created and owned by{" "}
-                  <a
-                    href="https://www.citosoft.co.uk"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-primary underline-offset-2 hover:underline"
+            </div>
+
+            <div className="col-span-2 space-y-2 rounded-md border border-border/70 bg-background/50 p-3">
+              <div className="text-xs font-medium text-foreground">License</div>
+              <div className="text-xs text-muted-foreground">
+                Copyright (c) Citosoft. All rights reserved.
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Created and owned by{" "}
+                <a
+                  href="https://www.citosoft.co.uk"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary underline-offset-2 hover:underline"
+                >
+                  www.citosoft.co.uk
+                </a>
+                .
+              </div>
+              <Button variant="outline" size="sm" className="w-full" onClick={openThirdPartyNotices}>
+                Third-Party Notices
+              </Button>
+            </div>
+
+            {autoUpdateTestingEnabled ? (
+              <div className="col-span-2 space-y-2 rounded-md border border-dashed border-border/70 bg-background/60 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-xs font-medium text-foreground">Local update testing</div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsAutoUpdateTestingExpanded((current) => !current)}
                   >
-                    www.citosoft.co.uk
-                  </a>
-                  .
-                </div>
-                <div className="mt-3">
-                  <Button variant="outline" size="sm" onClick={openThirdPartyNotices}>
-                    Third-Party Notices
+                    {isAutoUpdateTestingExpanded ? "Hide" : "Show"}
                   </Button>
                 </div>
+                {isAutoUpdateTestingExpanded ? (
+                  <>
+                    <div className="text-xs text-muted-foreground">
+                      Simulate updater states locally.
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {AUTO_UPDATE_TEST_ACTIONS.map((action) => (
+                        <Button
+                          key={action.target}
+                          variant="outline"
+                          size="sm"
+                          disabled={runningAutoUpdateTestTarget !== null}
+                          onClick={() => runAutoUpdateSimulation(action.target)}
+                        >
+                          {action.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </>
+                ) : null}
               </div>
-              {autoUpdateTestingEnabled ? (
-                <div className="rounded-lg border border-dashed border-border/70 bg-background/60 px-4 py-3 text-left">
-                  <div className="text-sm font-medium text-foreground">Local update testing</div>
-                  <div className="mt-1 text-sm text-muted-foreground">
-                    Simulate updater states locally to verify the toast and install flow without publishing a release.
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {AUTO_UPDATE_TEST_ACTIONS.map((action) => (
-                      <Button
-                        key={action.target}
-                        variant="outline"
-                        size="sm"
-                        disabled={runningAutoUpdateTestTarget !== null}
-                        onClick={() => runAutoUpdateSimulation(action.target)}
-                      >
-                        {action.label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-            </div>
+            ) : null}
           </DialogBody>
           <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
               Close
             </Button>
           </DialogFooter>
@@ -247,6 +367,120 @@ export function AboutDialog({
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsThirdPartyNoticesOpen(false)}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isReleaseAssetDialogOpen} onOpenChange={setIsReleaseAssetDialogOpen}>
+        <DialogContent
+          onClose={() => setIsReleaseAssetDialogOpen(false)}
+          headerTitle="Download Latest Release"
+          className="max-w-[540px]"
+        >
+          <DialogBody className="space-y-3">
+            {isLoadingReleaseAssets ? (
+              <div className="text-sm text-muted-foreground">Loading release assets...</div>
+            ) : null}
+            {!isLoadingReleaseAssets && releaseAssetsResult?.kind === "error" ? (
+              <div className="space-y-2">
+                <div className="text-sm text-destructive">{releaseAssetsResult.message}</div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleOpenReleaseAssetDialog}
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : null}
+            {!isLoadingReleaseAssets && releaseAssetsResult?.kind === "success" ? (
+              <>
+                <div className="text-sm text-muted-foreground">
+                  Choose a {APP_SHORT_NAME} v{releaseAssetsResult.latestVersion} asset to download.
+                </div>
+                {releaseAssetsResult.assets.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">No downloadable assets were found for this release.</div>
+                ) : (
+                  <div className="max-h-[240px] space-y-2 overflow-auto rounded-md border border-border/70 p-2">
+                    {releaseAssetsResult.assets.map((asset) => {
+                      const checked = asset.downloadUrl === selectedReleaseAssetDownloadUrl;
+                      const sizeLabel = asset.sizeBytes > 0
+                        ? `${Math.max(1, Math.round(asset.sizeBytes / 1024 / 1024))} MB`
+                        : "Unknown size";
+                      return (
+                        <label
+                          key={asset.downloadUrl}
+                          className="flex cursor-pointer items-start gap-2 rounded border border-border/60 bg-background/60 p-2"
+                        >
+                          <input
+                            type="radio"
+                            name="release-asset"
+                            checked={checked}
+                            onChange={() => setSelectedReleaseAssetDownloadUrl(asset.downloadUrl)}
+                            className="mt-1"
+                          />
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-medium text-foreground">{asset.name}</div>
+                            <div className="text-xs text-muted-foreground">{sizeLabel}</div>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            ) : null}
+            {releaseAssetDownloadResult?.kind === "success" ? (
+              <div className="space-y-2 rounded-md border border-border/70 bg-muted/30 p-3">
+                <div className="text-sm font-medium text-foreground">Downloaded {releaseAssetDownloadResult.fileName}</div>
+                <div className="text-xs text-muted-foreground">{releaseAssetDownloadResult.filePath}</div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void noraSystemClient.revealFileInFolder(releaseAssetDownloadResult.filePath)}
+                >
+                  Show in folder
+                </Button>
+              </div>
+            ) : null}
+            {releaseAssetDownloadResult?.kind === "error" ? (
+              <div className="text-sm text-destructive">{releaseAssetDownloadResult.message}</div>
+            ) : null}
+            {isDownloadingReleaseAsset && releaseAssetDownloadProgress ? (
+              <div className="space-y-2 rounded-md border border-border/70 bg-muted/20 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate text-xs text-muted-foreground">{releaseAssetDownloadProgress.fileName}</span>
+                  <span className="text-xs font-medium text-foreground">
+                    {releaseAssetDownloadProgress.percent !== null ? `${releaseAssetDownloadProgress.percent}%` : "Downloading"}
+                  </span>
+                </div>
+                <div className="h-2 overflow-hidden rounded bg-muted">
+                  <div
+                    className="h-full bg-primary transition-[width] duration-150"
+                    style={{
+                      width: `${Math.max(
+                        0,
+                        Math.min(100, releaseAssetDownloadProgress.percent ?? 0)
+                      )}%`
+                    }}
+                  />
+                </div>
+              </div>
+            ) : null}
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsReleaseAssetDialogOpen(false)}>
+              Close
+            </Button>
+            <Button
+              onClick={handleDownloadSelectedReleaseAsset}
+              disabled={
+                isLoadingReleaseAssets
+                || isDownloadingReleaseAsset
+                || !selectedReleaseAsset
+              }
+            >
+              {isDownloadingReleaseAsset ? "Downloading..." : "Download"}
             </Button>
           </DialogFooter>
         </DialogContent>

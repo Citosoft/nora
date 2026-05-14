@@ -120,6 +120,43 @@ export interface AutoUpdateTestSupport {
   enabled: boolean;
 }
 
+export interface ReleaseAssetSummary {
+  name: string;
+  downloadUrl: string;
+  sizeBytes: number;
+  contentType: string | null;
+}
+
+export type LatestReleaseAssetsResult =
+  | {
+      kind: "success";
+      latestVersion: string;
+      releaseUrl: string;
+      assets: ReleaseAssetSummary[];
+    }
+  | {
+      kind: "error";
+      message: string;
+    };
+
+export type ReleaseAssetDownloadResult =
+  | {
+      kind: "success";
+      filePath: string;
+      fileName: string;
+    }
+  | {
+      kind: "error";
+      message: string;
+    };
+
+export interface ReleaseAssetDownloadProgressPayload {
+  fileName: string;
+  downloadedBytes: number;
+  totalBytes: number | null;
+  percent: number | null;
+}
+
 export type LinuxUpdateStatus =
   | {
       kind: "unsupported";

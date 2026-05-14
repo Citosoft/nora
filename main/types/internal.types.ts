@@ -82,6 +82,17 @@ export type GithubReleaseResponse = {
   html_url?: unknown;
 };
 
+export type GithubReleaseAssetApiResponse = {
+  name?: unknown;
+  browser_download_url?: unknown;
+  size?: unknown;
+  content_type?: unknown;
+};
+
+export type GithubLatestReleaseApiResponse = GithubReleaseResponse & {
+  assets?: unknown;
+};
+
 export type ParsedVersion = {
   major: number;
   minor: number;

@@ -36,6 +36,11 @@ export function createSystemBridge(): SystemBridge {
     getAutoUpdateTestSupport: () => invokeIpc("app:get-auto-update-test-support"),
     simulateAutoUpdateStatus: (target) => invokeIpc("app:simulate-auto-update-status", target),
     installDownloadedUpdate: () => invokeIpc("app:install-downloaded-update"),
+    getLatestReleaseAssets: () => invokeIpc("app:get-latest-release-assets"),
+    downloadReleaseAsset: (payload) => invokeIpc("app:download-release-asset", payload),
+    revealFileInFolder: (filePath) => invokeIpc("app:reveal-file-in-folder", filePath),
+    onReleaseAssetDownloadProgress: (listener) =>
+      subscribeToIpcEvent("release-asset-download:progress", listener),
     onAutoUpdateStatus: (listener) => subscribeToIpcEvent<AutoUpdateStatus>("auto-update:status", listener),
     onForgeOAuthDevicePrompt: (listener) =>
       subscribeToIpcEvent<ForgeOAuthDevicePrompt>("forge-oauth:device-prompt", listener),
