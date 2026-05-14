@@ -73,14 +73,25 @@ jobs:
           VITE_PUBLIC_POSTHOG_HOST: ${{ secrets.VITE_PUBLIC_POSTHOG_HOST }}
         run: ${{ matrix.make_command }}
 
-      - name: Verify and checksum macOS DMG artifact
+      - name: Verify macOS release artifacts
         if: runner.os == 'macOS'
         shell: bash
         run: |
           DMG_PATH="out/make/Nora-arm64.dmg"
           CHECKSUM_PATH="out/make/Nora-arm64.dmg.sha256"
+          ZIP_DIR="out/make/zip/darwin/arm64"
+          RELEASES_JSON_PATH="${ZIP_DIR}/RELEASES.json"
+          ZIP_PATH="$(find "${ZIP_DIR}" -maxdepth 1 -type f -name '*.zip' | head -n 1)"
           if [ ! -f "${DMG_PATH}" ]; then
             echo "Missing expected macOS DMG at ${DMG_PATH}"
+            exit 1
+          fi
+          if [ ! -f "${RELEASES_JSON_PATH}" ]; then
+            echo "Missing expected macOS updater manifest at ${RELEASES_JSON_PATH}"
+            exit 1
+          fi
+          if [ -z "${ZIP_PATH}" ]; then
+            echo "Missing expected macOS updater zip in ${ZIP_DIR}"
             exit 1
           fi
           hdiutil verify "${DMG_PATH}"
@@ -156,6 +167,23 @@ jobs:
           ARCHIVE_PATH: out/make/Nora-arm64.dmg.sha256
         run: node scripts/release/upload-supabase-artifact.mjs
 
+      - name: Upload macOS updater artifacts to Supabase
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          SUPABASE_STORAGE_URL: ${{ secrets.NORA_SUPABASE_STORAGE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.NORA_SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_BUCKET: ${{ secrets.NORA_SUPABASE_BUCKET }}
+          SUPABASE_STORAGE_PATH: releases/${{ github.ref_name }}/macos-updater.tgz
+          SUPABASE_UPLOAD_CONTENT_TYPE: application/gzip
+        run: |
+          ZIP_DIR="out/make/zip/darwin/arm64"
+          ARCHIVE_PATH="$(mktemp "${TMPDIR:-/tmp}/nora-macos-updater.XXXXXX.tgz")"
+          tar -C "${ZIP_DIR}" -czf "${ARCHIVE_PATH}" .
+          export ARCHIVE_PATH
+          node scripts/release/upload-supabase-artifact.mjs
+          rm -f "${ARCHIVE_PATH}"
+
   release:
     name: Create GitHub release (Windows, Linux, macOS)
     runs-on: ubuntu-latest
@@ -222,12 +250,34 @@ jobs:
             --output "release-assets/Nora-arm64.dmg.sha256" \
             "${DOWNLOAD_URL}"
 
+      - name: Download macOS updater artifacts from Supabase
+        shell: bash
+        env:
+          SUPABASE_STORAGE_URL: ${{ secrets.NORA_SUPABASE_STORAGE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.NORA_SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_BUCKET: ${{ secrets.NORA_SUPABASE_BUCKET }}
+          SUPABASE_STORAGE_PATH: releases/${{ github.ref_name }}/macos-updater.tgz
+          DEST_DIR: release-assets
+        run: bash scripts/release/download-supabase-artifact.sh
+
       - name: Verify macOS DMG checksum
         shell: bash
         run: |
           cd release-assets
           shasum -a 256 -c Nora-arm64.dmg.sha256
           rm -f Nora-arm64.dmg.sha256
+
+      - name: Verify macOS updater assets
+        shell: bash
+        run: |
+          if [ ! -f "release-assets/RELEASES.json" ]; then
+            echo "Missing macOS updater manifest in release-assets"
+            exit 1
+          fi
+          if [ -z "$(find release-assets -maxdepth 1 -type f -name '*.zip' -print -quit)" ]; then
+            echo "Missing macOS updater zip in release-assets"
+            exit 1
+          fi
 
       - name: Publish release
         uses: softprops/action-gh-release@v2

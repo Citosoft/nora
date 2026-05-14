@@ -59,24 +59,40 @@ jobs:
             --output "release-assets/Nora-arm64.dmg.sha256" \
             "${DOWNLOAD_URL}"
 
+      - name: Download macOS updater artifacts from Supabase
+        shell: bash
+        env:
+          SUPABASE_STORAGE_URL: ${{ secrets.NORA_SUPABASE_STORAGE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.NORA_SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_BUCKET: ${{ secrets.NORA_SUPABASE_BUCKET }}
+          SUPABASE_STORAGE_PATH: releases/${{ inputs.tag }}/macos-updater.tgz
+          DEST_DIR: release-assets
+        run: bash scripts/release/download-supabase-artifact.sh
+
       - name: Verify macOS DMG checksum
         shell: bash
         run: |
           cd release-assets
           shasum -a 256 -c Nora-arm64.dmg.sha256
 
-      - name: Resolve macOS DMG asset path
+      - name: Verify macOS updater assets
         shell: bash
         run: |
-          RELEASE_ASSET_PATH="$(find release-assets -type f -name '*.dmg' | head -n 1)"
-          if [ -z "${RELEASE_ASSET_PATH}" ]; then
+          if [ -z "$(find release-assets -maxdepth 1 -type f -name '*.dmg' -print -quit)" ]; then
             echo "No .dmg file found in release-assets"
             exit 1
           fi
-          echo "RELEASE_ASSET_PATH=${RELEASE_ASSET_PATH}" >> "${GITHUB_ENV}"
+          if [ ! -f "release-assets/RELEASES.json" ]; then
+            echo "Missing macOS updater manifest in release-assets"
+            exit 1
+          fi
+          if [ -z "$(find release-assets -maxdepth 1 -type f -name '*.zip' -print -quit)" ]; then
+            echo "Missing macOS updater zip in release-assets"
+            exit 1
+          fi
 
       - name: Attach macOS assets to existing release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.tag }}
-          files: ${{ env.RELEASE_ASSET_PATH }}
+          files: release-assets/**/*
