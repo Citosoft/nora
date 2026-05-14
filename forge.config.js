@@ -3,6 +3,7 @@ const fs = require("node:fs/promises");
 const { MakerDeb } = require("@electron-forge/maker-deb");
 const { MakerDMG } = require("@electron-forge/maker-dmg");
 const { MakerSquirrel } = require("@electron-forge/maker-squirrel");
+const { MakerZIP } = require("@electron-forge/maker-zip");
 const { AutoUnpackNativesPlugin } = require("@electron-forge/plugin-auto-unpack-natives");
 
 const iconBasePath = path.resolve(__dirname, "renderer", "icon");
@@ -71,7 +72,8 @@ module.exports = {
         icon: iconIcnsPath
       },
       ["darwin"]
-    )
+    ),
+    new MakerZIP({}, ["darwin"])
   ],
   plugins: [new AutoUnpackNativesPlugin({})]
 };
