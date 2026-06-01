@@ -84,7 +84,15 @@ export function registerSystemIpc({
     const browserSession = session.fromPartition("persist:nora-browser");
     return importChromeBrowserDataToSession(browserSession, process.platform, process.env, {}, profileId || "Default");
   });
-  ipcMain.handle("app:get-analytics-runtime-config", (): AnalyticsRuntimeConfig => analyticsRuntimeConfig);
+  ipcMain.handle("app:get-analytics-runtime-config", (): AnalyticsRuntimeConfig => ({
+    ...analyticsRuntimeConfig,
+    coarseLaunchContext: {
+      ...analyticsRuntimeConfig.coarseLaunchContext,
+      countryCode: app.getLocaleCountryCode() || null,
+      language: app.getLocale().split("-")[0] || null,
+      timezoneOffsetMinutes: new Date().getTimezoneOffset()
+    }
+  }));
   ipcMain.handle("app:get-linux-apt-setup-status", (): Promise<LinuxAptSetupStatus> => getLinuxAptSetupStatus());
   ipcMain.handle("app:install-linux-apt-updates", (): Promise<LinuxAptSetupStatus> => installLinuxAptUpdates());
   ipcMain.handle("app:get-linux-update-status", (): Promise<LinuxUpdateStatus> => getLinuxUpdateStatus());

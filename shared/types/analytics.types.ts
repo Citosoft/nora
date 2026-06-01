@@ -7,6 +7,16 @@ export interface AnalyticsContext {
   appVersion: string;
 }
 
+export interface AnalyticsCoarseLaunchContext {
+  appVersion: string;
+  environment: AnalyticsEnvironment;
+  platform: string;
+  architecture: string;
+  countryCode: string | null;
+  language: string | null;
+  timezoneOffsetMinutes: number;
+}
+
 export interface PostHogConfig {
   apiKey: string;
   host?: string;
@@ -17,4 +27,5 @@ export interface AnalyticsRuntimeConfig {
   devModeAnalyticsSwitch: string;
   devModeAnalyticsEnabled: boolean;
   analyticsAllowedInCurrentRun: boolean;
+  coarseLaunchContext: AnalyticsCoarseLaunchContext;
 }

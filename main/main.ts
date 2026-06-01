@@ -76,7 +76,16 @@ const analyticsRuntimeConfig: AnalyticsRuntimeConfig = {
   isDevelopmentMode,
   devModeAnalyticsSwitch: DEV_ANALYTICS_SWITCH,
   devModeAnalyticsEnabled,
-  analyticsAllowedInCurrentRun: !isDevelopmentMode || devModeAnalyticsEnabled
+  analyticsAllowedInCurrentRun: !isDevelopmentMode || devModeAnalyticsEnabled,
+  coarseLaunchContext: {
+    appVersion: app.getVersion(),
+    environment: isDevelopmentMode ? "development" : "production",
+    platform: process.platform,
+    architecture: process.arch,
+    countryCode: null,
+    language: null,
+    timezoneOffsetMinutes: new Date().getTimezoneOffset()
+  }
 };
 
 function configureMediaPermissions(): void {

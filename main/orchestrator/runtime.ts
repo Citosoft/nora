@@ -166,6 +166,15 @@ export function createRuntimeHelpers(deps: RuntimeHelperDeps): RuntimeHelpers {
 
   type PtyProcess = ReturnType<RuntimeHelperDeps["spawnPty"]>;
 
+  function getShellNoticeToolLabel(toolLabel: string): string {
+    const normalized = toolLabel.replace(/[^A-Za-z0-9 ._-]/g, "").trim();
+    return normalized || "Agent";
+  }
+
+  function buildPersistentAgentShellCommand(toolLabel: string, command: string): string {
+    return `{ ${command}; }; exit_code=$?; printf '\\n[${getShellNoticeToolLabel(toolLabel)} exited with code %s; shell remains open]\\n' "$exit_code"; exec "\${SHELL:-/bin/sh}" -i`;
+  }
+
   function getInteractiveShellArgsForChild(executable: string): string[] {
     if (deps.isWindows()) {
       return [];
@@ -395,13 +404,15 @@ export function createRuntimeHelpers(deps: RuntimeHelperDeps): RuntimeHelpers {
       return;
     }
 
-    const shouldUseShellWrapper = deps.isWindows();
+    const shouldKeepShellOpen = !deps.isWindows();
+    const launchCommand = shouldKeepShellOpen ? buildPersistentAgentShellCommand(agent?.toolLabel || "Agent", command) : command;
+    const shouldUseShellWrapper = deps.isWindows() || shouldKeepShellOpen;
     const parsedArgs =
-      !shouldUseShellWrapper && !deps.hasShellMetacharacters(command)
-        ? deps.parseCommandArgs(command)
+      !shouldUseShellWrapper && !deps.hasShellMetacharacters(launchCommand)
+        ? deps.parseCommandArgs(launchCommand)
         : null;
     const executable = parsedArgs?.[0] || deps.getShell();
-    const args = parsedArgs ? parsedArgs.slice(1) : deps.getPtyShellArgs(command);
+    const args = parsedArgs ? parsedArgs.slice(1) : deps.getPtyShellArgs(launchCommand);
     const ptyProcess = deps.spawnPty(executable, args, {
       name: "xterm-256color",
       cols: 120,

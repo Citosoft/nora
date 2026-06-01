@@ -1,18 +1,56 @@
 import { createRuntimeHelpers } from "@main/orchestrator/runtime";
 import type { RuntimeSession, WorkspaceTarget } from "@main/types/internal.types";
 import type { RuntimeHelperDeps } from "@main/types/orchestratorRuntime.types";
-import type { TerminalShellOption } from "@shared/appTypes";
+import type { AgentSession, TerminalShellOption } from "@shared/appTypes";
 import assert from "node:assert/strict";
 import test from "node:test";
 
 type SpawnCall = {
   executable: string;
+  argv: string[];
   cwd: string | undefined;
 };
+
+function normalizePtyArgv(argv: string | string[]): string[] {
+  return Array.isArray(argv) ? argv : [argv];
+}
+
+function createAgentSession(overrides: Partial<AgentSession>): AgentSession {
+  return {
+    id: "agent-1",
+    projectId: "project-1",
+    sessionId: "session-1",
+    worktreeId: "worktree-1",
+    mode: "write",
+    name: "Agent",
+    toolId: "codex",
+    toolLabel: "Codex",
+    status: "running",
+    workspace: process.cwd(),
+    branch: "main",
+    host: "local",
+    task: "",
+    command: "codex --no-alt-screen",
+    pid: null,
+    lastEventAt: "2026-04-15T00:00:00.000Z",
+    lastTerminalLine: "",
+    resumeSessionId: null,
+    resumeCommand: null,
+    contextFilePath: "",
+    terminalStreamPath: "",
+    isBusy: false,
+    busyUntil: null,
+    terminalOutput: [],
+    rawTerminalOutput: "",
+    changeSummary: null,
+    ...overrides
+  };
+}
 
 function createDeps(args?: {
   getShell?: string;
   isWindows?: boolean;
+  appendAgentOutput?: RuntimeHelperDeps["appendAgentOutput"];
   spawnPtyImpl?: RuntimeHelperDeps["spawnPty"];
   spawnChildImpl?: RuntimeHelperDeps["spawnChild"];
 }): RuntimeHelperDeps {
@@ -59,7 +97,20 @@ function createDeps(args?: {
       throw new Error("not used in this test");
     }) as RuntimeHelperDeps["spawnChild"]),
     getShellArgsForExecutable: (_executable, command) => ["-lc", command],
-    getAgentById: () => null,
+    getAgentById: (agentId) => {
+      if (agentId === "codex-agent") {
+        return createAgentSession({ id: agentId });
+      }
+      if (agentId === "claude-agent") {
+        return createAgentSession({
+          id: agentId,
+          toolId: "claude",
+          toolLabel: "Claude",
+          command: "claude"
+        });
+      }
+      return null;
+    },
     getRuntimeSession: (sessionId) => runtimeSessions.get(sessionId),
     setRuntimeSession: (sessionId, session) => {
       runtimeSessions.set(sessionId, session);
@@ -70,7 +121,7 @@ function createDeps(args?: {
     updateAgent: () => undefined,
     updateTerminal: () => undefined,
     updateLocalTerminal: () => undefined,
-    appendAgentOutput: () => undefined,
+    appendAgentOutput: args?.appendAgentOutput || (() => undefined),
     appendTerminalOutput: () => undefined,
     appendLocalTerminalOutput: () => undefined
   };
@@ -95,8 +146,8 @@ test("spawnTerminalPty retries with fallback executable after posix_spawnp failu
   const spawnCalls: SpawnCall[] = [];
   const deps = createDeps({
     getShell: "/bin/sh",
-    spawnPtyImpl: (((executable: Parameters<RuntimeHelperDeps["spawnPty"]>[0], _argv: Parameters<RuntimeHelperDeps["spawnPty"]>[1], options: Parameters<RuntimeHelperDeps["spawnPty"]>[2]) => {
-      spawnCalls.push({ executable, cwd: options.cwd });
+    spawnPtyImpl: (((executable: Parameters<RuntimeHelperDeps["spawnPty"]>[0], argv: Parameters<RuntimeHelperDeps["spawnPty"]>[1], options: Parameters<RuntimeHelperDeps["spawnPty"]>[2]) => {
+      spawnCalls.push({ executable, argv: normalizePtyArgv(argv), cwd: options.cwd });
       if (executable === "/missing/zsh") {
         throw new Error("posix_spawnp failed.");
       }
@@ -134,8 +185,8 @@ test("spawnTerminalPty retries with fallback executable after posix_spawnp failu
 test("spawnTerminalPty falls back to process cwd when target cwd is missing", async () => {
   const spawnCalls: SpawnCall[] = [];
   const deps = createDeps({
-    spawnPtyImpl: (((executable: Parameters<RuntimeHelperDeps["spawnPty"]>[0], _argv: Parameters<RuntimeHelperDeps["spawnPty"]>[1], options: Parameters<RuntimeHelperDeps["spawnPty"]>[2]) => {
-      spawnCalls.push({ executable, cwd: options.cwd });
+    spawnPtyImpl: (((executable: Parameters<RuntimeHelperDeps["spawnPty"]>[0], argv: Parameters<RuntimeHelperDeps["spawnPty"]>[1], options: Parameters<RuntimeHelperDeps["spawnPty"]>[2]) => {
+      spawnCalls.push({ executable, argv: normalizePtyArgv(argv), cwd: options.cwd });
       return {
         pid: 100,
         cols: 120,
@@ -170,8 +221,8 @@ test("spawnTerminalPty preserves Windows shell paths with spaces", async () => {
   const spawnCalls: SpawnCall[] = [];
   const deps = createDeps({
     isWindows: true,
-    spawnPtyImpl: (((executable: Parameters<RuntimeHelperDeps["spawnPty"]>[0], _argv: Parameters<RuntimeHelperDeps["spawnPty"]>[1], options: Parameters<RuntimeHelperDeps["spawnPty"]>[2]) => {
-      spawnCalls.push({ executable, cwd: options.cwd });
+    spawnPtyImpl: (((executable: Parameters<RuntimeHelperDeps["spawnPty"]>[0], argv: Parameters<RuntimeHelperDeps["spawnPty"]>[1], options: Parameters<RuntimeHelperDeps["spawnPty"]>[2]) => {
+      spawnCalls.push({ executable, argv: normalizePtyArgv(argv), cwd: options.cwd });
       return {
         pid: 100,
         cols: 120,
@@ -201,4 +252,72 @@ test("spawnTerminalPty preserves Windows shell paths with spaces", async () => {
 
   assert.equal(spawnCalls.length >= 1, true);
   assert.equal(spawnCalls[0]?.executable, shellPath);
+});
+
+test("spawnAgentPty keeps local Codex sessions inside a shell after Codex exits", async () => {
+  const spawnCalls: SpawnCall[] = [];
+  const deps = createDeps({
+    getShell: "/bin/zsh",
+    spawnPtyImpl: (((executable: Parameters<RuntimeHelperDeps["spawnPty"]>[0], argv: Parameters<RuntimeHelperDeps["spawnPty"]>[1], options: Parameters<RuntimeHelperDeps["spawnPty"]>[2]) => {
+      spawnCalls.push({ executable, argv: normalizePtyArgv(argv), cwd: options.cwd });
+      return {
+        pid: 4321,
+        cols: 120,
+        rows: 36,
+        process: "zsh",
+        handleFlowControl: false,
+        pause: () => undefined,
+        resume: () => undefined,
+        write: () => undefined,
+        resize: () => undefined,
+        kill: () => undefined,
+        clear: () => undefined,
+        onData: () => ({ dispose: () => undefined }),
+        onExit: () => ({ dispose: () => undefined })
+      };
+    }) as unknown as RuntimeHelperDeps["spawnPty"])
+  });
+  const helpers = createRuntimeHelpers(deps);
+
+  await helpers.spawnAgentPty("codex-agent", "codex --no-alt-screen", createTarget(process.cwd()), {});
+
+  assert.equal(spawnCalls[0]?.executable, "/bin/zsh");
+  assert.deepEqual(spawnCalls[0]?.argv.slice(0, 1), ["-lc"]);
+  assert.match(spawnCalls[0]?.argv[1] || "", /codex --no-alt-screen/);
+  assert.match(spawnCalls[0]?.argv[1] || "", /shell remains open/);
+  assert.match(spawnCalls[0]?.argv[1] || "", /exec "\$\{SHELL:-\/bin\/sh\}" -i/);
+});
+
+test("spawnAgentPty keeps local non-Codex sessions inside a shell after the agent exits", async () => {
+  const spawnCalls: SpawnCall[] = [];
+  const deps = createDeps({
+    getShell: "/bin/zsh",
+    spawnPtyImpl: (((executable: Parameters<RuntimeHelperDeps["spawnPty"]>[0], argv: Parameters<RuntimeHelperDeps["spawnPty"]>[1], options: Parameters<RuntimeHelperDeps["spawnPty"]>[2]) => {
+      spawnCalls.push({ executable, argv: normalizePtyArgv(argv), cwd: options.cwd });
+      return {
+        pid: 4321,
+        cols: 120,
+        rows: 36,
+        process: "zsh",
+        handleFlowControl: false,
+        pause: () => undefined,
+        resume: () => undefined,
+        write: () => undefined,
+        resize: () => undefined,
+        kill: () => undefined,
+        clear: () => undefined,
+        onData: () => ({ dispose: () => undefined }),
+        onExit: () => ({ dispose: () => undefined })
+      };
+    }) as unknown as RuntimeHelperDeps["spawnPty"])
+  });
+  const helpers = createRuntimeHelpers(deps);
+
+  await helpers.spawnAgentPty("claude-agent", "claude", createTarget(process.cwd()), {});
+
+  assert.equal(spawnCalls[0]?.executable, "/bin/zsh");
+  assert.deepEqual(spawnCalls[0]?.argv.slice(0, 1), ["-lc"]);
+  assert.match(spawnCalls[0]?.argv[1] || "", /claude/);
+  assert.match(spawnCalls[0]?.argv[1] || "", /Claude exited with code %s; shell remains open/);
+  assert.match(spawnCalls[0]?.argv[1] || "", /exec "\$\{SHELL:-\/bin\/sh\}" -i/);
 });
