@@ -125,6 +125,8 @@ jobs:
           NORA_GITHUB_CLIENT_ID: ${{ secrets.NORA_GITHUB_CLIENT_ID }}
           NORA_MAC_CODESIGN_IDENTITY: ${{ secrets.NORA_MAC_CODESIGN_IDENTITY }}
           NORA_MAC_DMG_CODESIGN_IDENTITY: ${{ secrets.NORA_MAC_CODESIGN_IDENTITY }}
+          NORA_MAC_UPDATE_MANIFEST_BASE_URL: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}
+          NORA_MAC_UPDATE_RELEASE_NOTES: ${{ github.ref_name }}
           NORA_NOTARIZE: ${{ runner.os == 'macOS' && '1' || '' }}
           NORA_NOTARY_APPLE_ID: ${{ secrets.NORA_APPLE_ID }}
           NORA_NOTARY_APPLE_ID_PASSWORD: ${{ secrets.NORA_APPLE_APP_SPECIFIC_PASSWORD }}

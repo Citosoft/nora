@@ -83,6 +83,12 @@ const macDmgSignConfig =
         }
       }
     : {};
+const macZipConfig = process.env.NORA_MAC_UPDATE_MANIFEST_BASE_URL
+  ? {
+      macUpdateManifestBaseUrl: process.env.NORA_MAC_UPDATE_MANIFEST_BASE_URL,
+      macUpdateReleaseNotes: process.env.NORA_MAC_UPDATE_RELEASE_NOTES || ""
+    }
+  : {};
 
 module.exports = {
   rebuildConfig: {
@@ -149,7 +155,7 @@ module.exports = {
       },
       ["darwin"]
     ),
-    new MakerZIP({}, ["darwin"])
+    new MakerZIP(macZipConfig, ["darwin"])
   ],
   plugins: [new AutoUnpackNativesPlugin({})]
 };
