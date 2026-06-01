@@ -33,6 +33,7 @@ export type AppShellSignedInCoreSources = {
   createTerminalWithStatus: (payload: CreateTerminalPayload) => Promise<AppState | null>;
   openAddRemoteWorkspaceModal: () => void;
   focusWorkspaceWithRecovery: (projectId: string) => Promise<AppState | null>;
+  focusLocalTerminalDock: () => Promise<void>;
   uiCommands: AppUiCommands;
 };
 

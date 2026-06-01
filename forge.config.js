@@ -12,6 +12,77 @@ const iconIcnsPath = path.resolve(__dirname, "renderer", "icon.icns");
 const iconPngPath = path.resolve(__dirname, "renderer", "icon.png");
 const installerLoadingGifPath = path.resolve(__dirname, "renderer", "installer-loading.gif");
 const appIconUrl = "https://raw.githubusercontent.com/Citosoft/nora/main/renderer/icon.ico";
+const macBundleId = process.env.NORA_MAC_BUNDLE_ID || "com.citosoft.nora";
+
+function buildMacSignConfig() {
+  if (process.platform !== "darwin" || process.env.NORA_SKIP_MAC_SIGNING === "1") {
+    return undefined;
+  }
+
+  return {
+    hardenedRuntime: true,
+    identity: process.env.NORA_MAC_CODESIGN_IDENTITY || undefined
+  };
+}
+
+function buildMacNotarizeConfig() {
+  if (process.platform !== "darwin") {
+    return undefined;
+  }
+
+  const keychainProfile = process.env.NORA_NOTARY_KEYCHAIN_PROFILE;
+  if (keychainProfile) {
+    return {
+      keychainProfile,
+      keychain: process.env.NORA_NOTARY_KEYCHAIN || undefined
+    };
+  }
+
+  const appleApiKey = process.env.NORA_NOTARY_APPLE_API_KEY;
+  const appleApiKeyId = process.env.NORA_NOTARY_APPLE_API_KEY_ID;
+  const appleApiIssuer = process.env.NORA_NOTARY_APPLE_API_ISSUER;
+  if (appleApiKey && appleApiKeyId && appleApiIssuer) {
+    return {
+      appleApiKey,
+      appleApiKeyId,
+      appleApiIssuer
+    };
+  }
+
+  const appleId = process.env.NORA_NOTARY_APPLE_ID;
+  const appleIdPassword = process.env.NORA_NOTARY_APPLE_ID_PASSWORD;
+  const teamId = process.env.NORA_NOTARY_TEAM_ID;
+  if (appleId && appleIdPassword && teamId) {
+    return {
+      appleId,
+      appleIdPassword,
+      teamId
+    };
+  }
+
+  if (process.env.NORA_NOTARIZE === "1") {
+    throw new Error(
+      "NORA_NOTARIZE=1 requires NORA_NOTARY_KEYCHAIN_PROFILE, the NORA_NOTARY_APPLE_API_* variables, or the NORA_NOTARY_APPLE_ID* variables."
+    );
+  }
+
+  return undefined;
+}
+
+const macSignConfig = buildMacSignConfig();
+const macNotarizeConfig = buildMacNotarizeConfig();
+const macDmgSignIdentity = process.env.NORA_MAC_DMG_CODESIGN_IDENTITY || process.env.NORA_MAC_CODESIGN_IDENTITY;
+const macDmgSignConfig =
+  process.platform === "darwin" && macDmgSignIdentity
+    ? {
+        additionalDMGOptions: {
+          "code-sign": {
+            "signing-identity": macDmgSignIdentity,
+            identifier: `${macBundleId}.dmg`
+          }
+        }
+      }
+    : {};
 
 module.exports = {
   rebuildConfig: {
@@ -23,12 +94,16 @@ module.exports = {
     },
     name: "Nora",
     executableName: "Nora",
+    appBundleId: macBundleId,
+    appCategoryType: "public.app-category.developer-tools",
     icon:
       process.platform === "darwin"
         ? iconIcnsPath
         : process.platform === "linux"
           ? iconPngPath
-          : iconBasePath
+          : iconBasePath,
+    ...(macSignConfig ? { osxSign: macSignConfig } : {}),
+    ...(macNotarizeConfig ? { osxNotarize: macNotarizeConfig } : {})
   },
   hooks: {
     async packageAfterCopy(_forgeConfig, buildPath) {
@@ -69,7 +144,8 @@ module.exports = {
       {
         name: "Nora-arm64",
         title: "Nora",
-        icon: iconIcnsPath
+        icon: iconIcnsPath,
+        ...macDmgSignConfig
       },
       ["darwin"]
     ),

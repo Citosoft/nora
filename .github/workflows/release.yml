@@ -63,15 +63,98 @@ jobs:
       - name: Run unit tests
         run: npm run test:unit
 
+      - name: Verify macOS signing secrets
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          NORA_MAC_CERTIFICATE_P12_BASE64: ${{ secrets.NORA_MAC_CERTIFICATE_P12_BASE64 }}
+          NORA_MAC_CERTIFICATE_PASSWORD: ${{ secrets.NORA_MAC_CERTIFICATE_PASSWORD }}
+          NORA_MAC_CODESIGN_IDENTITY: ${{ secrets.NORA_MAC_CODESIGN_IDENTITY }}
+          NORA_APPLE_ID: ${{ secrets.NORA_APPLE_ID }}
+          NORA_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.NORA_APPLE_APP_SPECIFIC_PASSWORD }}
+          NORA_APPLE_TEAM_ID: ${{ secrets.NORA_APPLE_TEAM_ID }}
+        run: |
+          missing=0
+          for name in \
+            NORA_MAC_CERTIFICATE_P12_BASE64 \
+            NORA_MAC_CERTIFICATE_PASSWORD \
+            NORA_MAC_CODESIGN_IDENTITY \
+            NORA_APPLE_ID \
+            NORA_APPLE_APP_SPECIFIC_PASSWORD \
+            NORA_APPLE_TEAM_ID
+          do
+            if [ -z "${!name}" ]; then
+              echo "Missing required macOS release secret: ${name}"
+              missing=1
+            fi
+          done
+          exit "${missing}"
+
+      - name: Import macOS signing certificate
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          NORA_MAC_CERTIFICATE_P12_BASE64: ${{ secrets.NORA_MAC_CERTIFICATE_P12_BASE64 }}
+          NORA_MAC_CERTIFICATE_PASSWORD: ${{ secrets.NORA_MAC_CERTIFICATE_PASSWORD }}
+          NORA_MAC_CODESIGN_IDENTITY: ${{ secrets.NORA_MAC_CODESIGN_IDENTITY }}
+          KEYCHAIN_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          CERTIFICATE_PATH="${RUNNER_TEMP}/nora-developer-id.p12"
+          KEYCHAIN_PATH="${RUNNER_TEMP}/nora-release.keychain-db"
+
+          printf '%s' "${NORA_MAC_CERTIFICATE_P12_BASE64}" | base64 --decode > "${CERTIFICATE_PATH}"
+
+          security create-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_PATH}"
+          security set-keychain-settings -lut 21600 "${KEYCHAIN_PATH}"
+          security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_PATH}"
+          security import "${CERTIFICATE_PATH}" \
+            -P "${NORA_MAC_CERTIFICATE_PASSWORD}" \
+            -A \
+            -t cert \
+            -f pkcs12 \
+            -k "${KEYCHAIN_PATH}"
+          security list-keychains -d user -s "${KEYCHAIN_PATH}"
+          security default-keychain -s "${KEYCHAIN_PATH}"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_PATH}"
+          security find-identity -v -p codesigning "${KEYCHAIN_PATH}"
+          security find-identity -v -p codesigning "${KEYCHAIN_PATH}" | grep -F "${NORA_MAC_CODESIGN_IDENTITY}"
+
       - name: Make distributables
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
           NORA_GITHUB_CLIENT_ID: ${{ secrets.NORA_GITHUB_CLIENT_ID }}
+          NORA_MAC_CODESIGN_IDENTITY: ${{ secrets.NORA_MAC_CODESIGN_IDENTITY }}
+          NORA_MAC_DMG_CODESIGN_IDENTITY: ${{ secrets.NORA_MAC_CODESIGN_IDENTITY }}
+          NORA_NOTARIZE: ${{ runner.os == 'macOS' && '1' || '' }}
+          NORA_NOTARY_APPLE_ID: ${{ secrets.NORA_APPLE_ID }}
+          NORA_NOTARY_APPLE_ID_PASSWORD: ${{ secrets.NORA_APPLE_APP_SPECIFIC_PASSWORD }}
+          NORA_NOTARY_TEAM_ID: ${{ secrets.NORA_APPLE_TEAM_ID }}
           NORA_POSTHOG_API_KEY: ${{ secrets.NORA_POSTHOG_API_KEY }}
           NORA_POSTHOG_HOST: ${{ secrets.NORA_POSTHOG_HOST }}
           VITE_PUBLIC_POSTHOG_PROJECT_TOKEN: ${{ secrets.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN }}
           VITE_PUBLIC_POSTHOG_HOST: ${{ secrets.VITE_PUBLIC_POSTHOG_HOST }}
         run: ${{ matrix.make_command }}
+
+      - name: Notarize and staple macOS DMG
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          NORA_APPLE_ID: ${{ secrets.NORA_APPLE_ID }}
+          NORA_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.NORA_APPLE_APP_SPECIFIC_PASSWORD }}
+          NORA_APPLE_TEAM_ID: ${{ secrets.NORA_APPLE_TEAM_ID }}
+        run: |
+          DMG_PATH="out/make/Nora-arm64.dmg"
+          if [ ! -f "${DMG_PATH}" ]; then
+            echo "Missing expected macOS DMG at ${DMG_PATH}"
+            exit 1
+          fi
+          xcrun notarytool submit "${DMG_PATH}" \
+            --apple-id "${NORA_APPLE_ID}" \
+            --password "${NORA_APPLE_APP_SPECIFIC_PASSWORD}" \
+            --team-id "${NORA_APPLE_TEAM_ID}" \
+            --wait
+          xcrun stapler staple "${DMG_PATH}"
+          xcrun stapler validate "${DMG_PATH}"
 
       - name: Verify macOS release artifacts
         if: runner.os == 'macOS'
@@ -95,6 +178,18 @@ jobs:
             exit 1
           fi
           hdiutil verify "${DMG_PATH}"
+          codesign --verify --verbose=2 "${DMG_PATH}"
+          xcrun stapler validate "${DMG_PATH}"
+          spctl -a -vv -t install "${DMG_PATH}"
+
+          APP_VERIFY_DIR="$(mktemp -d "${TMPDIR:-/tmp}/nora-updater-app.XXXXXX")"
+          ditto -x -k "${ZIP_PATH}" "${APP_VERIFY_DIR}"
+          if [ ! -d "${APP_VERIFY_DIR}/Nora.app" ]; then
+            echo "Missing Nora.app inside macOS updater zip at ${ZIP_PATH}"
+            exit 1
+          fi
+          codesign --verify --deep --strict --verbose=2 "${APP_VERIFY_DIR}/Nora.app"
+          spctl -a -vv --type execute "${APP_VERIFY_DIR}/Nora.app"
           (
             cd out/make
             shasum -a 256 Nora-arm64.dmg > Nora-arm64.dmg.sha256
