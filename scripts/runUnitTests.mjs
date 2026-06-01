@@ -1,4 +1,5 @@
 import { readdirSync } from "node:fs";
+import { cp } from "node:fs/promises";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
@@ -19,6 +20,7 @@ function collectTestFiles(directory) {
 }
 
 const testRoot = join(process.cwd(), "dist-tests", "tests", "unit");
+await cp("package.json", join(process.cwd(), "dist-tests", "package.json"));
 const testFiles = collectTestFiles(testRoot).sort();
 
 if (testFiles.length === 0) {
