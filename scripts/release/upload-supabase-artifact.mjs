@@ -41,6 +41,30 @@ function encodeMetadata(value) {
   return Buffer.from(value, "utf8").toString("base64");
 }
 
+async function removeExistingObjectIfPresent() {
+  const deleteResponse = await fetch(`${storageBaseUrl}/storage/v1/object/${bucket}`, {
+    method: "DELETE",
+    headers: {
+      authorization: `Bearer ${serviceRoleKey}`,
+      apikey: serviceRoleKey,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      prefixes: [storagePath]
+    })
+  });
+
+  if (deleteResponse.ok || deleteResponse.status === 404) {
+    return;
+  }
+
+  console.error(`Failed to remove existing object before upload: ${deleteResponse.status} ${deleteResponse.statusText}`);
+  console.error(await deleteResponse.text());
+  process.exit(1);
+}
+
+await removeExistingObjectIfPresent();
+
 const createUploadResponse = await fetch(`${storageBaseUrl}/storage/v1/upload/resumable`, {
   method: "POST",
   headers: {
