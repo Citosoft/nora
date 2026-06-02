@@ -10,6 +10,7 @@
     "build": "tsc && tsc-alias -p tsconfig.json && tsc -p tsconfig.preload.json --noEmit && node scripts/bundle-preload.mjs && node scripts/build-renderer.mjs && tailwindcss -i renderer/styles.css -o dist/renderer/styles.css && node scripts/generate-oauth-build-config.mjs && node scripts/generate-icons.mjs && node scripts/generate-third-party-notices.mjs && node scripts/copy-static.mjs",
     "generate:icons": "node scripts/generate-icons.mjs",
     "generate:third-party-notices": "node scripts/generate-third-party-notices.mjs",
+    "postinstall": "node scripts/installElectronBinary.mjs",
     "install:linux-dev-launcher": "node scripts/install-linux-dev-launcher.mjs",
     "release:check": "npm run test:unit && npm run check:path-hygiene && npm run check:shell-assembly-imports && npm run check:nora-bridge-usage",
     "release:patch": "npm run release:check && npm version patch && git push --follow-tags",

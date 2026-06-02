@@ -1,6 +1,7 @@
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { noraToolingClient } from "@/components/app/clients/noraToolingClient";
 import { createAgentSkillCatalogMap, getAgentSkillCatalogSummaries } from "@/components/app/logic/agentSkills";
+import { getEnabledStatusBarTools } from "@/components/app/logic/statusBarTools";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import type { StatusBarEntry } from "@/components/app/types";
 import { Button } from "@/components/ui/button";
@@ -129,13 +130,14 @@ export function StatusBar({
   const [actionToolId, setActionToolId] = useState<string | null>(null);
   const [toolErrorById, setToolErrorById] = useState<Record<string, string | null>>({});
   const [prefetchedToolIds, setPrefetchedToolIds] = useState<Record<string, boolean>>({});
+  const visibleTools = useMemo(() => getEnabledStatusBarTools(tools), [tools]);
   const skillCatalogByToolId = useMemo(
     () => createAgentSkillCatalogMap(agentSkillCatalogs),
     [agentSkillCatalogs]
   );
   const skillCatalogSummaries = useMemo(
-    () => getAgentSkillCatalogSummaries(tools, skillCatalogByToolId),
-    [tools, skillCatalogByToolId]
+    () => getAgentSkillCatalogSummaries(visibleTools, skillCatalogByToolId),
+    [visibleTools, skillCatalogByToolId]
   );
   const availableSkillCount = useMemo(
     () => skillCatalogSummaries.reduce((total, summary) => total + summary.catalog.skills.length, 0),
@@ -143,7 +145,7 @@ export function StatusBar({
   );
 
   const loadToolUsage = useCallback(async (toolId: string): Promise<void> => {
-    const tool = tools.find((item) => item.id === toolId);
+    const tool = visibleTools.find((item) => item.id === toolId);
     if (!tool || !tool.detected) {
       console.log("[nora renderer] usage fetch skipped", {
         toolId,
@@ -192,10 +194,10 @@ export function StatusBar({
     } finally {
       setUsageLoadingToolId((current) => (current === toolId ? null : current));
     }
-  }, [tools]);
+  }, [visibleTools]);
 
   useEffect(() => {
-    const targets = tools
+    const targets = visibleTools
       .filter((tool) => tool.detected && !TOOL_USAGE_DASHBOARD_URLS[tool.id] && !prefetchedToolIds[tool.id])
       .map((tool) => tool.id);
     if (!targets.length) {
@@ -223,7 +225,7 @@ export function StatusBar({
     return () => {
       cancelled = true;
     };
-  }, [loadToolUsage, prefetchedToolIds, tools]);
+  }, [loadToolUsage, prefetchedToolIds, visibleTools]);
 
   return (
     <div className="workspace-shell-footer-surface flex h-8 items-center justify-between border-t border-border/60 bg-card/95 px-3 text-xs text-muted-foreground">
@@ -231,7 +233,7 @@ export function StatusBar({
         {activeEntry?.loading ? <LoaderCircle className="size-3.5 animate-spin text-primary" /> : null}
         <div className="truncate">{activeEntry?.message ?? "Ready"}</div>
         <div className="flex items-center gap-1.5">
-          {tools.map((tool) => {
+          {visibleTools.map((tool) => {
             const usageInfo = usageByToolId[tool.id] ?? null;
             const summary = extractUsageSummary(usageInfo);
             const abbreviatedUsage = formatAbbreviatedRemainingUsage(summary);

@@ -149,6 +149,20 @@ export const buildSettingsRuntimeValue = (d: BuildSettingsRuntimeValueDeps): Set
   },
   agentCatalog: d.snapshot.agentCatalog,
   agentSkillCatalogs: d.snapshot.agentSkillCatalogs,
+  installTool: (toolId) => {
+    const tool = d.snapshot.agentCatalog.find((entry) => entry.id === toolId);
+    if (!tool) {
+      return;
+    }
+
+    void d.safely(() =>
+      noraToolingManagementClient.installManagedTool({
+        toolId,
+        action: "install",
+        installCommand: tool.installTemplate
+      })
+    );
+  },
   toggleToolEnabled: (toolId, enabled) => {
     const tool = d.snapshot.agentCatalog.find((entry) => entry.id === toolId);
     if (!tool) {

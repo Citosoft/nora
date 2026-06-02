@@ -1,10 +1,11 @@
 import { useSettingsRuntime } from "@/components/app/hooks/useSettingsRuntime";
 import { createAgentSkillCatalogMap } from "@/components/app/logic/agentSkills";
+import { formatInstallLogText } from "@/components/app/logic/terminalLogText";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { isAgentToolAvailable } from "@shared/agentToolState";
-import { Bot, ChevronDown } from "lucide-react";
+import { Bot, ChevronDown, LoaderCircle, Wrench } from "lucide-react";
 import { useMemo, useState } from "react";
 
 export function CliSettingsSection() {
@@ -13,6 +14,7 @@ export function CliSettingsSection() {
     agentSkillCatalogs,
     appSettings,
     updatePreferredAgentToolId,
+    installTool,
     toggleToolEnabled,
     refreshAgentCatalog,
     removeToolSkill
@@ -129,11 +131,12 @@ export function CliSettingsSection() {
         {agentCatalog.map((tool) => {
           const skillCatalog = skillCatalogByToolId.get(tool.id) || null;
           const statusLabel = !tool.detected
-            ? "Not detected"
+            ? (tool.installStatus === "running" ? "Installing" : "Not detected")
             : tool.enabled
               ? "Enabled"
               : "Disabled";
           const isExpanded = expandedToolIds.has(tool.id);
+          const shouldShowInstallProgress = tool.installStatus === "running" || (isExpanded && tool.installLog.length > 0);
 
           return (
             <div
@@ -160,36 +163,62 @@ export function CliSettingsSection() {
                     aria-hidden="true"
                   />
                 </button>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={tool.enabled}
-                  disabled={!tool.detected}
-                  onClick={() => toggleToolEnabled(tool.id, !tool.enabled)}
-                  className={[
-                    "flex w-[124px] shrink-0 items-center justify-between rounded-[4px] border px-3 py-2 text-left transition",
-                    tool.detected
-                      ? tool.enabled
-                        ? "border-primary/40 bg-primary/10 text-foreground"
-                        : "border-border/70 bg-background/50 text-muted-foreground hover:border-primary/25 hover:text-foreground"
-                      : "cursor-not-allowed border-border/50 bg-muted/30 text-muted-foreground/70"
-                  ].join(" ")}
-                >
-                  <span className="text-sm">{tool.enabled ? "Enabled" : "Disabled"}</span>
-                  <span
+                <div className="flex shrink-0 items-center gap-2">
+                  {!tool.detected ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setExpandedToolIds((current) => {
+                          const next = new Set(current);
+                          next.add(tool.id);
+                          return next;
+                        });
+                        installTool(tool.id);
+                      }}
+                      disabled={tool.installStatus === "running"}
+                    >
+                      {tool.installStatus === "running" ? (
+                        <LoaderCircle className="size-4 animate-spin" />
+                      ) : (
+                        <Wrench className="size-4" />
+                      )}
+                      {tool.installStatus === "running" ? "Installing" : "Install"}
+                    </Button>
+                  ) : null}
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={tool.enabled}
+                    disabled={!tool.detected}
+                    onClick={() => toggleToolEnabled(tool.id, !tool.enabled)}
                     className={[
-                      "relative inline-flex h-5 w-9 shrink-0 rounded-full transition",
-                      tool.detected ? (tool.enabled ? "bg-primary" : "bg-muted") : "bg-muted/60"
+                      "flex w-[124px] shrink-0 items-center justify-between rounded-[4px] border px-3 py-2 text-left transition",
+                      tool.detected
+                        ? tool.enabled
+                          ? "border-primary/40 bg-primary/10 text-foreground"
+                          : "border-border/70 bg-background/50 text-muted-foreground hover:border-primary/25 hover:text-foreground"
+                        : "cursor-not-allowed border-border/50 bg-muted/30 text-muted-foreground/70"
                     ].join(" ")}
                   >
                     <span
+                      className="text-sm">{tool.enabled ? "Enabled" : "Disabled"}</span>
+                    <span
                       className={[
-                        "absolute top-0.5 size-4 rounded-full bg-white transition",
-                        tool.enabled ? "left-[18px]" : "left-0.5"
+                        "relative inline-flex h-5 w-9 shrink-0 rounded-full transition",
+                        tool.detected ? (tool.enabled ? "bg-primary" : "bg-muted") : "bg-muted/60"
                       ].join(" ")}
-                    />
-                  </span>
-                </button>
+                    >
+                      <span
+                        className={[
+                          "absolute top-0.5 size-4 rounded-full bg-white transition",
+                          tool.enabled ? "left-[18px]" : "left-0.5"
+                        ].join(" ")}
+                      />
+                    </span>
+                  </button>
+                </div>
               </div>
 
               {isExpanded ? (
@@ -260,6 +289,26 @@ export function CliSettingsSection() {
                       </div>
                     </div>
                   ) : null}
+                </div>
+              ) : null}
+
+              {shouldShowInstallProgress ? (
+                <div className="mt-4 rounded-[4px] border border-border/60 bg-background/35 px-3 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      Install progress
+                    </div>
+                    {tool.installStatus === "running" ? (
+                      <LoaderCircle className="size-3.5 animate-spin text-primary" />
+                    ) : null}
+                  </div>
+                  {tool.installLog.length ? (
+                    <pre className="terminal-text mt-3 max-h-44 overflow-auto rounded-[4px] border border-border/60 bg-black/30 p-3 text-xs leading-6 text-muted-foreground">
+                      {formatInstallLogText(tool.installLog)}
+                    </pre>
+                  ) : (
+                    <div className="mt-2 text-sm text-muted-foreground">Waiting for install output...</div>
+                  )}
                 </div>
               ) : null}
             </div>

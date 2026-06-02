@@ -1,4 +1,5 @@
 import { formatDependencyLabel, getMissingInstallDependencies } from "@/components/app/logic/toolInstallDependencies";
+import { formatInstallLogText } from "@/components/app/logic/terminalLogText";
 import { getNextToolPopoverState } from "@/components/app/logic/toolPopoverPosition";
 import { AgentToolIcon, ToolPopover, WorkspaceProjectIcon } from "@/components/app/shared/Tooling";
 import type { AccentColor, ThemeMode, ToolPopoverState } from "@/components/app/types";
@@ -406,7 +407,7 @@ export function OnboardingDialog({
 
                       {tool.installLog.length ? (
                         <pre className="terminal-text mt-3 max-h-28 overflow-auto rounded-[4px] border border-border/60 bg-black/30 p-2 text-xs leading-5 text-muted-foreground">
-                          {tool.installLog.join("\n")}
+                          {formatInstallLogText(tool.installLog)}
                         </pre>
                       ) : null}
                     </div>

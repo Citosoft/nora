@@ -1,4 +1,5 @@
 import { noraToolingClient } from "@/components/app/clients/noraToolingClient";
+import { formatInstallLogText, stripTerminalControlSequences } from "@/components/app/logic/terminalLogText";
 import { formatTimestamp, statusVariant } from "@/components/app/logic/utils";
 import { resolveWorkspaceProjectIconMode, shouldInvertFrameworkLogoInDarkMode } from "@/components/app/logic/workspaceProjectIcon";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,14 @@ export function toolLogoUrl(toolId: string): string {
     claude: "anthropic.com",
     gemini: "gemini.google.com",
     cursor: "cursor.com",
+    aider: "aider.chat",
+    goose: "goose-docs.ai",
+    qwen: "qwenlm.github.io",
+    opencode: "opencode.ai",
+    copilot: "github.com",
+    continue: "continue.dev",
+    amp: "ampcode.com",
+    crush: "charm.land",
     chatgpt: "chatgpt.com",
     perplexity: "perplexity.ai",
     grok: "grok.com"
@@ -414,7 +423,7 @@ export const ToolPopover = forwardRef<HTMLDivElement, {
 
       {tool.installLog.length ? (
         <pre className="terminal-text mt-4 max-h-44 overflow-auto rounded-[4px] border border-border/60 bg-black/30 p-3 text-xs leading-6 text-muted-foreground">
-          {tool.installLog.join("\n")}
+          {formatInstallLogText(tool.installLog)}
         </pre>
       ) : null}
     </div>
@@ -422,9 +431,7 @@ export const ToolPopover = forwardRef<HTMLDivElement, {
 });
 
 function TerminalTranscript({ output }: { output: string }) {
-  const cleaned = output
-    .replace(/\x1B\][^\u0007]*(?:\u0007|\x1B\\)/g, "")
-    .replace(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, "")
+  const cleaned = stripTerminalControlSequences(output)
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n");
 

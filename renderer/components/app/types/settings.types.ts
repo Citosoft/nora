@@ -97,6 +97,7 @@ export type SettingsRuntimeValue = {
   relaunchApplication: () => void;
   agentCatalog: AgentCatalogEntry[];
   agentSkillCatalogs: AgentSkillCatalog[];
+  installTool: (toolId: string) => void;
   toggleToolEnabled: (toolId: string, enabled: boolean) => void;
   refreshAgentCatalog: () => void;
   searchToolSkills: (toolId: string, query: string) => Promise<AgentSkillSearchResult>;

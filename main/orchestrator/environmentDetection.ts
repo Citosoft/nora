@@ -5,6 +5,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { AGENT_DEFINITIONS } from "../agentCatalog";
+import type { AgentExecutablePathCandidate } from "../types/internal.types";
 import { buildProcessEnv } from "../processEnv";
 import { getExecStderr, getExecStdout } from "./execErrors";
 import { getShell, isWindows } from "./shell";
@@ -31,7 +32,7 @@ function emptyAgentDetectionInfo(id: string): AgentDetectionInfo {
 
 async function commandInfoForAliases(
   aliases: string[],
-  windowsKnownPaths: string[] = [],
+  executablePathCandidates: AgentExecutablePathCandidate[] = [],
   findExistingPath: (paths: string[]) => Promise<string | null> | string | null,
   acceptResolvedPath?: (resolvedPath: string) => boolean
 ): Promise<Pick<AgentCatalogEntry, "detected" | "detectedCommand" | "detectedPath" | "detectionProbe" | "detectionStdout" | "detectionStderr">> {
@@ -39,18 +40,16 @@ async function commandInfoForAliases(
   let lastStdout: string | null = null;
   let lastStderr: string | null = null;
 
-  if (isWindows() && windowsKnownPaths.length) {
-    const resolvedKnownPaths = windowsKnownPaths
-      .map((candidate) => candidate.replace(/%LOCALAPPDATA%/gi, process.env.LOCALAPPDATA || ""))
-      .filter(Boolean);
-    const knownPath = await findExistingPath(resolvedKnownPaths);
-    if (knownPath) {
+  const resolvedPathCandidates = resolveExecutablePathCandidates(executablePathCandidates);
+  if (resolvedPathCandidates.length) {
+    const candidatePath = await findExistingPath(resolvedPathCandidates);
+    if (candidatePath) {
       return {
         detected: true,
-        detectedCommand: knownPath,
-        detectedPath: knownPath,
-        detectionProbe: resolvedKnownPaths.join(" || "),
-        detectionStdout: knownPath,
+        detectedCommand: candidatePath,
+        detectedPath: candidatePath,
+        detectionProbe: resolvedPathCandidates.join(" || "),
+        detectionStdout: candidatePath,
         detectionStderr: null
       };
     }
@@ -102,6 +101,27 @@ async function commandInfoForAliases(
     detectionStdout: lastStdout,
     detectionStderr: lastStderr
   };
+}
+
+function resolveExecutablePathCandidates(candidates: AgentExecutablePathCandidate[]): string[] {
+  const platform = process.platform;
+  const homeDir = process.env.HOME || "";
+  const userProfileDir = process.env.USERPROFILE || "";
+  const localAppDataDir = process.env.LOCALAPPDATA || "";
+  const appDataDir = process.env.APPDATA || "";
+
+  return candidates
+    .filter((candidate) => !candidate.platforms || candidate.platforms.includes(platform))
+    .map((candidate) =>
+      candidate.path
+        .replace(/^~(?=$|[\\/])/, homeDir)
+        .replace(/\$HOME(?=$|[\\/])/g, homeDir)
+        .replace(/%USERPROFILE%/gi, userProfileDir)
+        .replace(/%LOCALAPPDATA%/gi, localAppDataDir)
+        .replace(/%APPDATA%/gi, appDataDir)
+    )
+    .map((candidate) => candidate.trim())
+    .filter(Boolean);
 }
 
 export async function findGitExecutable(
@@ -169,7 +189,7 @@ export async function detectLocalAgentCatalog(
   for (const tool of AGENT_DEFINITIONS) {
     const detected = await commandInfoForAliases(
       tool.aliases,
-      tool.windowsKnownPaths,
+      tool.executablePathCandidates,
       findExistingPath,
       tool.id === "codex" ? (resolvedPath) => !isCodexDesktopAppBinaryPath(resolvedPath) : undefined
     );
