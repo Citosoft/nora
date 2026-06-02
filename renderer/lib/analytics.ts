@@ -116,7 +116,19 @@ export function trackAppLaunchEvent(): void {
   }
 
   appLaunchEventTracked = true;
-  capturePostHogEvent("app.launched", coarseLaunchContext);
+  capturePostHogEvent("app.launched", buildCoarseLaunchEventProperties(coarseLaunchContext));
+}
+
+function buildCoarseLaunchEventProperties(context: AnalyticsCoarseLaunchContext): EventProperties {
+  return {
+    appVersion: context.appVersion,
+    environment: context.environment,
+    platform: context.platform,
+    architecture: context.architecture,
+    countryCode: context.countryCode,
+    language: context.language,
+    timezoneOffsetMinutes: context.timezoneOffsetMinutes
+  };
 }
 
 function capturePostHogEvent(name: string, properties?: EventProperties): void {

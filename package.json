@@ -39,6 +39,14 @@
   },
   "author": "Citosoft",
   "license": "MIT",
+  "engines": {
+    "node": ">=24.16.0 <25",
+    "npm": ">=11.13.0"
+  },
+  "overrides": {
+    "tar": "^7.5.16",
+    "tmp": "^0.2.7"
+  },
   "config": {
     "forge": "./forge.config.js"
   },
@@ -60,9 +68,9 @@
     "ai": "^6.0.168",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "geist": "^1.7.0",
+    "geist": "1.0.0",
     "lucide-react": "^0.511.0",
-    "monaco-editor": "^0.55.1",
+    "monaco-editor": "^0.53.0",
     "node-pty": "^1.0.0",
     "posthog-js": "^1.365.0",
     "react": "^19.1.0",
@@ -70,6 +78,7 @@
     "react-markdown": "^10.1.0",
     "recharts": "^2.15.4",
     "remark-gfm": "^4.0.1",
+    "sharp": "^0.34.5",
     "strip-ansi": "^6.0.1",
     "tailwind-merge": "^3.3.1",
     "update-electron-app": "^3.1.2",
@@ -86,7 +95,7 @@
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "autoprefixer": "^10.4.21",
-    "electron": "^37.2.0",
+    "electron": "^42.3.1",
     "esbuild": "^0.25.5",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
