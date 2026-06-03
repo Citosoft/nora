@@ -7,7 +7,6 @@ import type {
 } from "@shared/ipc/types/systemGateway.types";
 import type { MacApplicationMenuCommand, MacApplicationMenuSyncPayload } from "@shared/types/macApplicationMenu.types";
 import { MAC_APPLICATION_MENU_COMMAND_CHANNEL } from "@shared/types/macApplicationMenu.types";
-import { clipboard } from "electron";
 
 import { invokeIpc } from "./invokeIpc";
 import { subscribeToIpcEvent } from "./subscribeToIpcEvent";
@@ -15,7 +14,7 @@ import { subscribeToIpcEvent } from "./subscribeToIpcEvent";
 export function createSystemBridge(): SystemBridge {
   return {
     openExternalUrl: (url) => invokeIpc("app:open-external-url", url),
-    copyText: (text) => Promise.resolve(clipboard.writeText(text)),
+    copyText: (text) => invokeIpc("app:copy-text", text),
     closeWindow: () => invokeIpc("window:close"),
     minimizeWindow: () => invokeIpc("window:minimize"),
     toggleMaximizeWindow: () => invokeIpc("window:toggle-maximize"),
@@ -32,6 +31,8 @@ export function createSystemBridge(): SystemBridge {
     installLinuxAptUpdates: () => invokeIpc("app:install-linux-apt-updates"),
     getLinuxUpdateStatus: () => invokeIpc("app:get-linux-update-status"),
     getReleaseVersionStatus: () => invokeIpc("app:get-release-version-status"),
+    checkAppRepositoryStarred: () => invokeIpc("app:check-app-repository-starred"),
+    starAppRepository: () => invokeIpc("app:star-app-repository"),
     getAutoUpdateStatus: () => invokeIpc("app:get-auto-update-status"),
     getAutoUpdateTestSupport: () => invokeIpc("app:get-auto-update-test-support"),
     simulateAutoUpdateStatus: (target) => invokeIpc("app:simulate-auto-update-status", target),

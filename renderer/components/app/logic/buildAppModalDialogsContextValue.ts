@@ -103,9 +103,7 @@ export const buildAppModalDialogsContextValue = (d: AppModalDialogsBuildDeps): A
     onInstallDependency: (dependencyId) => {
       void d.installStartupDependencyWithRefresh(dependencyId);
     },
-    onCopyInstructions: (dependency) => {
-      d.copyStartupDependencyInstructions(dependency.id);
-    },
+    onCopyInstructions: d.copyStartupDependencyInstructions,
     onToggleSimulatedMissing: d.toggleSimulatedMissingDependency,
     onClearSimulation: d.clearSimulatedMissingDependencies,
     onReload: () => {

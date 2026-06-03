@@ -31,6 +31,7 @@ export type TitleBarBuildDeps = {
   openCreateBrowser: () => void;
   openCreateTerminal: () => void;
   openStartupDependencies: () => void;
+  openOnboarding: () => void;
   onCloseWorkspace: () => void;
   onOpenSettings: () => void;
   onRefreshWorkspace: () => void;

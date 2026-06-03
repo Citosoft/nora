@@ -26,6 +26,7 @@ export function createSessionService(deps: SessionServiceDeps): SessionService {
     restartLocalTerminal: deps.restartLocalTerminal,
     destroyAgent: deps.destroyAgent,
     destroyTerminal: deps.destroyTerminal,
+    removeWorktree: deps.removeWorktree,
     destroyLocalTerminal: deps.destroyLocalTerminal,
     stopAllAgentsGracefully: deps.stopAllAgentsGracefully
   };

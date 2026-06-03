@@ -209,6 +209,7 @@ export interface SessionService {
   restartLocalTerminal: () => Promise<LocalTerminalState>;
   destroyAgent: (agentId: string) => Promise<AppState>;
   destroyTerminal: (sessionId: string) => Promise<AppState>;
+  removeWorktree: (worktreeId: string) => Promise<AppState>;
   destroyLocalTerminal: () => Promise<LocalTerminalState | null>;
   stopAllAgentsGracefully: (
     onProgress?: (payload: { detail: string; command: string | null }) => void

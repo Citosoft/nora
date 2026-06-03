@@ -1,6 +1,8 @@
 import { formatDependencyLabel, getMissingInstallDependencies } from "@/components/app/logic/toolInstallDependencies";
 import { formatInstallLogText } from "@/components/app/logic/terminalLogText";
 import { getNextToolPopoverState } from "@/components/app/logic/toolPopoverPosition";
+import { buildStartupDependencyCopyText } from "@/components/app/logic/startupDependencyCopyText";
+import { AppMark } from "@/components/app/shared/AppMark";
 import { AgentToolIcon, ToolPopover, WorkspaceProjectIcon } from "@/components/app/shared/Tooling";
 import type { AccentColor, ThemeMode, ToolPopoverState } from "@/components/app/types";
 import { Badge } from "@/components/ui/badge";
@@ -11,18 +13,19 @@ import {
   DialogContent,
   DialogDescription,
   DialogFooter,
-  DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Tooltip } from "@/components/ui/tooltip";
 import type { AgentCatalogEntry, AppSettings, InstalledIde, WorkspaceFramework } from "@shared/appTypes";
 import type { StartupDependency, StartupDependencyId } from "@shared/types/startupDependency.types";
-import { AlertTriangle, CheckCircle2, ChevronRight, Copy, LoaderCircle, RefreshCcw, Rocket, Wrench, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronDown, Copy, LoaderCircle, RefreshCcw, Wrench } from "lucide-react";
 import type { MouseEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-type OnboardingStep = "dependencies" | "tools" | "settings" | "workspace";
+type OnboardingStep = "dependencies" | "tools" | "appearance" | "settings" | "workspace";
+type DependencyCopyState = "idle" | "copying" | "copied" | "failed";
 
 export type OnboardingDialogProps = {
   open: boolean;
@@ -53,18 +56,55 @@ export type OnboardingDialogProps = {
   onDefaultIdeChange: (ideId: string | null) => void;
   onUserDisplayNameChange: (displayName: string) => void;
   onInstallDependency: (dependencyId: StartupDependencyId) => void;
-  onCopyInstructions: (dependency: StartupDependency) => void;
+  onCopyInstructions: (dependency: StartupDependency) => Promise<void>;
   onReloadDependencies: () => void;
   onRefreshTools: () => void;
   onInstallDraftChange: (toolId: string, value: string) => void;
   onInstallTool: (toolId: string) => void;
   onSetToolEnabled: (toolId: string, enabled: boolean) => void;
   onChooseWorkspace: () => void;
+  onSkipOnboarding: () => void;
   onStart: () => void;
 };
 
 const ACCENT_OPTIONS: AccentColor[] = ["silver", "green", "blue", "amber", "rose", "violet"];
+const ACCENT_OPTION_CLASSES: Record<AccentColor, string> = {
+  silver: "bg-[hsl(220_9%_46%)]",
+  green: "bg-[hsl(161_67%_37%)]",
+  blue: "bg-[hsl(213_79%_47%)]",
+  amber: "bg-[hsl(32_95%_45%)]",
+  rose: "bg-[hsl(346_78%_47%)]",
+  violet: "bg-[hsl(262_73%_54%)]"
+};
 const THEME_OPTIONS: ThemeMode[] = ["system", "light", "dark"];
+const THEME_OPTION_LABELS: Record<ThemeMode, string> = {
+  system: "System",
+  light: "Light",
+  dark: "Dark"
+};
+const ONBOARDING_STEPS: OnboardingStep[] = ["dependencies", "tools", "appearance", "settings", "workspace"];
+const ONBOARDING_STEP_COPY: Record<OnboardingStep, { title: string; description: string }> = {
+  dependencies: {
+    title: "Check local dependencies",
+    description: "Make sure Nora can use the required system tools before opening repositories."
+  },
+  tools: {
+    title: "Set up agent CLIs",
+    description: "Review detected coding agents and install or enable the tools you want available."
+  },
+  appearance: {
+    title: "Choose your appearance",
+    description: "Pick the theme and accent color Nora should use across the app."
+  },
+  settings: {
+    title: "Choose starter settings",
+    description: "Set your name, preferred IDE, workspace state location, and rendering defaults."
+  },
+  workspace: {
+    title: "Choose your first workspace",
+    description: "Open a repository now, or continue and add one later from the main app."
+  }
+};
 
 export function OnboardingDialog({
   open,
@@ -102,13 +142,20 @@ export function OnboardingDialog({
   onInstallTool,
   onSetToolEnabled,
   onChooseWorkspace,
+  onSkipOnboarding,
   onStart
 }: OnboardingDialogProps) {
   const [step, setStep] = useState<OnboardingStep>("dependencies");
+  const [isSkipConfirmOpen, setIsSkipConfirmOpen] = useState(false);
   const [activeToolPopover, setActiveToolPopover] = useState<ToolPopoverState | null>(null);
+  const [expandedDependencyIds, setExpandedDependencyIds] = useState<StartupDependencyId[]>([]);
+  const [dependencyCopyStates, setDependencyCopyStates] = useState<Partial<Record<StartupDependencyId, DependencyCopyState>>>({});
   const popoverRef = useRef<HTMLDivElement | null>(null);
+  const copiedDependencyTimeoutRef = useRef<number | null>(null);
   const missingDependencies = dependencies.filter((dependency) => dependency.status === "missing");
   const hasBlockingDependencies = missingDependencies.some((dependency) => dependency.severity === "mandatory");
+  const mandatoryDependencies = dependencies.filter((dependency) => dependency.severity === "mandatory");
+  const optionalDependencies = dependencies.filter((dependency) => dependency.severity === "optional");
   const normalizedUserDisplayName = userDisplayName.trim();
   const detectedToolCount = tools.filter((tool) => tool.detected).length;
   const dependencyReport = useMemo(
@@ -117,13 +164,31 @@ export function OnboardingDialog({
   );
   const hasSelectedWorkspace = Boolean(currentWorkspacePath);
   const activeTool = tools.find((tool) => tool.id === activeToolPopover?.toolId) ?? null;
+  const stepIndex = ONBOARDING_STEPS.indexOf(step);
+  const stepNumber = stepIndex + 1;
+  const previousStep = stepIndex > 0 ? ONBOARDING_STEPS[stepIndex - 1] : null;
+  const nextStep = stepIndex < ONBOARDING_STEPS.length - 1 ? ONBOARDING_STEPS[stepIndex + 1] : null;
+  const stepCopy = ONBOARDING_STEP_COPY[step];
 
   useEffect(() => {
     if (open) {
       setStep("dependencies");
+      setIsSkipConfirmOpen(false);
       setActiveToolPopover(null);
+      setExpandedDependencyIds([]);
+      setDependencyCopyStates({});
+      if (copiedDependencyTimeoutRef.current !== null) {
+        window.clearTimeout(copiedDependencyTimeoutRef.current);
+        copiedDependencyTimeoutRef.current = null;
+      }
     }
   }, [open]);
+
+  useEffect(() => () => {
+    if (copiedDependencyTimeoutRef.current !== null) {
+      window.clearTimeout(copiedDependencyTimeoutRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     if (!activeToolPopover) {
@@ -166,82 +231,109 @@ export function OnboardingDialog({
     const rect = event.currentTarget.getBoundingClientRect();
     setActiveToolPopover(getNextToolPopoverState(null, toolId, rect));
   };
+  const toggleDependencyExpanded = (dependencyId: StartupDependencyId) => {
+    setExpandedDependencyIds((current) =>
+      current.includes(dependencyId)
+        ? current.filter((item) => item !== dependencyId)
+        : [...current, dependencyId]
+    );
+  };
+  const handleCopyDependencyInstructions = async (dependency: StartupDependency): Promise<void> => {
+    setDependencyCopyStates((current) => ({ ...current, [dependency.id]: "copying" }));
+    try {
+      await onCopyInstructions(dependency);
+      setDependencyCopyStates((current) => ({ ...current, [dependency.id]: "copied" }));
+      if (copiedDependencyTimeoutRef.current !== null) {
+        window.clearTimeout(copiedDependencyTimeoutRef.current);
+      }
+      copiedDependencyTimeoutRef.current = window.setTimeout(() => {
+        setDependencyCopyStates((current) => ({ ...current, [dependency.id]: "idle" }));
+        copiedDependencyTimeoutRef.current = null;
+      }, 1600);
+    } catch {
+      setDependencyCopyStates((current) => ({ ...current, [dependency.id]: "failed" }));
+      if (copiedDependencyTimeoutRef.current !== null) {
+        window.clearTimeout(copiedDependencyTimeoutRef.current);
+      }
+      copiedDependencyTimeoutRef.current = window.setTimeout(() => {
+        setDependencyCopyStates((current) => ({ ...current, [dependency.id]: "idle" }));
+        copiedDependencyTimeoutRef.current = null;
+      }, 2200);
+    }
+  };
+
+  const handleConfirmSkipOnboarding = (): void => {
+    setIsSkipConfirmOpen(false);
+    onSkipOnboarding();
+  };
+
+  const handleOnboardingDismissAttempt = (): void => {
+    setIsSkipConfirmOpen(true);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={() => undefined}>
+    <>
+    <Dialog open={open} onOpenChange={(nextOpen) => {
+      if (!nextOpen) {
+        handleOnboardingDismissAttempt();
+      }
+    }}>
       <DialogContent
         className="h-[min(84vh,820px)] w-[min(1180px,calc(100vw-2rem))] max-w-none"
         headerTitle={(
           <span className="flex items-center gap-2">
-            <Rocket className="size-4 text-primary" />
+            <AppMark className="size-5 shrink-0" />
             Welcome to Nora
-        </span>
+          </span>
         )}
       >
-        <DialogHeader>
-          <DialogTitle>Let&apos;s get Nora ready</DialogTitle>
-          <DialogDescription>
-            Check the required tools, then choose a few starter settings.
-          </DialogDescription>
-          {normalizedUserDisplayName ? (
-            <div className="pt-1 text-sm text-muted-foreground">
-              Setting things up for <span className="font-medium text-foreground">{normalizedUserDisplayName}</span>.
-            </div>
-          ) : null}
-        </DialogHeader>
-
         <DialogBody className="flex min-h-0 flex-col gap-5">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <div className={`grid size-7 place-items-center rounded-full border text-sm font-semibold ${step === "dependencies" ? "border-primary bg-primary/10 text-primary" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-600"}`}>
-                1
-              </div>
-              <div>
-                <div className="text-sm font-medium text-foreground">Dependencies</div>
-                <div className="text-xs text-muted-foreground">Check required tools first</div>
-              </div>
+          <div className="flex items-center gap-3" aria-label={`Onboarding step ${stepNumber} of ${ONBOARDING_STEPS.length}`}>
+            <div className="flex max-w-[65vw] items-center gap-2">
+              {ONBOARDING_STEPS.map((item, index) => (
+                <Tooltip key={item} content={ONBOARDING_STEP_COPY[item].title} side="top" className="z-[40000]">
+                  <button
+                    type="button"
+                    onClick={() => setStep(item)}
+                    aria-label={`Go to ${ONBOARDING_STEP_COPY[item].title}`}
+                    className={[
+                      "flex h-5 items-center rounded-full transition-[width] duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                      index === stepIndex ? "w-16" : "w-8"
+                    ].join(" ")}
+                  >
+                    <div
+                      className={[
+                        "h-1.5 w-full rounded-full transition-colors duration-200 ease-out",
+                        index === stepIndex ? "bg-primary" : index < stepIndex ? "bg-muted-foreground/45" : "bg-muted"
+                      ].join(" ")}
+                    />
+                  </button>
+                </Tooltip>
+              ))}
             </div>
-            <ChevronRight className="size-4 text-muted-foreground" />
-            <div className="flex items-center gap-2">
-              <div className={`grid size-7 place-items-center rounded-full border text-sm font-semibold ${step === "tools" ? "border-primary bg-primary/10 text-primary" : step === "settings" || step === "workspace" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600" : "border-border/70 bg-background text-muted-foreground"}`}>
-                2
-              </div>
-              <div>
-                <div className="text-sm font-medium text-foreground">Agent CLIs</div>
-                <div className="text-xs text-muted-foreground">Detect and install tools</div>
-              </div>
+            <div className="shrink-0 text-sm font-medium tabular-nums text-muted-foreground">
+              {stepNumber} of {ONBOARDING_STEPS.length}
             </div>
-            <ChevronRight className="size-4 text-muted-foreground" />
-            <div className="flex items-center gap-2">
-              <div className={`grid size-7 place-items-center rounded-full border text-sm font-semibold ${step === "settings" ? "border-primary bg-primary/10 text-primary" : step === "workspace" ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600" : "border-border/70 bg-background text-muted-foreground"}`}>
-                3
+          </div>
+          <div className="space-y-2 pb-3 pt-3">
+            <DialogTitle className="text-2xl">{stepCopy.title}</DialogTitle>
+            <DialogDescription>{stepCopy.description}</DialogDescription>
+            {normalizedUserDisplayName ? (
+              <div className="pt-1 text-sm text-muted-foreground">
+                Setting things up for <span className="font-medium text-foreground">{normalizedUserDisplayName}</span>.
               </div>
-              <div>
-                <div className="text-sm font-medium text-foreground">Settings</div>
-                <div className="text-xs text-muted-foreground">Choose starter defaults</div>
-              </div>
-            </div>
-            <ChevronRight className="size-4 text-muted-foreground" />
-            <div className="flex items-center gap-2">
-              <div className={`grid size-7 place-items-center rounded-full border text-sm font-semibold ${step === "workspace" ? "border-primary bg-primary/10 text-primary" : "border-border/70 bg-background text-muted-foreground"}`}>
-                4
-              </div>
-              <div>
-                <div className="text-sm font-medium text-foreground">Workspace</div>
-                <div className="text-xs text-muted-foreground">Choose your first repo</div>
-              </div>
-            </div>
+            ) : null}
           </div>
 
           {step === "dependencies" ? (
-            <div className="rounded-[6px] border border-border/70 bg-background/60 p-4">
+            <div className="space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <div className="text-sm font-medium text-foreground">Dependency check</div>
-                  <div className="mt-1 text-sm text-muted-foreground">
-                    Nora needs Git before it can open repositories. Optional entries unlock CLI install and remote workflow features.
-                  </div>
+                <div className="text-sm font-medium text-foreground">Dependency check</div>
+                <div className="mt-1 text-sm text-muted-foreground">
+                    Nora needs git and the GitHub CLI before it can open repositories and use GitHub features. Optional entries unlock CLI install and remote workflow features.
                 </div>
+              </div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={onReloadDependencies} disabled={isLoadingDependencies}>
                     <RefreshCcw className="size-4" />
@@ -250,72 +342,137 @@ export function OnboardingDialog({
                 </div>
               </div>
 
-              <div className="mt-4 space-y-3">
+              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {isLoadingDependencies ? (
-                  <div className="flex items-center gap-3 rounded-[6px] border border-border/70 bg-card/70 px-4 py-3 text-sm text-foreground">
+                  <div className="flex items-center gap-3 rounded-[6px] border border-border/70 bg-card/70 px-4 py-3 text-sm text-foreground md:col-span-2 xl:col-span-3">
                     <LoaderCircle className="size-4 animate-spin text-primary" />
                     Checking dependencies...
                   </div>
                 ) : null}
-                {dependencies.map((dependency) => {
-                  const isAvailable = dependency.status === "available";
-                  const isInstalling = installTargetId === dependency.id;
-                  return (
-                    <div key={dependency.id} className="min-w-0 rounded-[6px] border border-border/70 bg-card/70 p-3">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            {isAvailable ? (
-                              <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
-                            ) : dependency.severity === "mandatory" ? (
-                              <AlertTriangle className="size-4 shrink-0 text-amber-500" />
-                            ) : (
-                              <XCircle className="size-4 shrink-0 text-muted-foreground" />
-                            )}
-                            <div className="font-medium text-foreground">{dependency.label}</div>
-                            <span className="rounded-full border border-border/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                              {dependency.severity}
-                            </span>
-                            <span className="rounded-full border border-border/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                              {dependency.status}
-                            </span>
-                          </div>
-                          <div className="mt-1.5 text-sm text-muted-foreground">{dependency.summary}</div>
-                          {dependency.detectedPath ? (
-                            <div className="mt-2 break-all rounded-[4px] border border-border/60 bg-background px-3 py-1.5 text-xs text-foreground">
-                              {dependency.detectedPath}
-                            </div>
-                          ) : null}
-                          {!isAvailable && dependency.manualInstructions.length ? (
-                            <div className="mt-2 space-y-1.5">
-                              {dependency.manualInstructions.map((instruction) => (
-                                <div key={instruction} className="break-words rounded-[4px] border border-border/60 bg-background px-3 py-1.5 text-sm text-foreground">
-                                  {instruction}
-                                </div>
-                              ))}
-                            </div>
-                          ) : null}
-                        </div>
-
-                        <div className="flex shrink-0 flex-col gap-2">
-                          {dependency.canAutoInstall ? (
-                            <Button
-                              onClick={() => onInstallDependency(dependency.id)}
-                              disabled={isLoadingDependencies || isAvailable}
+                {[
+                  { title: "Mandatory", items: mandatoryDependencies },
+                  { title: "Optional", items: optionalDependencies }
+                ].map((group) =>
+                  group.items.length ? (
+                    <div key={group.title} className="md:col-span-2 xl:col-span-3">
+                      <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{group.title}</div>
+                      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                        {group.items.map((dependency) => {
+                          const isAvailable = dependency.status === "available";
+                          const isInstalling = installTargetId === dependency.id;
+                          const isExpanded = expandedDependencyIds.includes(dependency.id);
+                          const copyState = dependencyCopyStates[dependency.id] ?? "idle";
+                          const isCopying = copyState === "copying";
+                          const wasCopied = copyState === "copied";
+                          const copyFailed = copyState === "failed";
+                          const installCommand = buildStartupDependencyCopyText(dependency);
+                          const hasDependencyDetails =
+                            dependency.summary.trim().length > 0 ||
+                            Boolean(dependency.detectedPath) ||
+                            dependency.manualInstructions.length > 0;
+                          return (
+                            <div
+                              key={dependency.id}
+                              className={[
+                                "min-w-0 rounded-[6px] border p-2.5 transition-colors",
+                                wasCopied
+                                  ? "border-emerald-500/45 bg-emerald-500/10"
+                                  : copyFailed
+                                  ? "border-destructive/45 bg-destructive/10"
+                                  : "border-border/70 bg-card/70"
+                              ].join(" ")}
                             >
-                              {isInstalling ? <LoaderCircle className="size-4 animate-spin" /> : <Wrench className="size-4" />}
-                              {dependency.autoInstallLabel || "Install"}
-                            </Button>
-                          ) : null}
-                          <Button variant="outline" onClick={() => onCopyInstructions(dependency)}>
-                            <Copy className="size-4" />
-                            Copy steps
-                          </Button>
-                        </div>
+                              <div className="flex min-w-0 items-center justify-between gap-3">
+                                <div className="flex min-w-0 items-center gap-2">
+                                  {isAvailable ? (
+                                    <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
+                                  ) : dependency.severity === "mandatory" ? (
+                                    <AlertTriangle className="size-4 shrink-0 text-amber-500" />
+                                  ) : (
+                                    <AlertTriangle className="size-4 shrink-0 text-orange-500" />
+                                  )}
+                                  <div className="min-w-0 truncate font-medium text-foreground">{dependency.label}</div>
+                                </div>
+
+                                <div className="flex shrink-0 gap-1.5">
+                                  {installCommand ? (
+                                    <Button
+                                      type="button"
+                                      size="icon"
+                                      variant="outline"
+                                      tooltip={isCopying ? "Copying command" : wasCopied ? "Copied command" : copyFailed ? "Copy failed" : "Copy install command"}
+                                      className={[
+                                        wasCopied ? "border-emerald-500/45 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "",
+                                        copyFailed ? "border-destructive/45 bg-destructive/10 text-destructive" : ""
+                                      ].filter(Boolean).join(" ") || undefined}
+                                      onClick={() => void handleCopyDependencyInstructions(dependency)}
+                                      disabled={isCopying}
+                                      aria-label={`${isCopying ? "Copying" : wasCopied ? "Copied" : copyFailed ? "Copy failed for" : "Copy install command for"} ${dependency.label}`}
+                                    >
+                                      {isCopying ? (
+                                        <LoaderCircle className="size-4 animate-spin" />
+                                      ) : wasCopied ? (
+                                        <CheckCircle2 className="size-4 text-emerald-500" />
+                                      ) : (
+                                        <Copy className="size-4" />
+                                      )}
+                                    </Button>
+                                  ) : null}
+                                  {hasDependencyDetails ? (
+                                    <Button
+                                      type="button"
+                                      size="icon"
+                                      variant="outline"
+                                      tooltip={isExpanded ? "Hide details" : "Show details"}
+                                      onClick={() => toggleDependencyExpanded(dependency.id)}
+                                      aria-expanded={isExpanded}
+                                      aria-label={isExpanded ? `Hide ${dependency.label} details` : `Show ${dependency.label} details`}
+                                    >
+                                      <ChevronDown className={`size-4 transition ${isExpanded ? "rotate-180" : ""}`} />
+                                    </Button>
+                                  ) : null}
+                                  {dependency.canAutoInstall ? (
+                                    <Button
+                                      size="sm"
+                                      tooltip={isAvailable ? `${dependency.label} is already installed` : dependency.autoInstallLabel || `Install ${dependency.label}`}
+                                      onClick={() => onInstallDependency(dependency.id)}
+                                      disabled={isLoadingDependencies || isAvailable}
+                                    >
+                                      {isInstalling ? <LoaderCircle className="size-4 animate-spin" /> : <Wrench className="size-4" />}
+                                      {dependency.autoInstallLabel || "Install"}
+                                    </Button>
+                                  ) : null}
+                                </div>
+                              </div>
+
+                              {isExpanded ? (
+                                <div className="mt-3">
+                                  {dependency.summary.trim().length > 0 ? (
+                                    <div className="mt-1.5 text-sm text-muted-foreground">{dependency.summary}</div>
+                                  ) : null}
+                                  {dependency.detectedPath ? (
+                                    <div className="mt-2 break-all rounded-[4px] border border-border/60 bg-background px-3 py-1.5 text-xs text-foreground">
+                                      {dependency.detectedPath}
+                                    </div>
+                                  ) : null}
+                                  {!isAvailable && dependency.manualInstructions.length ? (
+                                    <div className="mt-2 space-y-1.5">
+                                      {dependency.manualInstructions.map((instruction) => (
+                                        <div key={instruction} className="break-words rounded-[4px] border border-border/60 bg-background px-3 py-1.5 text-sm text-foreground">
+                                          {instruction}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                  );
-                })}
+                  ) : null
+                )}
               </div>
 
               {installErrorMessage ? (
@@ -325,7 +482,7 @@ export function OnboardingDialog({
               ) : null}
             </div>
           ) : step === "tools" ? (
-            <div className="rounded-[6px] border border-border/70 bg-background/60 p-4">
+            <div className="space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="text-sm font-medium text-foreground">Agent CLI setup</div>
@@ -419,9 +576,136 @@ export function OnboardingDialog({
                 {detectedToolCount} of {tools.length} supported agent CLIs detected.
               </div>
             </div>
+          ) : step === "appearance" ? (
+            <div className="min-h-0 flex-1">
+              <div>
+                <div className="text-sm font-medium text-foreground">Appearance</div>
+                <div className="mt-1 text-sm text-muted-foreground">
+                  Choose the visual defaults Nora should use across the app.
+                </div>
+
+                <div className="mt-4 grid gap-6 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-foreground">Theme</div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {THEME_OPTIONS.map((option) => (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => onThemeModeChange(option)}
+                          aria-pressed={themeMode === option}
+                          className={[
+                            "rounded-[5px] border p-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                            themeMode === option
+                              ? "border-primary bg-primary/10 text-foreground"
+                              : "border-border/70 bg-background/50 text-muted-foreground hover:border-primary/35 hover:text-foreground"
+                          ].join(" ")}
+                        >
+                          <div
+                            className={[
+                              "h-20 overflow-hidden rounded-[4px] border",
+                              option === "dark"
+                                ? "border-zinc-700 bg-zinc-950"
+                                : option === "light"
+                                  ? "border-zinc-200 bg-white"
+                                  : "border-border bg-zinc-100"
+                            ].join(" ")}
+                          >
+                            <div
+                              className={[
+                                "flex h-full flex-col",
+                                option === "system" ? "bg-gradient-to-br from-white from-50% to-zinc-950 to-50%" : ""
+                              ].join(" ")}
+                            >
+                              <div
+                                className={[
+                                  "h-2.5 border-b",
+                                  option === "dark"
+                                    ? "border-zinc-800 bg-zinc-900"
+                                    : option === "light"
+                                      ? "border-zinc-200 bg-zinc-50"
+                                      : "border-zinc-400/40 bg-white/75"
+                                ].join(" ")}
+                              />
+                              <div className="grid min-h-0 flex-1 grid-cols-[0.9fr_1.6fr_0.9fr]">
+                                <div
+                                  className={[
+                                    "border-r p-1",
+                                    option === "dark"
+                                      ? "border-zinc-800 bg-zinc-900"
+                                      : option === "light"
+                                        ? "border-zinc-200 bg-zinc-100"
+                                        : "border-zinc-400/40 bg-zinc-200/85"
+                                  ].join(" ")}
+                                >
+                                  <div className={["h-1.5 rounded-full", option === "dark" ? "bg-zinc-700" : "bg-zinc-300"].join(" ")} />
+                                  <div className={["mt-1 h-1.5 w-2/3 rounded-full", option === "dark" ? "bg-zinc-800" : "bg-zinc-400/60"].join(" ")} />
+                                </div>
+                                <div
+                                  className={[
+                                    "p-1",
+                                    option === "dark" ? "bg-zinc-950" : option === "light" ? "bg-white" : "bg-white/80"
+                                  ].join(" ")}
+                                >
+                                  <div className={["h-2 rounded-sm", option === "dark" ? "bg-zinc-800" : "bg-zinc-200"].join(" ")} />
+                                  <div className={["mt-1 h-1.5 w-4/5 rounded-full", option === "dark" ? "bg-zinc-700" : "bg-zinc-300"].join(" ")} />
+                                </div>
+                                <div
+                                  className={[
+                                    "border-l p-1",
+                                    option === "dark"
+                                      ? "border-zinc-800 bg-zinc-900"
+                                      : option === "light"
+                                        ? "border-zinc-200 bg-zinc-100"
+                                        : "border-zinc-400/40 bg-zinc-800/85"
+                                  ].join(" ")}
+                                >
+                                  <div className={["h-1.5 rounded-full", option === "light" ? "bg-zinc-300" : "bg-zinc-600"].join(" ")} />
+                                  <div className={["mt-1 h-1.5 w-1/2 rounded-full", option === "light" ? "bg-zinc-400/60" : "bg-zinc-700"].join(" ")} />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="mt-2 text-center text-xs font-medium">{THEME_OPTION_LABELS[option]}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 md:pl-4">
+                    <div className="text-sm font-medium text-foreground">Accent color</div>
+                    <div className="flex justify-center pt-3">
+                      <div className="grid grid-cols-6 gap-2 rounded-[6px] border border-border/70 bg-card/50 p-2">
+                        {ACCENT_OPTIONS.map((option) => (
+                          <button
+                            key={option}
+                            type="button"
+                            onClick={() => onAccentColorChange(option)}
+                            aria-label={`Use ${option} accent color`}
+                            aria-pressed={accentColor === option}
+                            title={option}
+                            className={[
+                              "grid h-9 w-9 place-items-center rounded-full border transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                              ACCENT_OPTION_CLASSES[option],
+                              accentColor === option
+                                ? "border-foreground shadow-[0_0_0_2px_hsl(var(--background)),0_0_0_4px_hsl(var(--foreground))]"
+                                : "border-border/70 hover:scale-105"
+                            ].join(" ")}
+                          >
+                            {accentColor === option ? (
+                              <span className="size-2 rounded-full bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.35)]" />
+                            ) : null}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : step === "settings" ? (
             <div className="min-h-0 flex-1">
-              <div className="rounded-[6px] border border-border/70 bg-background/60 p-4">
+              <div>
                 <div className="text-sm font-medium text-foreground">Starter settings</div>
                 <div className="mt-1 text-sm text-muted-foreground">
                   These are persisted immediately, so this screen doubles as a simple first-run preferences step.
@@ -435,28 +719,6 @@ export function OnboardingDialog({
                       onChange={(event) => onUserDisplayNameChange(event.target.value)}
                       placeholder="Your name"
                     />
-                  </label>
-
-                  <label className="block space-y-2">
-                    <span className="text-sm font-medium text-foreground">Theme</span>
-                    <Select value={themeMode} onChange={(event) => onThemeModeChange(event.target.value as ThemeMode)}>
-                      {THEME_OPTIONS.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </Select>
-                  </label>
-
-                  <label className="block space-y-2">
-                    <span className="text-sm font-medium text-foreground">Accent color</span>
-                    <Select value={accentColor} onChange={(event) => onAccentColorChange(event.target.value as AccentColor)}>
-                      {ACCENT_OPTIONS.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </Select>
                   </label>
 
                   <label className="block space-y-2">
@@ -505,7 +767,7 @@ export function OnboardingDialog({
               </div>
             </div>
           ) : (
-            <div className="rounded-[6px] border border-border/70 bg-background/60 p-4">
+            <div className="space-y-4">
               <div className="text-sm font-medium text-foreground">Choose your first workspace</div>
               <div className="mt-1 text-sm text-muted-foreground">
                 Pick a repository now, or continue and add one later from the main app.
@@ -573,33 +835,63 @@ export function OnboardingDialog({
         ) : null}
 
         <DialogFooter>
-          {step !== "dependencies" ? (
-            <Button
-              variant="outline"
-              onClick={() => setStep(step === "workspace" ? "settings" : step === "settings" ? "tools" : "dependencies")}
-            >
-              Back
+          <div className="flex w-full items-center justify-between gap-2">
+            <Button variant="ghost" onClick={handleOnboardingDismissAttempt}>
+              Skip onboarding
             </Button>
-          ) : null}
-          {step === "dependencies" ? (
-            <Button onClick={() => setStep("tools")} disabled={isLoadingDependencies || hasBlockingDependencies}>
-              Continue
-            </Button>
-          ) : step === "tools" ? (
-            <Button onClick={() => setStep("settings")}>
-              Continue
-            </Button>
-          ) : step === "settings" ? (
-            <Button onClick={() => setStep("workspace")}>
-              Continue
-            </Button>
-          ) : (
-            <Button onClick={onStart}>
-              Start Nora
-            </Button>
-          )}
+            <div className="flex items-center gap-2">
+              {previousStep ? (
+                <Button
+                  variant="outline"
+                  onClick={() => setStep(previousStep)}
+                >
+                  Back
+                </Button>
+              ) : null}
+              {step === "dependencies" ? (
+                <Button onClick={() => setStep("tools")} disabled={isLoadingDependencies || hasBlockingDependencies}>
+                  Continue
+                </Button>
+              ) : step === "tools" ? (
+                <Button onClick={() => setStep("appearance")}>
+                  Continue
+                </Button>
+              ) : nextStep ? (
+                <Button onClick={() => setStep(nextStep)}>
+                  Continue
+                </Button>
+              ) : (
+                <Button onClick={onStart}>
+                  Start Nora
+                </Button>
+              )}
+            </div>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <Dialog open={isSkipConfirmOpen} onOpenChange={setIsSkipConfirmOpen}>
+      <DialogContent
+        className="max-w-[480px]"
+        onClose={() => setIsSkipConfirmOpen(false)}
+        headerTitle="Skip onboarding?"
+      >
+        <DialogBody className="pt-6">
+          <DialogDescription className="text-sm leading-relaxed">
+            You can finish setup later. Any preferences you changed during onboarding are saved, and you can reopen onboarding from Settings when you are ready.
+          </DialogDescription>
+        </DialogBody>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setIsSkipConfirmOpen(false)}>
+            Continue setup
+          </Button>
+          <Button onClick={handleConfirmSkipOnboarding}>
+            Skip for now
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

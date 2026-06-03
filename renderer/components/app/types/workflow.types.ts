@@ -228,6 +228,13 @@ export type WorkspaceSidebarProps = {
   onOpenWorkspaceBrowser: (projectId: string, url?: string) => void;
   onFocusWorkspace: (projectId: string) => void;
   onFocusWorkspaceView: (worktreeId: string) => void;
+  onFocusWorkspaceWorktree: (projectId: string, worktreeId: string) => Promise<AppState | null>;
+  onOpenCreateAgentOnWorktree: (projectId: string, worktreeId: string) => void;
+  onOpenCreateTerminalOnWorktree: (projectId: string, worktreeId: string) => void;
+  onOpenCreateWorktree: (projectId: string) => void;
+  onLaunchQuickTerminalOnWorktree: (projectId: string, worktreeId: string) => void;
+  onLaunchWorktreeScript: (projectId: string, payload: CreateTerminalPayload) => void;
+  onRemoveWorktree: (projectId: string, worktreeId: string, branch: string) => void;
   onFocusAgent: (agentId: string) => void;
   onFocusTerminal: (sessionId: string) => void;
   onFocusWorkspaceAgent: (projectId: string, agentId: string) => Promise<AppState | null>;
@@ -277,7 +284,6 @@ export type TaskCenterTaskReference = {
 
 export type UseAppBootstrapArgs = {
   setUiState: Dispatch<SetStateAction<UiState>>;
-  captureError: (error: unknown) => void;
   initialWindowUiState: WindowUiState;
 };
 

@@ -62,6 +62,9 @@ function createSessionServiceStub(): SessionService {
     destroyTerminal: async () => {
       throw new Error("not used");
     },
+    removeWorktree: async () => {
+      throw new Error("not used");
+    },
     renameTerminal: async () => {
       throw new Error("not used");
     },

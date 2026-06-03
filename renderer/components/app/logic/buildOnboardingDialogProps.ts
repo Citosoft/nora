@@ -36,7 +36,7 @@ export const buildOnboardingDialogProps = (d: BuildOnboardingDialogPropsDeps): O
   onInstallDependency: (dependencyId) => {
     void d.installStartupDependencyWithRefresh(dependencyId);
   },
-  onCopyInstructions: (dependency) => d.copyStartupDependencyInstructions(dependency.id),
+  onCopyInstructions: d.copyStartupDependencyInstructions,
   onReloadDependencies: () => {
     void d.reloadStartupDependencyReport();
   },
@@ -53,5 +53,6 @@ export const buildOnboardingDialogProps = (d: BuildOnboardingDialogPropsDeps): O
   onChooseWorkspace: () => {
     void d.openAddWorkspaceModal();
   },
+  onSkipOnboarding: d.completeOnboarding,
   onStart: d.completeOnboarding
 });

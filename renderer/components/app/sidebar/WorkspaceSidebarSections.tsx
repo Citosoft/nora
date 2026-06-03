@@ -67,17 +67,17 @@ export function WorkspaceSidebarCollapsedRail({
 }) {
   return (
     <div className="flex h-full flex-col items-center gap-3 px-2 py-4">
-      <Button variant="ghost" size="icon" tooltip="Add workspace" onClick={onChooseProject} aria-label="Add workspace">
+      <Button variant="ghost" size="icon" tooltip="Add project" onClick={onChooseProject} aria-label="Add project">
         <Plus className="size-4" />
       </Button>
-      <Button variant="ghost" size="icon" tooltip="Refresh workspace" onClick={onRefresh} aria-label="Refresh workspace">
+      <Button variant="ghost" size="icon" tooltip="Refresh project" onClick={onRefresh} aria-label="Refresh project">
         <RefreshCcw className="size-4" />
       </Button>
-      <Button variant="ghost" size="icon" tooltip="Reset workspaces" onClick={onResetWorkspaces} aria-label="Reset workspaces">
+      <Button variant="ghost" size="icon" tooltip="Reset projects" onClick={onResetWorkspaces} aria-label="Reset projects">
         <Trash2 className="size-4" />
       </Button>
       {hasActiveProject ? (
-        <Button variant="ghost" size="icon" tooltip="Exit workspace" onClick={onCloseProject} aria-label="Exit workspace">
+        <Button variant="ghost" size="icon" tooltip="Exit project" onClick={onCloseProject} aria-label="Exit project">
           <X className="size-4" />
         </Button>
       ) : null}
@@ -109,7 +109,7 @@ export function WorkspaceSidebarCollapsedRail({
               </button>
             ))
           ) : (
-            <div className="px-2 text-center text-xs text-muted-foreground">No workspaces</div>
+            <div className="px-2 text-center text-xs text-muted-foreground">No projects</div>
           )}
         </div>
       </div>

@@ -190,6 +190,7 @@ export const buildSettingsRuntimeValue = (d: BuildSettingsRuntimeValueDeps): Set
     void d.safely(() => noraToolingManagementClient.removeManagedToolSkill({ toolId, skillId }));
   },
   missingOptionalStartupDependencyCount: d.missingOptionalStartupDependencyCount,
+  openOnboardingFlow: d.openOnboardingFlow,
   openStartupDependenciesDialog: d.openStartupDependenciesDialog,
   workbenchLayout: {
     isWorkspaceSidebarCollapsed: d.isWorkspaceSidebarCollapsed,

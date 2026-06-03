@@ -21,6 +21,7 @@ export type CommonPreLaunchTitleBarInput = Pick<
   | "onAddWorkspace"
   | "onAddRemoteWorkspace"
   | "onOpenStartupDependencies"
+  | "onOpenOnboarding"
 >;
 
 export type PreLaunchOnboardingTitleBarWorkspaceInput = {

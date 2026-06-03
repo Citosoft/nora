@@ -13,7 +13,7 @@ import type {
   TitleBarProps
 } from "@/components/app/types/chromeDialog.types";
 import type { AppState } from "@shared/appTypes";
-import type { StartupDependencyId, StartupDependencyReport } from "@shared/types/startupDependency.types";
+import type { StartupDependency, StartupDependencyId, StartupDependencyReport } from "@shared/types/startupDependency.types";
 import type { Dispatch, SetStateAction } from "react";
 
 export function buildPreLaunchTitleBarCommonInput(args: {
@@ -32,6 +32,7 @@ export function buildPreLaunchTitleBarCommonInput(args: {
   onAddWorkspace: () => void;
   onAddRemoteWorkspace: () => void;
   onOpenStartupDependencies: () => void;
+  onOpenOnboarding: () => void;
 }): CommonPreLaunchTitleBarInput {
   return {
     windowUiState: args.windowUiState,
@@ -48,7 +49,8 @@ export function buildPreLaunchTitleBarCommonInput(args: {
     defaultIdeId: args.defaultIdeId,
     onAddWorkspace: args.onAddWorkspace,
     onAddRemoteWorkspace: args.onAddRemoteWorkspace,
-    onOpenStartupDependencies: args.onOpenStartupDependencies
+    onOpenStartupDependencies: args.onOpenStartupDependencies,
+    onOpenOnboarding: args.onOpenOnboarding
   };
 }
 
@@ -75,7 +77,7 @@ export function buildPreLaunchStartupDependenciesDialogProps(args: {
   simulatedMissingDependencyIds: StartupDependencyId[];
   handleStartupDependenciesDialogOpenChange: (open: boolean) => void;
   installStartupDependencyWithRefresh: (dependencyId: StartupDependencyId) => Promise<void>;
-  copyStartupDependencyInstructions: (dependencyId: StartupDependencyId) => void;
+  copyStartupDependencyInstructions: (dependency: StartupDependency) => Promise<void>;
   toggleSimulatedMissingDependency: (dependencyId: StartupDependencyId) => void;
   clearSimulatedMissingDependencies: () => void;
   reloadStartupDependencyReport: () => Promise<void>;
@@ -91,7 +93,7 @@ export function buildPreLaunchStartupDependenciesDialogProps(args: {
     onInstallDependency: (dependencyId) => {
       void args.installStartupDependencyWithRefresh(dependencyId);
     },
-    onCopyInstructions: (dependency) => args.copyStartupDependencyInstructions(dependency.id),
+    onCopyInstructions: args.copyStartupDependencyInstructions,
     onToggleSimulatedMissing: args.toggleSimulatedMissingDependency,
     onClearSimulation: args.clearSimulatedMissingDependencies,
     onReload: () => {

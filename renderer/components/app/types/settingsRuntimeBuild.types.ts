@@ -88,6 +88,7 @@ export type BuildSettingsRuntimeValueDeps = {
   relaunchApplication: () => Promise<void>;
   safely: (action: () => Promise<AppState>) => Promise<AppState | null>;
   missingOptionalStartupDependencyCount: number;
+  openOnboardingFlow: () => void;
   openStartupDependenciesDialog: () => void;
   isWorkspaceSidebarCollapsed: boolean;
   isChangesSidebarCollapsed: boolean;

@@ -9,7 +9,6 @@ import { useEffect, useState } from "react";
 
 export function useAppBootstrap({
   setUiState,
-  captureError,
   initialWindowUiState
 }: UseAppBootstrapArgs): UseAppBootstrapResult {
   const [windowUiState, setWindowUiState] = useState<WindowUiState>(initialWindowUiState);

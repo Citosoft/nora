@@ -18,7 +18,7 @@ import type { AccentColor, AppView, ResolvedTheme, ThemeMode, UiState, WindowUiS
 import type { AppPreLaunchViewProps } from "@/components/app/types/appPreLaunchView.types";
 import type { ShortcutActionMap } from "@/components/app/types/workflow.types";
 import type { AppSettings, AppState, InstalledIde } from "@shared/appTypes";
-import type { StartupDependencyId, StartupDependencyReport } from "@shared/types/startupDependency.types";
+import type { StartupDependency, StartupDependencyId, StartupDependencyReport } from "@shared/types/startupDependency.types";
 import type { Dispatch, ReactElement, SetStateAction } from "react";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
 import { useMemo } from "react";
@@ -40,6 +40,7 @@ type UseAppPreLaunchViewPropsArgs = {
   defaultIdeId: string | null;
   openAddWorkspaceModal: () => Promise<AppState | null>;
   openStartupDependenciesDialog: () => void;
+  openOnboardingFlow: () => void;
   linuxUpdateStatus: AppPreLaunchViewProps["topBannersProps"]["linuxUpdateStatus"];
   handleCopyLinuxUpdateCommand: () => void;
   handleOpenLinuxRelease: () => void;
@@ -68,7 +69,7 @@ type UseAppPreLaunchViewPropsArgs = {
   updateDefaultIde: (ideId: string | null) => void;
   updateUserDisplayName: (displayName: string) => void;
   installStartupDependencyWithRefresh: (dependencyId: StartupDependencyId) => Promise<void>;
-  copyStartupDependencyInstructions: (dependencyId: StartupDependencyId) => void;
+  copyStartupDependencyInstructions: (dependency: StartupDependency) => Promise<void>;
   reloadStartupDependencyReport: () => Promise<void>;
   refreshOnboardingTools: () => Promise<void>;
   installOnboardingTool: (toolId: string) => Promise<void>;
@@ -110,6 +111,7 @@ export function useAppPreLaunchViewProps(args: UseAppPreLaunchViewPropsArgs): {
     defaultIdeId,
     openAddWorkspaceModal,
     openStartupDependenciesDialog,
+    openOnboardingFlow,
     linuxUpdateStatus,
     handleCopyLinuxUpdateCommand,
     handleOpenLinuxRelease,
@@ -181,7 +183,8 @@ export function useAppPreLaunchViewProps(args: UseAppPreLaunchViewPropsArgs): {
         uiCommands.openAddWorkspaceDialog();
       },
       onAddRemoteWorkspace: uiCommands.openRemoteWorkspaceDialog,
-      onOpenStartupDependencies: openStartupDependenciesDialog
+      onOpenStartupDependencies: openStartupDependenciesDialog,
+      onOpenOnboarding: openOnboardingFlow
     });
 
     const preLaunchViewProps: AppPreLaunchViewProps = {
@@ -362,6 +365,7 @@ export function useAppPreLaunchViewProps(args: UseAppPreLaunchViewPropsArgs): {
     onboardingFooter,
     openAddWorkspaceModal,
     openStartupDependenciesDialog,
+    openOnboardingFlow,
     reloadStartupDependencyReport,
     refreshOnboardingTools,
     resolvedTheme,

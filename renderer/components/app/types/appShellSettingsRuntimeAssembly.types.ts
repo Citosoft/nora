@@ -80,6 +80,7 @@ export type AppShellSettingsRuntimeAssemblyInput = {
     BuildSettingsRuntimeValueDeps,
     | "safely"
     | "missingOptionalStartupDependencyCount"
+    | "openOnboardingFlow"
     | "openStartupDependenciesDialog"
   >;
   sidebarLayout: Pick<

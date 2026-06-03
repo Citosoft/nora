@@ -4,7 +4,7 @@ import { MarkdownRenderer } from "@/components/app/shared/MarkdownRenderer";
 import type { AboutDialogProps } from "@/components/app/types/component.types";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader } from "@/components/ui/dialog";
-import { APP_DESCRIPTION, APP_NAME, APP_SHORT_NAME, APP_VERSION } from "@shared/appMeta";
+import { APP_DESCRIPTION, APP_GITHUB_REPOSITORY_API_URL, APP_GITHUB_REPOSITORY_SLUG, APP_NAME, APP_REPOSITORY_URL, APP_SHORT_NAME, APP_VERSION } from "@shared/appMeta";
 import type {
   AutoUpdateTestTarget,
   LatestReleaseAssetsResult,
@@ -14,6 +14,9 @@ import type {
   ReleaseVersionStatus
 } from "@shared/appTypes";
 import { useEffect, useState } from "react";
+import { Github, Star } from "lucide-react";
+
+type RepositoryStarStatus = "loading" | "starred" | "unstarred" | "unavailable";
 
 const AUTO_UPDATE_TEST_ACTIONS: Array<{ target: AutoUpdateTestTarget; label: string }> = [
   { target: "checking", label: "Checking" },
@@ -96,6 +99,60 @@ export function AboutDialog({
   const [isDownloadingReleaseAsset, setIsDownloadingReleaseAsset] = useState(false);
   const [releaseAssetDownloadResult, setReleaseAssetDownloadResult] = useState<ReleaseAssetDownloadResult | null>(null);
   const [releaseAssetDownloadProgress, setReleaseAssetDownloadProgress] = useState<ReleaseAssetDownloadProgressPayload | null>(null);
+  const [githubStarCount, setGithubStarCount] = useState<number | null>(null);
+  const [repositoryStarStatus, setRepositoryStarStatus] = useState<RepositoryStarStatus>("loading");
+  const [isStarringRepository, setIsStarringRepository] = useState(false);
+  const [starRepositoryError, setStarRepositoryError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    let mounted = true;
+    setGithubStarCount(null);
+    setRepositoryStarStatus("loading");
+    setStarRepositoryError(null);
+    setIsStarringRepository(false);
+
+    void Promise.all([
+      fetch(APP_GITHUB_REPOSITORY_API_URL, {
+        headers: {
+          Accept: "application/vnd.github+json"
+        }
+      })
+        .then(async (response) => {
+          if (!response.ok) {
+            return null;
+          }
+
+          const payload = await response.json() as { stargazers_count?: unknown };
+          return typeof payload.stargazers_count === "number" ? payload.stargazers_count : null;
+        })
+        .catch(() => null),
+      noraSystemClient.checkAppRepositoryStarred().catch(() => null)
+    ]).then(([starCount, starred]) => {
+      if (!mounted) {
+        return;
+      }
+
+      if (starCount !== null) {
+        setGithubStarCount(starCount);
+      }
+
+      if (starred === true) {
+        setRepositoryStarStatus("starred");
+      } else if (starred === false) {
+        setRepositoryStarStatus("unstarred");
+      } else {
+        setRepositoryStarStatus("unavailable");
+      }
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) {
@@ -261,6 +318,49 @@ export function AboutDialog({
       });
   };
 
+  const handleOpenRepository = (): void => {
+    void noraSystemClient.openExternalUrl(APP_REPOSITORY_URL);
+  };
+
+  const handleStarRepository = (): void => {
+    if (repositoryStarStatus === "starred" || isStarringRepository) {
+      return;
+    }
+
+    if (repositoryStarStatus === "unavailable") {
+      handleOpenRepository();
+      return;
+    }
+
+    setIsStarringRepository(true);
+    setStarRepositoryError(null);
+
+    void noraSystemClient.starAppRepository().then((starred) => {
+      setIsStarringRepository(false);
+      if (starred) {
+        setRepositoryStarStatus("starred");
+        setGithubStarCount((current) => (current === null ? current : current + 1));
+        return;
+      }
+
+      setStarRepositoryError("Could not star the repo. Make sure gh is authenticated and try again.");
+    });
+  };
+
+  const starOnGitHubLabel = (() => {
+    if (isStarringRepository) {
+      return "Starring…";
+    }
+
+    if (repositoryStarStatus === "starred") {
+      return githubStarCount === null ? "Starred" : `Starred (${githubStarCount.toLocaleString()})`;
+    }
+
+    return githubStarCount === null
+      ? "Star on GitHub"
+      : `Star on GitHub (${githubStarCount.toLocaleString()})`;
+  })();
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -322,6 +422,50 @@ export function AboutDialog({
                   <div className="text-xs text-destructive">{releaseInstallerError}</div>
                 ) : null}
               </div>
+            </div>
+
+            <div className="col-span-2 space-y-2 rounded-md border border-border/70 bg-background/50 p-3">
+              <div className="text-xs font-medium text-foreground">GitHub</div>
+              <div className="text-xs text-muted-foreground">
+                View source, report issues, and contribute on GitHub.
+              </div>
+              <button
+                type="button"
+                onClick={handleOpenRepository}
+                className="inline-flex items-center gap-1.5 text-xs text-primary underline-offset-2 hover:underline"
+              >
+                <Github className="size-3.5" aria-hidden="true" />
+                <span>{APP_GITHUB_REPOSITORY_SLUG}</span>
+              </button>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" className="flex-1" onClick={handleOpenRepository}>
+                  View repository
+                </Button>
+                <Button
+                  variant={repositoryStarStatus === "starred" ? "outline" : "default"}
+                  size="sm"
+                  className="flex-1"
+                  onClick={handleStarRepository}
+                  disabled={repositoryStarStatus === "loading" || repositoryStarStatus === "starred" || isStarringRepository}
+                >
+                  <Star
+                    className={[
+                      "size-4",
+                      repositoryStarStatus === "starred" ? "fill-amber-400/70 text-amber-400" : ""
+                    ].filter(Boolean).join(" ") || undefined}
+                    aria-hidden="true"
+                  />
+                  {starOnGitHubLabel}
+                </Button>
+              </div>
+              {repositoryStarStatus === "unavailable" ? (
+                <div className="text-xs text-muted-foreground">
+                  Install and authenticate the GitHub CLI (<code>gh</code>) to star from Nora, or use the button to open the repo in your browser.
+                </div>
+              ) : null}
+              {starRepositoryError ? (
+                <div className="text-xs text-destructive">{starRepositoryError}</div>
+              ) : null}
             </div>
 
             <div className="col-span-2 space-y-2 rounded-md border border-border/70 bg-background/50 p-3">

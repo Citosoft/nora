@@ -103,6 +103,7 @@ export const buildAppShellSettingsRuntimeAssemblyInputFromDeps = (
   runtime: {
     safely: deps.safely,
     missingOptionalStartupDependencyCount: deps.missingOptionalStartupDependencyCount,
+    openOnboardingFlow: deps.openOnboardingFlow,
     openStartupDependenciesDialog: deps.openStartupDependenciesDialog
   },
   sidebarLayout: {

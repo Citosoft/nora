@@ -91,6 +91,8 @@ export interface SystemBridge {
   onAppClosingProgress: (listener: (payload: AppClosingProgressPayload) => void) => () => void;
   logAnalytics: (level: "info" | "warn" | "debug" | "error", message: string) => Promise<void>;
   scanLocalAgentUsage: (request: AgentUsageScanRequest) => Promise<LocalAgentUsageReport>;
+  checkAppRepositoryStarred: () => Promise<boolean | null>;
+  starAppRepository: () => Promise<boolean>;
   syncMacApplicationMenu: (payload: MacApplicationMenuSyncPayload) => Promise<void>;
   onMacApplicationMenuCommand: (listener: (command: MacApplicationMenuCommand) => void) => () => void;
 }

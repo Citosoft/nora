@@ -151,7 +151,7 @@ export function Tooltip({
             <div
               ref={tooltipRef}
               className={cn(
-                "pointer-events-none fixed z-[9999] min-w-40 max-w-[22rem] rounded-[5px] border border-border/70 bg-popover/95 px-2.5 py-1.5 text-xs text-popover-foreground shadow-xl whitespace-pre-wrap break-words [overflow-wrap:anywhere]",
+                "pointer-events-none fixed z-[40000] inline-block w-fit max-w-[22rem] rounded-[5px] border border-border/70 bg-popover/95 px-2.5 py-1.5 text-xs text-popover-foreground shadow-xl whitespace-pre-wrap break-words [overflow-wrap:anywhere] dark:border-white/15 dark:bg-zinc-200 dark:text-zinc-950",
                 className
               )}
               style={{

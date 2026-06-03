@@ -54,6 +54,7 @@ export const assembleSignedInChromeShellComposeSlice = (s: SignedInChromeShellAs
       openCreateBrowser: chromeShell.openWorkspaceBrowserFromTitleBar,
       openCreateTerminal: chromeShell.openCreateTerminalModal,
       openStartupDependencies: chromeShell.openStartupDependenciesDialog,
+      openOnboarding: chromeShell.openOnboardingFlow,
       onCloseWorkspace: () => {
         void core.safely(() => noraWorkspaceManagementClient.closeWorkspace());
       },

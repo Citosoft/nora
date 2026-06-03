@@ -104,6 +104,7 @@ export type SettingsRuntimeValue = {
   installToolSkill: (toolId: string, skillReference: string) => Promise<void>;
   removeToolSkill: (toolId: string, skillId: string) => void;
   missingOptionalStartupDependencyCount: number;
+  openOnboardingFlow: () => void;
   openStartupDependenciesDialog: () => void;
   workbenchLayout: {
     isWorkspaceSidebarCollapsed: boolean;
@@ -139,4 +140,4 @@ export type SettingsGroup =
 export type SettingsPageToolSkillSearch = (toolId: string, query: string) => Promise<AgentSkillSearchResult>;
 export type WorkspaceLayoutPatch = Partial<SettingsRuntimeValue["workbenchLayout"]>;
 export type SettingsPageGroup = SettingsGroup;
-export type DevSettingsSectionProps = Pick<SettingsRuntimeValue, "triggerDevToast">;
+export type DevSettingsSectionProps = Pick<SettingsRuntimeValue, "openOnboardingFlow" | "triggerDevToast">;

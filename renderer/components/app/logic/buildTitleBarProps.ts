@@ -40,6 +40,7 @@ export const buildTitleBarProps = (d: TitleBarBuildDeps): TitleBarProps => ({
   onFocusPreviousSessionTab: d.focusPreviousSessionTab,
   onFocusNextSessionTab: d.focusNextSessionTab,
   onOpenStartupDependencies: d.openStartupDependencies,
+  onOpenOnboarding: d.openOnboarding,
   splitViewSelection: d.snapshotProject
     ? {
         views: d.activeSplitViewCollection.views.map((view) => ({

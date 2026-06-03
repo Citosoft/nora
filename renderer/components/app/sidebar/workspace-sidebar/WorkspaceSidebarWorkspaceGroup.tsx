@@ -1,3 +1,9 @@
+import {
+  formatWorkspaceSidebarWorktreeLocationLabel,
+  getWorkspaceSidebarPullRequestDotClass,
+  sortWorkspaceSidebarWorktrees,
+  workspaceSidebarHasPullRequestState
+} from "@/components/app/logic/workspaceSidebarPresentation";
 import { createQuickTerminalDialogDefaults, createQuickTerminalPayload } from "@/components/app/logic/terminalQuickLaunch";
 import { setWorkspaceRelativePathDragData } from "@/components/app/logic/workspacePathDrag";
 import { createScriptTerminalDefaults, formatWorkspaceScriptActionLabel, getPreferredWorkspaceScripts } from "@/components/app/logic/workspaceScripts";
@@ -5,6 +11,7 @@ import { setWorkspaceTaskDragData } from "@/components/app/logic/workspaceTaskDr
 import { WorkspaceProjectIcon } from "@/components/app/shared/Tooling";
 import { WorkspaceSidebarChildSectionLabel } from "@/components/app/sidebar/workspace-sidebar/WorkspaceSidebarChildSectionLabel";
 import { WorkspaceSidebarWorkspaceSessionRow } from "@/components/app/sidebar/workspace-sidebar/WorkspaceSidebarWorkspaceSessionRow";
+import { WorkspaceWorktreeActionsMenuItems } from "@/components/app/sidebar/workspace-sidebar/WorkspaceWorktreeActionsMenuItems";
 import { WorkspaceWorkspaceActionsMenuItems } from "@/components/app/sidebar/workspace-sidebar/WorkspaceWorkspaceActionsMenuItems";
 import type { WorkspaceSidebarWorkspaceGroupProps } from "@/components/app/types/workspaceSidebarWorkspaceGroup.types";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +27,7 @@ import {
   Ellipsis,
   FileText,
   FolderKanban,
+  GitBranch,
   LoaderCircle,
   Plus,
   ScrollText,
@@ -35,12 +43,14 @@ export const WorkspaceSidebarWorkspaceGroup = ({
   projectFaviconUrlByProjectId,
   collapsedWorkspaceIds,
   onCollapsedWorkspaceIdsChange,
+  collapsedWorkspaceWorktreeSectionIds,
   collapsedWorkspaceAgentSectionIds,
   collapsedWorkspaceTerminalSectionIds,
   collapsedWorkspaceAiChatSectionIds,
   collapsedWorkspaceNoteSectionIds,
   collapsedWorkspaceSpecSectionIds,
   collapsedWorkspaceTaskSectionIds,
+  toggleWorkspaceWorktreeSection,
   toggleWorkspaceAgentSection,
   toggleWorkspaceTerminalSection,
   toggleWorkspaceAiChatSection,
@@ -81,6 +91,13 @@ export const WorkspaceSidebarWorkspaceGroup = ({
   openWorkspaceMenu,
   onFocusWorkspace,
   onFocusWorkspaceView,
+  onFocusWorkspaceWorktree,
+  onOpenCreateAgentOnWorktree,
+  onOpenCreateTerminalOnWorktree,
+  onOpenCreateWorktree,
+  onLaunchQuickTerminalOnWorktree,
+  onLaunchWorktreeScript,
+  onRemoveWorktree,
   onOpenCreateAgent,
   onOpenCreateTerminal,
   onLaunchWorkspaceTerminal,
@@ -128,6 +145,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
       ? `${directSshLocation.user}@${directSshLocation.host}${directSshLocation.port ? `:${directSshLocation.port}` : ""}`
       : null;
     const isGroupCollapsed = collapsedWorkspaceIds[workspace.project.id] ?? false;
+    const isWorktreeSectionCollapsed = collapsedWorkspaceWorktreeSectionIds[workspace.project.id] ?? true;
     const isAgentSectionCollapsed = collapsedWorkspaceAgentSectionIds[workspace.project.id] ?? true;
     const isTerminalSectionCollapsed = collapsedWorkspaceTerminalSectionIds[workspace.project.id] ?? true;
     const isTaskSectionCollapsed = collapsedWorkspaceTaskSectionIds[workspace.project.id] ?? true;
@@ -174,6 +192,13 @@ export const WorkspaceSidebarWorkspaceGroup = ({
     const workspaceSpecEntries = workspaceSpecs.filter((spec) => spec.projectId === workspace.project.id);
     const workspaceNoteEntries = workspaceNotes.filter((note) => note.projectId === workspace.project.id);
     const workspaceAiChatEntries = aiChatTabs.filter((tab) => tab.projectId === workspace.project.id);
+    const workspaceWorktreeEntries = sortWorkspaceSidebarWorktrees(workspace.worktrees, workspace.project.rootPath);
+    const focusedWorktreeId =
+      isFocused
+        ? snapshot.sessions.find((session) => session.id === snapshot.currentSessionId)?.focusedWorktreeId ??
+          snapshot.worktrees.find((worktree) => worktree.path === snapshot.changesRoot)?.id ??
+          null
+        : null;
     const scripts = getPreferredWorkspaceScripts(workspace);
 
     return (
@@ -186,7 +211,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
       >
         <div
           className={cn(
-            "flex items-stretch border-l-2",
+            "group flex items-stretch border-l-2",
             isFocused ? "border-primary bg-primary/5" : "border-transparent"
           )}
           onContextMenu={(event) => {
@@ -234,71 +259,73 @@ export const WorkspaceSidebarWorkspaceGroup = ({
           </button>
           <div className="flex items-center pr-2">
             <Badge variant="outline">{sessionCount}</Badge>
-            {scripts.length && preferredShellId ? (
+            <div className="flex items-center opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+              {scripts.length && preferredShellId ? (
+                <DropdownMenu
+                  align="end"
+                  widthClassName="w-56"
+                  trigger={(
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 shrink-0 rounded-none self-center"
+                      aria-label={`Run scripts for ${workspace.project.name}`}
+                      disabled={isRemoving}
+                    >
+                      <TerminalSquare className="size-4" />
+                    </Button>
+                  )}
+                >
+                  {scripts.map((script) => (
+                    <DropdownMenuItem
+                      key={script.id}
+                      onSelect={() =>
+                        onLaunchWorkspaceScript(
+                          workspace.project.id,
+                          createScriptTerminalDefaults(script, preferredShellId)
+                        )
+                      }
+                    >
+                      <TerminalSquare className="size-4" />
+                      {formatWorkspaceScriptActionLabel(script)}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenu>
+              ) : null}
               <DropdownMenu
                 align="end"
-                widthClassName="w-56"
+                widthClassName="w-64"
                 trigger={(
                   <Button
                     variant="ghost"
                     size="icon"
-                  className="size-8 shrink-0 rounded-none self-center"
-                  aria-label={`Run scripts for ${workspace.project.name}`}
-                  disabled={isRemoving}
-                >
-                    <TerminalSquare className="size-4" />
+                    className="size-8 shrink-0 rounded-none self-center"
+                    aria-label={`Workspace actions for ${workspace.project.name}`}
+                    disabled={isRemoving}
+                  >
+                    <Ellipsis className="size-4" />
                   </Button>
                 )}
               >
-                {scripts.map((script) => (
-                  <DropdownMenuItem
-                    key={script.id}
-                    onSelect={() =>
-                      onLaunchWorkspaceScript(
-                        workspace.project.id,
-                        createScriptTerminalDefaults(script, preferredShellId)
-                      )
-                    }
-                  >
-                    <TerminalSquare className="size-4" />
-                    {formatWorkspaceScriptActionLabel(script)}
-                  </DropdownMenuItem>
-                ))}
+                <WorkspaceWorkspaceActionsMenuItems
+                  workspace={workspace}
+                  focusedProjectId={snapshot.project?.id ?? null}
+                  terminalShells={snapshot.terminalShells}
+                  preferredShellId={preferredShellId}
+                  terminalQuickLaunchDefaults={terminalQuickLaunchDefaults}
+                  runnableGlobalTerminalPresets={runnableGlobalTerminalPresets}
+                  onOpenCreateAgent={onOpenCreateAgent}
+                  onFocusWorkspace={onFocusWorkspace}
+                  onOpenWorkspaceBrowser={onOpenWorkspaceBrowser}
+                  onLaunchWorkspaceTerminal={onLaunchWorkspaceTerminal}
+                  onOpenCreateTerminal={onOpenCreateTerminal}
+                  onOpenWorkspaceTerminalPresets={onOpenWorkspaceTerminalPresets}
+                  onCreateTask={onCreateTask}
+                  onCreateSpec={onCreateSpec}
+                  onRemoveProject={onRemoveProject}
+                />
               </DropdownMenu>
-            ) : null}
-            <DropdownMenu
-              align="end"
-              widthClassName="w-64"
-              trigger={(
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-8 shrink-0 rounded-none self-center"
-                  aria-label={`Workspace actions for ${workspace.project.name}`}
-                  disabled={isRemoving}
-                >
-                  <Ellipsis className="size-4" />
-                </Button>
-              )}
-            >
-              <WorkspaceWorkspaceActionsMenuItems
-                workspace={workspace}
-                focusedProjectId={snapshot.project?.id ?? null}
-                terminalShells={snapshot.terminalShells}
-                preferredShellId={preferredShellId}
-                terminalQuickLaunchDefaults={terminalQuickLaunchDefaults}
-                runnableGlobalTerminalPresets={runnableGlobalTerminalPresets}
-                onOpenCreateAgent={onOpenCreateAgent}
-                onFocusWorkspace={onFocusWorkspace}
-                onOpenWorkspaceBrowser={onOpenWorkspaceBrowser}
-                onLaunchWorkspaceTerminal={onLaunchWorkspaceTerminal}
-                onOpenCreateTerminal={onOpenCreateTerminal}
-                onOpenWorkspaceTerminalPresets={onOpenWorkspaceTerminalPresets}
-                onCreateTask={onCreateTask}
-                onCreateSpec={onCreateSpec}
-                onRemoveProject={onRemoveProject}
-              />
-            </DropdownMenu>
+            </div>
             <Button
               variant="ghost"
               size="icon"
@@ -318,7 +345,142 @@ export const WorkspaceSidebarWorkspaceGroup = ({
         </div>
         {isGroupCollapsed ? null : (
           <div className="border-t border-border/40 bg-background/10 pl-1.5">
-            <div className="py-2 pl-5 pr-4">
+            <div className="py-1.5 pl-5 pr-4">
+              <div className="flex items-center justify-between gap-3">
+                <WorkspaceSidebarChildSectionLabel
+                  icon={<GitBranch className="size-3.5" />}
+                  label="Worktrees"
+                  count={workspaceWorktreeEntries.length}
+                />
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7"
+                    aria-label={`Create worktree for ${workspace.project.name}`}
+                    onClick={() => onOpenCreateWorktree(workspace.project.id)}
+                    disabled={isRemoving}
+                  >
+                    <Plus className="size-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7"
+                    onClick={() => toggleWorkspaceWorktreeSection(workspace.project.id)}
+                    aria-label={isWorktreeSectionCollapsed ? "Expand worktrees section" : "Collapse worktrees section"}
+                  >
+                    {isWorktreeSectionCollapsed ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}
+                  </Button>
+                </div>
+              </div>
+              {isWorktreeSectionCollapsed ? null : workspaceWorktreeEntries.length ? (
+                <div className="mt-1 space-y-0.5">
+                  {workspaceWorktreeEntries.map((worktree) => {
+                    const locationLabel = formatWorkspaceSidebarWorktreeLocationLabel(worktree, workspace.project.rootPath);
+                    const pullRequestStatus =
+                      pullRequestStatusByWorkspaceBranch[`${workspace.project.id}:${worktree.branch.trim()}`] ?? null;
+                    const hasPullRequest = workspaceSidebarHasPullRequestState(pullRequestStatus?.state);
+                    const isFocusedWorktree = focusedWorktreeId === worktree.id;
+                    return (
+                      <div
+                        key={worktree.id}
+                        className="group/worktree flex min-w-0 items-center gap-0.5 rounded-[4px] pr-1 transition hover:bg-accent/40"
+                      >
+                        <button
+                          type="button"
+                          onClick={() =>
+                            isFocused
+                              ? onFocusWorkspaceView(worktree.id)
+                              : void onFocusWorkspaceWorktree(workspace.project.id, worktree.id)
+                          }
+                          className={cn(
+                            "flex min-w-0 flex-1 items-center gap-2 rounded-[4px] px-2 py-1 text-left transition",
+                            isFocusedWorktree ? "bg-primary/10" : "hover:bg-accent/40"
+                          )}
+                          title={`${worktree.branch}\n${worktree.path}`}
+                        >
+                          {renderSubitemStatusDot(isFocusedWorktree ? "bg-primary" : "bg-muted-foreground/45")}
+                          <div className="min-w-0 flex-1 truncate text-[12px] leading-tight">
+                            <span className="font-medium text-foreground">{worktree.branch}</span>
+                            <span className="text-muted-foreground"> · {locationLabel}</span>
+                          </div>
+                          {worktree.status === "creating" ? (
+                            <Badge variant="outline" className="h-5 shrink-0 px-1.5 text-[10px]">
+                              Creating
+                            </Badge>
+                          ) : null}
+                          {worktree.status === "error" ? (
+                            <Badge variant="outline" className="h-5 shrink-0 px-1.5 text-[10px] text-destructive">
+                              Error
+                            </Badge>
+                          ) : null}
+                          {hasPullRequest && pullRequestStatus ? (
+                            <Tooltip
+                              content={
+                                pullRequestStatus.pullRequestNumber
+                                  ? `PR status: ${pullRequestStatus.label} (#${pullRequestStatus.pullRequestNumber})`
+                                  : `PR status: ${pullRequestStatus.label}`
+                              }
+                              side="right"
+                            >
+                              <span
+                                className={cn(
+                                  "inline-flex size-1.5 shrink-0 rounded-full",
+                                  getWorkspaceSidebarPullRequestDotClass(pullRequestStatus.state)
+                                )}
+                                aria-label={`Pull request status: ${pullRequestStatus.label}`}
+                              />
+                            </Tooltip>
+                          ) : null}
+                        </button>
+                        <DropdownMenu
+                          align="end"
+                          widthClassName="w-56"
+                          trigger={(
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-7 shrink-0 opacity-0 transition-opacity group-hover/worktree:opacity-100 group-focus-within/worktree:opacity-100"
+                              aria-label={`Worktree actions for ${worktree.branch}`}
+                              disabled={isRemoving}
+                            >
+                              <Ellipsis className="size-4" />
+                            </Button>
+                          )}
+                        >
+                          <WorkspaceWorktreeActionsMenuItems
+                            workspace={workspace}
+                            worktree={worktree}
+                            preferredShellId={preferredShellId}
+                            pullRequestStatus={pullRequestStatus}
+                            isRootWorktree={
+                              worktree.path === workspace.project.rootPath || worktree.createdFromRef === "ROOT"
+                            }
+                            onFocusWorktree={() =>
+                              isFocused
+                                ? onFocusWorkspaceView(worktree.id)
+                                : void onFocusWorkspaceWorktree(workspace.project.id, worktree.id)
+                            }
+                            onOpenCreateAgentOnWorktree={onOpenCreateAgentOnWorktree}
+                            onOpenCreateTerminalOnWorktree={onOpenCreateTerminalOnWorktree}
+                            onLaunchQuickTerminalOnWorktree={onLaunchQuickTerminalOnWorktree}
+                            onLaunchWorktreeScript={onLaunchWorktreeScript}
+                            onRemoveWorktree={onRemoveWorktree}
+                            onOpenPullRequest={onOpenWorkspaceBrowser}
+                          />
+                        </DropdownMenu>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="mt-1 rounded-[4px] border border-dashed border-border/60 bg-background/30 px-3 py-2 text-sm text-muted-foreground">
+                  No worktrees detected yet.
+                </div>
+              )}
+            </div>
+            <div className="py-1.5 pl-5 pr-4">
               <div className="flex items-center justify-between gap-3">
                 <WorkspaceSidebarChildSectionLabel icon={<Bot className="size-3.5" />} label="Agents" count={workspace.agents.length} />
                 <div className="flex items-center gap-1">
@@ -368,7 +530,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                 No agents yet
               </button>
             )}
-            <div className="py-2 pl-5 pr-4">
+            <div className="py-1.5 pl-5 pr-4">
               <div className="flex items-center justify-between gap-3">
                 <WorkspaceSidebarChildSectionLabel
                   icon={<TerminalSquare className="size-3.5" />}
@@ -448,7 +610,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                 No terminals yet
               </button>
             )}
-            <div className="py-2 pl-5 pr-4">
+            <div className="py-1.5 pl-5 pr-4">
               <div className="flex items-center justify-between gap-3">
                 <WorkspaceSidebarChildSectionLabel
                   icon={<FolderKanban className="size-3.5" />}
@@ -531,7 +693,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
               </div>
               )}
             </div>
-            <div className="py-2 pl-5 pr-4">
+            <div className="py-1.5 pl-5 pr-4">
               <div className="flex items-center justify-between gap-3">
                 <WorkspaceSidebarChildSectionLabel
                   icon={<ScrollText className="size-3.5" />}
@@ -602,7 +764,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
               </div>
               )}
             </div>
-            <div className="py-2 pl-5 pr-4">
+            <div className="py-1.5 pl-5 pr-4">
               <div className="flex items-center justify-between gap-3">
                 <WorkspaceSidebarChildSectionLabel
                   icon={<StickyNote className="size-3.5" />}
@@ -673,7 +835,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
               </div>
               )}
             </div>
-            <div className="py-2 pl-5 pr-4">
+            <div className="py-1.5 pl-5 pr-4">
               <div className="flex items-center justify-between gap-3">
                 <WorkspaceSidebarChildSectionLabel
                   icon={<Sparkles className="size-3.5" />}

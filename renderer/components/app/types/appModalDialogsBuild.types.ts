@@ -14,7 +14,7 @@ import type {
   ProjectSummary,
   WorkspaceSummary
 } from "@shared/appTypes";
-import type { StartupDependencyId, StartupDependencyReport } from "@shared/types/startupDependency.types";
+import type { StartupDependency, StartupDependencyId, StartupDependencyReport } from "@shared/types/startupDependency.types";
 import type { Dispatch, SetStateAction } from "react";
 
 export type AppModalDialogsLinuxAptSetupStatus = Extract<LinuxAptSetupStatus, { kind: "missing" }> | null;
@@ -58,7 +58,7 @@ export type AppModalDialogsBuildDeps = {
   simulatedMissingDependencyIds: StartupDependencyId[];
   handleStartupDependenciesDialogOpenChange: (open: boolean) => void;
   installStartupDependencyWithRefresh: (dependencyId: StartupDependencyId) => Promise<void>;
-  copyStartupDependencyInstructions: (dependencyId: StartupDependencyId) => void;
+  copyStartupDependencyInstructions: (dependency: StartupDependency) => Promise<void>;
   toggleSimulatedMissingDependency: (dependencyId: StartupDependencyId) => void;
   clearSimulatedMissingDependencies: () => void;
   reloadStartupDependencyReport: () => void | Promise<void>;
