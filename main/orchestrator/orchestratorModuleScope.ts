@@ -1,4 +1,9 @@
-import type { AgentDetectionInfo } from "@shared/appTypes";
+import {
+  invalidateLocalAgentDetectionCache,
+  isLocalAgentDetectionInFlight,
+  peekLocalAgentCatalogDetections,
+  resolveLocalAgentCatalogDetections
+} from "../agentDetectionCache";
 import { APP_RUNTIME_SETTINGS } from "@shared/constants/appRuntimeSettings";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -51,8 +56,13 @@ const {
   createForgePullRequestForRepo
 } = forgeRemoteOps;
 
-const detectLocalAgentCatalogFromEnvironment = (): Promise<AgentDetectionInfo[]> =>
+const detectLocalAgentCatalogFromEnvironment = (): Promise<import("@shared/appTypes").AgentDetectionInfo[]> =>
   detectLocalAgentCatalog(findExistingPath);
+
+const resolveLocalAgentCatalogFromEnvironment = (
+  options: { force?: boolean } = {}
+): Promise<import("@shared/appTypes").AgentDetectionInfo[]> =>
+  resolveLocalAgentCatalogDetections(detectLocalAgentCatalogFromEnvironment, options);
 
 const findGitExecutableFromEnvironment = (): Promise<string | null> =>
   findGitExecutable(findExistingPath, findExecutableOnPath);
@@ -156,6 +166,10 @@ export {
   deleteWorkspaceFile,
   detectDefaultWorktreePrepareCommand,
   detectLocalAgentCatalogFromEnvironment,
+  resolveLocalAgentCatalogFromEnvironment,
+  invalidateLocalAgentDetectionCache,
+  isLocalAgentDetectionInFlight,
+  peekLocalAgentCatalogDetections,
   detectRemoteAgentCatalogForTarget,
   detectWorkspaceInstructionFile,
   detectWorkspaceScripts,

@@ -1,7 +1,7 @@
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { noraToolingClient } from "@/components/app/clients/noraToolingClient";
 import { createAgentSkillCatalogMap, getAgentSkillCatalogSummaries } from "@/components/app/logic/agentSkills";
-import { getEnabledStatusBarTools } from "@/components/app/logic/statusBarTools";
+import { getEnabledStatusBarTools, getUsagePollingToolIds } from "@/components/app/logic/statusBarTools";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import type { StatusBarEntry } from "@/components/app/types";
 import { Button } from "@/components/ui/button";
@@ -22,10 +22,7 @@ interface StatusBarProps {
   onOpenSkillsSettings?: () => void;
 }
 
-const TOOL_USAGE_DASHBOARD_URLS: Record<string, string> = {
-  cursor: "https://www.cursor.com/dashboard",
-  gemini: "https://aistudio.google.com/usage"
-};
+const FOOTER_USAGE_POLL_INTERVAL_MS = 5 * 60 * 1000;
 
 type UsageWindowSummary = {
   raw: string;
@@ -129,7 +126,6 @@ export function StatusBar({
   const [usageLoadingToolId, setUsageLoadingToolId] = useState<string | null>(null);
   const [actionToolId, setActionToolId] = useState<string | null>(null);
   const [toolErrorById, setToolErrorById] = useState<Record<string, string | null>>({});
-  const [prefetchedToolIds, setPrefetchedToolIds] = useState<Record<string, boolean>>({});
   const visibleTools = useMemo(() => getEnabledStatusBarTools(tools), [tools]);
   const skillCatalogByToolId = useMemo(
     () => createAgentSkillCatalogMap(agentSkillCatalogs),
@@ -143,6 +139,7 @@ export function StatusBar({
     () => skillCatalogSummaries.reduce((total, summary) => total + summary.catalog.skills.length, 0),
     [skillCatalogSummaries]
   );
+  const usagePollingToolIds = useMemo(() => getUsagePollingToolIds(visibleTools), [visibleTools]);
 
   const loadToolUsage = useCallback(async (toolId: string): Promise<void> => {
     const tool = visibleTools.find((item) => item.id === toolId);
@@ -153,10 +150,10 @@ export function StatusBar({
       });
       return;
     }
-    if (TOOL_USAGE_DASHBOARD_URLS[toolId]) {
+    if (!tool.supportsUsageStatus) {
       console.log("[nora renderer] usage fetch skipped", {
         toolId,
-        reason: "dashboard-only"
+        reason: "unsupported"
       });
       return;
     }
@@ -196,36 +193,62 @@ export function StatusBar({
     }
   }, [visibleTools]);
 
+  const switchToolAccount = useCallback(async (toolId: string, options: { refreshUsage: boolean }): Promise<void> => {
+    if (!onSwitchToolAccount) {
+      return;
+    }
+
+    setActionToolId(toolId);
+    setToolErrorById((current) => ({
+      ...current,
+      [toolId]: null
+    }));
+    try {
+      await onSwitchToolAccount(toolId);
+      if (options.refreshUsage) {
+        await loadToolUsage(toolId);
+      }
+    } catch {
+      // The app-level switch flow already routes this through the shared error dialog.
+    } finally {
+      setActionToolId((current) => (current === toolId ? null : current));
+    }
+  }, [loadToolUsage, onSwitchToolAccount]);
+
   useEffect(() => {
-    const targets = visibleTools
-      .filter((tool) => tool.detected && !TOOL_USAGE_DASHBOARD_URLS[tool.id] && !prefetchedToolIds[tool.id])
-      .map((tool) => tool.id);
-    if (!targets.length) {
+    if (!usagePollingToolIds.length) {
       return;
     }
 
     let cancelled = false;
-    const run = async (): Promise<void> => {
-      for (const toolId of targets) {
-        if (cancelled) {
-          break;
+    let isPolling = false;
+    const pollUsage = async (): Promise<void> => {
+      if (isPolling) {
+        return;
+      }
+      isPolling = true;
+      try {
+        for (const toolId of usagePollingToolIds) {
+          if (cancelled) {
+            break;
+          }
+          await loadToolUsage(toolId);
         }
-        await loadToolUsage(toolId);
-        if (cancelled) {
-          break;
-        }
-        setPrefetchedToolIds((current) => ({
-          ...current,
-          [toolId]: true
-        }));
+      } finally {
+        isPolling = false;
       }
     };
 
-    void run();
+    void pollUsage();
+    const interval = window.setInterval(() => {
+      void pollUsage();
+    }, FOOTER_USAGE_POLL_INTERVAL_MS);
+
     return () => {
       cancelled = true;
+      window.clearInterval(interval);
     };
-  }, [loadToolUsage, prefetchedToolIds, visibleTools]);
+  }, [loadToolUsage, usagePollingToolIds]);
 
   return (
     <div className="workspace-shell-footer-surface flex h-8 items-center justify-between border-t border-border/60 bg-card/95 px-3 text-xs text-muted-foreground">
@@ -239,10 +262,31 @@ export function StatusBar({
             const abbreviatedUsage = formatAbbreviatedRemainingUsage(summary);
             const isUsageLoading = usageLoadingToolId === tool.id;
             const isActionLoading = actionToolId === tool.id;
-            const usageDashboardUrl = TOOL_USAGE_DASHBOARD_URLS[tool.id] ?? null;
-            const actionLabel = !tool.detected
-              ? (tool.installStatus === "running" ? "Installing..." : "Install")
-              : (isActionLoading ? "Switching..." : "Switch account");
+            const usageDashboardUrl = tool.usageDashboardUrl;
+            const isAuthUnavailable = usageInfo?.status === "unavailable";
+            const installActionLabel = tool.installStatus === "running" || isActionLoading ? "Installing..." : "Install";
+            const accountActionLabel = isActionLoading
+              ? (isAuthUnavailable ? "Logging in..." : "Switching...")
+              : (isAuthUnavailable ? "Login" : "Switch account");
+
+            const trigger = (
+              <button
+                type="button"
+                title={tool.label}
+                className="flex items-center gap-1 rounded-[4px] bg-transparent px-1 py-0.5 transition hover:bg-accent/50"
+                aria-label={tool.label}
+              >
+                <AgentToolIcon toolId={tool.id} label={tool.label} className="size-5 rounded-[3px] bg-transparent" imageClassName="size-4 rounded-none" />
+                {abbreviatedUsage ? (
+                  <span
+                    className="text-[10px] font-medium tabular-nums text-muted-foreground"
+                    title={`${tool.label} remaining usage: ${abbreviatedUsage}`}
+                  >
+                    {abbreviatedUsage}
+                  </span>
+                ) : null}
+              </button>
+            );
 
             return (
               <Popover
@@ -251,28 +295,13 @@ export function StatusBar({
                 onOpenChange={(open) => {
                   setSkillsPopoverOpen(false);
                   setOpenToolId(open ? tool.id : null);
-                  if (open) {
+                  if (open && tool.supportsUsageStatus) {
                     void loadToolUsage(tool.id);
                   }
                 }}
               >
                 <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    title={tool.label}
-                    className="flex items-center gap-1 rounded-[4px] bg-transparent px-1 py-0.5 transition hover:bg-accent/50"
-                    aria-label={tool.label}
-                  >
-                    <AgentToolIcon toolId={tool.id} label={tool.label} className="size-5 rounded-[3px] bg-transparent" imageClassName="size-4 rounded-none" />
-                    {abbreviatedUsage ? (
-                      <span
-                        className="text-[10px] font-medium tabular-nums text-muted-foreground"
-                        title={`${tool.label} remaining usage: ${abbreviatedUsage}`}
-                      >
-                        {abbreviatedUsage}
-                      </span>
-                    ) : null}
-                  </button>
+                  {trigger}
                 </PopoverTrigger>
                 <PopoverContent side="top" align="end" className="footer-tool-status-popover w-80 space-y-3">
                   <div className="flex items-center justify-between">
@@ -310,7 +339,7 @@ export function StatusBar({
                         disabled={tool.installStatus === "running" || isActionLoading || !onInstallTool}
                       >
                         {tool.installStatus === "running" || isActionLoading ? <LoaderCircle className="size-4 animate-spin" /> : <Wrench className="size-4" />}
-                        {actionLabel}
+                        {installActionLabel}
                       </Button>
                     ) : usageDashboardUrl ? (
                       <div className="space-y-2">
@@ -327,8 +356,22 @@ export function StatusBar({
                         <div className="truncate text-xs text-muted-foreground" title={usageDashboardUrl}>
                           {usageDashboardUrl}
                         </div>
+                        {tool.supportsAccountSwitch ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full justify-center"
+                            onClick={() => {
+                              void switchToolAccount(tool.id, { refreshUsage: false });
+                            }}
+                            disabled={isActionLoading || !onSwitchToolAccount}
+                          >
+                            {isActionLoading ? <LoaderCircle className="size-4 animate-spin" /> : <UserRound className="size-4" />}
+                            {accountActionLabel}
+                          </Button>
+                        ) : null}
                       </div>
-                    ) : (
+                    ) : tool.supportsUsageStatus ? (
                       <>
                         <div className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 text-sm">
                           <div className="text-[11px] text-muted-foreground">Hourly</div>
@@ -369,36 +412,20 @@ export function StatusBar({
                           <div className="min-w-0 truncate text-foreground" title={summary.account}>{summary.account}</div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="flex-1 justify-center"
-                            onClick={() => {
-                              if (!onSwitchToolAccount) {
-                                return;
-                              }
-                              setActionToolId(tool.id);
-                              setToolErrorById((current) => ({
-                                ...current,
-                                [tool.id]: null
-                              }));
-                              Promise.resolve(onSwitchToolAccount(tool.id))
-                                .then(() => loadToolUsage(tool.id))
-                                .catch((error: unknown) => {
-                                  setToolErrorById((current) => ({
-                                    ...current,
-                                    [tool.id]: error instanceof Error ? error.message : "Unable to switch account."
-                                  }));
-                                })
-                                .finally(() => {
-                                  setActionToolId((current) => (current === tool.id ? null : current));
-                                });
-                            }}
-                            disabled={isActionLoading || !onSwitchToolAccount}
-                          >
-                            {isActionLoading ? <LoaderCircle className="size-4 animate-spin" /> : <UserRound className="size-4" />}
-                            {actionLabel}
-                          </Button>
+                          {tool.supportsAccountSwitch ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="flex-1 justify-center"
+                              onClick={() => {
+                                void switchToolAccount(tool.id, { refreshUsage: true });
+                              }}
+                              disabled={isActionLoading || !onSwitchToolAccount}
+                            >
+                              {isActionLoading ? <LoaderCircle className="size-4 animate-spin" /> : <UserRound className="size-4" />}
+                              {accountActionLabel}
+                            </Button>
+                          ) : null}
                           <Button
                             type="button"
                             variant="outline"
@@ -412,7 +439,20 @@ export function StatusBar({
                           </Button>
                         </div>
                       </>
-                  )}
+                    ) : tool.supportsAccountSwitch ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full justify-center"
+                        onClick={() => {
+                          void switchToolAccount(tool.id, { refreshUsage: false });
+                        }}
+                        disabled={isActionLoading || !onSwitchToolAccount}
+                      >
+                        {isActionLoading ? <LoaderCircle className="size-4 animate-spin" /> : <UserRound className="size-4" />}
+                        {accountActionLabel}
+                      </Button>
+                    ) : null}
                   {toolErrorById[tool.id] ? (
                     <div className="rounded-[6px] border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
                       {toolErrorById[tool.id]}

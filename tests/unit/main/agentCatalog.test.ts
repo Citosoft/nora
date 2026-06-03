@@ -6,16 +6,30 @@ const expectedAgentIds = [
   "codex",
   "claude",
   "gemini",
+  "pi",
   "cursor",
   "aider",
   "goose",
   "qwen",
   "opencode",
+  "antigravity",
   "grok",
   "copilot",
+  "cline",
   "continue",
+  "codebuff",
   "amp",
-  "crush"
+  "kilo",
+  "kiro",
+  "crush",
+  "aug",
+  "autohand",
+  "droid",
+  "kimi",
+  "mistral-vibe",
+  "rovo",
+  "hermes",
+  "openclaw"
 ];
 
 test("agent catalog includes common CLI coding agents", () => {
@@ -27,8 +41,50 @@ test("agent definitions provide launch, detection, and install defaults", () => 
     assert.equal(tool.label.trim().length > 0, true, `${tool.id} has a label`);
     assert.equal(tool.launchCommand.trim().length > 0, true, `${tool.id} has a launch command`);
     assert.equal(tool.aliases.length > 0, true, `${tool.id} has aliases`);
-    assert.equal(tool.installTemplate.trim().length > 0, true, `${tool.id} has an install template`);
+    assert.equal(tool.installTemplate.trim().length > 0, true, `${tool.id} has install support`);
     assert.equal(tool.executablePathCandidates.length > 0, true, `${tool.id} has executable path candidates`);
+  }
+});
+
+test("agent definitions expose footer management capabilities only where supported", () => {
+  const capabilitiesByTool = new Map(
+    AGENT_DEFINITIONS.map((tool) => [
+      tool.id,
+      {
+        supportsUsageStatus: tool.supportsUsageStatus,
+        usageDashboardUrl: tool.usageDashboardUrl,
+        supportsAccountSwitch: tool.supportsAccountSwitch
+      }
+    ])
+  );
+
+  assert.deepEqual(capabilitiesByTool.get("codex"), {
+    supportsUsageStatus: true,
+    usageDashboardUrl: null,
+    supportsAccountSwitch: true
+  });
+  assert.deepEqual(capabilitiesByTool.get("claude"), {
+    supportsUsageStatus: true,
+    usageDashboardUrl: null,
+    supportsAccountSwitch: true
+  });
+  assert.deepEqual(capabilitiesByTool.get("gemini"), {
+    supportsUsageStatus: false,
+    usageDashboardUrl: "https://aistudio.google.com/usage",
+    supportsAccountSwitch: false
+  });
+  assert.deepEqual(capabilitiesByTool.get("cursor"), {
+    supportsUsageStatus: false,
+    usageDashboardUrl: "https://www.cursor.com/dashboard",
+    supportsAccountSwitch: true
+  });
+
+  for (const toolId of expectedAgentIds.filter((id) => !["codex", "claude", "gemini", "cursor"].includes(id))) {
+    assert.deepEqual(capabilitiesByTool.get(toolId), {
+      supportsUsageStatus: false,
+      usageDashboardUrl: null,
+      supportsAccountSwitch: false
+    });
   }
 });
 

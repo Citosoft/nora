@@ -50,6 +50,7 @@ import { slugify } from "./orchestrator/slug";
 import { detectLocalUrlFromOutput, didReturnToShellPrompt } from "./orchestrator/terminalOutputDetect";
 import { delay, futureIso, nowIso } from "./orchestrator/time";
 import { createPersistenceHelpers } from "./orchestrator/persistence";
+import { reconcileWorkspaceAgentsAfterCatalogRefresh } from "./orchestrator/agentCatalogReconciliation";
 import { createProjectOpenHelpers } from "./orchestrator/projectOpen";
 import { createRuntimeHelpers } from "./orchestrator/runtime";
 import { createSessionCreationHelpers } from "./orchestrator/sessionCreation";
@@ -141,6 +142,9 @@ import {
   detectDefaultWorktreePrepareCommand,
   detectLocalAgentCatalogFromEnvironment,
   detectRemoteAgentCatalogForTarget,
+  invalidateLocalAgentDetectionCache,
+  peekLocalAgentCatalogDetections,
+  resolveLocalAgentCatalogFromEnvironment,
   detectWorkspaceInstructionFile,
   detectWorkspaceScripts,
   execFileAsync,
@@ -571,6 +575,9 @@ export class Orchestrator implements OrchestratorFacade {
       nowIso,
       detectRemoteAgentCatalog: detectRemoteAgentCatalogForTarget,
       detectLocalAgentCatalog: detectLocalAgentCatalogFromEnvironment,
+      resolveLocalAgentCatalogDetections: resolveLocalAgentCatalogFromEnvironment,
+      peekLocalAgentCatalogDetections,
+      invalidateLocalAgentDetectionCache,
       buildAgentCatalog,
       getToolConfigs: () => this.toolingState.getToolConfigs(),
       readAgentSkillCatalogs,
@@ -595,7 +602,6 @@ export class Orchestrator implements OrchestratorFacade {
         this.toolingState.deleteInstallSession(toolId);
       },
       updateCatalogTool: (toolId, partial) => this.terminalMutationFacade.updateCatalogTool(toolId, partial),
-      refreshCatalog: () => this.toolingMainService.refreshCatalog(),
       installAgentSkill: (toolId, skillReference, onOutput) => installGlobalAgentSkill(toolId, skillReference, onOutput),
       removeAgentSkill: (toolId, skillId) => removeGlobalAgentSkill(toolId, skillId),
       updateAgentSkillCatalog: (catalog) => this.terminalMutationFacade.updateAgentSkillCatalog(catalog),
@@ -604,7 +610,20 @@ export class Orchestrator implements OrchestratorFacade {
         this.toolingState.setToolConfigs(configs);
       },
       getCliToolStatus: (tool) => this.toolStatusHelpers.getCliToolStatus(tool) as Promise<ToolUsageInfo>,
-      searchAgentSkills: (toolId, query) => searchAgentSkills(toolId, query)
+      searchAgentSkills: (toolId, query) => searchAgentSkills(toolId, query),
+      reconcileWorkspaceAgentsAfterCatalogRefresh: () =>
+        reconcileWorkspaceAgentsAfterCatalogRefresh({
+          nowIso,
+          getSnapshot: () => this.getSnapshot(),
+          updateAgent: (agentId, partial) => this.terminalMutationFacade.updateAgent(agentId, partial),
+          hasRuntimeSession: (sessionId) => this.sessionRuntime.hasRuntimeSession(sessionId),
+          buildResumeCommand,
+          normalizeAgentLaunchCommand,
+          resetAgentTranscript: (agent) => this.terminalMutationFacade.resetAgentTranscript(agent),
+          getWorktreeTarget: (project, worktree) => this.getWorktreeTarget(project, worktree),
+          getToolEnv: (toolId) => this.toolingRuntimeService.getToolEnv(toolId),
+          spawnAgentPty: (agentId, command, target, toolEnv) => this.runtimeHelpers.spawnAgentPty(agentId, command, target, toolEnv)
+        })
     });
     this.toolingMainService = new ToolingMainService(this.toolingHelpers);
     this.forgeHelpers = createForgeHelpers({
@@ -822,7 +841,7 @@ export class Orchestrator implements OrchestratorFacade {
           this.toolingState.setToolConfigs(configs);
         },
         updateState: (updater) => this.stateGateway.updateState(updater),
-        refreshCatalog: () => this.toolingMainService.refreshCatalog(),
+        scheduleCatalogRefresh: () => this.toolingMainService.scheduleCatalogRefresh(),
         restoreWorkspaceState: () => this.persistenceHelpers.restoreWorkspaceState(),
         refreshWorkspaceSummaries: (reason) => this.refreshWorkspaceSummaries(reason),
         getSnapshot: () => this.getSnapshot()
@@ -944,8 +963,8 @@ export class Orchestrator implements OrchestratorFacade {
     return this.lifecycleService.initialize();
   }
 
-  async refreshCatalog(): Promise<AppState> {
-    return this.toolingMainService.refreshCatalog();
+  refreshCatalog(options?: import("./types/agentDetectionCache.types").RefreshCatalogOptions): Promise<AppState> {
+    return this.toolingMainService.refreshCatalog(options);
   }
 
   async selectProject(projectRoot: string): Promise<AppState> {

@@ -34,7 +34,12 @@ function asString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 }
 
-async function readCodexAuthHints(): Promise<string[]> {
+type AuthHintReadResult = {
+  hints: string[];
+  readable: boolean;
+};
+
+async function readCodexAuthHints(): Promise<AuthHintReadResult> {
   const authPath = path.join(os.homedir(), ".codex", "auth.json");
   try {
     console.log("[nora main] codex auth hint read start", { authPath });
@@ -58,10 +63,16 @@ async function readCodexAuthHints(): Promise<string[]> {
       authPath,
       hintCount: hints.length
     });
-    return hints;
+    return {
+      hints,
+      readable: true
+    };
   } catch {
     console.warn("[nora main] codex auth hint read failed", { authPath });
-    return [];
+    return {
+      hints: [],
+      readable: false
+    };
   }
 }
 
@@ -126,7 +137,7 @@ export function createToolStatusHelpers(deps: ToolStatusHelperDeps): ToolStatusH
 
   async function getAuthHints(toolId: string): Promise<string[]> {
     if (toolId === "codex") {
-      return readCodexAuthHints();
+      return (await readCodexAuthHints()).hints;
     }
     if (toolId === "gemini") {
       return readGeminiAuthHints();
@@ -138,6 +149,14 @@ export function createToolStatusHelpers(deps: ToolStatusHelperDeps): ToolStatusH
   }
 
   async function getCliToolStatus(tool: AgentCatalogEntry) {
+    if (!tool.supportsUsageStatus) {
+      console.log("[nora main] tool status skipped", {
+        toolId: tool.id,
+        reason: "unsupported"
+      });
+      return null;
+    }
+
     const statusCommand = getToolStatusArgs(tool.id);
     if (!statusCommand) {
       console.log("[nora main] tool status skipped", {
@@ -147,7 +166,8 @@ export function createToolStatusHelpers(deps: ToolStatusHelperDeps): ToolStatusH
       return null;
     }
 
-    const authHints = await getAuthHints(tool.id);
+    const codexAuthHints = tool.id === "codex" ? await readCodexAuthHints() : null;
+    const authHints = codexAuthHints?.hints ?? await getAuthHints(tool.id);
     const shellCommand = [tool.detectedCommand || tool.id, ...statusCommand.args].join(" ");
     console.log("[nora main] tool status probe start", {
       toolId: tool.id,
@@ -157,6 +177,19 @@ export function createToolStatusHelpers(deps: ToolStatusHelperDeps): ToolStatusH
     });
 
     if (tool.id === "codex") {
+      if (!codexAuthHints?.readable || authHints.length === 0) {
+        console.log("[nora main] codex status probe skipped", {
+          toolId: tool.id,
+          reason: codexAuthHints?.readable ? "no-auth-hints" : "auth-file-unreadable"
+        });
+        return {
+          status: "unavailable" as const,
+          title: statusCommand.title,
+          lines: ["Codex is not signed in."],
+          fetchedAt: deps.nowIso()
+        };
+      }
+
       const interactiveStatus = await deps.getInteractiveCodexStatus(statusCommand.title, tool);
       const dedupedLines = dedupeLines([...authHints, ...interactiveStatus.lines]).slice(-24);
       console.log("[nora main] tool status probe success", {

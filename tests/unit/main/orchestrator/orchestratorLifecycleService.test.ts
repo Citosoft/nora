@@ -28,7 +28,9 @@ test("OrchestratorLifecycleService delegates initialize and queued refresh", asy
       updateState: () => {
         events.push("update-state");
       },
-      refreshCatalog: async () => createState(),
+      scheduleCatalogRefresh: () => {
+        events.push("schedule-catalog");
+      },
       restoreWorkspaceState: async () => {
         events.push("restore");
       },
@@ -47,6 +49,7 @@ test("OrchestratorLifecycleService delegates initialize and queued refresh", asy
   await service.refreshWorkspaceSummaries("test");
 
   assert.equal(events.includes("set-tool-configs"), true);
+  assert.equal(events.includes("schedule-catalog"), true);
   assert.equal(events.includes("update-state"), true);
   assert.equal(events.includes("restore"), true);
   assert.equal(events.includes("refresh"), true);

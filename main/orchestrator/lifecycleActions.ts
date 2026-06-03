@@ -7,7 +7,7 @@ type LifecycleActionDependencies = {
   loadToolConfigs: () => Promise<Record<string, AgentToolConfig>>;
   setToolConfigs: (configs: Record<string, AgentToolConfig>) => void;
   updateState: (updater: (state: AppState) => AppState) => void;
-  refreshCatalog: () => Promise<AppState>;
+  scheduleCatalogRefresh: () => void;
   restoreWorkspaceState: () => Promise<void>;
   refreshWorkspaceSummaries: (reason: string) => Promise<void>;
   getSnapshot: () => AppState;
@@ -38,7 +38,7 @@ export async function initializeLifecycle(deps: LifecycleActionDependencies): Pr
     activeRemoteMounts
   }));
 
-  await deps.refreshCatalog();
+  deps.scheduleCatalogRefresh();
   await deps.restoreWorkspaceState();
   await deps.refreshWorkspaceSummaries("initialize");
   return deps.getSnapshot();

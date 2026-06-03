@@ -61,6 +61,13 @@ export function useAppToolInstallFlows({
   const installOnboardingTool = useCallback(async (toolId: string): Promise<void> => {
     const tool = snapshot?.agentCatalog.find((item) => item.id === toolId);
     const installCommand = resolveInstallCommand(toolId, tool?.installTemplate ?? "");
+    if (!installCommand.trim()) {
+      setUiState((current) => ({
+        ...current,
+        activeErrorMessage: `${tool?.label || toolId} does not have an install command configured yet.`
+      }));
+      return;
+    }
     const missingDependencies = getMissingInstallDependencies(installCommand, effectiveStartupDependencyReport);
     if (missingDependencies.length) {
       const dependencyLabels = missingDependencies.map((dependencyId) => formatDependencyLabel(dependencyId)).join(", ");
@@ -93,6 +100,13 @@ export function useAppToolInstallFlows({
   const installStatusBarTool = useCallback(async (toolId: string): Promise<void> => {
     const tool = snapshot?.agentCatalog.find((item) => item.id === toolId);
     const installCommand = resolveInstallCommand(toolId, tool?.installTemplate ?? "");
+    if (!installCommand.trim()) {
+      setUiState((current) => ({
+        ...current,
+        activeErrorMessage: `${tool?.label || toolId} does not have an install command configured yet.`
+      }));
+      return;
+    }
     const missingDependencies = getMissingInstallDependencies(installCommand, effectiveStartupDependencyReport);
     if (missingDependencies.length) {
       const dependencyLabels = missingDependencies.map((dependencyId) => formatDependencyLabel(dependencyId)).join(", ");

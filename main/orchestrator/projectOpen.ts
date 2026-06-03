@@ -1,4 +1,6 @@
 import type { WorkspaceTarget } from "@main/types/internal.types";
+import { isLocalAgentDetectionInFlight, peekLocalAgentCatalogDetections } from "@main/agentDetectionCache";
+import { createUndetectedLocalAgentDetections } from "@main/orchestrator/environmentDetection";
 import type {
   AppState,
   ProjectSummary,
@@ -144,9 +146,10 @@ export function createProjectOpenHelpers(deps: ProjectOpenHelperDeps): ProjectOp
     const worktrees = ensuredSessions.flatMap((sessionState) => sessionState.worktrees);
     const sessions = ensuredSessions.map((sessionState) => sessionState.session);
     const currentSessionId = sessions[0]?.id || null;
+    const agentDetectionPending = project.location?.kind !== "ssh" && isLocalAgentDetectionInFlight();
     const catalogDetections = project.location?.kind === "ssh"
       ? project.remoteAgentCatalog || []
-      : await deps.detectLocalAgentCatalog();
+      : (peekLocalAgentCatalogDetections() ?? createUndetectedLocalAgentDetections());
     const catalog = deps.buildAgentCatalog(catalogDetections, deps.getSnapshot().agentCatalog, deps.toolConfigs);
     const agentSkillCatalogs = await deps.readAgentSkillCatalogs([...catalog.map((tool) => tool.id), deps.sharedAgentSkillsToolId]);
 
@@ -186,6 +189,9 @@ export function createProjectOpenHelpers(deps: ProjectOpenHelperDeps): ProjectOp
     for (const agent of recoveredAgents) {
       const tool = deps.getSnapshot().agentCatalog.find((item) => item.id === agent.toolId);
       if (project.location?.kind !== "ssh" && (!tool?.detected || !tool.enabled)) {
+        if (agentDetectionPending) {
+          continue;
+        }
         deps.updateAgent(agent.id, {
           status: "error",
           lastEventAt: deps.nowIso()

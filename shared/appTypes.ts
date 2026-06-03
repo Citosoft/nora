@@ -10,6 +10,7 @@ export * from "./types/agentContext.types";
 export * from "./types/agentUsageStats.types";
 export * from "./types/ai.types";
 export * from "./types/analytics.types";
+export * from "./types/diffAnnotation.types";
 export * from "./types/fileEditorTheme.types";
 export * from "./types/integrations.types";
 export * from "./types/remote.types";

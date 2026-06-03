@@ -1,4 +1,4 @@
-import { diffLineClass } from "@/components/app/logic/utils";
+import { AnnotatedDiffLines } from "@/components/app/panels/diff-annotation/AnnotatedDiffLines";
 import type { ResolvedTheme } from "@/components/app/types";
 import { cn } from "@/lib/utils";
 import type { ChangeEntry } from "@shared/appTypes";
@@ -42,11 +42,7 @@ export function FullDiffViewer({
               </div>
             </div>
             <div className="p-4">
-              {change.diff.split("\n").map((line, index) => (
-                <div key={`${change.path}-${index}-${line}`} className={cn("whitespace-pre-wrap break-words px-2", diffLineClass(line, resolvedTheme))}>
-                  {line || " "}
-                </div>
-              ))}
+              <AnnotatedDiffLines diff={change.diff} filePath={change.path} resolvedTheme={resolvedTheme} />
             </div>
           </section>
         ))}

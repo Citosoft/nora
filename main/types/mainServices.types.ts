@@ -216,7 +216,8 @@ export interface SessionService {
 }
 
 export interface ToolingService {
-  refreshCatalog: () => Promise<AppState>;
+  refreshCatalog: (options?: import("@main/types/agentDetectionCache.types").RefreshCatalogOptions) => Promise<AppState>;
+  scheduleCatalogRefresh: () => void;
   installAgentTool: (payload: InstallToolPayload) => Promise<AppState>;
   searchToolSkills: (toolId: string, query: string) => Promise<AgentSkillSearchResult>;
   installToolSkill: (

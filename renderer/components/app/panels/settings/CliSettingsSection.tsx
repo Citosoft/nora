@@ -130,6 +130,7 @@ export function CliSettingsSection() {
         </div>
         {agentCatalog.map((tool) => {
           const skillCatalog = skillCatalogByToolId.get(tool.id) || null;
+          const hasInstallCommand = tool.installTemplate.trim().length > 0;
           const statusLabel = !tool.detected
             ? (tool.installStatus === "running" ? "Installing" : "Not detected")
             : tool.enabled
@@ -164,7 +165,7 @@ export function CliSettingsSection() {
                   />
                 </button>
                 <div className="flex shrink-0 items-center gap-2">
-                  {!tool.detected ? (
+                  {!tool.detected && hasInstallCommand ? (
                     <Button
                       type="button"
                       variant="outline"

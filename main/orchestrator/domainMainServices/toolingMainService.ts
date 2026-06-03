@@ -11,7 +11,10 @@ import type { ToolingService } from "../../types/mainServices.types";
 export class ToolingMainService implements ToolingService {
   constructor(private readonly helpers: ToolingHelpers) {}
 
-  refreshCatalog = (): ReturnType<ToolingHelpers["refreshCatalog"]> => this.helpers.refreshCatalog();
+  refreshCatalog = (options?: import("../../types/agentDetectionCache.types").RefreshCatalogOptions): ReturnType<ToolingHelpers["refreshCatalog"]> =>
+    this.helpers.refreshCatalog(options);
+
+  scheduleCatalogRefresh = (): void => this.helpers.scheduleCatalogRefresh();
 
   installAgentTool = (payload: InstallToolPayload) => this.helpers.installAgentTool(payload);
 

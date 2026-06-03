@@ -30,6 +30,10 @@ function emptyAgentDetectionInfo(id: string): AgentDetectionInfo {
   };
 }
 
+export function createUndetectedLocalAgentDetections(): AgentDetectionInfo[] {
+  return AGENT_DEFINITIONS.map((tool) => emptyAgentDetectionInfo(tool.id));
+}
+
 async function commandInfoForAliases(
   aliases: string[],
   executablePathCandidates: AgentExecutablePathCandidate[] = [],
@@ -55,19 +59,14 @@ async function commandInfoForAliases(
     }
   }
 
-  for (const alias of aliases) {
-    const probe = isWindows() ? `where ${alias}` : `command -v ${alias}`;
-    lastProbe = probe;
+  if (!isWindows() && aliases.length > 1) {
+    const compoundProbe = aliases.map((alias) => `command -v ${alias}`).join(" || ");
+    lastProbe = compoundProbe;
     try {
-      const result = isWindows()
-        ? await execFileAsync("where", [alias], {
-            cwd: process.cwd(),
-            env: buildProcessEnv(process.env)
-          })
-        : await execFileAsync(getShell(), ["-lc", `command -v ${alias}`], {
-            cwd: process.cwd(),
-            env: buildProcessEnv(process.env)
-          });
+      const result = await execFileAsync(getShell(), ["-lc", compoundProbe], {
+        cwd: process.cwd(),
+        env: buildProcessEnv(process.env)
+      });
       const stdout = result.stdout.trim();
       const stderr = result.stderr.trim();
       lastStdout = stdout || null;
@@ -75,11 +74,12 @@ async function commandInfoForAliases(
       const resolvedCandidates = stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
       const resolved = resolvedCandidates.find((candidate) => (acceptResolvedPath ? acceptResolvedPath(candidate) : true)) ?? "";
       if (resolved) {
+        const matchedAlias = aliases.find((alias) => resolved.endsWith(`/${alias}`) || resolved.endsWith(`\\${alias}`)) ?? aliases[0] ?? null;
         return {
           detected: true,
-          detectedCommand: alias,
+          detectedCommand: matchedAlias,
           detectedPath: resolved,
-          detectionProbe: probe,
+          detectionProbe: compoundProbe,
           detectionStdout: stdout || null,
           detectionStderr: stderr || null
         };
@@ -87,7 +87,42 @@ async function commandInfoForAliases(
     } catch (error: unknown) {
       lastStdout = getExecStdout(error).trim() || null;
       lastStderr = getExecStderr(error).trim() || null;
-      continue;
+    }
+  } else {
+    for (const alias of aliases) {
+      const probe = isWindows() ? `where ${alias}` : `command -v ${alias}`;
+      lastProbe = probe;
+      try {
+        const result = isWindows()
+          ? await execFileAsync("where", [alias], {
+              cwd: process.cwd(),
+              env: buildProcessEnv(process.env)
+            })
+          : await execFileAsync(getShell(), ["-lc", probe], {
+              cwd: process.cwd(),
+              env: buildProcessEnv(process.env)
+            });
+        const stdout = result.stdout.trim();
+        const stderr = result.stderr.trim();
+        lastStdout = stdout || null;
+        lastStderr = stderr || null;
+        const resolvedCandidates = stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+        const resolved = resolvedCandidates.find((candidate) => (acceptResolvedPath ? acceptResolvedPath(candidate) : true)) ?? "";
+        if (resolved) {
+          return {
+            detected: true,
+            detectedCommand: alias,
+            detectedPath: resolved,
+            detectionProbe: probe,
+            detectionStdout: stdout || null,
+            detectionStderr: stderr || null
+          };
+        }
+      } catch (error: unknown) {
+        lastStdout = getExecStdout(error).trim() || null;
+        lastStderr = getExecStderr(error).trim() || null;
+        continue;
+      }
     }
   }
 
@@ -184,27 +219,25 @@ export function buildAgentCatalog(
 export async function detectLocalAgentCatalog(
   findExistingPath: (paths: string[]) => Promise<string | null> | string | null
 ): Promise<AgentDetectionInfo[]> {
-  const detections: AgentDetectionInfo[] = [];
-
-  for (const tool of AGENT_DEFINITIONS) {
-    const detected = await commandInfoForAliases(
-      tool.aliases,
-      tool.executablePathCandidates,
-      findExistingPath,
-      tool.id === "codex" ? (resolvedPath) => !isCodexDesktopAppBinaryPath(resolvedPath) : undefined
-    );
-    detections.push({
-      id: tool.id,
-      detected: detected.detected,
-      detectedCommand: detected.detectedCommand,
-      detectedPath: detected.detectedPath,
-      detectionProbe: detected.detectionProbe,
-      detectionStdout: detected.detectionStdout,
-      detectionStderr: detected.detectionStderr
-    });
-  }
-
-  return detections;
+  return Promise.all(
+    AGENT_DEFINITIONS.map(async (tool) => {
+      const detected = await commandInfoForAliases(
+        tool.aliases,
+        tool.executablePathCandidates,
+        findExistingPath,
+        tool.id === "codex" ? (resolvedPath) => !isCodexDesktopAppBinaryPath(resolvedPath) : undefined
+      );
+      return {
+        id: tool.id,
+        detected: detected.detected,
+        detectedCommand: detected.detectedCommand,
+        detectedPath: detected.detectedPath,
+        detectionProbe: detected.detectionProbe,
+        detectionStdout: detected.detectionStdout,
+        detectionStderr: detected.detectionStderr
+      };
+    })
+  );
 }
 
 export async function detectTerminalShells(): Promise<TerminalShellOption[]> {
@@ -316,25 +349,23 @@ export async function detectRemoteAgentCatalog(
   wrapRemoteLoginShellCommand: (command: string) => string,
   shellQuote: (value: string) => string
 ): Promise<AgentDetectionInfo[]> {
-  const detections: AgentDetectionInfo[] = [];
-
-  for (const tool of AGENT_DEFINITIONS) {
-    const detected = await commandInfoForAliasesOnRemoteTarget(
-      tool.aliases,
-      runRemoteSshCommand,
-      wrapRemoteLoginShellCommand,
-      shellQuote
-    );
-    detections.push({
-      id: tool.id,
-      detected: detected.detected,
-      detectedCommand: detected.detectedCommand,
-      detectedPath: detected.detectedPath,
-      detectionProbe: detected.detectionProbe,
-      detectionStdout: detected.detectionStdout,
-      detectionStderr: detected.detectionStderr
-    });
-  }
-
-  return detections;
+  return Promise.all(
+    AGENT_DEFINITIONS.map(async (tool) => {
+      const detected = await commandInfoForAliasesOnRemoteTarget(
+        tool.aliases,
+        runRemoteSshCommand,
+        wrapRemoteLoginShellCommand,
+        shellQuote
+      );
+      return {
+        id: tool.id,
+        detected: detected.detected,
+        detectedCommand: detected.detectedCommand,
+        detectedPath: detected.detectedPath,
+        detectionProbe: detected.detectionProbe,
+        detectionStdout: detected.detectionStdout,
+        detectionStderr: detected.detectionStderr
+      };
+    })
+  );
 }

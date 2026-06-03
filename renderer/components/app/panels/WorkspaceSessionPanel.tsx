@@ -105,7 +105,18 @@ function getProjectScriptsSignature(scripts: WorkspaceScriptLauncher[]): string 
 }
 
 function getToolsSignature(tools: AgentCatalogEntry[]): string {
-  return tools.map((tool) => `${tool.id}|${tool.label}|${tool.detected ? "1" : "0"}|${tool.enabled ? "1" : "0"}|${tool.installStatus}`).join("\n");
+  return tools.map((tool) =>
+    [
+      tool.id,
+      tool.label,
+      tool.detected ? "1" : "0",
+      tool.enabled ? "1" : "0",
+      tool.installStatus,
+      tool.supportsUsageStatus ? "1" : "0",
+      tool.usageDashboardUrl ?? "",
+      tool.supportsAccountSwitch ? "1" : "0"
+    ].join("|")
+  ).join("\n");
 }
 
 function getBrowserTabsSignature(tabs: BrowserTabState[]): string {
