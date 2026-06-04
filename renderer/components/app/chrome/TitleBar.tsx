@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { BookOpen, Bot, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, Code2, Compass, Copy, FolderGit2, Globe, History, Keyboard, Minus, Moon, PanelBottom, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, RefreshCcw, Settings, Square, Sun, TerminalSquare, Wrench, X } from "lucide-react";
+import { Activity, BookOpen, Bot, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, Code2, Compass, Copy, FolderGit2, Globe, History, Keyboard, Minus, Moon, PanelBottom, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, RefreshCcw, Settings, Square, Sun, TerminalSquare, Wrench, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 function TitleBarControls({
@@ -111,6 +111,7 @@ export function TitleBar({
   onFocusPreviousSessionTab,
   onFocusNextSessionTab,
   onOpenStartupDependencies,
+  onOpenResourceMonitor,
   onOpenOnboarding,
   splitViewSelection,
   workspaceQuickSearch
@@ -378,6 +379,10 @@ export function TitleBar({
               <DropdownMenuItem onSelect={onOpenStartupDependencies}>
                 <Wrench className="size-4" />
                 <span>Startup Dependencies</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={onOpenResourceMonitor}>
+                <Activity className="size-4" />
+                <span>Resource Monitor</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={onOpenOnboarding}>
                 <Compass className="size-4" />

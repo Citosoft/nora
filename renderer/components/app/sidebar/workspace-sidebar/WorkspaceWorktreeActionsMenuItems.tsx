@@ -84,8 +84,10 @@ export const WorkspaceWorktreeActionsMenuItems = ({
                   if (!preferredShellId) {
                     return;
                   }
+                  const defaults = createScriptTerminalDefaults(script, preferredShellId);
                   onLaunchWorktreeScript(workspace.project.id, {
-                    ...createScriptTerminalDefaults(script, preferredShellId),
+                    ...defaults,
+                    name: defaults.name ?? formatWorkspaceScriptActionLabel(script),
                     target: { kind: "existing", worktreeId: worktree.id }
                   });
                 })

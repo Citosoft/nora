@@ -224,6 +224,7 @@ export type UiState = {
   createTerminalDefaults: CreateTerminalDialogDefaults | null;
   showAboutDialog: boolean;
   showKeyboardShortcutsDialog: boolean;
+  showResourceMonitorDialog: boolean;
   showWorkspaceSwitcherDialog: boolean;
   destroyAgentId: string | null;
   removeMissingWorkspaceRoot: string | null;

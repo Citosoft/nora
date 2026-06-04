@@ -23,6 +23,7 @@ export type TitleBarBuildDeps = {
   onFocusLocalTerminalDock: () => void;
   onOpenAbout: () => void;
   onOpenKeyboardShortcuts: () => void;
+  onOpenResourceMonitor: () => void;
   onToggleChangesSidebar: () => void;
   onToggleLocalTerminalDock: () => void;
   onToggleWorkspaceSidebar: () => void;

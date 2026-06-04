@@ -6,6 +6,7 @@ import type {
   AboutDialogProps,
   AddWorkspaceDialogProps,
   RemoteWorkspaceDialogProps,
+  ResourceMonitorDialogProps,
   StartupDependenciesDialogProps,
   TitleBarProps
 } from "@/components/app/types/chromeDialog.types";
@@ -27,5 +28,6 @@ export type AppPreLaunchViewProps = {
   addWorkspaceDialogProps: AddWorkspaceDialogProps;
   remoteWorkspaceDialogProps: RemoteWorkspaceDialogProps;
   keyboardShortcutsDialogProps: KeyboardShortcutsDialogProps;
+  resourceMonitorDialogProps: ResourceMonitorDialogProps;
   aboutDialogProps: AboutDialogProps;
 };

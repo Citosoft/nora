@@ -426,7 +426,9 @@ function registerIpc(): void {
       return appSettings;
     },
     showAgentCompletionNotification,
-    analyticsRuntimeConfig
+    analyticsRuntimeConfig,
+    getSnapshot: () => services.snapshot.getSnapshot(),
+    getLocalTerminalState: () => services.snapshot.getLocalTerminalState()
   });
 
   registerMacApplicationMenuIpc(() => mainWindow);

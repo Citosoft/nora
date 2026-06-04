@@ -480,6 +480,7 @@ function AppRootRuntimeContent({
       focusNextSessionTab: titleBar.onFocusNextSessionTab,
       openKeyboardShortcuts: titleBar.onOpenKeyboardShortcuts,
       openStartupDependencies: titleBar.onOpenStartupDependencies,
+      openResourceMonitor: titleBar.onOpenResourceMonitor,
       submitIssue: titleBar.onSubmitIssue,
       openAbout: titleBar.onOpenAbout
     };

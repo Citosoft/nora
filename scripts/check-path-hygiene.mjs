@@ -1,6 +1,11 @@
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 
-const output = execSync("git ls-files", { encoding: "utf8" });
+const result = spawnSync("git", ["ls-files"], { encoding: "utf8" });
+if (result.status !== 0 || !result.stdout) {
+  throw result.error ?? new Error(result.stderr || "Unable to list tracked files");
+}
+
+const output = result.stdout;
 const files = output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
 
 const errors = [];

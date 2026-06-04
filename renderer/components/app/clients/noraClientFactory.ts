@@ -181,6 +181,7 @@ export const NORA_SYSTEM_CLIENT_METHODS = [
   "onAppClosingProgress",
   "logAnalytics",
   "scanLocalAgentUsage",
+  "getResourceMonitorSnapshot",
   "syncMacApplicationMenu",
   "onMacApplicationMenuCommand"
 ] as const satisfies readonly (keyof NoraBridge)[];

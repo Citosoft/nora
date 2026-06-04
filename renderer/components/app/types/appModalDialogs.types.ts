@@ -14,6 +14,7 @@ import type {
   RemoteWorkspaceDialogProps,
   RemoveMissingWorkspaceDialogProps,
   ResetWorkspacesDialogProps,
+  ResourceMonitorDialogProps,
   StartupDependenciesDialogProps,
   WorkspaceSwitcherDialogProps,
   WorkspaceTerminalPresetsDialogProps
@@ -43,5 +44,6 @@ export type AppModalDialogsContextValue = {
   analyticsConsent: AnalyticsConsentDialogProps;
   about: AboutDialogProps;
   keyboardShortcuts: AppModalDialogsKeyboardShortcutsSlice;
+  resourceMonitor: ResourceMonitorDialogProps;
   workspaceSwitcher: WorkspaceSwitcherDialogProps;
 };

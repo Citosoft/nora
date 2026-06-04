@@ -3,6 +3,7 @@ import {
   buildPreLaunchAboutDialogProps,
   buildPreLaunchAddWorkspaceDialogProps,
   buildPreLaunchKeyboardShortcutsDialogProps,
+  buildPreLaunchResourceMonitorDialogProps,
   buildPreLaunchRemoteWorkspaceDialogProps,
   buildPreLaunchStartupDependenciesDialogProps,
   buildPreLaunchTitleBarCommonInput,
@@ -174,6 +175,7 @@ export function useAppPreLaunchViewProps(args: UseAppPreLaunchViewPropsArgs): {
       onToggleTheme: toggleTheme,
       onOpenSettings: toggleSettingsPage,
       onOpenKeyboardShortcuts: uiCommands.openKeyboardShortcutsDialog,
+      onOpenResourceMonitor: uiCommands.openResourceMonitorDialog,
       onOpenAbout: uiCommands.openAboutDialog,
       onSubmitIssue: handleSubmitIssue,
       installedIdes,
@@ -317,6 +319,10 @@ export function useAppPreLaunchViewProps(args: UseAppPreLaunchViewPropsArgs): {
       keyboardShortcutsDialogProps: buildPreLaunchKeyboardShortcutsDialogProps({
         uiState,
         windowUiState,
+        uiCommands
+      }),
+      resourceMonitorDialogProps: buildPreLaunchResourceMonitorDialogProps({
+        uiState,
         uiCommands
       }),
       aboutDialogProps: buildPreLaunchAboutDialogProps({

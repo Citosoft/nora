@@ -56,6 +56,7 @@ export type TitleBarProps = {
   onOpenSettings: () => void;
   settingsActive: boolean;
   onOpenKeyboardShortcuts: () => void;
+  onOpenResourceMonitor: () => void;
   onOpenAbout: () => void;
   onSubmitIssue: () => void;
   canOpenProjectInIde: boolean;
@@ -171,6 +172,11 @@ export type StartupDependenciesDialogProps = {
   onClearSimulation: () => void;
   onReload: () => void;
   onQuit: () => void;
+};
+
+export type ResourceMonitorDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 };
 
 export type WorkspaceOption = {

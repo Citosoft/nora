@@ -10,6 +10,7 @@ export const buildTitleBarProps = (d: TitleBarBuildDeps): TitleBarProps => ({
   onOpenSettings: d.onOpenSettings,
   settingsActive: d.activeView === "settings",
   onOpenKeyboardShortcuts: d.onOpenKeyboardShortcuts,
+  onOpenResourceMonitor: d.onOpenResourceMonitor,
   onOpenAbout: d.onOpenAbout,
   onSubmitIssue: d.handleSubmitIssue,
   canOpenProjectInIde: d.canOpenProjectInIde,

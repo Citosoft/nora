@@ -19,6 +19,7 @@ import type {
   BrowserCookieProfileSummary,
   BrowserDataImportResult,
   LatestReleaseAssetsResult,
+  LocalTerminalState,
   LinuxAptSetupStatus,
   LinuxUpdateStatus,
   ReleaseAssetDownloadResult,
@@ -37,6 +38,7 @@ import { detectUserIdentity } from "@main/userIdentity";
 import { getStartupDependencyReport, installStartupDependency } from "@main/startupDependencies";
 import { getRemoteConnectionOptions } from "@main/remoteMounts";
 import { checkAppRepositoryStarred, starAppRepository } from "@main/githubRepositoryStar";
+import { sampleAppResourceUsage } from "@main/resource-monitor/processResourceSampler";
 
 interface RegisterSystemIpcDeps {
   parseAllowedExternalUrl: (value: string) => URL;
@@ -49,6 +51,8 @@ interface RegisterSystemIpcDeps {
   saveAppSettings: (nextSettings: AppSettings) => Promise<AppSettings>;
   showAgentCompletionNotification: (payload: AgentCompletionNotificationPayload) => Promise<void>;
   analyticsRuntimeConfig: AnalyticsRuntimeConfig;
+  getSnapshot: () => AppState;
+  getLocalTerminalState: () => LocalTerminalState | null;
 }
 
 export function registerSystemIpc({
@@ -61,7 +65,9 @@ export function registerSystemIpc({
   getAppSettings,
   saveAppSettings,
   showAgentCompletionNotification,
-  analyticsRuntimeConfig
+  analyticsRuntimeConfig,
+  getSnapshot,
+  getLocalTerminalState
 }: RegisterSystemIpcDeps): void {
   ipcMain.handle("app:log-analytics", (_event, { level, message }: { level: "info" | "warn" | "debug" | "error"; message: string }) => {
     const logger = console[level] ?? console.log;
@@ -98,6 +104,9 @@ export function registerSystemIpc({
   ipcMain.handle("app:install-linux-apt-updates", (): Promise<LinuxAptSetupStatus> => installLinuxAptUpdates());
   ipcMain.handle("app:get-linux-update-status", (): Promise<LinuxUpdateStatus> => getLinuxUpdateStatus());
   ipcMain.handle("app:get-release-version-status", (): Promise<ReleaseVersionStatus> => getReleaseVersionStatus());
+  ipcMain.handle("app:get-resource-monitor-snapshot", () =>
+    sampleAppResourceUsage(getSnapshot(), getLocalTerminalState())
+  );
   ipcMain.handle("app:check-app-repository-starred", (): Promise<boolean | null> => checkAppRepositoryStarred());
   ipcMain.handle("app:star-app-repository", (): Promise<boolean> => starAppRepository());
   ipcMain.handle("app:get-auto-update-status", (): AutoUpdateStatus => getAutoUpdateStatus());

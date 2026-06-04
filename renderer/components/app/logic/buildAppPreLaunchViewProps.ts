@@ -9,6 +9,7 @@ import type {
   AboutDialogProps,
   AddWorkspaceDialogProps,
   RemoteWorkspaceDialogProps,
+  ResourceMonitorDialogProps,
   StartupDependenciesDialogProps,
   TitleBarProps
 } from "@/components/app/types/chromeDialog.types";
@@ -24,6 +25,7 @@ export function buildPreLaunchTitleBarCommonInput(args: {
   onToggleTheme: () => void;
   onOpenSettings: () => void;
   onOpenKeyboardShortcuts: () => void;
+  onOpenResourceMonitor: () => void;
   onOpenAbout: () => void;
   onSubmitIssue: () => void;
   installedIdes: TitleBarProps["installedIdes"];
@@ -42,6 +44,7 @@ export function buildPreLaunchTitleBarCommonInput(args: {
     onToggleTheme: args.onToggleTheme,
     onOpenSettings: args.onOpenSettings,
     onOpenKeyboardShortcuts: args.onOpenKeyboardShortcuts,
+    onOpenResourceMonitor: args.onOpenResourceMonitor,
     onOpenAbout: args.onOpenAbout,
     onSubmitIssue: args.onSubmitIssue,
     installedIdes: args.installedIdes,
@@ -154,6 +157,16 @@ export function buildPreLaunchKeyboardShortcutsDialogProps(args: {
     open: args.uiState.showKeyboardShortcutsDialog,
     onOpenChange: args.uiCommands.setKeyboardShortcutsDialogOpen,
     platform: args.windowUiState.platform
+  };
+}
+
+export function buildPreLaunchResourceMonitorDialogProps(args: {
+  uiState: UiState;
+  uiCommands: AppUiCommands;
+}): ResourceMonitorDialogProps {
+  return {
+    open: args.uiState.showResourceMonitorDialog,
+    onOpenChange: args.uiCommands.setResourceMonitorDialogOpen
   };
 }
 

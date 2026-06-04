@@ -13,6 +13,7 @@ export type CommonPreLaunchTitleBarInput = Pick<
   | "onToggleTheme"
   | "onOpenSettings"
   | "onOpenKeyboardShortcuts"
+  | "onOpenResourceMonitor"
   | "onOpenAbout"
   | "onSubmitIssue"
   | "installedIdes"

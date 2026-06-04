@@ -276,6 +276,10 @@ export const buildAppModalDialogsContextValue = (d: AppModalDialogsBuildDeps): A
     onOpenChange: d.uiCommands.setKeyboardShortcutsDialogOpen,
     platform: d.windowUiStatePlatform
   },
+  resourceMonitor: {
+    open: d.uiState.showResourceMonitorDialog,
+    onOpenChange: d.uiCommands.setResourceMonitorDialogOpen
+  },
   workspaceSwitcher: {
     open: d.uiState.showWorkspaceSwitcherDialog,
     onOpenChange: d.uiCommands.setWorkspaceSwitcherDialogOpen,

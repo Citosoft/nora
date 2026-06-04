@@ -44,6 +44,7 @@ export const assembleSignedInChromeShellComposeSlice = (s: SignedInChromeShellAs
       },
       onOpenAbout: core.uiCommands.openAboutDialog,
       onOpenKeyboardShortcuts: core.uiCommands.openKeyboardShortcutsDialog,
+      onOpenResourceMonitor: core.uiCommands.openResourceMonitorDialog,
       onToggleChangesSidebar: () => chromeShell.setIsChangesSidebarCollapsed((current) => !current),
       onToggleLocalTerminalDock: () => chromeShell.setIsLocalTerminalDockCollapsed((current) => !current),
       onToggleWorkspaceSidebar: () => chromeShell.setIsWorkspaceSidebarCollapsed((current) => !current),

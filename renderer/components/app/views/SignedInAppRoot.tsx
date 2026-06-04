@@ -446,6 +446,7 @@ function SignedInAppRootContent({
       },
       openKeyboardShortcuts: props.uiCommands.openKeyboardShortcutsDialog,
       openStartupDependencies: chromeShellSources.openStartupDependenciesDialog,
+      openResourceMonitor: props.uiCommands.openResourceMonitorDialog,
       submitIssue: chromeShellSources.handleSubmitIssue,
       openAbout: props.uiCommands.openAboutDialog
     }),
@@ -457,6 +458,7 @@ function SignedInAppRootContent({
       props.safely,
       props.workspaceLifecycle.handleOpenRecentWorkspace,
       props.uiCommands.openKeyboardShortcutsDialog,
+      props.uiCommands.openResourceMonitorDialog,
       props.uiCommands.openAboutDialog
     ]
   );

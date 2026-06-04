@@ -37,6 +37,7 @@ export type AppModalDialogsBuildDeps = {
     | "setDestroyAgentDialogOpen"
     | "setDestroyAgentId"
     | "setKeyboardShortcutsDialogOpen"
+    | "setResourceMonitorDialogOpen"
     | "setRemoteWorkspaceDialogOpen"
     | "setResetWorkspacesDialogOpen"
     | "setWorkspaceSwitcherDialogOpen"

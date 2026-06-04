@@ -144,6 +144,7 @@ const DropdownMenuContext = React.createContext<{ close: () => void } | null>(nu
 export function DropdownMenuItem({
   children,
   destructive = false,
+  disabled = false,
   className,
   onSelect
 }: DropdownMenuItemProps) {
@@ -155,9 +156,14 @@ export function DropdownMenuItem({
       className={cn(
         "flex w-full items-center gap-2 rounded-[6px] px-3 py-2 text-left text-[12px] transition hover:bg-accent/60",
         destructive ? "text-destructive" : "text-popover-foreground",
+        disabled ? "cursor-not-allowed opacity-50 hover:bg-transparent" : "",
         className
       )}
+      disabled={disabled}
       onClick={() => {
+        if (disabled) {
+          return;
+        }
         onSelect?.();
         context?.close();
       }}

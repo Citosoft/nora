@@ -61,6 +61,7 @@ export function createSystemBridge(): SystemBridge {
       subscribeToIpcEvent<AppClosingProgressPayload>("app:closing-progress", listener),
     logAnalytics: (level, message) => invokeIpc("app:log-analytics", { level, message }),
     scanLocalAgentUsage: (request) => invokeIpc("app:scan-local-agent-usage", request),
+    getResourceMonitorSnapshot: () => invokeIpc("app:get-resource-monitor-snapshot"),
     syncMacApplicationMenu: (payload: MacApplicationMenuSyncPayload) => invokeIpc("app:sync-mac-application-menu", payload),
     onMacApplicationMenuCommand: (listener: (command: MacApplicationMenuCommand) => void) =>
       subscribeToIpcEvent<MacApplicationMenuCommand>(MAC_APPLICATION_MENU_COMMAND_CHANNEL, listener)
