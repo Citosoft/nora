@@ -90,6 +90,10 @@ export type SettingsRuntimeValue = {
   updateAiPreferredProvider: (provider: AiProvider) => void;
   updateAiApiKey: (provider: AiProvider, apiKey: string) => void;
   updateAiModel: (provider: AiProvider, model: string) => void;
+  updateVoiceSettings: (voice: AppSettings["voice"]) => void;
+  updateAiSimpleTaskSettings: (
+    settings: Pick<AppSettings["ai"], "simpleTaskProvider" | "localLlmModelId">
+  ) => void;
   aiModelOptions: Record<AiProvider, AiModelCatalogEntry[]>;
   aiModelLoading: Record<AiProvider, boolean>;
   aiModelError: Record<AiProvider, string | null>;
@@ -97,12 +101,14 @@ export type SettingsRuntimeValue = {
   relaunchApplication: () => void;
   agentCatalog: AgentCatalogEntry[];
   agentSkillCatalogs: AgentSkillCatalog[];
+  installTool: (toolId: string) => void;
   toggleToolEnabled: (toolId: string, enabled: boolean) => void;
   refreshAgentCatalog: () => void;
   searchToolSkills: (toolId: string, query: string) => Promise<AgentSkillSearchResult>;
   installToolSkill: (toolId: string, skillReference: string) => Promise<void>;
   removeToolSkill: (toolId: string, skillId: string) => void;
   missingOptionalStartupDependencyCount: number;
+  openOnboardingFlow: () => void;
   openStartupDependenciesDialog: () => void;
   workbenchLayout: {
     isWorkspaceSidebarCollapsed: boolean;
@@ -131,6 +137,7 @@ export type SettingsGroup =
   | "skills"
   | "integrations"
   | "ai"
+  | "voice"
   | "privacy"
   | "system"
   | "dev";
@@ -138,4 +145,4 @@ export type SettingsGroup =
 export type SettingsPageToolSkillSearch = (toolId: string, query: string) => Promise<AgentSkillSearchResult>;
 export type WorkspaceLayoutPatch = Partial<SettingsRuntimeValue["workbenchLayout"]>;
 export type SettingsPageGroup = SettingsGroup;
-export type DevSettingsSectionProps = Pick<SettingsRuntimeValue, "triggerDevToast">;
+export type DevSettingsSectionProps = Pick<SettingsRuntimeValue, "openOnboardingFlow" | "triggerDevToast">;

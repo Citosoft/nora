@@ -1,7 +1,6 @@
 import { noraAppClient } from "@/components/app/clients/noraAppClient";
 import { noraIntegrationClient } from "@/components/app/clients/noraIntegrationClient";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
-import { noraToolingClient } from "@/components/app/clients/noraToolingClient";
 import { applyStateDelta, normalizeSnapshot } from "@/components/app/logic/appUtils";
 import type { WindowUiState } from "@/components/app/types";
 import type { UseAppBootstrapArgs, UseAppBootstrapResult } from "@/components/app/types/component.types";
@@ -10,7 +9,6 @@ import { useEffect, useState } from "react";
 
 export function useAppBootstrap({
   setUiState,
-  captureError,
   initialWindowUiState
 }: UseAppBootstrapArgs): UseAppBootstrapResult {
   const [windowUiState, setWindowUiState] = useState<WindowUiState>(initialWindowUiState);
@@ -69,22 +67,12 @@ export function useAppBootstrap({
       }
     });
 
-    noraToolingClient.refreshCatalog().then((snapshot) => {
-      if (mounted) {
-        setUiState((current) => ({ ...current, snapshot: normalizeSnapshot(snapshot) }));
-      }
-    }).catch((error: unknown) => {
-      if (mounted) {
-        captureError(error);
-      }
-    });
-
     return () => {
       mounted = false;
       unsubscribe();
       unsubscribeDelta();
     };
-  }, [captureError, setUiState]);
+  }, [setUiState]);
 
   useEffect(() => {
     let mounted = true;

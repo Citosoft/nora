@@ -13,11 +13,15 @@ import type {
   SaveToolConfigPayload,
   ToolUsageInfo
 } from "@shared/appTypes";
+import type { RefreshCatalogOptions } from "../types/agentDetectionCache.types";
 
 export interface ToolingHelperDeps {
   nowIso: () => string;
   detectRemoteAgentCatalog: (target: import("./internal.types").WorkspaceTarget) => Promise<AgentDetectionInfo[]>;
   detectLocalAgentCatalog: () => Promise<AgentDetectionInfo[]>;
+  resolveLocalAgentCatalogDetections: (options?: { force?: boolean }) => Promise<AgentDetectionInfo[]>;
+  peekLocalAgentCatalogDetections: () => AgentDetectionInfo[] | null;
+  invalidateLocalAgentDetectionCache: () => void;
   buildAgentCatalog: (
     detections: AgentDetectionInfo[],
     existingCatalog: AgentCatalogEntry[],
@@ -38,7 +42,6 @@ export interface ToolingHelperDeps {
   setInstallSession: (toolId: string, child: import("node:child_process").ChildProcessWithoutNullStreams) => void;
   deleteInstallSession: (toolId: string) => void;
   updateCatalogTool: (toolId: string, partial: Partial<AgentCatalogEntry>) => void;
-  refreshCatalog: () => Promise<AppState>;
   installAgentSkill: (
     toolId: string,
     skillReference: string,
@@ -50,10 +53,26 @@ export interface ToolingHelperDeps {
   setToolConfigs: (configs: Record<string, AgentToolConfig>) => void;
   getCliToolStatus: (tool: AgentCatalogEntry) => Promise<ToolUsageInfo | null>;
   searchAgentSkills: (toolId: string, query: string) => Promise<AgentSkillSearchResult>;
+  reconcileWorkspaceAgentsAfterCatalogRefresh: () => Promise<void>;
+}
+
+export interface ToolAccountSwitchExecution {
+  executable: string;
+  args: string[];
+  shell?: boolean;
+  waitForExit: boolean;
+}
+
+export interface ToolAccountSwitchCommand {
+  buildExecution: (
+    toolCommand: string,
+    getShellExecution: ToolingHelperDeps["getInstallCommandExecution"]
+  ) => ToolAccountSwitchExecution;
 }
 
 export interface ToolingHelpers {
-  refreshCatalog: () => Promise<AppState>;
+  refreshCatalog: (options?: RefreshCatalogOptions) => Promise<AppState>;
+  scheduleCatalogRefresh: () => void;
   installAgentTool: (payload: InstallToolPayload) => Promise<AppState>;
   installToolSkill: (
     payload: InstallAgentSkillPayload,

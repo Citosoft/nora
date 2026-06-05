@@ -1,6 +1,6 @@
 import { buildChangesPanelSectionProps } from "@/components/app/logic/buildChangesPanelSectionProps";
 import type { ChangesPanelSectionBuildDeps } from "@/components/app/types/changesPanelSectionBuild.types";
-import type { AppState } from "@shared/appTypes";
+import { DEFAULT_APP_SETTINGS, type AppState } from "@shared/appTypes";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -12,12 +12,7 @@ function createBuildDeps(
     activeChangesPanelTab: "git",
     addForgeWorkItemComment: async () => {},
     appSettingsAi: {
-      preferredProvider: "openai",
-      modelByProvider: {
-        openai: "",
-        anthropic: "",
-        google: ""
-      },
+      ...DEFAULT_APP_SETTINGS.ai,
       apiKeys: {
         openai: "",
         anthropic: "",

@@ -166,6 +166,12 @@ export function buildMacApplicationMenuTemplate(
       }
     },
     {
+      label: "Resource Monitor",
+      click: () => {
+        emitMenuCommand(getMainWindow, { kind: "open-resource-monitor" });
+      }
+    },
+    {
       label: "Submit Issue",
       click: () => {
         emitMenuCommand(getMainWindow, { kind: "submit-issue" });

@@ -19,12 +19,14 @@ type SessionActionsDependencies = {
 export function getActiveChangesRoot(state: AppState): string {
   const focusedAgent = state.agents.find((agent) => agent.id === state.focusedAgentId);
   if (focusedAgent?.workspace) {
-    return focusedAgent.workspace;
+    return state.worktrees.find((worktree) => worktree.id === focusedAgent.worktreeId)?.path || focusedAgent.workspace;
   }
 
   const focusedTerminal = state.terminals.find((terminal) => terminal.id === state.focusedTerminalId);
   if (focusedTerminal?.workspace) {
-    return focusedTerminal.workspace;
+    return state.worktrees.find((worktree) => worktree.id === focusedTerminal.worktreeId)?.path ||
+      state.project?.rootPath ||
+      focusedTerminal.workspace;
   }
 
   const currentSession = state.sessions.find((session) => session.id === state.currentSessionId);

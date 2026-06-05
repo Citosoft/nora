@@ -47,9 +47,11 @@ export type UseFocusedAgentPanelSessionResult = {
   isSavingPastedImage: boolean;
   contextSelector: FocusedAgentContextSelectorState;
   isLoadingContextSources: boolean;
-  hasVoiceTranscriptionApiKey: boolean;
+  isVoiceTranscriptionReady: boolean;
   isVoiceInputSupported: boolean;
   isListeningVoiceInput: boolean;
+  isTranscribingVoiceInput: boolean;
+  voiceInputLevels: number[];
   terminalSubmission: TerminalSubmission | null;
   terminalResetVersion: number;
   infoPopoverRef: RefObject<HTMLDivElement | null>;

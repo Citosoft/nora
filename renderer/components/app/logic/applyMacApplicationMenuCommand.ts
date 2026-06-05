@@ -18,6 +18,7 @@ export type MacApplicationMenuActionHandlers = {
   focusNextSessionTab: () => void;
   openKeyboardShortcuts: () => void;
   openStartupDependencies: () => void;
+  openResourceMonitor: () => void;
   submitIssue: () => void;
   openAbout: () => void;
 };
@@ -77,6 +78,9 @@ export function applyMacApplicationMenuCommand(
       return;
     case "open-startup-dependencies":
       handlers.openStartupDependencies();
+      return;
+    case "open-resource-monitor":
+      handlers.openResourceMonitor();
       return;
     case "submit-issue":
       handlers.submitIssue();

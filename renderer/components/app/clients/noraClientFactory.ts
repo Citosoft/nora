@@ -95,7 +95,8 @@ export const NORA_TERMINAL_CLIENT_METHODS = [
   "restartLocalTerminal",
   "clearLocalTerminal",
   "destroyLocalTerminal",
-  "focusWorktree"
+  "focusWorktree",
+  "removeWorktree"
 ] as const satisfies readonly (keyof NoraBridge)[];
 
 export const NORA_SESSION_CLIENT_METHODS = [
@@ -154,6 +155,8 @@ export const NORA_SYSTEM_CLIENT_METHODS = [
   "installLinuxAptUpdates",
   "getLinuxUpdateStatus",
   "getReleaseVersionStatus",
+  "checkAppRepositoryStarred",
+  "starAppRepository",
   "getAutoUpdateStatus",
   "getAutoUpdateTestSupport",
   "simulateAutoUpdateStatus",
@@ -172,12 +175,21 @@ export const NORA_SYSTEM_CLIENT_METHODS = [
   "onRemoteMountOutput",
   "listChromeCookieProfiles",
   "importChromeBrowserData",
+  "getLocalVoiceModelStatus",
+  "getLocalVoiceRuntimeStatus",
+  "installLocalVoiceModel",
+  "installLocalVoiceRuntime",
+  "getLocalAiModelStatus",
+  "getLocalAiRuntimeStatus",
+  "installLocalAiModel",
+  "installLocalAiRuntime",
   "transcribeVoiceInput",
   "savePastedImage",
   "showAgentCompletionNotification",
   "onAppClosingProgress",
   "logAnalytics",
   "scanLocalAgentUsage",
+  "getResourceMonitorSnapshot",
   "syncMacApplicationMenu",
   "onMacApplicationMenuCommand"
 ] as const satisfies readonly (keyof NoraBridge)[];

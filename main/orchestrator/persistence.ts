@@ -149,6 +149,7 @@ export function createPersistenceHelpers(deps: PersistenceHelperDeps): Persisten
           isBusy: true,
           lastEventAt: deps.nowIso(),
           lastTerminalLine: terminal.lastTerminalLine || "",
+          currentWorkingDirectory: terminal.currentWorkingDirectory || terminal.workspace,
           rawTerminalOutput: "",
           detectedLocalUrl: terminal.host === "local" ? (terminal.detectedLocalUrl || null) : null,
           detectedLocalPort:

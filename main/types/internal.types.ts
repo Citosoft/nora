@@ -17,11 +17,16 @@ import type {
   WorktreeRecord
 } from "@shared/appTypes";
 
+export type AgentExecutablePathCandidate = {
+  path: string;
+  platforms?: NodeJS.Platform[];
+};
+
 export type AgentDefinition = Omit<
   AgentCatalogEntry,
   "detected" | "enabled" | "detectedCommand" | "detectedPath" | "detectionProbe" | "detectionStdout" | "detectionStderr" | "installStatus" | "installLog" | "config"
 > & {
-  windowsKnownPaths?: string[];
+  executablePathCandidates: AgentExecutablePathCandidate[];
   windowsLaunchCommand?: string;
   skillCatalog?:
     | {

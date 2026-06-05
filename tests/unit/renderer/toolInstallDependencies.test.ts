@@ -16,7 +16,7 @@ test("getMissingInstallDependencies returns only unavailable dependencies", () =
     dependencies: [
       {
         id: "git",
-        label: "Git",
+        label: "git",
         severity: "mandatory",
         status: "available",
         summary: "",
@@ -52,7 +52,7 @@ test("getMissingInstallDependencies returns only unavailable dependencies", () =
       },
       {
         id: "ssh-client",
-        label: "SSH Client",
+        label: "ssh client",
         severity: "optional",
         status: "available",
         summary: "",
@@ -64,7 +64,7 @@ test("getMissingInstallDependencies returns only unavailable dependencies", () =
       },
       {
         id: "ssh-mount",
-        label: "SSH Mount Support",
+        label: "ssh mount support",
         severity: "optional",
         status: "available",
         summary: "",

@@ -79,6 +79,9 @@ export function registerSessionIpc({ services, withSnapshot }: RegisterSessionIp
   ipcMain.handle("app:destroy-terminal", (_event, sessionId: string) =>
     withSnapshot(() => services.session.destroyTerminal(sessionId))
   );
+  ipcMain.handle("app:remove-worktree", (_event, worktreeId: string) =>
+    withSnapshot(() => services.session.removeWorktree(worktreeId))
+  );
   ipcMain.handle("app:destroy-local-terminal", () =>
     services.session.destroyLocalTerminal()
   );

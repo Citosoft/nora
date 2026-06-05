@@ -13,11 +13,11 @@ import { isAgentToolAvailable } from "@shared/agentToolState";
 import { Bot, Expand, FileText, GitPullRequest, Globe, LayoutPanelTop, MessageSquare, Plus, TerminalSquare, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
-function runCloseAction(targets: WorkspaceSessionTab[], onClose: (tab: WorkspaceSessionTab) => void) {
+function runCloseAction(targets: WorkspaceSessionTab[], onCloseMany: (tabs: WorkspaceSessionTab[]) => void) {
   if (!targets.length) {
     return;
   }
-  targets.forEach((tab) => onClose(tab));
+  onCloseMany(targets);
 }
 
 export function WorkspaceSessionTabs({
@@ -27,6 +27,7 @@ export function WorkspaceSessionTabs({
   tools,
   onSelect,
   onClose,
+  onCloseMany,
   onCreateAgent,
   onCreateTerminalFromDefaults,
   onCreateTerminal,
@@ -155,26 +156,26 @@ export function WorkspaceSessionTabs({
                 <ContextMenuContent className="w-64">
                   <ContextMenuItem
                     disabled={closeTabTargets.length === 0}
-                    onSelect={() => runCloseAction(closeTabTargets, onClose)}
+                    onSelect={() => runCloseAction(closeTabTargets, onCloseMany)}
                   >
                     Close Tab
                     <span className="ml-auto text-[11px] text-muted-foreground">{closeTabShortcut}</span>
                   </ContextMenuItem>
                   <ContextMenuItem
                     disabled={closeOtherTabTargets.length === 0}
-                    onSelect={() => runCloseAction(closeOtherTabTargets, onClose)}
+                    onSelect={() => runCloseAction(closeOtherTabTargets, onCloseMany)}
                   >
                     Close Others
                   </ContextMenuItem>
                   <ContextMenuItem
                     disabled={closeRightTabTargets.length === 0}
-                    onSelect={() => runCloseAction(closeRightTabTargets, onClose)}
+                    onSelect={() => runCloseAction(closeRightTabTargets, onCloseMany)}
                   >
                     Close Tabs to the Right
                   </ContextMenuItem>
                   <ContextMenuItem
                     disabled={closeLeftTabTargets.length === 0}
-                    onSelect={() => runCloseAction(closeLeftTabTargets, onClose)}
+                    onSelect={() => runCloseAction(closeLeftTabTargets, onCloseMany)}
                   >
                     Close Tabs to the Left
                   </ContextMenuItem>

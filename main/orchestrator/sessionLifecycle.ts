@@ -6,6 +6,16 @@ import type {
 } from "../types/orchestratorSessionLifecycle.types";
 
 export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps): SessionLifecycleHelpers {
+  function getAttachedSessionRoot(
+    worktrees: WorktreeRecord[],
+    session: Pick<AgentSession | TerminalSession, "worktreeId" | "workspace"> | null
+  ): string | null {
+    if (!session) {
+      return null;
+    }
+    return worktrees.find((worktree) => worktree.id === session.worktreeId)?.path || session.workspace || null;
+  }
+
   async function focusAgent(agentId: string): Promise<AppState> {
     const snapshot = deps.getSnapshot();
     const agent = snapshot.agents.find((item) => item.id === agentId);
@@ -249,7 +259,7 @@ export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps):
       worktrees: nextWorktrees,
       focusedAgentId: nextFocusedAgentId,
       changesRoot:
-        remainingAgents.find((item) => item.id === nextFocusedAgentId)?.workspace ||
+        getAttachedSessionRoot(nextWorktrees, remainingAgents.find((item) => item.id === nextFocusedAgentId) || null) ||
         currentState.project?.rootPath ||
         null,
       errorMessage: null
@@ -296,8 +306,8 @@ export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps):
       worktrees: nextWorktrees,
       focusedTerminalId: nextFocusedTerminalId,
       changesRoot:
-        remainingTerminals.find((item) => item.id === nextFocusedTerminalId)?.workspace ||
-        currentState.agents.find((item) => item.id === currentState.focusedAgentId)?.workspace ||
+        getAttachedSessionRoot(nextWorktrees, remainingTerminals.find((item) => item.id === nextFocusedTerminalId) || null) ||
+        getAttachedSessionRoot(nextWorktrees, currentState.agents.find((item) => item.id === currentState.focusedAgentId) || null) ||
         currentState.project?.rootPath ||
         null,
       errorMessage: null
@@ -375,6 +385,68 @@ export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps):
     return worktrees.filter((item) => item.id !== updated.id);
   }
 
+  async function removeWorktree(worktreeId: string): Promise<AppState> {
+    const state = deps.getSnapshot();
+    const worktree = state.worktrees.find((item) => item.id === worktreeId);
+    if (!worktree) {
+      throw new Error("Worktree could not be found.");
+    }
+    if (!state.project || worktree.projectId !== state.project.id) {
+      throw new Error("Choose the project before removing a worktree.");
+    }
+    if (worktree.path === state.project.rootPath || worktree.createdFromRef === "ROOT") {
+      throw new Error("The repository root worktree cannot be removed.");
+    }
+
+    const attachedAgents = state.agents.filter((agent) => agent.worktreeId === worktreeId);
+    const attachedTerminals = state.terminals.filter((terminal) => terminal.worktreeId === worktreeId);
+    if (attachedAgents.length || attachedTerminals.length) {
+      throw new Error("Remove all agents and terminals from this worktree before deleting it.");
+    }
+
+    try {
+      await deps.execGit(deps.getProjectTarget(state.project), ["worktree", "remove", "--force", worktree.path]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to remove git worktree.";
+      throw new Error(message);
+    }
+
+    await fs.rm(deps.getWorktreeDir(worktree.projectId, worktree.sessionId, worktree.id), {
+      recursive: true,
+      force: true
+    });
+
+    const nextWorktrees = state.worktrees.filter((item) => item.id !== worktreeId);
+    const nextSessions = state.sessions.map((session) => {
+      if (session.id !== worktree.sessionId) {
+        return session;
+      }
+
+      const hasFocusedWorktree = nextWorktrees.some((item) => item.id === session.focusedWorktreeId);
+      const replacementWorktree = nextWorktrees.find((item) => item.sessionId === session.id) || null;
+
+      return {
+        ...session,
+        focusedWorktreeId: hasFocusedWorktree ? session.focusedWorktreeId : replacementWorktree?.id || null,
+        updatedAt: deps.nowIso(),
+        lastUsedAt: deps.nowIso()
+      };
+    });
+    const wasFocusedWorktree =
+      state.sessions.find((session) => session.id === state.currentSessionId)?.focusedWorktreeId === worktreeId ||
+      state.changesRoot === worktree.path;
+
+    deps.updateState((currentState) => ({
+      ...currentState,
+      sessions: nextSessions,
+      worktrees: nextWorktrees,
+      changesRoot: wasFocusedWorktree ? currentState.project?.rootPath ?? null : currentState.changesRoot,
+      errorMessage: null
+    }));
+
+    return deps.refreshProjectState();
+  }
+
   return {
     focusAgent,
     focusTerminal,
@@ -383,6 +455,7 @@ export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps):
     restartTerminal,
     destroyAgent,
     destroyTerminal,
+    removeWorktree,
     refreshWorktreeCollectionAfterDetach,
     refreshWorktreeCollectionAfterTerminalDetach
   };

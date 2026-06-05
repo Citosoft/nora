@@ -1,7 +1,13 @@
 import { noraAgentClient } from "@/components/app/clients/noraAgentClient";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
+import { convertRecordedAudioBlobToWav } from "@/components/app/logic/convertRecordedAudioBlobToWav";
+import {
+  logEmptyVoiceInputTranscription,
+  reportVoiceInputTranscriptionError
+} from "@/components/app/logic/voiceInputTranscriptionErrors";
 import { noraTerminalClient } from "@/components/app/clients/noraTerminalClient";
 import { useWorkspaceSessionContext } from "@/components/app/context/workspaceSessionContext";
+import { useVoiceInputLevelTracker } from "@/components/app/hooks/useVoiceInputLevelTracker";
 import { useWorkspaceAgentContextSources } from "@/components/app/hooks/useWorkspaceAgentContextSources";
 import { useWorkspaceProjectFavicon } from "@/components/app/hooks/useWorkspaceProjectFavicon";
 import {
@@ -83,8 +89,12 @@ export const useFocusedAgentPanelSession = ({
   const [previewImageDraft, setPreviewImageDraft] = useState<PastedImageDraft | null>(null);
   const [isSendingTerminalInput, setIsSendingTerminalInput] = useState(false);
   const [isSavingPastedImage, setIsSavingPastedImage] = useState(false);
-  const [hasVoiceTranscriptionApiKey, setHasVoiceTranscriptionApiKey] = useState(false);
+  const [isVoiceTranscriptionReady, setIsVoiceTranscriptionReady] = useState(false);
+  const [voiceDictationProvider, setVoiceDictationProvider] = useState<"openai" | "localWhisper">("openai");
   const [isListeningVoiceInput, setIsListeningVoiceInput] = useState(false);
+  const [isTranscribingVoiceInput, setIsTranscribingVoiceInput] = useState(false);
+  const [voiceInputMediaStream, setVoiceInputMediaStream] = useState<MediaStream | null>(null);
+  const voiceInputLevels = useVoiceInputLevelTracker(isListeningVoiceInput, voiceInputMediaStream);
   const workspaceProjectFaviconUrl = useWorkspaceProjectFavicon(workspace?.project.id ?? null, workspace?.project.rootPath ?? null);
   const [terminalSubmission, setTerminalSubmission] = useState<TerminalSubmission | null>(null);
   const [terminalResetVersion, setTerminalResetVersion] = useState(0);
@@ -113,23 +123,28 @@ export const useFocusedAgentPanelSession = ({
 
   useEffect(() => {
     let cancelled = false;
-    const refreshVoiceKeyAvailability = async () => {
+    const refreshVoiceTranscriptionAvailability = async () => {
       try {
         const settings = await noraSystemClient.getAppSettings();
+        const isReady = settings.voice.dictationProvider === "localWhisper"
+          ? (await noraSystemClient.getLocalVoiceModelStatus(settings.voice.localWhisperModelId)).state === "installed" &&
+            (await noraSystemClient.getLocalVoiceRuntimeStatus()).state === "installed"
+          : settings.ai.apiKeys.openai.trim().length > 0;
         if (!cancelled) {
-          setHasVoiceTranscriptionApiKey(settings.ai.apiKeys.openai.trim().length > 0);
+          setVoiceDictationProvider(settings.voice.dictationProvider);
+          setIsVoiceTranscriptionReady(isReady);
         }
       } catch {
         if (!cancelled) {
-          setHasVoiceTranscriptionApiKey(false);
+          setIsVoiceTranscriptionReady(false);
         }
       }
     };
-    void refreshVoiceKeyAvailability();
-    window.addEventListener("focus", refreshVoiceKeyAvailability);
+    void refreshVoiceTranscriptionAvailability();
+    window.addEventListener("focus", refreshVoiceTranscriptionAvailability);
     return () => {
       cancelled = true;
-      window.removeEventListener("focus", refreshVoiceKeyAvailability);
+      window.removeEventListener("focus", refreshVoiceTranscriptionAvailability);
     };
   }, []);
 
@@ -149,6 +164,8 @@ export const useFocusedAgentPanelSession = ({
     setIsSendingTerminalInput(false);
     setIsSavingPastedImage(false);
     setIsListeningVoiceInput(false);
+    setIsTranscribingVoiceInput(false);
+    setVoiceInputMediaStream(null);
     setTerminalSubmission(null);
     mediaRecorderRef.current?.stop();
     mediaRecorderRef.current = null;
@@ -338,7 +355,7 @@ export const useFocusedAgentPanelSession = ({
       isSendingTerminalInput ||
       isSavingPastedImage ||
       !isVoiceInputSupported ||
-      !hasVoiceTranscriptionApiKey
+      !isVoiceTranscriptionReady
     ) {
       return;
     }
@@ -354,6 +371,7 @@ export const useFocusedAgentPanelSession = ({
         const recorder = new MediaRecorder(stream);
         recordedVoiceChunksRef.current = [];
         mediaStreamRef.current = stream;
+        setVoiceInputMediaStream(stream);
         mediaRecorderRef.current = recorder;
 
         recorder.ondataavailable = (event) => {
@@ -363,18 +381,23 @@ export const useFocusedAgentPanelSession = ({
         };
 
         recorder.onstop = () => {
+          setIsListeningVoiceInput(false);
           const run = async () => {
+            setIsTranscribingVoiceInput(true);
             try {
               const chunks = recordedVoiceChunksRef.current;
               recordedVoiceChunksRef.current = [];
               if (!chunks.length) {
+                logEmptyVoiceInputTranscription("No audio was captured.");
                 return;
               }
               const audioBlob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
-              const audioBytes = new Uint8Array(await audioBlob.arrayBuffer());
+              const audioBytes = voiceDictationProvider === "localWhisper"
+                ? await convertRecordedAudioBlobToWav(audioBlob)
+                : new Uint8Array(await audioBlob.arrayBuffer());
               const transcript = await noraSystemClient.transcribeVoiceInput({
                 audioData: Array.from(audioBytes),
-                mimeType: recorder.mimeType || "audio/webm"
+                mimeType: voiceDictationProvider === "localWhisper" ? "audio/wav" : recorder.mimeType || "audio/webm"
               });
               const input = terminalInputRef.current;
               if (!input) {
@@ -384,10 +407,10 @@ export const useFocusedAgentPanelSession = ({
               input.value = prefix.length > 0 ? `${prefix} ${transcript}` : transcript;
               input.focus();
             } catch (error) {
-              const message = error instanceof Error ? error.message : "Unknown transcription error.";
-              window.alert(`Voice input failed: ${message}`);
+              reportVoiceInputTranscriptionError(error);
             } finally {
-              setIsListeningVoiceInput(false);
+              setIsTranscribingVoiceInput(false);
+              setVoiceInputMediaStream(null);
               mediaRecorderRef.current = null;
               mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
               mediaStreamRef.current = null;
@@ -398,6 +421,8 @@ export const useFocusedAgentPanelSession = ({
 
         recorder.onerror = () => {
           setIsListeningVoiceInput(false);
+          setIsTranscribingVoiceInput(false);
+          setVoiceInputMediaStream(null);
           mediaRecorderRef.current = null;
           mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
           mediaStreamRef.current = null;
@@ -417,7 +442,8 @@ export const useFocusedAgentPanelSession = ({
     isSavingPastedImage,
     isSendingTerminalInput,
     isVoiceInputSupported,
-    hasVoiceTranscriptionApiKey
+    isVoiceTranscriptionReady,
+    voiceDictationProvider
   ]);
 
   const handleAgentInputPaste = async (event: ReactClipboardEvent<HTMLInputElement>) => {
@@ -696,9 +722,11 @@ export const useFocusedAgentPanelSession = ({
     setPreviewImageDraft,
     isSendingTerminalInput,
     isSavingPastedImage,
-    hasVoiceTranscriptionApiKey,
+    isVoiceTranscriptionReady,
     isVoiceInputSupported,
     isListeningVoiceInput,
+    isTranscribingVoiceInput,
+    voiceInputLevels,
     contextSelector: {
       sources: contextSources,
       selections: contextSelections

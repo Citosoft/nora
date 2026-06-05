@@ -1,4 +1,6 @@
-import { diffLineClass } from "@/components/app/logic/utils";
+import { DiffAnnotationIntroDialog } from "@/components/app/dialogs/DiffAnnotationIntroDialog";
+import { useDiffAnnotationIntroDialog } from "@/components/app/hooks/useDiffAnnotationIntroDialog";
+import { AnnotatedDiffLines } from "@/components/app/panels/diff-annotation/AnnotatedDiffLines";
 import type { ResolvedTheme } from "@/components/app/types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -18,6 +20,7 @@ export function DiffViewer({
   onClose?: () => void;
   onExpand?: () => void;
 }) {
+  const diffAnnotationIntroDialog = useDiffAnnotationIntroDialog();
   const changeTone = (status: ChangeEntry["status"]) => {
     switch (status) {
       case "added":
@@ -33,6 +36,7 @@ export function DiffViewer({
 
   return (
     <div className={cn("flex min-h-0 flex-1 flex-col", expanded ? "h-full" : "")}>
+      <DiffAnnotationIntroDialog {...diffAnnotationIntroDialog} />
       <div className="border-b border-border/50 px-4 py-3">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
@@ -63,11 +67,7 @@ export function DiffViewer({
         </div>
       </div>
       <div className={cn("terminal-text min-h-0 flex-1 overflow-auto text-[12px] leading-6", expanded ? "p-5" : "p-4")}>
-        {change.diff.split("\n").map((line, index) => (
-          <div key={`${index}-${line}`} className={cn("whitespace-pre-wrap break-words px-2", diffLineClass(line, resolvedTheme))}>
-            {line || " "}
-          </div>
-        ))}
+        <AnnotatedDiffLines diff={change.diff} filePath={change.path} resolvedTheme={resolvedTheme} />
       </div>
     </div>
   );

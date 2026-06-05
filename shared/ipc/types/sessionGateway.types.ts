@@ -34,6 +34,7 @@ export interface SessionBridge {
   restartTerminal: (sessionId: string) => Promise<AppState>;
   clearTerminal: (sessionId: string) => Promise<AppState>;
   destroyTerminal: (sessionId: string) => Promise<AppState>;
+  removeWorktree: (worktreeId: string) => Promise<AppState>;
   sendTerminalInput: (sessionId: string, input: string) => Promise<void>;
   getTerminalBuffer: (sessionId: string) => Promise<string>;
   resizeTerminal: (sessionId: string, cols: number, rows: number) => Promise<void>;

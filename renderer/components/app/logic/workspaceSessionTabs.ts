@@ -29,6 +29,16 @@ export function getWorkspaceSessionTabId(tab: WorkspaceSessionTab): string {
   return tab.id;
 }
 
+export function formatTerminalWorkspaceSessionTabName(name: string, workspace: string): string {
+  const normalizedWorkspace = workspace.trim().replace(/\\/g, "/").replace(/\/+$/, "");
+  if (!normalizedWorkspace) {
+    return name;
+  }
+  const segments = normalizedWorkspace.split("/").filter(Boolean);
+  const workspaceLabel = segments[segments.length - 1] ?? normalizedWorkspace;
+  return `${name} · ${workspaceLabel}`;
+}
+
 export function getActiveWorkspaceSessionTabId({
   activeViewId,
   activeWorkspaceContentTab,
@@ -127,7 +137,7 @@ export function getWorkspaceSessionTabs(
     ...workspace.terminals.map((item) => ({
       id: item.id,
       kind: "terminal" as const,
-      name: item.name,
+      name: formatTerminalWorkspaceSessionTabName(item.name, item.currentWorkingDirectory || item.workspace),
       status: item.status
     })),
     ...browserTabs

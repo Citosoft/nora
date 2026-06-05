@@ -13,6 +13,9 @@ test("getToolsSignature is order-stable for identical catalogs", () => {
       description: "",
       usageNotes: [],
       authFields: [],
+      supportsUsageStatus: false,
+      usageDashboardUrl: null,
+      supportsAccountSwitch: false,
       detected: true,
       enabled: true,
       detectedCommand: null,
@@ -26,6 +29,37 @@ test("getToolsSignature is order-stable for identical catalogs", () => {
     }
   ];
   assert.equal(getToolsSignature(tools), getToolsSignature(tools));
+});
+
+test("getToolsSignature tracks footer management capabilities", () => {
+  const tool = {
+    id: "codex",
+    label: "Codex",
+    aliases: [],
+    launchCommand: "",
+    installTemplate: "",
+    description: "",
+    usageNotes: [],
+    authFields: [],
+    supportsUsageStatus: false,
+    usageDashboardUrl: null,
+    supportsAccountSwitch: false,
+    detected: true,
+    enabled: true,
+    detectedCommand: null,
+    detectedPath: null,
+    detectionProbe: null,
+    detectionStdout: null,
+    detectionStderr: null,
+    installStatus: "idle" as const,
+    installLog: [],
+    config: { values: {}, updatedAt: null }
+  };
+
+  assert.notEqual(
+    getToolsSignature([tool]),
+    getToolsSignature([{ ...tool, supportsUsageStatus: true, supportsAccountSwitch: true }])
+  );
 });
 
 test("getWorkspaceContextSignature returns empty string for null workspace", () => {

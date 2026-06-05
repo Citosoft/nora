@@ -8,6 +8,12 @@ import type {
   BrowserCookieProfileSummary,
   BrowserDataImportResult,
   LatestReleaseAssetsResult,
+  LocalAiModelStatus,
+  LocalAiRuntimeStatus,
+  LocalLlmModelId,
+  LocalVoiceModelStatus,
+  LocalVoiceRuntimeStatus,
+  LocalWhisperModelId,
   ForgeOAuthDevicePrompt,
   InstalledIde,
   LinuxAptSetupStatus,
@@ -27,6 +33,7 @@ import type {
 } from "../../types/startupDependency.types";
 import type { AgentUsageScanRequest, LocalAgentUsageReport } from "../../types/agentUsageStats.types";
 import type { MacApplicationMenuCommand, MacApplicationMenuSyncPayload } from "../../types/macApplicationMenu.types";
+import type { ResourceMonitorSnapshot } from "../../types/resourceMonitor.types";
 import type { DetectedUserIdentity } from "../../types/userIdentity.types";
 
 export interface WindowState {
@@ -85,12 +92,23 @@ export interface SystemBridge {
   onRemoteMountOutput: (listener: (payload: RemoteMountOutputPayload) => void) => () => void;
   listChromeCookieProfiles: () => Promise<BrowserCookieProfileSummary[]>;
   importChromeBrowserData: (profileId?: string) => Promise<BrowserDataImportResult>;
+  getLocalVoiceModelStatus: (modelId: LocalWhisperModelId) => Promise<LocalVoiceModelStatus>;
+  getLocalVoiceRuntimeStatus: () => Promise<LocalVoiceRuntimeStatus>;
+  installLocalVoiceModel: (modelId: LocalWhisperModelId) => Promise<LocalVoiceModelStatus>;
+  installLocalVoiceRuntime: () => Promise<LocalVoiceRuntimeStatus>;
+  getLocalAiModelStatus: (modelId: LocalLlmModelId) => Promise<LocalAiModelStatus>;
+  getLocalAiRuntimeStatus: () => Promise<LocalAiRuntimeStatus>;
+  installLocalAiModel: (modelId: LocalLlmModelId) => Promise<LocalAiModelStatus>;
+  installLocalAiRuntime: () => Promise<LocalAiRuntimeStatus>;
   transcribeVoiceInput: (payload: VoiceInputTranscriptionPayload) => Promise<string>;
   savePastedImage: (payload: SavePastedImagePayload) => Promise<PastedImageReference>;
   showAgentCompletionNotification: (payload: AgentCompletionNotificationPayload) => Promise<void>;
   onAppClosingProgress: (listener: (payload: AppClosingProgressPayload) => void) => () => void;
   logAnalytics: (level: "info" | "warn" | "debug" | "error", message: string) => Promise<void>;
   scanLocalAgentUsage: (request: AgentUsageScanRequest) => Promise<LocalAgentUsageReport>;
+  getResourceMonitorSnapshot: () => Promise<ResourceMonitorSnapshot>;
+  checkAppRepositoryStarred: () => Promise<boolean | null>;
+  starAppRepository: () => Promise<boolean>;
   syncMacApplicationMenu: (payload: MacApplicationMenuSyncPayload) => Promise<void>;
   onMacApplicationMenuCommand: (listener: (command: MacApplicationMenuCommand) => void) => () => void;
 }

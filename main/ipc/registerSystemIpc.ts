@@ -7,6 +7,10 @@ import {
   getLatestReleaseAssets,
   getReleaseInstallerScriptCommandForLocalTerminal
 } from "@main/releaseDownloads";
+import { getLocalAiModelStatus, installLocalAiModel } from "@main/ai/localAiModels";
+import { getLocalAiRuntimeStatus, installLocalAiRuntime } from "@main/ai/localAiRuntime";
+import { getLocalVoiceModelStatus, installLocalVoiceModel } from "@main/ai/localVoiceModels";
+import { getLocalVoiceRuntimeStatus, installLocalVoiceRuntime } from "@main/ai/localVoiceRuntime";
 import { transcribeVoiceInput } from "@main/ai/voiceTranscription";
 import type {
   AgentCompletionNotificationPayload,
@@ -19,6 +23,9 @@ import type {
   BrowserCookieProfileSummary,
   BrowserDataImportResult,
   LatestReleaseAssetsResult,
+  LocalLlmModelId,
+  LocalWhisperModelId,
+  LocalTerminalState,
   LinuxAptSetupStatus,
   LinuxUpdateStatus,
   ReleaseAssetDownloadResult,
@@ -26,7 +33,7 @@ import type {
 } from "@shared/appTypes";
 import type { StartupDependencyId } from "@shared/types/startupDependency.types";
 import type { VoiceInputTranscriptionPayload } from "@shared/ipc/types/systemGateway.types";
-import { app, ipcMain, session, shell } from "electron";
+import { app, clipboard, ipcMain, session, shell } from "electron";
 import {
   getAutoUpdateStatus,
   getAutoUpdateTestSupport,
@@ -36,6 +43,8 @@ import {
 import { detectUserIdentity } from "@main/userIdentity";
 import { getStartupDependencyReport, installStartupDependency } from "@main/startupDependencies";
 import { getRemoteConnectionOptions } from "@main/remoteMounts";
+import { checkAppRepositoryStarred, starAppRepository } from "@main/githubRepositoryStar";
+import { sampleAppResourceUsage } from "@main/resource-monitor/processResourceSampler";
 
 interface RegisterSystemIpcDeps {
   parseAllowedExternalUrl: (value: string) => URL;
@@ -48,6 +57,8 @@ interface RegisterSystemIpcDeps {
   saveAppSettings: (nextSettings: AppSettings) => Promise<AppSettings>;
   showAgentCompletionNotification: (payload: AgentCompletionNotificationPayload) => Promise<void>;
   analyticsRuntimeConfig: AnalyticsRuntimeConfig;
+  getSnapshot: () => AppState;
+  getLocalTerminalState: () => LocalTerminalState | null;
 }
 
 export function registerSystemIpc({
@@ -60,7 +71,9 @@ export function registerSystemIpc({
   getAppSettings,
   saveAppSettings,
   showAgentCompletionNotification,
-  analyticsRuntimeConfig
+  analyticsRuntimeConfig,
+  getSnapshot,
+  getLocalTerminalState
 }: RegisterSystemIpcDeps): void {
   ipcMain.handle("app:log-analytics", (_event, { level, message }: { level: "info" | "warn" | "debug" | "error"; message: string }) => {
     const logger = console[level] ?? console.log;
@@ -84,6 +97,22 @@ export function registerSystemIpc({
     const browserSession = session.fromPartition("persist:nora-browser");
     return importChromeBrowserDataToSession(browserSession, process.platform, process.env, {}, profileId || "Default");
   });
+  ipcMain.handle("app:get-local-voice-model-status", (_event, modelId: LocalWhisperModelId) =>
+    getLocalVoiceModelStatus(modelId)
+  );
+  ipcMain.handle("app:get-local-voice-runtime-status", () => getLocalVoiceRuntimeStatus());
+  ipcMain.handle("app:install-local-voice-model", (_event, modelId: LocalWhisperModelId) =>
+    installLocalVoiceModel(modelId)
+  );
+  ipcMain.handle("app:install-local-voice-runtime", () => installLocalVoiceRuntime());
+  ipcMain.handle("app:get-local-ai-model-status", (_event, modelId: LocalLlmModelId) =>
+    getLocalAiModelStatus(modelId)
+  );
+  ipcMain.handle("app:get-local-ai-runtime-status", () => getLocalAiRuntimeStatus());
+  ipcMain.handle("app:install-local-ai-model", (_event, modelId: LocalLlmModelId) =>
+    installLocalAiModel(modelId)
+  );
+  ipcMain.handle("app:install-local-ai-runtime", () => installLocalAiRuntime());
   ipcMain.handle("app:get-analytics-runtime-config", (): AnalyticsRuntimeConfig => ({
     ...analyticsRuntimeConfig,
     coarseLaunchContext: {
@@ -97,6 +126,11 @@ export function registerSystemIpc({
   ipcMain.handle("app:install-linux-apt-updates", (): Promise<LinuxAptSetupStatus> => installLinuxAptUpdates());
   ipcMain.handle("app:get-linux-update-status", (): Promise<LinuxUpdateStatus> => getLinuxUpdateStatus());
   ipcMain.handle("app:get-release-version-status", (): Promise<ReleaseVersionStatus> => getReleaseVersionStatus());
+  ipcMain.handle("app:get-resource-monitor-snapshot", () =>
+    sampleAppResourceUsage(getSnapshot(), getLocalTerminalState())
+  );
+  ipcMain.handle("app:check-app-repository-starred", (): Promise<boolean | null> => checkAppRepositoryStarred());
+  ipcMain.handle("app:star-app-repository", (): Promise<boolean> => starAppRepository());
   ipcMain.handle("app:get-auto-update-status", (): AutoUpdateStatus => getAutoUpdateStatus());
   ipcMain.handle("app:get-auto-update-test-support", (): AutoUpdateTestSupport => getAutoUpdateTestSupport());
   ipcMain.handle("app:simulate-auto-update-status", (_event, target: AutoUpdateTestTarget): AutoUpdateStatus =>
@@ -154,6 +188,12 @@ export function registerSystemIpc({
   ipcMain.handle("app:open-external-url", (_event, url: string) => {
     const parsed = parseAllowedExternalUrl(url);
     return shell.openExternal(parsed.toString());
+  });
+  ipcMain.handle("app:copy-text", (_event, text: string) => {
+    clipboard.writeText(text);
+    if (clipboard.readText() !== text) {
+      throw new Error("The clipboard did not accept the copied text.");
+    }
   });
   ipcMain.handle("app:open-project-in-ide", (_event, ideId: string, projectPath: string) =>
     openProjectInIde(ideId, projectPath)

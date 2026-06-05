@@ -187,6 +187,8 @@ export class SessionMainService implements SessionService {
 
   destroyTerminal = (sessionId: string): Promise<AppState> => this.d.sessionLifecycle.destroyTerminal(sessionId);
 
+  removeWorktree = (worktreeId: string): Promise<AppState> => this.d.sessionLifecycle.removeWorktree(worktreeId);
+
   destroyLocalTerminal = (): Promise<LocalTerminalState | null> => this.d.localTerminal.destroyLocalTerminal();
 
   stopAllAgentsGracefully = (

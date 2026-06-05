@@ -12,6 +12,7 @@ import { KeyboardShortcutsDialog as AppKeyboardShortcutsDialog } from "@/compone
 import { LinuxAptSetupDialog as AppLinuxAptSetupDialog } from "@/components/app/dialogs/LinuxAptSetupDialog";
 import { OAuthDeviceCodeDialog as AppOAuthDeviceCodeDialog } from "@/components/app/dialogs/OAuthDeviceCodeDialog";
 import { RemoteWorkspaceDialog as AppRemoteWorkspaceDialog } from "@/components/app/dialogs/RemoteWorkspaceDialog";
+import { ResourceMonitorDialog as AppResourceMonitorDialog } from "@/components/app/dialogs/ResourceMonitorDialog";
 import { RemoveMissingWorkspaceDialog as AppRemoveMissingWorkspaceDialog } from "@/components/app/dialogs/RemoveMissingWorkspaceDialog";
 import { ResetWorkspacesDialog as AppResetWorkspacesDialog } from "@/components/app/dialogs/ResetWorkspacesDialog";
 import { StartupDependenciesDialog as AppStartupDependenciesDialog } from "@/components/app/dialogs/StartupDependenciesDialog";
@@ -40,6 +41,7 @@ export const AppModalDialogs = () => {
       <AppAnalyticsConsentDialog {...d.analyticsConsent} />
       <AppAboutDialog {...d.about} />
       <AppKeyboardShortcutsDialog {...d.keyboardShortcuts} />
+      <AppResourceMonitorDialog {...d.resourceMonitor} />
       <AppWorkspaceSwitcherDialog {...d.workspaceSwitcher} />
     </>
   );

@@ -42,6 +42,7 @@ export const getWorkspaceContextSignature = (workspace: WorkspaceSummary | null)
         terminal.shellId,
         terminal.shellLabel,
         terminal.workspace,
+        terminal.currentWorkingDirectory ?? "",
         terminal.branch,
         String(terminal.pid ?? ""),
         String(terminal.detectedLocalPort ?? ""),
@@ -74,7 +75,18 @@ export const getProjectScriptsSignature = (scripts: WorkspaceScriptLauncher[]): 
   scripts.map((script) => `${script.id}|${script.packageManager}|${script.scriptName}|${script.label}|${script.command}`).join("\n");
 
 export const getToolsSignature = (tools: AgentCatalogEntry[]): string =>
-  tools.map((tool) => `${tool.id}|${tool.label}|${tool.detected ? "1" : "0"}|${tool.enabled ? "1" : "0"}|${tool.installStatus}`).join("\n");
+  tools.map((tool) =>
+    [
+      tool.id,
+      tool.label,
+      tool.detected ? "1" : "0",
+      tool.enabled ? "1" : "0",
+      tool.installStatus,
+      tool.supportsUsageStatus ? "1" : "0",
+      tool.usageDashboardUrl ?? "",
+      tool.supportsAccountSwitch ? "1" : "0"
+    ].join("|")
+  ).join("\n");
 
 export const getBrowserTabsSignature = (tabs: BrowserTabState[]): string =>
   tabs.map((tab) => `${tab.id}|${tab.projectId}|${tab.title}|${tab.status}|${tab.historyIndex}|${tab.history[tab.historyIndex] ?? ""}`).join("\n");
@@ -108,6 +120,7 @@ export const getTerminalRenderSignature = (terminal: TerminalSession | null): st
     terminal.shellId,
     terminal.shellLabel,
     terminal.workspace,
+    terminal.currentWorkingDirectory ?? "",
     terminal.branch,
     String(terminal.pid ?? ""),
     String(terminal.detectedLocalPort ?? ""),

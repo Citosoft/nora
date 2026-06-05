@@ -1,23 +1,53 @@
 import type { AgentSkillInstallOutputEvent, AppState, InstallAgentSkillPayload, InstallToolPayload, RemoveAgentSkillPayload, SaveToolConfigPayload } from "@shared/appTypes";
+import type { AgentDetectionInfo } from "@shared/appTypes";
 import { spawn as spawnChild } from "node:child_process";
 import os from "node:os";
 import { buildProcessEnv } from "../processEnv";
-import type { ToolingHelperDeps, ToolingHelpers } from "../types/orchestratorTooling.types";
+import type { RefreshCatalogOptions } from "../types/agentDetectionCache.types";
+import type { ToolAccountSwitchCommand, ToolingHelperDeps, ToolingHelpers } from "../types/orchestratorTooling.types";
+
+function escapeToolCommand(toolCommand: string): string {
+  return /\s/.test(toolCommand) ? `"${toolCommand}"` : toolCommand;
+}
 
 export function createToolingHelpers(deps: ToolingHelperDeps): ToolingHelpers {
-  const TOOL_ACCOUNT_SWITCH_COMMANDS: Record<string, "default" | null> = {
-    codex: "default",
-    claude: "default",
+  const TOOL_ACCOUNT_SWITCH_COMMANDS: Record<string, ToolAccountSwitchCommand | null> = {
+    codex: {
+      buildExecution: (toolCommand, getShellExecution) => ({
+        ...getShellExecution(`${escapeToolCommand(toolCommand)} logout && ${escapeToolCommand(toolCommand)} login`),
+        waitForExit: true
+      })
+    },
+    claude: {
+      buildExecution: (toolCommand) => ({
+        executable: toolCommand,
+        args: ["auth", "login", "--claudeai"],
+        shell: process.platform === "win32",
+        waitForExit: false
+      })
+    },
     gemini: null,
-    cursor: "default"
+    cursor: {
+      buildExecution: (toolCommand, getShellExecution) => ({
+        ...getShellExecution(`${escapeToolCommand(toolCommand)} logout && ${escapeToolCommand(toolCommand)} login`),
+        waitForExit: true
+      })
+    }
   };
 
-  async function refreshCatalog(): Promise<AppState> {
+  async function resolveDetections(force = false): Promise<AgentDetectionInfo[]> {
     const state = deps.getSnapshot();
     const remoteProject = state.project?.location?.kind === "ssh" ? state.project : null;
-    const detections = remoteProject
-      ? await deps.detectRemoteAgentCatalog(deps.getProjectTarget(remoteProject))
-      : await deps.detectLocalAgentCatalog();
+    if (remoteProject) {
+      return deps.detectRemoteAgentCatalog(deps.getProjectTarget(remoteProject));
+    }
+
+    return deps.resolveLocalAgentCatalogDetections({ force });
+  }
+
+  async function applyCatalogFromDetections(detections: AgentDetectionInfo[]): Promise<void> {
+    const state = deps.getSnapshot();
+    const remoteProject = state.project?.location?.kind === "ssh" ? state.project : null;
     const catalog = deps.buildAgentCatalog(detections, state.agentCatalog, deps.getToolConfigs());
     const agentSkillCatalogs = await deps.readAgentSkillCatalogs([...catalog.map((tool) => tool.id), deps.sharedAgentSkillsToolId]);
 
@@ -47,8 +77,66 @@ export function createToolingHelpers(deps: ToolingHelperDeps): ToolingHelpers {
       }));
     }
 
-    await deps.refreshWorkspaceSummaries("refreshCatalog");
+    await deps.reconcileWorkspaceAgentsAfterCatalogRefresh();
+  }
+
+  async function refreshCatalog(options: RefreshCatalogOptions = {}): Promise<AppState> {
+    const force = options.force ?? false;
+    const awaitDetection = options.awaitDetection ?? true;
+    const awaitWorkspaceSummaries = options.awaitWorkspaceSummaries ?? awaitDetection;
+
+    if (force) {
+      deps.invalidateLocalAgentDetectionCache();
+    }
+
+    const finishRefresh = async (detections: AgentDetectionInfo[]): Promise<void> => {
+      await applyCatalogFromDetections(detections);
+      if (awaitWorkspaceSummaries) {
+        await deps.refreshWorkspaceSummaries("refreshCatalog");
+      } else {
+        void deps.refreshWorkspaceSummaries("refreshCatalog");
+      }
+    };
+
+    if (!awaitDetection) {
+      const cachedDetections = deps.peekLocalAgentCatalogDetections();
+      if (cachedDetections) {
+        await finishRefresh(cachedDetections);
+        return deps.getSnapshot();
+      }
+
+      void resolveDetections(force)
+        .then(finishRefresh)
+        .catch((error: unknown) => {
+          console.error("[nora main] background catalog refresh failed", error);
+        });
+      return deps.getSnapshot();
+    }
+
+    const detections = await resolveDetections(force);
+    await finishRefresh(detections);
     return deps.getSnapshot();
+  }
+
+  function scheduleCatalogRefresh(): void {
+    void refreshCatalog({
+      awaitDetection: false,
+      awaitWorkspaceSummaries: false
+    });
+  }
+
+  async function refreshCatalogAfterInstall(toolId: string): Promise<AppState> {
+    try {
+      return await refreshCatalog({ force: true, awaitDetection: true, awaitWorkspaceSummaries: true });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      deps.updateCatalogTool(toolId, {
+        installStatus: "error",
+        installLog: [...(deps.getSnapshot().agentCatalog.find((item) => item.id === toolId)?.installLog || []), `[refresh error] ${message}`]
+          .slice(-deps.maxInstallLogLines)
+      });
+      return deps.getSnapshot();
+    }
   }
 
   async function installAgentTool(payload: InstallToolPayload): Promise<AppState> {
@@ -100,30 +188,37 @@ export function createToolingHelpers(deps: ToolingHelperDeps): ToolingHelpers {
     child.stdout.on("data", (chunk: Buffer) => appendLog(chunk.toString()));
     child.stderr.on("data", (chunk: Buffer) => appendLog(chunk.toString()));
 
-    child.on("error", (error: Error) => {
-      appendLog(`\n[${payload.action} error] ${error.message}\n`);
-      deps.updateCatalogTool(tool.id, {
-        installStatus: "error"
-      });
-      deps.deleteInstallSession(tool.id);
-    });
+    return new Promise<AppState>((resolve, reject) => {
+      let settled = false;
+      const finish = (action: () => Promise<AppState>): void => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        void action().then(resolve, reject);
+      };
 
-    child.on("exit", (code: number | null) => {
-      deps.updateCatalogTool(tool.id, {
-        installStatus: code === 0 ? "installed" : "error"
+      child.on("error", (error: Error) => {
+        finish(async () => {
+          appendLog(`\n[${payload.action} error] ${error.message}\n`);
+          deps.updateCatalogTool(tool.id, {
+            installStatus: "error"
+          });
+          deps.deleteInstallSession(tool.id);
+          return deps.getSnapshot();
+        });
       });
-      deps.deleteInstallSession(tool.id);
-      void deps.refreshCatalog().catch((error: unknown) => {
-        const message = error instanceof Error ? error.message : "Unknown error";
-        deps.updateCatalogTool(tool.id, {
-          installStatus: "error",
-          installLog: [...(deps.getSnapshot().agentCatalog.find((item) => item.id === tool.id)?.installLog || []), `[refresh error] ${message}`]
-            .slice(-deps.maxInstallLogLines)
+
+      child.on("exit", (code: number | null) => {
+        finish(async () => {
+          deps.updateCatalogTool(tool.id, {
+            installStatus: code === 0 ? "installed" : "error"
+          });
+          deps.deleteInstallSession(tool.id);
+          return refreshCatalogAfterInstall(tool.id);
         });
       });
     });
-
-    return deps.getSnapshot();
   }
 
   async function installToolSkill(
@@ -168,7 +263,7 @@ export function createToolingHelpers(deps: ToolingHelperDeps): ToolingHelpers {
 
     const nextConfigs = await deps.saveToolConfigStore(payload.toolId, values);
     deps.setToolConfigs(nextConfigs);
-    return deps.refreshCatalog();
+    return refreshCatalog({ force: false, awaitDetection: true, awaitWorkspaceSummaries: true });
   }
 
   async function getToolUsage(toolId: string) {
@@ -181,6 +276,13 @@ export function createToolingHelpers(deps: ToolingHelperDeps): ToolingHelpers {
       console.log("[nora main] getToolUsage skipped", {
         toolId,
         reason: !tool ? "unknown-tool" : "not-detected"
+      });
+      return null;
+    }
+    if (!tool.supportsUsageStatus) {
+      console.log("[nora main] getToolUsage skipped", {
+        toolId,
+        reason: "unsupported"
       });
       return null;
     }
@@ -200,22 +302,22 @@ export function createToolingHelpers(deps: ToolingHelperDeps): ToolingHelpers {
     if (!tool || !tool.detected) {
       throw new Error("Install this CLI before switching accounts.");
     }
+    if (!tool.supportsAccountSwitch) {
+      throw new Error(`${tool.label} does not support account switching from Nora.`);
+    }
 
     const command = TOOL_ACCOUNT_SWITCH_COMMANDS[toolId] ?? null;
     if (!command) {
       throw new Error(`Account switching is not configured for ${tool.label}.`);
     }
 
-    const toolCommand = tool.detectedCommand || tool.id;
-    const escapedToolCommand = /\s/.test(toolCommand) ? `"${toolCommand}"` : toolCommand;
-    const accountCommand = `${escapedToolCommand} logout && ${escapedToolCommand} login`;
-
-    const execution = deps.getInstallCommandExecution(accountCommand);
+    const execution = command.buildExecution(tool.detectedCommand || tool.id, deps.getInstallCommandExecution);
     await new Promise<void>((resolve, reject) => {
       const child = spawnChild(execution.executable, execution.args, {
         cwd: os.homedir(),
         env: buildProcessEnv(process.env, tool.config.values),
-        stdio: "pipe"
+        shell: execution.shell ?? false,
+        stdio: ["ignore", "pipe", "pipe"]
       });
 
       let output = "";
@@ -226,25 +328,48 @@ export function createToolingHelpers(deps: ToolingHelperDeps): ToolingHelpers {
       child.stdout.on("data", appendOutput);
       child.stderr.on("data", appendOutput);
 
+      let settled = false;
+      const cleanup = (): void => {
+        child.stdout.off("data", appendOutput);
+        child.stderr.off("data", appendOutput);
+        child.off("error", onError);
+        child.off("exit", onExit);
+      };
+      const settle = (callback: () => void): void => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        clearTimeout(timeout);
+        cleanup();
+        callback();
+      };
+
       const timeout = setTimeout(() => {
         child.kill();
-        reject(new Error(`Timed out waiting for ${tool.label} account switch.`));
+        settle(() => reject(new Error(`Timed out waiting for ${tool.label} account switch.`)));
       }, 120_000);
 
-      child.on("error", (error: Error) => {
-        clearTimeout(timeout);
-        reject(error);
-      });
-
-      child.on("exit", (code: number | null) => {
-        clearTimeout(timeout);
+      const onError = (error: Error): void => {
+        settle(() => reject(error));
+      };
+      const onExit = (code: number | null): void => {
         if (code === 0) {
-          resolve();
+          settle(resolve);
           return;
         }
 
         const trimmedOutput = output.trim();
-        reject(new Error(trimmedOutput || `${tool.label} account switch failed with exit code ${code ?? "unknown"}.`));
+        settle(() => reject(new Error(trimmedOutput || `${tool.label} account switch failed with exit code ${code ?? "unknown"}.`)));
+      };
+
+      child.on("error", onError);
+      child.on("exit", onExit);
+      child.on("spawn", () => {
+        if (!execution.waitForExit) {
+          child.unref();
+          settle(resolve);
+        }
       });
     });
   }
@@ -261,6 +386,7 @@ export function createToolingHelpers(deps: ToolingHelperDeps): ToolingHelpers {
 
   return {
     refreshCatalog,
+    scheduleCatalogRefresh,
     installAgentTool,
     installToolSkill,
     removeToolSkill,

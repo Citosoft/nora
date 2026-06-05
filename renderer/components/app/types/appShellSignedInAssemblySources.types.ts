@@ -234,6 +234,7 @@ export type AppShellSignedInChromeShellSources = {
   switchStatusBarToolAccount: AppChromeShellComposeSlice["statusBarChrome"]["onSwitchToolAccount"];
   toggleSettingsPage: () => void;
   openStartupDependenciesDialog: () => void;
+  openOnboardingFlow: () => void;
   openAddWorkspaceModal: () => Promise<AppState | null>;
   defaultIdeId: string | null;
   installedIdes: AppChromeShellComposeSlice["titleBar"]["installedIdes"];

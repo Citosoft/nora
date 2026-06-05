@@ -5,6 +5,7 @@ import { AddWorkspaceDialog as AppAddWorkspaceDialog } from "@/components/app/di
 import { KeyboardShortcutsDialog as AppKeyboardShortcutsDialog } from "@/components/app/dialogs/KeyboardShortcutsDialog";
 import { OnboardingDialog as AppOnboardingDialog } from "@/components/app/dialogs/OnboardingDialog";
 import { RemoteWorkspaceDialog as AppRemoteWorkspaceDialog } from "@/components/app/dialogs/RemoteWorkspaceDialog";
+import { ResourceMonitorDialog as AppResourceMonitorDialog } from "@/components/app/dialogs/ResourceMonitorDialog";
 import { StartupDependenciesDialog as AppStartupDependenciesDialog } from "@/components/app/dialogs/StartupDependenciesDialog";
 import { shouldRenderLoadingOnboardingDialog } from "@/components/app/logic/startupDialogVisibility";
 import type { AppPreLaunchViewProps } from "@/components/app/types/appPreLaunchView.types";
@@ -26,6 +27,7 @@ export function AppPreLaunchView({
   addWorkspaceDialogProps,
   remoteWorkspaceDialogProps,
   keyboardShortcutsDialogProps,
+  resourceMonitorDialogProps,
   aboutDialogProps
 }: AppPreLaunchViewProps) {
   if (!snapshot) {
@@ -44,6 +46,7 @@ export function AppPreLaunchView({
               <AppOnboardingDialog {...loadingOnboardingDialogProps} />
             ) : null}
             <AppStartupDependenciesDialog {...startupDependenciesDialogProps} />
+            <AppResourceMonitorDialog {...resourceMonitorDialogProps} />
           </>
         }
         footer={loadingFooter}
@@ -64,6 +67,7 @@ export function AppPreLaunchView({
             <AppAddWorkspaceDialog {...addWorkspaceDialogProps} />
             <AppRemoteWorkspaceDialog {...remoteWorkspaceDialogProps} />
             <AppKeyboardShortcutsDialog {...keyboardShortcutsDialogProps} />
+            <AppResourceMonitorDialog {...resourceMonitorDialogProps} />
             <AppAboutDialog {...aboutDialogProps} />
           </>
         }

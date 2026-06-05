@@ -1,4 +1,4 @@
-import { getWorkspaceSessionTabsToClose, isBulkClosableWorkspaceSessionTab } from "@/components/app/logic/workspaceSessionTabContextActions";
+import { getWorkspaceSessionTabsToClose, isDirectionalClosableWorkspaceSessionTab } from "@/components/app/logic/workspaceSessionTabContextActions";
 import { getWorkspaceSessionTabId, getWorkspaceSessionTabToFocusAfterClose } from "@/components/app/logic/workspaceSessionTabs";
 import type { WorkspaceSessionTab } from "@/components/app/types/workflow.types";
 import assert from "node:assert/strict";
@@ -40,11 +40,11 @@ const FILE_TAB: WorkspaceSessionTab = {
 
 const tabs: WorkspaceSessionTab[] = [AGENT_TAB, TERMINAL_TAB, BROWSER_TAB, FILE_TAB];
 
-test("isBulkClosableWorkspaceSessionTab excludes agent tabs only", () => {
-  assert.equal(isBulkClosableWorkspaceSessionTab(AGENT_TAB), false);
-  assert.equal(isBulkClosableWorkspaceSessionTab(TERMINAL_TAB), true);
-  assert.equal(isBulkClosableWorkspaceSessionTab(BROWSER_TAB), true);
-  assert.equal(isBulkClosableWorkspaceSessionTab(FILE_TAB), true);
+test("isDirectionalClosableWorkspaceSessionTab excludes agent tabs only", () => {
+  assert.equal(isDirectionalClosableWorkspaceSessionTab(AGENT_TAB), false);
+  assert.equal(isDirectionalClosableWorkspaceSessionTab(TERMINAL_TAB), true);
+  assert.equal(isDirectionalClosableWorkspaceSessionTab(BROWSER_TAB), true);
+  assert.equal(isDirectionalClosableWorkspaceSessionTab(FILE_TAB), true);
 });
 
 test("getWorkspaceSessionTabsToClose returns anchor tab for close action", () => {
@@ -52,9 +52,14 @@ test("getWorkspaceSessionTabsToClose returns anchor tab for close action", () =>
   assert.deepEqual(targets, [BROWSER_TAB]);
 });
 
-test("getWorkspaceSessionTabsToClose returns non-agent tabs for close-others action", () => {
+test("getWorkspaceSessionTabsToClose returns every tab except the anchor for close-others action", () => {
   const targets = getWorkspaceSessionTabsToClose(tabs, TERMINAL_TAB, "close-others");
-  assert.deepEqual(targets, [BROWSER_TAB, FILE_TAB]);
+  assert.deepEqual(targets, [AGENT_TAB, BROWSER_TAB, FILE_TAB]);
+});
+
+test("getWorkspaceSessionTabsToClose includes terminals for close-others action", () => {
+  const targets = getWorkspaceSessionTabsToClose(tabs, BROWSER_TAB, "close-others");
+  assert.deepEqual(targets, [AGENT_TAB, TERMINAL_TAB, FILE_TAB]);
 });
 
 test("getWorkspaceSessionTabsToClose returns only non-agent tabs on the right", () => {

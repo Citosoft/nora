@@ -209,6 +209,7 @@ export interface SessionService {
   restartLocalTerminal: () => Promise<LocalTerminalState>;
   destroyAgent: (agentId: string) => Promise<AppState>;
   destroyTerminal: (sessionId: string) => Promise<AppState>;
+  removeWorktree: (worktreeId: string) => Promise<AppState>;
   destroyLocalTerminal: () => Promise<LocalTerminalState | null>;
   stopAllAgentsGracefully: (
     onProgress?: (payload: { detail: string; command: string | null }) => void
@@ -216,7 +217,8 @@ export interface SessionService {
 }
 
 export interface ToolingService {
-  refreshCatalog: () => Promise<AppState>;
+  refreshCatalog: (options?: import("@main/types/agentDetectionCache.types").RefreshCatalogOptions) => Promise<AppState>;
+  scheduleCatalogRefresh: () => void;
   installAgentTool: (payload: InstallToolPayload) => Promise<AppState>;
   searchToolSkills: (toolId: string, query: string) => Promise<AgentSkillSearchResult>;
   installToolSkill: (

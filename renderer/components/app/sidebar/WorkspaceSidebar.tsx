@@ -81,6 +81,13 @@ export const WorkspaceSidebar = () => {
     onOpenWorkspaceBrowser,
     onFocusWorkspace,
     onFocusWorkspaceView,
+    onFocusWorkspaceWorktree,
+    onOpenCreateAgentOnWorktree,
+    onOpenCreateTerminalOnWorktree,
+    onOpenCreateWorktree,
+    onLaunchQuickTerminalOnWorktree,
+    onLaunchWorktreeScript,
+    onRemoveWorktree,
     onFocusAgent,
     onFocusTerminal,
     onFocusWorkspaceAgent,
@@ -169,12 +176,14 @@ export const WorkspaceSidebar = () => {
   });
 
   const {
+    collapsedWorkspaceWorktreeSectionIds,
     collapsedWorkspaceAgentSectionIds,
     collapsedWorkspaceTerminalSectionIds,
     collapsedWorkspaceAiChatSectionIds,
     collapsedWorkspaceNoteSectionIds,
     collapsedWorkspaceSpecSectionIds,
     collapsedWorkspaceTaskSectionIds,
+    toggleWorkspaceWorktreeSection,
     toggleWorkspaceAgentSection,
     toggleWorkspaceTerminalSection,
     toggleWorkspaceAiChatSection,
@@ -293,12 +302,14 @@ export const WorkspaceSidebar = () => {
                           projectFaviconUrlByProjectId={projectFaviconUrlByProjectId}
                           collapsedWorkspaceIds={collapsedWorkspaceIds}
                           onCollapsedWorkspaceIdsChange={onCollapsedWorkspaceIdsChange}
+                          collapsedWorkspaceWorktreeSectionIds={collapsedWorkspaceWorktreeSectionIds}
                           collapsedWorkspaceAgentSectionIds={collapsedWorkspaceAgentSectionIds}
                           collapsedWorkspaceTerminalSectionIds={collapsedWorkspaceTerminalSectionIds}
                           collapsedWorkspaceAiChatSectionIds={collapsedWorkspaceAiChatSectionIds}
                           collapsedWorkspaceNoteSectionIds={collapsedWorkspaceNoteSectionIds}
                           collapsedWorkspaceSpecSectionIds={collapsedWorkspaceSpecSectionIds}
                           collapsedWorkspaceTaskSectionIds={collapsedWorkspaceTaskSectionIds}
+                          toggleWorkspaceWorktreeSection={toggleWorkspaceWorktreeSection}
                           toggleWorkspaceAgentSection={toggleWorkspaceAgentSection}
                           toggleWorkspaceTerminalSection={toggleWorkspaceTerminalSection}
                           toggleWorkspaceAiChatSection={toggleWorkspaceAiChatSection}
@@ -339,6 +350,13 @@ export const WorkspaceSidebar = () => {
                           openWorkspaceMenu={openWorkspaceMenu}
                           onFocusWorkspace={onFocusWorkspace}
                           onFocusWorkspaceView={onFocusWorkspaceView}
+                          onFocusWorkspaceWorktree={onFocusWorkspaceWorktree}
+                          onOpenCreateAgentOnWorktree={onOpenCreateAgentOnWorktree}
+                          onOpenCreateTerminalOnWorktree={onOpenCreateTerminalOnWorktree}
+                          onOpenCreateWorktree={onOpenCreateWorktree}
+                          onLaunchQuickTerminalOnWorktree={onLaunchQuickTerminalOnWorktree}
+                          onLaunchWorktreeScript={onLaunchWorktreeScript}
+                          onRemoveWorktree={onRemoveWorktree}
                           onOpenCreateAgent={onOpenCreateAgent}
                           onOpenCreateTerminal={onOpenCreateTerminal}
                           onLaunchWorkspaceTerminal={onLaunchWorkspaceTerminal}

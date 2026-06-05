@@ -341,6 +341,7 @@ export function createSessionCreationHelpers(deps: SessionCreationDeps): Session
       status: "starting",
       isBusy: true,
       workspace: worktree.path,
+      currentWorkingDirectory: worktree.path,
       branch: worktree.branch,
       host: project.location?.kind === "ssh" ? project.location.host : "local",
       shellId: shell.id,

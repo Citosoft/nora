@@ -1,4 +1,4 @@
-import type { GithubBranchPullRequestState, WorkspaceSummary } from "@shared/appTypes";
+import type { GithubBranchPullRequestState, WorktreeRecord, WorkspaceSummary } from "@shared/appTypes";
 
 export const formatWorkspaceSessionTimestamp = (value: string): string => {
   const date = new Date(value);
@@ -31,3 +31,32 @@ export const getWorkspaceSidebarTooltip = (workspace: WorkspaceSummary): string 
     ? `${workspace.project.name}\n${directSshLabel}\n${workspace.project.rootPath}`
     : workspace.project.rootPath;
 };
+
+export const formatWorkspaceSidebarWorktreeLocationLabel = (
+  worktree: Pick<WorktreeRecord, "path" | "createdFromRef">,
+  projectRootPath: string
+): string => {
+  if (worktree.path === projectRootPath || worktree.createdFromRef === "ROOT") {
+    return "Root";
+  }
+
+  const normalizedPath = worktree.path.replace(/\\/g, "/");
+  const segments = normalizedPath.split("/").filter(Boolean);
+  return segments[segments.length - 1] || worktree.path;
+};
+
+export const sortWorkspaceSidebarWorktrees = (
+  worktrees: WorktreeRecord[],
+  projectRootPath: string
+): WorktreeRecord[] =>
+  worktrees
+    .filter((worktree) => worktree.status !== "removing")
+    .sort((left, right) => {
+      if (left.path === projectRootPath) {
+        return -1;
+      }
+      if (right.path === projectRootPath) {
+        return 1;
+      }
+      return right.lastUsedAt.localeCompare(left.lastUsedAt);
+    });

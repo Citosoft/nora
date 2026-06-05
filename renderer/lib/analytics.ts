@@ -116,10 +116,10 @@ export function trackAppLaunchEvent(): void {
   }
 
   appLaunchEventTracked = true;
-  capturePostHogEvent("app.launched", toEventProperties(coarseLaunchContext));
+  capturePostHogEvent("app.launched", buildCoarseLaunchEventProperties(coarseLaunchContext));
 }
 
-function toEventProperties(context: AnalyticsCoarseLaunchContext): EventProperties {
+function buildCoarseLaunchEventProperties(context: AnalyticsCoarseLaunchContext): EventProperties {
   return {
     appVersion: context.appVersion,
     environment: context.environment,

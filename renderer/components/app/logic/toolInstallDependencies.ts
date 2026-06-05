@@ -40,6 +40,9 @@ export function getMissingInstallDependencies(
 }
 
 export function formatDependencyLabel(dependencyId: StartupDependencyId): string {
+  if (dependencyId === "gh") {
+    return "GitHub CLI";
+  }
   if (dependencyId === "npm" || dependencyId === "npx") {
     return dependencyId;
   }

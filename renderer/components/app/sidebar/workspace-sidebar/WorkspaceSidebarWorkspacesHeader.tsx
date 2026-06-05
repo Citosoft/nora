@@ -9,10 +9,10 @@ export const WorkspaceSidebarWorkspacesHeader = (props: WorkspaceSidebarWorkspac
 
   return (
     <div className="workspace-shell-surface flex h-[52px] items-center justify-between bg-background/70 px-4">
-      <div className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">Workspaces</div>
+      <div className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">Projects</div>
       <div className="flex items-center gap-1">
         {variant === "active-project" ? (
-          <Button variant="ghost" size="icon" className="size-8" onClick={onChooseProject} aria-label="Add workspace">
+          <Button variant="ghost" size="icon" className="size-8" onClick={onChooseProject} aria-label="Add project">
             <Plus className="size-4" />
           </Button>
         ) : (
@@ -26,20 +26,20 @@ export const WorkspaceSidebarWorkspacesHeader = (props: WorkspaceSidebarWorkspac
           className="size-8"
           onClick={onToggleCollapseAllWorkspaces}
           disabled={!hasWorkspaceGroups}
-          aria-label={allWorkspaceGroupsCollapsed ? "Expand all workspaces" : "Collapse all workspaces"}
+          aria-label={allWorkspaceGroupsCollapsed ? "Expand all projects" : "Collapse all projects"}
         >
           <ChevronsUpDown className="size-4" />
         </Button>
         {variant === "active-project" ? (
-          <Button variant="ghost" size="icon" className="size-8" onClick={props.onRefresh} aria-label="Refresh workspace">
+          <Button variant="ghost" size="icon" className="size-8" onClick={props.onRefresh} aria-label="Refresh project">
             <RefreshCcw className="size-4" />
           </Button>
         ) : null}
-        <Button variant="ghost" size="icon" className="size-8" onClick={onResetWorkspaces} aria-label="Reset workspaces">
+        <Button variant="ghost" size="icon" className="size-8" onClick={onResetWorkspaces} aria-label="Reset projects">
           <Trash2 className="size-4" />
         </Button>
         {variant === "active-project" ? (
-          <Button variant="ghost" size="icon" className="size-8" onClick={props.onCloseProject} aria-label="Exit workspace">
+          <Button variant="ghost" size="icon" className="size-8" onClick={props.onCloseProject} aria-label="Exit project">
             <X className="size-4" />
           </Button>
         ) : null}

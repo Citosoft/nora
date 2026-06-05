@@ -18,12 +18,14 @@ export type WorkspaceSidebarWorkspaceGroupProps = {
   projectFaviconUrlByProjectId: Record<string, string | null>;
   collapsedWorkspaceIds: Record<string, boolean>;
   onCollapsedWorkspaceIdsChange: (updater: (current: Record<string, boolean>) => Record<string, boolean>) => void;
+  collapsedWorkspaceWorktreeSectionIds: Record<string, boolean>;
   collapsedWorkspaceAgentSectionIds: Record<string, boolean>;
   collapsedWorkspaceTerminalSectionIds: Record<string, boolean>;
   collapsedWorkspaceAiChatSectionIds: Record<string, boolean>;
   collapsedWorkspaceNoteSectionIds: Record<string, boolean>;
   collapsedWorkspaceSpecSectionIds: Record<string, boolean>;
   collapsedWorkspaceTaskSectionIds: Record<string, boolean>;
+  toggleWorkspaceWorktreeSection: (workspaceId: string) => void;
   toggleWorkspaceAgentSection: (workspaceId: string) => void;
   toggleWorkspaceTerminalSection: (workspaceId: string) => void;
   toggleWorkspaceAiChatSection: (workspaceId: string) => void;
@@ -64,6 +66,13 @@ export type WorkspaceSidebarWorkspaceGroupProps = {
   openWorkspaceMenu: (workspaceId: string, event: MouseEvent<HTMLDivElement | HTMLButtonElement>) => void;
   onFocusWorkspace: (projectId: string) => void;
   onFocusWorkspaceView: (worktreeId: string) => void;
+  onFocusWorkspaceWorktree: (workspaceId: string, worktreeId: string) => void;
+  onOpenCreateAgentOnWorktree: (projectId: string, worktreeId: string) => void;
+  onOpenCreateTerminalOnWorktree: (projectId: string, worktreeId: string) => void;
+  onOpenCreateWorktree: (projectId: string) => void;
+  onLaunchQuickTerminalOnWorktree: (projectId: string, worktreeId: string) => void;
+  onLaunchWorktreeScript: (projectId: string, payload: CreateTerminalPayload) => void;
+  onRemoveWorktree: (projectId: string, worktreeId: string, branch: string) => void;
   onOpenCreateAgent: () => void;
   onOpenCreateTerminal: (defaults: CreateTerminalDialogDefaults) => void;
   onLaunchWorkspaceTerminal: (projectId: string, payload: CreateTerminalPayload) => void;

@@ -1,11 +1,11 @@
 import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
-import {
-  useChangesPanelChrome,
+import { useChangesPanelChrome,
   useChangesPanelFiles,
   useChangesPanelForge,
   useChangesPanelVercel,
   useChangesPanelWorkspace
 } from "@/components/app/context/changesPanelContext";
+import { useDiffAnnotations } from "@/components/app/context/diffAnnotationContext";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
 import { useWorkspaceAgentContextSources } from "@/components/app/hooks/useWorkspaceAgentContextSources";
 import { useWorkspaceExternalHarnessSessions } from "@/components/app/hooks/useWorkspaceExternalHarnessSessions";
@@ -14,6 +14,7 @@ import { formatTimestamp } from "@/components/app/logic/utils";
 import { setWorkspaceRelativePathDragData } from "@/components/app/logic/workspacePathDrag";
 import { FileTreePanel } from "@/components/app/panels/FileTreePanel";
 import { ForgePanel } from "@/components/app/panels/ForgePanel";
+import { DiffReviewCountBadge, DiffReviewTray } from "@/components/app/panels/diff-annotation/DiffReviewTray";
 import { VercelPanel } from "@/components/app/panels/VercelPanel";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { ForgeProviderIcon } from "@/components/app/views/ForgeProviderIcon";
@@ -270,6 +271,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
     onInspectCommit,
     onClearCommitInspection
   } = useChangesPanelChrome();
+  const { annotationCount, getAnnotationCountForPath } = useDiffAnnotations();
   const statusBar = useStatusBar();
   const [commitMessage, setCommitMessage] = useState("");
   const [isCommitting, setIsCommitting] = useState(false);
@@ -1596,6 +1598,11 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                         >
                           Full diff
                         </Button>
+                        {annotationCount > 0 ? (
+                          <div className="flex h-6 items-center border-r border-border/70 px-2">
+                            <DiffReviewCountBadge count={annotationCount} />
+                          </div>
+                        ) : null}
                         {!isInspectingCommit ? (
                           <>
                             <Button
@@ -1637,25 +1644,28 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
               </div>
               {isChangedFilesCollapsed ? null : (
                 <div>
-                  {snapshot.changes.map((change) => (
+                  {snapshot.changes.map((change) => {
+                    const pathAnnotationCount = getAnnotationCountForPath(change.path);
+
+                    return (
                     <div
                       key={change.path}
                       className={cn(
-                        "border-l-2 px-4 py-3 transition",
+                        "border-l-2 px-3 py-1.5 transition",
                         selectedChange?.path === change.path
                           ? "border-primary bg-primary/10"
                           : "border-transparent hover:bg-accent/30"
                       )}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex min-w-0 items-center gap-1.5">
                         {!isInspectingCommit ? (
                           <label
-                            className="grid size-5 shrink-0 place-items-center"
+                            className="grid size-4 shrink-0 place-items-center"
                             onClick={(event) => event.stopPropagation()}
                           >
                             <input
                               type="checkbox"
-                              className="size-3.5 rounded-[4px] border border-input bg-background"
+                              className="size-3 rounded-[3px] border border-input bg-background"
                               checked={selectedPathSet.has(change.path)}
                               onChange={() => toggleCommitPath(change.path)}
                               aria-label={`Include ${change.path} in commit`}
@@ -1665,62 +1675,61 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                         <button
                           type="button"
                           onClick={() => void onSelectChange(change.path)}
-                          title={change.path}
-                          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                          title={`${change.path}\n${change.status} · +${change.additions} · -${change.deletions}`}
+                          className="flex min-w-0 flex-1 items-center gap-2 text-left"
                         >
-                          <div className={cn("w-4 shrink-0 text-xs font-semibold uppercase", changeTone(change.status))}>
+                          <span className={cn("w-3.5 shrink-0 text-[10px] font-semibold leading-none", changeTone(change.status))}>
                             {changeGlyph(change.status)}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-medium">{change.path}</div>
-                            <div className="mt-1 flex items-center gap-3 text-[11px] text-muted-foreground">
-                              <div className="uppercase tracking-[0.12em]">{change.status}</div>
-                              <div className="flex items-center gap-1">
-                                <Plus className="size-3 text-emerald-500" />
-                                <span>{change.additions}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Minus className="size-3 text-destructive" />
-                                <span>{change.deletions}</span>
-                              </div>
-                            </div>
-                          </div>
+                          </span>
+                          <span className="min-w-0 flex-1 truncate text-[12px] font-medium leading-none">{change.path}</span>
+                          <span className="flex shrink-0 items-center gap-2 text-[10px] tabular-nums leading-none text-muted-foreground">
+                            <span className="flex items-center gap-0.5">
+                              <Plus className="size-2.5 text-emerald-500" />
+                              {change.additions}
+                            </span>
+                            <span className="flex items-center gap-0.5">
+                              <Minus className="size-2.5 text-destructive" />
+                              {change.deletions}
+                            </span>
+                          </span>
+                          {pathAnnotationCount > 0 ? <DiffReviewCountBadge count={pathAnnotationCount} /> : null}
                         </button>
                         {!isInspectingCommit ? (
                           <>
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="shrink-0 text-destructive hover:text-destructive"
+                              className="size-7 shrink-0 text-destructive hover:text-destructive"
                               tooltip={change.status.trim() === "??" ? "Delete untracked file" : "Discard file changes"}
                               onClick={() => void handleDiscardChange(change)}
                               aria-label={change.status.trim() === "??" ? `Delete ${change.path}` : `Discard changes in ${change.path}`}
                               disabled={discardingChangePath === change.path}
                             >
                               {discardingChangePath === change.path ? (
-                                <LoaderCircle className="size-4 animate-spin" />
+                                <LoaderCircle className="size-3.5 animate-spin" />
                               ) : (
-                                <Undo2 className="size-4" />
+                                <Undo2 className="size-3.5" />
                               )}
                             </Button>
                             {canEditChange(change) ? (
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="shrink-0"
+                                className="size-7 shrink-0"
                                 tooltip="Edit file"
                                 onClick={() => onEditChange(change.path)}
                                 aria-label={`Edit ${change.path}`}
                                 disabled={discardingChangePath === change.path}
                               >
-                                <FilePenLine className="size-4" />
+                                <FilePenLine className="size-3.5" />
                               </Button>
                             ) : null}
                           </>
                         ) : null}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1729,6 +1738,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
               {isInspectingCommit ? "No diff available for this commit." : "The focused worktree is clean right now."}
             </div>
           )}
+          {activeTab === "git" && !isInspectingCommit ? <DiffReviewTray /> : null}
         </CardContent>
       )}
     </section>
