@@ -32,6 +32,7 @@ type WorkspaceOpsDeps = {
 
 const IMPORTED_CONTEXT_BUNDLE_HEADER_BYTES = 24 * 1024;
 const IMPORTED_CONTEXT_BUNDLE_MAX_FULL_READ_BYTES = 5 * 1024 * 1024;
+const WORKSPACE_FILE_LIST_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
 
 export function createWorkspaceOperations(deps: WorkspaceOpsDeps) {
   function getStatePath(target: WorkspaceTarget, projectId: string, relativePath: string, storageMode = loadWorkspaceStateStorageMode()): string {
@@ -389,7 +390,11 @@ export function createWorkspaceOperations(deps: WorkspaceOpsDeps) {
   }
 
   async function listWorkspaceTrackedAndUntrackedFiles(target: WorkspaceTarget): Promise<string[]> {
-    const { stdout } = await deps.execGit(target, ["ls-files", "--cached", "--others", "--exclude-standard", "--full-name"]);
+    const { stdout } = await deps.execGit(
+      target,
+      ["ls-files", "--cached", "--others", "--exclude-standard", "--full-name"],
+      WORKSPACE_FILE_LIST_MAX_BUFFER_BYTES
+    );
     const unique = new Set(
       stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
     );

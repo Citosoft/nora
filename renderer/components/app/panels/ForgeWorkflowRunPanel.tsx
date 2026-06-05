@@ -153,7 +153,7 @@ export function ForgeWorkflowRunPanel({
                       onClick={() => onOpenUrl(detail.webUrl)}
                     >
                       <ExternalLink className="size-3.5" aria-hidden />
-                      Open on GitHub
+                      Open run
                     </Button>
                   ) : null}
                 </div>
@@ -308,7 +308,7 @@ function StepTimelineGlyph({ conclusion, status }: { conclusion: string | null; 
     );
   }
 
-  if (co === "failure" || co === "cancelled" || co === "timed_out" || co === "action_required") {
+  if (co === "failure" || co === "failed" || co === "cancelled" || co === "canceled" || co === "timed_out" || co === "action_required") {
     return (
       <span
         className="flex size-5 shrink-0 items-center justify-center rounded-full bg-destructive text-destructive-foreground ring-2 ring-background"
@@ -330,7 +330,16 @@ function StepTimelineGlyph({ conclusion, status }: { conclusion: string | null; 
     );
   }
 
-  if (st === "in_progress" || st === "queued" || st === "pending" || st === "waiting") {
+  if (
+    st === "in_progress" ||
+    st === "queued" ||
+    st === "pending" ||
+    st === "waiting" ||
+    st === "running" ||
+    st === "created" ||
+    st === "preparing" ||
+    st === "scheduled"
+  ) {
     return (
       <span
         className="flex size-5 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white ring-2 ring-background"
@@ -354,10 +363,18 @@ function StatusIcon({ status }: { status: string }) {
   if (normalized === "success") {
     return <CheckCircle2 className="size-4 text-emerald-500" aria-hidden />;
   }
-  if (normalized === "failure" || normalized === "cancelled" || normalized === "timed_out") {
+  if (normalized === "failure" || normalized === "failed" || normalized === "cancelled" || normalized === "canceled" || normalized === "timed_out") {
     return <XCircle className="size-4 text-destructive" aria-hidden />;
   }
-  if (normalized === "in_progress" || normalized === "queued" || normalized === "pending") {
+  if (
+    normalized === "in_progress" ||
+    normalized === "queued" ||
+    normalized === "pending" ||
+    normalized === "running" ||
+    normalized === "created" ||
+    normalized === "preparing" ||
+    normalized === "scheduled"
+  ) {
     return <LoaderCircle className="size-4 animate-spin text-amber-500" aria-hidden />;
   }
   return <Clock3 className="size-4 text-muted-foreground" aria-hidden />;

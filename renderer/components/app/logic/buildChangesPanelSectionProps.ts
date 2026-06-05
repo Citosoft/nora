@@ -1,6 +1,7 @@
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
 import { noraWorkspaceManagementClient } from "@/components/app/clients/noraWorkspaceManagementClient";
+import { parseForgeWorkflowRunNumber } from "@/components/app/logic/forgeWorkflowRuns";
 import type { ChangesPanelSectionProps } from "@/components/app/types/changesPanel.types";
 import type { ChangesPanelSectionBuildDeps } from "@/components/app/types/changesPanelSectionBuild.types";
 import type { AppState } from "@shared/appTypes";
@@ -40,8 +41,8 @@ export const buildChangesPanelSectionProps = (
       if (!snapshot.project) {
         return;
       }
-      const runId = Number.parseInt(run.id.replace(/^github-workflow-run-/, ""), 10);
-      if (!Number.isInteger(runId) || runId < 1) {
+      const runId = parseForgeWorkflowRunNumber(run);
+      if (!runId) {
         return;
       }
       d.openForgeViewer(snapshot.project.id, "workflow_run", runId, run.name);
@@ -61,6 +62,7 @@ export const buildChangesPanelSectionProps = (
     },
     onForgeCommentSubmit: (payload) => d.addForgeWorkItemComment(payload),
     onSpawnIssueAgent: (toolId) => d.handleSpawnForgeIssueAgent(toolId),
+    onSpawnReviewAgent: (toolId, selections, targetMode) => d.handleSpawnForgeReviewAgent(toolId, selections, targetMode),
     onOpenCreatePullRequest: () => d.setIsCreatePullRequestDialogOpen(true)
   },
   vercel: {

@@ -45,6 +45,9 @@ export async function getLocalAiRuntimeStatus(): Promise<LocalAiRuntimeStatus> {
   const checkedPaths = getLocalLlamaExecutableCandidates();
   for (const candidate of checkedPaths) {
     if (await isExecutableFile(candidate)) {
+      if (candidate === getManagedLlamaExecutablePath()) {
+        await repairLocalLlamaRuntimeSharedLibraryLinks(path.dirname(candidate));
+      }
       return {
         state: "installed",
         executablePath: candidate,
@@ -62,6 +65,40 @@ export async function getLocalAiRuntimeStatus(): Promise<LocalAiRuntimeStatus> {
 
 export async function getLocalLlamaExecutablePath(): Promise<string | null> {
   return (await getLocalAiRuntimeStatus()).executablePath;
+}
+
+export function buildLocalLlamaRuntimeEnv(
+  executablePath: string,
+  sourceEnv: NodeJS.ProcessEnv = process.env
+): NodeJS.ProcessEnv {
+  const runtimeDirectory = path.dirname(executablePath);
+  const env = buildProcessEnv(sourceEnv);
+
+  if (process.platform === "win32") {
+    env.PATH = [runtimeDirectory, env.PATH].filter(Boolean).join(path.delimiter);
+    return env;
+  }
+
+  if (process.platform === "darwin") {
+    env.DYLD_LIBRARY_PATH = [runtimeDirectory, env.DYLD_LIBRARY_PATH].filter(Boolean).join(path.delimiter);
+    return env;
+  }
+
+  env.LD_LIBRARY_PATH = [runtimeDirectory, env.LD_LIBRARY_PATH].filter(Boolean).join(path.delimiter);
+  return env;
+}
+
+export async function repairLocalLlamaRuntimeSharedLibraryLinks(runtimeDirectory: string): Promise<void> {
+  if (process.platform !== "linux") {
+    return;
+  }
+
+  const entries = await fsPromises.readdir(runtimeDirectory, { withFileTypes: true });
+  await Promise.all(
+    entries
+      .filter((entry) => entry.isFile())
+      .map((entry) => createLinuxSharedLibrarySonameLink(runtimeDirectory, entry.name))
+  );
 }
 
 export async function installLocalAiRuntime(): Promise<LocalAiRuntimeStatus> {
@@ -197,6 +234,7 @@ async function installManagedLlamaRuntimeFromArchive(
     await fsPromises.mkdir(runtimeDirectory, { recursive: true });
     await copyRuntimeDirectoryContents(sourceDirectory, runtimeDirectory);
     await ensurePosixExecutable(runtimeDirectory);
+    await repairLocalLlamaRuntimeSharedLibraryLinks(runtimeDirectory);
   } finally {
     await fsPromises.rm(tempDirectory, { recursive: true, force: true });
   }
@@ -259,7 +297,34 @@ async function copyRuntimeDirectoryContents(sourceDirectory: string, destination
     }
     if (entry.isFile()) {
       await fsPromises.copyFile(sourcePath, destinationPath);
+      continue;
     }
+    if (entry.isSymbolicLink()) {
+      const linkTarget = await fsPromises.readlink(sourcePath);
+      await fsPromises.symlink(linkTarget, destinationPath);
+    }
+  }
+}
+
+async function createLinuxSharedLibrarySonameLink(runtimeDirectory: string, fileName: string): Promise<void> {
+  const sonameMatch = /^(lib.+\.so\.\d+)\.\d+(?:\.\d+)*$/.exec(fileName);
+  if (!sonameMatch) {
+    return;
+  }
+
+  const linkName = sonameMatch[1];
+  const linkPath = path.join(runtimeDirectory, linkName);
+  try {
+    await fsPromises.lstat(linkPath);
+    return;
+  } catch {
+    // Missing SONAME links are expected for older managed runtime copies.
+  }
+
+  try {
+    await fsPromises.symlink(fileName, linkPath);
+  } catch {
+    await fsPromises.copyFile(path.join(runtimeDirectory, fileName), linkPath);
   }
 }
 

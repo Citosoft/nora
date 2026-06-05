@@ -128,6 +128,7 @@ export function WorkspaceSessionPanel() {
     onForgeAction,
     onForgeCommentSubmit,
     onSpawnIssueAgent,
+    onSpawnReviewAgent,
     onFocusFileEditorTab,
     onCloseFileEditorTab,
     onSetActiveWorkspaceContentTab,
@@ -362,7 +363,8 @@ export function WorkspaceSessionPanel() {
       onRefreshDetail: onRefreshForgeItem,
       onAction: onForgeAction,
       onCommentSubmit: onForgeCommentSubmit,
-      onSpawnIssueAgent: onSpawnIssueAgent
+      onSpawnIssueAgent: onSpawnIssueAgent,
+      onSpawnReviewAgent: onSpawnReviewAgent
     }),
     [
       forgeActionLoading,
@@ -376,7 +378,8 @@ export function WorkspaceSessionPanel() {
       onForgeCommentSubmit,
       onOpenForgeUrl,
       onRefreshForgeItem,
-      onSpawnIssueAgent
+      onSpawnIssueAgent,
+      onSpawnReviewAgent
     ]
   );
 

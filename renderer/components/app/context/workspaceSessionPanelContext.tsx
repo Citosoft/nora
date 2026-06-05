@@ -1,5 +1,6 @@
 import { noraSessionClient } from "@/components/app/clients/noraSessionClient";
 import { noraToolingManagementClient } from "@/components/app/clients/noraToolingManagementClient";
+import { parseForgeWorkflowRunNumber } from "@/components/app/logic/forgeWorkflowRuns";
 import { requestCloseFileEditorTab } from "@/components/app/logic/requestCloseFileEditorTab";
 import { buildDestroyTerminalGuardMessage } from "@/components/app/logic/sessionCloseGuard";
 import type { WorkspaceSessionPanelProps } from "@/components/app/types/panel.types";
@@ -271,8 +272,8 @@ export const createWorkspaceSessionPanelValue = (d: WorkspaceSessionPanelBuildDe
     if (!d.project?.id) {
       return;
     }
-    const runId = Number.parseInt(run.id.replace(/^github-workflow-run-/, ""), 10);
-    if (!Number.isInteger(runId) || runId < 1) {
+    const runId = parseForgeWorkflowRunNumber(run);
+    if (!runId) {
       return;
     }
     d.openForgeViewer(d.project.id, "workflow_run", runId, run.name);
@@ -301,6 +302,9 @@ export const createWorkspaceSessionPanelValue = (d: WorkspaceSessionPanelBuildDe
   },
   onSpawnIssueAgent: async (toolId) => {
     await d.handleSpawnForgeIssueAgent(toolId);
+  },
+  onSpawnReviewAgent: async (toolId, selections, targetMode) => {
+    await d.handleSpawnForgeReviewAgent(toolId, selections, targetMode);
   },
   onAddItemToView: (item) => {
     void d.workspaceSessionViews.addItem(item);
@@ -484,6 +488,7 @@ export function WorkspaceSessionPanelProvider({
     onForgeAction: value.onForgeAction,
     onForgeCommentSubmit: value.onForgeCommentSubmit,
     onSpawnIssueAgent: value.onSpawnIssueAgent,
+    onSpawnReviewAgent: value.onSpawnReviewAgent,
     onAddItemToView: value.onAddItemToView,
     onAddItemToSlot: value.onAddItemToSlot,
     onMoveTile: value.onMoveTile,

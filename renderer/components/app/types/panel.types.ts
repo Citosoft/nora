@@ -19,6 +19,10 @@ import type {
   WorkspaceTaskBoardsState,
   WorkspaceTasksState
 } from "@/components/app/types";
+import type {
+  ForgeReviewAgentTargetMode,
+  ForgeReviewCommentSelection
+} from "@/components/app/types/forgeReviewHandoff.types";
 import type { FileEditorAgentSendTarget } from "@/components/app/types/fileEditor.types";
 import type {
   OpenWorkspaceFileEditorOptions,
@@ -157,6 +161,11 @@ export type ForgePanelProps = {
   onAction: (action: ForgeWorkItemAction) => void;
   onCommentSubmit: (payload: ForgeAddCommentPayload) => Promise<void>;
   onSpawnIssueAgent: (toolId: string) => Promise<void>;
+  onSpawnReviewAgent: (
+    toolId: string,
+    selections: ForgeReviewCommentSelection[],
+    targetMode: ForgeReviewAgentTargetMode
+  ) => Promise<void>;
 };
 
 export type ForgeDetailPanelProps = Pick<
@@ -175,6 +184,7 @@ export type ForgeDetailPanelProps = Pick<
   | "onAction"
   | "onCommentSubmit"
   | "onSpawnIssueAgent"
+  | "onSpawnReviewAgent"
 > & {
   repoFullName?: string | null;
   repoProvider?: "github" | "gitlab";
@@ -460,6 +470,11 @@ export type WorkspaceSessionPanelProps = {
   onForgeAction: (action: ForgeWorkItemAction) => void;
   onForgeCommentSubmit: (payload: ForgeAddCommentPayload) => Promise<void>;
   onSpawnIssueAgent: (toolId: string) => Promise<void>;
+  onSpawnReviewAgent: (
+    toolId: string,
+    selections: ForgeReviewCommentSelection[],
+    targetMode: ForgeReviewAgentTargetMode
+  ) => Promise<void>;
   onAddItemToView: (item: WorkspaceSplitViewItemReference) => void;
   onAddItemToSlot: (item: WorkspaceSplitViewItemReference, column: number, row: number) => void;
   onMoveTile: (tileId: string, deltaColumn: number, deltaRow: number) => void;

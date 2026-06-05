@@ -5,6 +5,7 @@ export const buildForgeSignedInAssemblySlice = ({
   integration,
   resolveGitlabForgeRepoOverride,
   handleSpawnForgeIssueAgent,
+  handleSpawnForgeReviewAgent,
   focusedForgeViewerTab
 }: ForgeSignedInAssemblySliceInput): AppShellSignedInForgeSources => {
   const f = integration;
@@ -23,6 +24,7 @@ export const buildForgeSignedInAssemblySlice = ({
     refreshForgeOverview: f.refreshForgeOverview,
     resolveGitlabForgeRepoOverride,
     handleSpawnForgeIssueAgent,
+    handleSpawnForgeReviewAgent,
     focusedForgeViewerTab,
     handleCreateForgePullRequest: f.handleCreateForgePullRequest
   };

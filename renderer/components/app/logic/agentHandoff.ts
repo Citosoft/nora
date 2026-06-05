@@ -1,5 +1,6 @@
 import { noraAgentClient } from "@/components/app/clients/noraAgentClient";
 import { noraAppClient } from "@/components/app/clients/noraAppClient";
+import { queueAgentInputDraftHandoff } from "@/components/app/logic/agentInputDraftHandoff";
 import { normalizeSnapshot } from "@/components/app/logic/appUtils";
 import type { UpdateSnapshot } from "@/components/app/types/component.types";
 import type { AgentPromptSubmission } from "@shared/appTypes";
@@ -223,6 +224,7 @@ export async function handoffPromptToAgent(options: {
     await options.focusAgent(options.agentId);
   }
 
+  queueAgentInputDraftHandoff(options.agentId, options.prompt.text);
   await waitForAgentConversationReady(options.agentId, options.updateSnapshot);
   await sendPromptToAgent(options.agentId, options.prompt, options.updateSnapshot);
 }

@@ -230,7 +230,7 @@ function normalizeStoredForgeViewerTab(value: unknown): ForgeViewerTabState | nu
     typeof value.title === "string" && value.title.trim()
       ? value.title.trim()
       : kind === "workflow_run"
-        ? `Action #${numberRaw}`
+        ? `Run #${numberRaw}`
         : `${kind === "pull_request" ? "PR" : "Issue"} #${numberRaw}`;
   const forgeRepoHostOverride =
     typeof value.forgeRepoHostOverride === "string" && value.forgeRepoHostOverride.trim().length > 0

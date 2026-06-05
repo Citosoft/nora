@@ -49,6 +49,7 @@ export type WorkspaceSessionCenterSlotContentProps = {
     | "onAction"
     | "onCommentSubmit"
     | "onSpawnIssueAgent"
+    | "onSpawnReviewAgent"
   >;
   stableTools: AgentCatalogEntry[];
   forgeOverview: ForgeOverview | null;

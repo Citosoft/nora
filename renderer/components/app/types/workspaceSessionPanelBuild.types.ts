@@ -73,6 +73,7 @@ export type WorkspaceSessionPanelOrchestrationDeps = {
   handleOpenWorkspaceBrowser: WorkspaceSessionPanelProps["onOpenWorkspaceBrowser"];
   handleSelectAiChatProviderModel: WorkspaceSessionPanelProps["onSelectAiChatProviderModel"];
   handleSpawnForgeIssueAgent: WorkspaceSessionPanelProps["onSpawnIssueAgent"];
+  handleSpawnForgeReviewAgent: WorkspaceSessionPanelProps["onSpawnReviewAgent"];
   loadForgeWorkItemDetail: (
     kind: ForgeWorkItemKind,
     number: number,

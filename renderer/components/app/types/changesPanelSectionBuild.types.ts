@@ -30,6 +30,7 @@ export type ChangesPanelSectionBuildDeps = {
   forgeOverview: ChangesPanelForgeSlice["overview"];
   forgeWorkItemDetail: ForgeWorkItemDetail | null;
   handleSpawnForgeIssueAgent: ChangesPanelForgeSlice["onSpawnIssueAgent"];
+  handleSpawnForgeReviewAgent: ChangesPanelForgeSlice["onSpawnReviewAgent"];
   isChangesSidebarCollapsed: boolean;
   isLoadingForgeOverview: boolean;
   linkCurrentWorkspaceToVercelProject: ChangesPanelVercelSlice["onLinkVercelProject"];

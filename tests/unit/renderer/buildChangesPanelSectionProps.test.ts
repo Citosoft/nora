@@ -32,6 +32,7 @@ function createBuildDeps(
     forgeOverview: null,
     forgeWorkItemDetail: null,
     handleSpawnForgeIssueAgent: async () => {},
+    handleSpawnForgeReviewAgent: async () => {},
     isChangesSidebarCollapsed: false,
     isLoadingForgeOverview: false,
     linkCurrentWorkspaceToVercelProject: () => {},
@@ -150,4 +151,40 @@ test("buildChangesPanelSectionProps leaves the center surface unchanged when sel
   await props.chrome.onSelectChange("src/app.ts");
 
   assert.deepEqual(calls, []);
+});
+
+test("buildChangesPanelSectionProps opens GitLab pipeline runs in the forge viewer", () => {
+  const calls: Array<{ projectId: string; kind: string; number: number; title: string }> = [];
+  const props = buildChangesPanelSectionProps(
+    createBuildDeps({
+      openForgeViewer: (projectId, kind, number, title) => {
+        calls.push({ projectId, kind, number, title });
+      }
+    }),
+    {
+      project: { id: "project-1" },
+      changesRoot: null,
+      changes: []
+    } as unknown as AppState
+  );
+
+  props.forge.onOpenForgeWorkflowRun({
+    id: "gitlab-pipeline-456",
+    name: "Pipeline #12",
+    status: "running",
+    conclusion: null,
+    branch: "main",
+    event: "push",
+    updatedAt: "2026-06-05T00:00:00.000Z",
+    webUrl: "https://gitlab.example.com/group/project/-/pipelines/456"
+  });
+
+  assert.deepEqual(calls, [
+    {
+      projectId: "project-1",
+      kind: "workflow_run",
+      number: 456,
+      title: "Pipeline #12"
+    }
+  ]);
 });

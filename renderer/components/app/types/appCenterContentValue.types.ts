@@ -1,6 +1,10 @@
 import type { AppUiCommands } from "@/components/app/hooks/useAppUiCommands";
 import type { WorkspaceSessionViewsApi } from "@/components/app/hooks/useWorkspaceSessionViews";
 import type {
+  ForgeReviewAgentTargetMode,
+  ForgeReviewCommentSelection
+} from "@/components/app/types/forgeReviewHandoff.types";
+import type {
   AiChatMessage,
   AiChatReasoningLevel,
   AiChatTabState,
@@ -121,6 +125,11 @@ export type AppCenterContentValueArgs = {
   handleOpenWorkspaceBrowser: (projectId: string, url?: string) => void;
   handleSelectAiChatProviderModel: UseAiModelCatalogResult["handleSelectAiChatProviderModel"];
   handleSpawnForgeIssueAgent: (toolId: string) => Promise<void>;
+  handleSpawnForgeReviewAgent: (
+    toolId: string,
+    selections: ForgeReviewCommentSelection[],
+    targetMode: ForgeReviewAgentTargetMode
+  ) => Promise<void>;
   isCenterDiffExpanded: boolean;
   isCenterFullDiffExpanded: boolean;
   loadForgeWorkItemDetail: (kind: ForgeWorkItemKind, number: number, repoOverride?: { host: string; fullName: string } | null) => Promise<void>;

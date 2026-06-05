@@ -13,7 +13,7 @@ export function createForgeViewerTab(
     projectId,
     kind,
     number,
-    title: title.trim() || (kind === "workflow_run" ? `Action #${number}` : `${kind === "pull_request" ? "PR" : "Issue"} #${number}`),
+    title: title.trim() || (kind === "workflow_run" ? `Run #${number}` : `${kind === "pull_request" ? "PR" : "Issue"} #${number}`),
     forgeRepoHostOverride: repoOverride?.host ?? null,
     forgeRepoFullNameOverride: repoOverride?.fullName ?? null
   };

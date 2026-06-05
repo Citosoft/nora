@@ -163,6 +163,7 @@ export function deriveAppMainCenterContentValue(
     handleOpenWorkspaceBrowser: args.handleOpenWorkspaceBrowser,
     handleSelectAiChatProviderModel: args.handleSelectAiChatProviderModel,
     handleSpawnForgeIssueAgent: args.handleSpawnForgeIssueAgent,
+    handleSpawnForgeReviewAgent: args.handleSpawnForgeReviewAgent,
     isDiffExpanded: args.isCenterDiffExpanded,
     isFullDiffExpanded: args.isCenterFullDiffExpanded,
     loadForgeWorkItemDetail: args.loadForgeWorkItemDetail,

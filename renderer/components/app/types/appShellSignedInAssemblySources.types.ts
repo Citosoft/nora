@@ -62,6 +62,7 @@ export type AppShellSignedInForgeSources = Pick<
   | "refreshForgeOverview"
   | "resolveGitlabForgeRepoOverride"
   | "handleSpawnForgeIssueAgent"
+  | "handleSpawnForgeReviewAgent"
   | "focusedForgeViewerTab"
 > &
   Pick<ChangesPanelSectionBuildDeps, "forgeBranchPullRequestStatus" | "isLoadingForgeOverview"> & {

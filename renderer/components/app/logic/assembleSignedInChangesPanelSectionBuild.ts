@@ -42,6 +42,7 @@ export const assembleSignedInChangesPanelSectionBuild = (
     forgeOverview: forge.forgeOverview,
     forgeWorkItemDetail: forge.forgeWorkItemDetail,
     handleSpawnForgeIssueAgent: forge.handleSpawnForgeIssueAgent,
+    handleSpawnForgeReviewAgent: forge.handleSpawnForgeReviewAgent,
     isChangesSidebarCollapsed: chromeShell.isChangesSidebarCollapsed,
     isLoadingForgeOverview: forge.isLoadingForgeOverview,
     linkCurrentWorkspaceToVercelProject: vercel.linkCurrentWorkspaceToVercelProject,

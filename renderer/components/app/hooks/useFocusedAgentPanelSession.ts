@@ -15,6 +15,11 @@ import {
   buildPlainTerminalInputWithWorkspacePaths,
   formatWorkspacePathForSubmission
 } from "@/components/app/logic/agentInputAttachments";
+import {
+  AGENT_INPUT_DRAFT_HANDOFF_EVENT,
+  consumeQueuedAgentInputDraftHandoff,
+  getAgentInputDraftHandoffPayloadFromEvent
+} from "@/components/app/logic/agentInputDraftHandoff";
 import { workspacePathDraftsFromNativeFileDrop } from "@/components/app/logic/agentInputNativeFileDrop";
 import { formatTaskFileInstruction, resolveTaskInstructionPath } from "@/components/app/logic/appUtils";
 import { SHORTCUT_DEFINITIONS, formatShortcutKeyParts, formatShortcutKeys } from "@/components/app/logic/keyboardShortcuts";
@@ -173,6 +178,41 @@ export const useFocusedAgentPanelSession = ({
     mediaStreamRef.current = null;
     recordedVoiceChunksRef.current = [];
   }, [agent?.id, terminal?.id]);
+
+  useEffect(() => {
+    if (!agent) {
+      return;
+    }
+
+    const applyDraft = (text: string): void => {
+      const input = terminalInputRef.current;
+      if (!input || !text.trim()) {
+        return;
+      }
+      const current = input.value.trim();
+      input.value = current.length > 0 ? `${current}\n\n${text}` : text;
+      input.focus();
+    };
+
+    const queuedDraft = consumeQueuedAgentInputDraftHandoff(agent.id);
+    if (queuedDraft) {
+      applyDraft(queuedDraft.text);
+    }
+
+    const handleDraftHandoff = (event: Event): void => {
+      const payload = getAgentInputDraftHandoffPayloadFromEvent(event);
+      if (payload?.agentId !== agent.id) {
+        return;
+      }
+      applyDraft(payload.text);
+      consumeQueuedAgentInputDraftHandoff(agent.id);
+    };
+
+    window.addEventListener(AGENT_INPUT_DRAFT_HANDOFF_EVENT, handleDraftHandoff);
+    return () => {
+      window.removeEventListener(AGENT_INPUT_DRAFT_HANDOFF_EVENT, handleDraftHandoff);
+    };
+  }, [agent]);
 
   useEffect(() => () => {
     mediaRecorderRef.current?.stop();

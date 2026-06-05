@@ -123,6 +123,7 @@ export function createForgeRemoteOps(countDiffLines: CountDiffLinesFn) {
   }
 
   function mapGitlabDiscussionComments(discussion: JsonObject): ForgeWorkItemComment[] {
+    const threadId = getString(discussion.id) ?? `gitlab-discussion-${randomUUID()}`;
     const notes = getJsonArray(discussion.notes)
       .map((note) => getJsonObject(note))
       .filter((note): note is JsonObject => !!note);
@@ -138,6 +139,7 @@ export function createForgeRemoteOps(countDiffLines: CountDiffLinesFn) {
         authorAvatarUrl: getString(author?.avatar_url),
         body: normalizeGitlabCommentBody(body),
         createdAt: getString(note.created_at) ?? getString(note.updated_at) ?? new Date().toISOString(),
+        threadId,
         path: path ?? null,
         oldLine: getNumber(position?.old_line),
         newLine: getNumber(position?.new_line)
@@ -184,69 +186,127 @@ export function createForgeRemoteOps(countDiffLines: CountDiffLinesFn) {
     };
   }
 
+  function mapGitlabPipeline(item: JsonObject): ForgeWorkflowRunSummary {
+    const pipelineId = getNumber(item.id) ?? 0;
+    const pipelineIid = getNumber(item.iid);
+    return {
+      id: `gitlab-pipeline-${pipelineId}`,
+      name: pipelineIid ? `Pipeline #${pipelineIid}` : `Pipeline #${pipelineId}`,
+      status: getString(item.status) ?? "unknown",
+      conclusion: null,
+      branch: getString(item.ref),
+      event: getString(item.source),
+      updatedAt: getString(item.updated_at) ?? getString(item.created_at) ?? new Date().toISOString(),
+      webUrl: getString(item.web_url) ?? ""
+    };
+  }
+
   async function fetchForgeWorkflowRunDetailForRepo(
     repo: ForgeRepoSummary,
     runId: number,
     options: ForgeRequestOptions
   ): Promise<ForgeWorkflowRunDetail> {
-    if (repo.provider !== "github") {
-      throw new Error("Workflow run details are only available for GitHub repositories.");
+    if (repo.provider === "github") {
+      const headers: Record<string, string> = {
+        Accept: "application/vnd.github+json"
+      };
+      if (options.githubToken) {
+        headers.Authorization = `Bearer ${options.githubToken}`;
+      }
+
+      const [runResponse, jobsResponse] = await Promise.all([
+        fetch(`https://api.github.com/repos/${repo.fullName}/actions/runs/${runId}`, { headers }),
+        fetch(`https://api.github.com/repos/${repo.fullName}/actions/runs/${runId}/jobs?per_page=100`, { headers })
+      ]);
+
+      if (!runResponse.ok || !jobsResponse.ok) {
+        const detail = !runResponse.ok ? await runResponse.text() : await jobsResponse.text();
+        throw new Error(`GitHub request failed: ${detail || runResponse.statusText || jobsResponse.statusText}`);
+      }
+
+      const runPayload = getJsonObject(await runResponse.json()) ?? {};
+      const jobsPayload = getJsonObject(await jobsResponse.json()) ?? {};
+      const jobs = getJsonArray(jobsPayload.jobs)
+        .map((item) => getJsonObject(item))
+        .filter((item): item is JsonObject => !!item)
+        .map((job) => ({
+          id: String(getNumber(job.id) ?? randomUUID()),
+          name: getString(job.name) ?? "Unnamed job",
+          status: getString(job.status) ?? "unknown",
+          conclusion: getString(job.conclusion),
+          startedAt: getString(job.started_at),
+          completedAt: getString(job.completed_at),
+          webUrl: getString(job.html_url),
+          steps: getJsonArray(job.steps)
+            .map((item) => getJsonObject(item))
+            .filter((item): item is JsonObject => !!item)
+            .map((step) => ({
+              id: String(getNumber(step.number) ?? randomUUID()),
+              name: getString(step.name) ?? "Unnamed step",
+              number: getNumber(step.number) ?? 0,
+              status: getString(step.status) ?? "unknown",
+              conclusion: getString(step.conclusion),
+              startedAt: getString(step.started_at),
+              completedAt: getString(step.completed_at)
+            }))
+        }));
+
+      return {
+        id: getNumber(runPayload.id) ?? runId,
+        name: getString(runPayload.display_title) ?? getString(runPayload.name) ?? `Action #${runId}`,
+        status: getString(runPayload.status) ?? "unknown",
+        conclusion: getString(runPayload.conclusion),
+        branch: getString(runPayload.head_branch),
+        event: getString(runPayload.event),
+        createdAt: getString(runPayload.created_at) ?? new Date().toISOString(),
+        updatedAt: getString(runPayload.updated_at) ?? getString(runPayload.created_at) ?? new Date().toISOString(),
+        webUrl: getString(runPayload.html_url) ?? "",
+        jobs
+      };
     }
 
-    const headers: Record<string, string> = {
-      Accept: "application/vnd.github+json"
-    };
-    if (options.githubToken) {
-      headers.Authorization = `Bearer ${options.githubToken}`;
+    const baseUrl = `https://${repo.host}/api/v4/projects/${encodeURIComponent(repo.fullName)}`;
+    const headers: Record<string, string> = {};
+    if (options.gitlabToken) {
+      headers["PRIVATE-TOKEN"] = options.gitlabToken;
     }
 
-    const [runResponse, jobsResponse] = await Promise.all([
-      fetch(`https://api.github.com/repos/${repo.fullName}/actions/runs/${runId}`, { headers }),
-      fetch(`https://api.github.com/repos/${repo.fullName}/actions/runs/${runId}/jobs?per_page=100`, { headers })
+    const [pipelineResponse, jobsResponse] = await Promise.all([
+      fetch(`${baseUrl}/pipelines/${runId}`, { headers }),
+      fetch(`${baseUrl}/pipelines/${runId}/jobs?include_retried=true&per_page=100`, { headers })
     ]);
 
-    if (!runResponse.ok || !jobsResponse.ok) {
-      const detail = !runResponse.ok ? await runResponse.text() : await jobsResponse.text();
-      throw new Error(`GitHub request failed: ${detail || runResponse.statusText || jobsResponse.statusText}`);
+    if (!pipelineResponse.ok || !jobsResponse.ok) {
+      const detail = !pipelineResponse.ok ? await pipelineResponse.text() : await jobsResponse.text();
+      throw new Error(`GitLab request failed: ${detail || pipelineResponse.statusText || jobsResponse.statusText}`);
     }
 
-    const runPayload = getJsonObject(await runResponse.json()) ?? {};
-    const jobsPayload = getJsonObject(await jobsResponse.json()) ?? {};
-    const jobs = getJsonArray(jobsPayload.jobs)
+    const pipelinePayload = getJsonObject(await pipelineResponse.json()) ?? {};
+    const jobsPayload = getJsonArray(await jobsResponse.json())
       .map((item) => getJsonObject(item))
-      .filter((item): item is JsonObject => !!item)
-      .map((job) => ({
-        id: String(getNumber(job.id) ?? randomUUID()),
-        name: getString(job.name) ?? "Unnamed job",
-        status: getString(job.status) ?? "unknown",
-        conclusion: getString(job.conclusion),
-        startedAt: getString(job.started_at),
-        completedAt: getString(job.completed_at),
-        webUrl: getString(job.html_url),
-        steps: getJsonArray(job.steps)
-          .map((item) => getJsonObject(item))
-          .filter((item): item is JsonObject => !!item)
-          .map((step) => ({
-            id: String(getNumber(step.number) ?? randomUUID()),
-            name: getString(step.name) ?? "Unnamed step",
-            number: getNumber(step.number) ?? 0,
-            status: getString(step.status) ?? "unknown",
-            conclusion: getString(step.conclusion),
-            startedAt: getString(step.started_at),
-            completedAt: getString(step.completed_at)
-          }))
-      }));
+      .filter((item): item is JsonObject => !!item);
+    const jobs = jobsPayload.map((job) => ({
+      id: String(getNumber(job.id) ?? randomUUID()),
+      name: getString(job.name) ?? getString(job.stage) ?? "Unnamed job",
+      status: getString(job.status) ?? "unknown",
+      conclusion: null,
+      startedAt: getString(job.started_at),
+      completedAt: getString(job.finished_at),
+      webUrl: getString(job.web_url),
+      steps: []
+    }));
+    const pipelineIid = getNumber(pipelinePayload.iid);
 
     return {
-      id: getNumber(runPayload.id) ?? runId,
-      name: getString(runPayload.display_title) ?? getString(runPayload.name) ?? `Action #${runId}`,
-      status: getString(runPayload.status) ?? "unknown",
-      conclusion: getString(runPayload.conclusion),
-      branch: getString(runPayload.head_branch),
-      event: getString(runPayload.event),
-      createdAt: getString(runPayload.created_at) ?? new Date().toISOString(),
-      updatedAt: getString(runPayload.updated_at) ?? getString(runPayload.created_at) ?? new Date().toISOString(),
-      webUrl: getString(runPayload.html_url) ?? "",
+      id: getNumber(pipelinePayload.id) ?? runId,
+      name: pipelineIid ? `Pipeline #${pipelineIid}` : `Pipeline #${runId}`,
+      status: getString(pipelinePayload.status) ?? "unknown",
+      conclusion: null,
+      branch: getString(pipelinePayload.ref),
+      event: getString(pipelinePayload.source),
+      createdAt: getString(pipelinePayload.created_at) ?? new Date().toISOString(),
+      updatedAt: getString(pipelinePayload.updated_at) ?? getString(pipelinePayload.created_at) ?? new Date().toISOString(),
+      webUrl: getString(pipelinePayload.web_url) ?? "",
       jobs
     };
   }
@@ -312,21 +372,35 @@ export function createForgeRemoteOps(countDiffLines: CountDiffLinesFn) {
       headers["PRIVATE-TOKEN"] = options.gitlabToken;
     }
 
-    const [mergeRequestsResponse, issuesResponse] = await Promise.all([
+    const [mergeRequestsResponse, issuesResponse, pipelinesResponse] = await Promise.all([
       fetch(`${baseUrl}/merge_requests?state=opened&per_page=20`, { headers }),
-      fetch(`${baseUrl}/issues?state=opened&per_page=20`, { headers })
+      fetch(`${baseUrl}/issues?state=opened&per_page=20`, { headers }),
+      fetch(`${baseUrl}/pipelines?per_page=10&order_by=updated_at&sort=desc`, { headers })
     ]);
 
-    if (!mergeRequestsResponse.ok || !issuesResponse.ok) {
-      const detail = !mergeRequestsResponse.ok ? await mergeRequestsResponse.text() : await issuesResponse.text();
-      throw new Error(`GitLab request failed: ${detail || mergeRequestsResponse.statusText || issuesResponse.statusText}`);
+    if (!mergeRequestsResponse.ok || !issuesResponse.ok || !pipelinesResponse.ok) {
+      const detail = !mergeRequestsResponse.ok
+        ? await mergeRequestsResponse.text()
+        : !issuesResponse.ok
+          ? await issuesResponse.text()
+          : await pipelinesResponse.text();
+      throw new Error(
+        `GitLab request failed: ${detail || mergeRequestsResponse.statusText || issuesResponse.statusText || pipelinesResponse.statusText}`
+      );
     }
 
-    const [mergeRequestsPayload, issuesPayload] = await Promise.all([mergeRequestsResponse.json(), issuesResponse.json()]);
+    const [mergeRequestsPayload, issuesPayload, pipelinesPayload] = await Promise.all([
+      mergeRequestsResponse.json(),
+      issuesResponse.json(),
+      pipelinesResponse.json()
+    ]);
     const mergeRequests = getJsonArray(mergeRequestsPayload)
       .map((item) => getJsonObject(item))
       .filter((item): item is JsonObject => !!item);
     const issues = getJsonArray(issuesPayload)
+      .map((item) => getJsonObject(item))
+      .filter((item): item is JsonObject => !!item);
+    const pipelines = getJsonArray(pipelinesPayload)
       .map((item) => getJsonObject(item))
       .filter((item): item is JsonObject => !!item);
 
@@ -334,7 +408,7 @@ export function createForgeRemoteOps(countDiffLines: CountDiffLinesFn) {
       repo,
       pullRequests: mergeRequests.map(mapGitlabMergeRequest),
       issues: issues.map(mapGitlabIssue),
-      workflowRuns: [],
+      workflowRuns: pipelines.map(mapGitlabPipeline),
       gitlabUserMergeRequests: [],
       gitlabUserMergeRequestsErrorMessage: null,
       errorMessage: null

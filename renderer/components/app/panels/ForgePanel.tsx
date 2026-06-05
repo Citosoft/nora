@@ -1,19 +1,25 @@
 import { formatDiffPreview, getInlineCommentKey, parseDiffLines, splitForgeComments } from "@/components/app/logic/forgePanelDiff";
+import {
+  formatForgeReviewLineLabel,
+  getForgeReviewCommentSelections
+} from "@/components/app/logic/forgeReviewHandoff";
 import { resolveForgeWorkflowRunBadgeVariant } from "@/components/app/logic/forgeWorkflowRunUi";
 import { diffLineClass } from "@/components/app/logic/utils";
 import { MarkdownRenderer } from "@/components/app/shared/MarkdownRenderer";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import type { ForgeDetailPanelProps, ForgePanelProps } from "@/components/app/types/component.types";
+import type { ForgeReviewAgentTargetMode } from "@/components/app/types/forgeReviewHandoff.types";
 import { ForgeProviderIcon } from "@/components/app/views/ForgeProviderIcon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { isAgentToolAvailable } from "@shared/agentToolState";
 import type {
   AgentCatalogEntry,
-  ForgeOverview,
+  ForgeProvider,
   ForgeWorkflowRunSummary,
   ForgeWorkItemKind,
   ForgeWorkItemSummary
@@ -53,7 +59,17 @@ function getWorkflowRunBadgeVariant(run: ForgeWorkflowRunSummary): "success" | "
 
 function isWorkflowRunActive(run: ForgeWorkflowRunSummary): boolean {
   const label = getWorkflowRunLabel(run).toLowerCase();
-  return label === "queued" || label === "in_progress" || label === "pending" || label === "requested" || label === "waiting";
+  return (
+    label === "queued" ||
+    label === "in_progress" ||
+    label === "pending" ||
+    label === "requested" ||
+    label === "waiting" ||
+    label === "running" ||
+    label === "created" ||
+    label === "preparing" ||
+    label === "scheduled"
+  );
 }
 
 function ActiveWorkflowRunBadge({ label }: { label: string }) {
@@ -165,22 +181,14 @@ function ForgeWorkflowRunList({
   runs,
   onOpenRun
 }: {
-  provider: ForgeOverview["repo"] extends infer T ? T extends { provider: infer P } ? P : never : never;
+  provider: ForgeProvider;
   runs: ForgeWorkflowRunSummary[];
   onOpenRun: (run: ForgeWorkflowRunSummary) => void;
 }) {
-  if (provider !== "github") {
-    return (
-      <div className="rounded-[6px] border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">
-        GitHub Actions are only available for GitHub repositories.
-      </div>
-    );
-  }
-
   if (!runs.length) {
     return (
       <div className="rounded-[6px] border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">
-        No recent workflow runs.
+        No recent {provider === "gitlab" ? "pipelines" : "workflow runs"}.
       </div>
     );
   }
@@ -235,7 +243,8 @@ export function ForgePanel(props: ForgePanelProps) {
     onRefreshDetail,
     onAction,
     onCommentSubmit,
-    onSpawnIssueAgent
+    onSpawnIssueAgent,
+    onSpawnReviewAgent
   } = props;
   const repo = overview?.repo ?? null;
   const provider = repo?.provider ?? "github";
@@ -248,6 +257,7 @@ export function ForgePanel(props: ForgePanelProps) {
   const prLabel = activeProviderTab === "gitlab" ? "Merge Requests" : "Pull Requests";
   const prTabLabel = activeProviderTab === "gitlab" ? "MRs" : "Pull Requests";
   const issueLabel = "Issues";
+  const runsTabLabel = activeProviderTab === "gitlab" ? "Pipelines" : "Actions";
 
   useEffect(() => {
     setActiveListTab("pull_requests");
@@ -268,7 +278,7 @@ export function ForgePanel(props: ForgePanelProps) {
   }, [activeProviderTab]);
 
   useEffect(() => {
-    if (!repo || repo.provider !== "github" || activeProviderTab !== "github" || detail || activeListTab !== "actions") {
+    if (!repo || repo.provider !== activeProviderTab || detail || activeListTab !== "actions") {
       return;
     }
 
@@ -316,6 +326,7 @@ export function ForgePanel(props: ForgePanelProps) {
         onAction={onAction}
         onCommentSubmit={onCommentSubmit}
         onSpawnIssueAgent={onSpawnIssueAgent}
+        onSpawnReviewAgent={onSpawnReviewAgent}
         repoFullName={repo?.fullName ?? null}
         repoProvider={provider}
       />
@@ -381,7 +392,7 @@ export function ForgePanel(props: ForgePanelProps) {
             </TabsTrigger>
             <TabsTrigger value="actions" className="justify-center">
               <Activity className="size-3.5" />
-              <span>Actions</span>
+              <span>{runsTabLabel}</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -485,11 +496,13 @@ export function ForgeDetailPanel({
   onAction,
   onCommentSubmit,
   onSpawnIssueAgent,
+  onSpawnReviewAgent,
   repoFullName = null,
   repoProvider = "github"
 }: ForgeDetailPanelProps) {
   const [commentDraft, setCommentDraft] = useState("");
   const [inlineCommentDraft, setInlineCommentDraft] = useState("");
+  const [reviewAgentTargetMode, setReviewAgentTargetMode] = useState<ForgeReviewAgentTargetMode>("new-worktree");
   const [inlineComposerTarget, setInlineComposerTarget] = useState<{
     key: string;
     path: string;
@@ -504,12 +517,154 @@ export function ForgeDetailPanel({
     () => splitForgeComments(detail?.comments ?? []),
     [detail?.comments]
   );
+  const reviewCommentSelections = useMemo(
+    () => getForgeReviewCommentSelections(detail),
+    [detail]
+  );
+  const [selectedReviewCommentIds, setSelectedReviewCommentIds] = useState<string[]>([]);
+  const selectedReviewComments = useMemo(
+    () => reviewCommentSelections.filter((comment) => selectedReviewCommentIds.includes(comment.commentId)),
+    [reviewCommentSelections, selectedReviewCommentIds]
+  );
 
   useEffect(() => {
     setCommentDraft("");
     setInlineCommentDraft("");
+    setReviewAgentTargetMode("new-worktree");
     setInlineComposerTarget(null);
+    setSelectedReviewCommentIds([]);
   }, [detail?.kind, detail?.item.id]);
+
+  useEffect(() => {
+    setSelectedReviewCommentIds(reviewCommentSelections.map((comment) => comment.commentId));
+  }, [reviewCommentSelections]);
+
+  const reviewCommentSelector = detail?.kind === "pull_request" && reviewCommentSelections.length ? (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            Review comments
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            {selectedReviewComments.length} of {reviewCommentSelections.length} selected
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelectedReviewCommentIds(reviewCommentSelections.map((comment) => comment.commentId))}
+            disabled={selectedReviewComments.length === reviewCommentSelections.length}
+          >
+            Select all
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelectedReviewCommentIds([])}
+            disabled={!selectedReviewComments.length}
+          >
+            Clear
+          </Button>
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="mr-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          Target
+        </div>
+        <div className="flex rounded-[6px] border border-border/60 bg-background/60 p-0.5">
+          <Button
+            type="button"
+            variant={reviewAgentTargetMode === "new-worktree" ? "secondary" : "ghost"}
+            size="sm"
+            className="h-7 rounded-[4px] px-2.5 text-xs"
+            onClick={() => setReviewAgentTargetMode("new-worktree")}
+          >
+            New worktree
+          </Button>
+          <Button
+            type="button"
+            variant={reviewAgentTargetMode === "current-branch" ? "secondary" : "ghost"}
+            size="sm"
+            className="h-7 rounded-[4px] px-2.5 text-xs"
+            onClick={() => setReviewAgentTargetMode("current-branch")}
+          >
+            Checked-out branch
+          </Button>
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="mr-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          Send to agent
+        </div>
+        {availableTools.map((tool: AgentCatalogEntry) => (
+          <Button
+            key={tool.id}
+            variant="ghost"
+            size="icon"
+            className="size-9"
+            tooltip={`Spawn a new ${tool.label} agent for selected review comments`}
+            aria-label={`Spawn a new ${tool.label} agent for selected review comments`}
+            onClick={() => {
+              void onSpawnReviewAgent(tool.id, selectedReviewComments, reviewAgentTargetMode);
+            }}
+            disabled={!selectedReviewComments.length || detailLoading || actionLoading || commentLoading}
+          >
+            <AgentToolIcon
+              toolId={tool.id}
+              label={tool.label}
+              className="size-6 rounded-[4px] bg-transparent"
+              imageClassName="size-5 rounded-[4px]"
+            />
+          </Button>
+        ))}
+        {!availableTools.length ? (
+          <div className="text-sm text-muted-foreground">No detected agent CLIs are available.</div>
+        ) : null}
+      </div>
+      <div className="max-h-[min(30rem,calc(100vh-14rem))] space-y-2 overflow-y-auto pr-1">
+        {reviewCommentSelections.map((comment) => {
+          const checkboxId = `review-comment-${comment.commentId}`;
+          const isSelected = selectedReviewCommentIds.includes(comment.commentId);
+          return (
+            <label
+              key={comment.commentId}
+              htmlFor={checkboxId}
+              className="flex cursor-pointer gap-3 rounded-[6px] border border-border/50 bg-background/60 p-3 transition hover:border-primary/40 hover:bg-accent/20"
+            >
+              <input
+                id={checkboxId}
+                type="checkbox"
+                className="mt-1 size-4 shrink-0 accent-primary"
+                checked={isSelected}
+                onChange={(event) => {
+                  setSelectedReviewCommentIds((current) =>
+                    event.target.checked
+                      ? Array.from(new Set([...current, comment.commentId]))
+                      : current.filter((commentId) => commentId !== comment.commentId)
+                  );
+                }}
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <span className="font-mono text-foreground/90">{comment.path}</span>
+                  <span>{formatForgeReviewLineLabel(comment.oldLine, comment.newLine)}</span>
+                  <span>{comment.author || "Unknown"}</span>
+                </div>
+                <div className="terminal-text mt-2 overflow-x-auto rounded-[4px] border border-border/40 bg-background/70 px-2 py-1 text-[11px] leading-5">
+                  {comment.lineText || "(line context unavailable)"}
+                </div>
+                <div className="mt-2 whitespace-pre-wrap text-sm leading-5 text-foreground/85">
+                  {comment.body}
+                </div>
+              </div>
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  ) : null;
 
   return (
     <div className="center-column-surface flex h-full min-h-0 flex-col bg-card/95">
@@ -576,6 +731,22 @@ export function ForgeDetailPanel({
             <RefreshCcw className="size-4" />
             Refresh
           </Button>
+          {reviewCommentSelector ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <MessageSquare className="size-4" />
+                  Review comments
+                  <Badge variant="outline" className="ml-1">
+                    {selectedReviewComments.length}/{reviewCommentSelections.length}
+                  </Badge>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-[min(42rem,calc(100vw-2rem))]">
+                {reviewCommentSelector}
+              </PopoverContent>
+            </Popover>
+          ) : null}
           {canOpenDetailInViewer && onOpenInViewer ? (
             <Button variant="ghost" size="sm" onClick={onOpenInViewer}>
               Open viewer
@@ -691,14 +862,24 @@ export function ForgeDetailPanel({
                                   ) : null}
                                 </div>
                                 {inlineComments.length ? (
-                                  <div className="ml-[4.5rem] space-y-1 rounded-[4px] border border-border/40 bg-background/60 p-2">
+                                  <div className="ml-[4.5rem] mt-2 space-y-3 border-l-2 border-primary/70 pl-3">
                                     {inlineComments.map((comment) => (
-                                      <div key={comment.id} className="text-xs">
-                                        <div className="text-muted-foreground">
-                                          <span className="font-medium text-foreground/90">{comment.author || "Unknown"}</span>
-                                          <span className="ml-2">{new Date(comment.createdAt).toLocaleString()}</span>
+                                      <div
+                                        key={comment.id}
+                                        className="whitespace-normal rounded-[6px] border border-primary/25 bg-primary/5 p-3 font-sans text-xs shadow-sm shadow-primary/5"
+                                      >
+                                        <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
+                                          <MessageSquare className="size-3.5 text-primary" aria-hidden />
+                                          <span className="font-medium text-foreground">{comment.author || "Unknown"}</span>
+                                          <span>{new Date(comment.createdAt).toLocaleString()}</span>
                                         </div>
-                                        <div className="mt-1 whitespace-pre-wrap text-foreground/85">{comment.body || "(empty)"}</div>
+                                        {comment.body.trim() ? (
+                                          <MarkdownRenderer className="space-y-2 text-[13px] leading-5 text-foreground/90">
+                                            {comment.body}
+                                          </MarkdownRenderer>
+                                        ) : (
+                                          <div className="text-sm text-muted-foreground">No comment body provided.</div>
+                                        )}
                                       </div>
                                     ))}
                                   </div>

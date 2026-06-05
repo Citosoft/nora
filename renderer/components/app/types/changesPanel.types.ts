@@ -1,4 +1,8 @@
 import type { CreateAgentDialogDefaults, ResolvedTheme } from "@/components/app/types";
+import type {
+  ForgeReviewAgentTargetMode,
+  ForgeReviewCommentSelection
+} from "@/components/app/types/forgeReviewHandoff.types";
 import type { OpenWorkspaceFileEditorOptions } from "@/components/app/types/workflow.types";
 import type {
   AgentCatalogEntry,
@@ -58,6 +62,11 @@ export type ChangesPanelForgeSlice = {
   onForgeAction: (action: ForgeWorkItemAction) => void;
   onForgeCommentSubmit: (payload: ForgeAddCommentPayload) => Promise<void>;
   onSpawnIssueAgent: (toolId: string) => Promise<void>;
+  onSpawnReviewAgent: (
+    toolId: string,
+    selections: ForgeReviewCommentSelection[],
+    targetMode: ForgeReviewAgentTargetMode
+  ) => Promise<void>;
   onOpenCreatePullRequest: () => void;
 };
 

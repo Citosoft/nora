@@ -49,7 +49,7 @@ export function createForgeHelpers(deps: ForgeHelperDeps): ForgeHelpers {
     }
 
     const project = await deps.resolveProjectSummaryById(projectId);
-    return deps.getWorkspaceForgeRepo(deps.getProjectTarget(project));
+    return deps.getWorkspaceForgeRepo(deps.getProjectTarget(project), { gitlabHost: options.gitlabHost });
   }
 
   async function getForgeOverview(projectId: string, options: ForgeRequestOptions) {
@@ -57,7 +57,7 @@ export function createForgeHelpers(deps: ForgeHelperDeps): ForgeHelpers {
     let gitlabUserMergeRequests: ForgeWorkItemSummary[] = [];
     let gitlabUserMergeRequestsErrorMessage: string | null = null;
     try {
-      const repo = await deps.getWorkspaceForgeRepo(deps.getProjectTarget(project));
+      const repo = await deps.getWorkspaceForgeRepo(deps.getProjectTarget(project), { gitlabHost: options.gitlabHost });
       if (options.gitlabToken?.trim()) {
         const gitlabHost = normalizeGitlabHost(options.gitlabHost) ?? (repo?.provider === "gitlab" ? repo.host : "gitlab.com");
         try {
@@ -127,7 +127,7 @@ export function createForgeHelpers(deps: ForgeHelperDeps): ForgeHelpers {
         hasRemoteBranch,
         hasPublishedBranch
       });
-      const repo = await deps.getWorkspaceForgeRepo(deps.getProjectTarget(project));
+      const repo = await deps.getWorkspaceForgeRepo(deps.getProjectTarget(project), { gitlabHost: options.gitlabHost });
       if (!repo) {
         console.info("[forge-pr-debug][main] no forge repo resolved", {
           projectId,
@@ -238,7 +238,7 @@ export function createForgeHelpers(deps: ForgeHelperDeps): ForgeHelpers {
   ) {
     const state = deps.getSnapshot();
     const project = await deps.resolveProjectSummaryById(projectId);
-    const repo = await deps.getWorkspaceForgeRepo(deps.getProjectTarget(project));
+    const repo = await deps.getWorkspaceForgeRepo(deps.getProjectTarget(project), { gitlabHost: options.gitlabHost });
     if (!repo) {
       throw new Error(NO_REPO_ERROR);
     }

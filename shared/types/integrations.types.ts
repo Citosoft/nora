@@ -51,6 +51,7 @@ export interface ForgeWorkItemComment {
   authorAvatarUrl: string | null;
   body: string;
   createdAt: string;
+  threadId?: string | null;
   path: string | null;
   oldLine: number | null;
   newLine: number | null;

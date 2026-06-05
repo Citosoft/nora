@@ -18,7 +18,10 @@ import type { WorkspaceTarget } from "./internal.types";
 export interface ForgeHelperDeps {
   resolveProjectSummaryById: (projectId: string) => Promise<ProjectSummary>;
   getProjectTarget: (project: ProjectSummary) => WorkspaceTarget;
-  getWorkspaceForgeRepo: (target: WorkspaceTarget) => Promise<ForgeRepoSummary | null>;
+  getWorkspaceForgeRepo: (
+    target: WorkspaceTarget,
+    options?: { gitlabHost?: string | null }
+  ) => Promise<ForgeRepoSummary | null>;
   fetchForgeOverviewForRepo: (repo: ForgeRepoSummary, options: ForgeRequestOptions) => Promise<ForgeOverview>;
   fetchGitlabUserMergeRequests: (
     host: string,

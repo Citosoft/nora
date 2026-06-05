@@ -229,6 +229,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
     onForgeAction,
     onForgeCommentSubmit,
     onSpawnIssueAgent,
+    onSpawnReviewAgent,
     onOpenCreatePullRequest
   } = useChangesPanelForge();
   const {
@@ -1577,6 +1578,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
               onAction={onForgeAction}
               onCommentSubmit={onForgeCommentSubmit}
               onSpawnIssueAgent={onSpawnIssueAgent}
+              onSpawnReviewAgent={onSpawnReviewAgent}
             />
           ) : snapshot.changes.length ? (
             <div className="min-h-0 flex-1 overflow-auto">

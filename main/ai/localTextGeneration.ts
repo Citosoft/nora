@@ -3,7 +3,7 @@ import type { LocalTextGenerationRequest } from "@main/types/localTextGeneration
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { getLocalAiModelStatus, getLocalLlmModelPath } from "./localAiModels";
-import { getLocalLlamaExecutablePath } from "./localAiRuntime";
+import { buildLocalLlamaRuntimeEnv, getLocalLlamaExecutablePath } from "./localAiRuntime";
 import { extractLlamaCliStdout } from "./localLlamaOutput";
 
 const execFileAsync = promisify(execFile);
@@ -38,6 +38,7 @@ export async function generateLocalText(
     const { stdout } = await execFileAsync(executablePath, args, {
       maxBuffer: 1024 * 1024 * 4,
       encoding: "utf8",
+      env: buildLocalLlamaRuntimeEnv(executablePath),
       timeout: GENERATION_TIMEOUT_MS
     });
     const text = extractLlamaCliStdout(stdout);

@@ -307,6 +307,7 @@ function SignedInAppRootContent({
 
   const {
     handleSpawnForgeIssueAgent,
+    handleSpawnForgeReviewAgent,
     handleOpenProjectInIde
   } = useForgeActionHandlers({
     forgeWorkItemDetail: forgeIntegration.forgeWorkItemDetail,
@@ -725,6 +726,7 @@ function SignedInAppRootContent({
           integration: forgeIntegration,
           resolveGitlabForgeRepoOverride: props.centerTabs.resolveGitlabForgeRepoOverride,
           handleSpawnForgeIssueAgent,
+          handleSpawnForgeReviewAgent,
           focusedForgeViewerTab: layout.focusedForgeViewerTab
         },
         vercelSliceInput: {
@@ -856,6 +858,7 @@ function SignedInAppRootContent({
     forgeIntegration,
     props.centerTabs.resolveGitlabForgeRepoOverride,
     handleSpawnForgeIssueAgent,
+    handleSpawnForgeReviewAgent,
     layout.focusedForgeViewerTab,
     vercelIntegration,
     props.preferences.vercelAccountLabel,

@@ -4,16 +4,28 @@ import { countDiffLines, mapCommitChangeStatus } from "./changeDiffUtils";
 import { getExecStdout } from "./execErrors";
 import { parseForgeRepoSummary } from "./forgeRepoParse";
 
-const getWorkspaceForgeRepo = async (target: WorkspaceTarget, execGit: WorkspaceGitExec) => {
+const getWorkspaceForgeRepo = async (
+  target: WorkspaceTarget,
+  execGit: WorkspaceGitExec,
+  options: { gitlabHost?: string | null } = {}
+) => {
   const { stdout: remotesStdout } = await execGit(target, ["remote"]);
   const remotes = remotesStdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  const remote = remotes.includes("origin") ? "origin" : remotes[0];
-  if (!remote) {
-    return null;
+  let firstSupportedRepo: ReturnType<typeof parseForgeRepoSummary> = null;
+
+  for (const remote of remotes) {
+    const { stdout: remoteUrlStdout } = await execGit(target, ["remote", "get-url", remote]);
+    const repo = parseForgeRepoSummary(remoteUrlStdout.trim(), options);
+    if (!repo) {
+      continue;
+    }
+    if (remote === "origin") {
+      return repo;
+    }
+    firstSupportedRepo ??= repo;
   }
 
-  const { stdout: remoteUrlStdout } = await execGit(target, ["remote", "get-url", remote]);
-  return parseForgeRepoSummary(remoteUrlStdout.trim());
+  return firstSupportedRepo;
 };
 
 const commitWorkspaceChanges = async (
@@ -216,7 +228,8 @@ const readCommitChanges = async (
 };
 
 export const createWorkspaceGitBindings = (execGit: WorkspaceGitExec) => ({
-  getWorkspaceForgeRepo: (target: WorkspaceTarget) => getWorkspaceForgeRepo(target, execGit),
+  getWorkspaceForgeRepo: (target: WorkspaceTarget, options?: { gitlabHost?: string | null }) =>
+    getWorkspaceForgeRepo(target, execGit, options),
   commitWorkspaceChanges: (target: WorkspaceTarget, message: string, selectedPaths: string[] | null) =>
     commitWorkspaceChanges(target, message, selectedPaths, execGit),
   pullWorkspaceChanges: (target: WorkspaceTarget) => pullWorkspaceChanges(target, execGit),

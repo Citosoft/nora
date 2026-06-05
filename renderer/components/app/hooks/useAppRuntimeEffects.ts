@@ -107,11 +107,11 @@ export function useAppRuntimeEffects({
       return;
     }
 
-    const activeSessionIds = new Set(snapshot.sessions.map((session) => session.id));
+    const activeAgentSessionIds = new Set(snapshot.agents.map((agent) => agent.sessionId));
     const debounceMs = isRemoteMountedWorkspace ? 6000 : 2500;
 
     const unsubscribe = noraTerminalClient.onTerminalData(({ sessionId }) => {
-      if (document.hidden || !activeSessionIds.has(sessionId)) {
+      if (document.hidden || !activeAgentSessionIds.has(sessionId)) {
         return;
       }
 
@@ -177,13 +177,11 @@ export function useAppRuntimeEffects({
   }, [
     snapshot?.project?.id,
     snapshot?.workspaces.map((workspace) => workspace.project.id).join("\n"),
-    snapshot?.agents.map((agent) => `${agent.id}:${agent.status}:${agent.lastEventAt}`).join("\n"),
-    snapshot?.terminals.map((terminal) => `${terminal.id}:${terminal.status}:${terminal.lastEventAt}`).join("\n"),
+    snapshot?.changes.map((change) => change.path).join("\n"),
     workspaceLoading,
     isAddingWorkspace,
     taskRefreshTimeoutRef,
-    reloadWorkspaceTasksForProject,
-    snapshot
+    reloadWorkspaceTasksForProject
   ]);
 
   useEffect(() => {

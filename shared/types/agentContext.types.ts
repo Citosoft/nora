@@ -14,6 +14,7 @@ export type AgentPromptSource =
   | "task-reference"
   | "task-planner"
   | "forge-issue"
+  | "forge-review"
   | "browser-selection"
   | "file-editor"
   | "diff-review";
