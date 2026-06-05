@@ -23,6 +23,7 @@ import { getImportedImageTargetPath } from "./helpers/browserImageImport";
 import { createLaunchCommandQueueController } from "./helpers/launchCommandQueue";
 import { createMainWindowNotifications } from "./helpers/mainWindowNotifications";
 import { createMainUserInteractionsController } from "./helpers/mainUserInteractions";
+import { createProjectWorkspace } from "./helpers/projectWorkspaceCreation";
 import { handleSquirrelLifecycle, loadEnvFile } from "./helpers/startupRuntime";
 import { configureWebviewGuests, isAllowedBrowserGuestUrl } from "./helpers/webviewSecurity";
 import { attachCloseSessionTabShortcutForwarding } from "./helpers/closeSessionTabShortcutForwarding";
@@ -394,7 +395,15 @@ function registerIpc(): void {
     getAppSettings: () => appSettings,
     importBrowserImageToWorkspace,
     validateMoveWorkspaceFilePayload,
-    validateWriteWorkspaceFilePayload
+    validateWriteWorkspaceFilePayload,
+    createProjectWorkspace: (payload) =>
+      createProjectWorkspace(payload, {
+        getMainWindow: () => mainWindow,
+        getSnapshot: () => services.snapshot.getSnapshot(),
+        compactStateForRenderer,
+        withSnapshot,
+        selectProject: (projectRoot) => services.workspace.selectProject(projectRoot)
+      })
   });
 
   registerForgeIpc({

@@ -12,6 +12,7 @@ export const NORA_WORKSPACE_CLIENT_METHODS = [
   "chooseProject",
   "focusWorkspace",
   "chooseProjectAtPath",
+  "createProjectWorkspace",
   "closeProject",
   "removeProject",
   "refresh",

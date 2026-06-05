@@ -10,6 +10,7 @@ export const orchestratorTestModules = [
   "tests/unit/main/orchestrator/agentLaunch.test.ts",
   "tests/unit/main/orchestrator/agentBusyActivity.test.ts",
   "tests/unit/main/orchestrator/agentContextSourceSummary.test.ts",
+  "tests/unit/main/orchestrator/workspaceTarget.test.ts",
   "tests/unit/main/orchestrator/terminalPerformance.test.ts",
   "tests/unit/main/orchestrator/terminalLineExtraction.test.ts",
   "tests/unit/main/orchestrator/claudeHarnessContext.test.ts",
@@ -29,7 +30,9 @@ export const rendererHelperTestModules = [
   "tests/unit/renderer/workspaceAiChatToolUtils.test.ts",
   "tests/unit/renderer/browserTabNavigation.test.ts",
   "tests/unit/renderer/aiChatSelection.test.ts",
-  "tests/unit/renderer/workspaceSplitViewUtils.test.ts"
+  "tests/unit/renderer/workspaceSplitViewUtils.test.ts",
+  "tests/unit/renderer/projectScaffoldPrompt.test.ts",
+  "tests/unit/renderer/projectScaffoldLaunch.test.ts"
 ] as const;
 
 /** High-value gaps to close next (orchestration / layout / session shell). */

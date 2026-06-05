@@ -289,6 +289,8 @@ export interface CreateAgentPayload {
   target: WorktreeTarget;
   contextSelections?: import("./agentContext.types").AgentContextSelection[];
   launchSource?: import("./agentContext.types").AgentPromptSource;
+  initialPromptDelivery?: import("../agentStartupCapabilities").AgentInitialPromptDelivery;
+  startupTrustMode?: import("../agentStartupCapabilities").AgentStartupTrustMode;
   branchCheckout?: {
     mode: "existing" | "new";
     branchName: string;

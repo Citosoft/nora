@@ -23,7 +23,7 @@ import { AGENT_DEFINITIONS, SHARED_AGENT_SKILLS_TOOL_ID, getDefaultToolCommand }
 import { installAgentSkill as installGlobalAgentSkill, readAgentSkillCatalogs, removeAgentSkill as removeGlobalAgentSkill, searchAgentSkills } from "./agentSkills";
 import { getProjectsDir, getWorktreeDir } from "./noraPaths";
 import { hasBusyTerminalActivity } from "./orchestrator/agentBusyActivity";
-import { normalizeAgentLaunchCommand } from "./orchestrator/agentLaunch";
+import { buildAgentLaunchCommand, normalizeAgentLaunchCommand } from "./orchestrator/agentLaunch";
 import { createInitialState } from "./orchestrator/createAppInitialState";
 import { createForgeHelpers } from "./orchestrator/forge";
 import { getGitProgressCommand, normalizeLocalPath } from "./orchestrator/gitWorkspaceCommandUtils";
@@ -699,28 +699,34 @@ export class Orchestrator implements OrchestratorFacade {
       randomId: () => randomUUID(),
       getSnapshot: () => this.getSnapshot(),
       resolveAgentLaunchCommand: (tool, payload) => {
+        const buildLaunchCommand = (command: string): string =>
+          buildAgentLaunchCommand(tool.id, command, {
+            initialPrompt: payload.task,
+            initialPromptDelivery: payload.initialPromptDelivery,
+            startupTrustMode: payload.startupTrustMode
+          });
         const commandOverride = payload.commandOverride.trim();
         if (commandOverride) {
-          return normalizeAgentLaunchCommand(tool.id, commandOverride);
+          return buildLaunchCommand(commandOverride);
         }
 
         const detectedPath = tool.detectedPath?.trim();
         if (detectedPath) {
           const detectedPathCommand = /\s/.test(detectedPath) ? `"${detectedPath}"` : detectedPath;
-          return normalizeAgentLaunchCommand(tool.id, detectedPathCommand);
+          return buildLaunchCommand(detectedPathCommand);
         }
 
         const detectedCommand = tool.detectedCommand?.trim();
         if (detectedCommand) {
-          return normalizeAgentLaunchCommand(tool.id, detectedCommand);
+          return buildLaunchCommand(detectedCommand);
         }
 
         const windowsLaunchCommand = AGENT_DEFINITIONS.find((entry) => entry.id === tool.id)?.windowsLaunchCommand?.trim();
         if (isWindows() && windowsLaunchCommand) {
-          return normalizeAgentLaunchCommand(tool.id, windowsLaunchCommand);
+          return buildLaunchCommand(windowsLaunchCommand);
         }
 
-        return normalizeAgentLaunchCommand(tool.id, tool.launchCommand || tool.id);
+        return buildLaunchCommand(tool.launchCommand || tool.id);
       },
       getToolEnv: (toolId) => this.toolingRuntimeService.getToolEnv(toolId),
       getWorktreeArtifactPaths,

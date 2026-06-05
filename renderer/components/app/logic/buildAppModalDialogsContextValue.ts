@@ -2,6 +2,9 @@ import { noraAgentClient } from "@/components/app/clients/noraAgentClient";
 import { noraRemoteWorkspaceClient } from "@/components/app/clients/noraRemoteWorkspaceClient";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { noraWorkspaceManagementClient } from "@/components/app/clients/noraWorkspaceManagementClient";
+import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
+import { handoffPromptToAgent } from "@/components/app/logic/agentHandoff";
+import { launchProjectScaffoldAgent } from "@/components/app/logic/projectScaffoldLaunch";
 import type { AppModalDialogsContextValue } from "@/components/app/types/appModalDialogs.types";
 import type { AppModalDialogsBuildDeps } from "@/components/app/types/appModalDialogsBuild.types";
 import type { ConnectRemoteProjectPayload } from "@shared/appTypes";
@@ -187,11 +190,36 @@ export const buildAppModalDialogsContextValue = (d: AppModalDialogsBuildDeps): A
   },
   addWorkspace: {
     open: d.uiState.showAddWorkspaceModal,
+    tools: d.snapshot.agentCatalog,
+    preferredAgentToolId: d.appSettings.preferredAgentToolId,
     onOpenChange: d.uiCommands.setAddWorkspaceDialogOpen,
     onChooseLocal: () => {
       void d.handleChooseLocalWorkspace();
     },
-    onChooseRemote: d.openAddRemoteWorkspaceModal
+    onChooseRemote: d.openAddRemoteWorkspaceModal,
+    onCreateNewProjectAgent: async (payload, projectName) => {
+      try {
+        d.uiCommands.setAddWorkspaceDialogOpen(false);
+        await launchProjectScaffoldAgent(
+          { payload, projectName },
+          {
+            createProjectWorkspace: noraWorkspaceClient.createProjectWorkspace,
+            createAgent: noraAgentClient.createAgent,
+            normalizeSnapshot: d.normalizeSnapshot,
+            updateSnapshot: (next) => {
+              d.setUiState((current) => ({
+                ...current,
+                activeErrorMessage: next.errorMessage || current.activeErrorMessage,
+                snapshot: next
+              }));
+            },
+            handoffPrompt: handoffPromptToAgent
+          }
+        );
+      } catch (error) {
+        d.captureError(error);
+      }
+    }
   },
   remoteWorkspace: {
     open: d.uiState.showRemoteWorkspaceModal,

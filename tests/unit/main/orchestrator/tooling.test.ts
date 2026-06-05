@@ -175,6 +175,21 @@ function createSwitchToolDeps(tool: AgentCatalogEntry, onCommand: (command: stri
   };
 }
 
+function writeFakeCliExecutable(basePath: string, scriptLines: string[]): string {
+  const scriptBody = scriptLines.join("\n");
+  if (process.platform === "win32") {
+    const jsPath = `${basePath}.js`;
+    const cmdPath = `${basePath}.cmd`;
+    writeFileSync(jsPath, scriptBody, "utf8");
+    writeFileSync(cmdPath, `@echo off\r\nnode "${jsPath}" %*\r\n`, "utf8");
+    return cmdPath;
+  }
+
+  writeFileSync(basePath, ["#!/usr/bin/env node", scriptBody].join("\n"), "utf8");
+  chmodSync(basePath, 0o755);
+  return basePath;
+}
+
 async function waitForFile(filePath: string): Promise<void> {
   const startedAt = Date.now();
   while (!existsSync(filePath)) {
@@ -315,17 +330,10 @@ test("installAgentTool resolves with refreshed detection after installer exit", 
 test("switchToolAccount uses Claude Code's browser auth command", async () => {
   const tempRoot = mkdtempSync(join(tmpdir(), "nora-claude-switch-"));
   const argvPath = join(tempRoot, "argv.json");
-  const executablePath = join(tempRoot, "fake-claude");
-  writeFileSync(
-    executablePath,
-    [
-      "#!/usr/bin/env node",
-      "const fs = require('node:fs');",
-      `fs.writeFileSync(${JSON.stringify(argvPath)}, JSON.stringify(process.argv.slice(2)));`
-    ].join("\n"),
-    "utf8"
-  );
-  chmodSync(executablePath, 0o755);
+  const executablePath = writeFakeCliExecutable(join(tempRoot, "fake-claude"), [
+    "const fs = require('node:fs');",
+    `fs.writeFileSync(${JSON.stringify(argvPath)}, JSON.stringify(process.argv.slice(2)));`
+  ]);
   const tool = createAgentCatalogEntry({
     id: "claude",
     label: "Claude Code",
@@ -353,18 +361,11 @@ test("switchToolAccount uses Claude Code's browser auth command", async () => {
 test("switchToolAccount resolves after launching Claude browser auth", async () => {
   const tempRoot = mkdtempSync(join(tmpdir(), "nora-claude-switch-running-"));
   const childInfoPath = join(tempRoot, "child.json");
-  const executablePath = join(tempRoot, "fake-claude");
-  writeFileSync(
-    executablePath,
-    [
-      "#!/usr/bin/env node",
-      "const fs = require('node:fs');",
-      `fs.writeFileSync(${JSON.stringify(childInfoPath)}, JSON.stringify({ pid: process.pid, argv: process.argv.slice(2) }));`,
-      "setTimeout(() => process.exit(0), 30000);"
-    ].join("\n"),
-    "utf8"
-  );
-  chmodSync(executablePath, 0o755);
+  const executablePath = writeFakeCliExecutable(join(tempRoot, "fake-claude"), [
+    "const fs = require('node:fs');",
+    `fs.writeFileSync(${JSON.stringify(childInfoPath)}, JSON.stringify({ pid: process.pid, argv: process.argv.slice(2) }));`,
+    "setTimeout(() => process.exit(0), 30000);"
+  ]);
   const tool = createAgentCatalogEntry({
     id: "claude",
     label: "Claude Code",

@@ -13,6 +13,28 @@ type ProjectMetadataDependencies = {
   getWorkspaceLocation: (target: WorkspaceTarget) => WorkspaceLocation;
 };
 
+function isUnbornHeadError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("ambiguous argument 'HEAD'") || message.includes("unknown revision or path not in the working tree");
+}
+
+async function readCurrentBranchName(
+  target: WorkspaceTarget,
+  execGit: ProjectMetadataDependencies["execGit"]
+): Promise<string> {
+  try {
+    const { stdout } = await execGit(target, ["rev-parse", "--abbrev-ref", "HEAD"]);
+    return stdout.trim();
+  } catch (error) {
+    if (!isUnbornHeadError(error)) {
+      throw error;
+    }
+
+    const { stdout } = await execGit(target, ["symbolic-ref", "--short", "HEAD"]);
+    return stdout.trim() || "main";
+  }
+}
+
 export function getWorkspaceLocation(target: WorkspaceTarget): WorkspaceLocation {
   return target.location || { kind: "local" };
 }
@@ -83,7 +105,7 @@ export function createGetProjectMetadata(deps: ProjectMetadataDependencies) {
     await reporter?.("Checking repository root...", await deps.getGitProgressCommand(target, ["rev-parse", "--show-toplevel"]));
     const { stdout: topLevel } = await deps.execGit(target, ["rev-parse", "--show-toplevel"]);
     await reporter?.("Reading current branch...", await deps.getGitProgressCommand(target, ["rev-parse", "--abbrev-ref", "HEAD"]));
-    const { stdout: branchStdout } = await deps.execGit(target, ["rev-parse", "--abbrev-ref", "HEAD"]);
+    const branchName = await readCurrentBranchName(target, deps.execGit);
     await reporter?.("Resolving git common dir...", await deps.getGitProgressCommand(target, ["rev-parse", "--git-common-dir"]));
     const { stdout: gitCommonDirStdout } = await deps.execGit(target, ["rev-parse", "--git-common-dir"]);
 
@@ -102,7 +124,7 @@ export function createGetProjectMetadata(deps: ProjectMetadataDependencies) {
       gitCommonDir: location.kind === "ssh" ? gitCommonDirStdout.trim() : path.resolve(rootPath, gitCommonDirStdout.trim()),
       location,
       workspaceTerminalPresets: [],
-      baseBranch: branchStdout.trim(),
+      baseBranch: branchName,
       workspaceInstructionFile,
       framework,
       platform: location.kind === "ssh" ? "ssh" : process.platform,

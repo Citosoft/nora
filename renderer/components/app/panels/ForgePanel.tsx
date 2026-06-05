@@ -4,7 +4,9 @@ import {
   getForgeReviewCommentSelections
 } from "@/components/app/logic/forgeReviewHandoff";
 import { resolveForgeWorkflowRunBadgeVariant } from "@/components/app/logic/forgeWorkflowRunUi";
+import { resolveMonacoLanguageId } from "@/components/app/logic/fileEditorMonaco";
 import { diffLineClass } from "@/components/app/logic/utils";
+import { ForgeDiffCodeLine } from "@/components/app/panels/ForgeDiffCodeLine";
 import { MarkdownRenderer } from "@/components/app/shared/MarkdownRenderer";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import type { ForgeDetailPanelProps, ForgePanelProps } from "@/components/app/types/component.types";
@@ -24,7 +26,7 @@ import type {
   ForgeWorkItemKind,
   ForgeWorkItemSummary
 } from "@shared/appTypes";
-import { Activity, ArrowLeft, ExternalLink, FileDiff, GitBranch, GitPullRequest, MessageSquare, Plus, RefreshCcw, Tags } from "lucide-react";
+import { Activity, ArrowLeft, CalendarClock, ExternalLink, FileDiff, GitBranch, GitMerge, GitPullRequest, MessageSquare, Plus, RefreshCcw, Send, Tags, User, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 type ForgeListTab = "pull_requests" | "issues" | "actions";
@@ -102,6 +104,28 @@ function ForgeBranchSummary({ item }: { item: ForgeWorkItemSummary }) {
       </span>
     </div>
   );
+}
+
+function getForgeStateBadgeVariant(state: string): "success" | "warning" | "destructive" | "outline" {
+  const normalized = state.toLowerCase();
+  if (["open", "opened", "merged"].includes(normalized)) {
+    return "success";
+  }
+  if (["draft", "reopened"].includes(normalized)) {
+    return "warning";
+  }
+  if (["closed", "declined"].includes(normalized)) {
+    return "destructive";
+  }
+  return "outline";
+}
+
+function formatForgeUpdatedAt(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "Unknown";
+  }
+  return date.toLocaleString();
 }
 
 function ForgeWorkItemList({
@@ -668,24 +692,117 @@ export function ForgeDetailPanel({
 
   return (
     <div className="center-column-surface flex h-full min-h-0 flex-col bg-card/95">
-      <div className="border-b border-border/50 px-4 py-3">
-        <div className="min-w-0">
-          {detail ? (
-            <>
-              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-muted-foreground">
+      <div className="border-b border-border/50 bg-card/95">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/35 px-4 py-2.5">
+          <div className="flex min-w-0 items-center gap-2">
+            <Button variant="ghost" size="sm" className="h-8 px-2.5" onClick={onBackToList}>
+              <ArrowLeft className="size-4" />
+              Back
+            </Button>
+            {detail ? (
+              <div className="flex min-w-0 items-center gap-2 rounded-[5px] border border-border/60 bg-background/60 px-2.5 py-1.5 text-xs text-muted-foreground">
                 <ForgeProviderIcon provider={detailProvider} className="size-3.5 shrink-0" />
-                {detail.kind === "pull_request" ? <GitPullRequest className="size-3.5" /> : <MessageSquare className="size-3.5" />}
-                <span>{detail.kind === "pull_request" ? pullRequestLabel : "Issue"}</span>
+                {detail.kind === "pull_request" ? <GitPullRequest className="size-3.5 shrink-0" /> : <MessageSquare className="size-3.5 shrink-0" />}
+                <span className="truncate">{detail.kind === "pull_request" ? pullRequestLabel : "Issue"}</span>
+                <span className="font-mono text-foreground/80">#{detail.item.number}</span>
               </div>
-              <div className="mt-2 text-lg font-semibold leading-tight text-foreground">
-                #{detail.item.number} {detail.item.title}
+            ) : null}
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button variant="ghost" size="sm" className="h-8" onClick={onRefreshDetail} disabled={detailLoading || actionLoading}>
+              <RefreshCcw className="size-4" />
+              Refresh
+            </Button>
+            {reviewCommentSelector ? (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8">
+                    <MessageSquare className="size-4" />
+                    Review
+                    <Badge variant="outline" className="ml-1 px-1.5">
+                      {selectedReviewComments.length}/{reviewCommentSelections.length}
+                    </Badge>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-[min(42rem,calc(100vw-2rem))]">
+                  {reviewCommentSelector}
+                </PopoverContent>
+              </Popover>
+            ) : null}
+            {canOpenDetailInViewer && onOpenInViewer ? (
+              <Button variant="ghost" size="sm" className="h-8" onClick={onOpenInViewer}>
+                <FileDiff className="size-4" />
+                Viewer
+              </Button>
+            ) : null}
+            {detail?.canMerge ? (
+              <Button variant="default" size="sm" className="h-8" onClick={() => onAction("merge")} disabled={detailLoading || actionLoading}>
+                <GitMerge className="size-4" />
+                Merge
+              </Button>
+            ) : null}
+            {detail?.canClose ? (
+              <Button variant="ghost" size="sm" className="h-8" onClick={() => onAction("close")} disabled={detailLoading || actionLoading}>
+                Close
+              </Button>
+            ) : null}
+            {detail?.canReopen ? (
+              <Button variant="ghost" size="sm" className="h-8" onClick={() => onAction("reopen")} disabled={detailLoading || actionLoading}>
+                Reopen
+              </Button>
+            ) : null}
+            {detail ? (
+              <Button variant="ghost" size="sm" className="h-8" onClick={() => onOpenUrl(detail.item.webUrl)}>
+                <ExternalLink className="size-4" />
+                Open
+              </Button>
+            ) : null}
+          </div>
+        </div>
+        <div className="px-4 py-3">
+          {detail ? (
+            <div className="min-w-0 space-y-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="text-xl font-semibold leading-tight text-foreground">
+                    {detail.item.title}
+                  </div>
+                  {detail.kind === "pull_request" ? <ForgeBranchSummary item={detail.item} /> : null}
+                </div>
+                <Badge variant={getForgeStateBadgeVariant(detail.item.state)} className="capitalize">
+                  {detail.item.state}
+                </Badge>
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <Badge variant="outline">{detail.item.state}</Badge>
-                {detail.item.author ? <Badge variant="outline">{detail.item.author}</Badge> : null}
-                <Badge variant="outline">{new Date(detail.item.updatedAt).toLocaleString()}</Badge>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                {detail.item.author ? (
+                  <div className="inline-flex max-w-full items-center gap-1.5 rounded-[5px] border border-border/55 bg-background/55 px-2.5 py-1.5">
+                    <User className="size-3.5 shrink-0" />
+                    <span className="truncate">{detail.item.author}</span>
+                  </div>
+                ) : null}
+                <div className="inline-flex max-w-full items-center gap-1.5 rounded-[5px] border border-border/55 bg-background/55 px-2.5 py-1.5">
+                  <CalendarClock className="size-3.5 shrink-0" />
+                  <span className="truncate">{formatForgeUpdatedAt(detail.item.updatedAt)}</span>
+                </div>
+                {detail.kind === "pull_request" && detail.changes.length ? (
+                  <div className="inline-flex max-w-full items-center gap-1.5 rounded-[5px] border border-border/55 bg-background/55 px-2.5 py-1.5">
+                    <FileDiff className="size-3.5 shrink-0" />
+                    <span>{detail.changes.length} file{detail.changes.length === 1 ? "" : "s"}</span>
+                    <span className="text-emerald-600 dark:text-emerald-300">+{detail.changes.reduce((total, change) => total + change.additions, 0)}</span>
+                    <span className="text-red-600 dark:text-red-300">-{detail.changes.reduce((total, change) => total + change.deletions, 0)}</span>
+                  </div>
+                ) : null}
+                {detail.labels.length ? (
+                  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                    {detail.labels.slice(0, 4).map((label) => (
+                      <Badge key={label} variant="outline" className="max-w-40 truncate">
+                        {label}
+                      </Badge>
+                    ))}
+                    {detail.labels.length > 4 ? <Badge variant="outline">+{detail.labels.length - 4}</Badge> : null}
+                  </div>
+                ) : null}
               </div>
-              {detail.kind === "pull_request" ? <ForgeBranchSummary item={detail.item} /> : null}
               {detail.kind === "issue" ? (
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <div className="mr-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
@@ -717,64 +834,12 @@ export function ForgeDetailPanel({
                   ) : null}
                 </div>
               ) : null}
-            </>
+            </div>
           ) : (
             <div className="text-lg font-semibold leading-tight text-foreground">Forge item</div>
           )}
+          {detailErrorMessage ? <div className="mt-3 text-xs text-destructive">{detailErrorMessage}</div> : null}
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={onBackToList}>
-            <ArrowLeft className="size-4" />
-            Back
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onRefreshDetail} disabled={detailLoading || actionLoading}>
-            <RefreshCcw className="size-4" />
-            Refresh
-          </Button>
-          {reviewCommentSelector ? (
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <MessageSquare className="size-4" />
-                  Review comments
-                  <Badge variant="outline" className="ml-1">
-                    {selectedReviewComments.length}/{reviewCommentSelections.length}
-                  </Badge>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="start" className="w-[min(42rem,calc(100vw-2rem))]">
-                {reviewCommentSelector}
-              </PopoverContent>
-            </Popover>
-          ) : null}
-          {canOpenDetailInViewer && onOpenInViewer ? (
-            <Button variant="ghost" size="sm" onClick={onOpenInViewer}>
-              Open viewer
-            </Button>
-          ) : null}
-          {detail?.canMerge ? (
-            <Button variant="ghost" size="sm" onClick={() => onAction("merge")} disabled={detailLoading || actionLoading}>
-              Merge
-            </Button>
-          ) : null}
-          {detail?.canClose ? (
-            <Button variant="ghost" size="sm" onClick={() => onAction("close")} disabled={detailLoading || actionLoading}>
-              Close
-            </Button>
-          ) : null}
-          {detail?.canReopen ? (
-            <Button variant="ghost" size="sm" onClick={() => onAction("reopen")} disabled={detailLoading || actionLoading}>
-              Reopen
-            </Button>
-          ) : null}
-          {detail ? (
-            <Button variant="ghost" size="sm" onClick={() => onOpenUrl(detail.item.webUrl)}>
-              <ExternalLink className="size-4" />
-              Open
-            </Button>
-          ) : null}
-        </div>
-        {detailErrorMessage ? <div className="mt-3 text-xs text-destructive">{detailErrorMessage}</div> : null}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
@@ -819,48 +884,50 @@ export function ForgeDetailPanel({
                 </div>
                 {detail.changes.length ? (
                   <div className="space-y-3">
-                    {detail.changes.map((change) => (
-                      <div key={change.id} className="rounded-[6px] border border-border/50 bg-background/55 p-3">
-                        <div className="mb-2 text-xs text-muted-foreground">
-                          {[change.path, `+${change.additions}`, `-${change.deletions}`].join(" · ")}
-                          {change.previousPath ? ` · renamed from ${change.previousPath}` : ""}
-                        </div>
-                        <div className="terminal-text overflow-x-auto whitespace-pre rounded-[4px] border border-border/50 bg-background/70 p-2 text-[11px] leading-5">
-                          {parseDiffLines(formatDiffPreview(change.diff)).map((line) => {
-                            const inlineKey = getInlineCommentKey(change.path, line.oldLine, line.newLine);
-                            const inlineComments = inlineCommentsByKey.get(inlineKey) ?? [];
-                            const supportsInlineComments = detail.capabilities?.supportsInlineComments
-                              ?? (detailProvider === "gitlab" && detail.kind === "pull_request");
-                            const canCommentInline = supportsInlineComments && (line.oldLine !== null || line.newLine !== null);
-                            return (
-                              <div key={`${change.id}-${line.key}`} className="space-y-1">
-                                <div className="group flex items-start gap-2">
-                                  <div className="mt-[1px] w-16 shrink-0 text-[10px] text-muted-foreground/80">
-                                    {line.oldLine ?? " "} | {line.newLine ?? " "}
+                    {detail.changes.map((change) => {
+                      const languageId = resolveMonacoLanguageId(change.path);
+                      return (
+                        <div key={change.id} className="rounded-[6px] border border-border/50 bg-background/55 p-3">
+                          <div className="mb-2 text-xs text-muted-foreground">
+                            {[change.path, `+${change.additions}`, `-${change.deletions}`].join(" · ")}
+                            {change.previousPath ? ` · renamed from ${change.previousPath}` : ""}
+                          </div>
+                          <div className="terminal-text overflow-x-auto whitespace-pre rounded-[4px] border border-border/50 bg-background/70 p-2 text-[11px] leading-5">
+                            {parseDiffLines(formatDiffPreview(change.diff)).map((line) => {
+                              const inlineKey = getInlineCommentKey(change.path, line.oldLine, line.newLine);
+                              const inlineComments = inlineCommentsByKey.get(inlineKey) ?? [];
+                              const supportsInlineComments = detail.capabilities?.supportsInlineComments
+                                ?? (detailProvider === "gitlab" && detail.kind === "pull_request");
+                              const canCommentInline = supportsInlineComments && (line.oldLine !== null || line.newLine !== null);
+                              return (
+                                <div key={`${change.id}-${line.key}`} className="space-y-1">
+                                  <div className="group flex items-start gap-2">
+                                    <div className="mt-[1px] w-16 shrink-0 text-[10px] text-muted-foreground/80">
+                                      {line.oldLine ?? " "} | {line.newLine ?? " "}
+                                    </div>
+                                    <div className={cn("min-w-0 flex-1 whitespace-pre-wrap break-words px-1", diffLineClass(line.text, resolvedTheme))}>
+                                      <ForgeDiffCodeLine text={line.text} languageId={languageId} resolvedTheme={resolvedTheme} />
+                                    </div>
+                                    {canCommentInline ? (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="mt-0.5 size-6 rounded-[4px] border border-transparent bg-background/80 opacity-0 shadow-sm transition hover:border-primary/30 hover:bg-primary/10 group-hover:opacity-100"
+                                        onClick={() => {
+                                          setInlineComposerTarget({
+                                            key: inlineKey,
+                                            path: change.path,
+                                            oldLine: line.oldLine,
+                                            newLine: line.newLine
+                                          });
+                                          setInlineCommentDraft("");
+                                        }}
+                                        aria-label="Add inline comment"
+                                      >
+                                        <Plus className="size-3.5" />
+                                      </Button>
+                                    ) : null}
                                   </div>
-                                  <div className={cn("min-w-0 flex-1 whitespace-pre-wrap break-words px-1", diffLineClass(line.text, resolvedTheme))}>
-                                    {line.text || " "}
-                                  </div>
-                                  {canCommentInline ? (
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="size-5 opacity-0 transition group-hover:opacity-100"
-                                      onClick={() => {
-                                        setInlineComposerTarget({
-                                          key: inlineKey,
-                                          path: change.path,
-                                          oldLine: line.oldLine,
-                                          newLine: line.newLine
-                                        });
-                                        setInlineCommentDraft("");
-                                      }}
-                                      aria-label="Add inline comment"
-                                    >
-                                      <Plus className="size-3.5" />
-                                    </Button>
-                                  ) : null}
-                                </div>
                                 {inlineComments.length ? (
                                   <div className="ml-[4.5rem] mt-2 space-y-3 border-l-2 border-primary/70 pl-3">
                                     {inlineComments.map((comment) => (
@@ -885,18 +952,49 @@ export function ForgeDetailPanel({
                                   </div>
                                 ) : null}
                                 {inlineComposerTarget?.key === inlineKey ? (
-                                  <div className="ml-[4.5rem] space-y-2 rounded-[4px] border border-border/50 bg-background/70 p-2">
+                                  <div className="ml-[4.5rem] mt-2 overflow-hidden rounded-[6px] border border-primary/35 bg-background/95 shadow-lg shadow-primary/10">
+                                    <div className="flex items-center justify-between gap-3 border-b border-border/45 bg-primary/5 px-3 py-2">
+                                      <div className="min-w-0">
+                                        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
+                                          Inline review
+                                        </div>
+                                        <div className="mt-0.5 truncate font-sans text-xs text-muted-foreground">
+                                          <span className="font-mono text-foreground/85">{inlineComposerTarget.path}</span>
+                                          <span className="px-1.5">·</span>
+                                          <span>{formatForgeReviewLineLabel(inlineComposerTarget.oldLine, inlineComposerTarget.newLine)}</span>
+                                        </div>
+                                      </div>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="size-7 shrink-0 rounded-[4px]"
+                                        onClick={() => {
+                                          setInlineComposerTarget(null);
+                                          setInlineCommentDraft("");
+                                        }}
+                                        disabled={commentLoading}
+                                        aria-label="Cancel inline comment"
+                                      >
+                                        <X className="size-3.5" />
+                                      </Button>
+                                    </div>
+                                    <div className="space-y-2 p-3">
                                     <Textarea
                                       value={inlineCommentDraft}
                                       onChange={(event) => setInlineCommentDraft(event.target.value)}
-                                      placeholder="Write an inline comment"
-                                      className="min-h-20 resize-y"
+                                      placeholder="Leave a review comment on this line"
+                                      className="min-h-24 resize-y border-border/60 bg-card/80 text-sm leading-5 focus-visible:ring-primary/40"
                                       disabled={commentLoading}
                                     />
-                                    <div className="flex items-center justify-end gap-2">
+                                    <div className="flex items-center justify-between gap-3">
+                                      <div className="font-sans text-[11px] text-muted-foreground">
+                                        Posts as a review comment on the pull request diff.
+                                      </div>
+                                      <div className="flex shrink-0 items-center gap-2">
                                       <Button
                                         variant="ghost"
                                         size="sm"
+                                        className="h-8 rounded-[4px]"
                                         onClick={() => {
                                           setInlineComposerTarget(null);
                                           setInlineCommentDraft("");
@@ -906,8 +1004,9 @@ export function ForgeDetailPanel({
                                         Cancel
                                       </Button>
                                       <Button
-                                        variant="ghost"
+                                        variant="default"
                                         size="sm"
+                                        className="h-8 rounded-[4px]"
                                         disabled={!inlineCommentDraft.trim() || commentLoading}
                                         onClick={() => {
                                           const nextComment = inlineCommentDraft.trim();
@@ -927,17 +1026,21 @@ export function ForgeDetailPanel({
                                           });
                                         }}
                                       >
-                                        {commentLoading ? "Posting" : "Add inline comment"}
+                                        <Send className="size-3.5" />
+                                        {commentLoading ? "Posting" : "Comment"}
                                       </Button>
+                                      </div>
+                                    </div>
                                     </div>
                                   </div>
                                 ) : null}
-                              </div>
-                            );
-                          })}
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-sm text-muted-foreground">No changed files available.</div>

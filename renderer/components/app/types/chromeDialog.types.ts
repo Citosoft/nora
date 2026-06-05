@@ -98,9 +98,12 @@ export type TitleBarProps = {
 
 export type AddWorkspaceDialogProps = {
   open: boolean;
+  tools: AgentCatalogEntry[];
+  preferredAgentToolId: string | null;
   onOpenChange: (open: boolean) => void;
   onChooseLocal: () => void;
   onChooseRemote: () => void;
+  onCreateNewProjectAgent?: (payload: CreateAgentPayload, projectName: string) => Promise<void>;
 };
 
 export type CreateAgentDialogProps = {

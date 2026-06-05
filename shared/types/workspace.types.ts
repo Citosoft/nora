@@ -206,6 +206,15 @@ export interface WorkspaceFileRequest {
 
 export interface CreateWorkspaceDirectoryPayload extends WorkspaceFileRequest {}
 
+export interface CreateProjectWorkspacePayload {
+  projectName: string;
+}
+
+export interface CreateProjectWorkspaceResult {
+  state: import("./session.types").AppState;
+  projectRoot: string | null;
+}
+
 export interface WriteWorkspaceFilePayload extends WorkspaceFileRequest {
   content: string;
 }

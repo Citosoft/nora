@@ -7,6 +7,7 @@ export function createWorkspaceBridge(): WorkspaceBridge {
   return {
     chooseProject: () => invokeIpc("app:choose-project"),
     chooseProjectAtPath: (defaultPath, title) => invokeIpc("app:choose-project-at-path", defaultPath, title),
+    createProjectWorkspace: (payload) => invokeIpc("app:create-project-workspace", payload),
     openSshProject: (payload) => invokeIpc("app:open-ssh-project", payload),
     mountRemoteProject: (payload) => invokeIpc("app:mount-remote-project", payload),
     connectRemoteProject: (mountPoint, host) => invokeIpc("app:connect-remote-project", mountPoint, host),

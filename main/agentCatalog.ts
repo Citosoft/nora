@@ -265,7 +265,7 @@ export const AGENT_DEFINITIONS: AgentDefinition[] = [
       "Configure model provider credentials in OpenCode before starting larger tasks."
     ],
     executablePathCandidates: [
-      { path: "~/.opencode/bin/opencode", platforms: ["darwin", "linux"] }
+      { path: "~/.opencode/bin/opencode", platforms: ["darwin", "linux", "win32"] }
     ]
   }),
   agent({

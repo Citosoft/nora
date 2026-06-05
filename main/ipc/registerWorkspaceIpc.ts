@@ -5,6 +5,8 @@ import type {
   AppSettings,
   AppState,
   CommitChangesPayload,
+  CreateProjectWorkspacePayload,
+  CreateProjectWorkspaceResult,
   CreateWorkspaceDirectoryPayload,
   ExternalHarnessContextRef,
   ExternalHarnessSessionSummary,
@@ -36,6 +38,7 @@ interface RegisterWorkspaceIpcDeps {
   importBrowserImageToWorkspace: (payload: ImportBrowserImagePayload) => Promise<AppState>;
   validateMoveWorkspaceFilePayload: (payload: { projectId: string; fromPath: string; toPath: string }) => void;
   validateWriteWorkspaceFilePayload: (payload: WriteWorkspaceFilePayload) => void;
+  createProjectWorkspace: (payload: CreateProjectWorkspacePayload) => Promise<CreateProjectWorkspaceResult>;
 }
 
 export function registerWorkspaceIpc({
@@ -45,7 +48,8 @@ export function registerWorkspaceIpc({
   getAppSettings,
   importBrowserImageToWorkspace,
   validateMoveWorkspaceFilePayload,
-  validateWriteWorkspaceFilePayload
+  validateWriteWorkspaceFilePayload,
+  createProjectWorkspace
 }: RegisterWorkspaceIpcDeps): void {
   ipcMain.handle("app:get-snapshot", () => compactStateForRenderer(services.snapshot.getSnapshot()));
   ipcMain.handle("app:get-agent-terminal-buffer", (_event, agentId: string) =>
@@ -62,6 +66,9 @@ export function registerWorkspaceIpc({
   );
   ipcMain.handle("app:get-agent-context-state", (_event, agentId: string) =>
     services.snapshot.getAgentContextState(agentId)
+  );
+  ipcMain.handle("app:create-project-workspace", (_event, payload: CreateProjectWorkspacePayload) =>
+    createProjectWorkspace(payload)
   );
   ipcMain.handle("app:list-workspace-agent-context-sources", (_event, projectId: string, excludeAgentId?: string) =>
     services.snapshot.listWorkspaceAgentContextSources(projectId, excludeAgentId)

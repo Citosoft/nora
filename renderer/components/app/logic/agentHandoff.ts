@@ -87,6 +87,9 @@ async function waitForAgentConversationReady(
   let geminiRunningSinceMs: number | null = null;
   let geminiLastNormalizedOutput = "";
   let geminiStableIterations = 0;
+  let genericRunningSinceMs: number | null = null;
+  let genericLastNormalizedOutput = "";
+  let genericStableIterations = 0;
 
   for (let attempt = 0; attempt < 60; attempt += 1) {
     const next = normalizeSnapshot(await noraAppClient.getSnapshot());
@@ -205,13 +208,54 @@ async function waitForAgentConversationReady(
           return;
         }
       }
-    } else if (agent.status === "running") {
-      await new Promise((resolve) => globalThis.setTimeout(resolve, 200));
-      return;
+    } else {
+      const GENERIC_MIN_MS_AFTER_RUNNING = 2_500;
+      const GENERIC_STABLE_ITERATIONS = 2;
+      const GENERIC_MIN_BUFFER_CHARS = 16;
+      const GENERIC_FALLBACK_MAX_MS = 10_000;
+      const GENERIC_POST_IDLE_MS = 300;
+      const hasVisibleStartupPrompt =
+        /do you trust/i.test(plainOutput) ||
+        /press enter to continue/i.test(plainOutput) ||
+        /choose .*proceed/i.test(plainOutput) ||
+        /permission/i.test(plainOutput);
+
+      if (agent.status !== "running") {
+        genericRunningSinceMs = null;
+        genericLastNormalizedOutput = "";
+        genericStableIterations = 0;
+      } else {
+        if (genericRunningSinceMs === null) {
+          genericRunningSinceMs = Date.now();
+        }
+
+        const elapsed = Date.now() - genericRunningSinceMs;
+
+        if (plainOutput !== genericLastNormalizedOutput) {
+          genericLastNormalizedOutput = plainOutput;
+          genericStableIterations = 0;
+        } else if (plainOutput.length >= GENERIC_MIN_BUFFER_CHARS) {
+          genericStableIterations += 1;
+        }
+
+        const outputSettled =
+          elapsed >= GENERIC_MIN_MS_AFTER_RUNNING &&
+          genericStableIterations >= GENERIC_STABLE_ITERATIONS;
+        const quietFallbackReady =
+          elapsed >= GENERIC_FALLBACK_MAX_MS &&
+          !hasVisibleStartupPrompt;
+
+        if (outputSettled || quietFallbackReady) {
+          await new Promise((resolve) => globalThis.setTimeout(resolve, GENERIC_POST_IDLE_MS));
+          return;
+        }
+      }
     }
 
     await new Promise((resolve) => globalThis.setTimeout(resolve, 300));
   }
+
+  throw new Error("The agent terminal was not ready to receive the scaffold prompt.");
 }
 
 export async function handoffPromptToAgent(options: {

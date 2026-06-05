@@ -115,6 +115,8 @@ export function buildPreLaunchAddWorkspaceDialogProps(args: {
 }): AddWorkspaceDialogProps {
   return {
     open: args.uiState.showAddWorkspaceModal,
+    tools: [],
+    preferredAgentToolId: null,
     onOpenChange: args.uiCommands.setAddWorkspaceDialogOpen,
     onChooseLocal: args.onChooseLocalWorkspace,
     onChooseRemote: args.uiCommands.openRemoteWorkspaceDialog

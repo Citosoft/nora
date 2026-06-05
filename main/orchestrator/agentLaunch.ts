@@ -2,6 +2,12 @@ export type NormalizeAgentLaunchCommandOptions = {
   isWindowsPlatform?: boolean;
 };
 
+export type AgentLaunchStartupOptions = NormalizeAgentLaunchCommandOptions & {
+  initialPrompt?: string;
+  initialPromptDelivery?: import("@shared/agentStartupCapabilities").AgentInitialPromptDelivery;
+  startupTrustMode?: import("@shared/agentStartupCapabilities").AgentStartupTrustMode;
+};
+
 const RESUME_ID_PATTERN = /[A-Za-z0-9._:-]+/;
 
 function normalizeResumeIdentifier(value: string): string {
@@ -39,6 +45,51 @@ function normalizeGeminiResumeCommand(command: string): string {
       return normalizedResumeId ? `${prefix}${normalizedResumeId}` : `${prefix}${rawResumeId}`;
     }
   );
+}
+
+function quoteLaunchArgument(value: string, isWindowsPlatform: boolean): string {
+  if (isWindowsPlatform) {
+    return `"${value.replace(/"/g, "\\\"").replace(/\r?\n/g, " ")}"`;
+  }
+
+  return `'${value.replace(/'/g, "'\\''")}'`;
+}
+
+function commandHasFlag(command: string, flag: string): boolean {
+  return new RegExp(`(?:^|\\s)${flag.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:\\s|=|$)`).test(command);
+}
+
+export function buildAgentLaunchCommand(
+  toolId: string,
+  command: string,
+  options?: AgentLaunchStartupOptions
+): string {
+  const isWindowsPlatform = options?.isWindowsPlatform ?? process.platform === "win32";
+  let launchCommand = normalizeAgentLaunchCommand(toolId, command, { isWindowsPlatform });
+  const initialPrompt = options?.initialPrompt?.trim() ?? "";
+  const shouldPresetPrompt = options?.initialPromptDelivery === "launch-command" && initialPrompt.length > 0;
+  const quotedPrompt = shouldPresetPrompt ? quoteLaunchArgument(initialPrompt, isWindowsPlatform) : "";
+
+  if (toolId === "gemini" && options?.startupTrustMode === "trusted-workspace" && !commandHasFlag(launchCommand, "--skip-trust")) {
+    launchCommand = `${launchCommand} --skip-trust`;
+  }
+
+  if (!shouldPresetPrompt) {
+    return launchCommand;
+  }
+
+  if (toolId === "gemini") {
+    if (commandHasFlag(launchCommand, "--prompt-interactive") || commandHasFlag(launchCommand, "-i")) {
+      return launchCommand;
+    }
+    return `${launchCommand} --prompt-interactive ${quotedPrompt}`;
+  }
+
+  if (toolId === "codex" || toolId === "claude") {
+    return `${launchCommand} ${quotedPrompt}`;
+  }
+
+  return launchCommand;
 }
 
 export function normalizeAgentLaunchCommand(

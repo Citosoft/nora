@@ -2,6 +2,8 @@ import type {
   AgentContextSelection,
   AppState,
   CommitChangesPayload,
+  CreateProjectWorkspacePayload,
+  CreateProjectWorkspaceResult,
   ConnectRemoteProjectPayload,
   CreateWorkspaceDirectoryPayload,
   ExternalHarnessContextRef,
@@ -35,6 +37,7 @@ export interface WorkspaceLoadingProgressPayload {
 export interface WorkspaceBridge {
   chooseProject: () => Promise<AppState>;
   chooseProjectAtPath: (defaultPath: string, title?: string) => Promise<AppState>;
+  createProjectWorkspace: (payload: CreateProjectWorkspacePayload) => Promise<CreateProjectWorkspaceResult>;
   openSshProject: (payload: ConnectRemoteProjectPayload) => Promise<AppState>;
   mountRemoteProject: (payload: ConnectRemoteProjectPayload) => Promise<{ mountPoint: string; mountedUnc: string }>;
   connectRemoteProject: (mountPoint: string, host: string) => Promise<AppState>;
