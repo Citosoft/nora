@@ -140,7 +140,7 @@ async function commandInfoForAliases(
 
 function resolveExecutablePathCandidates(candidates: AgentExecutablePathCandidate[]): string[] {
   const platform = process.platform;
-  const homeDir = process.env.HOME || "";
+  const homeDir = process.env.HOME || process.env.USERPROFILE || "";
   const userProfileDir = process.env.USERPROFILE || "";
   const localAppDataDir = process.env.LOCALAPPDATA || "";
   const appDataDir = process.env.APPDATA || "";
