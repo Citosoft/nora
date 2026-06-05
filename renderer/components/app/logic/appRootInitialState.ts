@@ -11,6 +11,7 @@ export const appRootInitialUiState: UiState = {
   createTerminalDefaults: null,
   showAboutDialog: false,
   showKeyboardShortcutsDialog: false,
+  showResourceMonitorDialog: false,
   showWorkspaceSwitcherDialog: false,
   destroyAgentId: null,
   removeMissingWorkspaceRoot: null,

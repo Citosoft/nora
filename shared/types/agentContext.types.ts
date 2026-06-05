@@ -15,7 +15,8 @@ export type AgentPromptSource =
   | "task-planner"
   | "forge-issue"
   | "browser-selection"
-  | "file-editor";
+  | "file-editor"
+  | "diff-review";
 
 export type AgentContextReferenceKind =
   | "agent"

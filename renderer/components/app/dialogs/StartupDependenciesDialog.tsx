@@ -1,4 +1,5 @@
 import { isProductionBuild } from "@/components/app/logic/appEnvironment";
+import { buildStartupDependencyCopyText } from "@/components/app/logic/startupDependencyCopyText";
 import type { StartupDependenciesDialogProps } from "@/components/app/types/component.types";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,7 +11,11 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
-import { AlertTriangle, CheckCircle2, Copy, LoaderCircle, RefreshCcw, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Copy, LoaderCircle, RefreshCcw } from "lucide-react";
+import type { StartupDependencyId } from "@shared/types/startupDependency.types";
+import { useEffect, useRef, useState } from "react";
+
+type DependencyCopyState = "idle" | "copying" | "copied" | "failed";
 
 export function StartupDependenciesDialog({
   open,
@@ -27,10 +32,45 @@ export function StartupDependenciesDialog({
   onReload,
   onQuit
 }: StartupDependenciesDialogProps) {
+  const [dependencyCopyStates, setDependencyCopyStates] = useState<Partial<Record<StartupDependencyId, DependencyCopyState>>>({});
+  const copyFeedbackTimeoutRef = useRef<number | null>(null);
   const missingDependencies = dependencies.filter((dependency) => dependency.status === "missing");
   const blockingDependencies = missingDependencies.filter((dependency) => dependency.severity === "mandatory");
   const hasBlockingDependencies = blockingDependencies.length > 0;
   const showSimulationControls = !isProductionBuild;
+
+  useEffect(() => () => {
+    if (copyFeedbackTimeoutRef.current !== null) {
+      window.clearTimeout(copyFeedbackTimeoutRef.current);
+    }
+  }, []);
+
+  const resetCopyStateLater = (dependencyId: StartupDependencyId, delayMs: number): void => {
+    if (copyFeedbackTimeoutRef.current !== null) {
+      window.clearTimeout(copyFeedbackTimeoutRef.current);
+    }
+    copyFeedbackTimeoutRef.current = window.setTimeout(() => {
+      setDependencyCopyStates((current) => ({ ...current, [dependencyId]: "idle" }));
+      copyFeedbackTimeoutRef.current = null;
+    }, delayMs);
+  };
+
+  const handleCopyDependencyInstructions = async (dependency: { id: StartupDependencyId; label: string }): Promise<void> => {
+    const matchedDependency = dependencies.find((item) => item.id === dependency.id);
+    if (!matchedDependency) {
+      return;
+    }
+
+    setDependencyCopyStates((current) => ({ ...current, [dependency.id]: "copying" }));
+    try {
+      await onCopyInstructions(matchedDependency);
+      setDependencyCopyStates((current) => ({ ...current, [dependency.id]: "copied" }));
+      resetCopyStateLater(dependency.id, 1600);
+    } catch {
+      setDependencyCopyStates((current) => ({ ...current, [dependency.id]: "failed" }));
+      resetCopyStateLater(dependency.id, 2200);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -73,6 +113,11 @@ export function StartupDependenciesDialog({
                 const isInstalling = installTargetId === dependency.id;
                 const isSimulatedMissing = simulatedMissingDependencyIds.includes(dependency.id);
                 const isAvailable = dependency.status === "available";
+                const installCommand = buildStartupDependencyCopyText(dependency);
+                const copyState = dependencyCopyStates[dependency.id] ?? "idle";
+                const isCopying = copyState === "copying";
+                const wasCopied = copyState === "copied";
+                const copyFailed = copyState === "failed";
                 return (
                   <div
                     key={dependency.id}
@@ -86,15 +131,17 @@ export function StartupDependenciesDialog({
                           ) : dependency.severity === "mandatory" ? (
                             <AlertTriangle className="size-4 shrink-0 text-amber-500" />
                           ) : (
-                            <XCircle className="size-4 shrink-0 text-muted-foreground" />
+                            <AlertTriangle className="size-4 shrink-0 text-orange-500" />
                           )}
                           <div className="font-medium text-foreground">{dependency.label}</div>
                           <span className="rounded-full border border-border/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                             {dependency.severity}
                           </span>
-                          <span className="rounded-full border border-border/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                            {dependency.status}
-                          </span>
+                          {!isAvailable ? (
+                            <span className="rounded-full border border-border/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                              {dependency.status}
+                            </span>
+                          ) : null}
                           {isSimulatedMissing ? (
                             <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-700">
                               simulated
@@ -131,10 +178,36 @@ export function StartupDependenciesDialog({
                         ) : null}
                       </div>
 
-                      <div className="flex shrink-0 flex-col gap-2">
+                      <div className="flex shrink-0 flex-row items-center gap-2">
+                        {installCommand ? (
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="outline"
+                            tooltip={isCopying ? "Copying command" : wasCopied ? "Copied command" : copyFailed ? "Copy failed" : "Copy install command"}
+                            className={[
+                              wasCopied ? "border-emerald-500/45 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "",
+                              copyFailed ? "border-destructive/45 bg-destructive/10 text-destructive" : ""
+                            ].filter(Boolean).join(" ") || undefined}
+                            onClick={() => {
+                              void handleCopyDependencyInstructions(dependency);
+                            }}
+                            disabled={isLoading || isCopying}
+                            aria-label={`${isCopying ? "Copying" : wasCopied ? "Copied" : copyFailed ? "Copy failed for" : "Copy install command for"} ${dependency.label}`}
+                          >
+                            {isCopying ? (
+                              <LoaderCircle className="size-4 animate-spin" />
+                            ) : wasCopied ? (
+                              <CheckCircle2 className="size-4 text-emerald-500" />
+                            ) : (
+                              <Copy className="size-4" />
+                            )}
+                          </Button>
+                        ) : null}
                         {showSimulationControls ? (
                           <Button
                             variant="outline"
+                            tooltip={isSimulatedMissing ? `Clear the simulated missing state for ${dependency.label}` : `Simulate ${dependency.label} as missing`}
                             onClick={() => onToggleSimulatedMissing(dependency.id)}
                             disabled={isLoading}
                           >
@@ -143,6 +216,7 @@ export function StartupDependenciesDialog({
                         ) : null}
                         {dependency.canAutoInstall ? (
                           <Button
+                            tooltip={isAvailable ? `${dependency.label} is already installed` : dependency.autoInstallLabel || `Install ${dependency.label}`}
                             onClick={() => onInstallDependency(dependency.id)}
                             disabled={isLoading || isSimulatedMissing || isAvailable}
                           >
@@ -150,14 +224,6 @@ export function StartupDependenciesDialog({
                             {dependency.autoInstallLabel || "Install"}
                           </Button>
                         ) : null}
-                        <Button
-                          variant="outline"
-                          onClick={() => onCopyInstructions(dependency)}
-                          disabled={isLoading}
-                        >
-                          <Copy className="size-4" />
-                          Copy steps
-                        </Button>
                       </div>
                     </div>
                   </div>

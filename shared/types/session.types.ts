@@ -127,6 +127,9 @@ export interface AgentCatalogEntry {
   description: string;
   usageNotes: string[];
   authFields: import("./system.types").AgentAuthField[];
+  supportsUsageStatus: boolean;
+  usageDashboardUrl: string | null;
+  supportsAccountSwitch: boolean;
   detected: boolean;
   enabled: boolean;
   detectedCommand: string | null;
@@ -198,6 +201,7 @@ export interface TerminalSession {
   status: TerminalStatus;
   isBusy: boolean;
   workspace: string;
+  currentWorkingDirectory?: string | null;
   branch: string;
   host: string;
   shellId: string;

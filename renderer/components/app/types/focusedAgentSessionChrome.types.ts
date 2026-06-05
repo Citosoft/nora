@@ -27,9 +27,11 @@ export type FocusedAgentInputComposerProps = {
   attachedWorkspacePaths: WorkspacePathAttachmentDraft[];
   contextSelector: FocusedAgentContextSelectorState;
   isLoadingContextSources: boolean;
-  hasVoiceTranscriptionApiKey: boolean;
+  isVoiceTranscriptionReady: boolean;
   isVoiceInputSupported: boolean;
   isListeningVoiceInput: boolean;
+  isTranscribingVoiceInput: boolean;
+  voiceInputLevels: number[];
   isSendingTerminalInput: boolean;
   isSavingPastedImage: boolean;
   canSendLiveTerminalInput: boolean;

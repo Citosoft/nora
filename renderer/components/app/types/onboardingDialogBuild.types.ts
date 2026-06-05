@@ -1,6 +1,6 @@
 import type { AccentColor, ThemeMode, UiState } from "@/components/app/types";
 import type { AppSettings, AppState, InstalledIde } from "@shared/appTypes";
-import type { StartupDependencyId, StartupDependencyReport } from "@shared/types/startupDependency.types";
+import type { StartupDependency, StartupDependencyId, StartupDependencyReport } from "@shared/types/startupDependency.types";
 
 export type BuildOnboardingDialogPropsDeps = {
   mode: "loading" | "onboarding";
@@ -26,7 +26,7 @@ export type BuildOnboardingDialogPropsDeps = {
   updateDefaultIde: (ideId: string | null) => void;
   updateUserDisplayName: (displayName: string) => void;
   installStartupDependencyWithRefresh: (dependencyId: StartupDependencyId) => Promise<void>;
-  copyStartupDependencyInstructions: (dependencyId: StartupDependencyId) => void;
+  copyStartupDependencyInstructions: (dependency: StartupDependency) => Promise<void>;
   reloadStartupDependencyReport: () => Promise<void>;
   refreshOnboardingTools: () => Promise<void>;
   installOnboardingTool: (toolId: string) => Promise<void>;

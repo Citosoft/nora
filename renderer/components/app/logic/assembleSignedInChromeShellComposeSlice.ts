@@ -44,6 +44,7 @@ export const assembleSignedInChromeShellComposeSlice = (s: SignedInChromeShellAs
       },
       onOpenAbout: core.uiCommands.openAboutDialog,
       onOpenKeyboardShortcuts: core.uiCommands.openKeyboardShortcutsDialog,
+      onOpenResourceMonitor: core.uiCommands.openResourceMonitorDialog,
       onToggleChangesSidebar: () => chromeShell.setIsChangesSidebarCollapsed((current) => !current),
       onToggleLocalTerminalDock: () => chromeShell.setIsLocalTerminalDockCollapsed((current) => !current),
       onToggleWorkspaceSidebar: () => chromeShell.setIsWorkspaceSidebarCollapsed((current) => !current),
@@ -54,6 +55,7 @@ export const assembleSignedInChromeShellComposeSlice = (s: SignedInChromeShellAs
       openCreateBrowser: chromeShell.openWorkspaceBrowserFromTitleBar,
       openCreateTerminal: chromeShell.openCreateTerminalModal,
       openStartupDependencies: chromeShell.openStartupDependenciesDialog,
+      openOnboarding: chromeShell.openOnboardingFlow,
       onCloseWorkspace: () => {
         void core.safely(() => noraWorkspaceManagementClient.closeWorkspace());
       },

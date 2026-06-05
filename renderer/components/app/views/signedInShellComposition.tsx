@@ -6,6 +6,7 @@ import {
 } from "@/components/app/context/appShellBuildContexts";
 import { ChromeShellPortsProvider } from "@/components/app/context/chromeShellPortsContext";
 import { ChangesColumnPortsProvider } from "@/components/app/context/changesColumnPortsContext";
+import { DiffAnnotationProvider } from "@/components/app/context/diffAnnotationContext";
 import { ModalClusterPortsProvider } from "@/components/app/context/modalClusterPortsContext";
 import { SessionCenterPortsProvider } from "@/components/app/context/sessionCenterPortsContext";
 import { WorkspaceSidebarPortsProvider } from "@/components/app/context/workspaceSidebarPortsContext";
@@ -62,21 +63,23 @@ export const SignedInShellComposition = ({
 
   return (
     <SettingsRuntimeBuildProvider value={settingsRuntimeBuild}>
-      <SessionCenterPortsProvider value={sessionCenterPorts}>
-        <ChangesColumnPortsProvider value={changesColumnPorts}>
-          <ModalClusterPortsProvider value={modalClusterPorts}>
-            <WorkspaceSidebarPortsProvider value={workspaceSidebarPorts}>
-              <ChromeShellPortsProvider value={chromeShellPorts}>
-                <AppChromeShellComposeProvider value={chromeShellCompose}>
-                  <AppShellLayoutProvider value={shellLayout}>
-                    <AppRootShellFrameProvider value={shellFrameValue}>{children}</AppRootShellFrameProvider>
-                  </AppShellLayoutProvider>
-                </AppChromeShellComposeProvider>
-              </ChromeShellPortsProvider>
-            </WorkspaceSidebarPortsProvider>
-          </ModalClusterPortsProvider>
-        </ChangesColumnPortsProvider>
-      </SessionCenterPortsProvider>
+      <DiffAnnotationProvider>
+        <SessionCenterPortsProvider value={sessionCenterPorts}>
+          <ChangesColumnPortsProvider value={changesColumnPorts}>
+            <ModalClusterPortsProvider value={modalClusterPorts}>
+              <WorkspaceSidebarPortsProvider value={workspaceSidebarPorts}>
+                <ChromeShellPortsProvider value={chromeShellPorts}>
+                  <AppChromeShellComposeProvider value={chromeShellCompose}>
+                    <AppShellLayoutProvider value={shellLayout}>
+                      <AppRootShellFrameProvider value={shellFrameValue}>{children}</AppRootShellFrameProvider>
+                    </AppShellLayoutProvider>
+                  </AppChromeShellComposeProvider>
+                </ChromeShellPortsProvider>
+              </WorkspaceSidebarPortsProvider>
+            </ModalClusterPortsProvider>
+          </ChangesColumnPortsProvider>
+        </SessionCenterPortsProvider>
+      </DiffAnnotationProvider>
     </SettingsRuntimeBuildProvider>
   );
 };

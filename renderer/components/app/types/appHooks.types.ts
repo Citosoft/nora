@@ -31,7 +31,7 @@ import type {
   VercelRuntimeLogEntry,
   WorkspaceTaskBoard
 } from "@shared/appTypes";
-import type { StartupDependencyId, StartupDependencyReport } from "@shared/types/startupDependency.types";
+import type { StartupDependency, StartupDependencyId, StartupDependencyReport } from "@shared/types/startupDependency.types";
 import type { Dispatch, SetStateAction } from "react";
 
 export type UseStartupDependenciesArgs = {
@@ -50,12 +50,13 @@ export type UseStartupDependenciesResult = {
   shouldShowStartupDependenciesDialog: boolean;
   reloadStartupDependencyReport: () => Promise<void>;
   installStartupDependencyWithRefresh: (dependencyId: StartupDependencyId) => Promise<void>;
+  openOnboardingFlow: () => void;
   openStartupDependenciesDialog: () => void;
   handleStartupDependenciesDialogOpenChange: (open: boolean) => void;
   toggleSimulatedMissingDependency: (dependencyId: StartupDependencyId) => void;
   clearSimulatedMissingDependencies: () => void;
   completeOnboarding: () => void;
-  copyStartupDependencyInstructions: (dependencyId: StartupDependencyId) => void;
+  copyStartupDependencyInstructions: (dependency: StartupDependency) => Promise<void>;
 };
 
 export type UseBrowserTabsArgs = {

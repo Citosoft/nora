@@ -118,6 +118,9 @@ function createDeps(args: {
       destroyTerminal: async () => {
         throw new Error("not used");
       },
+      removeWorktree: async () => {
+        throw new Error("not used");
+      },
       refreshWorktreeCollectionAfterDetach: async (_project, worktrees) => {
         return worktrees;
       },

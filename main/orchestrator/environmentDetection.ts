@@ -5,6 +5,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { AGENT_DEFINITIONS } from "../agentCatalog";
+import type { AgentExecutablePathCandidate } from "../types/internal.types";
 import { buildProcessEnv } from "../processEnv";
 import { getExecStderr, getExecStdout } from "./execErrors";
 import { getShell, isWindows } from "./shell";
@@ -29,9 +30,13 @@ function emptyAgentDetectionInfo(id: string): AgentDetectionInfo {
   };
 }
 
+export function createUndetectedLocalAgentDetections(): AgentDetectionInfo[] {
+  return AGENT_DEFINITIONS.map((tool) => emptyAgentDetectionInfo(tool.id));
+}
+
 async function commandInfoForAliases(
   aliases: string[],
-  windowsKnownPaths: string[] = [],
+  executablePathCandidates: AgentExecutablePathCandidate[] = [],
   findExistingPath: (paths: string[]) => Promise<string | null> | string | null,
   acceptResolvedPath?: (resolvedPath: string) => boolean
 ): Promise<Pick<AgentCatalogEntry, "detected" | "detectedCommand" | "detectedPath" | "detectionProbe" | "detectionStdout" | "detectionStderr">> {
@@ -39,36 +44,29 @@ async function commandInfoForAliases(
   let lastStdout: string | null = null;
   let lastStderr: string | null = null;
 
-  if (isWindows() && windowsKnownPaths.length) {
-    const resolvedKnownPaths = windowsKnownPaths
-      .map((candidate) => candidate.replace(/%LOCALAPPDATA%/gi, process.env.LOCALAPPDATA || ""))
-      .filter(Boolean);
-    const knownPath = await findExistingPath(resolvedKnownPaths);
-    if (knownPath) {
+  const resolvedPathCandidates = resolveExecutablePathCandidates(executablePathCandidates);
+  if (resolvedPathCandidates.length) {
+    const candidatePath = await findExistingPath(resolvedPathCandidates);
+    if (candidatePath) {
       return {
         detected: true,
-        detectedCommand: knownPath,
-        detectedPath: knownPath,
-        detectionProbe: resolvedKnownPaths.join(" || "),
-        detectionStdout: knownPath,
+        detectedCommand: candidatePath,
+        detectedPath: candidatePath,
+        detectionProbe: resolvedPathCandidates.join(" || "),
+        detectionStdout: candidatePath,
         detectionStderr: null
       };
     }
   }
 
-  for (const alias of aliases) {
-    const probe = isWindows() ? `where ${alias}` : `command -v ${alias}`;
-    lastProbe = probe;
+  if (!isWindows() && aliases.length > 1) {
+    const compoundProbe = aliases.map((alias) => `command -v ${alias}`).join(" || ");
+    lastProbe = compoundProbe;
     try {
-      const result = isWindows()
-        ? await execFileAsync("where", [alias], {
-            cwd: process.cwd(),
-            env: buildProcessEnv(process.env)
-          })
-        : await execFileAsync(getShell(), ["-lc", `command -v ${alias}`], {
-            cwd: process.cwd(),
-            env: buildProcessEnv(process.env)
-          });
+      const result = await execFileAsync(getShell(), ["-lc", compoundProbe], {
+        cwd: process.cwd(),
+        env: buildProcessEnv(process.env)
+      });
       const stdout = result.stdout.trim();
       const stderr = result.stderr.trim();
       lastStdout = stdout || null;
@@ -76,11 +74,12 @@ async function commandInfoForAliases(
       const resolvedCandidates = stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
       const resolved = resolvedCandidates.find((candidate) => (acceptResolvedPath ? acceptResolvedPath(candidate) : true)) ?? "";
       if (resolved) {
+        const matchedAlias = aliases.find((alias) => resolved.endsWith(`/${alias}`) || resolved.endsWith(`\\${alias}`)) ?? aliases[0] ?? null;
         return {
           detected: true,
-          detectedCommand: alias,
+          detectedCommand: matchedAlias,
           detectedPath: resolved,
-          detectionProbe: probe,
+          detectionProbe: compoundProbe,
           detectionStdout: stdout || null,
           detectionStderr: stderr || null
         };
@@ -88,7 +87,42 @@ async function commandInfoForAliases(
     } catch (error: unknown) {
       lastStdout = getExecStdout(error).trim() || null;
       lastStderr = getExecStderr(error).trim() || null;
-      continue;
+    }
+  } else {
+    for (const alias of aliases) {
+      const probe = isWindows() ? `where ${alias}` : `command -v ${alias}`;
+      lastProbe = probe;
+      try {
+        const result = isWindows()
+          ? await execFileAsync("where", [alias], {
+              cwd: process.cwd(),
+              env: buildProcessEnv(process.env)
+            })
+          : await execFileAsync(getShell(), ["-lc", probe], {
+              cwd: process.cwd(),
+              env: buildProcessEnv(process.env)
+            });
+        const stdout = result.stdout.trim();
+        const stderr = result.stderr.trim();
+        lastStdout = stdout || null;
+        lastStderr = stderr || null;
+        const resolvedCandidates = stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+        const resolved = resolvedCandidates.find((candidate) => (acceptResolvedPath ? acceptResolvedPath(candidate) : true)) ?? "";
+        if (resolved) {
+          return {
+            detected: true,
+            detectedCommand: alias,
+            detectedPath: resolved,
+            detectionProbe: probe,
+            detectionStdout: stdout || null,
+            detectionStderr: stderr || null
+          };
+        }
+      } catch (error: unknown) {
+        lastStdout = getExecStdout(error).trim() || null;
+        lastStderr = getExecStderr(error).trim() || null;
+        continue;
+      }
     }
   }
 
@@ -102,6 +136,27 @@ async function commandInfoForAliases(
     detectionStdout: lastStdout,
     detectionStderr: lastStderr
   };
+}
+
+function resolveExecutablePathCandidates(candidates: AgentExecutablePathCandidate[]): string[] {
+  const platform = process.platform;
+  const homeDir = process.env.HOME || "";
+  const userProfileDir = process.env.USERPROFILE || "";
+  const localAppDataDir = process.env.LOCALAPPDATA || "";
+  const appDataDir = process.env.APPDATA || "";
+
+  return candidates
+    .filter((candidate) => !candidate.platforms || candidate.platforms.includes(platform))
+    .map((candidate) =>
+      candidate.path
+        .replace(/^~(?=$|[\\/])/, homeDir)
+        .replace(/\$HOME(?=$|[\\/])/g, homeDir)
+        .replace(/%USERPROFILE%/gi, userProfileDir)
+        .replace(/%LOCALAPPDATA%/gi, localAppDataDir)
+        .replace(/%APPDATA%/gi, appDataDir)
+    )
+    .map((candidate) => candidate.trim())
+    .filter(Boolean);
 }
 
 export async function findGitExecutable(
@@ -164,27 +219,25 @@ export function buildAgentCatalog(
 export async function detectLocalAgentCatalog(
   findExistingPath: (paths: string[]) => Promise<string | null> | string | null
 ): Promise<AgentDetectionInfo[]> {
-  const detections: AgentDetectionInfo[] = [];
-
-  for (const tool of AGENT_DEFINITIONS) {
-    const detected = await commandInfoForAliases(
-      tool.aliases,
-      tool.windowsKnownPaths,
-      findExistingPath,
-      tool.id === "codex" ? (resolvedPath) => !isCodexDesktopAppBinaryPath(resolvedPath) : undefined
-    );
-    detections.push({
-      id: tool.id,
-      detected: detected.detected,
-      detectedCommand: detected.detectedCommand,
-      detectedPath: detected.detectedPath,
-      detectionProbe: detected.detectionProbe,
-      detectionStdout: detected.detectionStdout,
-      detectionStderr: detected.detectionStderr
-    });
-  }
-
-  return detections;
+  return Promise.all(
+    AGENT_DEFINITIONS.map(async (tool) => {
+      const detected = await commandInfoForAliases(
+        tool.aliases,
+        tool.executablePathCandidates,
+        findExistingPath,
+        tool.id === "codex" ? (resolvedPath) => !isCodexDesktopAppBinaryPath(resolvedPath) : undefined
+      );
+      return {
+        id: tool.id,
+        detected: detected.detected,
+        detectedCommand: detected.detectedCommand,
+        detectedPath: detected.detectedPath,
+        detectionProbe: detected.detectionProbe,
+        detectionStdout: detected.detectionStdout,
+        detectionStderr: detected.detectionStderr
+      };
+    })
+  );
 }
 
 export async function detectTerminalShells(): Promise<TerminalShellOption[]> {
@@ -296,25 +349,23 @@ export async function detectRemoteAgentCatalog(
   wrapRemoteLoginShellCommand: (command: string) => string,
   shellQuote: (value: string) => string
 ): Promise<AgentDetectionInfo[]> {
-  const detections: AgentDetectionInfo[] = [];
-
-  for (const tool of AGENT_DEFINITIONS) {
-    const detected = await commandInfoForAliasesOnRemoteTarget(
-      tool.aliases,
-      runRemoteSshCommand,
-      wrapRemoteLoginShellCommand,
-      shellQuote
-    );
-    detections.push({
-      id: tool.id,
-      detected: detected.detected,
-      detectedCommand: detected.detectedCommand,
-      detectedPath: detected.detectedPath,
-      detectionProbe: detected.detectionProbe,
-      detectionStdout: detected.detectionStdout,
-      detectionStderr: detected.detectionStderr
-    });
-  }
-
-  return detections;
+  return Promise.all(
+    AGENT_DEFINITIONS.map(async (tool) => {
+      const detected = await commandInfoForAliasesOnRemoteTarget(
+        tool.aliases,
+        runRemoteSshCommand,
+        wrapRemoteLoginShellCommand,
+        shellQuote
+      );
+      return {
+        id: tool.id,
+        detected: detected.detected,
+        detectedCommand: detected.detectedCommand,
+        detectedPath: detected.detectedPath,
+        detectionProbe: detected.detectionProbe,
+        detectionStdout: detected.detectionStdout,
+        detectionStderr: detected.detectionStderr
+      };
+    })
+  );
 }

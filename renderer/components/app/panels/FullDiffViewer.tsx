@@ -1,4 +1,6 @@
-import { diffLineClass } from "@/components/app/logic/utils";
+import { DiffAnnotationIntroDialog } from "@/components/app/dialogs/DiffAnnotationIntroDialog";
+import { useDiffAnnotationIntroDialog } from "@/components/app/hooks/useDiffAnnotationIntroDialog";
+import { AnnotatedDiffLines } from "@/components/app/panels/diff-annotation/AnnotatedDiffLines";
 import type { ResolvedTheme } from "@/components/app/types";
 import { cn } from "@/lib/utils";
 import type { ChangeEntry } from "@shared/appTypes";
@@ -26,8 +28,11 @@ export function FullDiffViewer({
   changes: ChangeEntry[];
   resolvedTheme: ResolvedTheme;
 }) {
+  const diffAnnotationIntroDialog = useDiffAnnotationIntroDialog();
+
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+      <DiffAnnotationIntroDialog {...diffAnnotationIntroDialog} />
       <div className="terminal-text h-full min-h-0 flex-1 overflow-y-auto overflow-x-hidden text-[12px] leading-6">
         {changes.map((change) => (
           <section key={change.path} className="border-b border-border/40 last:border-b-0">
@@ -42,11 +47,7 @@ export function FullDiffViewer({
               </div>
             </div>
             <div className="p-4">
-              {change.diff.split("\n").map((line, index) => (
-                <div key={`${change.path}-${index}-${line}`} className={cn("whitespace-pre-wrap break-words px-2", diffLineClass(line, resolvedTheme))}>
-                  {line || " "}
-                </div>
-              ))}
+              <AnnotatedDiffLines diff={change.diff} filePath={change.path} resolvedTheme={resolvedTheme} />
             </div>
           </section>
         ))}

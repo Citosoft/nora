@@ -223,6 +223,7 @@ export const createWorkspaceSessionPanelValue = (d: WorkspaceSessionPanelBuildDe
   onRestartTerminal: (sessionId) => d.safely(() => noraSessionClient.restartTerminal(sessionId)),
   onClearTerminal: (sessionId) => d.safely(() => noraSessionClient.clearTerminal(sessionId)),
   onDestroyRequest: (agentId) => d.uiCommands.setDestroyAgentId(agentId),
+  onDestroyAgent: (agentId) => d.safely(() => noraSessionClient.destroyAgent(agentId)),
   onDestroyTerminal: (sessionId) => {
     const terminal = d.workspace?.terminals.find((item) => item.id === sessionId) ?? null;
     const confirmMessage = terminal ? buildDestroyTerminalGuardMessage(terminal, Date.now()) : null;
@@ -466,6 +467,7 @@ export function WorkspaceSessionPanelProvider({
     onRestartTerminal: value.onRestartTerminal,
     onClearTerminal: value.onClearTerminal,
     onDestroyRequest: value.onDestroyRequest,
+    onDestroyAgent: value.onDestroyAgent,
     onDestroyTerminal: value.onDestroyTerminal,
     onDeleteViewById: value.onDeleteViewById,
     onExitSplitView: value.onExitSplitView,

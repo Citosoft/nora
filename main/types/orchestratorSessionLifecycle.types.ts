@@ -59,6 +59,7 @@ export interface SessionLifecycleHelpers {
   restartTerminal: (terminalId: string) => Promise<AppState>;
   destroyAgent: (agentId: string) => Promise<AppState>;
   destroyTerminal: (terminalId: string) => Promise<AppState>;
+  removeWorktree: (worktreeId: string) => Promise<AppState>;
   refreshWorktreeCollectionAfterDetach: (
     project: ProjectSummary,
     worktrees: WorktreeRecord[],

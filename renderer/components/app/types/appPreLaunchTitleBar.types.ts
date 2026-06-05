@@ -13,6 +13,7 @@ export type CommonPreLaunchTitleBarInput = Pick<
   | "onToggleTheme"
   | "onOpenSettings"
   | "onOpenKeyboardShortcuts"
+  | "onOpenResourceMonitor"
   | "onOpenAbout"
   | "onSubmitIssue"
   | "installedIdes"
@@ -21,6 +22,7 @@ export type CommonPreLaunchTitleBarInput = Pick<
   | "onAddWorkspace"
   | "onAddRemoteWorkspace"
   | "onOpenStartupDependencies"
+  | "onOpenOnboarding"
 >;
 
 export type PreLaunchOnboardingTitleBarWorkspaceInput = {

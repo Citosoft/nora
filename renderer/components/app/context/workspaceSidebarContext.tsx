@@ -2,7 +2,9 @@ import { noraSessionClient } from "@/components/app/clients/noraSessionClient";
 import { noraToolingManagementClient } from "@/components/app/clients/noraToolingManagementClient";
 import { noraWorkspaceManagementClient } from "@/components/app/clients/noraWorkspaceManagementClient";
 import { createOpenTaskInWorkspaceHandler } from "@/components/app/logic/createOpenTaskInWorkspaceHandler";
+import { createQuickTerminalDialogDefaults, createQuickTerminalPayload } from "@/components/app/logic/terminalQuickLaunch";
 import type { WorkspaceSidebarProps } from "@/components/app/types/component.types";
+import type { CreateTerminalPayload } from "@shared/appTypes";
 import type { WorkspaceSidebarBuildDeps } from "@/components/app/types/workspaceSidebarBuild.types";
 import { createContext, useContext, type ReactNode } from "react";
 
@@ -12,6 +14,18 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
     openTaskEditor: d.openTaskEditor,
     activeProjectId: d.activeProjectId
   });
+  const runInWorkspace = (projectId: string, action: () => void) => {
+    if (d.activeProjectId === projectId) {
+      action();
+      return;
+    }
+    void d.focusWorkspaceWithRecovery(projectId).then((next) => {
+      if (!next) {
+        return;
+      }
+      action();
+    });
+  };
 
   return {
     githubToken: d.githubToken,
@@ -86,6 +100,60 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
       d.setTaskEditorState(null);
       d.setWorkspaceSessionActiveViewId(null);
       void d.safely(() => noraSessionClient.focusWorktree(worktreeId));
+    },
+    onFocusWorkspaceWorktree: (projectId, worktreeId) =>
+      d.focusWorkspaceWithRecovery(projectId).then((next) =>
+        next
+          ? (d.setIsTaskBoardOpen(false),
+            d.setIsSpecBrowserOpen(false),
+            d.setIsNoteBrowserOpen(false),
+            d.setTaskEditorState(null),
+            d.setWorkspaceSessionActiveViewId(null),
+            d.safely(() => noraSessionClient.focusWorktree(worktreeId)))
+          : null
+      ),
+    onOpenCreateAgentOnWorktree: (projectId, worktreeId) => {
+      runInWorkspace(projectId, () =>
+        d.uiCommands.openCreateAgentDialog({
+          target: { kind: "existing", worktreeId }
+        })
+      );
+    },
+    onOpenCreateTerminalOnWorktree: (projectId, worktreeId) => {
+      runInWorkspace(projectId, () =>
+        d.uiCommands.openCreateTerminalDialog({
+          ...createQuickTerminalDialogDefaults(null, d.terminalQuickLaunchDefaults),
+          target: { kind: "existing", worktreeId }
+        })
+      );
+    },
+    onOpenCreateWorktree: (projectId) => {
+      runInWorkspace(projectId, () =>
+        d.uiCommands.openCreateAgentDialog({
+          target: { kind: "new" },
+          initialWizardStepIndex: 1
+        })
+      );
+    },
+    onLaunchQuickTerminalOnWorktree: (projectId, worktreeId) => {
+      void d.launchTerminalInWorkspace(projectId, {
+        ...createQuickTerminalPayload(null, d.terminalQuickLaunchDefaults),
+        target: { kind: "existing", worktreeId }
+      });
+    },
+    onLaunchWorktreeScript: (projectId, payload: CreateTerminalPayload) => {
+      void d.launchTerminalInWorkspace(projectId, payload);
+    },
+    onRemoveWorktree: (projectId, worktreeId, branch) => {
+      const confirmed = window.confirm(
+        `Delete worktree "${branch}"? This removes the git worktree and Nora's managed checkout. This cannot be undone.`
+      );
+      if (!confirmed) {
+        return;
+      }
+      runInWorkspace(projectId, () => {
+        void d.safely(() => noraSessionClient.removeWorktree(worktreeId));
+      });
     },
     onFocusAgent: (agentId) => {
       d.setIsTaskBoardOpen(false);
@@ -358,6 +426,13 @@ export function WorkspaceSidebarProvider({
     onOpenWorkspaceBrowser: value.onOpenWorkspaceBrowser,
     onFocusWorkspace: value.onFocusWorkspace,
     onFocusWorkspaceView: value.onFocusWorkspaceView,
+    onFocusWorkspaceWorktree: value.onFocusWorkspaceWorktree,
+    onOpenCreateAgentOnWorktree: value.onOpenCreateAgentOnWorktree,
+    onOpenCreateTerminalOnWorktree: value.onOpenCreateTerminalOnWorktree,
+    onOpenCreateWorktree: value.onOpenCreateWorktree,
+    onLaunchQuickTerminalOnWorktree: value.onLaunchQuickTerminalOnWorktree,
+    onLaunchWorktreeScript: value.onLaunchWorktreeScript,
+    onRemoveWorktree: value.onRemoveWorktree,
     onFocusAgent: value.onFocusAgent,
     onFocusTerminal: value.onFocusTerminal,
     onFocusWorkspaceAgent: value.onFocusWorkspaceAgent,

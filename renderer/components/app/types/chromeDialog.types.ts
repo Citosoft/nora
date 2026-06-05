@@ -56,6 +56,7 @@ export type TitleBarProps = {
   onOpenSettings: () => void;
   settingsActive: boolean;
   onOpenKeyboardShortcuts: () => void;
+  onOpenResourceMonitor: () => void;
   onOpenAbout: () => void;
   onSubmitIssue: () => void;
   canOpenProjectInIde: boolean;
@@ -85,6 +86,7 @@ export type TitleBarProps = {
   onFocusPreviousSessionTab: () => void;
   onFocusNextSessionTab: () => void;
   onOpenStartupDependencies: () => void;
+  onOpenOnboarding: () => void;
   splitViewSelection?: {
     views: Array<{ id: string; name: string }>;
     activeViewId: string | null;
@@ -165,11 +167,16 @@ export type StartupDependenciesDialogProps = {
   simulatedMissingDependencyIds: StartupDependencyId[];
   onOpenChange: (open: boolean) => void;
   onInstallDependency: (dependencyId: StartupDependencyId) => void;
-  onCopyInstructions: (dependency: StartupDependency) => void;
+  onCopyInstructions: (dependency: StartupDependency) => Promise<void>;
   onToggleSimulatedMissing: (dependencyId: StartupDependencyId) => void;
   onClearSimulation: () => void;
   onReload: () => void;
   onQuit: () => void;
+};
+
+export type ResourceMonitorDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 };
 
 export type WorkspaceOption = {

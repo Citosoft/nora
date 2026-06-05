@@ -1,8 +1,12 @@
 import type { WorkspaceTarget } from "@main/types/internal.types";
+import { isLocalAgentDetectionInFlight, peekLocalAgentCatalogDetections } from "@main/agentDetectionCache";
+import { createUndetectedLocalAgentDetections } from "@main/orchestrator/environmentDetection";
 import type {
   AppState,
+  AgentSession,
   ProjectSummary,
   TerminalSession,
+  WorktreeRecord,
   WorkspaceSummary
 } from "@shared/appTypes";
 import type { OpenProjectOptions, ProjectOpenHelperDeps, ProjectOpenHelpers } from "../types/orchestratorProjectOpen.types";
@@ -28,6 +32,56 @@ function mergeRecoveredTerminals(
       all.findIndex((candidate) => candidate.id === terminal.id) === index
     )
   ];
+}
+
+function getAttachedWorktreePath(worktrees: Array<{ id: string; path: string }>, worktreeId: string): string | null {
+  return worktrees.find((worktree) => worktree.id === worktreeId)?.path || null;
+}
+
+export function normalizeRecoveredTerminals(
+  terminals: TerminalSession[],
+  worktrees: Array<{ id: string; path: string }>
+): TerminalSession[] {
+  return terminals.map((terminal) => {
+    const worktreePath = getAttachedWorktreePath(worktrees, terminal.worktreeId);
+    if (!worktreePath) {
+      return terminal;
+    }
+
+    return {
+      ...terminal,
+      workspace: worktreePath,
+      currentWorkingDirectory: terminal.currentWorkingDirectory || terminal.workspace || worktreePath
+    };
+  });
+}
+
+function getRecoveredSessionChangesRoot({
+  project,
+  focusedAgentMode,
+  agents,
+  terminals,
+  worktrees
+}: {
+  project: ProjectSummary;
+  focusedAgentMode: OpenProjectOptions["focusedAgentMode"];
+  agents: AgentSession[];
+  terminals: TerminalSession[];
+  worktrees: WorktreeRecord[];
+}): string {
+  if (focusedAgentMode === "first-agent") {
+    const firstAgent = agents[0] ?? null;
+    if (firstAgent) {
+      return getAttachedWorktreePath(worktrees, firstAgent.worktreeId) || firstAgent.workspace || project.rootPath;
+    }
+  }
+
+  const firstTerminal = terminals[0] ?? null;
+  if (firstTerminal) {
+    return getAttachedWorktreePath(worktrees, firstTerminal.worktreeId) || project.rootPath;
+  }
+
+  return project.rootPath;
 }
 
 export function createProjectOpenHelpers(deps: ProjectOpenHelperDeps): ProjectOpenHelpers {
@@ -142,11 +196,13 @@ export function createProjectOpenHelpers(deps: ProjectOpenHelperDeps): ProjectOp
             deps.readProjectBranches(projectTargetForMetadata).catch(() => [project.baseBranch]))
         ]);
     const worktrees = ensuredSessions.flatMap((sessionState) => sessionState.worktrees);
+    const normalizedRecoveredTerminals = normalizeRecoveredTerminals(mergedRecoveredTerminals, worktrees);
     const sessions = ensuredSessions.map((sessionState) => sessionState.session);
     const currentSessionId = sessions[0]?.id || null;
+    const agentDetectionPending = project.location?.kind !== "ssh" && isLocalAgentDetectionInFlight();
     const catalogDetections = project.location?.kind === "ssh"
       ? project.remoteAgentCatalog || []
-      : await deps.detectLocalAgentCatalog();
+      : (peekLocalAgentCatalogDetections() ?? createUndetectedLocalAgentDetections());
     const catalog = deps.buildAgentCatalog(catalogDetections, deps.getSnapshot().agentCatalog, deps.toolConfigs);
     const agentSkillCatalogs = await deps.readAgentSkillCatalogs([...catalog.map((tool) => tool.id), deps.sharedAgentSkillsToolId]);
 
@@ -159,19 +215,23 @@ export function createProjectOpenHelpers(deps: ProjectOpenHelperDeps): ProjectOp
       worktrees,
       recentProjects,
       agents: recoveredAgents,
-      terminals: mergedRecoveredTerminals,
+      terminals: normalizedRecoveredTerminals,
       focusedAgentId: options.focusedAgentMode === "first-agent" ? (recoveredAgents[0]?.id || null) : null,
       focusedTerminalId:
         options.focusedAgentMode === "first-agent"
-          ? (recoveredAgents.length ? null : (mergedRecoveredTerminals[0]?.id || null))
-          : (mergedRecoveredTerminals[0]?.id || null),
+          ? (recoveredAgents.length ? null : (normalizedRecoveredTerminals[0]?.id || null))
+          : (normalizedRecoveredTerminals[0]?.id || null),
       selectedChangePath: ensuredSessions[0]?.selectedChangePath || null,
       selectedCommitHash: ensuredSessions[0]?.selectedCommitHash || null,
       selectedCommit: null,
       changesRoot:
-        options.focusedAgentMode === "first-agent"
-          ? (recoveredAgents[0]?.workspace || mergedRecoveredTerminals[0]?.workspace || project.rootPath)
-          : (mergedRecoveredTerminals[0]?.workspace || project.rootPath),
+        getRecoveredSessionChangesRoot({
+          project,
+          focusedAgentMode: options.focusedAgentMode,
+          agents: recoveredAgents,
+          terminals: normalizedRecoveredTerminals,
+          worktrees
+        }),
       changes: [],
       commitHistory: [],
       activeRemoteMounts,
@@ -186,6 +246,9 @@ export function createProjectOpenHelpers(deps: ProjectOpenHelperDeps): ProjectOp
     for (const agent of recoveredAgents) {
       const tool = deps.getSnapshot().agentCatalog.find((item) => item.id === agent.toolId);
       if (project.location?.kind !== "ssh" && (!tool?.detected || !tool.enabled)) {
+        if (agentDetectionPending) {
+          continue;
+        }
         deps.updateAgent(agent.id, {
           status: "error",
           lastEventAt: deps.nowIso()
@@ -213,15 +276,17 @@ export function createProjectOpenHelpers(deps: ProjectOpenHelperDeps): ProjectOp
       );
     }
 
-    for (const terminal of mergedRecoveredTerminals) {
+    for (const terminal of normalizedRecoveredTerminals) {
       if (deps.hasRuntimeSession(terminal.id)) {
         continue;
       }
+      const terminalWorktreePath = getAttachedWorktreePath(worktrees, terminal.worktreeId) || terminal.workspace;
+      const terminalRestorePath = terminal.currentWorkingDirectory || terminalWorktreePath;
       await deps.resetTerminalTranscript(terminal);
       void deps.spawnTerminalPty(
         terminal.id,
         terminal.command,
-        deps.getWorktreeTarget(project, { path: terminal.workspace, location: project.location }),
+        deps.getWorktreeTarget(project, { path: terminalRestorePath, location: project.location }),
         deps.resolveTerminalShell(terminal.shellId)
       );
     }

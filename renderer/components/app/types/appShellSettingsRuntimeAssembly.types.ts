@@ -70,6 +70,8 @@ export type AppShellSettingsRuntimeAssemblyInput = {
     | "updateAiPreferredProvider"
     | "updateAiApiKey"
     | "updateAiModel"
+    | "updateVoiceSettings"
+    | "updateAiSimpleTaskSettings"
     | "aiModelOptions"
     | "aiModelLoading"
     | "aiModelError"
@@ -80,6 +82,7 @@ export type AppShellSettingsRuntimeAssemblyInput = {
     BuildSettingsRuntimeValueDeps,
     | "safely"
     | "missingOptionalStartupDependencyCount"
+    | "openOnboardingFlow"
     | "openStartupDependenciesDialog"
   >;
   sidebarLayout: Pick<

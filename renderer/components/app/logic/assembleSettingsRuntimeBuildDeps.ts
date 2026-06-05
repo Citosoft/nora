@@ -94,6 +94,8 @@ export const buildAppShellSettingsRuntimeAssemblyInputFromDeps = (
     updateAiPreferredProvider: deps.updateAiPreferredProvider,
     updateAiApiKey: deps.updateAiApiKey,
     updateAiModel: deps.updateAiModel,
+    updateVoiceSettings: deps.updateVoiceSettings,
+    updateAiSimpleTaskSettings: deps.updateAiSimpleTaskSettings,
     aiModelOptions: deps.aiModelOptions,
     aiModelLoading: deps.aiModelLoading,
     aiModelError: deps.aiModelError,
@@ -103,6 +105,7 @@ export const buildAppShellSettingsRuntimeAssemblyInputFromDeps = (
   runtime: {
     safely: deps.safely,
     missingOptionalStartupDependencyCount: deps.missingOptionalStartupDependencyCount,
+    openOnboardingFlow: deps.openOnboardingFlow,
     openStartupDependenciesDialog: deps.openStartupDependenciesDialog
   },
   sidebarLayout: {

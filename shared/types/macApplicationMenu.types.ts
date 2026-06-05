@@ -42,5 +42,6 @@ export type MacApplicationMenuCommand =
   | { kind: "focus-next-session-tab" }
   | { kind: "open-keyboard-shortcuts" }
   | { kind: "open-startup-dependencies" }
+  | { kind: "open-resource-monitor" }
   | { kind: "submit-issue" }
   | { kind: "open-about" };

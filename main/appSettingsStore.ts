@@ -3,7 +3,8 @@ import {
   type AiSettings,
   type AppSettings,
   type TerminalPreset,
-  type TerminalQuickLaunchDefaults
+  type TerminalQuickLaunchDefaults,
+  type VoiceSettings
 } from "@shared/appTypes";
 import { safeStorage } from "electron";
 import fsPromises from "node:fs/promises";
@@ -44,6 +45,7 @@ function parseAppSettings(raw: string): AppSettings {
 
     const candidate = parsed as Partial<AppSettings>;
     const decryptedAiSettings = parseAiSettings(candidate.ai);
+    const voiceSettings = parseVoiceSettings(candidate.voice);
     return {
       hardwareAccelerationEnabled: candidate.hardwareAccelerationEnabled !== false,
       workspaceStateStorageMode:
@@ -90,11 +92,33 @@ function parseAppSettings(raw: string): AppSettings {
           : DEFAULT_APP_SETTINGS.fileEditorThemeId,
       terminalQuickLaunchDefaults: parseTerminalQuickLaunchDefaults(candidate.terminalQuickLaunchDefaults),
       terminalPresets: parseTerminalPresets(candidate.terminalPresets),
-      ai: decryptedAiSettings
+      ai: decryptedAiSettings,
+      voice: voiceSettings
     };
   } catch {
     return DEFAULT_APP_SETTINGS;
   }
+}
+
+function parseVoiceSettings(candidate: AppSettings["voice"] | undefined): VoiceSettings {
+  if (!candidate || typeof candidate !== "object") {
+    return DEFAULT_APP_SETTINGS.voice;
+  }
+
+  const parsedSettings = candidate as Partial<VoiceSettings>;
+  const dictationProvider =
+    parsedSettings.dictationProvider === "openai" || parsedSettings.dictationProvider === "localWhisper"
+      ? parsedSettings.dictationProvider
+      : DEFAULT_APP_SETTINGS.voice.dictationProvider;
+  const localWhisperModelId =
+    parsedSettings.localWhisperModelId === "tiny.en" || parsedSettings.localWhisperModelId === "base.en"
+      ? parsedSettings.localWhisperModelId
+      : DEFAULT_APP_SETTINGS.voice.localWhisperModelId;
+
+  return {
+    dictationProvider,
+    localWhisperModelId
+  };
 }
 
 function parseAiSettings(candidate: AppSettings["ai"] | undefined): AiSettings {
@@ -134,10 +158,21 @@ function parseAiSettings(candidate: AppSettings["ai"] | undefined): AiSettings {
       }
     : DEFAULT_APP_SETTINGS.ai.modelByProvider;
 
+  const simpleTaskProvider =
+    parsedSettings.simpleTaskProvider === "cloud" || parsedSettings.simpleTaskProvider === "local"
+      ? parsedSettings.simpleTaskProvider
+      : DEFAULT_APP_SETTINGS.ai.simpleTaskProvider;
+  const localLlmModelId =
+    parsedSettings.localLlmModelId === "qwen2.5-0.5b-instruct" || parsedSettings.localLlmModelId === "smollm2-360m-instruct"
+      ? parsedSettings.localLlmModelId
+      : DEFAULT_APP_SETTINGS.ai.localLlmModelId;
+
   return {
     preferredProvider,
     apiKeys,
-    modelByProvider
+    modelByProvider,
+    simpleTaskProvider,
+    localLlmModelId
   };
 }
 

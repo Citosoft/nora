@@ -121,7 +121,9 @@ export const buildChangesPanelSectionProps = (
       d.setActiveWorkspaceContentTab("diff");
     },
     onCommitChanges: (message, paths) => d.safely(() => noraWorkspaceClient.commitChanges(message, paths)),
-    canGenerateAiCommitMessage: Object.values(d.appSettingsAi.apiKeys).some((apiKey) => apiKey.trim().length > 0),
+    canGenerateAiCommitMessage:
+      d.appSettingsAi.simpleTaskProvider === "local" ||
+      Object.values(d.appSettingsAi.apiKeys).some((apiKey) => apiKey.trim().length > 0),
     onGenerateCommitMessage: async (paths) => {
       try {
         return await noraWorkspaceClient.generateCommitMessage({ paths });

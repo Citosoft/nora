@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { FlaskConical } from "lucide-react";
 
 export function DevSettingsSection() {
-  const { triggerDevToast } = useSettingsRuntime();
+  const { openOnboardingFlow, triggerDevToast } = useSettingsRuntime();
 
   return (
     <div className="space-y-6">
@@ -14,6 +14,15 @@ export function DevSettingsSection() {
         icon={FlaskConical}
       />
       <div className="divide-y divide-border/60 rounded-[6px] border border-border/70 bg-card/35 px-5">
+        <SettingRow
+          title="Onboarding Flow"
+          description="Reopen the first-run onboarding flow with the current workspace and settings data."
+          control={(
+            <Button variant="outline" onClick={openOnboardingFlow}>
+              Open onboarding
+            </Button>
+          )}
+        />
         <SettingRow
           title="Preview Toast Styles"
           description="Trigger sample toasts to validate contrast, spacing, and typography before shipping UI changes."

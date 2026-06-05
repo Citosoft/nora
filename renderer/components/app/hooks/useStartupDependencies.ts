@@ -5,11 +5,12 @@ import {
   writeStoredOnboardingCompleted,
   writeStoredStartupDependenciesDismissed
 } from "@/components/app/logic/appPersistence";
+import { buildStartupDependencyCopyText } from "@/components/app/logic/startupDependencyCopyText";
 import type {
   UseStartupDependenciesArgs,
   UseStartupDependenciesResult
 } from "@/components/app/types/appHooks.types";
-import type { StartupDependencyId, StartupDependencyReport } from "@shared/types/startupDependency.types";
+import type { StartupDependency, StartupDependencyId, StartupDependencyReport } from "@shared/types/startupDependency.types";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 export function useStartupDependencies({
@@ -60,6 +61,12 @@ export function useStartupDependencies({
     setShowStartupDependenciesDialog(true);
   }, []);
 
+  const openOnboardingFlow = useCallback((): void => {
+    writeStoredOnboardingCompleted(false);
+    setIsOnboardingCompleted(false);
+    setShowStartupDependenciesDialog(false);
+  }, []);
+
   const toggleSimulatedMissingDependency = useCallback((dependencyId: StartupDependencyId): void => {
     setSimulatedMissingDependencyIds((current) =>
       current.includes(dependencyId)
@@ -81,26 +88,28 @@ export function useStartupDependencies({
     writeStoredStartupDependenciesDismissed(true);
   }, []);
 
-  const copyStartupDependencyInstructions = useCallback((dependencyId: StartupDependencyId): void => {
-    const dependency = startupDependencyReport?.dependencies.find((item) => item.id === dependencyId);
-    if (!dependency) {
-      return;
+  const copyStartupDependencyInstructions = useCallback(async (dependency: StartupDependency): Promise<void> => {
+    const content = buildStartupDependencyCopyText(dependency);
+    if (!content) {
+      const message = `No install command is available for ${dependency.label}.`;
+      setUiState((current) => ({
+        ...current,
+        activeErrorMessage: message
+      }));
+      throw new Error(message);
     }
 
-    const content = [
-      dependency.label,
-      "",
-      ...dependency.manualInstructions
-    ].join("\n");
-
-    void noraSystemClient.copyText(content).catch((error: unknown) => {
+    try {
+      await noraSystemClient.copyText(content);
+    } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Unable to copy the dependency instructions.";
       setUiState((current) => ({
         ...current,
         activeErrorMessage: message
       }));
-    });
-  }, [setUiState, startupDependencyReport]);
+      throw error;
+    }
+  }, [setUiState]);
 
   const effectiveStartupDependencyReport = useMemo<StartupDependencyReport | null>(() => {
     if (!startupDependencyReport) {
@@ -155,6 +164,7 @@ export function useStartupDependencies({
     shouldShowStartupDependenciesDialog,
     reloadStartupDependencyReport,
     installStartupDependencyWithRefresh,
+    openOnboardingFlow,
     openStartupDependenciesDialog,
     handleStartupDependenciesDialogOpenChange,
     toggleSimulatedMissingDependency,

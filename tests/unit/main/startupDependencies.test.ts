@@ -18,6 +18,9 @@ test("startup dependency report includes npm and npx entries", async (t) => {
     if (requested.startsWith("git")) {
       return "/usr/bin/git";
     }
+    if (requested.startsWith("gh")) {
+      return "/usr/bin/gh";
+    }
     if (requested.startsWith("npm")) {
       return "/usr/bin/npm";
     }
@@ -48,11 +51,15 @@ test("startup dependency report includes npm and npx entries", async (t) => {
   });
 
   const report = await getStartupDependencyReport();
+  const ghDependency = report.dependencies.find((dependency) => dependency.id === "gh");
   const npmDependency = report.dependencies.find((dependency) => dependency.id === "npm");
   const npxDependency = report.dependencies.find((dependency) => dependency.id === "npx");
 
+  assert.ok(ghDependency);
   assert.ok(npmDependency);
   assert.ok(npxDependency);
+  assert.equal(ghDependency.status, "available");
+  assert.equal(ghDependency.severity, "mandatory");
   assert.equal(npmDependency.status, "available");
   assert.equal(npxDependency.status, "available");
   assert.equal(npmDependency.severity, "optional");
@@ -89,11 +96,15 @@ test("startup dependency report marks npm and npx as missing when unavailable", 
   });
 
   const report = await getStartupDependencyReport();
+  const ghDependency = report.dependencies.find((dependency) => dependency.id === "gh");
   const npmDependency = report.dependencies.find((dependency) => dependency.id === "npm");
   const npxDependency = report.dependencies.find((dependency) => dependency.id === "npx");
 
+  assert.ok(ghDependency);
   assert.ok(npmDependency);
   assert.ok(npxDependency);
+  assert.equal(ghDependency.status, "missing");
+  assert.equal(ghDependency.severity, "mandatory");
   assert.equal(npmDependency.status, "missing");
   assert.equal(npxDependency.status, "missing");
   assert.equal(npmDependency.canAutoInstall, false);

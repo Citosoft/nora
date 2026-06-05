@@ -103,9 +103,7 @@ export const buildAppModalDialogsContextValue = (d: AppModalDialogsBuildDeps): A
     onInstallDependency: (dependencyId) => {
       void d.installStartupDependencyWithRefresh(dependencyId);
     },
-    onCopyInstructions: (dependency) => {
-      d.copyStartupDependencyInstructions(dependency.id);
-    },
+    onCopyInstructions: d.copyStartupDependencyInstructions,
     onToggleSimulatedMissing: d.toggleSimulatedMissingDependency,
     onClearSimulation: d.clearSimulatedMissingDependencies,
     onReload: () => {
@@ -277,6 +275,10 @@ export const buildAppModalDialogsContextValue = (d: AppModalDialogsBuildDeps): A
     open: d.uiState.showKeyboardShortcutsDialog,
     onOpenChange: d.uiCommands.setKeyboardShortcutsDialogOpen,
     platform: d.windowUiStatePlatform
+  },
+  resourceMonitor: {
+    open: d.uiState.showResourceMonitorDialog,
+    onOpenChange: d.uiCommands.setResourceMonitorDialogOpen
   },
   workspaceSwitcher: {
     open: d.uiState.showWorkspaceSwitcherDialog,

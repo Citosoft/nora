@@ -443,6 +443,7 @@ export type WorkspaceSessionPanelProps = {
   onRestartTerminal: (sessionId: string) => Promise<AppState | null>;
   onClearTerminal: (sessionId: string) => Promise<AppState | null>;
   onDestroyRequest: (agentId: string) => void;
+  onDestroyAgent: (agentId: string) => Promise<AppState | null>;
   onDestroyTerminal: (sessionId: string) => Promise<AppState | null>;
   onDeleteViewById: (viewId: string) => Promise<boolean>;
   onExitSplitView: () => void;
@@ -474,6 +475,7 @@ export type WorkspaceSessionTabsProps = {
   tools: AgentCatalogEntry[];
   onSelect: (tab: WorkspaceSessionTab) => void;
   onClose: (tab: WorkspaceSessionTab) => void;
+  onCloseMany: (tabs: WorkspaceSessionTab[]) => void;
   onCreateAgent: (toolId: string) => void;
   onCreateTerminalFromDefaults: () => void;
   onCreateTerminal: () => void;

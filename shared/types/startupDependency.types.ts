@@ -1,5 +1,6 @@
 export type StartupDependencyId =
   | "git"
+  | "gh"
   | "npm"
   | "npx"
   | "ssh-client"

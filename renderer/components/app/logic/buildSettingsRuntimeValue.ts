@@ -138,6 +138,12 @@ export const buildSettingsRuntimeValue = (d: BuildSettingsRuntimeValueDeps): Set
   updateAiModel: (provider, model) => {
     void d.updateAiModel(provider, model).catch(d.captureError);
   },
+  updateVoiceSettings: (voice) => {
+    void d.updateVoiceSettings(voice).catch(d.captureError);
+  },
+  updateAiSimpleTaskSettings: (settings) => {
+    void d.updateAiSimpleTaskSettings(settings).catch(d.captureError);
+  },
   aiModelOptions: d.aiModelOptions,
   aiModelLoading: d.aiModelLoading,
   aiModelError: d.aiModelError,
@@ -149,6 +155,20 @@ export const buildSettingsRuntimeValue = (d: BuildSettingsRuntimeValueDeps): Set
   },
   agentCatalog: d.snapshot.agentCatalog,
   agentSkillCatalogs: d.snapshot.agentSkillCatalogs,
+  installTool: (toolId) => {
+    const tool = d.snapshot.agentCatalog.find((entry) => entry.id === toolId);
+    if (!tool) {
+      return;
+    }
+
+    void d.safely(() =>
+      noraToolingManagementClient.installManagedTool({
+        toolId,
+        action: "install",
+        installCommand: tool.installTemplate
+      })
+    );
+  },
   toggleToolEnabled: (toolId, enabled) => {
     const tool = d.snapshot.agentCatalog.find((entry) => entry.id === toolId);
     if (!tool) {
@@ -176,6 +196,7 @@ export const buildSettingsRuntimeValue = (d: BuildSettingsRuntimeValueDeps): Set
     void d.safely(() => noraToolingManagementClient.removeManagedToolSkill({ toolId, skillId }));
   },
   missingOptionalStartupDependencyCount: d.missingOptionalStartupDependencyCount,
+  openOnboardingFlow: d.openOnboardingFlow,
   openStartupDependenciesDialog: d.openStartupDependenciesDialog,
   workbenchLayout: {
     isWorkspaceSidebarCollapsed: d.isWorkspaceSidebarCollapsed,

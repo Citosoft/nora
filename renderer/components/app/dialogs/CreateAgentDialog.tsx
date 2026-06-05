@@ -167,7 +167,6 @@ export function CreateAgentDialog({
 
   useEffect(() => {
     if (open && !wasOpenRef.current) {
-      const defaultTask = availableTasks[0] ?? null;
       const defaultTarget: WorktreeTarget = { kind: "new" };
       const initialTarget =
         defaults?.target?.kind === "session-default"
@@ -191,7 +190,7 @@ export function CreateAgentDialog({
       setFormState({
         toolId: initialToolId,
         name: "",
-        task: defaultTask?.title ?? "",
+        task: "",
         commandOverride: "",
         mode: defaults?.mode ?? "write",
         ...initialLaunchState,
@@ -204,7 +203,7 @@ export function CreateAgentDialog({
           ? Math.max(0, Math.min(CREATE_AGENT_WIZARD_STEPS.length - 1, defaults.initialWizardStepIndex))
           : 0
       );
-      setSelectedTaskPath(defaultTask?.path ?? "");
+      setSelectedTaskPath("");
       setSelectedRoleId("developer");
       setLaunchTargetMode(initialMode);
       setBranchPrefix(WORKTREE_BRANCH_PREFIX_OPTIONS[0].value);
@@ -220,7 +219,6 @@ export function CreateAgentDialog({
     defaultLaunchTargetMode,
     defaultWorktreePrepareCommand,
     preferredAgentToolId,
-    availableTasks,
     worktrees,
     projectBranches,
     preparePresetEntries,
@@ -713,7 +711,7 @@ export function CreateAgentDialog({
           <Button
             onClick={handleStartAgent}
             disabled={isLaunchBlocked}
-            className="!border-emerald-800 !bg-emerald-700 !text-white hover:!border-emerald-700 hover:!bg-emerald-600 focus-visible:ring-emerald-600/60"
+            className="!border-zinc-300 !bg-white !text-zinc-950 hover:!border-zinc-400 hover:!bg-zinc-50 focus-visible:ring-zinc-400/70 dark:!border-zinc-500 dark:!bg-white dark:!text-zinc-950 dark:hover:!border-zinc-400 dark:hover:!bg-zinc-100 dark:focus-visible:ring-white/45"
           >
             Start agent
           </Button>

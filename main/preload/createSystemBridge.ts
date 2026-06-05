@@ -7,7 +7,6 @@ import type {
 } from "@shared/ipc/types/systemGateway.types";
 import type { MacApplicationMenuCommand, MacApplicationMenuSyncPayload } from "@shared/types/macApplicationMenu.types";
 import { MAC_APPLICATION_MENU_COMMAND_CHANNEL } from "@shared/types/macApplicationMenu.types";
-import { clipboard } from "electron";
 
 import { invokeIpc } from "./invokeIpc";
 import { subscribeToIpcEvent } from "./subscribeToIpcEvent";
@@ -15,7 +14,7 @@ import { subscribeToIpcEvent } from "./subscribeToIpcEvent";
 export function createSystemBridge(): SystemBridge {
   return {
     openExternalUrl: (url) => invokeIpc("app:open-external-url", url),
-    copyText: (text) => Promise.resolve(clipboard.writeText(text)),
+    copyText: (text) => invokeIpc("app:copy-text", text),
     closeWindow: () => invokeIpc("window:close"),
     minimizeWindow: () => invokeIpc("window:minimize"),
     toggleMaximizeWindow: () => invokeIpc("window:toggle-maximize"),
@@ -32,6 +31,8 @@ export function createSystemBridge(): SystemBridge {
     installLinuxAptUpdates: () => invokeIpc("app:install-linux-apt-updates"),
     getLinuxUpdateStatus: () => invokeIpc("app:get-linux-update-status"),
     getReleaseVersionStatus: () => invokeIpc("app:get-release-version-status"),
+    checkAppRepositoryStarred: () => invokeIpc("app:check-app-repository-starred"),
+    starAppRepository: () => invokeIpc("app:star-app-repository"),
     getAutoUpdateStatus: () => invokeIpc("app:get-auto-update-status"),
     getAutoUpdateTestSupport: () => invokeIpc("app:get-auto-update-test-support"),
     simulateAutoUpdateStatus: (target) => invokeIpc("app:simulate-auto-update-status", target),
@@ -53,6 +54,14 @@ export function createSystemBridge(): SystemBridge {
       subscribeToIpcEvent<RemoteMountOutputPayload>("remote-mount:output", listener),
     listChromeCookieProfiles: () => invokeIpc("app:list-chrome-cookie-profiles"),
     importChromeBrowserData: (profileId) => invokeIpc("app:import-chrome-browser-data", profileId),
+    getLocalVoiceModelStatus: (modelId) => invokeIpc("app:get-local-voice-model-status", modelId),
+    getLocalVoiceRuntimeStatus: () => invokeIpc("app:get-local-voice-runtime-status"),
+    installLocalVoiceModel: (modelId) => invokeIpc("app:install-local-voice-model", modelId),
+    installLocalVoiceRuntime: () => invokeIpc("app:install-local-voice-runtime"),
+    getLocalAiModelStatus: (modelId) => invokeIpc("app:get-local-ai-model-status", modelId),
+    getLocalAiRuntimeStatus: () => invokeIpc("app:get-local-ai-runtime-status"),
+    installLocalAiModel: (modelId) => invokeIpc("app:install-local-ai-model", modelId),
+    installLocalAiRuntime: () => invokeIpc("app:install-local-ai-runtime"),
     transcribeVoiceInput: (payload) => invokeIpc("app:transcribe-voice-input", payload),
     savePastedImage: (payload) => invokeIpc("app:save-pasted-image", payload),
     showAgentCompletionNotification: (payload) => invokeIpc("app:show-agent-completion-notification", payload),
@@ -60,6 +69,7 @@ export function createSystemBridge(): SystemBridge {
       subscribeToIpcEvent<AppClosingProgressPayload>("app:closing-progress", listener),
     logAnalytics: (level, message) => invokeIpc("app:log-analytics", { level, message }),
     scanLocalAgentUsage: (request) => invokeIpc("app:scan-local-agent-usage", request),
+    getResourceMonitorSnapshot: () => invokeIpc("app:get-resource-monitor-snapshot"),
     syncMacApplicationMenu: (payload: MacApplicationMenuSyncPayload) => invokeIpc("app:sync-mac-application-menu", payload),
     onMacApplicationMenuCommand: (listener: (command: MacApplicationMenuCommand) => void) =>
       subscribeToIpcEvent<MacApplicationMenuCommand>(MAC_APPLICATION_MENU_COMMAND_CHANNEL, listener)

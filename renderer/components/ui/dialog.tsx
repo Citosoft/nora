@@ -57,8 +57,8 @@ export function DialogBody({ children, className }: PropsWithChildren<{ classNam
   return <div className={cn("min-h-0 flex-1 overflow-y-auto px-6 pb-5 pt-1", className)}>{children}</div>;
 }
 
-export function DialogTitle({ children }: { children: ReactNode }) {
-  return <h2 className="text-xl font-semibold">{children}</h2>;
+export function DialogTitle({ children, className }: { children: ReactNode; className?: string }) {
+  return <h2 className={cn("text-xl font-semibold", className)}>{children}</h2>;
 }
 
 export function DialogDescription({ children, className }: PropsWithChildren<{ className?: string }>) {

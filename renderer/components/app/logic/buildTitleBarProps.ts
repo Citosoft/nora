@@ -10,6 +10,7 @@ export const buildTitleBarProps = (d: TitleBarBuildDeps): TitleBarProps => ({
   onOpenSettings: d.onOpenSettings,
   settingsActive: d.activeView === "settings",
   onOpenKeyboardShortcuts: d.onOpenKeyboardShortcuts,
+  onOpenResourceMonitor: d.onOpenResourceMonitor,
   onOpenAbout: d.onOpenAbout,
   onSubmitIssue: d.handleSubmitIssue,
   canOpenProjectInIde: d.canOpenProjectInIde,
@@ -40,6 +41,7 @@ export const buildTitleBarProps = (d: TitleBarBuildDeps): TitleBarProps => ({
   onFocusPreviousSessionTab: d.focusPreviousSessionTab,
   onFocusNextSessionTab: d.focusNextSessionTab,
   onOpenStartupDependencies: d.openStartupDependencies,
+  onOpenOnboarding: d.openOnboarding,
   splitViewSelection: d.snapshotProject
     ? {
         views: d.activeSplitViewCollection.views.map((view) => ({

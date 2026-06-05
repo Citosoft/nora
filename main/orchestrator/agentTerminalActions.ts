@@ -1,6 +1,10 @@
 import type { AgentContextPreview, AgentSession, AppState, TerminalSession } from "@shared/appTypes";
 import fs from "node:fs/promises";
 import path from "node:path";
+import {
+  getSubmittedCommandsFromInput,
+  resolveTerminalWorkspaceFromCommand
+} from "./terminalWorkingDirectory";
 
 type AgentTerminalActionsDependencies = {
   nowIso: () => string;
@@ -15,6 +19,9 @@ type AgentTerminalActionsDependencies = {
   resetTerminalTranscript: (terminal: TerminalSession) => Promise<void>;
   clearAgentContextFile: (agent: AgentSession) => Promise<void>;
 };
+
+const previousTerminalWorkspaces = new Map<string, string>();
+const terminalInputBuffers = new Map<string, string>();
 
 export async function clearAgentContext(
   deps: AgentTerminalActionsDependencies,
@@ -117,9 +124,30 @@ export async function sendTerminalInput(
   if (!session) {
     throw new Error("Terminal session is not running.");
   }
+  const currentInputBuffer = `${terminalInputBuffers.get(sessionId) ?? ""}${input}`;
+  const { commands, remainingInput } = getSubmittedCommandsFromInput(currentInputBuffer);
+  terminalInputBuffers.set(sessionId, remainingInput);
   if (shouldMarkBusy) {
+    const terminal = deps.getSnapshot().terminals.find((item) => item.id === sessionId) ?? null;
+    let nextWorkspace: string | null = null;
+    if (terminal && commands.length > 0) {
+      let workspaceCursor = terminal.currentWorkingDirectory || terminal.workspace;
+      for (const command of commands) {
+        const resolvedWorkspace = resolveTerminalWorkspaceFromCommand(
+          command,
+          workspaceCursor,
+          previousTerminalWorkspaces.get(sessionId) ?? null
+        );
+        if (resolvedWorkspace && resolvedWorkspace !== workspaceCursor) {
+          previousTerminalWorkspaces.set(sessionId, workspaceCursor);
+          workspaceCursor = resolvedWorkspace;
+        }
+      }
+      nextWorkspace = workspaceCursor !== (terminal.currentWorkingDirectory || terminal.workspace) ? workspaceCursor : null;
+    }
     deps.updateTerminal(sessionId, {
       isBusy: true,
+      ...(nextWorkspace && nextWorkspace !== terminal?.currentWorkingDirectory ? { currentWorkingDirectory: nextWorkspace } : {}),
       lastEventAt: deps.nowIso()
     });
   }

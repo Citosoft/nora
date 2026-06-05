@@ -1,6 +1,7 @@
 import type { AiSettings } from "./ai.types";
 import type { AnalyticsConsentStatus } from "./analytics.types";
 import type { FileEditorThemeId } from "./fileEditorTheme.types";
+import type { VoiceSettings } from "./voice.types";
 
 export type Screen = "project-selector" | "workspace";
 
@@ -256,6 +257,7 @@ export interface AppSettings {
   terminalQuickLaunchDefaults: TerminalQuickLaunchDefaults;
   terminalPresets: TerminalPreset[];
   ai: AiSettings;
+  voice: VoiceSettings;
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
@@ -290,7 +292,13 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
       openai: "gpt-4o-mini",
       google: "gemini-2.5-flash",
       anthropic: "claude-3-5-haiku-latest"
-    }
+    },
+    simpleTaskProvider: "cloud",
+    localLlmModelId: "qwen2.5-0.5b-instruct"
+  },
+  voice: {
+    dictationProvider: "openai",
+    localWhisperModelId: "base.en"
   }
 };
 

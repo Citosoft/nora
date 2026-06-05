@@ -7,6 +7,8 @@ export type AppUiCommands = {
   setAboutDialogOpen: (open: boolean) => void;
   openKeyboardShortcutsDialog: () => void;
   setKeyboardShortcutsDialogOpen: (open: boolean) => void;
+  openResourceMonitorDialog: () => void;
+  setResourceMonitorDialogOpen: (open: boolean) => void;
   openAddWorkspaceDialog: () => void;
   setAddWorkspaceDialogOpen: (open: boolean) => void;
   openRemoteWorkspaceDialog: () => void;
@@ -47,6 +49,14 @@ export function useAppUiCommands(setUiState: Dispatch<SetStateAction<UiState>>):
 
   const setKeyboardShortcutsDialogOpen = useCallback((open: boolean) => {
     setUiState((current) => ({ ...current, showKeyboardShortcutsDialog: open }));
+  }, [setUiState]);
+
+  const openResourceMonitorDialog = useCallback(() => {
+    setUiState((current) => ({ ...current, showResourceMonitorDialog: true }));
+  }, [setUiState]);
+
+  const setResourceMonitorDialogOpen = useCallback((open: boolean) => {
+    setUiState((current) => ({ ...current, showResourceMonitorDialog: open }));
   }, [setUiState]);
 
   const openAddWorkspaceDialog = useCallback(() => {
@@ -205,6 +215,8 @@ export function useAppUiCommands(setUiState: Dispatch<SetStateAction<UiState>>):
     setAboutDialogOpen,
     openKeyboardShortcutsDialog,
     setKeyboardShortcutsDialogOpen,
+    openResourceMonitorDialog,
+    setResourceMonitorDialogOpen,
     openAddWorkspaceDialog,
     setAddWorkspaceDialogOpen,
     openRemoteWorkspaceDialog,

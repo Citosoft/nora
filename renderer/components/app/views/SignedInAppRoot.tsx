@@ -372,6 +372,7 @@ function SignedInAppRootContent({
     switchStatusBarToolAccount: props.toolInstallFlows.switchStatusBarToolAccount,
     toggleSettingsPage: props.navigation.toggleSettingsPage,
     openStartupDependenciesDialog: dialogs.openStartupDependenciesDialog,
+    openOnboardingFlow: dialogs.openOnboardingFlow,
     openAddWorkspaceModal: props.workspaceLifecycle.openAddWorkspaceModal,
     defaultIdeId: props.preferences.defaultIdeId,
     installedIdes: props.bootstrap.installedIdes,
@@ -445,6 +446,7 @@ function SignedInAppRootContent({
       },
       openKeyboardShortcuts: props.uiCommands.openKeyboardShortcutsDialog,
       openStartupDependencies: chromeShellSources.openStartupDependenciesDialog,
+      openResourceMonitor: props.uiCommands.openResourceMonitorDialog,
       submitIssue: chromeShellSources.handleSubmitIssue,
       openAbout: props.uiCommands.openAboutDialog
     }),
@@ -456,6 +458,7 @@ function SignedInAppRootContent({
       props.safely,
       props.workspaceLifecycle.handleOpenRecentWorkspace,
       props.uiCommands.openKeyboardShortcutsDialog,
+      props.uiCommands.openResourceMonitorDialog,
       props.uiCommands.openAboutDialog
     ]
   );
@@ -525,6 +528,8 @@ function SignedInAppRootContent({
     updateAiPreferredProvider: props.preferences.updateAiPreferredProvider,
     updateAiApiKey: props.preferences.updateAiApiKey,
     updateAiModel: props.preferences.updateAiModel,
+    updateVoiceSettings: props.preferences.updateVoiceSettings,
+    updateAiSimpleTaskSettings: props.preferences.updateAiSimpleTaskSettings,
     aiModelOptions: props.aiModels.aiModelOptions,
     aiModelLoading: props.aiModels.aiModelLoading,
     aiModelError: props.aiModels.aiModelError,
@@ -532,6 +537,7 @@ function SignedInAppRootContent({
     relaunchApplication: props.preferences.relaunchApplication,
     safely: props.safely,
     missingOptionalStartupDependencyCount: dialogs.missingOptionalStartupDependencyCount,
+    openOnboardingFlow: dialogs.openOnboardingFlow,
     openStartupDependenciesDialog: dialogs.openStartupDependenciesDialog,
     isWorkspaceSidebarCollapsed,
     isChangesSidebarCollapsed,

@@ -15,6 +15,10 @@ import {
   shouldRescanTerminalLastLine,
   shouldRescanTerminalMetadata
 } from "./terminalPerformance";
+import {
+  extractOsc7WorkingDirectory,
+  getTrailingIncompleteOsc7Sequence
+} from "./terminalWorkingDirectory";
 
 export function createTerminalStateHelpers(deps: TerminalStateHelperDeps): TerminalStateHelpers {
   const AGENT_STATE_UPDATE_INTERVAL_MS = 1000;
@@ -24,6 +28,7 @@ export function createTerminalStateHelpers(deps: TerminalStateHelperDeps): Termi
   const agentLastStateUpdateAt = new Map<string, number>();
   const terminalLastStateUpdateAt = new Map<string, number>();
   const localTerminalLastStateUpdateAt = new Map<string, number>();
+  const terminalIncompleteOsc7Sequences = new Map<string, string>();
 
   function updateAgent(agentId: string, partial: Partial<AgentSession>): void {
     deps.updateState((state) => ({
@@ -182,6 +187,14 @@ export function createTerminalStateHelpers(deps: TerminalStateHelperDeps): Termi
     const nextOutput = capTerminalOutput(`${existing}${chunk}`);
     deps.setTerminalBuffer(terminalId, nextOutput);
     const currentTerminal = deps.getSnapshot().terminals.find((item) => item.id === terminalId) || null;
+    const osc7Input = `${terminalIncompleteOsc7Sequences.get(terminalId) ?? ""}${chunk}`;
+    const osc7Workspace = extractOsc7WorkingDirectory(osc7Input);
+    const incompleteOsc7Sequence = getTrailingIncompleteOsc7Sequence(osc7Input);
+    if (incompleteOsc7Sequence) {
+      terminalIncompleteOsc7Sequences.set(terminalId, incompleteOsc7Sequence);
+    } else {
+      terminalIncompleteOsc7Sequences.delete(terminalId);
+    }
     const shouldRescanMetadata = shouldRescanTerminalMetadata(chunk);
     const detectedLocal = shouldRescanMetadata
       ? deps.detectLocalUrlFromOutput(
@@ -213,12 +226,15 @@ export function createTerminalStateHelpers(deps: TerminalStateHelperDeps): Termi
       );
     const nextDetectedLocalUrl = shouldClearDetectedPort ? null : (detectedLocal.url || currentTerminal?.detectedLocalUrl || null);
     const nextDetectedLocalPort = shouldClearDetectedPort ? null : (detectedLocal.port || currentTerminal?.detectedLocalPort || null);
+    const nextCurrentWorkingDirectory =
+      osc7Workspace || currentTerminal?.currentWorkingDirectory || currentTerminal?.workspace || null;
     const now = Date.now();
     const hasCriticalChange =
       (currentTerminal?.isBusy ?? false) !== nextIsBusy ||
       (currentTerminal?.lastTerminalLine ?? "") !== lastTerminalLine ||
       (currentTerminal?.detectedLocalUrl ?? null) !== nextDetectedLocalUrl ||
-      (currentTerminal?.detectedLocalPort ?? null) !== nextDetectedLocalPort;
+      (currentTerminal?.detectedLocalPort ?? null) !== nextDetectedLocalPort ||
+      (currentTerminal?.currentWorkingDirectory ?? currentTerminal?.workspace ?? null) !== nextCurrentWorkingDirectory;
     const lastUpdatedAt = terminalLastStateUpdateAt.get(terminalId) || 0;
     if (shouldPublishThrottledTerminalStateUpdate({
       now,
@@ -232,7 +248,11 @@ export function createTerminalStateHelpers(deps: TerminalStateHelperDeps): Termi
         isBusy: nextIsBusy,
         lastTerminalLine,
         detectedLocalUrl: nextDetectedLocalUrl,
-        detectedLocalPort: nextDetectedLocalPort
+        detectedLocalPort: nextDetectedLocalPort,
+        ...(nextCurrentWorkingDirectory &&
+        nextCurrentWorkingDirectory !== (currentTerminal?.currentWorkingDirectory || currentTerminal?.workspace)
+          ? { currentWorkingDirectory: nextCurrentWorkingDirectory }
+          : {})
       });
       terminalLastStateUpdateAt.set(terminalId, now);
     }

@@ -5,6 +5,14 @@ import { buildProcessEnv } from "./processEnv";
 import { findExecutableOnPath } from "./processLookup";
 import { detectDirectSshSupport, detectRemoteMountSupport, findSshExecutable, installRemoteMountSupport } from "./remoteMounts";
 
+async function findGhExecutable(): Promise<string | null> {
+  if (isWindows()) {
+    return findExecutableOnPath(["gh.exe", "gh"], true);
+  }
+
+  return findExecutableOnPath(["gh"], false);
+}
+
 const execFileAsync = promisify(execFile);
 
 function isWindows(): boolean {
@@ -137,26 +145,148 @@ function getGitManualInstructions(): string[] {
   ];
 }
 
+async function canAutoInstallGh(): Promise<boolean> {
+  if (isWindows()) {
+    return hasCommand("winget");
+  }
+
+  if (isMac()) {
+    return hasCommand("brew");
+  }
+
+  return (await hasCommand("apt-get")) && (await hasCommand("pkexec"));
+}
+
+async function installGhDependency(): Promise<void> {
+  if (isWindows()) {
+    const wingetPath = await findExecutableOnPath(["winget"], true);
+    if (!wingetPath) {
+      throw new Error("winget is not available on this machine.");
+    }
+
+    await execFileAsync(wingetPath, [
+      "install",
+      "--id",
+      "GitHub.cli",
+      "--exact",
+      "--accept-package-agreements",
+      "--accept-source-agreements",
+      "--disable-interactivity"
+    ], {
+      windowsHide: false,
+      maxBuffer: 1024 * 1024,
+      env: buildProcessEnv(process.env)
+    });
+    return;
+  }
+
+  if (isMac()) {
+    const brewPath = await findExecutableOnPath(["brew"], false);
+    if (!brewPath) {
+      throw new Error("Homebrew is not available on this machine.");
+    }
+
+    await execFileAsync(brewPath, ["install", "gh"], {
+      maxBuffer: 1024 * 1024,
+      env: buildProcessEnv(process.env)
+    });
+    return;
+  }
+
+  const pkexecPath = await findExecutableOnPath(["pkexec"], false);
+  const aptGetPath = await findExecutableOnPath(["apt-get"], false);
+  if (!pkexecPath || !aptGetPath) {
+    throw new Error("Automatic GitHub CLI installation requires both pkexec and apt-get.");
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(pkexecPath, ["/bin/sh", "-lc", `apt-get update && DEBIAN_FRONTEND=noninteractive ${aptGetPath} install -y gh`], {
+      windowsHide: true,
+      stdio: ["ignore", "pipe", "pipe"],
+      env: buildProcessEnv(process.env)
+    });
+
+    let stderr = "";
+    child.stderr.on("data", (chunk: Buffer) => {
+      stderr += chunk.toString();
+    });
+    child.once("error", reject);
+    child.once("exit", (code) => {
+      if (code === 0) {
+        resolve();
+        return;
+      }
+
+      reject(new Error(stderr.trim() || `GitHub CLI installation failed with exit code ${code ?? 1}.`));
+    });
+  });
+}
+
+function getGhManualInstructions(): string[] {
+  if (isWindows()) {
+    return [
+      "Install GitHub CLI from https://cli.github.com/, or run `winget install --id GitHub.cli --exact` in PowerShell.",
+      "Run `gh auth login` after installation, then restart Nora so the app process can detect gh on PATH."
+    ];
+  }
+
+  if (isMac()) {
+    return [
+      "Install GitHub CLI with Homebrew using `brew install gh`.",
+      "Run `gh auth login` after installation, then restart Nora so the app process can detect gh on PATH."
+    ];
+  }
+
+  return [
+    "Install GitHub CLI with your package manager, for example `sudo apt-get update && sudo apt-get install -y gh`.",
+    "Run `gh auth login` after installation, then restart Nora so the app process can detect gh on PATH."
+  ];
+}
+
+async function createGhDependency(): Promise<StartupDependency> {
+  const ghPath = await findGhExecutable();
+  const canAutoInstall = !ghPath && await canAutoInstallGh();
+
+  return {
+    id: "gh",
+    label: "gh",
+    severity: "mandatory",
+    status: ghPath ? "available" : "missing",
+    summary: ghPath
+      ? "gh is available for GitHub integrations, authenticated repository actions, and CLI-based forge workflows."
+      : "gh is required. Install GitHub CLI and run `gh auth login` before continuing.",
+    detectedPath: ghPath,
+    installHint: ghPath
+      ? null
+      : canAutoInstall
+        ? "Nora can install GitHub CLI automatically on this machine."
+        : "Install GitHub CLI manually, then relaunch Nora.",
+    canAutoInstall,
+    autoInstallLabel: canAutoInstall ? "Install GitHub CLI" : null,
+    manualInstructions: getGhManualInstructions()
+  };
+}
+
 async function createGitDependency(): Promise<StartupDependency> {
   const gitPath = await findGitExecutable();
   const canAutoInstall = !gitPath && await canAutoInstallGit();
 
   return {
     id: "git",
-    label: "Git",
+    label: "git",
     severity: "mandatory",
     status: gitPath ? "available" : "missing",
     summary: gitPath
-      ? "Git is available for repository selection, worktrees, status, commits, and branch operations."
-      : "Git is required. Nora cannot open repositories or manage worktrees without it.",
+      ? "git is available for repository selection, worktrees, status, commits, and branch operations."
+      : "git is required. Nora cannot open repositories or manage worktrees without it.",
     detectedPath: gitPath,
     installHint: gitPath
       ? null
       : canAutoInstall
-        ? "Nora can install Git automatically on this machine."
-        : "Install Git manually, then relaunch Nora.",
+        ? "Nora can install git automatically on this machine."
+        : "Install git manually, then relaunch Nora.",
     canAutoInstall,
-    autoInstallLabel: canAutoInstall ? "Install Git" : null,
+    autoInstallLabel: canAutoInstall ? "Install git" : null,
     manualInstructions: getGitManualInstructions()
   };
 }
@@ -247,14 +377,14 @@ async function createSshClientDependency(): Promise<StartupDependency> {
 
   return {
     id: "ssh-client",
-    label: "SSH Client",
+    label: "ssh client",
     severity: "optional",
     status: directSshSupport.supported ? "available" : "missing",
     summary: directSshSupport.supported
-      ? "SSH is available for direct SSH workspaces and remote repository commands."
-      : directSshSupport.reason || "SSH is unavailable, so direct SSH workspaces are disabled.",
+      ? "ssh is available for direct SSH workspaces and remote repository commands."
+      : directSshSupport.reason || "ssh is unavailable, so direct SSH workspaces are disabled.",
     detectedPath: sshPath,
-    installHint: directSshSupport.supported ? null : "Install an SSH client to enable direct SSH workspaces.",
+    installHint: directSshSupport.supported ? null : "Install an ssh client to enable direct SSH workspaces.",
     canAutoInstall: false,
     autoInstallLabel: null,
     manualInstructions: getSshClientManualInstructions()
@@ -266,12 +396,12 @@ async function createSshMountDependency(): Promise<StartupDependency> {
 
   return {
     id: "ssh-mount",
-    label: "SSH Mount Support",
+    label: "ssh mount support",
     severity: "optional",
     status: mountSupport.supported ? "available" : "missing",
     summary: mountSupport.supported
-      ? "Remote mount support is available for SSH-backed mounted workspaces."
-      : mountSupport.reason || "SSH mount support is unavailable.",
+      ? "Remote mount support is available for ssh-backed mounted workspaces."
+      : mountSupport.reason || "ssh mount support is unavailable.",
     detectedPath: null,
     installHint: mountSupport.installHint,
     canAutoInstall: mountSupport.canAutoInstall,
@@ -287,6 +417,7 @@ async function createSshMountDependency(): Promise<StartupDependency> {
 export async function getStartupDependencyReport(): Promise<StartupDependencyReport> {
   const dependencies = await Promise.all([
     createGitDependency(),
+    createGhDependency(),
     createNpmDependency(),
     createNpxDependency(),
     createSshClientDependency(),
@@ -302,6 +433,11 @@ export async function getStartupDependencyReport(): Promise<StartupDependencyRep
 export async function installStartupDependency(dependencyId: StartupDependencyId): Promise<StartupDependencyReport> {
   if (dependencyId === "git") {
     await installGitDependency();
+    return getStartupDependencyReport();
+  }
+
+  if (dependencyId === "gh") {
+    await installGhDependency();
     return getStartupDependencyReport();
   }
 

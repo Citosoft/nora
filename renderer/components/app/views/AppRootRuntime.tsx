@@ -150,7 +150,6 @@ function AppRootRuntimeContent({
   });
   const bootstrap = useAppBootstrap({
     setUiState,
-    captureError,
     initialWindowUiState: appRootInitialWindowUiState
   });
   const canPreviewMacTitleBarChrome = !__NORA_IS_PRODUCTION__ && bootstrap.windowUiState.platform !== "darwin";
@@ -384,6 +383,7 @@ function AppRootRuntimeContent({
     defaultIdeId: preferences.defaultIdeId,
     openAddWorkspaceModal: workspaceLifecycle.openAddWorkspaceModal,
     openStartupDependenciesDialog: dialogs.openStartupDependenciesDialog,
+    openOnboardingFlow: dialogs.openOnboardingFlow,
     linuxUpdateStatus: linuxUpdateNotice.linuxUpdateStatus,
     handleCopyLinuxUpdateCommand,
     handleOpenLinuxRelease,
@@ -480,6 +480,7 @@ function AppRootRuntimeContent({
       focusNextSessionTab: titleBar.onFocusNextSessionTab,
       openKeyboardShortcuts: titleBar.onOpenKeyboardShortcuts,
       openStartupDependencies: titleBar.onOpenStartupDependencies,
+      openResourceMonitor: titleBar.onOpenResourceMonitor,
       submitIssue: titleBar.onSubmitIssue,
       openAbout: titleBar.onOpenAbout
     };
