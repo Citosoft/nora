@@ -358,6 +358,10 @@ export type AppPreferences = {
   updateAiPreferredProvider: (provider: AiProvider) => Promise<void>;
   updateAiApiKey: (provider: AiProvider, apiKey: string) => Promise<void>;
   updateAiModel: (provider: AiProvider, model: string) => Promise<void>;
+  updateVoiceSettings: (voice: AppSettings["voice"]) => Promise<void>;
+  updateAiSimpleTaskSettings: (
+    settings: Pick<AppSettings["ai"], "simpleTaskProvider" | "localLlmModelId">
+  ) => Promise<void>;
   relaunchApplication: () => Promise<void>;
 };
 

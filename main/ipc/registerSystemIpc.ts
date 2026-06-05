@@ -7,6 +7,10 @@ import {
   getLatestReleaseAssets,
   getReleaseInstallerScriptCommandForLocalTerminal
 } from "@main/releaseDownloads";
+import { getLocalAiModelStatus, installLocalAiModel } from "@main/ai/localAiModels";
+import { getLocalAiRuntimeStatus, installLocalAiRuntime } from "@main/ai/localAiRuntime";
+import { getLocalVoiceModelStatus, installLocalVoiceModel } from "@main/ai/localVoiceModels";
+import { getLocalVoiceRuntimeStatus, installLocalVoiceRuntime } from "@main/ai/localVoiceRuntime";
 import { transcribeVoiceInput } from "@main/ai/voiceTranscription";
 import type {
   AgentCompletionNotificationPayload,
@@ -19,6 +23,8 @@ import type {
   BrowserCookieProfileSummary,
   BrowserDataImportResult,
   LatestReleaseAssetsResult,
+  LocalLlmModelId,
+  LocalWhisperModelId,
   LocalTerminalState,
   LinuxAptSetupStatus,
   LinuxUpdateStatus,
@@ -91,6 +97,22 @@ export function registerSystemIpc({
     const browserSession = session.fromPartition("persist:nora-browser");
     return importChromeBrowserDataToSession(browserSession, process.platform, process.env, {}, profileId || "Default");
   });
+  ipcMain.handle("app:get-local-voice-model-status", (_event, modelId: LocalWhisperModelId) =>
+    getLocalVoiceModelStatus(modelId)
+  );
+  ipcMain.handle("app:get-local-voice-runtime-status", () => getLocalVoiceRuntimeStatus());
+  ipcMain.handle("app:install-local-voice-model", (_event, modelId: LocalWhisperModelId) =>
+    installLocalVoiceModel(modelId)
+  );
+  ipcMain.handle("app:install-local-voice-runtime", () => installLocalVoiceRuntime());
+  ipcMain.handle("app:get-local-ai-model-status", (_event, modelId: LocalLlmModelId) =>
+    getLocalAiModelStatus(modelId)
+  );
+  ipcMain.handle("app:get-local-ai-runtime-status", () => getLocalAiRuntimeStatus());
+  ipcMain.handle("app:install-local-ai-model", (_event, modelId: LocalLlmModelId) =>
+    installLocalAiModel(modelId)
+  );
+  ipcMain.handle("app:install-local-ai-runtime", () => installLocalAiRuntime());
   ipcMain.handle("app:get-analytics-runtime-config", (): AnalyticsRuntimeConfig => ({
     ...analyticsRuntimeConfig,
     coarseLaunchContext: {

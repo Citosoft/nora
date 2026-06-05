@@ -70,7 +70,25 @@ function normalizeAppSettings(candidate: AppSettings): AppSettings {
       modelByProvider: {
         ...DEFAULT_APP_SETTINGS.ai.modelByProvider,
         ...(candidate.ai?.modelByProvider ?? {})
-      }
+      },
+      simpleTaskProvider:
+        candidate.ai?.simpleTaskProvider === "cloud" || candidate.ai?.simpleTaskProvider === "local"
+          ? candidate.ai.simpleTaskProvider
+          : DEFAULT_APP_SETTINGS.ai.simpleTaskProvider,
+      localLlmModelId:
+        candidate.ai?.localLlmModelId === "qwen2.5-0.5b-instruct" || candidate.ai?.localLlmModelId === "smollm2-360m-instruct"
+          ? candidate.ai.localLlmModelId
+          : DEFAULT_APP_SETTINGS.ai.localLlmModelId
+    },
+    voice: {
+      dictationProvider:
+        candidate.voice?.dictationProvider === "openai" || candidate.voice?.dictationProvider === "localWhisper"
+          ? candidate.voice.dictationProvider
+          : DEFAULT_APP_SETTINGS.voice.dictationProvider,
+      localWhisperModelId:
+        candidate.voice?.localWhisperModelId === "tiny.en" || candidate.voice?.localWhisperModelId === "base.en"
+          ? candidate.voice.localWhisperModelId
+          : DEFAULT_APP_SETTINGS.voice.localWhisperModelId
     }
   };
 }
@@ -428,6 +446,25 @@ export function useAppPreferences(): AppPreferences {
     }));
   };
 
+  const updateVoiceSettings = async (voice: AppSettings["voice"]) => {
+    await saveAppSettings((current) => ({
+      ...current,
+      voice
+    }));
+  };
+
+  const updateAiSimpleTaskSettings = async (
+    settings: Pick<AppSettings["ai"], "simpleTaskProvider" | "localLlmModelId">
+  ) => {
+    await saveAppSettings((current) => ({
+      ...current,
+      ai: {
+        ...current.ai,
+        ...settings
+      }
+    }));
+  };
+
   const relaunchApplication = async () => {
     await noraSystemClient.relaunchApplication({
       hardwareAccelerationEnabled: appSettingsRef.current.hardwareAccelerationEnabled
@@ -486,6 +523,8 @@ export function useAppPreferences(): AppPreferences {
     updateAiPreferredProvider,
     updateAiApiKey,
     updateAiModel,
+    updateVoiceSettings,
+    updateAiSimpleTaskSettings,
     relaunchApplication
   };
 }

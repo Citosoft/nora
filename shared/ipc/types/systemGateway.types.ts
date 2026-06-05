@@ -8,6 +8,12 @@ import type {
   BrowserCookieProfileSummary,
   BrowserDataImportResult,
   LatestReleaseAssetsResult,
+  LocalAiModelStatus,
+  LocalAiRuntimeStatus,
+  LocalLlmModelId,
+  LocalVoiceModelStatus,
+  LocalVoiceRuntimeStatus,
+  LocalWhisperModelId,
   ForgeOAuthDevicePrompt,
   InstalledIde,
   LinuxAptSetupStatus,
@@ -86,6 +92,14 @@ export interface SystemBridge {
   onRemoteMountOutput: (listener: (payload: RemoteMountOutputPayload) => void) => () => void;
   listChromeCookieProfiles: () => Promise<BrowserCookieProfileSummary[]>;
   importChromeBrowserData: (profileId?: string) => Promise<BrowserDataImportResult>;
+  getLocalVoiceModelStatus: (modelId: LocalWhisperModelId) => Promise<LocalVoiceModelStatus>;
+  getLocalVoiceRuntimeStatus: () => Promise<LocalVoiceRuntimeStatus>;
+  installLocalVoiceModel: (modelId: LocalWhisperModelId) => Promise<LocalVoiceModelStatus>;
+  installLocalVoiceRuntime: () => Promise<LocalVoiceRuntimeStatus>;
+  getLocalAiModelStatus: (modelId: LocalLlmModelId) => Promise<LocalAiModelStatus>;
+  getLocalAiRuntimeStatus: () => Promise<LocalAiRuntimeStatus>;
+  installLocalAiModel: (modelId: LocalLlmModelId) => Promise<LocalAiModelStatus>;
+  installLocalAiRuntime: () => Promise<LocalAiRuntimeStatus>;
   transcribeVoiceInput: (payload: VoiceInputTranscriptionPayload) => Promise<string>;
   savePastedImage: (payload: SavePastedImagePayload) => Promise<PastedImageReference>;
   showAgentCompletionNotification: (payload: AgentCompletionNotificationPayload) => Promise<void>;

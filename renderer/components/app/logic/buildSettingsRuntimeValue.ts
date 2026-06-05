@@ -138,6 +138,12 @@ export const buildSettingsRuntimeValue = (d: BuildSettingsRuntimeValueDeps): Set
   updateAiModel: (provider, model) => {
     void d.updateAiModel(provider, model).catch(d.captureError);
   },
+  updateVoiceSettings: (voice) => {
+    void d.updateVoiceSettings(voice).catch(d.captureError);
+  },
+  updateAiSimpleTaskSettings: (settings) => {
+    void d.updateAiSimpleTaskSettings(settings).catch(d.captureError);
+  },
   aiModelOptions: d.aiModelOptions,
   aiModelLoading: d.aiModelLoading,
   aiModelError: d.aiModelError,

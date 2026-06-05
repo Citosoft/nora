@@ -11,6 +11,7 @@ import { SkillsSettingsSection } from "@/components/app/panels/settings/SkillsSe
 import { SystemSettingsSection } from "@/components/app/panels/settings/SystemSettingsSection";
 import { TerminalSettingsSection } from "@/components/app/panels/settings/TerminalSettingsSection";
 import { AgentUsageStatsSection } from "@/components/app/panels/settings/AgentUsageStatsSection";
+import { VoiceSettingsSection } from "@/components/app/panels/settings/VoiceSettingsSection";
 import { WorkbenchSettingsSection } from "@/components/app/panels/settings/WorkbenchSettingsSection";
 import type { SettingsGroup, SettingsPageProps } from "@/components/app/types/component.types";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import {
   FlaskConical,
   Globe,
   LayoutDashboard,
+  Mic2,
   Palette,
   Plug,
   Shield,
@@ -43,6 +45,7 @@ const SETTINGS_GROUP_ITEMS: { value: SettingsGroup; label: string; icon: LucideI
   { value: "skills", label: "Skills", icon: Sparkles },
   { value: "integrations", label: "Integrations", icon: Plug },
   { value: "ai", label: "AI", icon: Bot },
+  { value: "voice", label: "Voice", icon: Mic2 },
   { value: "privacy", label: "Privacy", icon: Shield },
   { value: "system", label: "System", icon: Cpu },
   ...(!__NORA_IS_PRODUCTION__ ? [{ value: "dev" as const, label: "Dev", icon: FlaskConical }] : [])
@@ -137,6 +140,10 @@ export function SettingsPage({ initialGroup }: SettingsPageProps) {
 
           <TabsContent value="ai" className="mt-0">
             <AiSettingsSection />
+          </TabsContent>
+
+          <TabsContent value="voice" className="mt-0">
+            <VoiceSettingsSection />
           </TabsContent>
 
           <TabsContent value="privacy" className="mt-0">

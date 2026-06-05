@@ -528,6 +528,8 @@ function SignedInAppRootContent({
     updateAiPreferredProvider: props.preferences.updateAiPreferredProvider,
     updateAiApiKey: props.preferences.updateAiApiKey,
     updateAiModel: props.preferences.updateAiModel,
+    updateVoiceSettings: props.preferences.updateVoiceSettings,
+    updateAiSimpleTaskSettings: props.preferences.updateAiSimpleTaskSettings,
     aiModelOptions: props.aiModels.aiModelOptions,
     aiModelLoading: props.aiModels.aiModelLoading,
     aiModelError: props.aiModels.aiModelError,

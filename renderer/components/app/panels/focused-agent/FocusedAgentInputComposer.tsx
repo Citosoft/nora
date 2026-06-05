@@ -1,3 +1,4 @@
+import { VoiceInputLevelTracker } from "@/components/app/panels/focused-agent/VoiceInputLevelTracker";
 import { countSelectedAgentContextGroups } from "@/components/app/logic/agentContextSelections";
 import { AgentContextPicker } from "@/components/app/shared/AgentContextPicker";
 import { getPastedImageLabel, getWorkspacePathPillLabel } from "@/components/app/logic/agentInputAttachments";
@@ -6,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { ArrowUp, FileImage, FileText, Folder, LoaderCircle, Mic, Share2, X } from "lucide-react";
+import { ArrowUp, FileImage, FileText, Folder, LoaderCircle, Mic, Share2, Square, X } from "lucide-react";
 
 export const FocusedAgentInputComposer = ({
   agent,
@@ -14,9 +15,11 @@ export const FocusedAgentInputComposer = ({
   attachedWorkspacePaths,
   contextSelector,
   isLoadingContextSources,
-  hasVoiceTranscriptionApiKey,
+  isVoiceTranscriptionReady,
   isVoiceInputSupported,
   isListeningVoiceInput,
+  isTranscribingVoiceInput,
+  voiceInputLevels,
   isSendingTerminalInput,
   isSavingPastedImage,
   canSendLiveTerminalInput,
@@ -122,47 +125,71 @@ export const FocusedAgentInputComposer = ({
             </PopoverContent>
           </Popover>
         ) : null}
-        <Input
-          ref={inputRef}
-          onDragOver={onDragOver}
-          onDrop={onDrop}
-          onPaste={(event) => {
-            void onPaste(event);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              void onSend();
-            }
-          }}
-          placeholder={agent ? "Send input to agent" : "Send input to terminal"}
-          disabled={isSendingTerminalInput || isSavingPastedImage || !canSendLiveTerminalInput}
-          className="h-8 min-w-0 flex-1 border-0 bg-transparent px-2 text-[15px] shadow-none placeholder:text-muted-foreground/70 focus-visible:ring-0 focus-visible:ring-offset-0"
-        />
+        {isListeningVoiceInput ? (
+          <VoiceInputLevelTracker levels={voiceInputLevels} />
+        ) : (
+          <Input
+            ref={inputRef}
+            onDragOver={onDragOver}
+            onDrop={onDrop}
+            onPaste={(event) => {
+              void onPaste(event);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                void onSend();
+              }
+            }}
+            placeholder={agent ? "Send input to agent" : "Send input to terminal"}
+            disabled={isSendingTerminalInput || isSavingPastedImage || !canSendLiveTerminalInput}
+            className="h-8 min-w-0 flex-1 border-0 bg-transparent px-2 text-[15px] shadow-none placeholder:text-muted-foreground/70 focus-visible:ring-0 focus-visible:ring-offset-0"
+          />
+        )}
         <Button
           variant="ghost"
           size="icon"
           tooltip={
-            !hasVoiceTranscriptionApiKey
-              ? "Add an OpenAI API key in Settings -> AI to enable voice input"
+            !isVoiceTranscriptionReady
+              ? "Configure voice dictation in Settings -> Voice to enable voice input"
               : !isVoiceInputSupported
               ? "Voice input is not supported in this environment"
+              : isTranscribingVoiceInput
+                ? "Transcribing voice input"
+              : isListeningVoiceInput
+                ? "Listening — click to stop and transcribe"
+                : "Start voice input"
+          }
+          className={cn(
+            "size-8 shrink-0 rounded-full",
+            isListeningVoiceInput && "bg-primary/15 text-primary hover:bg-primary/20",
+            isTranscribingVoiceInput && "bg-primary/10 text-primary hover:bg-primary/15"
+          )}
+          disabled={
+            !isVoiceTranscriptionReady ||
+            !isVoiceInputSupported ||
+            isSendingTerminalInput ||
+            isSavingPastedImage ||
+            isTranscribingVoiceInput ||
+            !canSendLiveTerminalInput
+          }
+          aria-label={
+            isTranscribingVoiceInput
+              ? "Transcribing voice input"
               : isListeningVoiceInput
                 ? "Stop voice input"
                 : "Start voice input"
           }
-          className={cn("size-8 shrink-0 rounded-full", isListeningVoiceInput && "bg-primary/15 text-primary hover:bg-primary/20")}
-          disabled={
-            !hasVoiceTranscriptionApiKey ||
-            !isVoiceInputSupported ||
-            isSendingTerminalInput ||
-            isSavingPastedImage ||
-            !canSendLiveTerminalInput
-          }
-          aria-label={isListeningVoiceInput ? "Stop voice input" : "Start voice input"}
+          aria-pressed={isListeningVoiceInput}
           onClick={onToggleVoiceInput}
         >
-          <Mic className="size-[16px]" />
+          {isTranscribingVoiceInput ? (
+            <LoaderCircle className="size-[16px] animate-spin" />
+          ) : isListeningVoiceInput ? (
+            <Square className="size-[14px] fill-current" aria-hidden />
+          ) : (
+            <Mic className="size-[16px]" aria-hidden />
+          )}
         </Button>
         <Button
           variant="default"

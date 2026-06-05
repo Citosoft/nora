@@ -9,6 +9,11 @@ import type {
   GenerateCommitMessageResult
 } from "@shared/appTypes";
 import { generateText } from "ai";
+import { buildLocalCommitMessageRequest } from "./localCommitPrompt";
+import { extractLocalCommitMessageFromModelOutput } from "./localCommitMessageParsing";
+import { generateLocalText } from "./localTextGeneration";
+import { getLocalAiModelStatus } from "./localAiModels";
+import { getLocalAiRuntimeStatus } from "./localAiRuntime";
 
 const PROVIDER_PRIORITY: AiProvider[] = ["openai", "google", "anthropic"];
 
@@ -30,12 +35,21 @@ export async function generateCommitMessageFromChanges(
     throw new Error("No selected changes are available for commit message generation.");
   }
 
-  const provider = resolveProvider(appSettings.ai);
-  if (!provider) {
-    throw new Error("Add at least one AI provider API key in Settings to generate commit messages.");
+  const prompt = buildCommitMessagePrompt(selectedChanges);
+
+  if (appSettings.ai.simpleTaskProvider === "local") {
+    const message = await generateCommitMessageWithLocalModel(appSettings.ai, selectedChanges);
+    return {
+      message,
+      provider: "local"
+    };
   }
 
-  const prompt = buildCommitMessagePrompt(selectedChanges);
+  const provider = resolveProvider(appSettings.ai);
+  if (!provider) {
+    throw new Error("Add at least one AI provider API key in Settings, or switch simple AI tasks to a local model.");
+  }
+
   const selectedModel = resolveProviderModel(appSettings.ai, provider);
   const responseText = provider === "google"
     ? await generateWithGoogleFallbacks(appSettings.ai.apiKeys.google, selectedModel, prompt)
@@ -50,6 +64,31 @@ export async function generateCommitMessageFromChanges(
     message,
     provider
   };
+}
+
+async function generateCommitMessageWithLocalModel(settings: AiSettings, changes: ChangeEntry[]): Promise<string> {
+  const [modelStatus, runtimeStatus] = await Promise.all([
+    getLocalAiModelStatus(settings.localLlmModelId),
+    getLocalAiRuntimeStatus()
+  ]);
+
+  if (runtimeStatus.state !== "installed") {
+    throw new Error("Install the llama.cpp runtime in Settings -> AI before generating commit messages locally.");
+  }
+  if (modelStatus.state !== "installed") {
+    throw new Error("Install the selected local model in Settings -> AI before generating commit messages locally.");
+  }
+
+  const responseText = await generateLocalText(
+    settings.localLlmModelId,
+    buildLocalCommitMessageRequest(changes)
+  );
+  const candidate = extractLocalCommitMessageFromModelOutput(responseText);
+  const message = normalizeCommitMessage(candidate);
+  if (!message) {
+    throw new Error("The local model response did not include a valid commit message.");
+  }
+  return message;
 }
 
 async function generateWithGoogleFallbacks(apiKey: string, selectedModel: string, prompt: string): Promise<string> {
@@ -116,7 +155,10 @@ function resolveProviderModel(settings: AiSettings, provider: AiProvider): strin
 }
 
 function buildCommitMessagePrompt(changes: ChangeEntry[]): string {
-  const diffContext = createDiffContext(changes);
+  const diffContext = createDiffContext(changes, {
+    maxDiffContextChars: MAX_DIFF_CONTEXT_CHARS,
+    maxDiffCharsPerFile: MAX_DIFF_CHARS_PER_FILE
+  });
   const changedFileList = changes.map((change) => `- ${change.path} (${change.status})`).join("\n");
 
   return [
@@ -135,22 +177,25 @@ function buildCommitMessagePrompt(changes: ChangeEntry[]): string {
   ].join("\n");
 }
 
-function createDiffContext(changes: ChangeEntry[]): string {
+function createDiffContext(
+  changes: ChangeEntry[],
+  limits: { maxDiffContextChars: number; maxDiffCharsPerFile: number }
+): string {
   let consumed = 0;
   const chunks: string[] = [];
 
   for (const change of changes) {
-    if (consumed >= MAX_DIFF_CONTEXT_CHARS) {
+    if (consumed >= limits.maxDiffContextChars) {
       break;
     }
 
     const header = `\n# ${change.path}\n`;
-    const available = MAX_DIFF_CONTEXT_CHARS - consumed - header.length;
+    const available = limits.maxDiffContextChars - consumed - header.length;
     if (available <= 0) {
       break;
     }
 
-    const fileDiff = change.diff.slice(0, Math.min(MAX_DIFF_CHARS_PER_FILE, available));
+    const fileDiff = change.diff.slice(0, Math.min(limits.maxDiffCharsPerFile, available));
     chunks.push(`${header}${fileDiff}`);
     consumed += header.length + fileDiff.length;
   }

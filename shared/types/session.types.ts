@@ -201,6 +201,7 @@ export interface TerminalSession {
   status: TerminalStatus;
   isBusy: boolean;
   workspace: string;
+  currentWorkingDirectory?: string | null;
   branch: string;
   host: string;
   shellId: string;

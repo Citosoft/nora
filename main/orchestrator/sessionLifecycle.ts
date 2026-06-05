@@ -6,6 +6,16 @@ import type {
 } from "../types/orchestratorSessionLifecycle.types";
 
 export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps): SessionLifecycleHelpers {
+  function getAttachedSessionRoot(
+    worktrees: WorktreeRecord[],
+    session: Pick<AgentSession | TerminalSession, "worktreeId" | "workspace"> | null
+  ): string | null {
+    if (!session) {
+      return null;
+    }
+    return worktrees.find((worktree) => worktree.id === session.worktreeId)?.path || session.workspace || null;
+  }
+
   async function focusAgent(agentId: string): Promise<AppState> {
     const snapshot = deps.getSnapshot();
     const agent = snapshot.agents.find((item) => item.id === agentId);
@@ -249,7 +259,7 @@ export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps):
       worktrees: nextWorktrees,
       focusedAgentId: nextFocusedAgentId,
       changesRoot:
-        remainingAgents.find((item) => item.id === nextFocusedAgentId)?.workspace ||
+        getAttachedSessionRoot(nextWorktrees, remainingAgents.find((item) => item.id === nextFocusedAgentId) || null) ||
         currentState.project?.rootPath ||
         null,
       errorMessage: null
@@ -296,8 +306,8 @@ export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps):
       worktrees: nextWorktrees,
       focusedTerminalId: nextFocusedTerminalId,
       changesRoot:
-        remainingTerminals.find((item) => item.id === nextFocusedTerminalId)?.workspace ||
-        currentState.agents.find((item) => item.id === currentState.focusedAgentId)?.workspace ||
+        getAttachedSessionRoot(nextWorktrees, remainingTerminals.find((item) => item.id === nextFocusedTerminalId) || null) ||
+        getAttachedSessionRoot(nextWorktrees, currentState.agents.find((item) => item.id === currentState.focusedAgentId) || null) ||
         currentState.project?.rootPath ||
         null,
       errorMessage: null

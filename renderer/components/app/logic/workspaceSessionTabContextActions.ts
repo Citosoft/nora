@@ -4,7 +4,7 @@ function isSameSessionTab(left: WorkspaceSessionTab, right: WorkspaceSessionTab)
   return left.kind === right.kind && left.id === right.id;
 }
 
-export function isBulkClosableWorkspaceSessionTab(tab: WorkspaceSessionTab): boolean {
+export function isDirectionalClosableWorkspaceSessionTab(tab: WorkspaceSessionTab): boolean {
   return tab.kind !== "agent";
 }
 
@@ -22,10 +22,10 @@ export function getWorkspaceSessionTabsToClose(
     return [tabs[anchorIndex]];
   }
   if (action === "close-others") {
-    return tabs.filter((tab, index) => index !== anchorIndex && isBulkClosableWorkspaceSessionTab(tab));
+    return tabs.filter((_, index) => index !== anchorIndex);
   }
   if (action === "close-right") {
-    return tabs.slice(anchorIndex + 1).filter(isBulkClosableWorkspaceSessionTab);
+    return tabs.slice(anchorIndex + 1).filter(isDirectionalClosableWorkspaceSessionTab);
   }
-  return tabs.slice(0, anchorIndex).filter(isBulkClosableWorkspaceSessionTab);
+  return tabs.slice(0, anchorIndex).filter(isDirectionalClosableWorkspaceSessionTab);
 }

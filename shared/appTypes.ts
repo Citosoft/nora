@@ -16,4 +16,5 @@ export * from "./types/integrations.types";
 export * from "./types/remote.types";
 export * from "./types/session.types";
 export * from "./types/system.types";
+export * from "./types/voice.types";
 export * from "./types/workspace.types";

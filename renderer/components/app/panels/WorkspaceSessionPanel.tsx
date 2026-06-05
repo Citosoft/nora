@@ -3,6 +3,7 @@ import {
   useWorkspaceSessionPanelActions,
   useWorkspaceSessionPanelData
 } from "@/components/app/context/workspaceSessionPanelContext";
+import { isAgentBusyAt } from "@/components/app/logic/agentBusy";
 import { createQuickTerminalDialogDefaults, createQuickTerminalPayload } from "@/components/app/logic/terminalQuickLaunch";
 import { resolvePreferredTerminalShellId } from "@/components/app/logic/terminalShellPreferences";
 import { isWorkspaceSpecMarkdownPath } from "@/components/app/logic/workspaceNoraPaths";
@@ -17,22 +18,23 @@ import {
   getWorkspaceSessionTabToFocusAfterClose,
   getWorkspaceSessionTabs
 } from "@/components/app/logic/workspaceSessionTabs";
+import {
+  getAgentRenderSignature,
+  getBrowserTabsSignature,
+  getProjectScriptsSignature,
+  getTerminalRenderSignature,
+  getTerminalShellsSignature,
+  getToolsSignature,
+  getWorkspaceContextSignature
+} from "@/components/app/logic/workspaceSessionSignatures";
 import { SessionTabPane, SessionTabStack } from "@/components/app/panels/SessionTabStack";
 import { WorkspaceSessionCenterSlotContent } from "@/components/app/panels/WorkspaceSessionCenterSlotContent";
 import { WorkspaceSessionTabs } from "@/components/app/panels/WorkspaceSessionTabs";
 import { WorkspaceSessionToolbar } from "@/components/app/panels/WorkspaceSessionToolbar";
 import { WorkspaceSplitViewPanel } from "@/components/app/panels/WorkspaceSplitViewPanel";
-import type { BrowserTabState, CreateAgentDialogDefaults, CreateTerminalDialogDefaults } from "@/components/app/types";
+import type { CreateAgentDialogDefaults, CreateTerminalDialogDefaults } from "@/components/app/types";
 import type { FileEditorAgentSendTarget } from "@/components/app/types/fileEditor.types";
 import type { WorkspaceSessionTab } from "@/components/app/types/workflow.types";
-import type {
-  AgentCatalogEntry,
-  AgentSession,
-  TerminalSession,
-  TerminalShellOption,
-  WorkspaceScriptLauncher,
-  WorkspaceSummary
-} from "@shared/appTypes";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
@@ -41,123 +43,15 @@ function assertUnreachable(value: never): never {
   throw new Error(`Unhandled workspace session tab kind: ${String(value)}`);
 }
 
-function getWorkspaceContextSignature(workspace: WorkspaceSummary | null): string {
-  if (!workspace) {
-    return "";
-  }
+function buildBulkDestroyAgentsMessage(agentTabs: WorkspaceSessionTab[]): string {
+  const agentCount = agentTabs.length;
+  const busyCount = agentTabs.filter((tab) => tab.kind === "agent" && isAgentBusyAt(tab, Date.now())).length;
+  const agentLabel = agentCount === 1 ? "agent tab" : "agent tabs";
+  const busySentence = busyCount > 0
+    ? ` ${busyCount === 1 ? "One agent is" : `${busyCount} agents are`} still working and will be interrupted.`
+    : "";
 
-  const project = workspace.project;
-  const framework = project.framework;
-  const location = project.location;
-  const agents = workspace.agents
-    .map((agent) => [
-      agent.id,
-      agent.sessionId,
-      agent.name,
-      agent.status,
-      agent.mode,
-      agent.toolId,
-      agent.toolLabel,
-      agent.workspace,
-      agent.branch,
-      String(agent.pid ?? "")
-    ].join("|"))
-    .join("\n");
-  const terminals = workspace.terminals
-    .map((terminal) => [
-      terminal.id,
-      terminal.sessionId,
-      terminal.name,
-      terminal.status,
-      terminal.shellId,
-      terminal.shellLabel,
-      terminal.workspace,
-      terminal.branch,
-      String(terminal.pid ?? ""),
-      String(terminal.detectedLocalPort ?? ""),
-      terminal.detectedLocalUrl ?? ""
-    ].join("|"))
-    .join("\n");
-
-  return [
-    project.id,
-    project.name,
-    project.rootPath,
-    project.baseBranch,
-    framework?.label ?? "",
-    framework?.version ?? "",
-    framework?.logoUrl ?? "",
-    location?.kind ?? "",
-    location?.kind === "ssh" ? location.user : "",
-    location?.kind === "ssh" ? location.host : "",
-    location?.kind === "ssh" ? String(location.port ?? "") : "",
-    agents,
-    terminals
-  ].join("\n");
-}
-
-function getTerminalShellsSignature(shells: TerminalShellOption[]): string {
-  return shells.map((shell) => `${shell.id}|${shell.label}|${shell.executable}`).join("\n");
-}
-
-function getProjectScriptsSignature(scripts: WorkspaceScriptLauncher[]): string {
-  return scripts.map((script) => `${script.id}|${script.packageManager}|${script.scriptName}|${script.label}|${script.command}`).join("\n");
-}
-
-function getToolsSignature(tools: AgentCatalogEntry[]): string {
-  return tools.map((tool) =>
-    [
-      tool.id,
-      tool.label,
-      tool.detected ? "1" : "0",
-      tool.enabled ? "1" : "0",
-      tool.installStatus,
-      tool.supportsUsageStatus ? "1" : "0",
-      tool.usageDashboardUrl ?? "",
-      tool.supportsAccountSwitch ? "1" : "0"
-    ].join("|")
-  ).join("\n");
-}
-
-function getBrowserTabsSignature(tabs: BrowserTabState[]): string {
-  return tabs.map((tab) => `${tab.id}|${tab.projectId}|${tab.title}|${tab.status}|${tab.historyIndex}|${tab.history[tab.historyIndex] ?? ""}`).join("\n");
-}
-
-function getAgentRenderSignature(agent: AgentSession | null): string {
-  if (!agent) {
-    return "";
-  }
-  return [
-    agent.id,
-    agent.name,
-    agent.status,
-    agent.mode,
-    agent.toolId,
-    agent.toolLabel,
-    agent.workspace,
-    agent.branch,
-    String(agent.pid ?? ""),
-    agent.command
-  ].join("\n");
-}
-
-function getTerminalRenderSignature(terminal: TerminalSession | null): string {
-  if (!terminal) {
-    return "";
-  }
-  return [
-    terminal.id,
-    terminal.name,
-    terminal.status,
-    terminal.shellId,
-    terminal.shellLabel,
-    terminal.workspace,
-    terminal.branch,
-    String(terminal.pid ?? ""),
-    String(terminal.detectedLocalPort ?? ""),
-    terminal.detectedLocalUrl ?? "",
-    terminal.command
-  ].join("\n");
+  return `Close ${agentCount} ${agentLabel}? This will stop ${agentCount === 1 ? "that agent" : "those agents"}.${busySentence}`;
 }
 
 function getTabOrderKey(tab: WorkspaceSessionTab): string {
@@ -243,6 +137,7 @@ export function WorkspaceSessionPanel() {
     onRestartTerminal,
     onClearTerminal,
     onDestroyRequest,
+    onDestroyAgent,
     onDestroyTerminal,
     onDeleteViewById,
     onExitSplitView,
@@ -282,6 +177,7 @@ export function WorkspaceSessionPanel() {
   const restartTerminalRef = useRef(onRestartTerminal);
   const clearTerminalRef = useRef(onClearTerminal);
   const destroyRequestRef = useRef(onDestroyRequest);
+  const destroyAgentRef = useRef(onDestroyAgent);
   const destroyTerminalRef = useRef(onDestroyTerminal);
 
   useEffect(() => {
@@ -303,6 +199,7 @@ export function WorkspaceSessionPanel() {
     restartTerminalRef.current = onRestartTerminal;
     clearTerminalRef.current = onClearTerminal;
     destroyRequestRef.current = onDestroyRequest;
+    destroyAgentRef.current = onDestroyAgent;
     destroyTerminalRef.current = onDestroyTerminal;
   }, [
     onChooseProject,
@@ -323,6 +220,7 @@ export function WorkspaceSessionPanel() {
     onRestartTerminal,
     onClearTerminal,
     onDestroyRequest,
+    onDestroyAgent,
     onDestroyTerminal
   ]);
 
@@ -345,6 +243,7 @@ export function WorkspaceSessionPanel() {
   const restartTerminal = useCallback((sessionId: string) => restartTerminalRef.current(sessionId), []);
   const clearTerminal = useCallback((sessionId: string) => clearTerminalRef.current(sessionId), []);
   const destroyRequest = useCallback((agentId: string) => destroyRequestRef.current(agentId), []);
+  const destroyAgent = useCallback((agentId: string) => destroyAgentRef.current(agentId), []);
   const destroyTerminal = useCallback((sessionId: string) => destroyTerminalRef.current(sessionId), []);
 
   const activeFileEditorTab = fileEditorState?.tabs.find((tab) => tab.path === fileEditorState.activePath) ?? fileEditorState?.tabs[0] ?? null;
@@ -672,6 +571,44 @@ export function WorkspaceSessionPanel() {
 
     refocusNeighborAfterClose();
   };
+  const handleCloseTabs = (targets: WorkspaceSessionTab[]): void => {
+    if (targets.length === 0) {
+      return;
+    }
+    if (targets.length === 1) {
+      const target = targets[0];
+      if (target) {
+        handleCloseTab(target);
+      }
+      return;
+    }
+
+    const agentTargets = targets.filter((tab) => tab.kind === "agent");
+    if (agentTargets.length > 0 && !window.confirm(buildBulkDestroyAgentsMessage(agentTargets))) {
+      return;
+    }
+
+    targets
+      .filter((tab) => tab.kind !== "agent")
+      .forEach((tab) => handleCloseTab(tab));
+
+    if (agentTargets.length === 0) {
+      return;
+    }
+
+    const activeAgentTarget = agentTargets.find((tab) => getWorkspaceSessionTabId(tab) === activeTabId) ?? null;
+    const tabToFocusAfterAgentClose = activeAgentTarget
+      ? getWorkspaceSessionTabToFocusAfterClose(orderedSessionTabs, getWorkspaceSessionTabId(activeAgentTarget))
+      : null;
+
+    void Promise.all(agentTargets.map((tab) => destroyAgent(tab.id))).then(() => {
+      if (tabToFocusAfterAgentClose) {
+        window.setTimeout(() => {
+          handleSelectTab(tabToFocusAfterAgentClose);
+        }, 0);
+      }
+    });
+  };
 
   const workspaceCenterBody: ReactNode = activeView ? (
     <SessionTabStack>
@@ -725,6 +662,7 @@ export function WorkspaceSessionPanel() {
             tools={tools}
             onSelect={handleSelectTab}
             onClose={handleCloseTab}
+            onCloseMany={handleCloseTabs}
             onCreateAgent={(toolId) => {
               if (!workspace) {
                 return;

@@ -70,6 +70,8 @@ export type AppShellSettingsRuntimeAssemblyInput = {
     | "updateAiPreferredProvider"
     | "updateAiApiKey"
     | "updateAiModel"
+    | "updateVoiceSettings"
+    | "updateAiSimpleTaskSettings"
     | "aiModelOptions"
     | "aiModelLoading"
     | "aiModelError"

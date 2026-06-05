@@ -90,6 +90,10 @@ export type SettingsRuntimeValue = {
   updateAiPreferredProvider: (provider: AiProvider) => void;
   updateAiApiKey: (provider: AiProvider, apiKey: string) => void;
   updateAiModel: (provider: AiProvider, model: string) => void;
+  updateVoiceSettings: (voice: AppSettings["voice"]) => void;
+  updateAiSimpleTaskSettings: (
+    settings: Pick<AppSettings["ai"], "simpleTaskProvider" | "localLlmModelId">
+  ) => void;
   aiModelOptions: Record<AiProvider, AiModelCatalogEntry[]>;
   aiModelLoading: Record<AiProvider, boolean>;
   aiModelError: Record<AiProvider, string | null>;
@@ -133,6 +137,7 @@ export type SettingsGroup =
   | "skills"
   | "integrations"
   | "ai"
+  | "voice"
   | "privacy"
   | "system"
   | "dev";
