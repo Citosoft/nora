@@ -1,6 +1,6 @@
 import { Tooltip } from "@/components/ui/tooltip";
 import { Check, Package } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 type ProjectScaffoldCompactTileProps = {
   label: string;
@@ -21,6 +21,12 @@ export function ProjectScaffoldCompactTile({
   ariaLabel,
   tooltipContent
 }: ProjectScaffoldCompactTileProps) {
+  const [logoFailed, setLogoFailed] = useState(false);
+
+  useEffect(() => {
+    setLogoFailed(false);
+  }, [logoUrl]);
+
   return (
     <Tooltip side="top" className="z-[40000] max-w-72" content={tooltipContent}>
       <button
@@ -33,8 +39,14 @@ export function ProjectScaffoldCompactTile({
         ].join(" ")}
       >
         <div className="grid size-9 shrink-0 place-items-center rounded-[5px] border border-border/70 bg-background/70">
-          {logoUrl ? (
-            <img src={logoUrl} alt="" className="size-5" draggable={false} />
+          {logoUrl && !logoFailed ? (
+            <img
+              src={logoUrl}
+              alt=""
+              className="size-5 object-contain"
+              draggable={false}
+              onError={() => setLogoFailed(true)}
+            />
           ) : (
             <Package className="size-4 text-muted-foreground" aria-hidden="true" />
           )}

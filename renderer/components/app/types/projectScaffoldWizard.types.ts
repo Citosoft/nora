@@ -7,7 +7,31 @@ export type ProjectScaffoldOption = {
   recommended?: boolean;
 };
 
-export type ProjectScaffoldFrameworkCategory = "web" | "backend" | "mobile" | "desktop" | "data";
+export type ProjectScaffoldComponentCategory =
+  | "foundation"
+  | "ui"
+  | "application"
+  | "data"
+  | "auth"
+  | "platform"
+  | "operations"
+  | "features";
+
+export type ProjectScaffoldComponentGroup = {
+  category: ProjectScaffoldComponentCategory;
+  label: string;
+  options: ProjectScaffoldOption[];
+};
+
+export type ProjectScaffoldFrameworkCategory =
+  | "web"
+  | "backend"
+  | "mobile"
+  | "desktop"
+  | "data"
+  | "cli"
+  | "game"
+  | "monorepo";
 
 export type ProjectScaffoldFramework = {
   id: string;
@@ -25,6 +49,19 @@ export type ProjectScaffoldSelection = {
   frameworkId: string;
   componentIds: string[];
   testingIds: string[];
+};
+
+export type ProjectScaffoldFavorite = ProjectScaffoldSelection & {
+  id: string;
+  name: string;
+  toolId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SaveProjectScaffoldFavoriteInput = ProjectScaffoldSelection & {
+  name: string;
+  toolId: string | null;
 };
 
 export type ProjectScaffoldPromptInput = {
