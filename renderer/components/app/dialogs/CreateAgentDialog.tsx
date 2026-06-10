@@ -19,13 +19,7 @@ import type {
 import { Bot, Check } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-const WORKTREE_BRANCH_PREFIX_OPTIONS = [
-  { value: "feature", label: "Feature" },
-  { value: "bug", label: "Bug" },
-  { value: "chore", label: "Chore" },
-  { value: "hotfix", label: "Hotfix" },
-  { value: "docs", label: "Docs" }
-];
+import { WORKTREE_BRANCH_PREFIX_OPTIONS } from "@/components/app/constants/worktreeBranchPrefixOptions";
 
 const CREATE_AGENT_WIZARD_STEPS = [
   { id: "agent", label: "Agent" },

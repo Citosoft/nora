@@ -435,13 +435,45 @@ export function LoopDesignerDialog({
                       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Run goal</p>
                       <p className="mt-1 leading-6 text-muted-foreground">Chosen when you start a run</p>
                     </div>
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="text-muted-foreground">Writer</span>
-                      <Badge variant="secondary">{draft.writer.name || "Unnamed"}</Badge>
-                    </div>
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="text-muted-foreground">Review team</span>
-                      <span className="font-medium">{draft.reviewers.length} reviewer{draft.reviewers.length === 1 ? "" : "s"}</span>
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Agents</p>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3 rounded-md border border-primary/15 bg-background/60 p-2.5">
+                          <AgentToolIcon
+                            toolId={draft.writer.toolId}
+                            label={draft.writer.toolId}
+                            className="size-8 shrink-0 border border-border/60"
+                            imageClassName="size-5 rounded-sm"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-medium">{draft.writer.name || "Writer"}</p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {selectedWriterTool?.label ?? draft.writer.toolId}
+                            </p>
+                          </div>
+                          <Badge variant="secondary">Writer</Badge>
+                        </div>
+                        {draft.reviewers.map((reviewer, index) => (
+                          <div key={reviewer.id} className="flex items-center gap-3 rounded-md border border-primary/15 bg-background/60 p-2.5">
+                            <AgentToolIcon
+                              toolId={reviewer.toolId}
+                              label={reviewer.toolId}
+                              className="size-8 shrink-0 border border-border/60"
+                              imageClassName="size-5 rounded-sm"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-medium">{reviewer.name || `Reviewer ${index + 1}`}</p>
+                              <p className="truncate text-xs text-muted-foreground">
+                                {tools.find((tool) => tool.id === reviewer.toolId)?.label ?? reviewer.toolId}
+                              </p>
+                            </div>
+                            <Badge variant="secondary">Reviewer</Badge>
+                          </div>
+                        ))}
+                        {draft.reviewers.length === 0 ? (
+                          <p className="text-xs leading-5 text-muted-foreground">No reviewers configured</p>
+                        ) : null}
+                      </div>
                     </div>
                     <div className="flex items-center justify-between gap-4">
                       <span className="text-muted-foreground">Maximum cycles</span>

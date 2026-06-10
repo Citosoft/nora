@@ -22,8 +22,12 @@ export function applyLoopRunGoalTemplate(input: ApplyLoopRunGoalTemplateInput): 
   const goalKind = resolveGoalKind(input.template.goalKind, input.specsAvailable, input.tasksAvailable);
   return {
     goalKind,
-    selectedSpecPath: input.selectedSpecPath,
-    selectedTaskPath: input.selectedTaskPath,
+    selectedSpecPath: goalKind === "spec"
+      ? (input.selectedSpecPath || input.firstSpecPath)
+      : "",
+    selectedTaskPath: goalKind === "task"
+      ? (input.selectedTaskPath || input.firstTaskPath)
+      : "",
     objective: input.template.objective,
     limitsDraft: {
       ...input.limitsDraft,

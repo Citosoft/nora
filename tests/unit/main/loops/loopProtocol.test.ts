@@ -25,7 +25,7 @@ test("parseLoopResult accepts the latest matching token and strips ANSI", () => 
 });
 
 test("writer and reviewer prompts constrain their outcome vocabularies", () => {
-  const goal = { objective: "Deliver feature", specPath: null, taskPath: null };
+  const goal = { objective: "Deliver feature", specPath: null, taskPath: null, handoffPath: null };
   const writerPrompt = buildWriterPrompt(definition, writer, goal, undefined, "token-1");
   const reviewerPrompt = buildReviewerPrompt(definition, reviewer, goal, "Implemented", "token-2");
   assert.match(writerPrompt, /outcome="continue\|complete"/);
@@ -34,7 +34,7 @@ test("writer and reviewer prompts constrain their outcome vocabularies", () => {
 });
 
 test("writer and reviewer prompts include spec guidance when configured", () => {
-  const goal = { objective: "", specPath: ".nora/specs/feature.md", taskPath: null };
+  const goal = { objective: "", specPath: ".nora/specs/feature.md", taskPath: null, handoffPath: null };
   const writerPrompt = buildWriterPrompt(definition, writer, goal, undefined, "token-1");
   assert.match(writerPrompt, /Spec \(source of truth\)/);
   assert.match(writerPrompt, /\.nora\/specs\/feature\.md/);

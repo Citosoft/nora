@@ -1,7 +1,21 @@
 import { noraLoopClient } from "@/components/app/clients/noraLoopClient";
 import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
 import { LOOP_RUN_GOAL_TEMPLATE_GROUPS, LOOP_RUN_GOAL_TEMPLATES } from "@/components/app/constants/loopRunGoalTemplates";
+import { DEFAULT_LOOP_WORKTREE_BRANCH_PREFIX, WORKTREE_BRANCH_PREFIX_OPTIONS } from "@/components/app/constants/worktreeBranchPrefixOptions";
+import { LoopRunReviewFeedbackPicker } from "@/components/app/dialogs/LoopRunReviewFeedbackPicker";
+import { useLoopRunReviewFeedback } from "@/components/app/hooks/useLoopRunReviewFeedback";
 import { applyLoopRunGoalTemplate } from "@/components/app/logic/applyLoopRunGoalTemplate";
+import { formatWorktreeBranchPreview } from "@/components/app/logic/formatWorktreeBranchPreview";
+import {
+  LOOP_RUN_REVIEW_FEEDBACK_TEMPLATE_ID,
+  LOOP_RUN_SPEC_TEMPLATE_ID,
+  LOOP_RUN_TASK_TEMPLATE_ID,
+  shouldShowLoopRunReviewFeedbackPicker,
+  shouldShowLoopRunSpecPicker,
+  shouldShowLoopRunTaskPicker
+} from "@/components/app/logic/loopRunGoalTemplateUi";
+import { prepareLoopRunReviewHandoff } from "@/components/app/logic/prepareLoopRunReviewHandoff";
+import { formatLoopRunReviewWorkItemLabel } from "@/components/app/logic/loopRunReviewFeedback";
 import { Field } from "@/components/app/shared/Field";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { WizardProgress } from "@/components/app/shared/WizardProgress";
@@ -21,6 +35,7 @@ import type { WorkspaceSpecSummary, WorkspaceTaskSummary } from "@shared/appType
 import { buildLoopLimitsFromDraft, isLoopLimitsDraftValid, loopLimitsToDraft } from "@shared/loopLimits";
 import { hasLoopRunGoal } from "@shared/loopRunGoal";
 import {
+  GitBranch,
   ArrowLeft,
   ArrowRight,
   Clock3,
@@ -46,7 +61,7 @@ const LOOP_RUN_STEP_COPY: Record<LoopRunStep, { title: string; description: stri
   },
   review: {
     title: "Review and start",
-    description: "Confirm the goal, participating agents, and guardrails before Nora creates the managed worktree."
+    description: "Confirm the goal, worktree branch, participating agents, and guardrails before Nora creates the managed worktree."
   }
 };
 
@@ -96,6 +111,8 @@ export function LoopRunDialog({ open, definition, onOpenChange, onStarted }: Loo
     maxDurationMinutes: 240,
     roleTimeoutMinutes: 30
   });
+  const [branchPrefix, setBranchPrefix] = useState(DEFAULT_LOOP_WORKTREE_BRANCH_PREFIX);
+  const [branchName, setBranchName] = useState("");
   const [isLoadingGoals, setIsLoadingGoals] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -103,12 +120,14 @@ export function LoopRunDialog({ open, definition, onOpenChange, onStarted }: Loo
   useEffect(() => {
     if (!open || !definition) return;
     setStep("goal");
-    setGoalKind("spec");
+    setGoalKind("custom");
     setSelectedSpecPath("");
     setSelectedTaskPath("");
     setObjective("");
     setSelectedTemplateId("");
     setLimitsDraft(loopLimitsToDraft(definition.limits));
+    setBranchPrefix(DEFAULT_LOOP_WORKTREE_BRANCH_PREFIX);
+    setBranchName(definition.name);
     setErrorMessage(null);
   }, [definition, open]);
 
@@ -127,13 +146,11 @@ export function LoopRunDialog({ open, definition, onOpenChange, onStarted }: Loo
         setTasks(activeTasks);
         setSelectedSpecPath(nextSpecs[0]?.path ?? "");
         setSelectedTaskPath(activeTasks[0]?.path ?? "");
-        setGoalKind(nextSpecs.length > 0 ? "spec" : activeTasks.length > 0 ? "task" : "custom");
       })
       .catch(() => {
         if (!cancelled) {
           setSpecs([]);
           setTasks([]);
-          setGoalKind("custom");
         }
       })
       .finally(() => {
@@ -144,17 +161,39 @@ export function LoopRunDialog({ open, definition, onOpenChange, onStarted }: Loo
     };
   }, [definition, open]);
 
-  const goalReady = isGoalReady(goalKind, selectedSpecPath, selectedTaskPath, objective);
+  const showSpecPicker = shouldShowLoopRunSpecPicker(selectedTemplateId);
+  const showTaskPicker = shouldShowLoopRunTaskPicker(selectedTemplateId);
+  const showReviewFeedbackPicker = shouldShowLoopRunReviewFeedbackPicker(selectedTemplateId);
+  const reviewFeedback = useLoopRunReviewFeedback(definition?.projectId ?? null, open && step === "goal");
+  const reviewFeedbackReady = !showReviewFeedbackPicker || (
+    reviewFeedback.selectedComments.length > 0
+    && !reviewFeedback.isLoadingDetail
+    && !reviewFeedback.isLoadingOverview
+  );
+  const goalReady = reviewFeedbackReady && isGoalReady(goalKind, selectedSpecPath, selectedTaskPath, objective);
   const limitsReady = isLoopLimitsDraftValid(limitsDraft);
-  const canStart = !!definition && goalReady && limitsReady;
+  const worktreeReady = branchName.trim().length > 0;
+  const canStart = !!definition && goalReady && limitsReady && worktreeReady;
   const stepIndex = LOOP_RUN_STEPS.indexOf(step);
   const stepCopy = LOOP_RUN_STEP_COPY[step];
   const progressSteps = LOOP_RUN_STEPS.map((item) => ({ id: item, title: LOOP_RUN_STEP_COPY[item].title }));
   const selectedTemplate = LOOP_RUN_GOAL_TEMPLATES.find((template) => template.id === selectedTemplateId) ?? null;
-  const sourceLabel = goalSourceLabel(goalKind, selectedSpecPath, selectedTaskPath, specs, tasks);
+  const sourceLabel = showReviewFeedbackPicker && reviewFeedback.selectedWorkItem
+    ? formatLoopRunReviewWorkItemLabel(reviewFeedback.selectedWorkItem)
+    : goalSourceLabel(goalKind, selectedSpecPath, selectedTaskPath, specs, tasks);
+  const worktreeBranchPreview = formatWorktreeBranchPreview(branchPrefix, branchName);
 
   function handleTemplateChange(templateId: string): void {
     setSelectedTemplateId(templateId);
+    if (!templateId) {
+      if (definition) {
+        setLimitsDraft(loopLimitsToDraft(definition.limits));
+      }
+      setGoalKind("custom");
+      setObjective("");
+      reviewFeedback.reset();
+      return;
+    }
     const template = LOOP_RUN_GOAL_TEMPLATES.find((item) => item.id === templateId);
     if (!template) return;
     const applied = applyLoopRunGoalTemplate({
@@ -163,6 +202,8 @@ export function LoopRunDialog({ open, definition, onOpenChange, onStarted }: Loo
       tasksAvailable: tasks.length > 0,
       selectedSpecPath,
       selectedTaskPath,
+      firstSpecPath: specs[0]?.path ?? "",
+      firstTaskPath: tasks[0]?.path ?? "",
       limitsDraft
     });
     setGoalKind(applied.goalKind);
@@ -170,10 +211,15 @@ export function LoopRunDialog({ open, definition, onOpenChange, onStarted }: Loo
     setSelectedTaskPath(applied.selectedTaskPath);
     setObjective(applied.objective);
     setLimitsDraft(applied.limitsDraft);
+    if (templateId === LOOP_RUN_REVIEW_FEEDBACK_TEMPLATE_ID) {
+      reviewFeedback.reset();
+    }
   }
 
   function isStepReady(candidate: LoopRunStep): boolean {
-    return candidate === "goal" ? goalReady : candidate === "limits" ? limitsReady : canStart;
+    if (candidate === "goal") return goalReady;
+    if (candidate === "limits") return limitsReady;
+    return canStart;
   }
 
   function goBack(): void {
@@ -191,15 +237,30 @@ export function LoopRunDialog({ open, definition, onOpenChange, onStarted }: Loo
     setIsStarting(true);
     setErrorMessage(null);
     try {
+      let handoffPath: string | null = null;
+      if (showReviewFeedbackPicker) {
+        if (!reviewFeedback.detail) {
+          throw new Error("Choose a pull or merge request with review comments before starting.");
+        }
+        handoffPath = await prepareLoopRunReviewHandoff({
+          projectId: definition.projectId,
+          detail: reviewFeedback.detail,
+          selections: reviewFeedback.selectedComments
+        });
+      }
       const run = await noraLoopClient.startLoopRun({
         projectId: definition.projectId,
         definitionId: definition.id,
         objective: objective.trim(),
         specPath: goalKind === "spec" ? selectedSpecPath || null : null,
         taskPath: goalKind === "task" ? selectedTaskPath || null : null,
+        handoffPath,
         limits: buildLoopLimitsFromDraft(limitsDraft),
         target: { kind: "new" },
-        worktreeBranch: { prefix: "loop", name: definition.name }
+        worktreeBranch: {
+          prefix: branchPrefix.trim() || DEFAULT_LOOP_WORKTREE_BRANCH_PREFIX,
+          name: branchName.trim()
+        }
       });
       onStarted(run);
       onOpenChange(false);
@@ -231,8 +292,8 @@ export function LoopRunDialog({ open, definition, onOpenChange, onStarted }: Loo
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-            {step === "goal" ? <div className="grid gap-5 lg:grid-cols-[0.8fr_1.2fr]">
-              <div className="flex min-h-64 flex-col justify-between rounded-lg border border-primary/20 bg-primary/[0.04] p-5">
+            {step === "goal" ? <div className="grid items-start gap-5 lg:grid-cols-[0.8fr_1.2fr]">
+              <div className="flex flex-col gap-4 rounded-lg border border-primary/20 bg-primary/[0.04] p-5">
                 <div className="grid size-11 place-items-center rounded-lg bg-primary/10 text-primary">
                   <Target className="size-5" aria-hidden="true" />
                 </div>
@@ -251,7 +312,21 @@ export function LoopRunDialog({ open, definition, onOpenChange, onStarted }: Loo
                     {LOOP_RUN_GOAL_TEMPLATE_GROUPS.map((group) => (
                       <optgroup key={group.id} label={group.label}>
                         {group.templates.map((template) => (
-                          <option key={template.id} value={template.id}>{template.label}</option>
+                          <option
+                            key={template.id}
+                            value={template.id}
+                            disabled={
+                              (template.id === LOOP_RUN_SPEC_TEMPLATE_ID && specs.length === 0)
+                              || (template.id === LOOP_RUN_TASK_TEMPLATE_ID && tasks.length === 0)
+                              || (
+                                template.id === LOOP_RUN_REVIEW_FEEDBACK_TEMPLATE_ID
+                                && reviewFeedback.workItems.length === 0
+                                && !reviewFeedback.isLoadingOverview
+                              )
+                            }
+                          >
+                            {template.label}
+                          </option>
                         ))}
                       </optgroup>
                     ))}
@@ -260,44 +335,32 @@ export function LoopRunDialog({ open, definition, onOpenChange, onStarted }: Loo
                 {selectedTemplate ? <p className="text-xs leading-5 text-muted-foreground">
                   {selectedTemplate.description}
                 </p> : null}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="Goal source">
-                    <Select
-                      value={goalKind}
-                      onChange={(event) => setGoalKind(event.target.value as LoopRunGoalKind)}
-                      disabled={isLoadingGoals}
-                    >
-                      <option value="spec" disabled={specs.length === 0}>Workspace spec</option>
-                      <option value="task" disabled={tasks.length === 0}>Workspace task</option>
-                      <option value="custom">Custom instructions</option>
-                    </Select>
-                  </Field>
-                  {goalKind === "spec" ? <Field label="Spec">
-                    <Select
-                      value={selectedSpecPath}
-                      onChange={(event) => setSelectedSpecPath(event.target.value)}
-                      disabled={isLoadingGoals || specs.length === 0}
-                    >
-                      {specs.map((spec) => <option key={spec.path} value={spec.path}>{spec.title}</option>)}
-                    </Select>
-                  </Field> : null}
-                  {goalKind === "task" ? <Field label="Task">
-                    <Select
-                      value={selectedTaskPath}
-                      onChange={(event) => setSelectedTaskPath(event.target.value)}
-                      disabled={isLoadingGoals || tasks.length === 0}
-                    >
-                      {tasks.map((task) => <option key={task.path} value={task.path}>{task.title}</option>)}
-                    </Select>
-                  </Field> : null}
-                </div>
-                <Field label={goalKind === "custom" ? "Run goal" : "Additional instructions"}>
+                {showSpecPicker ? <Field label="Spec">
+                  <Select
+                    value={selectedSpecPath}
+                    onChange={(event) => setSelectedSpecPath(event.target.value)}
+                    disabled={isLoadingGoals || specs.length === 0}
+                  >
+                    {specs.map((spec) => <option key={spec.path} value={spec.path}>{spec.title}</option>)}
+                  </Select>
+                </Field> : null}
+                {showTaskPicker ? <Field label="Task">
+                  <Select
+                    value={selectedTaskPath}
+                    onChange={(event) => setSelectedTaskPath(event.target.value)}
+                    disabled={isLoadingGoals || tasks.length === 0}
+                  >
+                    {tasks.map((task) => <option key={task.path} value={task.path}>{task.title}</option>)}
+                  </Select>
+                </Field> : null}
+                {showReviewFeedbackPicker ? <LoopRunReviewFeedbackPicker reviewFeedback={reviewFeedback} /> : null}
+                <Field label={showSpecPicker || showTaskPicker || showReviewFeedbackPicker ? "Additional instructions" : "Run goal"}>
                   <Textarea
-                    autoFocus={goalKind === "custom"}
+                    autoFocus={!showSpecPicker && !showTaskPicker && !showReviewFeedbackPicker}
                     className="min-h-32 resize-none"
-                    placeholder={goalKind === "custom"
-                      ? "Describe the outcome this run should accomplish..."
-                      : "Optional extra guidance beyond the selected file..."}
+                    placeholder={showSpecPicker || showTaskPicker || showReviewFeedbackPicker
+                      ? "Optional extra guidance beyond the selected file..."
+                      : "Describe the outcome this run should accomplish..."}
                     value={objective}
                     onChange={(event) => setObjective(event.target.value)}
                   />
@@ -305,7 +368,7 @@ export function LoopRunDialog({ open, definition, onOpenChange, onStarted }: Loo
               </div>
             </div> : null}
 
-            {step === "limits" ? <div className="grid gap-5 lg:grid-cols-[1fr_0.9fr]">
+            {step === "limits" ? <div className="grid items-start gap-5 lg:grid-cols-[1fr_0.9fr]">
               <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
                 <Field label="Maximum iterations" className="rounded-lg border border-border p-4">
                   <div className="flex items-center gap-3">
@@ -354,7 +417,7 @@ export function LoopRunDialog({ open, definition, onOpenChange, onStarted }: Loo
                 </Field>
               </div>
 
-              <section className="flex flex-col justify-between gap-5 rounded-lg border border-primary/20 bg-primary/[0.04] p-5">
+              <section className="flex flex-col gap-4 rounded-lg border border-primary/20 bg-primary/[0.04] p-5">
                 <div className="grid size-11 place-items-center rounded-lg bg-primary/10 text-primary">
                   <ShieldCheck className="size-5" aria-hidden="true" />
                 </div>
@@ -370,7 +433,7 @@ export function LoopRunDialog({ open, definition, onOpenChange, onStarted }: Loo
               </section>
             </div> : null}
 
-            {step === "review" ? <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+            {step === "review" ? <div className="grid items-start gap-5 lg:grid-cols-[1.1fr_0.9fr]">
               <section className="space-y-5 rounded-lg border border-border p-5">
                 <div className="flex items-center gap-3 border-b border-border pb-5">
                   <div className="grid size-11 place-items-center rounded-lg bg-primary/10 text-primary">
@@ -392,6 +455,33 @@ export function LoopRunDialog({ open, definition, onOpenChange, onStarted }: Loo
                     </p>
                     <p className="mt-1 whitespace-pre-wrap leading-6 text-muted-foreground">{objective.trim()}</p>
                   </div> : null}
+                  <div className="space-y-4 border-t border-border pt-4">
+                    <div className="flex items-center gap-2">
+                      <GitBranch className="size-4 text-muted-foreground" aria-hidden="true" />
+                      <p className="text-sm font-medium">Worktree branch</p>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field label="Branch prefix">
+                        <Select value={branchPrefix} onChange={(event) => setBranchPrefix(event.target.value)}>
+                          {WORKTREE_BRANCH_PREFIX_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
+                        </Select>
+                      </Field>
+                      <Field label="Branch name">
+                        <Input
+                          value={branchName}
+                          onChange={(event) => setBranchName(event.target.value)}
+                          placeholder={definition?.name ?? "workflow-run"}
+                          required
+                        />
+                      </Field>
+                    </div>
+                    <p className="text-xs leading-5 text-muted-foreground">
+                      Git branch <span className="font-medium text-foreground">{worktreeBranchPreview}</span>
+                      {" "}with a short unique suffix added when the run starts.
+                    </p>
+                  </div>
                 </div>
               </section>
 
@@ -422,6 +512,10 @@ export function LoopRunDialog({ open, definition, onOpenChange, onStarted }: Loo
                         ))}
                       </div>
                     ) : null}
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-muted-foreground">Worktree branch</span>
+                    <span className="font-medium">{worktreeBranchPreview}</span>
                   </div>
                   <div className="flex items-center justify-between gap-4">
                     <span className="text-muted-foreground">Maximum iterations</span>

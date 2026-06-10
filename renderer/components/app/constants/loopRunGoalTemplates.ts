@@ -97,11 +97,11 @@ export const LOOP_RUN_GOAL_TEMPLATES: LoopRunGoalTemplate[] = [
   {
     id: "review-feedback",
     label: "Address review feedback",
-    description: "Work through review comments and leave the branch merge-ready.",
+    description: "Choose open review comments from a pull or merge request to address in this run.",
     category: "maintenance",
     goalKind: "custom",
     objective: [
-      "Address the latest review feedback on the active work.",
+      "Address the selected review comments from the attached handoff file.",
       "Fix each cited issue, add regression tests where appropriate,",
       "and leave the branch in a merge-ready state."
     ].join(" ")

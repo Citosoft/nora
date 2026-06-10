@@ -75,6 +75,7 @@ export interface LoopRun {
   objective: string;
   specPath: string | null;
   taskPath: string | null;
+  handoffPath: string | null;
   limits: LoopLimits;
   status: LoopRunStatus;
   stopReason: string | null;
@@ -105,6 +106,7 @@ export interface StartLoopRunPayload {
   objective: string;
   specPath?: string | null;
   taskPath?: string | null;
+  handoffPath?: string | null;
   limits?: LoopLimits;
   target: WorktreeTarget;
   branchCheckout?: { mode: "existing" | "new"; branchName: string } | null;

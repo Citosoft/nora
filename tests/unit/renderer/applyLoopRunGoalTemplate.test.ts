@@ -3,6 +3,24 @@ import { LOOP_RUN_GOAL_TEMPLATE_GROUPS, LOOP_RUN_GOAL_TEMPLATES } from "@/compon
 import assert from "node:assert/strict";
 import test from "node:test";
 
+test("applyLoopRunGoalTemplate selects the first spec for implement spec templates", () => {
+  const template = LOOP_RUN_GOAL_TEMPLATES.find((item) => item.id === "implement-spec");
+  assert.ok(template);
+  const result = applyLoopRunGoalTemplate({
+    template,
+    specsAvailable: true,
+    tasksAvailable: true,
+    selectedSpecPath: "",
+    selectedTaskPath: "",
+    firstSpecPath: ".nora/specs/feature.md",
+    firstTaskPath: ".nora/tasks/task.md",
+    limitsDraft: { maxIterations: 10, maxDurationMinutes: 240, roleTimeoutMinutes: 30 }
+  });
+  assert.equal(result.goalKind, "spec");
+  assert.equal(result.selectedSpecPath, ".nora/specs/feature.md");
+  assert.equal(result.selectedTaskPath, "");
+});
+
 test("applyLoopRunGoalTemplate falls back to custom when spec goal is unavailable", () => {
   const template = LOOP_RUN_GOAL_TEMPLATES.find((item) => item.id === "implement-spec");
   assert.ok(template);
@@ -12,9 +30,13 @@ test("applyLoopRunGoalTemplate falls back to custom when spec goal is unavailabl
     tasksAvailable: true,
     selectedSpecPath: "",
     selectedTaskPath: ".nora/tasks/task.md",
+    firstSpecPath: ".nora/specs/feature.md",
+    firstTaskPath: ".nora/tasks/task.md",
     limitsDraft: { maxIterations: 10, maxDurationMinutes: 240, roleTimeoutMinutes: 30 }
   });
   assert.equal(result.goalKind, "custom");
+  assert.equal(result.selectedSpecPath, "");
+  assert.equal(result.selectedTaskPath, "");
   assert.match(result.objective, /attached spec/i);
 });
 
@@ -25,11 +47,14 @@ test("smoke test template tightens guardrails for quick validation", () => {
     template,
     specsAvailable: true,
     tasksAvailable: true,
-    selectedSpecPath: ".nora/specs/feature.md",
-    selectedTaskPath: ".nora/tasks/task.md",
+    selectedSpecPath: "",
+    selectedTaskPath: "",
+    firstSpecPath: ".nora/specs/feature.md",
+    firstTaskPath: ".nora/tasks/task.md",
     limitsDraft: { maxIterations: 10, maxDurationMinutes: 240, roleTimeoutMinutes: 30 }
   });
   assert.equal(result.goalKind, "custom");
+  assert.equal(result.selectedSpecPath, "");
   assert.equal(result.limitsDraft.maxIterations, 2);
   assert.equal(result.limitsDraft.maxDurationMinutes, 15);
 });

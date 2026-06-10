@@ -27,6 +27,8 @@ export interface ApplyLoopRunGoalTemplateInput {
   tasksAvailable: boolean;
   selectedSpecPath: string;
   selectedTaskPath: string;
+  firstSpecPath: string;
+  firstTaskPath: string;
   limitsDraft: LoopRunLimitsDraft;
 }
 

@@ -27,7 +27,8 @@ function runGoal(run: LoopRun): LoopRunGoal {
   return {
     objective: run.objective,
     specPath: run.specPath,
-    taskPath: run.taskPath
+    taskPath: run.taskPath,
+    handoffPath: run.handoffPath
   };
 }
 
@@ -491,6 +492,7 @@ export function createLoopRunner(deps: LoopRunnerDeps): LoopRunner {
         objective: goal.objective,
         specPath: goal.specPath,
         taskPath: goal.taskPath,
+        handoffPath: goal.handoffPath,
         limits,
         status: "preparing",
         stopReason: null,

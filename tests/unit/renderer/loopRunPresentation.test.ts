@@ -21,6 +21,7 @@ function createRun(overrides: Partial<LoopRun> = {}): LoopRun {
     objective: "Ship the feature",
     specPath: null,
     taskPath: null,
+    handoffPath: null,
     limits: { maxIterations: 5, maxDurationMs: 60_000, roleTimeoutMs: 10_000 },
     status: "running",
     stopReason: null,

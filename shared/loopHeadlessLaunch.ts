@@ -94,14 +94,14 @@ export function buildLoopHeadlessShellCommand(input: LoopHeadlessLaunchInput): s
     }
     case "claude-print": {
       const permissionFlag = isReviewer ? "--permission-mode plan" : "--dangerously-skip-permissions";
-      return `${base} -p ${permissionFlag} --output-format text ${prompt}`;
+      return `${base} -p ${permissionFlag} --output-format stream-json --verbose ${prompt}`;
     }
     case "gemini-prompt": {
       const approvalFlag = isReviewer ? " --approval-mode plan" : " --approval-mode yolo";
       if (commandHasFlag(base, "--prompt-interactive") || commandHasFlag(base, "-i")) {
-        return `${base} --skip-trust --output-format text${approvalFlag} ${prompt}`;
+        return `${base} --skip-trust --output-format stream-json${approvalFlag} ${prompt}`;
       }
-      return `${base} --skip-trust --output-format text --prompt ${prompt}${approvalFlag}`;
+      return `${base} --skip-trust --output-format stream-json --prompt ${prompt}${approvalFlag}`;
     }
     case "print-flag":
       if (input.toolId === "grok") {

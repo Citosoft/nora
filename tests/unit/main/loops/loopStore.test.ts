@@ -16,7 +16,7 @@ const definition: LoopDefinition = {
 function run(status: LoopRun["status"]): LoopRun {
   return {
     id: "run-1", projectId: "project-1", definitionId: definition.id, definition, objective: "Goal",
-    specPath: null, taskPath: null, limits: definition.limits, status,
+    specPath: null, taskPath: null, handoffPath: null, limits: definition.limits, status,
     stopReason: null, sessionId: null, worktreeId: null, worktreePath: null, outputLog: "", outputEvents: [], roles: [], iterations: [], events: [],
     activeRoleId: null, activeToken: null, createdAt: definition.createdAt, startedAt: definition.createdAt,
     updatedAt: definition.updatedAt, completedAt: null

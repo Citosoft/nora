@@ -31,6 +31,7 @@ function normalizeLoadedRun(value: LoopRun): LoopRun {
     ...value,
     specPath: value.specPath ?? null,
     taskPath: value.taskPath ?? null,
+    handoffPath: value.handoffPath ?? null,
     worktreePath: value.worktreePath ?? null,
     outputLog: value.outputLog ?? "",
     outputEvents: value.outputEvents ?? [],

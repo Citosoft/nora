@@ -111,6 +111,7 @@ test("loop runner completes when the headless writer returns a matching completi
     objective: "Recover me",
     specPath: null,
     taskPath: null,
+    handoffPath: null,
     limits: definition.limits,
     status: "running",
     stopReason: null,

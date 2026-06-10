@@ -98,6 +98,7 @@ export function Select({
   disabled,
   ...props
 }: SelectProps) {
+  const [open, setOpen] = React.useState(false);
   const options = React.useMemo(() => flattenSelectOptions(children), [children]);
   const optionGroups = React.useMemo(() => groupSelectOptions(options), [options]);
   const fallbackValue = value ?? defaultValue ?? options.find((option) => !option.disabled)?.value ?? "";
@@ -107,6 +108,8 @@ export function Select({
 
   return (
     <SelectPrimitive.Root
+      open={open}
+      onOpenChange={setOpen}
       value={radixValue}
       disabled={disabled}
       onValueChange={(nextValue) => {
@@ -115,6 +118,7 @@ export function Select({
           target: { value: normalizedValue },
           currentTarget: { value: normalizedValue }
         } as React.ChangeEvent<HTMLSelectElement>);
+        setOpen(false);
       }}
     >
         <SelectPrimitive.Trigger
