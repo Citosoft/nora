@@ -3,6 +3,7 @@ import { formatInstallLogText } from "@/components/app/logic/terminalLogText";
 import { getNextToolPopoverState } from "@/components/app/logic/toolPopoverPosition";
 import { buildStartupDependencyCopyText } from "@/components/app/logic/startupDependencyCopyText";
 import { AppMark } from "@/components/app/shared/AppMark";
+import { WizardProgress } from "@/components/app/shared/WizardProgress";
 import { AgentToolIcon, ToolPopover, WorkspaceProjectIcon } from "@/components/app/shared/Tooling";
 import type { AccentColor, ThemeMode, ToolPopoverState } from "@/components/app/types";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +18,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Tooltip } from "@/components/ui/tooltip";
 import type { AgentCatalogEntry, AppSettings, InstalledIde, WorkspaceFramework } from "@shared/appTypes";
 import type { StartupDependency, StartupDependencyId } from "@shared/types/startupDependency.types";
 import { AlertTriangle, CheckCircle2, ChevronDown, Copy, LoaderCircle, RefreshCcw, Wrench } from "lucide-react";
@@ -165,10 +165,10 @@ export function OnboardingDialog({
   const hasSelectedWorkspace = Boolean(currentWorkspacePath);
   const activeTool = tools.find((tool) => tool.id === activeToolPopover?.toolId) ?? null;
   const stepIndex = ONBOARDING_STEPS.indexOf(step);
-  const stepNumber = stepIndex + 1;
   const previousStep = stepIndex > 0 ? ONBOARDING_STEPS[stepIndex - 1] : null;
   const nextStep = stepIndex < ONBOARDING_STEPS.length - 1 ? ONBOARDING_STEPS[stepIndex + 1] : null;
   const stepCopy = ONBOARDING_STEP_COPY[step];
+  const progressSteps = ONBOARDING_STEPS.map((item) => ({ id: item, title: ONBOARDING_STEP_COPY[item].title }));
 
   useEffect(() => {
     if (open) {
@@ -288,33 +288,7 @@ export function OnboardingDialog({
         )}
       >
         <DialogBody className="flex min-h-0 flex-col gap-5">
-          <div className="flex items-center gap-3" aria-label={`Onboarding step ${stepNumber} of ${ONBOARDING_STEPS.length}`}>
-            <div className="flex max-w-[65vw] items-center gap-2">
-              {ONBOARDING_STEPS.map((item, index) => (
-                <Tooltip key={item} content={ONBOARDING_STEP_COPY[item].title} side="top" className="z-[40000]">
-                  <button
-                    type="button"
-                    onClick={() => setStep(item)}
-                    aria-label={`Go to ${ONBOARDING_STEP_COPY[item].title}`}
-                    className={[
-                      "flex h-5 items-center rounded-full transition-[width] duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                      index === stepIndex ? "w-16" : "w-8"
-                    ].join(" ")}
-                  >
-                    <div
-                      className={[
-                        "h-1.5 w-full rounded-full transition-colors duration-200 ease-out",
-                        index === stepIndex ? "bg-primary" : index < stepIndex ? "bg-muted-foreground/45" : "bg-muted"
-                      ].join(" ")}
-                    />
-                  </button>
-                </Tooltip>
-              ))}
-            </div>
-            <div className="shrink-0 text-sm font-medium tabular-nums text-muted-foreground">
-              {stepNumber} of {ONBOARDING_STEPS.length}
-            </div>
-          </div>
+          <WizardProgress ariaLabel="Onboarding" steps={progressSteps} activeStep={step} onStepChange={setStep} />
           <div className="space-y-2 pb-3 pt-3">
             <DialogTitle className="text-2xl">{stepCopy.title}</DialogTitle>
             <DialogDescription>{stepCopy.description}</DialogDescription>

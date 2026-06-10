@@ -73,6 +73,15 @@ test("buildAgentLaunchCommand presets gemini prompt and workspace trust", () => 
   assert.equal(command, "gemini --skip-trust --prompt-interactive 'Scaffold a Ruby on Rails app'");
 });
 
+test("buildAgentLaunchCommand does not add cursor trust in interactive mode", () => {
+  const command = buildAgentLaunchCommand("cursor", "cursor-agent", {
+    startupTrustMode: "trusted-workspace",
+    isWindowsPlatform: false
+  });
+
+  assert.equal(command, "cursor-agent");
+});
+
 test("buildAgentLaunchCommand presets claude interactive prompt", () => {
   const command = buildAgentLaunchCommand("claude", "claude", {
     initialPrompt: "Scaffold an Expo app",

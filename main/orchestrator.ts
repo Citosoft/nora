@@ -24,6 +24,8 @@ import { installAgentSkill as installGlobalAgentSkill, readAgentSkillCatalogs, r
 import { getProjectsDir, getWorktreeDir } from "./noraPaths";
 import { hasBusyTerminalActivity } from "./orchestrator/agentBusyActivity";
 import { buildAgentLaunchCommand, normalizeAgentLaunchCommand } from "./orchestrator/agentLaunch";
+import { prepareLoopRunWorktree } from "./loops/prepareLoopRunWorktree";
+import type { PreparedLoopRunWorktree, PrepareLoopRunWorktreeInput } from "./types/prepareLoopRunWorktree.types";
 import { createInitialState } from "./orchestrator/createAppInitialState";
 import { createForgeHelpers } from "./orchestrator/forge";
 import { getGitProgressCommand, normalizeLocalPath } from "./orchestrator/gitWorkspaceCommandUtils";
@@ -1292,6 +1294,49 @@ export class Orchestrator implements OrchestratorFacade {
       terminal,
       this.getSnapshot().worktrees.find((item) => item.id === terminal.worktreeId) ?? null
     );
+  }
+
+  prepareLoopRunWorktree(input: PrepareLoopRunWorktreeInput): Promise<PreparedLoopRunWorktree> {
+    return prepareLoopRunWorktree(
+      {
+        nowIso,
+        getSnapshot: () => this.getSnapshot(),
+        resolveWorktreeForSpawn: (project, payload, agentName, onCreatingWorktree) =>
+          this.resolveWorktreeForSpawn(project, payload, agentName, onCreatingWorktree),
+        getWorktreeTarget: (project, worktree) => this.getWorktreeTarget(project, worktree),
+        checkoutBranchForLaunch: (target, branchCheckout) => this.checkoutBranchForLaunch(target, branchCheckout),
+        prepareWorktree: (target, command) => this.runtimeHelpers.prepareWorktree(target, command),
+        updateState: (updater) => {
+          this.stateGateway.updateState(updater);
+        },
+        upsertSession: (sessions, session) => this.upsertSession(sessions, session),
+        upsertWorktree: (worktrees, worktree) => this.upsertWorktree(worktrees, worktree),
+        upsertWorkspaceSummary: (workspaces, workspace) => this.upsertWorkspaceSummary(workspaces, workspace),
+        persistWorkspaceState: (state) => this.persistenceHelpers.persistWorkspaceState(state)
+      },
+      input
+    );
+  }
+
+  resolveLoopToolLaunch(toolId: string): { detectedCommand: string; env: Record<string, string> } {
+    const tool = this.getSnapshot().agentCatalog.find((entry) => entry.id === toolId);
+    if (!tool) {
+      throw new Error(`Unknown agent tool: ${toolId}`);
+    }
+    if (!tool.enabled) {
+      throw new Error(`${tool.label} is disabled in settings.`);
+    }
+    const detectedCommand = tool.detectedCommand?.trim() || tool.detectedPath?.trim();
+    if (!detectedCommand) {
+      throw new Error(`${tool.label} is not installed yet.`);
+    }
+    const command = /\s/.test(detectedCommand) && !detectedCommand.startsWith("\"")
+      ? `"${detectedCommand}"`
+      : detectedCommand;
+    return {
+      detectedCommand: normalizeAgentLaunchCommand(tool.id, command),
+      env: this.toolingRuntimeService.getToolEnv(tool.id)
+    };
   }
 
 }

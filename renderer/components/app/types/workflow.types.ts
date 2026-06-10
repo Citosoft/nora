@@ -229,6 +229,7 @@ export type WorkspaceSidebarProps = {
   onFocusWorkspace: (projectId: string) => void;
   onFocusWorkspaceView: (worktreeId: string) => void;
   onFocusWorkspaceWorktree: (projectId: string, worktreeId: string) => Promise<AppState | null>;
+  onOpenWorkflowRunChangeRequest: (projectId: string, worktreeId: string) => Promise<void>;
   onOpenCreateAgentOnWorktree: (projectId: string, worktreeId: string) => void;
   onOpenCreateTerminalOnWorktree: (projectId: string, worktreeId: string) => void;
   onOpenCreateWorktree: (projectId: string) => void;

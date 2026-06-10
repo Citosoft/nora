@@ -11,6 +11,7 @@ import { setWorkspaceTaskDragData } from "@/components/app/logic/workspaceTaskDr
 import { WorkspaceProjectIcon } from "@/components/app/shared/Tooling";
 import { WorkspaceSidebarChildSectionLabel } from "@/components/app/sidebar/workspace-sidebar/WorkspaceSidebarChildSectionLabel";
 import { WorkspaceSidebarWorkspaceSessionRow } from "@/components/app/sidebar/workspace-sidebar/WorkspaceSidebarWorkspaceSessionRow";
+import { LoopWorkspaceSection } from "@/components/app/sidebar/workspace-sidebar/LoopWorkspaceSection";
 import { WorkspaceWorktreeActionsMenuItems } from "@/components/app/sidebar/workspace-sidebar/WorkspaceWorktreeActionsMenuItems";
 import { WorkspaceWorkspaceActionsMenuItems } from "@/components/app/sidebar/workspace-sidebar/WorkspaceWorkspaceActionsMenuItems";
 import type { WorkspaceSidebarWorkspaceGroupProps } from "@/components/app/types/workspaceSidebarWorkspaceGroup.types";
@@ -92,6 +93,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
   onFocusWorkspace,
   onFocusWorkspaceView,
   onFocusWorkspaceWorktree,
+  onOpenWorkflowRunChangeRequest,
   onOpenCreateAgentOnWorktree,
   onOpenCreateTerminalOnWorktree,
   onOpenCreateWorktree,
@@ -480,6 +482,16 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                 </div>
               )}
             </div>
+            <LoopWorkspaceSection
+              workspace={workspace}
+              agentCatalog={snapshot.agentCatalog}
+              onCreateChangeRequest={(run) => {
+                if (!run.worktreeId) {
+                  return Promise.reject(new Error("This workflow run does not have a managed worktree."));
+                }
+                return onOpenWorkflowRunChangeRequest(run.projectId, run.worktreeId);
+              }}
+            />
             <div className="py-1.5 pl-5 pr-4">
               <div className="flex items-center justify-between gap-3">
                 <WorkspaceSidebarChildSectionLabel icon={<Bot className="size-3.5" />} label="Agents" count={workspace.agents.length} />

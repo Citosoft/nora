@@ -3,6 +3,7 @@ import { contextBridge } from "electron";
 
 import { createAppBridge } from "./preload/createAppBridge";
 import { createIntegrationBridge } from "./preload/createIntegrationBridge";
+import { createLoopBridge } from "./preload/createLoopBridge";
 import { createSessionBridge } from "./preload/createSessionBridge";
 import { createSystemBridge } from "./preload/createSystemBridge";
 import { createToolingBridge } from "./preload/createToolingBridge";
@@ -14,7 +15,8 @@ const noraApi: NoraBridge = {
   ...createSessionBridge(),
   ...createToolingBridge(),
   ...createSystemBridge(),
-  ...createIntegrationBridge()
+  ...createIntegrationBridge(),
+  ...createLoopBridge()
 };
 
 contextBridge.exposeInMainWorld("nora", noraApi);

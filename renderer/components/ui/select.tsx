@@ -1,4 +1,11 @@
-import type { OptionLikeProps, SelectOption, SelectProps } from "@/components/ui/types/primitives.types";
+import type {
+  OptionGroupLikeProps,
+  OptionLikeProps,
+  SelectOption,
+  SelectOptionGroup,
+  SelectOptionItemProps,
+  SelectProps
+} from "@/components/ui/types/primitives.types";
 import { cn } from "@/lib/utils";
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
@@ -18,14 +25,14 @@ function renderSelectTriggerLabel(label: React.ReactNode): React.ReactNode {
   return <span className="flex min-w-0 items-center gap-2 overflow-hidden">{label}</span>;
 }
 
-function flattenOptions(children: React.ReactNode): SelectOption[] {
+export function flattenSelectOptions(children: React.ReactNode, groupLabel?: React.ReactNode): SelectOption[] {
   return React.Children.toArray(children).flatMap((child) => {
     if (!React.isValidElement(child)) {
       return [];
     }
 
     if (child.type === React.Fragment) {
-      return flattenOptions((child.props as { children?: React.ReactNode }).children);
+      return flattenSelectOptions((child.props as { children?: React.ReactNode }).children, groupLabel);
     }
 
     if (typeof child.type === "string" && child.type.toLowerCase() === "option") {
@@ -33,12 +40,53 @@ function flattenOptions(children: React.ReactNode): SelectOption[] {
       return [{
         value: String(props.value ?? ""),
         label: props.children,
-        disabled: props.disabled === true
+        disabled: props.disabled === true,
+        groupLabel
       }];
+    }
+
+    if (typeof child.type === "string" && child.type.toLowerCase() === "optgroup") {
+      const props = child.props as OptionGroupLikeProps;
+      return flattenSelectOptions(props.children, props.label).map((option) => ({
+        ...option,
+        disabled: props.disabled === true || option.disabled
+      }));
     }
 
     return [];
   });
+}
+
+function groupSelectOptions(options: SelectOption[]): SelectOptionGroup[] {
+  const groups: SelectOptionGroup[] = [];
+  for (const option of options) {
+    const previous = groups.at(-1);
+    if (previous && previous.label === option.groupLabel) {
+      previous.options.push(option);
+      continue;
+    }
+    groups.push({
+      id: `group-${groups.length}`,
+      label: option.groupLabel ?? null,
+      options: [option]
+    });
+  }
+  return groups;
+}
+
+function SelectOptionItem({ option }: SelectOptionItemProps) {
+  return (
+    <SelectPrimitive.Item
+      value={option.value === "" ? EMPTY_OPTION_VALUE : option.value}
+      disabled={option.disabled}
+      className="relative flex cursor-default select-none items-center rounded-[5px] py-2 pl-8 pr-3 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
+    >
+      <SelectPrimitive.ItemIndicator className="absolute left-2 inline-flex items-center">
+        <Check className="size-4" />
+      </SelectPrimitive.ItemIndicator>
+      <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
+    </SelectPrimitive.Item>
+  );
 }
 
 export function Select({
@@ -50,7 +98,8 @@ export function Select({
   disabled,
   ...props
 }: SelectProps) {
-  const options = React.useMemo(() => flattenOptions(children), [children]);
+  const options = React.useMemo(() => flattenSelectOptions(children), [children]);
+  const optionGroups = React.useMemo(() => groupSelectOptions(options), [options]);
   const fallbackValue = value ?? defaultValue ?? options.find((option) => !option.disabled)?.value ?? "";
   const selectedValue = String(fallbackValue);
   const selectedOption = options.find((option) => option.value === selectedValue) ?? null;
@@ -97,18 +146,17 @@ export function Select({
             <ChevronUp className="size-4" />
           </SelectPrimitive.ScrollUpButton>
           <SelectPrimitive.Viewport className="max-h-[inherit] p-1">
-            {options.map((option) => (
-              <SelectPrimitive.Item
-                key={`${option.value}:${String(option.label)}`}
-                value={option.value === "" ? EMPTY_OPTION_VALUE : option.value}
-                disabled={option.disabled}
-                className="relative flex cursor-default select-none items-center rounded-[5px] py-2 pl-8 pr-3 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
-              >
-                <SelectPrimitive.ItemIndicator className="absolute left-2 inline-flex items-center">
-                  <Check className="size-4" />
-                </SelectPrimitive.ItemIndicator>
-                <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
-              </SelectPrimitive.Item>
+            {optionGroups.map((group) => group.label === null ? group.options.map((option) => (
+              <SelectOptionItem key={`${option.value}:${String(option.label)}`} option={option} />
+            )) : (
+              <SelectPrimitive.Group key={group.id}>
+                <SelectPrimitive.Label className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">
+                  {group.label}
+                </SelectPrimitive.Label>
+                {group.options.map((option) => (
+                  <SelectOptionItem key={`${option.value}:${String(option.label)}`} option={option} />
+                ))}
+              </SelectPrimitive.Group>
             ))}
           </SelectPrimitive.Viewport>
           <SelectPrimitive.ScrollDownButton className="grid place-items-center py-1 text-muted-foreground">

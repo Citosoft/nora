@@ -49,6 +49,7 @@ export type WorkspaceSidebarBuildDeps = Pick<
   isRemoteMountsSectionCollapsed: boolean;
   isWorkspaceSidebarCollapsed: boolean;
   launchTerminalInWorkspace: (projectId: string, payload: CreateTerminalPayload) => Promise<void>;
+  setIsCreatePullRequestDialogOpen: Dispatch<SetStateAction<boolean>>;
   openAddWorkspaceModal: () => Promise<AppState | null>;
   openAiChatFromSidebar: (projectId: string) => void;
   openSettingsPage: (group?: SettingsGroup) => void;

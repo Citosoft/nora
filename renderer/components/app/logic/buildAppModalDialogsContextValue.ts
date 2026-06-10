@@ -2,6 +2,7 @@ import { noraAgentClient } from "@/components/app/clients/noraAgentClient";
 import { noraRemoteWorkspaceClient } from "@/components/app/clients/noraRemoteWorkspaceClient";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { noraWorkspaceManagementClient } from "@/components/app/clients/noraWorkspaceManagementClient";
+import { buildCreatePullRequestBranches } from "@/components/app/logic/buildCreatePullRequestBranches";
 import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
 import { handoffPromptToAgent } from "@/components/app/logic/agentHandoff";
 import { launchProjectScaffoldAgent } from "@/components/app/logic/projectScaffoldLaunch";
@@ -180,11 +181,11 @@ export const buildAppModalDialogsContextValue = (d: AppModalDialogsBuildDeps): A
     provider: d.forgeOverview?.repo?.provider ?? null,
     sourceBranch: d.activeBranch,
     baseBranch: d.snapshot.project?.baseBranch || d.snapshot.projectBranches[0] || "",
-    availableBranches: d.snapshot.projectBranches.length
-      ? d.snapshot.projectBranches
-      : d.snapshot.project?.baseBranch
-        ? [d.snapshot.project.baseBranch]
-        : [],
+    availableBranches: buildCreatePullRequestBranches(
+      d.activeBranch,
+      d.snapshot.projectBranches,
+      d.snapshot.project?.baseBranch ?? ""
+    ),
     onOpenChange: d.setIsCreatePullRequestDialogOpen,
     onCreate: d.handleCreateForgePullRequest
   },

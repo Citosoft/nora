@@ -1,4 +1,5 @@
 import { noraSessionClient } from "@/components/app/clients/noraSessionClient";
+import { noraIntegrationClient } from "@/components/app/clients/noraIntegrationClient";
 import { noraToolingManagementClient } from "@/components/app/clients/noraToolingManagementClient";
 import { noraWorkspaceManagementClient } from "@/components/app/clients/noraWorkspaceManagementClient";
 import { createOpenTaskInWorkspaceHandler } from "@/components/app/logic/createOpenTaskInWorkspaceHandler";
@@ -112,6 +113,31 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
             d.safely(() => noraSessionClient.focusWorktree(worktreeId)))
           : null
       ),
+    onOpenWorkflowRunChangeRequest: async (projectId, worktreeId) => {
+      const focused = await d.focusWorkspaceWithRecovery(projectId);
+      if (!focused) {
+        throw new Error("Unable to focus the workflow workspace.");
+      }
+      const next = await d.safely(() => noraSessionClient.focusWorktree(worktreeId));
+      if (!next) {
+        throw new Error("Unable to focus the workflow worktree.");
+      }
+      d.setIsTaskBoardOpen(false);
+      d.setIsSpecBrowserOpen(false);
+      d.setIsNoteBrowserOpen(false);
+      d.setTaskEditorState(null);
+      d.setWorkspaceSessionActiveViewId(null);
+      d.uiCommands.clearBrowserAndForgeFocus();
+      const overview = await noraIntegrationClient.getForgeOverview(projectId, {
+        githubToken: d.githubToken,
+        gitlabToken: d.gitlabToken,
+        gitlabHost: d.gitlabHost
+      });
+      if (!overview.repo) {
+        throw new Error(overview.errorMessage ?? "Connect this repository to GitHub or GitLab before creating a change request.");
+      }
+      d.setIsCreatePullRequestDialogOpen(true);
+    },
     onOpenCreateAgentOnWorktree: (projectId, worktreeId) => {
       runInWorkspace(projectId, () =>
         d.uiCommands.openCreateAgentDialog({
@@ -427,6 +453,7 @@ export function WorkspaceSidebarProvider({
     onFocusWorkspace: value.onFocusWorkspace,
     onFocusWorkspaceView: value.onFocusWorkspaceView,
     onFocusWorkspaceWorktree: value.onFocusWorkspaceWorktree,
+    onOpenWorkflowRunChangeRequest: value.onOpenWorkflowRunChangeRequest,
     onOpenCreateAgentOnWorktree: value.onOpenCreateAgentOnWorktree,
     onOpenCreateTerminalOnWorktree: value.onOpenCreateTerminalOnWorktree,
     onOpenCreateWorktree: value.onOpenCreateWorktree,

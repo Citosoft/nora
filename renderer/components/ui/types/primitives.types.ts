@@ -28,10 +28,27 @@ export type SelectOption = {
   value: string;
   label: React.ReactNode;
   disabled?: boolean;
+  groupLabel?: React.ReactNode;
 };
 
 export type OptionLikeProps = {
   value?: string;
   children?: React.ReactNode;
   disabled?: boolean;
+};
+
+export type OptionGroupLikeProps = {
+  label?: React.ReactNode;
+  children?: React.ReactNode;
+  disabled?: boolean;
+};
+
+export type SelectOptionGroup = {
+  id: string;
+  label: React.ReactNode | null;
+  options: SelectOption[];
+};
+
+export type SelectOptionItemProps = {
+  option: SelectOption;
 };

@@ -7,6 +7,7 @@ import type {
   ImportBrowserImagePayload,
   WriteWorkspaceFilePayload
 } from "@shared/appTypes";
+import { randomUUID } from "node:crypto";
 import { DEFAULT_APP_SETTINGS } from "@shared/appTypes";
 import { app, BrowserWindow, session } from "electron";
 import path from "node:path";
@@ -52,15 +53,21 @@ import { registerSessionIpc } from "./ipc/registerSessionIpc";
 import { registerSystemIpc } from "./ipc/registerSystemIpc";
 import { registerToolingIpc } from "./ipc/registerToolingIpc";
 import { registerMacApplicationMenuIpc } from "./ipc/registerMacApplicationMenuIpc";
+import { registerLoopIpc } from "./ipc/registerLoopIpc";
 import { registerWindowIpc } from "./ipc/registerWindowIpc";
 import { registerWorkspaceIpc } from "./ipc/registerWorkspaceIpc";
 import type { OrchestratorFacade } from "./types/orchestratorFacade.types";
 import { unmountRemoteWorkspace } from "./remoteMounts";
 import type { MainServices } from "./services/mainServices";
+import { createLoopStore } from "./loops/loopStore";
+import { createLoopRunner } from "./loops/loopRunner";
+import { createLoopHeadlessExecutor } from "./loops/loopHeadlessExecutor";
+import type { LoopRunner } from "./types/loopRunner.types";
 
 let mainWindow: BrowserWindow | null = null;
 let orchestrator: OrchestratorFacade;
 let services: MainServices;
+let loopRunner: LoopRunner;
 let stopRendererWatcher: (() => void) | null = null;
 let isClosingMainWindow = false;
 const appSettingsStore = new AppSettingsStore(getAppSettingsPath());
@@ -355,6 +362,7 @@ function focusMainWindow(): void {
 }
 
 async function shutdownMainWindow(): Promise<void> {
+  loopRunner?.dispose();
   await shutdownMainWindowHelper({
     getMainWindow: () => mainWindow,
     getIsClosing: () => isClosingMainWindow,
@@ -417,8 +425,11 @@ function registerIpc(): void {
 
   registerSessionIpc({
     services,
-    withSnapshot
+    withSnapshot,
+    loopRunner
   });
+
+  registerLoopIpc({ loopRunner });
 
   registerAgentUsageIpc();
 
@@ -478,6 +489,38 @@ async function bootstrap(): Promise<void> {
     onLocalTerminalChanged: notifyLocalTerminalChanged
   });
   services = orchestrator.createServices();
+  const loopStore = createLoopStore({
+    resolveStatePath: (projectId, relativePath) => {
+      const project = services.snapshot.getSnapshot().workspaces
+        .map((workspace) => workspace.project)
+        .find((candidate) => candidate.id === projectId) ?? services.snapshot.getSnapshot().project;
+      if (project?.id === projectId && project.location?.kind === "ssh") {
+        throw new Error("Workflows currently require a local or mounted workspace.");
+      }
+      return services.workspace.resolveWorkspaceStatePath({ projectId, path: relativePath });
+    }
+  });
+  loopRunner = createLoopRunner({
+    store: loopStore,
+    nowIso: () => new Date().toISOString(),
+    randomId: () => randomUUID(),
+    getSnapshot: () => services.snapshot.getSnapshot(),
+    prepareWorktree: (input) => orchestrator.prepareLoopRunWorktree(input),
+    resolveLoopTool: (toolId) => orchestrator.resolveLoopToolLaunch(toolId),
+    headlessExecutor: createLoopHeadlessExecutor(),
+    notifyRunChanged: (run) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send("loop-run:changed", run);
+      }
+    },
+    notifyRunOutput: (payload) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send("loop-run:output", payload);
+      }
+    },
+    resolveWorkspaceStatePath: (projectId, relativePath) =>
+      services.workspace.resolveWorkspaceStatePath({ projectId, path: relativePath })
+  });
   orchestrator.onStateChanged((snapshot) => {
     scheduleStateChanged(snapshot);
   });

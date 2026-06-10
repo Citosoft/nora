@@ -640,6 +640,7 @@ function SignedInAppRootContent({
     setCollapsedWorkspaceIds,
     setFileEditorState: sessionActions.setFileEditorState,
     setIsCenterDiffExpanded,
+    setIsCreatePullRequestDialogOpen: dialogs.setIsCreatePullRequestDialogOpen,
     setIsChatbotsSectionCollapsed,
     setIsCliSectionCollapsed,
     setIsPortsSectionCollapsed,

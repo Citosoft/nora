@@ -13,6 +13,8 @@ export * from "./types/analytics.types";
 export * from "./types/diffAnnotation.types";
 export * from "./types/fileEditorTheme.types";
 export * from "./types/integrations.types";
+export * from "./types/loop.types";
+export * from "./types/loopOutput.types";
 export * from "./types/remote.types";
 export * from "./types/session.types";
 export * from "./types/system.types";

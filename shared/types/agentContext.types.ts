@@ -17,7 +17,8 @@ export type AgentPromptSource =
   | "forge-review"
   | "browser-selection"
   | "file-editor"
-  | "diff-review";
+  | "diff-review"
+  | "loop";
 
 export type AgentContextReferenceKind =
   | "agent"

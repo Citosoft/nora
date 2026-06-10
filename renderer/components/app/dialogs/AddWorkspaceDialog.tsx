@@ -8,6 +8,7 @@ import {
 } from "@/components/app/logic/projectScaffoldFavorites";
 import { buildProjectScaffoldPrompt, resolveProjectScaffoldOptions } from "@/components/app/logic/projectScaffoldPrompt";
 import { ProjectScaffoldCompactTile } from "@/components/app/shared/ProjectScaffoldCompactTile";
+import { WizardProgress } from "@/components/app/shared/WizardProgress";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import type { AddWorkspaceDialogProps } from "@/components/app/types/component.types";
 import type {
@@ -27,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Tooltip } from "@/components/ui/tooltip";
-import { canPresetAgentInitialPrompt, canPresetAgentWorkspaceTrust } from "@shared/agentStartupCapabilities";
+import { resolveManagedAgentLaunchOptions } from "@shared/agentStartupCapabilities";
 import { isAgentToolAvailable } from "@shared/agentToolState";
 import { Bot, Check, FolderPlus, HardDrive, Search, ServerCog, Sparkles, Star, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -152,6 +153,7 @@ export function AddWorkspaceDialog({
   const stepIndex = SCAFFOLD_STEPS.indexOf(step);
   const previousStep = stepIndex > 0 ? SCAFFOLD_STEPS[stepIndex - 1] : null;
   const nextStep = stepIndex < SCAFFOLD_STEPS.length - 1 ? SCAFFOLD_STEPS[stepIndex + 1] : null;
+  const progressSteps = SCAFFOLD_STEPS.map((item) => ({ id: item, title: SCAFFOLD_STEP_COPY[item].title }));
   const stepCopy = SCAFFOLD_STEP_COPY[step];
   const selectedComponents = selectedFramework
     ? resolveProjectScaffoldOptions(selectedFramework, selectedComponentIds, "componentOptions")
@@ -269,7 +271,6 @@ export function AddWorkspaceDialog({
 
     setIsCreatingProject(true);
     try {
-      const canPresetInitialPrompt = canPresetAgentInitialPrompt(selectedToolId);
       await onCreateNewProjectAgent(
         {
           toolId: selectedToolId,
@@ -282,8 +283,7 @@ export function AddWorkspaceDialog({
           worktreeBranch: null,
           prepareWorktree: false,
           launchSource: "dialog",
-          initialPromptDelivery: canPresetInitialPrompt ? "launch-command" : "terminal",
-          startupTrustMode: canPresetAgentWorkspaceTrust(selectedToolId) ? "trusted-workspace" : "default"
+          ...resolveManagedAgentLaunchOptions(selectedToolId)
         },
         normalizedProjectName
       );
@@ -312,33 +312,7 @@ export function AddWorkspaceDialog({
         <DialogBody className={isScaffoldWizardOpen ? "flex min-h-0 flex-col gap-5" : "space-y-3"}>
           {isScaffoldWizardOpen ? (
             <>
-              <div className="flex items-center gap-3" aria-label={`New project step ${stepIndex + 1} of ${SCAFFOLD_STEPS.length}`}>
-                <div className="flex max-w-[65vw] items-center gap-2">
-                  {SCAFFOLD_STEPS.map((item, index) => (
-                    <Tooltip key={item} content={SCAFFOLD_STEP_COPY[item].title} side="top" className="z-[40000]">
-                      <button
-                        type="button"
-                        onClick={() => setStep(item)}
-                        aria-label={`Go to ${SCAFFOLD_STEP_COPY[item].title}`}
-                        className={[
-                          "flex h-5 items-center rounded-full transition-[width] duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                          index === stepIndex ? "w-16" : "w-8"
-                        ].join(" ")}
-                      >
-                        <div
-                          className={[
-                            "h-1.5 w-full rounded-full transition-colors duration-200 ease-out",
-                            index === stepIndex ? "bg-primary" : index < stepIndex ? "bg-muted-foreground/45" : "bg-muted"
-                          ].join(" ")}
-                        />
-                      </button>
-                    </Tooltip>
-                  ))}
-                </div>
-                <div className="shrink-0 text-sm font-medium tabular-nums text-muted-foreground">
-                  {stepIndex + 1} of {SCAFFOLD_STEPS.length}
-                </div>
-              </div>
+              <WizardProgress ariaLabel="New project" steps={progressSteps} activeStep={step} onStepChange={setStep} />
               <div className="space-y-2">
                 <div className="text-2xl font-semibold tracking-normal">{stepCopy.title}</div>
                 <div className="text-sm text-muted-foreground">{stepCopy.description}</div>

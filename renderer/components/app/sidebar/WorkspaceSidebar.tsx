@@ -82,6 +82,7 @@ export const WorkspaceSidebar = () => {
     onFocusWorkspace,
     onFocusWorkspaceView,
     onFocusWorkspaceWorktree,
+    onOpenWorkflowRunChangeRequest,
     onOpenCreateAgentOnWorktree,
     onOpenCreateTerminalOnWorktree,
     onOpenCreateWorktree,
@@ -351,6 +352,7 @@ export const WorkspaceSidebar = () => {
                           onFocusWorkspace={onFocusWorkspace}
                           onFocusWorkspaceView={onFocusWorkspaceView}
                           onFocusWorkspaceWorktree={onFocusWorkspaceWorktree}
+                          onOpenWorkflowRunChangeRequest={onOpenWorkflowRunChangeRequest}
                           onOpenCreateAgentOnWorktree={onOpenCreateAgentOnWorktree}
                           onOpenCreateTerminalOnWorktree={onOpenCreateTerminalOnWorktree}
                           onOpenCreateWorktree={onOpenCreateWorktree}

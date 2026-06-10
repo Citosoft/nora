@@ -10,6 +10,7 @@ export type UseAppRootWorkspaceSidebarSourcesArgs = Omit<
   isNoteBrowserOpen: WorkspaceSidebarBuildDeps["isNoteBrowserOpen"];
   isSpecBrowserOpen: WorkspaceSidebarBuildDeps["isSpecBrowserOpen"];
   isTaskBoardOpen: WorkspaceSidebarBuildDeps["isTaskBoardOpen"];
+  setIsCreatePullRequestDialogOpen: WorkspaceSidebarBuildDeps["setIsCreatePullRequestDialogOpen"];
   uiCommands: Pick<
     AppUiCommands,
     | "clearBrowserAndForgeFocus"
