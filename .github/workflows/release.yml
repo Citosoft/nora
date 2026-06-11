@@ -13,7 +13,7 @@ jobs:
     name: Build ${{ matrix.target_name }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - os: windows-latest
