@@ -4,7 +4,7 @@
  * the typed bridge declaration and client adapter modules.
  */
 import { readFileSync, readdirSync } from "node:fs";
-import { join, relative } from "node:path";
+import { isAbsolute, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(fileURLToPath(new URL("..", import.meta.url)));
@@ -33,8 +33,13 @@ const walk = (dir, files = []) => {
   return files;
 };
 
+const isWithinDirectory = (file, directory) => {
+  const relativePath = relative(directory, file);
+  return relativePath === "" || (!relativePath.startsWith("..") && !isAbsolute(relativePath));
+};
+
 const isAllowed = (file) =>
-  allowedFiles.has(file) || allowedPrefixes.some((prefix) => file.startsWith(`${prefix}/`) || file === prefix);
+  allowedFiles.has(file) || allowedPrefixes.some((prefix) => isWithinDirectory(file, prefix));
 
 const offenders = [];
 
