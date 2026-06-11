@@ -86,7 +86,8 @@ test("loop runner completes when the headless writer returns a matching completi
     resolveLoopTool: () => ({ detectedCommand: "codex", env: {} }),
     headlessExecutor: {
       execute: ({ command, onOutput }) => {
-        const token = command.match(/token="([^"]+)"/)?.[1] ?? "";
+        const token = command.match(/token=\\?"([^"\\]+)\\?"/)?.[1];
+        assert.ok(token, "Expected the headless command to include the workflow result token.");
         onOutput("Running headless turn…\n");
         return {
           abort: () => {},
