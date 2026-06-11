@@ -1,4 +1,8 @@
 import { writeStoredBrowserTabsState } from "@/components/app/logic/appPersistence";
+import {
+  buildBrowserAnnotationStorageKey,
+  removeStoredBrowserAnnotationsForScope
+} from "@/components/app/logic/browserAnnotationPersistence";
 import { createBrowserTab } from "@/components/app/logic/browserTabs";
 import type { UseBrowserTabsArgs, UseBrowserTabsResult } from "@/components/app/types/appHooks.types";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
@@ -49,6 +53,9 @@ export function useBrowserTabs({
   const closeBrowserTab = useCallback((tabId: string): void => {
     setUiState((current) => {
       const closingTab = current.browserTabs.find((tab) => tab.id === tabId) ?? null;
+      if (closingTab) {
+        removeStoredBrowserAnnotationsForScope(buildBrowserAnnotationStorageKey(closingTab.projectId, closingTab.id));
+      }
       const nextTabs = current.browserTabs.filter((tab) => tab.id !== tabId);
       const closingFocusedTab = current.focusedBrowserTabId === tabId;
       const nextFocusedBrowserTabId = closingFocusedTab

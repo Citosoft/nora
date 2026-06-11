@@ -6,10 +6,20 @@ import { noraAgentClient } from "@/components/app/clients/noraAgentClient";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { useSessionCenterPorts } from "@/components/app/hooks/useSessionCenterPorts";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
+import { useBrowserAnnotationsState } from "@/components/app/hooks/useBrowserAnnotationsState";
 import { handoffPromptToAgent } from "@/components/app/logic/agentHandoff";
+import { getBrowserAnnotationsForUrl } from "@/components/app/logic/browserAnnotation";
+import {
+  buildBrowserInspectInstallScript,
+  buildBrowserInspectRepinScript,
+  buildBrowserInspectTeardownScript,
+  parseBrowserInspectTargetMessage
+} from "@/components/app/logic/browserInspectScript";
 import { markBrowserTabLoadStopped, updateTabNavigationState } from "@/components/app/logic/browserTabNavigation";
 import { getBrowserTabTitle, getCurrentBrowserUrl, normalizeBrowserUrl } from "@/components/app/logic/browserTabs";
 import { launchAgent } from "@/components/app/logic/launchAgentWithInstruction";
+import { BrowserCommentComposer } from "@/components/app/panels/browser-annotation/BrowserCommentComposer";
+import { BrowserReviewTray } from "@/components/app/panels/browser-annotation/BrowserReviewTray";
 import type { BrowserTabState } from "@/components/app/types";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { Button } from "@/components/ui/button";
@@ -19,9 +29,9 @@ import { Input } from "@/components/ui/input";
 import { isAgentToolAvailable } from "@shared/agentToolState";
 import type { AgentCatalogEntry, AgentSession, CreateAgentPayload } from "@shared/appTypes";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, ArrowRight, Bug, ExternalLink, Globe, RefreshCcw } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bug, ExternalLink, Globe, MousePointer2, RefreshCcw } from "lucide-react";
 import type { FocusEvent, MouseEvent } from "react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 type BrowserTabPanelProps = {
   tab?: BrowserTabState | null;
@@ -83,10 +93,137 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
   const webviewKey = useMemo(() => `${tab.id}:${reloadNonce}`, [reloadNonce, tab.id]);
   const availableTools = useMemo(() => tools.filter((tool) => isAgentToolAvailable(tool)), [tools]);
   const runningAgents = useMemo(() => agents.filter((agent) => agent.status === "running"), [agents]);
+  const reviewState = useBrowserAnnotationsState({
+    projectId: tab.projectId,
+    browserTabId: tab.id,
+    currentUrl,
+    pageTitle: tab.title,
+    workspaceInstructionPath,
+    agents,
+    tools,
+    onFocusAgent
+  });
+  const {
+    annotationCount,
+    annotations,
+    composerTarget,
+    inspectModeEnabled,
+    toggleInspectMode,
+    disableInspectMode,
+    openComposer,
+    closeComposer,
+    addAnnotation
+  } = reviewState;
+
+  const runInWebview = useCallback(
+    async (script: string) => {
+      const webview = webviewRef.current as ExecutableWebviewElement | null;
+      if (!webview || currentUrl === "about:blank") {
+        return;
+      }
+
+      try {
+        await webview.executeJavaScript(script);
+      } catch {
+        // Guest scripts can fail while navigation is in flight.
+      }
+    },
+    [currentUrl]
+  );
+
+  const syncBrowserInspectOverlays = useCallback(async () => {
+    await runInWebview(buildBrowserInspectTeardownScript());
+    if (inspectModeEnabled) {
+      await runInWebview(buildBrowserInspectInstallScript());
+      return;
+    }
+
+    const pageAnnotations = getBrowserAnnotationsForUrl(annotations, currentUrl);
+    if (pageAnnotations.length) {
+      await runInWebview(buildBrowserInspectRepinScript(pageAnnotations));
+    }
+  }, [annotations, currentUrl, inspectModeEnabled, runInWebview]);
 
   useEffect(() => {
     setAddressInput(currentUrl);
   }, [currentUrl]);
+
+  useEffect(() => {
+    if (inspectModeEnabled) {
+      setSelectionMenu(null);
+    }
+  }, [inspectModeEnabled]);
+
+  useEffect(() => {
+    if (currentUrl === "about:blank" && inspectModeEnabled) {
+      disableInspectMode();
+    }
+  }, [currentUrl, disableInspectMode, inspectModeEnabled]);
+
+  useEffect(() => {
+    if (!inspectModeEnabled) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        disableInspectMode();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [disableInspectMode, inspectModeEnabled]);
+
+  useEffect(() => {
+    if (currentUrl === "about:blank") {
+      return;
+    }
+
+    void syncBrowserInspectOverlays();
+  }, [currentUrl, inspectModeEnabled, annotations, syncBrowserInspectOverlays, webviewKey]);
+
+  useEffect(() => {
+    const webview = webviewRef.current;
+    if (!webview || currentUrl === "about:blank") {
+      return;
+    }
+
+    const handleDidStopLoading = () => {
+      void syncBrowserInspectOverlays();
+    };
+
+    webview.addEventListener("did-stop-loading", handleDidStopLoading);
+    return () => {
+      webview.removeEventListener("did-stop-loading", handleDidStopLoading);
+    };
+  }, [currentUrl, syncBrowserInspectOverlays, webviewKey]);
+
+  useEffect(() => {
+    const webview = webviewRef.current;
+    if (!webview || currentUrl === "about:blank" || !inspectModeEnabled) {
+      return;
+    }
+
+    const handleConsoleMessage = (event: Event) => {
+      const consoleEvent = event as ElectronConsoleMessageEvent;
+      const target = parseBrowserInspectTargetMessage(consoleEvent.message, currentUrl, tab.title);
+      if (target) {
+        openComposer(target);
+      }
+    };
+
+    webview.addEventListener("console-message", handleConsoleMessage);
+    return () => {
+      webview.removeEventListener("console-message", handleConsoleMessage);
+    };
+  }, [currentUrl, inspectModeEnabled, openComposer, tab.title, webviewKey]);
+
+  useEffect(() => {
+    return () => {
+      void runInWebview(buildBrowserInspectTeardownScript());
+    };
+  }, [runInWebview, webviewKey]);
 
   useLayoutEffect(() => {
     if (currentUrl !== "about:blank") {
@@ -179,6 +316,10 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
     };
 
     const handleContextMenu: EventListener = (event) => {
+      if (inspectModeEnabled) {
+        return;
+      }
+
       const contextEvent = event as ElectronWebviewContextMenuEvent;
       const selectionFromEvent = contextEvent.params?.selectionText?.trim() || "";
       const showMenuForSelection = (selectedText: string) => {
@@ -231,7 +372,7 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
       webview.removeEventListener("did-fail-load", handleDidFailLoad);
       webview.removeEventListener("context-menu", handleContextMenu);
     };
-  }, [currentUrl, onUpdateTab, tab.id]);
+  }, [currentUrl, inspectModeEnabled, onUpdateTab, tab.id]);
 
   useEffect(() => {
     if (!selectionMenu) {
@@ -422,7 +563,12 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
 
   return (
     <Card className="center-column-surface h-full min-h-0 rounded-none border-x-0 border-t-0 bg-card/95">
-      <CardContent className="grid h-full grid-rows-[auto_minmax(0,1fr)] p-0">
+      <CardContent
+        className={cn(
+          "grid h-full p-0",
+          annotationCount > 0 ? "grid-rows-[auto_minmax(0,1fr)_auto]" : "grid-rows-[auto_minmax(0,1fr)]"
+        )}
+      >
         <div className="workspace-shell-surface border-b border-border/60 bg-background/60 px-4 py-3">
           <div className="flex items-center gap-2">
             <div className="workspace-shell-control-border flex shrink-0 overflow-hidden rounded-[6px] border border-border/70 bg-background/40">
@@ -519,6 +665,25 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
               <Button
                 variant="outline"
                 size="icon"
+                className={cn(
+                  "button-default-surface workspace-shell-control-border h-10 w-10 shrink-0 rounded-none border-0 border-r border-border/70 shadow-none",
+                  inspectModeEnabled && "bg-primary/15 text-primary"
+                )}
+                onClick={() => {
+                  if (currentUrl === "about:blank") {
+                    return;
+                  }
+                  toggleInspectMode();
+                }}
+                disabled={currentUrl === "about:blank"}
+                aria-label={inspectModeEnabled ? "Exit inspect mode" : "Inspect page elements"}
+                aria-pressed={inspectModeEnabled}
+              >
+                <MousePointer2 className="size-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
                 className="button-default-surface workspace-shell-control-border h-10 w-10 shrink-0 rounded-none border-0 border-r border-border/70 shadow-none"
                 onClick={() => {
                   if (currentUrl === "about:blank") {
@@ -600,6 +765,13 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
                 </div>
               </div>
             ) : null}
+            {composerTarget ? (
+              <BrowserCommentComposer
+                target={composerTarget}
+                onSave={(body) => addAnnotation(composerTarget, body)}
+                onCancel={closeComposer}
+              />
+            ) : null}
             {selectionMenu ? (
               <ContextMenu onOpenChange={(open) => {
                 if (!open) {
@@ -666,6 +838,7 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
             ) : null}
           </div>
         )}
+        <BrowserReviewTray reviewState={reviewState} />
       </CardContent>
     </Card>
   );

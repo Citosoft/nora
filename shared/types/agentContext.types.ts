@@ -16,6 +16,7 @@ export type AgentPromptSource =
   | "forge-issue"
   | "forge-review"
   | "browser-selection"
+  | "browser-inspect"
   | "file-editor"
   | "diff-review"
   | "loop";

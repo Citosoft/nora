@@ -30,6 +30,13 @@ declare global {
     isMainFrame: boolean;
   }
 
+  interface ElectronConsoleMessageEvent extends Event {
+    message: string;
+    level: number;
+    line: number;
+    sourceId: string;
+  }
+
   interface ElectronWebviewElement extends HTMLElement {
     src: string;
     canGoBack(): boolean;
@@ -60,6 +67,11 @@ declare global {
       listener: (event: ElectronDidFailLoadEvent) => void,
       options?: boolean | AddEventListenerOptions
     ): void;
+    addEventListener(
+      type: "console-message",
+      listener: (event: ElectronConsoleMessageEvent) => void,
+      options?: boolean | AddEventListenerOptions
+    ): void;
     removeEventListener(
       type: "did-start-loading" | "did-stop-loading",
       listener: (event: Event) => void,
@@ -80,6 +92,12 @@ declare global {
       listener: (event: ElectronDidFailLoadEvent) => void,
       options?: boolean | EventListenerOptions
     ): void;
+    removeEventListener(
+      type: "console-message",
+      listener: (event: ElectronConsoleMessageEvent) => void,
+      options?: boolean | EventListenerOptions
+    ): void;
+    executeJavaScript(code: string, userGesture?: boolean): Promise<unknown>;
   }
 
   interface HTMLWebViewElement extends ElectronWebviewElement {}
