@@ -1,12 +1,11 @@
-import { formatDiffPreview, getInlineCommentKey, parseDiffLines, splitForgeComments } from "@/components/app/logic/forgePanelDiff";
+import { splitForgeComments } from "@/components/app/logic/forgePanelDiff";
 import {
   formatForgeReviewLineLabel,
   getForgeReviewCommentSelections
 } from "@/components/app/logic/forgeReviewHandoff";
 import { resolveForgeWorkflowRunBadgeVariant } from "@/components/app/logic/forgeWorkflowRunUi";
-import { resolveMonacoLanguageId } from "@/components/app/logic/fileEditorMonaco";
-import { diffLineClass } from "@/components/app/logic/utils";
-import { ForgeDiffCodeLine } from "@/components/app/panels/ForgeDiffCodeLine";
+import { ForgeChangedFilesTree } from "@/components/app/panels/ForgeChangedFilesTree";
+import { ForgeChangedFile } from "@/components/app/panels/ForgeChangedFile";
 import { MarkdownRenderer } from "@/components/app/shared/MarkdownRenderer";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import type { ForgeDetailPanelProps, ForgePanelProps } from "@/components/app/types/component.types";
@@ -17,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
 import { isAgentToolAvailable } from "@shared/agentToolState";
 import type {
   AgentCatalogEntry,
@@ -26,7 +24,7 @@ import type {
   ForgeWorkItemKind,
   ForgeWorkItemSummary
 } from "@shared/appTypes";
-import { Activity, ArrowLeft, CalendarClock, ExternalLink, FileDiff, GitBranch, GitMerge, GitPullRequest, MessageSquare, Plus, RefreshCcw, Send, Tags, User, X } from "lucide-react";
+import { Activity, ArrowLeft, CalendarClock, ExternalLink, FileDiff, GitBranch, GitMerge, GitPullRequest, ListTree, MessageSquare, RefreshCcw, Tags, User } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 type ForgeListTab = "pull_requests" | "issues" | "actions";
@@ -525,14 +523,9 @@ export function ForgeDetailPanel({
   repoProvider = "github"
 }: ForgeDetailPanelProps) {
   const [commentDraft, setCommentDraft] = useState("");
-  const [inlineCommentDraft, setInlineCommentDraft] = useState("");
   const [reviewAgentTargetMode, setReviewAgentTargetMode] = useState<ForgeReviewAgentTargetMode>("new-worktree");
-  const [inlineComposerTarget, setInlineComposerTarget] = useState<{
-    key: string;
-    path: string;
-    oldLine: number | null;
-    newLine: number | null;
-  } | null>(null);
+  const [isChangedFilesTreeOpen, setIsChangedFilesTreeOpen] = useState(false);
+  const [expandedChangeId, setExpandedChangeId] = useState<string | null>(null);
   const availableTools = useMemo(() => tools.filter((tool) => isAgentToolAvailable(tool)), [tools]);
   const detailProvider: ForgeProviderTab = detail?.item.id.startsWith("gitlab-") ? "gitlab" : repoProvider;
   const pullRequestLabel = detailProvider === "gitlab" ? "Merge Request" : "Pull Request";
@@ -550,18 +543,35 @@ export function ForgeDetailPanel({
     () => reviewCommentSelections.filter((comment) => selectedReviewCommentIds.includes(comment.commentId)),
     [reviewCommentSelections, selectedReviewCommentIds]
   );
+  const selectedChangePath = useMemo(
+    () => detail?.changes.find((change) => change.id === expandedChangeId)?.path ?? null,
+    [detail?.changes, expandedChangeId]
+  );
 
   useEffect(() => {
     setCommentDraft("");
-    setInlineCommentDraft("");
     setReviewAgentTargetMode("new-worktree");
-    setInlineComposerTarget(null);
+    setIsChangedFilesTreeOpen(false);
+    setExpandedChangeId(null);
     setSelectedReviewCommentIds([]);
   }, [detail?.kind, detail?.item.id]);
 
   useEffect(() => {
     setSelectedReviewCommentIds(reviewCommentSelections.map((comment) => comment.commentId));
   }, [reviewCommentSelections]);
+
+  useEffect(() => {
+    if (!expandedChangeId) {
+      return;
+    }
+
+    const element = document.getElementById(`forge-change-${expandedChangeId}`);
+    if (!element) {
+      return;
+    }
+
+    element.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [expandedChangeId]);
 
   const reviewCommentSelector = detail?.kind === "pull_request" && reviewCommentSelections.length ? (
     <div className="space-y-4">
@@ -713,6 +723,33 @@ export function ForgeDetailPanel({
               <RefreshCcw className="size-4" />
               Refresh
             </Button>
+            {detail?.kind === "pull_request" && detail.changes.length ? (
+              <Popover open={isChangedFilesTreeOpen} onOpenChange={setIsChangedFilesTreeOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={isChangedFilesTreeOpen ? "secondary" : "ghost"}
+                    size="sm"
+                    className="h-8"
+                  >
+                    <ListTree className="size-4" />
+                    {isChangedFilesTreeOpen ? "Hide files" : "Files"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" side="bottom" sideOffset={8} className="w-[min(22rem,calc(100vw-2rem))] p-0">
+                  <ForgeChangedFilesTree
+                    changes={detail.changes}
+                    selectedChangePath={selectedChangePath}
+                    onSelectChange={(changePath) => {
+                      const selectedChange = detail.changes.find((change) => change.path === changePath);
+                      if (selectedChange) {
+                        setExpandedChangeId(selectedChange.id);
+                      }
+                    }}
+                    onClose={() => setIsChangedFilesTreeOpen(false)}
+                  />
+                </PopoverContent>
+              </Popover>
+            ) : null}
             {reviewCommentSelector ? (
               <Popover>
                 <PopoverTrigger asChild>
@@ -884,163 +921,19 @@ export function ForgeDetailPanel({
                 </div>
                 {detail.changes.length ? (
                   <div className="space-y-3">
-                    {detail.changes.map((change) => {
-                      const languageId = resolveMonacoLanguageId(change.path);
-                      return (
-                        <div key={change.id} className="rounded-[6px] border border-border/50 bg-background/55 p-3">
-                          <div className="mb-2 text-xs text-muted-foreground">
-                            {[change.path, `+${change.additions}`, `-${change.deletions}`].join(" · ")}
-                            {change.previousPath ? ` · renamed from ${change.previousPath}` : ""}
-                          </div>
-                          <div className="terminal-text overflow-x-auto whitespace-pre rounded-[4px] border border-border/50 bg-background/70 p-2 text-[11px] leading-5">
-                            {parseDiffLines(formatDiffPreview(change.diff)).map((line) => {
-                              const inlineKey = getInlineCommentKey(change.path, line.oldLine, line.newLine);
-                              const inlineComments = inlineCommentsByKey.get(inlineKey) ?? [];
-                              const supportsInlineComments = detail.capabilities?.supportsInlineComments
-                                ?? (detailProvider === "gitlab" && detail.kind === "pull_request");
-                              const canCommentInline = supportsInlineComments && (line.oldLine !== null || line.newLine !== null);
-                              return (
-                                <div key={`${change.id}-${line.key}`} className="space-y-1">
-                                  <div className="group flex items-start gap-2">
-                                    <div className="mt-[1px] w-16 shrink-0 text-[10px] text-muted-foreground/80">
-                                      {line.oldLine ?? " "} | {line.newLine ?? " "}
-                                    </div>
-                                    <div className={cn("min-w-0 flex-1 whitespace-pre-wrap break-words px-1", diffLineClass(line.text, resolvedTheme))}>
-                                      <ForgeDiffCodeLine text={line.text} languageId={languageId} resolvedTheme={resolvedTheme} />
-                                    </div>
-                                    {canCommentInline ? (
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="mt-0.5 size-6 rounded-[4px] border border-transparent bg-background/80 opacity-0 shadow-sm transition hover:border-primary/30 hover:bg-primary/10 group-hover:opacity-100"
-                                        onClick={() => {
-                                          setInlineComposerTarget({
-                                            key: inlineKey,
-                                            path: change.path,
-                                            oldLine: line.oldLine,
-                                            newLine: line.newLine
-                                          });
-                                          setInlineCommentDraft("");
-                                        }}
-                                        aria-label="Add inline comment"
-                                      >
-                                        <Plus className="size-3.5" />
-                                      </Button>
-                                    ) : null}
-                                  </div>
-                                {inlineComments.length ? (
-                                  <div className="ml-[4.5rem] mt-2 space-y-3 border-l-2 border-primary/70 pl-3">
-                                    {inlineComments.map((comment) => (
-                                      <div
-                                        key={comment.id}
-                                        className="whitespace-normal rounded-[6px] border border-primary/25 bg-primary/5 p-3 font-sans text-xs shadow-sm shadow-primary/5"
-                                      >
-                                        <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
-                                          <MessageSquare className="size-3.5 text-primary" aria-hidden />
-                                          <span className="font-medium text-foreground">{comment.author || "Unknown"}</span>
-                                          <span>{new Date(comment.createdAt).toLocaleString()}</span>
-                                        </div>
-                                        {comment.body.trim() ? (
-                                          <MarkdownRenderer className="space-y-2 text-[13px] leading-5 text-foreground/90">
-                                            {comment.body}
-                                          </MarkdownRenderer>
-                                        ) : (
-                                          <div className="text-sm text-muted-foreground">No comment body provided.</div>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : null}
-                                {inlineComposerTarget?.key === inlineKey ? (
-                                  <div className="ml-[4.5rem] mt-2 overflow-hidden rounded-[6px] border border-primary/35 bg-background/95 shadow-lg shadow-primary/10">
-                                    <div className="flex items-center justify-between gap-3 border-b border-border/45 bg-primary/5 px-3 py-2">
-                                      <div className="min-w-0">
-                                        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
-                                          Inline review
-                                        </div>
-                                        <div className="mt-0.5 truncate font-sans text-xs text-muted-foreground">
-                                          <span className="font-mono text-foreground/85">{inlineComposerTarget.path}</span>
-                                          <span className="px-1.5">·</span>
-                                          <span>{formatForgeReviewLineLabel(inlineComposerTarget.oldLine, inlineComposerTarget.newLine)}</span>
-                                        </div>
-                                      </div>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="size-7 shrink-0 rounded-[4px]"
-                                        onClick={() => {
-                                          setInlineComposerTarget(null);
-                                          setInlineCommentDraft("");
-                                        }}
-                                        disabled={commentLoading}
-                                        aria-label="Cancel inline comment"
-                                      >
-                                        <X className="size-3.5" />
-                                      </Button>
-                                    </div>
-                                    <div className="space-y-2 p-3">
-                                    <Textarea
-                                      value={inlineCommentDraft}
-                                      onChange={(event) => setInlineCommentDraft(event.target.value)}
-                                      placeholder="Leave a review comment on this line"
-                                      className="min-h-24 resize-y border-border/60 bg-card/80 text-sm leading-5 focus-visible:ring-primary/40"
-                                      disabled={commentLoading}
-                                    />
-                                    <div className="flex items-center justify-between gap-3">
-                                      <div className="font-sans text-[11px] text-muted-foreground">
-                                        Posts as a review comment on the pull request diff.
-                                      </div>
-                                      <div className="flex shrink-0 items-center gap-2">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-8 rounded-[4px]"
-                                        onClick={() => {
-                                          setInlineComposerTarget(null);
-                                          setInlineCommentDraft("");
-                                        }}
-                                        disabled={commentLoading}
-                                      >
-                                        Cancel
-                                      </Button>
-                                      <Button
-                                        variant="default"
-                                        size="sm"
-                                        className="h-8 rounded-[4px]"
-                                        disabled={!inlineCommentDraft.trim() || commentLoading}
-                                        onClick={() => {
-                                          const nextComment = inlineCommentDraft.trim();
-                                          if (!nextComment) {
-                                            return;
-                                          }
-                                          void onCommentSubmit({
-                                            body: nextComment,
-                                            inlineTarget: {
-                                              path: inlineComposerTarget.path,
-                                              oldLine: inlineComposerTarget.oldLine,
-                                              newLine: inlineComposerTarget.newLine
-                                            }
-                                          }).then(() => {
-                                            setInlineComposerTarget(null);
-                                            setInlineCommentDraft("");
-                                          });
-                                        }}
-                                      >
-                                        <Send className="size-3.5" />
-                                        {commentLoading ? "Posting" : "Comment"}
-                                      </Button>
-                                      </div>
-                                    </div>
-                                    </div>
-                                  </div>
-                                ) : null}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {detail.changes.map((change) => (
+                      <ForgeChangedFile
+                        key={change.id}
+                        change={change}
+                        commentsByLine={inlineCommentsByKey}
+                        expanded={expandedChangeId === change.id}
+                        supportsInlineComments={detail.capabilities.supportsInlineComments}
+                        commentLoading={commentLoading}
+                        resolvedTheme={resolvedTheme}
+                        onToggle={() => setExpandedChangeId((current) => current === change.id ? null : change.id)}
+                        onCommentSubmit={onCommentSubmit}
+                      />
+                    ))}
                   </div>
                 ) : (
                   <div className="text-sm text-muted-foreground">No changed files available.</div>

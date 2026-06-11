@@ -1,6 +1,5 @@
 import type { ForgeWorkItemComment } from "@shared/appTypes";
-
-const MAX_DIFF_CHARS = 12_000;
+import { MAX_FORGE_DIFF_PREVIEW_CHARS } from "@shared/forgeDiff";
 
 export type ParsedDiffLine = {
   key: string;
@@ -15,11 +14,11 @@ export function formatDiffPreview(diff: string): string {
     return "No diff content available for this file.";
   }
 
-  if (normalized.length <= MAX_DIFF_CHARS) {
+  if (normalized.length <= MAX_FORGE_DIFF_PREVIEW_CHARS) {
     return normalized;
   }
 
-  return `${normalized.slice(0, MAX_DIFF_CHARS)}\n\n… Diff truncated for display`;
+  return `${normalized.slice(0, MAX_FORGE_DIFF_PREVIEW_CHARS)}\n\n… Diff truncated for display`;
 }
 
 export function parseDiffLines(diff: string): ParsedDiffLine[] {

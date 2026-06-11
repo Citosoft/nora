@@ -14,6 +14,7 @@ import type {
   ForgeWorkflowRunDetail,
   ForgeWorkflowRunSummary
 } from "@shared/appTypes";
+import { limitForgeDiffForTransport } from "@shared/forgeDiff";
 import { randomUUID } from "node:crypto";
 import type { CountDiffLinesFn, ForgeProviderRemoteAdapter } from "../../types/forgeRemote.types";
 import { getBoolean, getJsonArray, getJsonObject, getNumber, getString, type JsonObject } from "../../jsonValue";
@@ -108,7 +109,7 @@ export function createGithubForgeRemoteAdapter(countDiffLines: CountDiffLinesFn)
       previousPath: getString(item.previous_filename),
       additions: getNumber(item.additions) ?? countDiffLines(patch, "+"),
       deletions: getNumber(item.deletions) ?? countDiffLines(patch, "-"),
-      diff: patch
+      diff: limitForgeDiffForTransport(patch)
     };
   }
 

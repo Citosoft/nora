@@ -13,6 +13,7 @@ import type {
   ForgeWorkflowRunDetail,
   ForgeWorkflowRunSummary
 } from "@shared/appTypes";
+import { limitForgeDiffForTransport } from "@shared/forgeDiff";
 import { randomUUID } from "node:crypto";
 import type { CountDiffLinesFn, ForgeProviderRemoteAdapter } from "../../types/forgeRemote.types";
 import { getJsonArray, getJsonObject, getNumber, getString, type JsonObject } from "../../jsonValue";
@@ -123,7 +124,7 @@ export function createGitlabForgeRemoteAdapter(countDiffLines: CountDiffLinesFn)
       previousPath: oldPath && newPath && oldPath !== newPath ? oldPath : null,
       additions: countDiffLines(diff, "+"),
       deletions: countDiffLines(diff, "-"),
-      diff
+      diff: limitForgeDiffForTransport(diff)
     };
   }
 
