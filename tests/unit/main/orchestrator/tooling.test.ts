@@ -190,11 +190,20 @@ function writeFakeCliExecutable(basePath: string, scriptLines: string[]): string
   return basePath;
 }
 
-async function waitForFile(filePath: string): Promise<void> {
+async function waitForJsonFile<Value>(filePath: string): Promise<Value> {
   const startedAt = Date.now();
-  while (!existsSync(filePath)) {
+  while (true) {
+    if (existsSync(filePath)) {
+      try {
+        return JSON.parse(readFileSync(filePath, "utf8")) as Value;
+      } catch (error) {
+        if (!(error instanceof SyntaxError)) {
+          throw error;
+        }
+      }
+    }
     if (Date.now() - startedAt > 1000) {
-      throw new Error(`Timed out waiting for ${filePath}.`);
+      throw new Error(`Timed out waiting for valid JSON in ${filePath}.`);
     }
     await new Promise((resolve) => {
       setTimeout(resolve, 10);
@@ -351,8 +360,8 @@ test("switchToolAccount uses Claude Code's browser auth command", async () => {
 
     await helpers.switchToolAccount("claude");
 
-    await waitForFile(argvPath);
-    assert.deepEqual(JSON.parse(readFileSync(argvPath, "utf8")) as string[], ["auth", "login", "--claudeai"]);
+    const argv = await waitForJsonFile<string[]>(argvPath);
+    assert.deepEqual(argv, ["auth", "login", "--claudeai"]);
   } finally {
     rmSync(tempRoot, { recursive: true, force: true });
   }
@@ -388,8 +397,7 @@ test("switchToolAccount resolves after launching Claude browser auth", async () 
       })
     ]);
 
-    await waitForFile(childInfoPath);
-    const childInfo = JSON.parse(readFileSync(childInfoPath, "utf8")) as { pid: number; argv: string[] };
+    const childInfo = await waitForJsonFile<{ pid: number; argv: string[] }>(childInfoPath);
     assert.deepEqual(childInfo.argv, ["auth", "login", "--claudeai"]);
     process.kill(childInfo.pid);
   } finally {
