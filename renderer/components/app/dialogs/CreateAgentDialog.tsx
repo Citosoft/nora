@@ -116,7 +116,7 @@ export function CreateAgentDialog({
     branchCheckout: null,
     worktreeBranch: null
   });
-  const [branchPrefix, setBranchPrefix] = useState(WORKTREE_BRANCH_PREFIX_OPTIONS[0].value);
+  const [branchPrefix, setBranchPrefix] = useState<string>(WORKTREE_BRANCH_PREFIX_OPTIONS[0].value);
   const [branchName, setBranchName] = useState("");
   const [selectedPreparePresetValue, setSelectedPreparePresetValue] = useState("");
   const [contextSelections, setContextSelections] = useState<NonNullable<CreateAgentPayload["contextSelections"]>>([]);
