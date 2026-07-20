@@ -39,6 +39,7 @@ function createPayload(): CreateAgentPayload {
     toolId: "codex",
     name: "Scaffold Next.js project",
     task: "Scaffold a new Next.js project.",
+    initialPrompt: "Scaffold a new Next.js project.",
     commandOverride: "",
     mode: "write",
     target: { kind: "root" },

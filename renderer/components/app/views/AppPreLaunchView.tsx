@@ -40,7 +40,7 @@ export function AppPreLaunchView({
           <>
             <AppSplashScreen
               title="Nora is starting"
-              subtitle="Warming up agents and syncing workspaces."
+              subtitle="Warming up agents and syncing projects."
             />
             {shouldRenderLoadingOnboardingDialog(isOnboardingOpen) ? (
               <AppOnboardingDialog {...loadingOnboardingDialogProps} />

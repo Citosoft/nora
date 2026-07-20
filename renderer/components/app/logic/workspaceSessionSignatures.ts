@@ -22,6 +22,7 @@ export const getWorkspaceContextSignature = (workspace: WorkspaceSummary | null)
         agent.id,
         agent.sessionId,
         agent.name,
+        agent.threadTitle ?? "",
         agent.status,
         agent.mode,
         agent.toolId,
@@ -98,6 +99,7 @@ export const getAgentRenderSignature = (agent: AgentSession | null): string => {
   return [
     agent.id,
     agent.name,
+    agent.threadTitle ?? "",
     agent.status,
     agent.mode,
     agent.toolId,

@@ -60,7 +60,7 @@ export const AI_CHAT_PANEL_MODE_MENU: {
     label: "Ask",
     shortLabel: "Ask",
     disabled: false,
-    description: "Read-only workspace chat."
+    description: "Read-only project chat."
   },
   {
     value: "agent",

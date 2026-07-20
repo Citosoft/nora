@@ -70,7 +70,7 @@ export function TaskPanel() {
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               <FileText className="size-3.5" />
-              {completed ? "Completed task" : "Workspace task"}
+              {completed ? "Completed task" : "Project task"}
             </div>
             <div className="mt-1 flex items-center gap-2">
               <div className="truncate text-sm font-medium" title={title}>

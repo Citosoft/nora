@@ -1,9 +1,10 @@
 import type { NoteListEntry, SpecListEntry, TaskListEntry } from "@/components/app/types/component.types";
-import type { CreateTerminalDialogDefaults } from "@/components/app/types";
-import type { AiChatTabState } from "@/components/app/types";
+import type { AiChatTabState, CreateAgentDialogDefaults, CreateTerminalDialogDefaults } from "@/components/app/types";
 import type {
   AgentSession,
+  CreateAgentPayload,
   CreateTerminalPayload,
+  ExternalHarnessContextRef,
   ForgeBranchPullRequestStatus,
   TerminalPreset,
   TerminalQuickLaunchDefaults,
@@ -21,13 +22,16 @@ export type WorkspaceSidebarWorkspaceGroupProps = {
   onCollapsedWorkspaceIdsChange: (updater: (current: Record<string, boolean>) => Record<string, boolean>) => void;
   collapsedWorkspaceWorktreeSectionIds: Record<string, boolean>;
   collapsedWorkspaceAgentSectionIds: Record<string, boolean>;
+  collapsedWorkspaceThreadSectionIds: Record<string, boolean>;
   collapsedWorkspaceTerminalSectionIds: Record<string, boolean>;
   collapsedWorkspaceAiChatSectionIds: Record<string, boolean>;
   collapsedWorkspaceNoteSectionIds: Record<string, boolean>;
   collapsedWorkspaceSpecSectionIds: Record<string, boolean>;
   collapsedWorkspaceTaskSectionIds: Record<string, boolean>;
+  externalThreadReloadToken: number;
   toggleWorkspaceWorktreeSection: (workspaceId: string) => void;
   toggleWorkspaceAgentSection: (workspaceId: string) => void;
+  toggleWorkspaceThreadSection: (workspaceId: string) => void;
   toggleWorkspaceTerminalSection: (workspaceId: string) => void;
   toggleWorkspaceAiChatSection: (workspaceId: string) => void;
   toggleWorkspaceNoteSection: (workspaceId: string) => void;
@@ -76,7 +80,9 @@ export type WorkspaceSidebarWorkspaceGroupProps = {
   onCheckoutWorkspaceBranch: (projectId: string, branch: string) => Promise<AppState | null>;
   onLaunchWorktreeScript: (projectId: string, payload: CreateTerminalPayload) => void;
   onRemoveWorktree: (projectId: string, worktreeId: string, branch: string) => void;
-  onOpenCreateAgent: () => void;
+  onOpenCreateAgent: (defaults?: CreateAgentDialogDefaults) => void;
+  onResumeThread: (projectId: string, payload: CreateAgentPayload) => Promise<void>;
+  onArchiveThread: (projectId: string, ref: ExternalHarnessContextRef) => Promise<void>;
   onOpenCreateTerminal: (defaults: CreateTerminalDialogDefaults) => void;
   onLaunchWorkspaceTerminal: (projectId: string, payload: CreateTerminalPayload) => void;
   onLaunchWorkspaceScript: (projectId: string, defaults: CreateTerminalDialogDefaults) => void;

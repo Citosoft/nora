@@ -59,7 +59,7 @@ export function createWorkspaceAiChatTools(ctx: WorkspaceAiChatToolContext) {
   const readOnlyTools = {
     read_workspace_file: tool({
       description:
-        "Read a text file from the workspace using a path relative to the repo root (forward slashes). For large files, pass startLine/endLine (1-based, inclusive).",
+        "Read a text file from the project using a path relative to the repo root (forward slashes). For large files, pass startLine/endLine (1-based, inclusive).",
       inputSchema: zodSchema(
         z.object({
           path: z.string().min(1).describe("Repo-relative file path using /"),
@@ -103,7 +103,7 @@ export function createWorkspaceAiChatTools(ctx: WorkspaceAiChatToolContext) {
     }),
     list_workspace_directories: tool({
       description:
-        "List directories that appear in the workspace (from tracked paths and empty dirs). Optional path prefix filters results.",
+        "List directories that appear in the project (from tracked paths and empty dirs). Optional path prefix filters results.",
       inputSchema: zodSchema(
         z.object({
           pathPrefix: z.string().optional().describe("Only include directories equal to or under this prefix"),

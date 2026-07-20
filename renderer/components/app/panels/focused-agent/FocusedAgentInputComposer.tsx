@@ -119,7 +119,7 @@ export const FocusedAgentInputComposer = ({
                 sources={contextSelector.sources}
                 selections={contextSelector.selections}
                 isLoading={isLoadingContextSources}
-                emptyMessage="No other agents in this workspace have tracked context yet."
+                emptyMessage="No other agents in this project have tracked context yet."
                 onChange={onChangeContextSelections}
               />
             </PopoverContent>

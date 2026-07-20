@@ -92,6 +92,11 @@ export class WorkspaceMainService implements WorkspaceService {
   ): Promise<ExternalHarnessSessionSummary[]> =>
     this.actions().listExternalHarnessContextSessionsByProject(projectId, rootPath);
 
+  archiveExternalHarnessThread = (
+    projectId: string,
+    ref: ExternalHarnessContextRef
+  ): Promise<void> => this.actions().archiveExternalHarnessThreadByProject(projectId, ref);
+
   composeExternalHarnessContextSelections = (
     projectId: string,
     ref: ExternalHarnessContextRef

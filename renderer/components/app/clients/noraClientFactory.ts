@@ -43,6 +43,7 @@ export const NORA_WORKSPACE_CLIENT_METHODS = [
   "searchWorkspaceFiles",
   "listImportedContextBundles",
   "listExternalHarnessContextSessions",
+  "archiveExternalHarnessThread",
   "composeExternalHarnessContextSelections",
   "listNoraDetectableContextBundles",
   "importNoraDetectableContextBundle",

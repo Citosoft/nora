@@ -87,12 +87,12 @@ export function WorkspaceSwitcherDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         onClose={() => onOpenChange(false)}
-        headerTitle="Workspace Switcher"
+        headerTitle="Project Switcher"
         className="max-w-[640px]"
       >
         <DialogBody className="space-y-3 pt-0">
           <div className="text-sm text-muted-foreground">
-            Use <span className="font-medium text-foreground">Up</span> and <span className="font-medium text-foreground">Down</span> to choose a workspace, then press <span className="font-medium text-foreground">Enter</span>.
+            Use <span className="font-medium text-foreground">Up</span> and <span className="font-medium text-foreground">Down</span> to choose a project, then press <span className="font-medium text-foreground">Enter</span>.
           </div>
           {sortedWorkspaces.length ? (
             <div className="overflow-hidden rounded-[6px] border border-border/60 bg-background/30">
@@ -138,7 +138,7 @@ export function WorkspaceSwitcherDialog({
             </div>
           ) : (
             <div className="rounded-[6px] border border-dashed border-border/70 bg-background/20 px-4 py-6 text-sm text-muted-foreground">
-              No workspaces available.
+              No projects available.
             </div>
           )}
         </DialogBody>

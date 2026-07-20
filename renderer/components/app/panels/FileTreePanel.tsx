@@ -653,7 +653,7 @@ export function FileTreePanel({
   if (!fileTree.length) {
     return (
       <div className="m-3 border border-dashed border-border/70 bg-background/40 p-4 text-sm text-muted-foreground">
-        No files available in this workspace.
+        No files available in this project.
       </div>
     );
   }
@@ -811,8 +811,8 @@ export function FileTreePanel({
           <DialogBody className="space-y-4">
             <DialogDescription>
               {deleteTarget?.kind === "directory"
-                ? "This removes the folder and its contents from the workspace. This action cannot be undone here."
-                : "This removes the file from the workspace. This action cannot be undone here."}
+                ? "This removes the folder and its contents from the project. This action cannot be undone here."
+                : "This removes the file from the project. This action cannot be undone here."}
             </DialogDescription>
             {deleteTarget ? (
               <div className="rounded-[4px] border border-border/70 bg-background/40 px-3 py-2 text-sm text-foreground">

@@ -277,7 +277,7 @@ export const TitleBarWorkspaceQuickSearch = ({
           <div
             role="dialog"
             aria-modal="true"
-            aria-label="Workspace search"
+            aria-label="Project search"
             className={cn(
               "flex max-h-[min(560px,calc(100vh-6rem))] w-[min(640px,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-border/80 bg-popover text-popover-foreground shadow-2xl"
             )}
@@ -297,7 +297,7 @@ export const TitleBarWorkspaceQuickSearch = ({
                 onChange={(event) => setQuery(event.target.value)}
                 onKeyDown={handlePaletteInputKeyDown}
                 placeholder="Search agents, terminals, tasks, specs, notes, files…"
-                aria-label="Workspace search query"
+                aria-label="Project search query"
                 autoComplete="off"
                 spellCheck={false}
                 className="h-9 flex-1 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -308,14 +308,14 @@ export const TitleBarWorkspaceQuickSearch = ({
             </div>
             <div
               role="listbox"
-              aria-label="Workspace search results"
+              aria-label="Project search results"
               className="min-h-0 flex-1"
               onKeyDown={handleListKeyDown}
               tabIndex={-1}
             >
               {!displayRows.length ? (
                 <div className="px-4 py-10 text-center text-sm text-muted-foreground">
-                  {query.trim() ? "No matches in this workspace." : "Nothing to show yet for this workspace."}
+                  {query.trim() ? "No matches in this project." : "Nothing to show yet for this project."}
                 </div>
               ) : (
                 <ScrollArea ref={resultsScrollRef} className="max-h-[min(420px,calc(100vh-14rem))]">
@@ -387,7 +387,7 @@ export const TitleBarWorkspaceQuickSearch = ({
           "flex h-8 w-full min-w-[12rem] max-w-md items-center gap-2 rounded-[6px] border py-1 pl-2.5 pr-2 text-left text-xs transition hover:bg-accent/40",
           titleBarSelectorSurfaceClass
         )}
-        aria-label="Open workspace search"
+        aria-label="Open project search"
         aria-expanded={open}
         aria-haspopup="dialog"
       >
@@ -398,7 +398,7 @@ export const TitleBarWorkspaceQuickSearch = ({
           )}
           aria-hidden
         />
-        <span className="min-w-0 flex-1 truncate text-muted-foreground">Search workspace…</span>
+        <span className="min-w-0 flex-1 truncate text-muted-foreground">Search project...</span>
         <kbd className="shrink-0 rounded border border-border/60 bg-muted/40 px-1 py-px font-mono text-[10px] text-muted-foreground">
           {openShortcutLabel}
         </kbd>

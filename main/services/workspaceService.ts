@@ -22,6 +22,7 @@ export function createWorkspaceService(deps: WorkspaceServiceDeps): WorkspaceSer
     searchWorkspaceFiles: deps.searchWorkspaceFiles,
     listImportedContextBundles: deps.listImportedContextBundles,
     listExternalHarnessContextSessions: deps.listExternalHarnessContextSessions,
+    archiveExternalHarnessThread: deps.archiveExternalHarnessThread,
     composeExternalHarnessContextSelections: deps.composeExternalHarnessContextSelections,
     listNoraDetectableContextBundles: deps.listNoraDetectableContextBundles,
     importNoraDetectableContextBundle: deps.importNoraDetectableContextBundle,

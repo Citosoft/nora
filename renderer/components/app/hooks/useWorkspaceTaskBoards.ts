@@ -57,7 +57,7 @@ export function useWorkspaceTaskBoards() {
           return {
             projectId,
             board: createDefaultWorkspaceTaskBoard(),
-            errorMessage: error instanceof Error ? error.message : "Unable to load workspace task board."
+            errorMessage: error instanceof Error ? error.message : "Unable to load project task board."
           };
         }
       })
@@ -118,7 +118,7 @@ export function useWorkspaceTaskBoards() {
         [projectId]: {
           board: previousState.board,
           isLoading: false,
-          errorMessage: error instanceof Error ? error.message : "Unable to save workspace task board."
+          errorMessage: error instanceof Error ? error.message : "Unable to save project task board."
         }
       }));
       throw error;

@@ -45,6 +45,10 @@ export const buildResumeCommand = (
     return normalizeAgentLaunchCommand(agent.toolId, `${executable} resume ${resumeSessionId}`);
   }
 
+  if (agent.toolId === "claude") {
+    return normalizeAgentLaunchCommand(agent.toolId, `${executable} --resume ${resumeSessionId}`);
+  }
+
   if (agent.toolId === "cursor") {
     return normalizeAgentLaunchCommand(agent.toolId, `agent --resume=${resumeSessionId}`);
   }

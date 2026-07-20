@@ -97,7 +97,7 @@ export function DestroyAgentDialog({
                   <div className="flex gap-3">
                     <dt className="flex w-[5.5rem] shrink-0 items-center gap-1.5 text-xs font-medium text-muted-foreground">
                       <FolderGit2 className="size-3.5 opacity-80" aria-hidden="true" />
-                      Workspace
+                      Project
                     </dt>
                     <dd className="min-w-0 break-all font-mono text-xs leading-relaxed text-foreground">
                       {agent.workspace}

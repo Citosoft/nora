@@ -30,17 +30,19 @@ export async function launchProjectScaffoldAgent(
     };
   }
 
+  const initialPrompt = input.payload.initialPrompt?.trim() ?? "";
   const promptPresetAtLaunch =
+    initialPrompt.length > 0 &&
     input.payload.initialPromptDelivery === "launch-command" &&
     canPresetAgentInitialPrompt(input.payload.toolId);
 
-  if (!promptPresetAtLaunch) {
+  if (initialPrompt && !promptPresetAtLaunch) {
     await deps.handoffPrompt({
       agentId,
       prompt: {
         source: input.payload.launchSource ?? "dialog",
         title: "New project scaffold",
-        text: input.payload.task,
+        text: initialPrompt,
         workspacePaths: [],
         contextSelections: []
       },

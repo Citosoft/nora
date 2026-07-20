@@ -65,6 +65,13 @@ export abstract class WorkspaceActionsApiBase {
     return this.getWorkspaceActions().listExternalHarnessContextSessionsByProject(projectId, rootPath);
   }
 
+  async archiveExternalHarnessThread(
+    projectId: string,
+    ref: ExternalHarnessContextRef
+  ): Promise<void> {
+    return this.getWorkspaceActions().archiveExternalHarnessThreadByProject(projectId, ref);
+  }
+
   async composeExternalHarnessContextSelections(
     projectId: string,
     ref: ExternalHarnessContextRef

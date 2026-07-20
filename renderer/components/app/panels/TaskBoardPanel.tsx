@@ -99,7 +99,7 @@ export function TaskBoardPanel({
   };
 
   const workspaceSelectClassName =
-    "h-9 min-w-[10rem] max-w-[16rem] rounded-[5px] border border-input bg-background px-3 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+    "form-control-surface h-9 min-w-[10rem] max-w-[16rem] rounded-[5px] border px-3 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
@@ -133,7 +133,7 @@ export function TaskBoardPanel({
                 value={activeWorkspace.projectId}
                 onChange={(event) => onSelectWorkspace(event.target.value)}
                 className={workspaceSelectClassName}
-                aria-label="Active workspace for board and actions"
+                aria-label="Active project for board and actions"
               >
                 {workspaces.map((workspace) => (
                   <option key={workspace.projectId} value={workspace.projectId}>
@@ -292,7 +292,7 @@ export function TaskBoardPanel({
                         </div>
                         <div className="px-5 py-4">
                           {workspace.isTasksLoading || workspace.isBoardLoading ? (
-                            <div className="text-sm text-muted-foreground">Loading workspace tasks…</div>
+                            <div className="text-sm text-muted-foreground">Loading project tasks...</div>
                           ) : groups.length ? (
                             <div className="space-y-4">
                               {groups.map((group) => (
@@ -325,7 +325,7 @@ export function TaskBoardPanel({
                               ))}
                             </div>
                           ) : (
-                            <div className="text-sm text-muted-foreground">No tasks yet for this workspace.</div>
+                            <div className="text-sm text-muted-foreground">No tasks yet for this project.</div>
                           )}
                         </div>
                       </Card>
@@ -342,7 +342,7 @@ export function TaskBoardPanel({
               {!activeWorkspace ? (
                 <EmptyTaskBoardState />
               ) : activeWorkspace.isTasksLoading || activeWorkspace.isBoardLoading ? (
-                <div className="text-sm text-muted-foreground">Loading workspace board…</div>
+                <div className="text-sm text-muted-foreground">Loading project board...</div>
               ) : activeWorkspace.tasksErrorMessage || activeWorkspace.boardErrorMessage ? (
                 <div className="text-sm text-destructive">
                   {activeWorkspace.tasksErrorMessage || activeWorkspace.boardErrorMessage}
@@ -535,7 +535,7 @@ function TaskListRow({
         checked={selected}
         onChange={onToggleSelection}
         aria-label={`Select ${task.title}`}
-        className="size-4 rounded-[4px] border border-input bg-background"
+        className="form-control-surface size-4 rounded-[4px] border"
       />
       <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left">
         <FileText className="size-4 shrink-0 text-primary" />
@@ -617,7 +617,7 @@ function TaskBoardCard({
             checked={selected}
             onChange={onToggleSelection}
             aria-label={`Select ${task.title}`}
-            className="size-4 rounded-[4px] border border-input bg-background"
+            className="form-control-surface size-4 rounded-[4px] border"
           />
           Select
         </label>
@@ -649,7 +649,7 @@ function EmptyTaskBoardState() {
   return (
     <div className="flex h-full min-h-[320px] items-center justify-center rounded-[4px] border border-dashed border-border/70 bg-background/30 text-center">
       <div className="max-w-md px-6">
-        <div className="text-lg font-semibold text-foreground">No workspace tasks yet</div>
+        <div className="text-lg font-semibold text-foreground">No project tasks yet</div>
         <div className="mt-2 text-sm text-muted-foreground">
           Create Markdown task files and organize them into board sections without moving task content into a database.
         </div>

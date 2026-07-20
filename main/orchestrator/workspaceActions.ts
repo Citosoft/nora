@@ -74,6 +74,8 @@ export type WorkspaceActionsDependencies = {
     projectId: string,
     collection: WorkspaceSplitViewCollection
   ) => Promise<WorkspaceSplitViewCollection>;
+  listArchivedExternalHarnessThreadKeys: (projectId: string) => Promise<Set<string>>;
+  archiveExternalHarnessThread: (projectId: string, ref: ExternalHarnessContextRef, archivedAt: string) => Promise<void>;
   saveProject: (project: ProjectSummary) => Promise<void>;
 };
 
@@ -137,8 +139,17 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
       worktreeId,
       agents: snapshot.agents,
       agentCatalog: snapshot.agentCatalog,
+      archivedThreadKeys: await deps.listArchivedExternalHarnessThreadKeys(project.id),
       isRemoteWorkspace: target.location?.kind === "ssh"
     });
+  };
+
+  const archiveExternalHarnessThreadByProject = async (
+    projectId: string,
+    ref: ExternalHarnessContextRef
+  ): Promise<void> => {
+    await deps.resolveProjectSummaryById(projectId);
+    await deps.archiveExternalHarnessThread(projectId, ref, deps.nowIso());
   };
 
   const composeExternalHarnessContextSelectionsByProject = async (
@@ -347,6 +358,7 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
     listWorkspaceFiles,
     listImportedContextBundlesByProject,
     listExternalHarnessContextSessionsByProject,
+    archiveExternalHarnessThreadByProject,
     composeExternalHarnessContextSelectionsByProject,
     listWorkspaceDirectoriesByProject,
     listWorkspaceSpecsByProject,

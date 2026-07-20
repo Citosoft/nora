@@ -120,7 +120,7 @@ export function useAppToolInstallFlows({
     if (!snapshot?.project) {
       setUiState((current) => ({
         ...current,
-        activeErrorMessage: "Open a workspace before launching an install terminal from the footer."
+        activeErrorMessage: "Open a project before launching an install terminal from the footer."
       }));
       return;
     }

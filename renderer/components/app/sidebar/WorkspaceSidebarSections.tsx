@@ -117,9 +117,9 @@ export function WorkspaceSidebarCollapsedRail({
         <div className="flex flex-col items-center gap-2 px-1">
           <CollapsedMetric icon={<MonitorPlay className="size-4" />} label="Ports" count={activePortsCount} />
           <CollapsedMetric icon={<HardDrive className="size-4" />} label="Remote Mounts" count={activeRemoteMountsCount} />
-          {workspaceTasksCount ? <CollapsedMetric icon={<FolderGit2 className="size-4" />} label="Workspace Tasks" count={workspaceTasksCount} /> : null}
-          {workspaceSpecsCount ? <CollapsedMetric icon={<Sparkles className="size-4" />} label="Workspace Specs" count={workspaceSpecsCount} /> : null}
-          {workspaceNotesCount ? <CollapsedMetric icon={<StickyNote className="size-4" />} label="Workspace Notes" count={workspaceNotesCount} /> : null}
+          {workspaceTasksCount ? <CollapsedMetric icon={<FolderGit2 className="size-4" />} label="Project Tasks" count={workspaceTasksCount} /> : null}
+          {workspaceSpecsCount ? <CollapsedMetric icon={<Sparkles className="size-4" />} label="Project Specs" count={workspaceSpecsCount} /> : null}
+          {workspaceNotesCount ? <CollapsedMetric icon={<StickyNote className="size-4" />} label="Project Notes" count={workspaceNotesCount} /> : null}
         </div>
       </div>
     </div>
@@ -166,7 +166,7 @@ export function WorkspaceSidebarRemoteMountsSection(props: {
   } = props;
 
   return (
-    <div className="border-t border-border/60">
+    <div className="workspace-sidebar-section-divider border-t">
       <SectionHeader
         title="Remote Mounts"
         detail={`${activeRemoteMounts.length} active`}
@@ -262,7 +262,7 @@ export function WorkspaceSidebarPortsSection(props: {
   const { activePorts, currentProjectRoot, isCollapsed, onToggleCollapsed, onFocusTerminal, onFocusWorkspaceTerminal, onOpenWorkspaceBrowser } = props;
 
   return (
-    <div className="border-t border-border/60">
+    <div className="workspace-sidebar-section-divider border-t">
       <SectionHeader title="Ports" detail={`${activePorts.length} active`} isCollapsed={isCollapsed} onToggleCollapsed={onToggleCollapsed} />
       {isCollapsed ? null : (
         <div className="space-y-2 px-2 py-2">
@@ -323,7 +323,7 @@ export function WorkspaceSidebarChatbotsSection(props: {
   const { shortcuts, currentProjectId, isCollapsed, onToggleCollapsed, onOpenWorkspaceBrowser } = props;
 
   return (
-    <div className="border-t border-border/60">
+    <div className="workspace-sidebar-section-divider border-t">
       <SectionHeader
         title="AI Chatbots"
         detail={`${shortcuts.length} shortcuts`}
@@ -386,10 +386,10 @@ function SectionHeader({
   onToggleCollapsed: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between bg-background/70 px-4 pb-2.5 pt-1.5">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/80">{title}</div>
+    <div className="workspace-sidebar-section-header flex items-center justify-between px-4 py-1.5">
+      <div className="workspace-sidebar-section-title">{title}</div>
       <div className="flex items-center gap-2">
-        <div className="text-[11px] font-semibold text-foreground/70">{detail}</div>
+        <div className="workspace-sidebar-section-detail">{detail}</div>
         <Button variant="ghost" size="icon" className="size-7" onClick={onToggleCollapsed} aria-label={isCollapsed ? `Expand ${title.toLowerCase()} section` : `Collapse ${title.toLowerCase()} section`}>
           {isCollapsed ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4 rotate-[-90deg]" />}
         </Button>

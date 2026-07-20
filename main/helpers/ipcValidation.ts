@@ -69,17 +69,14 @@ export function normalizeCreateAgentPayload(payload: CreateAgentPayload): Create
     toolId: typeof payload.toolId === "string" ? payload.toolId : "",
     name: typeof payload.name === "string" ? payload.name : "",
     task: typeof payload.task === "string" ? payload.task : "",
+    initialPrompt: typeof payload.initialPrompt === "string" ? payload.initialPrompt : "",
     commandOverride: typeof payload.commandOverride === "string" ? payload.commandOverride : ""
   };
 }
 
 export function validateCreateAgentPayload(payload: CreateAgentPayload): void {
   const toolId = (typeof payload.toolId === "string" ? payload.toolId : "").trim();
-  const task = (typeof payload.task === "string" ? payload.task : "").trim();
   if (!toolId) {
     throw new Error("toolId is required.");
-  }
-  if (!task) {
-    throw new Error("task is required.");
   }
 }

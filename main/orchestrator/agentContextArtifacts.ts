@@ -319,13 +319,13 @@ export function buildLaunchContextEntry(options: {
         ? "Workspace root"
         : "Session default target";
   const content = [
-    `Agent: ${options.agent.name}`,
+    options.agent.name.trim() ? `Agent: ${options.agent.name.trim()}` : null,
     `Tool: ${options.agent.toolLabel}`,
     `Mode: ${options.agent.mode}`,
     `Launch target: ${targetLabel}`,
     `Task: ${options.agent.task}`,
     `Command: ${options.agent.command}`
-  ].join("\n");
+  ].filter((line): line is string => !!line).join("\n");
 
   return {
     id: `${options.agent.id}-launch-${Date.parse(options.createdAt)}`,

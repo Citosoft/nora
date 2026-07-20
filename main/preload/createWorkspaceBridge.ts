@@ -41,6 +41,8 @@ export function createWorkspaceBridge(): WorkspaceBridge {
       invokeIpc("app:list-imported-context-bundles", projectId, rootPath),
     listExternalHarnessContextSessions: (projectId, rootPath) =>
       invokeIpc("app:list-external-harness-context-sessions", projectId, rootPath),
+    archiveExternalHarnessThread: (payload) =>
+      invokeIpc("app:archive-external-harness-thread", payload),
     composeExternalHarnessContextSelections: (projectId, ref) =>
       invokeIpc("app:compose-external-harness-context-selections", projectId, ref),
     listNoraDetectableContextBundles: (projectId, sessionId, worktreeId) =>

@@ -434,7 +434,7 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
             references: [
               ...(currentUrl ? [{ kind: "workspace-path" as const, label: "Browser URL", value: currentUrl }] : []),
               ...(workspaceInstructionPath
-                ? [{ kind: "workspace-path" as const, label: "Workspace instructions", value: workspaceInstructionPath }]
+                ? [{ kind: "workspace-path" as const, label: "Project instructions", value: workspaceInstructionPath }]
                 : [])
             ]
           },
@@ -468,7 +468,7 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
           references: [
             ...(currentUrl ? [{ kind: "workspace-path" as const, label: "Browser URL", value: currentUrl }] : []),
             ...(workspaceInstructionPath
-              ? [{ kind: "workspace-path" as const, label: "Workspace instructions", value: workspaceInstructionPath }]
+              ? [{ kind: "workspace-path" as const, label: "Project instructions", value: workspaceInstructionPath }]
               : [])
           ]
         },

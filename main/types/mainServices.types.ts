@@ -106,6 +106,10 @@ export interface WorkspaceService {
     projectId: string,
     rootPath?: string
   ) => Promise<ExternalHarnessSessionSummary[]>;
+  archiveExternalHarnessThread: (
+    projectId: string,
+    ref: ExternalHarnessContextRef
+  ) => Promise<void>;
   composeExternalHarnessContextSelections: (
     projectId: string,
     ref: ExternalHarnessContextRef

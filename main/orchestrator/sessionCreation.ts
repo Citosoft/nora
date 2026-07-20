@@ -31,8 +31,10 @@ export function createSessionCreationHelpers(deps: SessionCreationDeps): Session
       throw new Error(`${tool.label} is not installed yet.`);
     }
 
-    const agentName = (payload.name || tool.label).trim();
+    const agentName = payload.name.trim();
     const launchCommand = deps.resolveAgentLaunchCommand(tool, payload);
+    const initialResumeSessionId = payload.resumeSessionId?.trim() || null;
+    const initialResumeCommand = payload.resumeCommand?.trim() || null;
     const agentId = deps.randomId();
     const toolEnv = deps.getToolEnv(tool.id);
     let provisionalAgent: AgentSession | null = null;
@@ -61,8 +63,9 @@ export function createSessionCreationHelpers(deps: SessionCreationDeps): Session
           pid: null,
           lastEventAt: deps.nowIso(),
           lastTerminalLine: "Creating worktree...",
-          resumeSessionId: null,
-          resumeCommand: null,
+          resumeSessionId: initialResumeSessionId,
+          resumeCommand: initialResumeCommand,
+          threadTitle: null,
           contextFilePath: pendingContextPaths.contextFilePath,
           terminalStreamPath: pendingContextPaths.terminalStreamPath,
           isBusy: true,
@@ -152,8 +155,9 @@ export function createSessionCreationHelpers(deps: SessionCreationDeps): Session
           pid: null,
           lastEventAt: deps.nowIso(),
           lastTerminalLine: launchStatusLine,
-          resumeSessionId: null,
-          resumeCommand: null,
+          resumeSessionId: initialResumeSessionId,
+          resumeCommand: initialResumeCommand,
+          threadTitle: null,
           contextFilePath: contextPaths.contextFilePath,
           terminalStreamPath: contextPaths.terminalStreamPath,
           isBusy: true,

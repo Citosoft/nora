@@ -34,6 +34,7 @@ export interface TerminalStateHelperDeps {
     value: string
   ) => Partial<Pick<AgentSession, "resumeSessionId" | "resumeCommand">> | null;
   buildResumeCommand: (agent: AgentSession) => string | null;
+  resolveAgentSessionTitle: (agent: AgentSession) => Promise<string | null>;
 }
 
 export interface TerminalStateHelpers {

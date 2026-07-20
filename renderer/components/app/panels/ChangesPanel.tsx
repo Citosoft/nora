@@ -156,7 +156,7 @@ function buildExternalHarnessTooltipContent(args: {
     <div className="space-y-1">
       <div><span className="font-semibold">Session:</span> {args.sessionLabel}</div>
       <div><span className="font-semibold">Conversation:</span> {args.conversationId}</div>
-      <div><span className="font-semibold">Workspace:</span> {args.workspacePath}</div>
+      <div><span className="font-semibold">Project:</span> {args.workspacePath}</div>
       <div><span className="font-semibold">Transcript file:</span> {args.primaryArtifactPath}</div>
       <div className="pt-1 text-[11px]">Click to prefill a new agent with this transcript.</div>
     </div>
@@ -915,7 +915,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                     activeTab === "context" ? activeSidebarTabClass : inactiveSidebarTabClass
                   )}
                   onClick={() => onActiveTabChange("context")}
-                  title="Workspace agent context you can attach to a new agent, and files under .nora/imported_context"
+                  title="Project agent context you can attach to a new agent, and files under .nora/imported_context"
                 >
                   <Brain className="size-3.5 shrink-0" />
                   <span className="truncate">Context</span>
@@ -1065,7 +1065,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                     className="flex items-center gap-1 text-muted-foreground"
                     title={
                       contextSubTab === "detected"
-                        ? `${workspaceAgentContextGroupCount} conversation group(s) from other agents in this workspace`
+                        ? `${workspaceAgentContextGroupCount} conversation group(s) from other agents in this project`
                         : `${importedBundlesUnique.length} unique file(s) under .nora/imported_context`
                     }
                   >
@@ -1411,11 +1411,11 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                       <div className="space-y-5 p-3 pb-6">
                         <section className="space-y-2" aria-labelledby="detected-nora-agents-heading">
                           <h3 id="detected-nora-agents-heading" className="px-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                            Nora workspace agents
+                            Nora project agents
                           </h3>
                           {!sortedAgentContextSources.length ? (
                             <div className="border border-dashed border-border/70 bg-background/40 p-3 text-sm text-muted-foreground">
-                              No other agents in this workspace have tracked context yet. Launch an agent and send prompts to
+                              No other agents in this project have tracked context yet. Launch an agent and send prompts to
                               build shareable conversation groups.
                             </div>
                           ) : (
@@ -1803,7 +1803,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                           >
                             <input
                               type="checkbox"
-                              className="size-3 rounded-[3px] border border-input bg-background"
+                              className="form-control-surface size-3 rounded-[3px] border"
                               checked={selectedPathSet.has(change.path)}
                               onChange={() => toggleCommitPath(change.path)}
                               aria-label={`Include ${change.path} in commit`}

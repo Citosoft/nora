@@ -80,7 +80,7 @@ export const AiChatComposer = ({
               className="inline-flex max-w-full items-center gap-1 rounded-full border border-border/60 bg-background/85 px-2.5 py-0.5 text-[11px] font-medium text-foreground/90 shadow-sm backdrop-blur-sm"
               title={workspacePill.title}
               role="status"
-              aria-label={`Active workspace: ${workspacePill.label}. ${workspacePill.title}`}
+              aria-label={`Active project: ${workspacePill.label}. ${workspacePill.title}`}
             >
               <FolderOpen className="size-3 shrink-0 text-muted-foreground" aria-hidden />
               <span className="min-w-0 truncate">{workspacePill.label}</span>
@@ -108,7 +108,7 @@ export const AiChatComposer = ({
             onSubmit();
           }}
           placeholder={
-            provider ? "Message the workspace assistant…" : "Add an API key in Settings → AI to start chatting"
+            provider ? "Message the project assistant…" : "Add an API key in Settings → AI to start chatting"
           }
           disabled={!hasTransport || busy}
           rows={1}

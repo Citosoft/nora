@@ -276,7 +276,8 @@ export function AddWorkspaceDialog({
         {
           toolId: selectedToolId,
           name: `Scaffold ${selectedFramework.label} project`,
-          task: scaffoldPrompt,
+          task: `Scaffold ${selectedFramework.label} project`,
+          initialPrompt: scaffoldPrompt,
           commandOverride: "",
           mode: "write",
           target: { kind: "root" },
@@ -301,12 +302,12 @@ export function AddWorkspaceDialog({
       <DialogContent
         className={isScaffoldWizardOpen ? "h-[min(84vh,760px)] w-[min(980px,calc(100vw-2rem))] max-w-none" : undefined}
         onClose={() => onOpenChange(false)}
-        headerTitle={isScaffoldWizardOpen ? "New project" : "Add workspace"}
+        headerTitle={isScaffoldWizardOpen ? "New project" : "Add project"}
       >
         <DialogHeader>
           <DialogDescription>
             {isScaffoldWizardOpen
-              ? "Choose a framework and options, then create a git-initialized workspace for an agent to scaffold."
+              ? "Choose a framework and options, then create a git-initialized project for an agent to scaffold."
               : "Choose whether to open an existing repository or scaffold a new project with an agent."}
           </DialogDescription>
         </DialogHeader>
@@ -605,7 +606,7 @@ export function AddWorkspaceDialog({
                           placeholder={selectedFramework ? `${selectedFramework.id}-app` : "my-new-project"}
                         />
                         <div className="mt-2 text-xs text-muted-foreground">
-                          Nora will ask where to create this folder, initialize git, open it as a workspace, then launch the agent.
+                          Nora will ask where to create this folder, initialize git, open it as a project, then launch the agent.
                         </div>
                       </div>
                       {availableTools.length ? (

@@ -9,7 +9,9 @@ import type {
 import { normalizeComparablePath } from "@shared/pathComparison";
 import os from "node:os";
 import path from "node:path";
+import { buildExternalHarnessThreadArchiveKey } from "../../externalHarnessThreadArchiveStore";
 import { normalizeStoredResumeSessionId } from "../resumeCommandUtils";
+import { resolveAgentSessionTitle } from "../agentSessionTitles";
 import { readMergedAgentContextEntries } from "./contextRepository";
 import { externalHarnessDiscoveryAdapters } from "./externalHarnessDiscoveryRegistry";
 import { buildSyntheticExternalHarnessAgent } from "./externalHarnessSyntheticAgent";
@@ -59,6 +61,7 @@ export const listExternalHarnessContextSessions = async (options: {
   worktreeId: string;
   agents: AgentSession[];
   agentCatalog: AgentCatalogEntry[];
+  archivedThreadKeys: Set<string>;
   /** Harness stores (~/.codex, etc.) are local; skip when the focused checkout is not on this machine. */
   isRemoteWorkspace: boolean;
 }): Promise<ExternalHarnessSessionSummary[]> => {
@@ -72,18 +75,35 @@ export const listExternalHarnessContextSessions = async (options: {
       adapter.discoverExternalHarnessCandidates(options.workspaceAbsolutePath, occupied)
     )
   );
-  const merged = candidateLists.flat().sort((left, right) => (right.lastUpdatedAt || "").localeCompare(left.lastUpdatedAt || ""));
+  const merged = candidateLists
+    .flat()
+    .filter((candidate) => !options.archivedThreadKeys.has(buildExternalHarnessThreadArchiveKey({
+      workspacePath: options.workspaceAbsolutePath,
+      toolId: candidate.toolId,
+      conversationId: candidate.conversationId,
+      primaryArtifactPath: candidate.primaryArtifactPath
+    })))
+    .sort((left, right) => (right.lastUpdatedAt || "").localeCompare(left.lastUpdatedAt || ""));
   const capped = merged.slice(0, 40);
 
   const summaries: ExternalHarnessSessionSummary[] = [];
   for (const candidate of capped) {
     const toolLabel = resolveToolLabel(options.agentCatalog, candidate.toolId);
+    const threadTitle = await resolveAgentSessionTitle({
+      id: `external-harness:${candidate.toolId}:${candidate.conversationId}`,
+      name: "",
+      toolId: candidate.toolId,
+      workspace: options.workspaceAbsolutePath,
+      resumeSessionId: candidate.conversationId,
+      threadTitle: null
+    }).catch(() => null);
     const ref: ExternalHarnessContextRef = {
       toolId: candidate.toolId,
       toolLabel,
       conversationId: candidate.conversationId,
       primaryArtifactPath: candidate.primaryArtifactPath,
       sessionLabel: candidate.sessionLabel,
+      threadTitle,
       workspacePath: options.workspaceAbsolutePath
     };
     const synthetic = buildSyntheticExternalHarnessAgent({

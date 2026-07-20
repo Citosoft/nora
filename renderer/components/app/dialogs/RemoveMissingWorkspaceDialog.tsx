@@ -29,17 +29,17 @@ export function RemoveMissingWorkspaceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent headerTitle="Remove Missing Workspace">
+      <DialogContent headerTitle="Remove Missing Project">
         <DialogHeader>
           <DialogDescription>
-            {APP_SHORT_NAME} could not open this workspace. It may belong to a remote mount that is no longer available.
+            {APP_SHORT_NAME} could not open this project. It may belong to a remote mount that is no longer available.
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
           <div className="rounded-[4px] border border-destructive/25 bg-destructive/5 p-3 text-sm">
             {projectRoot ? (
               <div className="break-all">
-                <span className="font-medium">Workspace:</span> {projectRoot}
+                <span className="font-medium">Project:</span> {projectRoot}
               </div>
             ) : null}
             {errorMessage ? (
@@ -49,7 +49,7 @@ export function RemoveMissingWorkspaceDialog({
         </DialogBody>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isRemoving}>
-            Keep workspace
+            Keep project
           </Button>
           <Button
             variant="outline"
@@ -63,7 +63,7 @@ export function RemoveMissingWorkspaceDialog({
             disabled={!projectRoot || isRemoving}
           >
             {isRemoving ? <LoaderCircle className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
-            Remove workspace
+            Remove project
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -16,7 +16,7 @@ export function DevSettingsSection() {
       <div className="divide-y divide-border/60 rounded-[6px] border border-border/70 bg-card/35 px-5">
         <SettingRow
           title="Onboarding Flow"
-          description="Reopen the first-run onboarding flow with the current workspace and settings data."
+          description="Reopen the first-run onboarding flow with the current project and settings data."
           control={(
             <Button variant="outline" onClick={openOnboardingFlow}>
               Open onboarding

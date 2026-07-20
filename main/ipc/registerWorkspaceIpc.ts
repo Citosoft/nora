@@ -2,6 +2,7 @@ import { listProviderModels } from "@main/ai/providerModels";
 import type { MainServices } from "@main/services/mainServices";
 import type {
   AgentContextSelection,
+  ArchiveExternalHarnessThreadPayload,
   AppSettings,
   AppState,
   CommitChangesPayload,
@@ -78,6 +79,11 @@ export function registerWorkspaceIpc({
     "app:list-external-harness-context-sessions",
     (_event, projectId: string, rootPath?: string): Promise<ExternalHarnessSessionSummary[]> =>
       services.workspace.listExternalHarnessContextSessions(projectId, rootPath)
+  );
+  ipcMain.handle(
+    "app:archive-external-harness-thread",
+    (_event, payload: ArchiveExternalHarnessThreadPayload): Promise<void> =>
+      services.workspace.archiveExternalHarnessThread(payload.projectId, payload.ref)
   );
   ipcMain.handle(
     "app:compose-external-harness-context-selections",

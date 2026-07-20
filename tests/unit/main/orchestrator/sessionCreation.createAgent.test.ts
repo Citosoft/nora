@@ -308,6 +308,18 @@ test("createAgent allows direct SSH projects even when the tool is not detected 
   assert.equal(result.agents[0].status, "starting");
 });
 
+test("createAgent keeps blank agent names blank", async () => {
+  const tool = createAgentTool();
+  const state = createState(createProjectSummary(undefined), tool);
+  const harness = createHarness({ state });
+  const helpers = createSessionCreationHelpers(harness.deps);
+
+  const result = await helpers.createAgent(createAgentPayload({ name: "   " }));
+
+  assert.equal(result.agents.length, 1);
+  assert.equal(result.agents[0].name, "");
+});
+
 test("createAgent reports and persists launch errors when PTY spawn fails", async () => {
   const tool = createAgentTool();
   const state = createState(createProjectSummary(undefined), tool);

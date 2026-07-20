@@ -88,7 +88,7 @@ export const WorkspaceWorkspaceActionsMenuItems = ({
         </div>
       ) : null}
       {runnableWorkspaceTerminalPresets.length > 0 ? (
-        <div className="px-3 pb-1 pt-0.5 text-[12px] font-medium text-muted-foreground">Workspace presets</div>
+        <div className="px-3 pb-1 pt-0.5 text-[12px] font-medium text-muted-foreground">Project presets</div>
       ) : null}
       {runnableWorkspaceTerminalPresets.map((preset) => (
         <DropdownMenuItem
@@ -137,7 +137,7 @@ export const WorkspaceWorkspaceActionsMenuItems = ({
       </DropdownMenuItem>
       <DropdownMenuItem destructive onSelect={() => onSelectWithClose(() => onRemoveProject(workspace.project.rootPath))}>
         <X className="size-4" />
-        Remove workspace
+        Remove project
       </DropdownMenuItem>
     </>
   );

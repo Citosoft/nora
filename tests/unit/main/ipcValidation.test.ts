@@ -16,9 +16,10 @@ function basePayload(overrides: Partial<CreateAgentPayload> = {}): CreateAgentPa
 }
 
 test("normalizeCreateAgentPayload coerces missing string fields", () => {
-  const raw = { ...basePayload(), name: undefined } as unknown as CreateAgentPayload;
+  const raw = { ...basePayload(), name: undefined, initialPrompt: undefined } as unknown as CreateAgentPayload;
   const normalized = normalizeCreateAgentPayload(raw);
   assert.equal(normalized.name, "");
+  assert.equal(normalized.initialPrompt, "");
 });
 
 test("validateCreateAgentPayload accepts empty agent name", () => {
@@ -34,9 +35,8 @@ test("validateCreateAgentPayload rejects empty toolId", () => {
   );
 });
 
-test("validateCreateAgentPayload rejects empty task", () => {
-  assert.throws(
-    () => validateCreateAgentPayload(normalizeCreateAgentPayload(basePayload({ task: "" }))),
-    /task is required/
-  );
+test("validateCreateAgentPayload accepts empty task", () => {
+  assert.doesNotThrow(() => {
+    validateCreateAgentPayload(normalizeCreateAgentPayload(basePayload({ task: "" })));
+  });
 });

@@ -72,6 +72,16 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
     onResetWorkspaces: d.uiCommands.openResetWorkspacesDialog,
     onOpenCreateAgent: (defaults) => d.uiCommands.openCreateAgentDialog(defaults),
     onOpenCreateTerminal: (defaults) => d.uiCommands.openCreateTerminalDialog(defaults),
+    onResumeThread: async (projectId, payload) => {
+      const focused = await d.focusWorkspaceWithRecovery(projectId);
+      if (!focused) {
+        return;
+      }
+      await d.safely(() => noraSessionClient.createAgent(payload));
+    },
+    onArchiveThread: async (projectId, ref) => {
+      await noraWorkspaceClient.archiveExternalHarnessThread({ projectId, ref });
+    },
     onLaunchWorkspaceTerminal: (projectId, payload) => {
       void d.launchTerminalInWorkspace(projectId, payload);
     },
@@ -117,7 +127,7 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
     onOpenWorkflowRunChangeRequest: async (projectId, worktreeId) => {
       const focused = await d.focusWorkspaceWithRecovery(projectId);
       if (!focused) {
-        throw new Error("Unable to focus the workflow workspace.");
+        throw new Error("Unable to focus the workflow project.");
       }
       const next = await d.safely(() => noraSessionClient.focusWorktree(worktreeId));
       if (!next) {
@@ -453,6 +463,8 @@ export function WorkspaceSidebarProvider({
     onResetWorkspaces: value.onResetWorkspaces,
     onOpenCreateAgent: value.onOpenCreateAgent,
     onOpenCreateTerminal: value.onOpenCreateTerminal,
+    onResumeThread: value.onResumeThread,
+    onArchiveThread: value.onArchiveThread,
     onLaunchWorkspaceTerminal: value.onLaunchWorkspaceTerminal,
     onLaunchWorkspaceScript: value.onLaunchWorkspaceScript,
     onOpenWorkspaceTerminalPresets: value.onOpenWorkspaceTerminalPresets,

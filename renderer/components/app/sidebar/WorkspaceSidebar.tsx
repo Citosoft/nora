@@ -4,6 +4,7 @@ import {
   useWorkspaceSidebarUi
 } from "@/components/app/context/workspaceSidebarContext";
 import { useWorkspaceSidebarAllAgents } from "@/components/app/hooks/useWorkspaceSidebarAllAgents";
+import { useWorkspaceSidebarAllThreads } from "@/components/app/hooks/useWorkspaceSidebarAllThreads";
 import { buildWorkspaceCollapseAllMap, useWorkspaceSidebarDerived } from "@/components/app/hooks/useWorkspaceSidebarDerived";
 import { useWorkspaceSidebarOverlays } from "@/components/app/hooks/useWorkspaceSidebarOverlays";
 import { useWorkspaceSidebarRemoteMounts } from "@/components/app/hooks/useWorkspaceSidebarRemoteMounts";
@@ -17,6 +18,7 @@ import {
   WorkspaceSidebarRemoteMountsSection
 } from "@/components/app/sidebar/WorkspaceSidebarSections";
 import { WorkspaceSidebarAllAgentsSection } from "@/components/app/sidebar/workspace-sidebar/WorkspaceSidebarAllAgentsSection";
+import { WorkspaceSidebarAllThreadsSection } from "@/components/app/sidebar/workspace-sidebar/WorkspaceSidebarAllThreadsSection";
 import { WorkspaceSidebarContextMenus } from "@/components/app/sidebar/workspace-sidebar/WorkspaceSidebarContextMenus";
 import { WorkspaceSidebarWorkspaceGroup } from "@/components/app/sidebar/workspace-sidebar/WorkspaceSidebarWorkspaceGroup";
 import { WorkspaceSidebarWorkspacesHeader } from "@/components/app/sidebar/workspace-sidebar/WorkspaceSidebarWorkspacesHeader";
@@ -28,6 +30,7 @@ import { useState } from "react";
 export const WorkspaceSidebar = () => {
   const [editingTerminalSessionId, setEditingTerminalSessionId] = useState<string | null>(null);
   const [editingTerminalNameDraft, setEditingTerminalNameDraft] = useState("");
+  const [externalThreadReloadToken, setExternalThreadReloadToken] = useState(0);
   const snapshot = useCanonicalAppSnapshot();
   const {
     githubToken,
@@ -75,6 +78,8 @@ export const WorkspaceSidebar = () => {
     onResetWorkspaces,
     onOpenCreateAgent,
     onOpenCreateTerminal,
+    onResumeThread,
+    onArchiveThread,
     onLaunchWorkspaceTerminal,
     onLaunchWorkspaceScript,
     onOpenWorkspaceTerminalPresets,
@@ -176,10 +181,29 @@ export const WorkspaceSidebar = () => {
     gitlabToken,
     gitlabHost
   });
+  const {
+    allThreadsGroupBy,
+    allThreadsGroupSections,
+    allThreadsHarnessFilter,
+    allThreadsHarnessFilterOptions,
+    allThreadsWorkspaceFilter,
+    allThreadsWorkspaceFilterOptions,
+    filteredAllWorkspaceThreadEntries,
+    isAllThreadsSectionCollapsed,
+    isLoadingAllThreads,
+    setAllThreadsGroupBy,
+    setAllThreadsHarnessFilter,
+    setAllThreadsWorkspaceFilter,
+    setIsAllThreadsSectionCollapsed
+  } = useWorkspaceSidebarAllThreads({
+    workspaceGroups,
+    reloadToken: externalThreadReloadToken
+  });
 
   const {
     collapsedWorkspaceWorktreeSectionIds,
     collapsedWorkspaceAgentSectionIds,
+    collapsedWorkspaceThreadSectionIds,
     collapsedWorkspaceTerminalSectionIds,
     collapsedWorkspaceAiChatSectionIds,
     collapsedWorkspaceNoteSectionIds,
@@ -187,6 +211,7 @@ export const WorkspaceSidebar = () => {
     collapsedWorkspaceTaskSectionIds,
     toggleWorkspaceWorktreeSection,
     toggleWorkspaceAgentSection,
+    toggleWorkspaceThreadSection,
     toggleWorkspaceTerminalSection,
     toggleWorkspaceAiChatSection,
     toggleWorkspaceNoteSection,
@@ -306,13 +331,16 @@ export const WorkspaceSidebar = () => {
                           onCollapsedWorkspaceIdsChange={onCollapsedWorkspaceIdsChange}
                           collapsedWorkspaceWorktreeSectionIds={collapsedWorkspaceWorktreeSectionIds}
                           collapsedWorkspaceAgentSectionIds={collapsedWorkspaceAgentSectionIds}
+                          collapsedWorkspaceThreadSectionIds={collapsedWorkspaceThreadSectionIds}
                           collapsedWorkspaceTerminalSectionIds={collapsedWorkspaceTerminalSectionIds}
                           collapsedWorkspaceAiChatSectionIds={collapsedWorkspaceAiChatSectionIds}
                           collapsedWorkspaceNoteSectionIds={collapsedWorkspaceNoteSectionIds}
                           collapsedWorkspaceSpecSectionIds={collapsedWorkspaceSpecSectionIds}
                           collapsedWorkspaceTaskSectionIds={collapsedWorkspaceTaskSectionIds}
+                          externalThreadReloadToken={externalThreadReloadToken}
                           toggleWorkspaceWorktreeSection={toggleWorkspaceWorktreeSection}
                           toggleWorkspaceAgentSection={toggleWorkspaceAgentSection}
+                          toggleWorkspaceThreadSection={toggleWorkspaceThreadSection}
                           toggleWorkspaceTerminalSection={toggleWorkspaceTerminalSection}
                           toggleWorkspaceAiChatSection={toggleWorkspaceAiChatSection}
                           toggleWorkspaceNoteSection={toggleWorkspaceNoteSection}
@@ -362,6 +390,8 @@ export const WorkspaceSidebar = () => {
                           onLaunchWorktreeScript={onLaunchWorktreeScript}
                           onRemoveWorktree={onRemoveWorktree}
                           onOpenCreateAgent={onOpenCreateAgent}
+                          onResumeThread={onResumeThread}
+                          onArchiveThread={onArchiveThread}
                           onOpenCreateTerminal={onOpenCreateTerminal}
                           onLaunchWorkspaceTerminal={onLaunchWorkspaceTerminal}
                           onLaunchWorkspaceScript={onLaunchWorkspaceScript}
@@ -392,7 +422,7 @@ export const WorkspaceSidebar = () => {
                       ))
                     ) : snapshot.project ? (
                       <div className="border-y border-dashed border-border/70 bg-background/40 px-4 py-4 text-sm text-muted-foreground">
-                        Add a repository to start grouping agents by workspace.
+                        Add a repository to start grouping agents by project.
                       </div>
                     ) : (
                       <div className="border-y border-dashed border-border/70 bg-background/40 px-4 py-4 text-sm text-muted-foreground">
@@ -401,6 +431,24 @@ export const WorkspaceSidebar = () => {
                     )}
                   </div>
                 </section>
+                <WorkspaceSidebarAllThreadsSection
+                  allThreadsWorkspaceFilter={allThreadsWorkspaceFilter}
+                  setAllThreadsWorkspaceFilter={setAllThreadsWorkspaceFilter}
+                  allThreadsWorkspaceFilterOptions={allThreadsWorkspaceFilterOptions}
+                  allThreadsHarnessFilter={allThreadsHarnessFilter}
+                  setAllThreadsHarnessFilter={setAllThreadsHarnessFilter}
+                  allThreadsHarnessFilterOptions={allThreadsHarnessFilterOptions}
+                  allThreadsGroupBy={allThreadsGroupBy}
+                  setAllThreadsGroupBy={setAllThreadsGroupBy}
+                  isAllThreadsSectionCollapsed={isAllThreadsSectionCollapsed}
+                  setIsAllThreadsSectionCollapsed={setIsAllThreadsSectionCollapsed}
+                  filteredAllWorkspaceThreadEntries={filteredAllWorkspaceThreadEntries}
+                  allThreadsGroupSections={allThreadsGroupSections}
+                  isLoadingAllThreads={isLoadingAllThreads}
+                  onResumeThread={onResumeThread}
+                  onArchiveThread={onArchiveThread}
+                  onThreadsChanged={() => setExternalThreadReloadToken((current) => current + 1)}
+                />
                 <WorkspaceSidebarAllAgentsSection
                   focusedAgent={focusedAgent}
                   now={now}

@@ -77,7 +77,7 @@ export function CliSettingsSection() {
             trigger={(
               <button
                 type="button"
-                className="flex h-10 w-full items-center justify-between rounded-[5px] border border-input bg-background px-3 py-2 text-sm ring-offset-background transition hover:bg-accent/40"
+                className="form-control-surface flex h-10 w-full items-center justify-between rounded-[5px] border px-3 py-2 text-sm ring-offset-background transition"
                 aria-label="Choose preferred agent CLI"
               >
                 <span className="flex min-w-0 items-center gap-2">

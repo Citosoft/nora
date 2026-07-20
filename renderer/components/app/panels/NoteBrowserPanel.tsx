@@ -71,7 +71,7 @@ export function NoteBrowserPanel({
                 </div>
                 <div className="px-5 py-4">
                   {workspace.isLoading ? (
-                    <div className="text-sm text-muted-foreground">Loading workspace notes…</div>
+                    <div className="text-sm text-muted-foreground">Loading project notes...</div>
                   ) : workspace.notes.length ? (
                     <div className="space-y-2">
                       {workspace.notes.map((note) => (
@@ -106,7 +106,7 @@ export function NoteBrowserPanel({
                     </div>
                   ) : (
                     <div className="rounded-[4px] border border-dashed border-border/70 bg-background/40 px-4 py-6 text-sm text-muted-foreground">
-                      No notes yet for this workspace.
+                      No notes yet for this project.
                     </div>
                   )}
                 </div>
@@ -114,7 +114,7 @@ export function NoteBrowserPanel({
             ))
           ) : (
             <div className="rounded-[4px] border border-dashed border-border/70 bg-background/40 px-6 py-8 text-sm text-muted-foreground">
-              Add a repository to keep notes per workspace.
+              Add a repository to keep notes per project.
             </div>
           )}
         </div>

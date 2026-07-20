@@ -19,13 +19,13 @@ export const FocusedAgentNoProjectHero = ({
       <pre className="mx-auto w-fit overflow-x-auto p-1 text-left font-mono text-sm leading-tight text-foreground md:text-base">
         {NORA_ASCII_3D}
       </pre>
-      <div>Open a repository once, then switch between workspaces and sessions from the left sidebar.</div>
+      <div>Open a repository once, then switch between projects and sessions from the left sidebar.</div>
     </div>
     <div className="flex justify-center">
       <Button variant="invisible" className="min-w-[220px] justify-between" onClick={() => void onChooseProject()}>
         <span className="inline-flex items-center gap-2">
           <FolderGit2 className="size-4" />
-          Add workspace
+          Add project
         </span>
         {addWorkspaceShortcutParts.length ? (
           <span className="inline-flex items-center gap-1">

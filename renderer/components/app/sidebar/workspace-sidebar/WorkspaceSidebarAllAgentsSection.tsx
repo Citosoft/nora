@@ -1,4 +1,5 @@
 import { isAgentBusyAt } from "@/components/app/logic/agentBusy";
+import { getAgentSessionDisplayTitle } from "@/components/app/logic/agentSessionDisplay";
 import {
   WORKSPACE_SIDEBAR_ALL_AGENTS_GROUP_BY_CYCLE,
   WORKSPACE_SIDEBAR_ALL_AGENTS_GROUP_BY_OPTIONS
@@ -18,6 +19,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronRight, SlidersHorizontal } from "lucide-react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useState } from "react";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
 
 export const WorkspaceSidebarAllAgentsSection = ({
@@ -39,17 +41,31 @@ export const WorkspaceSidebarAllAgentsSection = ({
   onFocusWorkspaceAgent
 }: WorkspaceSidebarAllAgentsSectionProps) => {
   const snapshot = useCanonicalAppSnapshot();
+  const [isControlsOpen, setIsControlsOpen] = useState(false);
   if (!snapshot) {
     return null;
   }
 
+  const applyWorkspaceFilter = (nextValue: string): void => {
+    setAllAgentsWorkspaceFilter(nextValue);
+    setIsControlsOpen(false);
+  };
+  const applyPrFilter = (nextValue: AllAgentsPrFilter): void => {
+    setAllAgentsPrFilter(nextValue);
+    setIsControlsOpen(false);
+  };
+  const applyGroupBy = (nextValue: typeof allAgentsGroupBy): void => {
+    setAllAgentsGroupBy(nextValue);
+    setIsControlsOpen(false);
+  };
+
   return (
-    <section className="border-t border-border/60">
-      <div className="flex items-center justify-between bg-background/70 px-4 py-2">
-        <div className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">Agents</div>
+    <section className="workspace-sidebar-section-divider border-t">
+      <div className="workspace-sidebar-section-header flex items-center justify-between px-4 py-1.5">
+        <div className="workspace-sidebar-section-title">Agents</div>
         <div className="flex items-center gap-2">
-          <div className="text-xs text-muted-foreground">{filteredAllWorkspaceAgentEntries.length}</div>
-          <Popover>
+          <div className="workspace-sidebar-section-detail">{filteredAllWorkspaceAgentEntries.length}</div>
+          <Popover open={isControlsOpen} onOpenChange={setIsControlsOpen}>
             <PopoverTrigger asChild>
               <Button variant="ghost" size="icon" className="size-7" aria-label="Filter and group agents">
                 <SlidersHorizontal className="size-4" />
@@ -60,12 +76,12 @@ export const WorkspaceSidebarAllAgentsSection = ({
                 <div className="space-y-2">
                   <div className="text-xs font-medium text-foreground">Filters</div>
                   <div>
-                    <div className="mb-1 text-[11px] text-muted-foreground">Workspace</div>
+                    <div className="mb-1 text-[11px] text-muted-foreground">Project</div>
                     <Select
                       className="h-8 text-xs"
                       value={allAgentsWorkspaceFilter}
-                      onChange={(event) => setAllAgentsWorkspaceFilter(event.target.value)}
-                      aria-label="Filter agents by workspace"
+                      onChange={(event) => applyWorkspaceFilter(event.target.value)}
+                      aria-label="Filter agents by project"
                     >
                       {allAgentsWorkspaceFilterOptions.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -79,7 +95,7 @@ export const WorkspaceSidebarAllAgentsSection = ({
                     <Select
                       className="h-8 text-xs"
                       value={allAgentsPrFilter}
-                      onChange={(event) => setAllAgentsPrFilter(event.target.value as AllAgentsPrFilter)}
+                      onChange={(event) => applyPrFilter(event.target.value as AllAgentsPrFilter)}
                       aria-label="Filter agents by pull request status"
                     >
                       <option value="all">All PR statuses</option>
@@ -105,7 +121,7 @@ export const WorkspaceSidebarAllAgentsSection = ({
                       }
                       if (event.key === "ArrowRight" || event.key === "ArrowDown") {
                         event.preventDefault();
-                        setAllAgentsGroupBy(
+                        applyGroupBy(
                           WORKSPACE_SIDEBAR_ALL_AGENTS_GROUP_BY_CYCLE[
                             (cycleIndex + 1) % WORKSPACE_SIDEBAR_ALL_AGENTS_GROUP_BY_CYCLE.length
                           ]
@@ -113,7 +129,7 @@ export const WorkspaceSidebarAllAgentsSection = ({
                       }
                       if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
                         event.preventDefault();
-                        setAllAgentsGroupBy(
+                        applyGroupBy(
                           WORKSPACE_SIDEBAR_ALL_AGENTS_GROUP_BY_CYCLE[
                             (cycleIndex - 1 + WORKSPACE_SIDEBAR_ALL_AGENTS_GROUP_BY_CYCLE.length) %
                               WORKSPACE_SIDEBAR_ALL_AGENTS_GROUP_BY_CYCLE.length
@@ -131,7 +147,7 @@ export const WorkspaceSidebarAllAgentsSection = ({
                           role="radio"
                           aria-checked={isSelected}
                           tabIndex={isSelected ? 0 : -1}
-                          onClick={() => setAllAgentsGroupBy(option.value)}
+                          onClick={() => applyGroupBy(option.value)}
                           className={cn(
                             "min-w-0 flex-1 rounded-full px-1.5 py-1.5 text-center text-[11px] font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                             isSelected
@@ -176,10 +192,11 @@ export const WorkspaceSidebarAllAgentsSection = ({
                       const hasPr = workspaceSidebarHasPullRequestState(entry.pullRequestStatus?.state);
                       const isFocusedAgent =
                         entry.workspaceId === snapshot.project?.id && focusedAgent?.id === entry.agent.id;
+                      const displayTitle = getAgentSessionDisplayTitle(entry.agent);
                       const secondaryLabel =
                         allAgentsGroupBy === "workspace"
-                          ? entry.agent.branch
-                          : `${entry.workspaceName} · ${entry.agent.branch}`;
+                          ? `${entry.agent.toolLabel} · ${entry.agent.branch}`
+                          : `${entry.workspaceName} · ${entry.agent.toolLabel} · ${entry.agent.branch}`;
                       return (
                         <button
                           key={entry.agent.id}
@@ -209,8 +226,10 @@ export const WorkspaceSidebarAllAgentsSection = ({
                             imageClassName="size-3.5 rounded-sm"
                           />
                           <div className="min-w-0 flex-1 truncate text-[12px] leading-tight">
-                            <span className="font-medium text-foreground">{entry.agent.name}</span>
-                            <span className="text-muted-foreground"> · {secondaryLabel}</span>
+                            {displayTitle ? <span className="font-medium text-foreground">{displayTitle}</span> : null}
+                            <span className="text-muted-foreground">
+                              {displayTitle ? " · " : ""}{secondaryLabel}
+                            </span>
                           </div>
                           {isBusy ? <BusyIndicator className="size-3 shrink-0" /> : null}
                           {hasPr && entry.pullRequestStatus ? (

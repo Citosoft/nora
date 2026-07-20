@@ -20,12 +20,12 @@ export function WorkbenchSettingsSection() {
     <div className="max-w-4xl">
       <SettingsSectionHeader
         title="Workbench"
-        description={`Tune workspace layout and view behavior in ${APP_SHORT_NAME}.`}
+        description={`Tune project layout and view behavior in ${APP_SHORT_NAME}.`}
         icon={LayoutDashboard}
       />
       <SettingRow
-        title="Workspace Sidebar"
-        description="Start with the workspace sidebar collapsed."
+        title="Projects Sidebar"
+        description="Start with the projects sidebar collapsed."
         control={
           <ToggleButton
             checked={workbenchLayout.isWorkspaceSidebarCollapsed}
@@ -47,7 +47,7 @@ export function WorkbenchSettingsSection() {
       />
       <SettingRow
         title="Remote Mounts Section"
-        description="Keep the remote mounts section collapsed in the workspace sidebar."
+        description="Keep the remote mounts section collapsed in the projects sidebar."
         control={
           <ToggleButton
             checked={workbenchLayout.isRemoteMountsSectionCollapsed}
@@ -58,7 +58,7 @@ export function WorkbenchSettingsSection() {
       />
       <SettingRow
         title="Active Ports Section"
-        description="Keep the active ports section collapsed in the workspace sidebar."
+        description="Keep the active ports section collapsed in the projects sidebar."
         control={
           <ToggleButton
             checked={workbenchLayout.isPortsSectionCollapsed}
@@ -69,7 +69,7 @@ export function WorkbenchSettingsSection() {
       />
       <SettingRow
         title="AI Chatbots Section"
-        description="Keep the AI chatbot shortcuts section collapsed in the workspace sidebar."
+        description="Keep the AI chatbot shortcuts section collapsed in the projects sidebar."
         control={
           <ToggleButton
             checked={workbenchLayout.isChatbotsSectionCollapsed}
@@ -80,7 +80,7 @@ export function WorkbenchSettingsSection() {
       />
       <SettingRow
         title="Agent CLIs Section"
-        description="Keep the agent CLI section collapsed in the workspace sidebar."
+        description="Keep the agent CLI section collapsed in the projects sidebar."
         control={
           <ToggleButton
             checked={workbenchLayout.isCliSectionCollapsed}
@@ -91,7 +91,7 @@ export function WorkbenchSettingsSection() {
       />
       <SettingRow
         title="Specs Section"
-        description="Keep the specs section collapsed in the workspace sidebar."
+        description="Keep the specs section collapsed in the projects sidebar."
         control={
           <ToggleButton
             checked={workbenchLayout.isSpecsSectionCollapsed}
@@ -135,7 +135,7 @@ export function WorkbenchSettingsSection() {
       />
       <SettingRow
         title="Remember Last Split View"
-        description="Reopen each workspace with its last active split view instead of always returning to the focused session."
+        description="Reopen each project with its last active split view instead of always returning to the focused session."
         control={
           <ToggleButton
             checked={appSettings.rememberLastSplitViewPerWorkspace}
@@ -156,8 +156,8 @@ export function WorkbenchSettingsSection() {
         }
       />
       <SettingRow
-        title="Workspace Session Tabs"
-        description="Show agent and terminal tabs above the main workspace panel."
+        title="Project Session Tabs"
+        description="Show agent and terminal tabs above the main project panel."
         control={
           <ToggleButton
             checked={appSettings.showWorkspaceSessionTabs}

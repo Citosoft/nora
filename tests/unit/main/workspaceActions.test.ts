@@ -62,6 +62,8 @@ function createWorkspaceActionsForTest(overrides: Partial<WorkspaceActionsDepend
     listWorkspaceTaskPaths: async () => [],
     readWorkspaceSplitViewCollection: async () => workspaceSplitViewCollection,
     writeWorkspaceSplitViewCollection: async () => workspaceSplitViewCollection,
+    listArchivedExternalHarnessThreadKeys: async () => new Set(),
+    archiveExternalHarnessThread: async () => undefined,
     saveProject: async () => undefined,
     ...overrides
   };

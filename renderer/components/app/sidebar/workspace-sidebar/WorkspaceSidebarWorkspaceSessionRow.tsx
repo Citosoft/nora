@@ -1,5 +1,6 @@
 import { setWorkspaceSplitViewItemDragData } from "@/components/app/logic/workspaceSplitViewDrag";
 import { isAgentBusyAt } from "@/components/app/logic/agentBusy";
+import { getAgentSessionDisplayTitle } from "@/components/app/logic/agentSessionDisplay";
 import {
   formatWorkspaceSessionTimestamp,
   getWorkspaceSidebarPullRequestDotClass,
@@ -92,6 +93,7 @@ export const WorkspaceSidebarWorkspaceSessionRow = ({
   const showAgentPullRequestStatus =
     kind === "agent" && workspaceSidebarHasPullRequestState(agentPullRequestStatus?.state);
   const showAgentUpdateIndicator = kind === "agent" && !isAgentBusy && !!agentsNeedingAttention[item.id];
+  const agentDisplayTitle = kind === "agent" ? getAgentSessionDisplayTitle(item) : null;
   const isTerminalInlineRenaming = kind === "terminal" && editingTerminalSessionId === item.id;
   const hasFocusedWorkspaceContentSurface =
     activeWorkspaceContentTab !== null || isTaskBoardOpen || isSpecBrowserOpen || isNoteBrowserOpen;
@@ -129,7 +131,7 @@ export const WorkspaceSidebarWorkspaceSessionRow = ({
           <div className="flex items-start gap-3">
             <AgentToolIcon toolId={item.toolId} label={item.toolLabel} className="size-10 shrink-0" imageClassName="size-6 rounded-sm" />
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-semibold">{item.name}</div>
+              {agentDisplayTitle ? <div className="truncate text-sm font-semibold">{agentDisplayTitle}</div> : null}
               <div className="mt-0.5 text-xs text-muted-foreground">{item.toolLabel} agent</div>
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
                 <Badge variant="outline">{item.mode}</Badge>
@@ -141,7 +143,7 @@ export const WorkspaceSidebarWorkspaceSessionRow = ({
         </div>
         <div className="grid gap-2 text-xs">
           <div className="rounded-[6px] border border-border/50 bg-background/60 p-2.5">
-            <div className="mb-1 text-[11px] text-muted-foreground">Workspace</div>
+            <div className="mb-1 text-[11px] text-muted-foreground">Project</div>
             <div className="break-all font-mono text-[11px] text-foreground/90">{item.workspace}</div>
           </div>
           {item.resumeSessionId ? (
@@ -210,7 +212,7 @@ export const WorkspaceSidebarWorkspaceSessionRow = ({
         </div>
         <div className="grid gap-2 text-xs">
           <div className="rounded-[6px] border border-border/50 bg-background/60 p-2.5">
-            <div className="mb-1 text-[11px] text-muted-foreground">Workspace</div>
+            <div className="mb-1 text-[11px] text-muted-foreground">Project</div>
             <div className="break-all font-mono text-[11px] text-foreground/90">{item.workspace}</div>
           </div>
           <div className="rounded-[6px] border border-border/50 bg-background/60 p-2.5">
@@ -268,12 +270,12 @@ export const WorkspaceSidebarWorkspaceSessionRow = ({
           />
         ) : (
           <>
-            <div className="truncate text-[13px] font-medium">{item.name}</div>
+            {agentDisplayTitle ? <div className="truncate text-[13px] font-medium">{agentDisplayTitle}</div> : null}
             <div className="truncate text-xs text-muted-foreground">
               {kind === "agent" && isAgentBusy && item.lastTerminalLine
                 ? item.lastTerminalLine
                 : kind === "agent"
-                  ? item.branch
+                  ? `${item.toolLabel} · ${item.branch}`
                   : item.launchConfig.label}
             </div>
           </>

@@ -89,10 +89,10 @@ function goalSourceLabel(
   tasks: WorkspaceTaskSummary[]
 ): string {
   if (goalKind === "spec") {
-    return specs.find((spec) => spec.path === selectedSpecPath)?.title ?? "Workspace spec";
+    return specs.find((spec) => spec.path === selectedSpecPath)?.title ?? "Project spec";
   }
   if (goalKind === "task") {
-    return tasks.find((task) => task.path === selectedTaskPath)?.title ?? "Workspace task";
+    return tasks.find((task) => task.path === selectedTaskPath)?.title ?? "Project task";
   }
   return "Custom instructions";
 }

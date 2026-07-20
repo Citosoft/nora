@@ -1,5 +1,6 @@
 import type {
   AgentContextSelection,
+  ArchiveExternalHarnessThreadPayload,
   AppState,
   CommitChangesPayload,
   CreateProjectWorkspacePayload,
@@ -82,6 +83,7 @@ export interface WorkspaceBridge {
     projectId: string,
     rootPath?: string
   ) => Promise<ExternalHarnessSessionSummary[]>;
+  archiveExternalHarnessThread: (payload: ArchiveExternalHarnessThreadPayload) => Promise<void>;
   composeExternalHarnessContextSelections: (
     projectId: string,
     ref: ExternalHarnessContextRef

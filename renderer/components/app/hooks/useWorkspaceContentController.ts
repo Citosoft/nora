@@ -78,13 +78,13 @@ export function useWorkspaceContentController({
 
   const resolveProjectName = (projectId: string): string => {
     if (!snapshot) {
-      return "Workspace";
+      return "Project";
     }
     if (snapshot.project?.id === projectId) {
       return snapshot.project.name;
     }
 
-    return snapshot.workspaces.find((workspace) => workspace.project.id === projectId)?.project.name ?? "Workspace";
+    return snapshot.workspaces.find((workspace) => workspace.project.id === projectId)?.project.name ?? "Project";
   };
 
   const resolveProjectSummary = (projectId: string) => {
@@ -110,8 +110,8 @@ export function useWorkspaceContentController({
 
     return {
       workspacePaths: [{ path: instructionFile.absolutePath, kind: "file" as const }],
-      references: [{ kind: "workspace-path" as const, label: "Workspace instructions", value: instructionFile.absolutePath }],
-      reminderText: `Workspace instructions live at ${instructionFile.absolutePath}.`
+      references: [{ kind: "workspace-path" as const, label: "Project instructions", value: instructionFile.absolutePath }],
+      reminderText: `Project instructions live at ${instructionFile.absolutePath}.`
     };
   };
 
@@ -873,7 +873,7 @@ export function useWorkspaceContentController({
     const payload: CreateAgentPayload = {
       toolId,
       name: `${projectName} planner`,
-      task: `Plan and create workspace tasks for ${projectName}`,
+      task: `Plan and create project tasks for ${projectName}`,
       commandOverride: "",
       launchSource: "task-planner",
       mode: "write",
@@ -919,13 +919,14 @@ export function useWorkspaceContentController({
   const handleCreateAgentFromDialog = async (payload: CreateAgentPayload, taskPath: string | null): Promise<void> => {
     try {
       const dialogContextSelections = payload.contextSelections ?? [];
+      const dialogInitialPrompt = payload.initialPrompt?.trim() ?? "";
+      const shouldHandoffInitialPrompt =
+        dialogInitialPrompt.length > 0 && payload.initialPromptDelivery !== "launch-command";
       const resolvedDialogTaskPath =
         taskPath && snapshot?.project ? await resolveWorkspaceStatePath(snapshot.project.id, taskPath) : null;
-      const workspaceInstruction = snapshot?.project ? buildWorkspaceInstructionPromptDetails(snapshot.project.id) : {
-        workspacePaths: [],
-        references: [],
-        reminderText: ""
-      };
+      const workspaceInstruction = resolvedDialogTaskPath && snapshot?.project
+        ? buildWorkspaceInstructionPromptDetails(snapshot.project.id)
+        : { workspacePaths: [], references: [], reminderText: "" };
       const launchResult = resolvedDialogTaskPath && snapshot?.project
         ? await launchAgentWithInstruction({
           payload,
@@ -952,7 +953,7 @@ export function useWorkspaceContentController({
             trackAgentCreation(agentPayload, "dialog");
           }
         })
-        : dialogContextSelections.length > 0 || workspaceInstruction.workspacePaths.length > 0
+        : dialogContextSelections.length > 0 || shouldHandoffInitialPrompt
         ? await launchAgent({
           payload,
           createAgent: (agentPayload) => runWithStatus("Creating agent", () => noraAgentClient.createAgent(agentPayload)),
@@ -963,8 +964,8 @@ export function useWorkspaceContentController({
           handoff: {
             prompt: {
               source: "dialog",
-              title: "Shared agent context",
-              text: workspaceInstruction.reminderText,
+              title: shouldHandoffInitialPrompt ? "Initial prompt" : "Shared agent context",
+              text: shouldHandoffInitialPrompt ? dialogInitialPrompt : workspaceInstruction.reminderText,
               workspacePaths: workspaceInstruction.workspacePaths,
               contextSelections: dialogContextSelections,
               references: workspaceInstruction.references

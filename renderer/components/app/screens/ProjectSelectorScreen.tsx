@@ -68,13 +68,13 @@ export function ProjectSelectorScreen() {
             <pre className="mx-auto w-fit overflow-x-auto p-1 text-left font-mono text-sm leading-tight text-foreground md:text-base">
               {NORA_ASCII_3D}
             </pre>
-            <div>Open a repository once, then switch between workspaces and sessions from the left sidebar.</div>
+            <div>Open a repository once, then switch between projects and sessions from the left sidebar.</div>
           </div>
           <div className="flex justify-center">
             <Button variant="invisible" className="min-w-[220px] justify-between" onClick={onChooseProject}>
               <span className="inline-flex items-center gap-2">
                 <FolderGit2 className="size-4" />
-                Add workspace
+                Add project
               </span>
               {addWorkspaceShortcutParts.length ? (
                 <span className="inline-flex items-center gap-1">
@@ -92,7 +92,7 @@ export function ProjectSelectorScreen() {
           </div>
           <div className="mx-auto w-full max-w-xl space-y-2 text-left">
             <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              Recent Workspaces
+              Recent Projects
             </div>
             {recentWorkspacePreview.length ? (
               <div className="space-y-1.5">
@@ -121,7 +121,7 @@ export function ProjectSelectorScreen() {
                 ))}
               </div>
             ) : (
-              <div className="text-sm text-muted-foreground">No recent workspaces yet.</div>
+              <div className="text-sm text-muted-foreground">No recent projects yet.</div>
             )}
           </div>
           <div className="flex justify-center">

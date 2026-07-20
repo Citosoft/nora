@@ -1,4 +1,4 @@
-import { AGENT_ROLE_OPTIONS, getAgentRoleLabel, getAgentRolePrompt } from "@/components/app/logic/agentRoles";
+import { AGENT_ROLE_OPTIONS, getAgentRolePrompt } from "@/components/app/logic/agentRoles";
 import { createLaunchTargetFormState, launchTargetModeFromTarget, resolveSupportedLaunchTargetMode } from "@/components/app/logic/createAgentLaunchTarget";
 import { useWorkspaceAgentContextSources } from "@/components/app/hooks/useWorkspaceAgentContextSources";
 import { AgentContextPicker } from "@/components/app/shared/AgentContextPicker";
@@ -9,8 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { isAgentToolAvailable } from "@shared/agentToolState";
+import { resolveManagedAgentLaunchOptions } from "@shared/agentStartupCapabilities";
 import type {
   CreateAgentPayload,
   TerminalPreset,
@@ -23,13 +25,13 @@ import { WORKTREE_BRANCH_PREFIX_OPTIONS } from "@/components/app/constants/workt
 
 const CREATE_AGENT_WIZARD_STEPS = [
   { id: "agent", label: "Agent" },
-  { id: "workspace", label: "Workspace" },
+  { id: "workspace", label: "Project" },
   { id: "context", label: "Context" }
 ] as const;
 
 type PreparePresetEntry = {
   value: string;
-  sourceLabel: "Workspace" | "Global";
+  sourceLabel: "Project" | "Global";
   preset: TerminalPreset;
   command: string;
 };
@@ -71,15 +73,6 @@ function findPreparePresetEntryByCommand(entries: PreparePresetEntry[], command:
   return entries.find((entry) => entry.command === normalizedCommand) ?? null;
 }
 
-function buildDefaultAgentDisplayName(toolLabel: string, roleId: AgentRoleId): string {
-  const rolePart = getAgentRoleLabel(roleId);
-  const trimmedTool = toolLabel.trim();
-  if (!trimmedTool) {
-    return rolePart;
-  }
-  return `${trimmedTool} ${rolePart}`;
-}
-
 export function CreateAgentDialog({
   open,
   project,
@@ -110,6 +103,7 @@ export function CreateAgentDialog({
     toolId: "",
     name: "",
     task: "",
+    initialPrompt: "",
     commandOverride: "",
     mode: "write",
     target: { kind: "new" },
@@ -124,7 +118,7 @@ export function CreateAgentDialog({
     enabled: open
   });
   const workspacePresetEntries = useMemo(
-    () => buildPreparePresetEntries(workspaceTerminalPresets, "Workspace", "workspace"),
+    () => buildPreparePresetEntries(workspaceTerminalPresets, "Project", "workspace"),
     [workspaceTerminalPresets]
   );
   const globalPresetEntries = useMemo(
@@ -143,15 +137,6 @@ export function CreateAgentDialog({
     () => agentSkillCatalogs.find((catalog) => catalog.toolId === formState.toolId) || null,
     [agentSkillCatalogs, formState.toolId]
   );
-  const selectedTool = useMemo(
-    () => detectedTools.find((tool) => tool.id === formState.toolId) ?? null,
-    [detectedTools, formState.toolId]
-  );
-  const defaultAgentDisplayName = useMemo(
-    () => buildDefaultAgentDisplayName(selectedTool?.label ?? "", selectedRoleId),
-    [selectedTool, selectedRoleId]
-  );
-
   const selectedExistingWorktree = (() => {
     const target = formState.target;
     return target.kind === "existing"
@@ -185,6 +170,7 @@ export function CreateAgentDialog({
         toolId: initialToolId,
         name: "",
         task: "",
+        initialPrompt: defaults?.initialPrompt ?? "",
         commandOverride: "",
         mode: defaults?.mode ?? "write",
         ...initialLaunchState,
@@ -295,15 +281,16 @@ export function CreateAgentDialog({
       launchTargetMode === "new" && branchNameValue
         ? { prefix: branchPrefix, name: branchNameValue }
         : null;
-    const resolvedAgentName =
-      formState.name.trim() ||
-      buildDefaultAgentDisplayName(selectedTool?.label ?? "", selectedRoleId);
     onCreateAgent(
       {
         ...formState,
-        name: resolvedAgentName,
+        name: formState.name.trim(),
         launchSource: "dialog",
-        task: getAgentRolePrompt(selectedRoleId, formState.task),
+        task: formState.task.trim(),
+        initialPrompt: formState.initialPrompt?.trim()
+          ? getAgentRolePrompt(selectedRoleId, formState.initialPrompt)
+          : "",
+        ...resolveManagedAgentLaunchOptions(formState.toolId),
         contextSelections,
         worktreeBranch
       },
@@ -422,8 +409,8 @@ export function CreateAgentDialog({
                       <Input
                         value={formState.name}
                         onChange={(event) => setFormState((current) => ({ ...current, name: event.target.value }))}
-                        placeholder={defaultAgentDisplayName}
-                        aria-label={`Agent name; leave blank for ${defaultAgentDisplayName}`}
+                        placeholder="Optional"
+                        aria-label="Agent name"
                       />
                     </Field>
                   </div>
@@ -588,7 +575,7 @@ export function CreateAgentDialog({
                           <option value="">Do not run a preset</option>
                           {workspacePresetEntries.map((entry) => (
                             <option key={entry.value} value={entry.value}>
-                              Workspace: {entry.preset.name.trim() || "Preset"}
+                              Project: {entry.preset.name.trim() || "Preset"}
                             </option>
                           ))}
                           {globalPresetEntries.map((entry) => (
@@ -613,7 +600,7 @@ export function CreateAgentDialog({
                       </>
                     ) : (
                       <p className="rounded-md border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
-                        No terminal presets yet. Add one in workspace or global settings to prep new worktrees.
+                        No terminal presets yet. Add one in project or global settings to prep new worktrees.
                       </p>
                     )}
                   </div>
@@ -624,7 +611,7 @@ export function CreateAgentDialog({
                 <div className="space-y-6">
                   <dl className="grid gap-5 sm:grid-cols-2">
                     <div>
-                      <dt className="text-xs font-medium text-muted-foreground">Workspace instructions</dt>
+                      <dt className="text-xs font-medium text-muted-foreground">Project instructions</dt>
                       <dd className="mt-1.5 text-sm leading-snug text-foreground">
                         {project?.workspaceInstructionFile ? (
                           <>
@@ -634,7 +621,7 @@ export function CreateAgentDialog({
                             </span>
                           </>
                         ) : (
-                          <span className="text-muted-foreground">None detected for this workspace.</span>
+                          <span className="text-muted-foreground">None detected for this project.</span>
                         )}
                       </dd>
                     </div>
@@ -655,6 +642,22 @@ export function CreateAgentDialog({
                   </dl>
 
                   <div className="border-t border-border/60 pt-5">
+                    <div className="mb-5">
+                      <Field label="Initial prompt">
+                        <Textarea
+                          value={formState.initialPrompt ?? ""}
+                          onChange={(event) =>
+                            setFormState((current) => ({
+                              ...current,
+                              initialPrompt: event.target.value
+                            }))
+                          }
+                          placeholder="Optional"
+                          className="min-h-28 resize-y"
+                          aria-label="Initial prompt"
+                        />
+                      </Field>
+                    </div>
                     <h3 className="text-sm font-medium text-foreground">Shared context</h3>
                     <p className="mt-1 text-xs text-muted-foreground">
                       Optional — attach conversation groups from other Nora agents or matching local CLI sessions for
@@ -666,7 +669,7 @@ export function CreateAgentDialog({
                         sources={contextSources}
                         selections={contextSelections}
                         isLoading={isLoadingContextSources}
-                        emptyMessage="No other agents in this workspace have tracked context yet."
+                        emptyMessage="No other agents in this project have tracked context yet."
                         onChange={setContextSelections}
                       />
                     </div>

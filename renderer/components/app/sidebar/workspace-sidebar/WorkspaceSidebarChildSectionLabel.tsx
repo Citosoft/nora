@@ -19,7 +19,7 @@ export const WorkspaceSidebarChildSectionLabel = ({
 }: WorkspaceSidebarChildSectionLabelProps) => {
   const shouldShowCount = typeof count === "number" && count > 0;
   const className = cn(
-    "flex min-w-0 items-center gap-3.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground",
+    "workspace-sidebar-child-section-label flex min-w-0 items-center gap-3.5 text-[13px] font-medium tracking-normal text-muted-foreground",
     onOpenCenter &&
       "rounded-[4px] px-1 py-0.5 -mx-1 transition hover:bg-accent/35 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
   );
@@ -29,7 +29,7 @@ export const WorkspaceSidebarChildSectionLabel = ({
       <span className="flex min-w-0 items-baseline gap-1">
         <span className="truncate">{label}</span>
         {shouldShowCount ? (
-          <span className="shrink-0 text-[10px] font-normal tabular-nums opacity-75">({count})</span>
+          <span className="shrink-0 text-xs font-normal tabular-nums opacity-75">({count})</span>
         ) : null}
       </span>
     </>
