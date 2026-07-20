@@ -45,7 +45,7 @@ test("buildProjectScaffoldPrompt includes framework, starter, components, and te
   assert.match(prompt, /Use this starter command when it is appropriate: npx create-next-app@latest\./);
   assert.match(prompt, /- TypeScript: Use typed source\./);
   assert.match(prompt, /- Playwright: Add browser tests\./);
-  assert.match(prompt, /Create the project in this workspace/);
+  assert.match(prompt, /Create the project in this repository/);
 });
 
 test("project scaffold registry has unique framework and option ids", () => {
