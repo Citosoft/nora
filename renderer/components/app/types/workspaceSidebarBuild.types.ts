@@ -56,6 +56,7 @@ export type WorkspaceSidebarBuildDeps = Pick<
   removingWorkspaceRoots: WorkspaceSidebarProps["removingWorkspaceRoots"];
   resolveInstallCommand: (toolId: string, installTemplate: string) => string;
   safely: (action: () => Promise<AppState>) => Promise<AppState | null>;
+  handleCheckoutWorkspaceBranch: (projectId: string, branch: string) => Promise<AppState | null>;
   setCollapsedWorkspaceIds: Dispatch<SetStateAction<Record<string, boolean>>>;
   setFileEditorState: Dispatch<SetStateAction<FileEditorState | null>>;
   setIsCenterDiffExpanded: Dispatch<SetStateAction<boolean>>;

@@ -50,6 +50,8 @@ export const NORA_WORKSPACE_CLIENT_METHODS = [
   "deleteNoraDetectableContextBundle",
   "statWorkspacePath",
   "getWorkspaceGitStatusSummary",
+  "checkoutWorkspaceBranch",
+  "setWorkspaceUpstream",
   "selectChange",
   "discardChange",
   "inspectCommit",

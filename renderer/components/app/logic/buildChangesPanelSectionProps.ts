@@ -136,6 +136,16 @@ export const buildChangesPanelSectionProps = (
     },
     onPullChanges: () => d.safely(() => noraWorkspaceClient.pullChanges()),
     onPushChanges: () => d.safely(() => noraWorkspaceClient.pushChanges()),
+    onCheckoutWorkspaceBranch: (branch) =>
+      snapshot.project
+        ? d.safely(() =>
+            noraWorkspaceClient.checkoutWorkspaceBranch({
+              projectId: snapshot.project!.id,
+              branch,
+              rootPath: snapshot.changesRoot || undefined
+            })
+          )
+        : Promise.resolve(null),
     onEditChange: (pathName) => {
       void d.openFileEditor(pathName, {
         rootPath: snapshot.changesRoot || snapshot.project?.rootPath || null

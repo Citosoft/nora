@@ -7,6 +7,7 @@ import type {
   ProjectSummary,
   TerminalPreset,
   WorkspaceGitStatusSummary,
+  SetWorkspaceUpstreamPayload,
   WorkspaceNoteSummary,
   WorkspacePathStatResult,
   WorkspaceSearchRequest,
@@ -21,6 +22,11 @@ import type { WorkspaceImageFileContent } from "@shared/types/workspaceFile.type
 import fs from "node:fs/promises";
 import { getProjectFile } from "../noraPaths";
 import type { WorkspaceTarget } from "../types/internal.types";
+import {
+  listRemoteTrackingBranches,
+  resolveGitTrackingBranch,
+  setGitTrackingBranch
+} from "../helpers/gitTrackingBranch";
 import {
   composeExternalHarnessContextSelections,
   listExternalHarnessContextSessions,
@@ -178,27 +184,19 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
       const { stdout: branchStdout } = await deps.execGit(target, ["rev-parse", "--abbrev-ref", "HEAD"], 64 * 1024);
       const branch = branchStdout.trim() || null;
       let upstreamBranch: string | null = null;
+      let hasConfiguredUpstream = false;
       let aheadCount = 0;
       let behindCount = 0;
       try {
-        const { stdout: upstreamStdout } = await deps.execGit(
-          target,
-          ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"],
-          64 * 1024
-        );
-        upstreamBranch = upstreamStdout.trim() || null;
-        if (upstreamBranch) {
-          const remoteName = upstreamBranch.split("/")[0]?.trim() || null;
-          if (remoteName) {
-            try {
-              await deps.execGit(target, ["fetch", "--quiet", remoteName], 1024 * 1024);
-            } catch {
-              // Fall back to the last fetched upstream ref if a background fetch is unavailable.
-            }
-          }
+        const trackingBranch = branch
+          ? await resolveGitTrackingBranch(target, deps.execGit, branch)
+          : null;
+        upstreamBranch = trackingBranch?.ref ?? null;
+        hasConfiguredUpstream = trackingBranch?.configured ?? false;
+        if (trackingBranch) {
           const { stdout: countsStdout } = await deps.execGit(
             target,
-            ["rev-list", "--left-right", "--count", "@{upstream}...HEAD"],
+            ["rev-list", "--left-right", "--count", `${trackingBranch.ref}...HEAD`],
             64 * 1024
           );
           const [behindRaw = "0", aheadRaw = "0"] = countsStdout.trim().split(/\s+/);
@@ -217,13 +215,44 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
         behindCount = 0;
       }
       const { stdout: statusStdout } = await deps.execGit(target, ["status", "--short"], 1024 * 1024);
+      const remoteBranches = await listRemoteTrackingBranches(target, deps.execGit).catch(() => []);
       const rawLines = statusStdout.split(/\r?\n/).map((line) => line.trimEnd()).filter(Boolean);
       const truncated = rawLines.length > deps.maxWorkspaceGitStatusLines;
       const lines = rawLines.slice(0, deps.maxWorkspaceGitStatusLines);
-      return { branch, upstreamBranch, aheadCount, behindCount, lines, truncated };
+      return { branch, upstreamBranch, hasConfiguredUpstream, remoteBranches, aheadCount, behindCount, lines, truncated };
     } catch {
-      return { branch: null, upstreamBranch: null, aheadCount: 0, behindCount: 0, lines: [], truncated: false };
+      return { branch: null, upstreamBranch: null, hasConfiguredUpstream: false, remoteBranches: [], aheadCount: 0, behindCount: 0, lines: [], truncated: false };
     }
+  };
+
+  const checkoutWorkspaceBranch = async (payload: {
+    projectId: string;
+    branch: string;
+    rootPath?: string;
+  }): Promise<AppState> => {
+    const project = await deps.resolveProjectSummaryById(payload.projectId);
+    const target = deps.resolveWorkspaceFileTarget(project, payload.rootPath);
+    const branch = payload.branch.trim();
+    if (!branch) {
+      throw new Error("Choose a branch to check out.");
+    }
+
+    await deps.execGit(target, ["checkout", branch], 64 * 1024);
+    return deps.refreshProjectState();
+  };
+
+  const setWorkspaceUpstream = async (payload: SetWorkspaceUpstreamPayload): Promise<WorkspaceGitStatusSummary> => {
+    const project = await deps.resolveProjectSummaryById(payload.projectId);
+    const target = deps.resolveWorkspaceFileTarget(project, payload.rootPath);
+    const remoteBranch = payload.remoteBranch.trim();
+    const { stdout } = await deps.execGit(target, ["rev-parse", "--abbrev-ref", "HEAD"], 64 * 1024);
+    const branch = stdout.trim();
+    if (!branch || branch === "HEAD") {
+      throw new Error("Check out a local branch before setting an upstream.");
+    }
+
+    await setGitTrackingBranch(target, deps.execGit, branch, remoteBranch);
+    return getWorkspaceGitStatusSummary(payload);
   };
 
   const listWorkspaceTasksByProject = async (projectId: string): Promise<WorkspaceTaskSummary[]> => {
@@ -325,6 +354,8 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
     searchWorkspaceFilesByProject,
     statWorkspacePathByProject,
     getWorkspaceGitStatusSummary,
+    checkoutWorkspaceBranch,
+    setWorkspaceUpstream,
     listWorkspaceTasksByProject,
     getWorkspaceTaskBoard,
     saveWorkspaceTaskBoard,

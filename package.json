@@ -9,6 +9,7 @@
   "scripts": {
     "build": "tsc && tsc-alias -p tsconfig.json && tsc -p tsconfig.preload.json --noEmit && node scripts/bundle-preload.mjs && node scripts/build-renderer.mjs && tailwindcss -i renderer/styles.css -o dist/renderer/styles.css && node scripts/generate-oauth-build-config.mjs && node scripts/generate-icons.mjs && node scripts/generate-third-party-notices.mjs && node scripts/copy-static.mjs",
     "generate:icons": "node scripts/generate-icons.mjs",
+    "fetch:product-icons": "node scripts/fetch-product-icons.mjs",
     "generate:third-party-notices": "node scripts/generate-third-party-notices.mjs",
     "postinstall": "node scripts/installElectronBinary.mjs",
     "install:linux-dev-launcher": "node scripts/install-linux-dev-launcher.mjs",

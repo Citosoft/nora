@@ -29,6 +29,8 @@ export function createWorkspaceService(deps: WorkspaceServiceDeps): WorkspaceSer
     deleteNoraDetectableContextBundle: deps.deleteNoraDetectableContextBundle,
     statWorkspacePath: deps.statWorkspacePath,
     getWorkspaceGitStatusSummary: deps.getWorkspaceGitStatusSummary,
+    checkoutWorkspaceBranch: deps.checkoutWorkspaceBranch,
+    setWorkspaceUpstream: deps.setWorkspaceUpstream,
     listWorkspaceTasks: deps.listWorkspaceTasks,
     getWorkspaceTaskBoard: deps.getWorkspaceTaskBoard,
     saveWorkspaceTaskBoard: deps.saveWorkspaceTaskBoard,

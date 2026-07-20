@@ -234,6 +234,7 @@ export type WorkspaceSidebarProps = {
   onOpenCreateTerminalOnWorktree: (projectId: string, worktreeId: string) => void;
   onOpenCreateWorktree: (projectId: string) => void;
   onLaunchQuickTerminalOnWorktree: (projectId: string, worktreeId: string) => void;
+  onCheckoutWorkspaceBranch: (projectId: string, branch: string) => Promise<AppState | null>;
   onLaunchWorktreeScript: (projectId: string, payload: CreateTerminalPayload) => void;
   onRemoveWorktree: (projectId: string, worktreeId: string, branch: string) => void;
   onFocusAgent: (agentId: string) => void;

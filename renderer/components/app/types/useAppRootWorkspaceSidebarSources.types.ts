@@ -11,6 +11,7 @@ export type UseAppRootWorkspaceSidebarSourcesArgs = Omit<
   isSpecBrowserOpen: WorkspaceSidebarBuildDeps["isSpecBrowserOpen"];
   isTaskBoardOpen: WorkspaceSidebarBuildDeps["isTaskBoardOpen"];
   setIsCreatePullRequestDialogOpen: WorkspaceSidebarBuildDeps["setIsCreatePullRequestDialogOpen"];
+  handleCheckoutWorkspaceBranch: WorkspaceSidebarBuildDeps["handleCheckoutWorkspaceBranch"];
   uiCommands: Pick<
     AppUiCommands,
     | "clearBrowserAndForgeFocus"

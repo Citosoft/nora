@@ -7,6 +7,7 @@ import {
 import { createQuickTerminalDialogDefaults, createQuickTerminalPayload } from "@/components/app/logic/terminalQuickLaunch";
 import { setWorkspaceRelativePathDragData } from "@/components/app/logic/workspacePathDrag";
 import { createScriptTerminalDefaults, formatWorkspaceScriptActionLabel, getPreferredWorkspaceScripts } from "@/components/app/logic/workspaceScripts";
+import { canRemoveWorkspaceWorktree } from "@/components/app/logic/worktreeRemoval";
 import { setWorkspaceTaskDragData } from "@/components/app/logic/workspaceTaskDrag";
 import { WorkspaceProjectIcon } from "@/components/app/shared/Tooling";
 import { WorkspaceSidebarChildSectionLabel } from "@/components/app/sidebar/workspace-sidebar/WorkspaceSidebarChildSectionLabel";
@@ -34,9 +35,11 @@ import {
   ScrollText,
   Sparkles,
   StickyNote,
-  TerminalSquare
+  TerminalSquare,
+  Trash2
 } from "lucide-react";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
+import { useStatusBar } from "@/components/app/logic/statusBarContext";
 
 export const WorkspaceSidebarWorkspaceGroup = ({
   workspace,
@@ -98,6 +101,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
   onOpenCreateTerminalOnWorktree,
   onOpenCreateWorktree,
   onLaunchQuickTerminalOnWorktree,
+  onCheckoutWorkspaceBranch,
   onLaunchWorktreeScript,
   onRemoveWorktree,
   onOpenCreateAgent,
@@ -129,6 +133,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
   onRemoveProject
 }: WorkspaceSidebarWorkspaceGroupProps) => {
   const snapshot = useCanonicalAppSnapshot();
+  const statusBar = useStatusBar();
   if (!snapshot) {
     return null;
   }
@@ -384,18 +389,39 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                       pullRequestStatusByWorkspaceBranch[`${workspace.project.id}:${worktree.branch.trim()}`] ?? null;
                     const hasPullRequest = workspaceSidebarHasPullRequestState(pullRequestStatus?.state);
                     const isFocusedWorktree = focusedWorktreeId === worktree.id;
+                    const isRootWorktree =
+                      worktree.path === workspace.project.rootPath || worktree.createdFromRef === "ROOT";
+                    const canRemoveWorktree = canRemoveWorkspaceWorktree(workspace, worktree, isRootWorktree);
+                    const handleCheckoutBranch = async () => {
+                      const statusId = statusBar.beginStatus(`Checking out ${worktree.branch}`, true);
+                      try {
+                        await onCheckoutWorkspaceBranch(workspace.project.id, worktree.branch);
+                      } finally {
+                        statusBar.endStatus(statusId);
+                      }
+                    };
                     return (
                       <div
                         key={worktree.id}
                         className="group/worktree flex min-w-0 items-center gap-0.5 rounded-[4px] pr-1 transition hover:bg-accent/40"
                       >
-                        <button
-                          type="button"
+                        <div
+                          role="button"
+                          tabIndex={0}
                           onClick={() =>
                             isFocused
                               ? onFocusWorkspaceView(worktree.id)
                               : void onFocusWorkspaceWorktree(workspace.project.id, worktree.id)
                           }
+                          onKeyDown={(event) => {
+                            if (event.key !== "Enter" && event.key !== " ") {
+                              return;
+                            }
+                            event.preventDefault();
+                            void (isFocused
+                              ? onFocusWorkspaceView(worktree.id)
+                              : onFocusWorkspaceWorktree(workspace.project.id, worktree.id));
+                          }}
                           className={cn(
                             "flex min-w-0 flex-1 items-center gap-2 rounded-[4px] px-2 py-1 text-left transition",
                             isFocusedWorktree ? "bg-primary/10" : "hover:bg-accent/40"
@@ -404,7 +430,21 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                         >
                           {renderSubitemStatusDot(isFocusedWorktree ? "bg-primary" : "bg-muted-foreground/45")}
                           <div className="min-w-0 flex-1 truncate text-[12px] leading-tight">
-                            <span className="font-medium text-foreground">{worktree.branch}</span>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void handleCheckoutBranch();
+                              }}
+                              className={cn(
+                                "font-medium text-foreground underline-offset-2 transition hover:underline",
+                                worktree.status !== "ready" && "cursor-not-allowed opacity-70"
+                              )}
+                              disabled={worktree.status !== "ready"}
+                              title={`Check out ${worktree.branch} in the root workspace`}
+                            >
+                              {worktree.branch}
+                            </button>
                             <span className="text-muted-foreground"> · {locationLabel}</span>
                           </div>
                           {worktree.status === "creating" ? (
@@ -435,7 +475,26 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                               />
                             </Tooltip>
                           ) : null}
-                        </button>
+                        </div>
+                        {!isRootWorktree ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-7 shrink-0 text-muted-foreground hover:text-destructive disabled:opacity-30"
+                            aria-label={`Delete worktree ${worktree.branch}`}
+                            title={
+                              canRemoveWorktree
+                                ? `Delete worktree ${worktree.branch}`
+                                : "Remove attached agents and terminals before deleting this worktree"
+                            }
+                            disabled={isRemoving || !canRemoveWorktree}
+                            onClick={() =>
+                              onRemoveWorktree(workspace.project.id, worktree.id, worktree.branch)
+                            }
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        ) : null}
                         <DropdownMenu
                           align="end"
                           widthClassName="w-56"
@@ -456,9 +515,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                             worktree={worktree}
                             preferredShellId={preferredShellId}
                             pullRequestStatus={pullRequestStatus}
-                            isRootWorktree={
-                              worktree.path === workspace.project.rootPath || worktree.createdFromRef === "ROOT"
-                            }
+                            isRootWorktree={isRootWorktree}
                             onFocusWorktree={() =>
                               isFocused
                                 ? onFocusWorkspaceView(worktree.id)

@@ -14,9 +14,10 @@ import type {
   GenerateCommitMessageResult,
   ImportBrowserImagePayload,
   ImportedContextBundleSummary,
-  NoraDetectableContextBundleSummary,
   ListAiModelsPayload,
   ListAiModelsResult,
+  NoraDetectableContextBundleSummary,
+  SetWorkspaceUpstreamPayload,
   TerminalPreset,
   WorkspaceFileRequest,
   WorkspaceNoteSummary,
@@ -144,6 +145,16 @@ export function registerWorkspaceIpc({
   ipcMain.handle(
     "app:get-workspace-git-status-summary",
     (_event, payload: { projectId: string; rootPath?: string }) => services.workspace.getWorkspaceGitStatusSummary(payload)
+  );
+  ipcMain.handle(
+    "app:checkout-workspace-branch",
+    (_event, payload: import("@shared/appTypes").CheckoutWorkspaceBranchPayload) =>
+      services.workspace.checkoutWorkspaceBranch(payload)
+  );
+  ipcMain.handle(
+    "app:set-workspace-upstream",
+    (_event, payload: SetWorkspaceUpstreamPayload) =>
+      services.workspace.setWorkspaceUpstream(payload)
   );
   ipcMain.handle("app:list-workspace-tasks", (_event, projectId: string) =>
     services.workspace.listWorkspaceTasks(projectId)

@@ -3,6 +3,7 @@ import type { WorkspaceGitExec, WorkspaceTarget } from "../types/internal.types"
 import { countDiffLines, mapCommitChangeStatus } from "./changeDiffUtils";
 import { getExecStdout } from "./execErrors";
 import { parseForgeRepoSummary } from "./forgeRepoParse";
+import { resolveGitTrackingBranch } from "../helpers/gitTrackingBranch";
 
 const getWorkspaceForgeRepo = async (
   target: WorkspaceTarget,
@@ -73,7 +74,18 @@ const pushWorkspaceChanges = async (target: WorkspaceTarget, execGit: WorkspaceG
 };
 
 const pullWorkspaceChanges = async (target: WorkspaceTarget, execGit: WorkspaceGitExec): Promise<void> => {
-  await execGit(target, ["pull", "--no-rebase", "--no-edit"]);
+  const branch = await readCurrentBranch(target, execGit);
+  const trackingBranch = await resolveGitTrackingBranch(target, execGit, branch);
+  if (!trackingBranch) {
+    throw new Error(`No remote branch was found for ${branch}.`);
+  }
+  await execGit(target, [
+    "pull",
+    "--no-rebase",
+    "--no-edit",
+    trackingBranch.remoteName,
+    trackingBranch.remoteBranch
+  ]);
 };
 
 const discardWorkspaceChange = async (

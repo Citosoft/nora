@@ -251,8 +251,22 @@ export interface WorkspacePathStatResult {
 export interface WorkspaceGitStatusSummary {
   branch: string | null;
   upstreamBranch: string | null;
+  hasConfiguredUpstream: boolean;
+  remoteBranches: string[];
   aheadCount: number;
   behindCount: number;
   lines: string[];
   truncated: boolean;
+}
+
+export interface SetWorkspaceUpstreamPayload {
+  projectId: string;
+  rootPath?: string;
+  remoteBranch: string;
+}
+
+export interface CheckoutWorkspaceBranchPayload {
+  projectId: string;
+  branch: string;
+  rootPath?: string;
 }

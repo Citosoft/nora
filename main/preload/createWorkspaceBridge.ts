@@ -53,6 +53,8 @@ export function createWorkspaceBridge(): WorkspaceBridge {
       invokeIpc("app:delete-nora-detectable-context-bundle", payload),
     statWorkspacePath: (payload) => invokeIpc("app:stat-workspace-path", payload),
     getWorkspaceGitStatusSummary: (payload) => invokeIpc("app:get-workspace-git-status-summary", payload),
+    checkoutWorkspaceBranch: (payload) => invokeIpc("app:checkout-workspace-branch", payload),
+    setWorkspaceUpstream: (payload) => invokeIpc("app:set-workspace-upstream", payload),
     selectChange: (pathName) => invokeIpc("app:select-change", pathName),
     discardChange: (pathName) => invokeIpc("app:discard-change", pathName),
     inspectCommit: (hash) => invokeIpc("app:inspect-commit", hash),

@@ -1,5 +1,6 @@
 import { PROJECT_SCAFFOLD_FRAMEWORKS } from "@/components/app/constants/projectScaffoldRegistry";
 import { resolveProjectScaffoldOptionLogoUrl } from "@/components/app/constants/projectScaffoldOptionLogos";
+import { ProductIcon } from "@/components/app/shared/ProductIcon";
 import { groupProjectScaffoldComponentOptions } from "@/components/app/logic/projectScaffoldOptionGroups";
 import {
   deleteProjectScaffoldFavorite,
@@ -352,15 +353,15 @@ export function AddWorkspaceDialog({
                                     title={componentLabels.join(", ") || "No optional components"}
                                   >
                                     <div className="grid size-8 place-items-center rounded-[4px] border border-border/70 bg-background/70">
-                                      {framework ? <img src={framework.logoUrl} alt="" className="size-4 object-contain" /> : <Star className="size-4 text-muted-foreground" />}
+                                      {framework ? <ProductIcon sourceUrl={framework.logoUrl} alt="" className="size-4 object-contain" /> : <Star className="size-4 text-muted-foreground" />}
                                     </div>
                                     {visibleComponentOptions.map((option) => (
                                       <div
                                         key={option.id}
                                         className="grid size-6 place-items-center rounded-[4px] border border-border/60 bg-background/60"
                                       >
-                                        <img
-                                          src={resolveProjectScaffoldOptionLogoUrl(option.id) ?? undefined}
+                                        <ProductIcon
+                                          sourceUrl={resolveProjectScaffoldOptionLogoUrl(option.id)}
                                           alt=""
                                           className="size-3.5 object-contain"
                                           draggable={false}
@@ -478,7 +479,7 @@ export function AddWorkspaceDialog({
                       <div className="rounded-[6px] border border-border/70 bg-background/40 p-4">
                         <div className="flex items-center gap-3">
                           <div className="grid size-10 shrink-0 place-items-center rounded-[5px] border border-border/70 bg-background/70">
-                            <img src={selectedFramework.logoUrl} alt="" className="size-6" draggable={false} />
+                            <ProductIcon sourceUrl={selectedFramework.logoUrl} alt="" className="size-6" draggable={false} />
                           </div>
                           <div className="min-w-0">
                             <div className="text-sm font-medium">{selectedFramework.label}</div>

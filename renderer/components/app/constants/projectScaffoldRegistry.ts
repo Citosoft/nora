@@ -1,3 +1,4 @@
+import { productFaviconUrl } from "@/components/app/logic/productIcon";
 import type { ProjectScaffoldFramework } from "@/components/app/types/projectScaffoldWizard.types";
 
 export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
@@ -6,7 +7,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Next.js",
     language: "TypeScript / JavaScript",
     category: "web",
-    logoUrl: "https://www.google.com/s2/favicons?domain=nextjs.org&sz=64",
+    logoUrl: productFaviconUrl("nextjs.org"),
     description: "React application with routing, server rendering, and full-stack patterns.",
     starterCommand: "npx create-next-app@latest",
     componentOptions: [
@@ -49,7 +50,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Vite React",
     language: "TypeScript / JavaScript",
     category: "web",
-    logoUrl: "https://www.google.com/s2/favicons?domain=vite.dev&sz=64",
+    logoUrl: productFaviconUrl("vite.dev"),
     description: "Client-rendered React app with fast local dev and simple bundling.",
     starterCommand: "npm create vite@latest",
     componentOptions: [
@@ -82,7 +83,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Vue",
     language: "TypeScript / JavaScript",
     category: "web",
-    logoUrl: "https://www.google.com/s2/favicons?domain=vuejs.org&sz=64",
+    logoUrl: productFaviconUrl("vuejs.org"),
     description: "Progressive frontend app with Vue single-file components and a flexible ecosystem.",
     starterCommand: "npm create vue@latest",
     componentOptions: [
@@ -102,7 +103,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Nuxt",
     language: "TypeScript / JavaScript",
     category: "web",
-    logoUrl: "https://www.google.com/s2/favicons?domain=nuxt.com&sz=64",
+    logoUrl: productFaviconUrl("nuxt.com"),
     description: "Vue full-stack framework with routing, server rendering, and deployment presets.",
     starterCommand: "npx nuxi@latest init",
     componentOptions: [
@@ -122,7 +123,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Angular",
     language: "TypeScript",
     category: "web",
-    logoUrl: "https://www.google.com/s2/favicons?domain=angular.dev&sz=64",
+    logoUrl: productFaviconUrl("angular.dev"),
     description: "Enterprise TypeScript app with Angular components, routing, dependency injection, and CLI tooling.",
     starterCommand: "npx @angular/cli@latest new",
     componentOptions: [
@@ -142,7 +143,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Remix",
     language: "TypeScript / JavaScript",
     category: "web",
-    logoUrl: "https://www.google.com/s2/favicons?domain=remix.run&sz=64",
+    logoUrl: productFaviconUrl("remix.run"),
     description: "React full-stack app focused on nested routing, loaders, actions, and web standards.",
     starterCommand: "npx create-remix@latest",
     componentOptions: [
@@ -162,7 +163,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "SolidStart",
     language: "TypeScript / JavaScript",
     category: "web",
-    logoUrl: "https://www.google.com/s2/favicons?domain=solidjs.com&sz=64",
+    logoUrl: productFaviconUrl("solidjs.com"),
     description: "Solid full-stack app with fine-grained reactivity and server rendering.",
     starterCommand: "npm create solid@latest",
     componentOptions: [
@@ -182,7 +183,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Qwik",
     language: "TypeScript / JavaScript",
     category: "web",
-    logoUrl: "https://www.google.com/s2/favicons?domain=qwik.dev&sz=64",
+    logoUrl: productFaviconUrl("qwik.dev"),
     description: "Resumable web app framework optimized for startup performance and fine-grained loading.",
     starterCommand: "npm create qwik@latest",
     componentOptions: [
@@ -202,7 +203,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Lit",
     language: "TypeScript / JavaScript",
     category: "web",
-    logoUrl: "https://www.google.com/s2/favicons?domain=lit.dev&sz=64",
+    logoUrl: productFaviconUrl("lit.dev"),
     description: "Web Components app or library using Lit's lightweight reactive component model.",
     starterCommand: "npm init @open-wc",
     componentOptions: [
@@ -222,7 +223,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Alpine.js",
     language: "JavaScript",
     category: "web",
-    logoUrl: "https://www.google.com/s2/favicons?domain=alpinejs.dev&sz=64",
+    logoUrl: productFaviconUrl("alpinejs.dev"),
     description: "Lightweight progressive enhancement for server-rendered HTML.",
     starterCommand: null,
     componentOptions: [
@@ -241,7 +242,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Electron",
     language: "TypeScript / JavaScript",
     category: "desktop",
-    logoUrl: "https://www.google.com/s2/favicons?domain=electronjs.org&sz=64",
+    logoUrl: productFaviconUrl("electronjs.org"),
     description: "Cross-platform desktop app with Chromium, Node.js, and native OS integrations.",
     starterCommand: "npm init electron-app@latest",
     componentOptions: [
@@ -262,7 +263,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "React Native",
     language: "TypeScript / JavaScript",
     category: "mobile",
-    logoUrl: "https://www.google.com/s2/favicons?domain=reactnative.dev&sz=64",
+    logoUrl: productFaviconUrl("reactnative.dev"),
     description: "Native mobile app built with React components and platform APIs.",
     starterCommand: "npx @react-native-community/cli@latest init",
     componentOptions: [
@@ -282,7 +283,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Expo",
     language: "TypeScript / JavaScript",
     category: "mobile",
-    logoUrl: "https://www.google.com/s2/favicons?domain=expo.dev&sz=64",
+    logoUrl: productFaviconUrl("expo.dev"),
     description: "React Native app with Expo tooling, routing, device APIs, and easier builds.",
     starterCommand: "npx create-expo-app@latest",
     componentOptions: [
@@ -302,7 +303,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Flutter",
     language: "Dart",
     category: "mobile",
-    logoUrl: "https://www.google.com/s2/favicons?domain=flutter.dev&sz=64",
+    logoUrl: productFaviconUrl("flutter.dev"),
     description: "Cross-platform mobile, desktop, and web app using Flutter widgets and Dart.",
     starterCommand: "flutter create",
     componentOptions: [
@@ -322,7 +323,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Tauri",
     language: "Rust + TypeScript",
     category: "desktop",
-    logoUrl: "https://www.google.com/s2/favicons?domain=tauri.app&sz=64",
+    logoUrl: productFaviconUrl("tauri.app"),
     description: "Lightweight desktop app with a Rust shell and web frontend.",
     starterCommand: "npm create tauri-app@latest",
     componentOptions: [
@@ -342,7 +343,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: ".NET MAUI",
     language: "C# / .NET",
     category: "mobile",
-    logoUrl: "https://www.google.com/s2/favicons?domain=dotnet.microsoft.com&sz=64",
+    logoUrl: productFaviconUrl("dotnet.microsoft.com"),
     description: "Cross-platform native app for mobile and desktop using .NET and XAML.",
     starterCommand: "dotnet new maui",
     componentOptions: [
@@ -362,7 +363,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Astro",
     language: "TypeScript / JavaScript",
     category: "web",
-    logoUrl: "https://www.google.com/s2/favicons?domain=astro.build&sz=64",
+    logoUrl: productFaviconUrl("astro.build"),
     description: "Content-focused web app with islands architecture and fast static output.",
     starterCommand: "npm create astro@latest",
     componentOptions: [
@@ -383,7 +384,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "SvelteKit",
     language: "TypeScript / JavaScript",
     category: "web",
-    logoUrl: "https://www.google.com/s2/favicons?domain=svelte.dev&sz=64",
+    logoUrl: productFaviconUrl("svelte.dev"),
     description: "Svelte app with file-based routing and server endpoints.",
     starterCommand: "npx sv create",
     componentOptions: [
@@ -401,7 +402,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Laravel",
     language: "PHP",
     category: "web",
-    logoUrl: "https://www.google.com/s2/favicons?domain=laravel.com&sz=64",
+    logoUrl: productFaviconUrl("laravel.com"),
     description: "PHP web app with routing, ORM, queues, and batteries-included conventions.",
     starterCommand: "composer create-project laravel/laravel",
     componentOptions: [
@@ -428,7 +429,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Ruby on Rails",
     language: "Ruby",
     category: "web",
-    logoUrl: "https://www.google.com/s2/favicons?domain=rubyonrails.org&sz=64",
+    logoUrl: productFaviconUrl("rubyonrails.org"),
     description: "Full-stack Ruby app with MVC conventions and Active Record.",
     starterCommand: "rails new",
     componentOptions: [
@@ -454,7 +455,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Django",
     language: "Python",
     category: "web",
-    logoUrl: "https://www.google.com/s2/favicons?domain=djangoproject.com&sz=64",
+    logoUrl: productFaviconUrl("djangoproject.com"),
     description: "Python web app with ORM, admin, templates, and robust defaults.",
     starterCommand: "django-admin startproject",
     componentOptions: [
@@ -480,7 +481,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "FastAPI",
     language: "Python",
     category: "backend",
-    logoUrl: "https://www.google.com/s2/favicons?domain=fastapi.tiangolo.com&sz=64",
+    logoUrl: productFaviconUrl("fastapi.tiangolo.com"),
     description: "Python API service with typed request models and OpenAPI docs.",
     starterCommand: null,
     componentOptions: [
@@ -507,7 +508,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Express",
     language: "TypeScript / JavaScript",
     category: "backend",
-    logoUrl: "https://www.google.com/s2/favicons?domain=expressjs.com&sz=64",
+    logoUrl: productFaviconUrl("expressjs.com"),
     description: "Minimal Node.js HTTP API or server-rendered app with a large middleware ecosystem.",
     starterCommand: null,
     componentOptions: [
@@ -537,7 +538,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "NestJS",
     language: "TypeScript",
     category: "backend",
-    logoUrl: "https://www.google.com/s2/favicons?domain=nestjs.com&sz=64",
+    logoUrl: productFaviconUrl("nestjs.com"),
     description: "Structured Node.js backend with modules, dependency injection, controllers, and providers.",
     starterCommand: "npx @nestjs/cli@latest new",
     componentOptions: [
@@ -564,7 +565,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Hono",
     language: "TypeScript / JavaScript",
     category: "backend",
-    logoUrl: "https://www.google.com/s2/favicons?domain=hono.dev&sz=64",
+    logoUrl: productFaviconUrl("hono.dev"),
     description: "Small, fast TypeScript web framework for edge, serverless, and Node runtimes.",
     starterCommand: "npm create hono@latest",
     componentOptions: [
@@ -584,7 +585,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "AdonisJS",
     language: "TypeScript / JavaScript",
     category: "backend",
-    logoUrl: "https://www.google.com/s2/favicons?domain=adonisjs.com&sz=64",
+    logoUrl: productFaviconUrl("adonisjs.com"),
     description: "Node.js MVC backend with routing, ORM, auth, validation, and batteries-included conventions.",
     starterCommand: "npm init adonisjs@latest",
     componentOptions: [
@@ -603,7 +604,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Flask",
     language: "Python",
     category: "backend",
-    logoUrl: "https://www.google.com/s2/favicons?domain=flask.palletsprojects.com&sz=64",
+    logoUrl: productFaviconUrl("flask.palletsprojects.com"),
     description: "Lightweight Python web app or API with explicit structure and extension choices.",
     starterCommand: null,
     componentOptions: [
@@ -623,7 +624,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Spring Boot",
     language: "Java / Kotlin",
     category: "backend",
-    logoUrl: "https://www.google.com/s2/favicons?domain=spring.io&sz=64",
+    logoUrl: productFaviconUrl("spring.io"),
     description: "Production-grade Java or Kotlin backend with Spring MVC, dependency injection, and starters.",
     starterCommand: "spring init",
     componentOptions: [
@@ -643,7 +644,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "ASP.NET Core",
     language: "C# / .NET",
     category: "backend",
-    logoUrl: "https://www.google.com/s2/favicons?domain=dotnet.microsoft.com&sz=64",
+    logoUrl: productFaviconUrl("dotnet.microsoft.com"),
     description: "C# web API or MVC app with .NET hosting, routing, dependency injection, and middleware.",
     starterCommand: "dotnet new webapi",
     componentOptions: [
@@ -663,7 +664,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Go + Gin",
     language: "Go",
     category: "backend",
-    logoUrl: "https://www.google.com/s2/favicons?domain=gin-gonic.com&sz=64",
+    logoUrl: productFaviconUrl("gin-gonic.com"),
     description: "Go HTTP API using the Gin router and idiomatic package structure.",
     starterCommand: null,
     componentOptions: [
@@ -683,7 +684,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Rust + Axum",
     language: "Rust",
     category: "backend",
-    logoUrl: "https://www.google.com/s2/favicons?domain=tokio.rs&sz=64",
+    logoUrl: productFaviconUrl("tokio.rs"),
     description: "Rust web API using Axum, Tokio, typed extractors, and tower middleware.",
     starterCommand: "cargo new",
     componentOptions: [
@@ -703,7 +704,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Phoenix",
     language: "Elixir",
     category: "web",
-    logoUrl: "https://www.google.com/s2/favicons?domain=phoenixframework.org&sz=64",
+    logoUrl: productFaviconUrl("phoenixframework.org"),
     description: "Elixir web app with LiveView, channels, and OTP-friendly conventions.",
     starterCommand: "mix phx.new",
     componentOptions: [
@@ -721,7 +722,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "RedwoodJS",
     language: "TypeScript / JavaScript",
     category: "web",
-    logoUrl: "https://www.google.com/s2/favicons?domain=redwoodjs.com&sz=64",
+    logoUrl: productFaviconUrl("redwoodjs.com"),
     description: "Full-stack React framework with API side, Prisma, GraphQL, and deployment conventions.",
     starterCommand: "yarn create redwood-app",
     componentOptions: [
@@ -741,7 +742,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Blitz",
     language: "TypeScript / JavaScript",
     category: "web",
-    logoUrl: "https://www.google.com/s2/favicons?domain=blitzjs.com&sz=64",
+    logoUrl: productFaviconUrl("blitzjs.com"),
     description: "Full-stack React app with RPC-style data access and Next.js foundations.",
     starterCommand: "npx blitz new",
     componentOptions: [
@@ -761,7 +762,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "TanStack Start",
     language: "TypeScript / JavaScript",
     category: "web",
-    logoUrl: "https://www.google.com/s2/favicons?domain=tanstack.com&sz=64",
+    logoUrl: productFaviconUrl("tanstack.com"),
     description: "Full-stack React framework with type-safe routing, server functions, and TanStack data tooling.",
     starterCommand: "npx @tanstack/cli@latest create",
     componentOptions: [
@@ -786,7 +787,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "React Router",
     language: "TypeScript / JavaScript",
     category: "web",
-    logoUrl: "https://www.google.com/s2/favicons?domain=reactrouter.com&sz=64",
+    logoUrl: productFaviconUrl("reactrouter.com"),
     description: "React Router framework-mode app with route modules, loaders, actions, and server rendering.",
     starterCommand: "npx create-react-router@latest",
     componentOptions: [
@@ -810,7 +811,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Symfony",
     language: "PHP",
     category: "web",
-    logoUrl: "https://www.google.com/s2/favicons?domain=symfony.com&sz=64",
+    logoUrl: productFaviconUrl("symfony.com"),
     description: "Modular PHP framework for web applications, APIs, queues, and enterprise services.",
     starterCommand: "symfony new --webapp",
     componentOptions: [
@@ -834,7 +835,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Cloudflare Workers",
     language: "TypeScript / JavaScript",
     category: "backend",
-    logoUrl: "https://www.google.com/s2/favicons?domain=workers.cloudflare.com&sz=64",
+    logoUrl: productFaviconUrl("workers.cloudflare.com"),
     description: "Edge application or API running on Cloudflare Workers with first-party storage bindings.",
     starterCommand: "npm create cloudflare@latest",
     componentOptions: [
@@ -858,7 +859,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Elysia",
     language: "TypeScript / Bun",
     category: "backend",
-    logoUrl: "https://www.google.com/s2/favicons?domain=elysiajs.com&sz=64",
+    logoUrl: productFaviconUrl("elysiajs.com"),
     description: "Type-safe Bun web framework for fast APIs and backend services.",
     starterCommand: "bun create elysia",
     componentOptions: [
@@ -881,7 +882,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Ktor",
     language: "Kotlin",
     category: "backend",
-    logoUrl: "https://www.google.com/s2/favicons?domain=ktor.io&sz=64",
+    logoUrl: productFaviconUrl("ktor.io"),
     description: "Kotlin server framework for asynchronous APIs, services, and WebSocket applications.",
     starterCommand: null,
     componentOptions: [
@@ -905,7 +906,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Ionic + Capacitor",
     language: "TypeScript / JavaScript",
     category: "mobile",
-    logoUrl: "https://www.google.com/s2/favicons?domain=ionicframework.com&sz=64",
+    logoUrl: productFaviconUrl("ionicframework.com"),
     description: "Cross-platform mobile and web app using Ionic UI and Capacitor native APIs.",
     starterCommand: "ionic start",
     componentOptions: [
@@ -928,7 +929,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Gradio",
     language: "Python",
     category: "data",
-    logoUrl: "https://www.google.com/s2/favicons?domain=gradio.app&sz=64",
+    logoUrl: productFaviconUrl("gradio.app"),
     description: "Python interface for machine-learning models, data workflows, and interactive demos.",
     starterCommand: null,
     componentOptions: [
@@ -950,7 +951,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "WordPress",
     language: "PHP / JavaScript",
     category: "web",
-    logoUrl: "https://www.google.com/s2/favicons?domain=wordpress.org&sz=64",
+    logoUrl: productFaviconUrl("wordpress.org"),
     description: "WordPress plugin, block theme, or custom block project with modern development tooling.",
     starterCommand: "npx @wordpress/create-block@latest",
     componentOptions: [
@@ -973,7 +974,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Go + Fiber",
     language: "Go",
     category: "backend",
-    logoUrl: "https://www.google.com/s2/favicons?domain=gofiber.io&sz=64",
+    logoUrl: productFaviconUrl("gofiber.io"),
     description: "Fast Express-inspired Go web framework for APIs and backend services.",
     starterCommand: "go mod init",
     componentOptions: [
@@ -996,7 +997,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Go + Echo",
     language: "Go",
     category: "backend",
-    logoUrl: "https://www.google.com/s2/favicons?domain=echo.labstack.com&sz=64",
+    logoUrl: productFaviconUrl("echo.labstack.com"),
     description: "Minimal high-performance Go framework for APIs and web applications.",
     starterCommand: "go mod init",
     componentOptions: [
@@ -1019,7 +1020,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Rust + Actix Web",
     language: "Rust",
     category: "backend",
-    logoUrl: "https://www.google.com/s2/favicons?domain=actix.rs&sz=64",
+    logoUrl: productFaviconUrl("actix.rs"),
     description: "Powerful Rust web framework for concurrent APIs and services.",
     starterCommand: "cargo new",
     componentOptions: [
@@ -1043,7 +1044,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "SwiftUI",
     language: "Swift",
     category: "mobile",
-    logoUrl: "https://www.google.com/s2/favicons?domain=developer.apple.com&sz=64",
+    logoUrl: productFaviconUrl("developer.apple.com"),
     description: "Native Apple application using SwiftUI across iOS, macOS, watchOS, or visionOS.",
     starterCommand: null,
     componentOptions: [
@@ -1065,7 +1066,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Compose Multiplatform",
     language: "Kotlin",
     category: "desktop",
-    logoUrl: "https://www.google.com/s2/favicons?domain=jetbrains.com&sz=64",
+    logoUrl: productFaviconUrl("jetbrains.com"),
     description: "Shared declarative Kotlin UI for desktop, Android, iOS, and web targets.",
     starterCommand: null,
     componentOptions: [
@@ -1088,7 +1089,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Godot",
     language: "GDScript / C#",
     category: "game",
-    logoUrl: "https://www.google.com/s2/favicons?domain=godotengine.org&sz=64",
+    logoUrl: productFaviconUrl("godotengine.org"),
     description: "Cross-platform 2D or 3D game using Godot scenes, resources, and scripting.",
     starterCommand: null,
     componentOptions: [
@@ -1111,7 +1112,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Nx",
     language: "TypeScript / JavaScript",
     category: "monorepo",
-    logoUrl: "https://www.google.com/s2/favicons?domain=nx.dev&sz=64",
+    logoUrl: productFaviconUrl("nx.dev"),
     description: "Integrated monorepo with project generators, task orchestration, caching, and dependency boundaries.",
     starterCommand: "npx create-nx-workspace@latest",
     componentOptions: [
@@ -1134,7 +1135,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Turborepo",
     language: "TypeScript / JavaScript",
     category: "monorepo",
-    logoUrl: "https://www.google.com/s2/favicons?domain=turbo.build&sz=64",
+    logoUrl: productFaviconUrl("turbo.build"),
     description: "Package-based JavaScript monorepo with fast cached task pipelines and deployable applications.",
     starterCommand: "npx create-turbo@latest",
     componentOptions: [
@@ -1157,7 +1158,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Python + Typer",
     language: "Python",
     category: "cli",
-    logoUrl: "https://www.google.com/s2/favicons?domain=typer.tiangolo.com&sz=64",
+    logoUrl: productFaviconUrl("typer.tiangolo.com"),
     description: "Typed Python command-line application with automatic help and shell completion.",
     starterCommand: "uv init",
     componentOptions: [
@@ -1180,7 +1181,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Rust + Clap",
     language: "Rust",
     category: "cli",
-    logoUrl: "https://www.google.com/s2/favicons?domain=rust-lang.org&sz=64",
+    logoUrl: productFaviconUrl("rust-lang.org"),
     description: "Fast native command-line application using Clap argument parsing and Cargo packaging.",
     starterCommand: "cargo new",
     componentOptions: [
@@ -1203,7 +1204,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Node Package",
     language: "TypeScript / JavaScript",
     category: "cli",
-    logoUrl: "https://www.google.com/s2/favicons?domain=nodejs.org&sz=64",
+    logoUrl: productFaviconUrl("nodejs.org"),
     description: "Publishable Node.js library or command-line package with modern build and release tooling.",
     starterCommand: "npm init",
     componentOptions: [
@@ -1227,7 +1228,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Streamlit",
     language: "Python",
     category: "data",
-    logoUrl: "https://www.google.com/s2/favicons?domain=streamlit.io&sz=64",
+    logoUrl: productFaviconUrl("streamlit.io"),
     description: "Python data app with interactive widgets, charts, and simple deployment.",
     starterCommand: null,
     componentOptions: [
@@ -1247,7 +1248,7 @@ export const PROJECT_SCAFFOLD_FRAMEWORKS: ProjectScaffoldFramework[] = [
     label: "Dash",
     language: "Python",
     category: "data",
-    logoUrl: "https://www.google.com/s2/favicons?domain=plotly.com&sz=64",
+    logoUrl: productFaviconUrl("plotly.com"),
     description: "Python analytical web app using Dash callbacks, Plotly charts, and Flask foundations.",
     starterCommand: null,
     componentOptions: [

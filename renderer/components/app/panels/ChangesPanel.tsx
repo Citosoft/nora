@@ -20,6 +20,7 @@ import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { ForgeProviderIcon } from "@/components/app/views/ForgeProviderIcon";
 import { Button } from "@/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -268,6 +269,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
     onGenerateCommitMessage,
     onPullChanges,
     onPushChanges,
+    onCheckoutWorkspaceBranch,
     onEditChange,
     onInspectCommit,
     onClearCommitInspection
@@ -282,6 +284,11 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
   const [isPushing, setIsPushing] = useState(false);
   const [gitStatusAheadCount, setGitStatusAheadCount] = useState(0);
   const [gitStatusBehindCount, setGitStatusBehindCount] = useState(0);
+  const [gitStatusHasConfiguredUpstream, setGitStatusHasConfiguredUpstream] = useState(true);
+  const [gitStatusRemoteBranches, setGitStatusRemoteBranches] = useState<string[]>([]);
+  const [gitStatusIsDirty, setGitStatusIsDirty] = useState(false);
+  const [isSettingUpstream, setIsSettingUpstream] = useState(false);
+  const [isCheckingOutBranch, setIsCheckingOutBranch] = useState(false);
   const [fileSearchQuery, setFileSearchQuery] = useState("");
   const [fileSearchResults, setFileSearchResults] = useState<WorkspaceSearchResult[]>([]);
   const [isSearchingFiles, setIsSearchingFiles] = useState(false);
@@ -304,6 +311,9 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
     if (!snapshot.project || activeTab !== "git" || collapsed) {
       setGitStatusAheadCount(0);
       setGitStatusBehindCount(0);
+      setGitStatusHasConfiguredUpstream(true);
+      setGitStatusRemoteBranches([]);
+      setGitStatusIsDirty(false);
       return;
     }
 
@@ -314,9 +324,15 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
       });
       setGitStatusAheadCount(summary.aheadCount);
       setGitStatusBehindCount(summary.behindCount);
+      setGitStatusHasConfiguredUpstream(summary.hasConfiguredUpstream);
+      setGitStatusRemoteBranches(summary.remoteBranches);
+      setGitStatusIsDirty(summary.lines.length > 0);
     } catch {
       setGitStatusAheadCount(0);
       setGitStatusBehindCount(0);
+      setGitStatusHasConfiguredUpstream(true);
+      setGitStatusRemoteBranches([]);
+      setGitStatusIsDirty(false);
     }
   }, [activeTab, collapsed, snapshot.changesRoot, snapshot.project]);
 
@@ -456,6 +472,22 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
   const isInspectingCommit = !!selectedCommit;
   const forgeProvider = forgeOverview?.repo?.provider ?? null;
   const changeCount = snapshot.changes.length;
+  const checkoutableBranches = useMemo(
+    () =>
+      [...snapshot.projectBranches]
+        .filter((branch) => branch.trim() && branch !== activeBranch)
+        .sort((left, right) => left.localeCompare(right)),
+    [activeBranch, snapshot.projectBranches]
+  );
+  const branchSwitcherDisabledReason = isInspectingCommit
+    ? "Return to working tree before switching branches"
+    : gitStatusIsDirty
+      ? "Commit or discard changes before switching branches"
+      : checkoutableBranches.length === 0
+        ? "No other local branches are available"
+        : null;
+  const canOpenBranchSwitcher =
+    !!snapshot.project && !isInspectingCommit && !gitStatusIsDirty && checkoutableBranches.length > 0 && !isCheckingOutBranch;
   const fileCount = filePaths.length;
   const additionsTotal = snapshot.changes.reduce((total, change) => total + change.additions, 0);
   const deletionsTotal = snapshot.changes.reduce((total, change) => total + change.deletions, 0);
@@ -641,6 +673,47 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
       await loadGitStatusSummary();
     } finally {
       setIsPulling(false);
+      statusBar.endStatus(statusId);
+    }
+  };
+
+  const handleCheckoutBranch = async (branch: string) => {
+    if (!snapshot.project || isCheckingOutBranch || gitStatusIsDirty || isInspectingCommit) {
+      return;
+    }
+
+    setIsCheckingOutBranch(true);
+    const statusId = statusBar.beginStatus(`Checking out ${branch}`, true);
+    try {
+      await onCheckoutWorkspaceBranch(branch);
+      onRefreshForge();
+      await loadGitStatusSummary();
+    } finally {
+      setIsCheckingOutBranch(false);
+      statusBar.endStatus(statusId);
+    }
+  };
+
+  const handleSetUpstream = async (remoteBranch: string) => {
+    if (!snapshot.project || isSettingUpstream) {
+      return;
+    }
+
+    setIsSettingUpstream(true);
+    const statusId = statusBar.beginStatus(`Linking ${activeBranch} to ${remoteBranch}`, true);
+    try {
+      const summary = await noraWorkspaceClient.setWorkspaceUpstream({
+        projectId: snapshot.project.id,
+        rootPath: snapshot.changesRoot || undefined,
+        remoteBranch
+      });
+      setGitStatusAheadCount(summary.aheadCount);
+      setGitStatusBehindCount(summary.behindCount);
+      setGitStatusHasConfiguredUpstream(summary.hasConfiguredUpstream);
+      setGitStatusRemoteBranches(summary.remoteBranches);
+      setGitStatusIsDirty(summary.lines.length > 0);
+    } finally {
+      setIsSettingUpstream(false);
       statusBar.endStatus(statusId);
     }
   };
@@ -923,13 +996,40 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
               </div>
               {activeTab === "git" ? (
                 <>
-                  <div
-                    className="flex items-center gap-1.5 rounded-[4px] border border-border/60 bg-background/60 px-2 py-1 text-foreground"
-                    title={activeBranch ? `Active branch: ${activeBranch}` : "Active branch unavailable"}
+                  <DropdownMenu
+                    align="end"
+                    widthClassName="w-64"
+                    trigger={(
+                      <Button
+                        variant="outline"
+                        className="h-7 max-w-[180px] shrink-0 gap-1.5 rounded-[4px] border-border/60 bg-background/60 px-2 py-1 text-[11px] font-medium text-foreground"
+                        disabled={!canOpenBranchSwitcher}
+                        tooltip={
+                          branchSwitcherDisabledReason ??
+                          (activeBranch ? `Switch branch from ${activeBranch}` : "Switch branch")
+                        }
+                        aria-label={activeBranch ? `Active branch: ${activeBranch}` : "Active branch unavailable"}
+                      >
+                        {isCheckingOutBranch ? (
+                          <LoaderCircle className="size-3.5 shrink-0 animate-spin text-primary" />
+                        ) : (
+                          <GitBranch className="size-3.5 shrink-0 text-primary" />
+                        )}
+                        <span className="truncate">{activeBranch || "unknown branch"}</span>
+                        <ChevronDown className="size-3 shrink-0 text-muted-foreground" />
+                      </Button>
+                    )}
                   >
-                    <GitBranch className="size-3.5 shrink-0 text-primary" />
-                    <span className="max-w-[140px] truncate font-medium">{activeBranch || "unknown branch"}</span>
-                  </div>
+                    {checkoutableBranches.map((branch) => (
+                      <DropdownMenuItem
+                        key={branch}
+                        onSelect={() => void handleCheckoutBranch(branch)}
+                      >
+                        <GitBranch className="size-4" />
+                        <span className="truncate">{branch}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenu>
                   <div className="flex items-center gap-1 text-muted-foreground" title={`${additionsTotal} additions`}>
                     <Plus className="size-3.5 text-emerald-500" />
                     <span>{additionsTotal}</span>
@@ -1109,6 +1209,42 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                         <span>{createPullRequestLabel}</span>
                       </Button>
                     </div>
+                    {!gitStatusHasConfiguredUpstream && activeBranch ? (
+                      <div className="flex items-center justify-between gap-3 rounded-[5px] border border-amber-500/30 bg-amber-500/5 px-2.5 py-2">
+                        <div className="min-w-0 text-[11px] text-muted-foreground">
+                          <span className="font-medium text-foreground">{activeBranch}</span> has no upstream branch.
+                        </div>
+                        <DropdownMenu
+                          align="end"
+                          widthClassName="w-64"
+                          trigger={(
+                            <Button
+                              variant="outline"
+                              className="h-7 shrink-0 gap-1.5 px-2 text-[11px]"
+                              disabled={isSettingUpstream || gitStatusRemoteBranches.length === 0}
+                              tooltip={
+                                gitStatusRemoteBranches.length
+                                  ? "Choose a remote branch to track"
+                                  : "No remote branches are available"
+                              }
+                            >
+                              {isSettingUpstream ? <LoaderCircle className="size-3.5 animate-spin" /> : <GitBranch className="size-3.5" />}
+                              <span>{isSettingUpstream ? "Linking" : "Set upstream"}</span>
+                            </Button>
+                          )}
+                        >
+                          {gitStatusRemoteBranches.map((remoteBranch) => (
+                            <DropdownMenuItem
+                              key={remoteBranch}
+                              onSelect={() => void handleSetUpstream(remoteBranch)}
+                            >
+                              <GitBranch className="size-4" />
+                              <span className="truncate">{remoteBranch}</span>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenu>
+                      </div>
+                    ) : null}
                     <div className="text-[11px] text-muted-foreground">
                       {selectedChangeCount} of {snapshot.changes.length} file{snapshot.changes.length === 1 ? "" : "s"} selected for commit
                       {generatedCommitProvider ? ` · Generated with ${generatedCommitProvider}` : ""}

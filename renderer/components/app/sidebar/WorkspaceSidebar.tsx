@@ -87,6 +87,7 @@ export const WorkspaceSidebar = () => {
     onOpenCreateTerminalOnWorktree,
     onOpenCreateWorktree,
     onLaunchQuickTerminalOnWorktree,
+    onCheckoutWorkspaceBranch,
     onLaunchWorktreeScript,
     onRemoveWorktree,
     onFocusAgent,
@@ -357,6 +358,7 @@ export const WorkspaceSidebar = () => {
                           onOpenCreateTerminalOnWorktree={onOpenCreateTerminalOnWorktree}
                           onOpenCreateWorktree={onOpenCreateWorktree}
                           onLaunchQuickTerminalOnWorktree={onLaunchQuickTerminalOnWorktree}
+                          onCheckoutWorkspaceBranch={onCheckoutWorkspaceBranch}
                           onLaunchWorktreeScript={onLaunchWorktreeScript}
                           onRemoveWorktree={onRemoveWorktree}
                           onOpenCreateAgent={onOpenCreateAgent}

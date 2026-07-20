@@ -107,6 +107,7 @@ export type ChangesPanelChromeSlice = {
   onGenerateCommitMessage: (paths?: string[]) => Promise<GenerateCommitMessageResult | null>;
   onPullChanges: () => Promise<AppState | null>;
   onPushChanges: () => Promise<AppState | null>;
+  onCheckoutWorkspaceBranch: (branch: string) => Promise<AppState | null>;
   onEditChange: (pathName: string) => void;
   onInspectCommit: (hash: string) => Promise<AppState | null>;
   onClearCommitInspection: () => Promise<AppState | null>;

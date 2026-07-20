@@ -1,4 +1,5 @@
 import { Tooltip } from "@/components/ui/tooltip";
+import { ProductIcon } from "@/components/app/shared/ProductIcon";
 import { Check, Package } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
@@ -40,12 +41,12 @@ export function ProjectScaffoldCompactTile({
       >
         <div className="grid size-9 shrink-0 place-items-center rounded-[5px] border border-border/70 bg-background/70">
           {logoUrl && !logoFailed ? (
-            <img
-              src={logoUrl}
+            <ProductIcon
+              sourceUrl={logoUrl}
               alt=""
               className="size-5 object-contain"
               draggable={false}
-              onError={() => setLogoFailed(true)}
+              onFinalError={() => setLogoFailed(true)}
             />
           ) : (
             <Package className="size-4 text-muted-foreground" aria-hidden="true" />

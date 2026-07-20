@@ -1,6 +1,7 @@
 import { noraSessionClient } from "@/components/app/clients/noraSessionClient";
 import { noraIntegrationClient } from "@/components/app/clients/noraIntegrationClient";
 import { noraToolingManagementClient } from "@/components/app/clients/noraToolingManagementClient";
+import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
 import { noraWorkspaceManagementClient } from "@/components/app/clients/noraWorkspaceManagementClient";
 import { createOpenTaskInWorkspaceHandler } from "@/components/app/logic/createOpenTaskInWorkspaceHandler";
 import { createQuickTerminalDialogDefaults, createQuickTerminalPayload } from "@/components/app/logic/terminalQuickLaunch";
@@ -167,6 +168,12 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
         target: { kind: "existing", worktreeId }
       });
     },
+    onCheckoutWorkspaceBranch: (projectId, branch) =>
+      d.activeProjectId === projectId
+        ? d.safely(() => noraWorkspaceClient.checkoutWorkspaceBranch({ projectId, branch }))
+        : d.focusWorkspaceWithRecovery(projectId).then((next) =>
+            next ? d.safely(() => noraWorkspaceClient.checkoutWorkspaceBranch({ projectId, branch })) : null
+          ),
     onLaunchWorktreeScript: (projectId, payload: CreateTerminalPayload) => {
       void d.launchTerminalInWorkspace(projectId, payload);
     },
@@ -458,6 +465,7 @@ export function WorkspaceSidebarProvider({
     onOpenCreateTerminalOnWorktree: value.onOpenCreateTerminalOnWorktree,
     onOpenCreateWorktree: value.onOpenCreateWorktree,
     onLaunchQuickTerminalOnWorktree: value.onLaunchQuickTerminalOnWorktree,
+    onCheckoutWorkspaceBranch: value.onCheckoutWorkspaceBranch,
     onLaunchWorktreeScript: value.onLaunchWorktreeScript,
     onRemoveWorktree: value.onRemoveWorktree,
     onFocusAgent: value.onFocusAgent,
