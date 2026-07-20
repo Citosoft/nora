@@ -91,7 +91,7 @@ export function VercelPanel({
     return (
       <div className="flex h-full min-h-0 flex-col items-center justify-center gap-3 p-6 text-center text-sm text-muted-foreground">
         <VercelMark className="size-8 text-foreground" />
-        <div>Connect Vercel in Settings before loading workspace deployment data.</div>
+        <div>Connect Vercel in Settings before loading project deployment data.</div>
         <Button variant="outline" size="sm" onClick={onOpenSettings}>
           Open settings
         </Button>
@@ -113,7 +113,7 @@ export function VercelPanel({
                 ? formatProjectCaption(linkedProject)
                 : accountLabel
                   ? `Connected as ${accountLabel}`
-                  : "Choose a Vercel project for this workspace"}
+                  : "Choose a Vercel project for this project"}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -164,7 +164,7 @@ export function VercelPanel({
 
           <div className="rounded-[8px] border border-border/60 bg-card/70 p-4">
             <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              Match workspace
+              Match project
             </div>
             <div className="mt-3 space-y-3">
               <Select
@@ -191,7 +191,7 @@ export function VercelPanel({
                   Link project
                 </Button>
                 <div className="text-xs text-muted-foreground">
-                  Auto-matching prefers the connected Git repo when available, then falls back to workspace naming.
+                  Auto-matching prefers the connected Git repo when available, then falls back to project naming.
                 </div>
               </div>
             </div>

@@ -1,4 +1,5 @@
 import type { AgentSession, AppState, ProjectSummary, TerminalSession, WorktreeRecord } from "@shared/appTypes";
+import { removeGitWorktreeIfRegistered } from "../helpers/gitWorktreeRemoval";
 import fs from "node:fs/promises";
 import type {
   SessionLifecycleHelperDeps,
@@ -335,7 +336,9 @@ export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps):
     }
 
     try {
-      await deps.execGit(deps.getProjectTarget(project), ["worktree", "remove", "--force", updated.path]);
+      await removeGitWorktreeIfRegistered(() =>
+        deps.execGit(deps.getProjectTarget(project), ["worktree", "remove", "--force", updated.path])
+      );
     } catch {
       return deps.upsertWorktree(worktrees, updated);
     }
@@ -372,7 +375,9 @@ export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps):
     }
 
     try {
-      await deps.execGit(deps.getProjectTarget(project), ["worktree", "remove", "--force", updated.path]);
+      await removeGitWorktreeIfRegistered(() =>
+        deps.execGit(deps.getProjectTarget(project), ["worktree", "remove", "--force", updated.path])
+      );
     } catch {
       return deps.upsertWorktree(worktrees, updated);
     }
@@ -394,7 +399,8 @@ export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps):
     if (!state.project || worktree.projectId !== state.project.id) {
       throw new Error("Choose the project before removing a worktree.");
     }
-    if (worktree.path === state.project.rootPath || worktree.createdFromRef === "ROOT") {
+    const project = state.project;
+    if (worktree.path === project.rootPath || worktree.createdFromRef === "ROOT") {
       throw new Error("The repository root worktree cannot be removed.");
     }
 
@@ -405,7 +411,9 @@ export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps):
     }
 
     try {
-      await deps.execGit(deps.getProjectTarget(state.project), ["worktree", "remove", "--force", worktree.path]);
+      await removeGitWorktreeIfRegistered(() =>
+        deps.execGit(deps.getProjectTarget(project), ["worktree", "remove", "--force", worktree.path])
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to remove git worktree.";
       throw new Error(message);

@@ -8,8 +8,8 @@ export const WorkspaceSidebarWorkspacesHeader = (props: WorkspaceSidebarWorkspac
   const hasWorkspaceGroups = workspaceGroupIds.length > 0;
 
   return (
-    <div className="workspace-shell-surface flex h-[52px] items-center justify-between bg-background/70 px-4">
-      <div className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">Projects</div>
+    <div className="workspace-sidebar-section-header flex min-h-11 items-center justify-between px-4 py-1.5">
+      <div className="workspace-sidebar-section-title">Projects</div>
       <div className="flex items-center gap-1">
         {variant === "active-project" ? (
           <Button variant="ghost" size="icon" className="size-8" onClick={onChooseProject} aria-label="Add project">

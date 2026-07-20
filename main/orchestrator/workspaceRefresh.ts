@@ -135,46 +135,52 @@ export function createWorkspaceRefreshHelpers(deps: WorkspaceRefreshHelperDeps):
       : workingTreeChanges;
     const nextSelectedCommitHash = selectedCommit && changes !== workingTreeChanges ? selectedCommit.hash : null;
 
-    deps.updateState((currentState) => ({
-      ...currentState,
-      project: currentState.project
-        ? {
-            ...currentState.project,
-            baseBranch: rootBranch,
-            workspaceInstructionFile,
-            updatedAt: deps.nowIso()
-          }
-        : null,
-      changesRoot,
-      selectedChangePath:
-        changes.find((change) => change.path === currentState.selectedChangePath)?.path ||
-        changes[0]?.path ||
-        null,
-      selectedCommitHash: nextSelectedCommitHash,
-      selectedCommit: nextSelectedCommitHash ? selectedCommit : null,
-      changes,
-      commitHistory,
-      activeRemoteMounts,
-      projectScripts,
-      projectBranches,
-      defaultWorktreePrepareCommand,
-      worktrees: currentState.worktrees.map((worktree) => ({
-        ...worktree,
-        branch: branchByWorktree.get(worktree.id) ?? worktree.branch,
-        scripts: scriptsByWorktree.get(worktree.id) ?? worktree.scripts ?? []
-      })),
-      agents: currentState.agents.map((agent) => ({
-        ...agent,
-        branch: branchByWorktree.get(agent.worktreeId) ?? agent.branch,
-        changeSummary: changeSummaryByWorktree.get(agent.worktreeId) ?? agent.changeSummary ?? null
-      })),
-      terminals: currentState.terminals.map((terminal) => ({
-        ...terminal,
-        branch: branchByWorktree.get(terminal.worktreeId) ?? terminal.branch,
-        changeSummary: changeSummaryByWorktree.get(terminal.worktreeId) ?? terminal.changeSummary ?? null
-      })),
-      errorMessage: refreshWarning
-    }));
+    const refreshedAgents = await deps.resolveAgentSessionTitles(state.agents);
+
+    deps.updateState((currentState) => {
+      const refreshedAgentTitleById = new Map(refreshedAgents.map((agent) => [agent.id, agent.threadTitle ?? null]));
+      return {
+        ...currentState,
+        project: currentState.project
+          ? {
+              ...currentState.project,
+              baseBranch: rootBranch,
+              workspaceInstructionFile,
+              updatedAt: deps.nowIso()
+            }
+          : null,
+        changesRoot,
+        selectedChangePath:
+          changes.find((change) => change.path === currentState.selectedChangePath)?.path ||
+          changes[0]?.path ||
+          null,
+        selectedCommitHash: nextSelectedCommitHash,
+        selectedCommit: nextSelectedCommitHash ? selectedCommit : null,
+        changes,
+        commitHistory,
+        activeRemoteMounts,
+        projectScripts,
+        projectBranches,
+        defaultWorktreePrepareCommand,
+        worktrees: currentState.worktrees.map((worktree) => ({
+          ...worktree,
+          branch: branchByWorktree.get(worktree.id) ?? worktree.branch,
+          scripts: scriptsByWorktree.get(worktree.id) ?? worktree.scripts ?? []
+        })),
+        agents: currentState.agents.map((agent) => ({
+          ...agent,
+          branch: branchByWorktree.get(agent.worktreeId) ?? agent.branch,
+          changeSummary: changeSummaryByWorktree.get(agent.worktreeId) ?? agent.changeSummary ?? null,
+          threadTitle: refreshedAgentTitleById.get(agent.id) ?? agent.threadTitle ?? null
+        })),
+        terminals: currentState.terminals.map((terminal) => ({
+          ...terminal,
+          branch: branchByWorktree.get(terminal.worktreeId) ?? terminal.branch,
+          changeSummary: changeSummaryByWorktree.get(terminal.worktreeId) ?? terminal.changeSummary ?? null
+        })),
+        errorMessage: refreshWarning
+      };
+    });
 
     deps.reportWorkspaceLoadingProgress(state.project.id, "Reconciling workspace summaries...", "read project index and session state");
     await deps.refreshWorkspaceSummaries("refreshProjectState");

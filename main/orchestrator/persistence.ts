@@ -109,6 +109,7 @@ export function createPersistenceHelpers(deps: PersistenceHelperDeps): Persisten
           lastTerminalLine: agent.lastTerminalLine || "",
           resumeSessionId: agent.resumeSessionId || null,
           resumeCommand: agent.resumeCommand || null,
+          threadTitle: agent.threadTitle || null,
           contextFilePath: contextPaths.contextFilePath,
           terminalStreamPath: contextPaths.terminalStreamPath,
           isBusy: false,

@@ -1,6 +1,7 @@
 import { noraSessionClient } from "@/components/app/clients/noraSessionClient";
 import { noraIntegrationClient } from "@/components/app/clients/noraIntegrationClient";
 import { noraToolingManagementClient } from "@/components/app/clients/noraToolingManagementClient";
+import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
 import { noraWorkspaceManagementClient } from "@/components/app/clients/noraWorkspaceManagementClient";
 import { createOpenTaskInWorkspaceHandler } from "@/components/app/logic/createOpenTaskInWorkspaceHandler";
 import { createQuickTerminalDialogDefaults, createQuickTerminalPayload } from "@/components/app/logic/terminalQuickLaunch";
@@ -71,6 +72,16 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
     onResetWorkspaces: d.uiCommands.openResetWorkspacesDialog,
     onOpenCreateAgent: (defaults) => d.uiCommands.openCreateAgentDialog(defaults),
     onOpenCreateTerminal: (defaults) => d.uiCommands.openCreateTerminalDialog(defaults),
+    onResumeThread: async (projectId, payload) => {
+      const focused = await d.focusWorkspaceWithRecovery(projectId);
+      if (!focused) {
+        return;
+      }
+      await d.safely(() => noraSessionClient.createAgent(payload));
+    },
+    onArchiveThread: async (projectId, ref) => {
+      await noraWorkspaceClient.archiveExternalHarnessThread({ projectId, ref });
+    },
     onLaunchWorkspaceTerminal: (projectId, payload) => {
       void d.launchTerminalInWorkspace(projectId, payload);
     },
@@ -116,7 +127,7 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
     onOpenWorkflowRunChangeRequest: async (projectId, worktreeId) => {
       const focused = await d.focusWorkspaceWithRecovery(projectId);
       if (!focused) {
-        throw new Error("Unable to focus the workflow workspace.");
+        throw new Error("Unable to focus the workflow project.");
       }
       const next = await d.safely(() => noraSessionClient.focusWorktree(worktreeId));
       if (!next) {
@@ -167,6 +178,12 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
         target: { kind: "existing", worktreeId }
       });
     },
+    onCheckoutWorkspaceBranch: (projectId, branch) =>
+      d.activeProjectId === projectId
+        ? d.safely(() => noraWorkspaceClient.checkoutWorkspaceBranch({ projectId, branch }))
+        : d.focusWorkspaceWithRecovery(projectId).then((next) =>
+            next ? d.safely(() => noraWorkspaceClient.checkoutWorkspaceBranch({ projectId, branch })) : null
+          ),
     onLaunchWorktreeScript: (projectId, payload: CreateTerminalPayload) => {
       void d.launchTerminalInWorkspace(projectId, payload);
     },
@@ -446,6 +463,8 @@ export function WorkspaceSidebarProvider({
     onResetWorkspaces: value.onResetWorkspaces,
     onOpenCreateAgent: value.onOpenCreateAgent,
     onOpenCreateTerminal: value.onOpenCreateTerminal,
+    onResumeThread: value.onResumeThread,
+    onArchiveThread: value.onArchiveThread,
     onLaunchWorkspaceTerminal: value.onLaunchWorkspaceTerminal,
     onLaunchWorkspaceScript: value.onLaunchWorkspaceScript,
     onOpenWorkspaceTerminalPresets: value.onOpenWorkspaceTerminalPresets,
@@ -458,6 +477,7 @@ export function WorkspaceSidebarProvider({
     onOpenCreateTerminalOnWorktree: value.onOpenCreateTerminalOnWorktree,
     onOpenCreateWorktree: value.onOpenCreateWorktree,
     onLaunchQuickTerminalOnWorktree: value.onLaunchQuickTerminalOnWorktree,
+    onCheckoutWorkspaceBranch: value.onCheckoutWorkspaceBranch,
     onLaunchWorktreeScript: value.onLaunchWorktreeScript,
     onRemoveWorktree: value.onRemoveWorktree,
     onFocusAgent: value.onFocusAgent,

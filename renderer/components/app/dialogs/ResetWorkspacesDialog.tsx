@@ -27,15 +27,15 @@ export function ResetWorkspacesDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent headerTitle="Reset Workspaces">
+      <DialogContent headerTitle="Reset Projects">
         <DialogHeader>
           <DialogDescription>
-            This clears all {APP_SHORT_NAME}-managed workspace records, sessions, and managed checkout directories. It does not change your sidebar layout, theme, or tool configuration.
+            This clears all {APP_SHORT_NAME}-managed project records, sessions, and managed checkout directories. It does not change your sidebar layout, theme, or tool configuration.
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
           <div className="rounded-[4px] border border-destructive/25 bg-destructive/5 p-3 text-sm text-muted-foreground">
-            Local repositories you opened directly are not deleted. Only {APP_SHORT_NAME}-managed workspace state and managed worktree checkout directories are cleared.
+            Local repositories you opened directly are not deleted. Only {APP_SHORT_NAME}-managed project state and managed worktree checkout directories are cleared.
           </div>
         </DialogBody>
         <DialogFooter>
@@ -54,7 +54,7 @@ export function ResetWorkspacesDialog({
             disabled={isResetting}
           >
             {isResetting ? <LoaderCircle className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
-            Reset workspaces
+            Reset projects
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -106,7 +106,7 @@ export function useWorkspaceSidebarAllAgents({
 
   const allAgentsWorkspaceFilterOptions = useMemo(
     () => [
-      { value: "all", label: "All workspaces" },
+      { value: "all", label: "All projects" },
       ...workspaceGroups.map((workspace) => ({
         value: workspace.project.id,
         label: workspace.project.name

@@ -149,7 +149,7 @@ export function RemoteWorkspaceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent onClose={() => onOpenChange(false)} headerTitle="Open remote workspace" className="max-w-[760px]">
+      <DialogContent onClose={() => onOpenChange(false)} headerTitle="Open remote project" className="max-w-[760px]">
         <DialogHeader>
           <DialogDescription>
             {connectionMode === "mount"
@@ -173,7 +173,7 @@ export function RemoteWorkspaceDialog({
                   Connection route
                 </div>
                 <div className="mt-1 text-sm text-muted-foreground">
-                  Choose how this workspace should be exposed inside {APP_SHORT_NAME}.
+                  Choose how this project should be exposed inside {APP_SHORT_NAME}.
                 </div>
               </div>
             </div>

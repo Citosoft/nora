@@ -34,7 +34,7 @@ export function GeneralSettingsSection() {
     <div className="max-w-4xl">
       <SettingsSectionHeader
         title="General"
-        description="Core workspace preferences and defaults."
+        description="Core project preferences and defaults."
         icon={SlidersHorizontal}
       />
       {missingOptionalStartupDependencyCount > 0 ? (
@@ -60,7 +60,7 @@ export function GeneralSettingsSection() {
                 trigger={(
                   <button
                     type="button"
-                    className="flex h-10 w-full items-center justify-between rounded-[5px] border border-input bg-background px-3 py-2 text-sm ring-offset-background transition hover:bg-accent/40"
+                    className="form-control-surface flex h-10 w-full items-center justify-between rounded-[5px] border px-3 py-2 text-sm ring-offset-background transition"
                     aria-label="Choose default IDE"
                   >
                     <span className="flex min-w-0 items-center gap-2">
@@ -102,7 +102,7 @@ export function GeneralSettingsSection() {
               <button
                 type="button"
                 disabled
-                className="flex h-10 w-full items-center justify-between rounded-[5px] border border-input bg-background px-3 py-2 text-sm opacity-60"
+                className="form-control-surface flex h-10 w-full items-center justify-between rounded-[5px] border px-3 py-2 text-sm opacity-60"
                 aria-label="No IDEs detected"
               >
                 <span className="flex min-w-0 items-center gap-2">
@@ -119,8 +119,8 @@ export function GeneralSettingsSection() {
         }
       />
       <SettingRow
-        title="Workspace State Location"
-        description="Choose whether Nora stores workspace state such as tasks, specs, notes, task boards, and split views in your home `.nora` folder or in each repository's `.nora` folder."
+        title="Project State Location"
+        description="Choose whether Nora stores project state such as tasks, specs, notes, task boards, and split views in your home `.nora` folder or in each repository's `.nora` folder."
         control={(
           <Select
             value={appSettings.workspaceStateStorageMode}

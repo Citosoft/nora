@@ -94,6 +94,7 @@ export type CreateAgentDialogDefaults = {
   toolId?: string;
   mode?: AgentSession["mode"];
   target?: CreateAgentPayload["target"];
+  initialPrompt?: string;
   contextSelections?: NonNullable<CreateAgentPayload["contextSelections"]>;
   /** Wizard step to show when the dialog opens: 0 Agent, 1 Workspace, 2 Context. */
   initialWizardStepIndex?: number;

@@ -204,8 +204,8 @@ export function TitleBar({
                 ? "Expand changes sidebar"
                 : "Collapse changes sidebar"
               : isWorkspaceSidebarCollapsed
-                ? "Expand workspace sidebar"
-                : "Collapse workspace sidebar"
+                ? "Expand projects sidebar"
+                : "Collapse projects sidebar"
           }
           title={
             sidebarsSwapped
@@ -213,8 +213,8 @@ export function TitleBar({
                 ? "Expand changes sidebar"
                 : "Collapse changes sidebar"
               : isWorkspaceSidebarCollapsed
-                ? "Expand workspace sidebar"
-                : "Collapse workspace sidebar"
+                ? "Expand projects sidebar"
+                : "Collapse projects sidebar"
           }
         >
           {sidebarsSwapped ? (
@@ -247,11 +247,11 @@ export function TitleBar({
             >
               <DropdownMenuItem onSelect={onAddWorkspace}>
                 <Plus className="size-4" />
-                <span>Add Workspace</span>
+                <span>Add Project</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={onAddRemoteWorkspace}>
                 <Globe className="size-4" />
-                <span>Add Remote Workspace</span>
+                <span>Add Remote Project</span>
               </DropdownMenuItem>
               {hasActiveWorkspace ? (
                 <>
@@ -276,11 +276,11 @@ export function TitleBar({
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={onRefreshWorkspace}>
                     <RefreshCcw className="size-4" />
-                    <span>Refresh Workspace</span>
+                    <span>Refresh Project</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={onCloseWorkspace}>
                     <X className="size-4" />
-                    <span>Close Workspace</span>
+                    <span>Close Project</span>
                   </DropdownMenuItem>
                 </>
               ) : null}
@@ -289,7 +289,7 @@ export function TitleBar({
                 type="button"
                 className="flex w-full items-center gap-2 rounded-[6px] px-3 py-2 text-left text-[12px] text-popover-foreground transition hover:bg-accent/60"
                 onClick={() => setShowRecentWorkspaceList((current) => !current)}
-                aria-label="Toggle recent workspace list"
+                aria-label="Toggle recent project list"
               >
                 <History className="size-4" />
                 <span>Add Recent</span>
@@ -310,7 +310,7 @@ export function TitleBar({
                     </DropdownMenuItem>
                   ))
                 ) : (
-                  <div className="px-3 py-2 text-[11px] text-muted-foreground">No recent workspaces.</div>
+                  <div className="px-3 py-2 text-[11px] text-muted-foreground">No recent projects.</div>
                 )
               ) : null}
             </DropdownMenu>
@@ -330,7 +330,7 @@ export function TitleBar({
             >
               <DropdownMenuItem onSelect={onToggleWorkspaceSidebar}>
                 <PanelLeftClose className="size-4" />
-                <span>Toggle Workspace Sidebar</span>
+                <span>Toggle Projects Sidebar</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={onToggleChangesSidebar}>
                 <PanelRightClose className="size-4" />
@@ -483,7 +483,7 @@ export function TitleBar({
                   isCompactTitleBar ? "max-w-[160px]" : "max-w-[220px]",
                   titleBarSelectorSurfaceClass
                 )}
-                aria-label={preferredIde ? `Open current workspace in ${preferredIde.name}` : "Open current workspace in an IDE"}
+                aria-label={preferredIde ? `Open current project in ${preferredIde.name}` : "Open current project in an IDE"}
                 onClick={() => {
                   if (preferredIde) {
                     onOpenProjectInIde(preferredIde.id);
@@ -531,8 +531,8 @@ export function TitleBar({
           aria-label={
             sidebarsSwapped
               ? isWorkspaceSidebarCollapsed
-                ? "Expand workspace sidebar"
-                : "Collapse workspace sidebar"
+                ? "Expand projects sidebar"
+                : "Collapse projects sidebar"
               : isChangesSidebarCollapsed
                 ? "Expand changes sidebar"
                 : "Collapse changes sidebar"
@@ -540,8 +540,8 @@ export function TitleBar({
           title={
             sidebarsSwapped
               ? isWorkspaceSidebarCollapsed
-                ? "Expand workspace sidebar"
-                : "Collapse workspace sidebar"
+                ? "Expand projects sidebar"
+                : "Collapse projects sidebar"
               : isChangesSidebarCollapsed
                 ? "Expand changes sidebar"
                 : "Collapse changes sidebar"

@@ -23,7 +23,9 @@ import type {
   AnalyticsRuntimeConfig,
   AppSettings,
   AppState,
+  CreateAgentPayload,
   CreateTerminalPayload,
+  ExternalHarnessContextRef,
   ForgeOAuthProviderConfig,
   ForgeProvider,
   InstalledIde,
@@ -222,6 +224,8 @@ export type WorkspaceSidebarProps = {
   onResetWorkspaces: () => void;
   onOpenCreateAgent: (defaults?: CreateAgentDialogDefaults) => void;
   onOpenCreateTerminal: (defaults: CreateTerminalDialogDefaults) => void;
+  onResumeThread: (projectId: string, payload: CreateAgentPayload) => Promise<void>;
+  onArchiveThread: (projectId: string, ref: ExternalHarnessContextRef) => Promise<void>;
   onLaunchWorkspaceTerminal: (projectId: string, payload: CreateTerminalPayload) => void;
   onLaunchWorkspaceScript: (projectId: string, defaults: CreateTerminalDialogDefaults) => void;
   onOpenWorkspaceTerminalPresets: (projectId: string) => void;
@@ -234,6 +238,7 @@ export type WorkspaceSidebarProps = {
   onOpenCreateTerminalOnWorktree: (projectId: string, worktreeId: string) => void;
   onOpenCreateWorktree: (projectId: string) => void;
   onLaunchQuickTerminalOnWorktree: (projectId: string, worktreeId: string) => void;
+  onCheckoutWorkspaceBranch: (projectId: string, branch: string) => Promise<AppState | null>;
   onLaunchWorktreeScript: (projectId: string, payload: CreateTerminalPayload) => void;
   onRemoveWorktree: (projectId: string, worktreeId: string, branch: string) => void;
   onFocusAgent: (agentId: string) => void;

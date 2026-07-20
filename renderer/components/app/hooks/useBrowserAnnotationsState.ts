@@ -70,7 +70,7 @@ export function useBrowserAnnotationsState({
     return [
       ...uniqueUrls.map((url) => ({ kind: "workspace-path" as const, label: "Reviewed page", value: url })),
       ...(workspaceInstructionPath
-        ? [{ kind: "workspace-path" as const, label: "Workspace instructions", value: workspaceInstructionPath }]
+        ? [{ kind: "workspace-path" as const, label: "Project instructions", value: workspaceInstructionPath }]
         : [])
     ];
   }, [annotations, workspaceInstructionPath]);

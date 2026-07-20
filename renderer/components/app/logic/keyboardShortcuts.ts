@@ -4,22 +4,22 @@ import type { ShortcutDefinition, ShortcutKey } from "@/components/app/types/com
 export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
   {
     id: "open-workspace-quick-search",
-    title: "Workspace Quick Search",
-    description: "Search agents, terminals, tasks, specs, notes, and files in the active workspace.",
+    title: "Project Quick Search",
+    description: "Search agents, terminals, tasks, specs, notes, and files in the active project.",
     category: "Workbench",
     keys: ["mod", "k"]
   },
   {
     id: "open-workspace-switcher",
-    title: "Open Workspace Switcher",
-    description: "Open the keyboard-driven workspace switcher.",
+    title: "Open Project Switcher",
+    description: "Open the keyboard-driven project switcher.",
     category: "Workbench",
     keys: ["mod", "shift", "k"]
   },
   {
     id: "toggle-workspace-sidebar",
-    title: "Toggle Workspace Sidebar",
-    description: "Collapse or expand the primary workspace sidebar.",
+    title: "Toggle Projects Sidebar",
+    description: "Collapse or expand the primary projects sidebar.",
     category: "Workbench",
     keys: ["mod", "b"]
   },
@@ -33,21 +33,21 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
   {
     id: "focus-previous-session-tab",
     title: "Previous Session Tab",
-    description: "Focus the previous workspace session tab.",
+    description: "Focus the previous project session tab.",
     category: "Workbench",
     keys: ["mod", "shift", "["]
   },
   {
     id: "focus-next-session-tab",
     title: "Next Session Tab",
-    description: "Focus the next workspace session tab.",
+    description: "Focus the next project session tab.",
     category: "Workbench",
     keys: ["mod", "shift", "]"]
   },
   {
     id: "close-active-session-tab",
     title: "Close Active Session Tab",
-    description: "Close the focused workspace session tab (agent, terminal, browser, editor, diff, or split view).",
+    description: "Close the focused project session tab (agent, terminal, browser, editor, diff, or split view).",
     category: "Workbench",
     keys: ["mod", "w"],
     allowInEditable: true
@@ -55,56 +55,56 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
   {
     id: "open-create-terminal",
     title: "New Terminal",
-    description: "Open a new terminal in the current workspace using your default shell and quick-launch settings.",
+    description: "Open a new terminal in the current project using your default shell and quick-launch settings.",
     category: "Workbench",
     keys: ["mod", "t"]
   },
   {
     id: "open-add-workspace",
-    title: "Add Workspace",
-    description: "Open the add workspace flow.",
+    title: "Add Project",
+    description: "Open the add project flow.",
     category: "Workbench",
     keys: ["mod", "o"]
   },
   {
     id: "open-recent-workspace-1",
-    title: "Open Recent Workspace 1",
-    description: "Open the first item in the recent workspace list.",
+    title: "Open Recent Project 1",
+    description: "Open the first item in the recent project list.",
     category: "Workbench",
     keys: ["mod", "1"]
   },
   {
     id: "open-recent-workspace-2",
-    title: "Open Recent Workspace 2",
-    description: "Open the second item in the recent workspace list.",
+    title: "Open Recent Project 2",
+    description: "Open the second item in the recent project list.",
     category: "Workbench",
     keys: ["mod", "2"]
   },
   {
     id: "open-recent-workspace-3",
-    title: "Open Recent Workspace 3",
-    description: "Open the third item in the recent workspace list.",
+    title: "Open Recent Project 3",
+    description: "Open the third item in the recent project list.",
     category: "Workbench",
     keys: ["mod", "3"]
   },
   {
     id: "open-recent-workspace-4",
-    title: "Open Recent Workspace 4",
-    description: "Open the fourth item in the recent workspace list.",
+    title: "Open Recent Project 4",
+    description: "Open the fourth item in the recent project list.",
     category: "Workbench",
     keys: ["mod", "4"]
   },
   {
     id: "open-recent-workspace-5",
-    title: "Open Recent Workspace 5",
-    description: "Open the fifth item in the recent workspace list.",
+    title: "Open Recent Project 5",
+    description: "Open the fifth item in the recent project list.",
     category: "Workbench",
     keys: ["mod", "5"]
   },
   {
     id: "open-workspace-browser",
     title: "New Browser",
-    description: "Open a new browser tab for the current workspace.",
+    description: "Open a new browser tab for the current project.",
     category: "Workbench",
     keys: ["mod", "shift", "t"]
   },
@@ -125,7 +125,7 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
   {
     id: "open-create-agent",
     title: "New Agent",
-    description: "Open the new agent flow for the current workspace.",
+    description: "Open the new agent flow for the current project.",
     category: "Workbench",
     keys: ["mod", "shift", "a"]
   },
@@ -190,9 +190,9 @@ export function buildShortcutsForHelpDialog(
   const merged: ShortcutDefinition = {
     ...firstRecent,
     id: "open-recent-workspace-1",
-    title: "Open Recent Workspace",
+    title: "Open Recent Project",
     description:
-      "Open one of the first five workspaces in your recent list, by position (modifier + 1 through 5).",
+      "Open one of the first five projects in your recent list, by position (modifier + 1 through 5).",
     helpKeysLabel: formatRecentWorkspaceShortcutsRange(platform)
   };
   return [...withoutRecent.slice(0, firstRecentIndex), merged, ...withoutRecent.slice(firstRecentIndex)];

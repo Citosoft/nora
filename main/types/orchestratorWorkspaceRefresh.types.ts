@@ -1,5 +1,6 @@
 import type {
   AppState,
+  AgentSession,
   ChangeEntry,
   CommitHistoryEntry,
   ProjectSummary,
@@ -38,6 +39,7 @@ export interface WorkspaceRefreshHelperDeps {
   describeGitTimeout: (operation: string) => string;
   readCommitEntry: (target: WorkspaceTarget, hash: string) => Promise<CommitHistoryEntry | null>;
   readCommitChanges: (target: WorkspaceTarget, hash: string) => Promise<ChangeEntry[]>;
+  resolveAgentSessionTitles: (agents: AgentSession[]) => Promise<AgentSession[]>;
   refreshWorkspaceSummaries: (reason: string) => Promise<void>;
   loadIndexedProjects: () => Promise<ProjectSummary[]>;
   loadRecentProjects: () => Promise<RecentProject[]>;

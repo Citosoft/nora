@@ -1,5 +1,6 @@
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { noraToolingClient } from "@/components/app/clients/noraToolingClient";
+import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
 import { noraWorkspaceManagementClient } from "@/components/app/clients/noraWorkspaceManagementClient";
 import { useAppRootDialogs } from "@/components/app/context/appRootDialogsContext";
 import {
@@ -608,6 +609,11 @@ function SignedInAppRootContent({
     declineAnalyticsConsent: dialogs.declineAnalyticsConsent,
     workspaceSwitcherEntries
   });
+  const handleCheckoutWorkspaceBranch = useCallback(
+    (projectId: string, branch: string) =>
+      props.safely(() => noraWorkspaceClient.checkoutWorkspaceBranch({ projectId, branch })),
+    [props.safely]
+  );
   const workspaceSidebarSources = useAppRootWorkspaceSidebarSources({
     agentsNeedingAttention,
     collapsedWorkspaceIds,
@@ -620,6 +626,7 @@ function SignedInAppRootContent({
     gitlabHost: props.preferences.gitlabHost,
     gitlabToken: props.preferences.gitlabToken,
     handleChooseWorkspaceAtPath: props.workspaceLifecycle.handleChooseWorkspaceAtPath,
+    handleCheckoutWorkspaceBranch,
     handleOpenWorkspaceBrowser: props.centerTabs.handleOpenWorkspaceBrowser,
     handleRemoveWorkspace: props.workspaceLifecycle.handleRemoveWorkspace,
     isChatbotsSectionCollapsed,

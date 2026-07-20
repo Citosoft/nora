@@ -172,6 +172,7 @@ export interface AgentSession {
   lastTerminalLine: string;
   resumeSessionId: string | null;
   resumeCommand: string | null;
+  threadTitle?: string | null;
   contextFilePath: string;
   terminalStreamPath: string;
   isBusy: boolean;
@@ -284,6 +285,7 @@ export interface CreateAgentPayload {
   toolId: string;
   name: string;
   task: string;
+  initialPrompt?: string;
   commandOverride: string;
   mode: AgentMode;
   target: WorktreeTarget;
@@ -291,6 +293,8 @@ export interface CreateAgentPayload {
   launchSource?: import("./agentContext.types").AgentPromptSource;
   initialPromptDelivery?: import("../agentStartupCapabilities").AgentInitialPromptDelivery;
   startupTrustMode?: import("../agentStartupCapabilities").AgentStartupTrustMode;
+  resumeSessionId?: string | null;
+  resumeCommand?: string | null;
   branchCheckout?: {
     mode: "existing" | "new";
     branchName: string;

@@ -77,7 +77,7 @@ export function SpecBrowserPanel({
                 </div>
                 <div className="px-5 py-4">
                   {workspace.isLoading ? (
-                    <div className="text-sm text-muted-foreground">Loading workspace specs…</div>
+                    <div className="text-sm text-muted-foreground">Loading project specs...</div>
                   ) : workspace.specs.length ? (
                     <div className="space-y-2">
                       {workspace.specs.map((spec) => (
@@ -118,7 +118,7 @@ export function SpecBrowserPanel({
                     </div>
                   ) : (
                     <div className="rounded-[4px] border border-dashed border-border/70 bg-background/40 px-4 py-6 text-sm text-muted-foreground">
-                      No specs yet for this workspace.
+                      No specs yet for this project.
                     </div>
                   )}
                 </div>
@@ -126,7 +126,7 @@ export function SpecBrowserPanel({
             ))
           ) : (
             <div className="rounded-[4px] border border-dashed border-border/70 bg-background/40 px-6 py-8 text-sm text-muted-foreground">
-              Add a repository to start organizing specs by workspace.
+              Add a repository to start organizing specs by project.
             </div>
           )}
         </div>

@@ -66,11 +66,11 @@ export function GenerateTasksDialog({
       <DialogContent onClose={() => onOpenChange(false)} headerTitle="Generate tasks">
         <DialogHeader>
           <DialogDescription>
-            Launch an agent to plan the work, then write task files into `.nora/tasks/` for the selected workspace.
+            Launch an agent to plan the work, then write task files into `.nora/tasks/` for the selected project.
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="space-y-4">
-          <Field label="Workspace">
+          <Field label="Project">
             <Select value={projectId} onChange={(event) => setProjectId(event.target.value)}>
               {workspaces.map((workspace) => (
                 <option key={workspace.projectId} value={workspace.projectId}>

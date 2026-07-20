@@ -1,5 +1,6 @@
 import type {
   AgentContextSelection,
+  ArchiveExternalHarnessThreadPayload,
   AppState,
   CommitChangesPayload,
   CreateProjectWorkspacePayload,
@@ -16,6 +17,7 @@ import type {
   TerminalPreset,
   WorkspaceFileRequest,
   WorkspaceGitStatusSummary,
+  SetWorkspaceUpstreamPayload,
   WorkspaceNoteSummary,
   WorkspacePathStatResult,
   WorkspaceSearchRequest,
@@ -24,6 +26,7 @@ import type {
   WorkspaceSplitViewCollection,
   WorkspaceTaskBoard,
   WorkspaceTaskSummary,
+  CheckoutWorkspaceBranchPayload,
   WriteWorkspaceFilePayload
 } from "../../appTypes";
 import type { WorkspaceImageFileContent } from "../../types/workspaceFile.types";
@@ -80,6 +83,7 @@ export interface WorkspaceBridge {
     projectId: string,
     rootPath?: string
   ) => Promise<ExternalHarnessSessionSummary[]>;
+  archiveExternalHarnessThread: (payload: ArchiveExternalHarnessThreadPayload) => Promise<void>;
   composeExternalHarnessContextSelections: (
     projectId: string,
     ref: ExternalHarnessContextRef
@@ -112,6 +116,8 @@ export interface WorkspaceBridge {
   getWorkspaceGitStatusSummary: (
     payload: { projectId: string; rootPath?: string }
   ) => Promise<WorkspaceGitStatusSummary>;
+  checkoutWorkspaceBranch: (payload: CheckoutWorkspaceBranchPayload) => Promise<AppState>;
+  setWorkspaceUpstream: (payload: SetWorkspaceUpstreamPayload) => Promise<WorkspaceGitStatusSummary>;
   selectChange: (pathName: string) => Promise<AppState>;
   discardChange: (pathName: string) => Promise<AppState>;
   inspectCommit: (hash: string) => Promise<AppState>;

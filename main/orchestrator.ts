@@ -21,7 +21,8 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import { AGENT_DEFINITIONS, SHARED_AGENT_SKILLS_TOOL_ID, getDefaultToolCommand } from "./agentCatalog";
 import { installAgentSkill as installGlobalAgentSkill, readAgentSkillCatalogs, removeAgentSkill as removeGlobalAgentSkill, searchAgentSkills } from "./agentSkills";
-import { getProjectsDir, getWorktreeDir } from "./noraPaths";
+import { getExternalHarnessThreadArchiveFile, getProjectsDir, getWorktreeDir } from "./noraPaths";
+import { ExternalHarnessThreadArchiveStore } from "./externalHarnessThreadArchiveStore";
 import { hasBusyTerminalActivity } from "./orchestrator/agentBusyActivity";
 import { buildAgentLaunchCommand, normalizeAgentLaunchCommand } from "./orchestrator/agentLaunch";
 import { prepareLoopRunWorktree } from "./loops/prepareLoopRunWorktree";
@@ -55,6 +56,7 @@ import { createPersistenceHelpers } from "./orchestrator/persistence";
 import { reconcileWorkspaceAgentsAfterCatalogRefresh } from "./orchestrator/agentCatalogReconciliation";
 import { createProjectOpenHelpers } from "./orchestrator/projectOpen";
 import { createRuntimeHelpers } from "./orchestrator/runtime";
+import { resolveAgentSessionTitle, resolveAgentSessionTitles } from "./orchestrator/agentSessionTitles";
 import { createSessionCreationHelpers } from "./orchestrator/sessionCreation";
 import { createSessionLifecycleHelpers } from "./orchestrator/sessionLifecycle";
 import {
@@ -347,7 +349,8 @@ export class Orchestrator implements OrchestratorFacade {
       getLastMeaningfulAgentOutputLine,
       hasBusyTerminalActivity,
       extractResumeDetails,
-      buildResumeCommand
+      buildResumeCommand,
+      resolveAgentSessionTitle
     });
     this.terminalMutationFacade = new TerminalMutationFacade(this.terminalStateHelpers, this.transcriptHelpers);
     this.runtimeHelpers = createRuntimeHelpers({
@@ -561,6 +564,7 @@ export class Orchestrator implements OrchestratorFacade {
       describeGitTimeout,
       readCommitEntry,
       readCommitChanges,
+      resolveAgentSessionTitles,
       refreshWorkspaceSummaries: (reason) => this.refreshWorkspaceSummaries(reason),
       loadIndexedProjects: () => this.projectIndexStore.load(),
       loadRecentProjects: () => this.recentProjectsStore.load(),
@@ -703,7 +707,7 @@ export class Orchestrator implements OrchestratorFacade {
       resolveAgentLaunchCommand: (tool, payload) => {
         const buildLaunchCommand = (command: string): string =>
           buildAgentLaunchCommand(tool.id, command, {
-            initialPrompt: payload.task,
+            initialPrompt: payload.initialPrompt,
             initialPromptDelivery: payload.initialPromptDelivery,
             startupTrustMode: payload.startupTrustMode
           });
@@ -1194,6 +1198,10 @@ export class Orchestrator implements OrchestratorFacade {
       listWorkspaceTaskPaths,
       readWorkspaceSplitViewCollection,
       writeWorkspaceSplitViewCollection,
+      listArchivedExternalHarnessThreadKeys: (projectId: string) =>
+        new ExternalHarnessThreadArchiveStore(getExternalHarnessThreadArchiveFile(projectId)).listKeys(),
+      archiveExternalHarnessThread: (projectId, ref, archivedAt) =>
+        new ExternalHarnessThreadArchiveStore(getExternalHarnessThreadArchiveFile(projectId)).archive(ref, archivedAt),
       saveProject: async (project: ProjectSummary) => {
         await this.projectIndexStore.save(project);
       }

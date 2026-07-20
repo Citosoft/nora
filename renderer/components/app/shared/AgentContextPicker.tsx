@@ -155,7 +155,7 @@ export function AgentContextPicker({
                 >
                   <input
                     type="checkbox"
-                    className="mt-0.5 size-4 rounded-[4px] border border-input bg-background"
+                    className="form-control-surface mt-0.5 size-4 rounded-[4px] border"
                     checked={selected}
                     onChange={() => onChange(toggleAgentContextGroupSelection(selections, source.agentId, group))}
                   />

@@ -158,7 +158,7 @@ export function IntegrationsSettingsSection() {
       />
       <SettingRow
         title={<IntegrationTitle provider="vercel" label="Vercel Token" />}
-        description="Personal access token used for Vercel account access. This is used for workspace-level Vercel features such as project linking and deployments."
+        description="Personal access token used for Vercel account access. This is used for project-level Vercel features such as project linking and deployments."
         control={(
           <div className="space-y-3">
             <Input

@@ -57,7 +57,7 @@ export function useWorkspaceSplitViews() {
           return {
             projectId,
             collection: createDefaultWorkspaceSplitViewCollection(),
-            errorMessage: error instanceof Error ? error.message : "Unable to load workspace split views."
+            errorMessage: error instanceof Error ? error.message : "Unable to load project split views."
           };
         }
       })
@@ -121,7 +121,7 @@ export function useWorkspaceSplitViews() {
         [projectId]: {
           collection: previousState.collection,
           isLoading: false,
-          errorMessage: error instanceof Error ? error.message : "Unable to save workspace split views."
+          errorMessage: error instanceof Error ? error.message : "Unable to save project split views."
         }
       }));
       throw error;

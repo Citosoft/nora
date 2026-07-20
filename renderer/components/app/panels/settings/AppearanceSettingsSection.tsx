@@ -39,12 +39,12 @@ export function AppearanceSettingsSection() {
 
       <SettingRow
         title="Sidebar layout"
-        description="Swap the workspace sidebar and Changes sidebar so the workspace list sits on the right."
+        description="Swap the projects sidebar and Changes sidebar so the projects list sits on the right."
         control={
           <ToggleButton
             checked={workbenchLayout.sidebarsSwapped}
             onChange={(checked) => updateWorkbenchLayout({ sidebarsSwapped: checked })}
-            label={workbenchLayout.sidebarsSwapped ? "Workspace on the right" : "Workspace on the left"}
+            label={workbenchLayout.sidebarsSwapped ? "Projects on the right" : "Projects on the left"}
           />
         }
       />

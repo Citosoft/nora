@@ -28,7 +28,7 @@ export const WorkspaceSessionLoadingOverlay = ({
             <div className="flex items-center gap-3">
               <LoaderCircle className="size-4 animate-spin text-primary" />
               <div className="text-sm font-medium text-foreground">
-                {appClosingState ? "Closing app" : workspaceLoading ? "Loading workspace" : "Adding workspace"}
+                {appClosingState ? "Closing app" : workspaceLoading ? "Loading project" : "Adding project"}
               </div>
             </div>
             <div className="mt-3 text-lg font-semibold text-foreground">
@@ -40,7 +40,7 @@ export const WorkspaceSessionLoadingOverlay = ({
                 : workspaceLoading?.targetLabel || "Opening the selected repository..."}
             </div>
             <div className="mt-4 rounded-[4px] border border-border/60 bg-background/60 px-3 py-2 text-sm text-foreground">
-              {appClosingState?.detail || workspaceLoading?.detail || "Waiting for the workspace to finish loading..."}
+              {appClosingState?.detail || workspaceLoading?.detail || "Waiting for the project to finish loading..."}
             </div>
             {appClosingState?.command || workspaceLoading?.command ? (
               <div className="mt-3 rounded-[4px] border border-border/60 bg-background/60 px-3 py-2">

@@ -41,7 +41,7 @@ export function useWorkspaceLifecycleActions({
   const handleChooseWorkspaceAtPath = useCallback(async (defaultPath: string, title?: string): Promise<void> => {
     addWorkspaceBaselineSignatureRef.current = getWorkspacePresenceSignature(snapshot);
     setIsAddingWorkspace(true);
-    addWorkspaceStatusIdRef.current = statusBar.beginStatus("Adding workspace", true);
+    addWorkspaceStatusIdRef.current = statusBar.beginStatus("Adding project", true);
 
     try {
       await safely(() => noraWorkspaceClient.chooseProjectAtPath(defaultPath, title));
@@ -78,7 +78,7 @@ export function useWorkspaceLifecycleActions({
     setUiState((current) => ({ ...current, showAddWorkspaceModal: false }));
     addWorkspaceBaselineSignatureRef.current = getWorkspacePresenceSignature(snapshot);
     setIsAddingWorkspace(true);
-    addWorkspaceStatusIdRef.current = statusBar.beginStatus("Adding workspace", true);
+    addWorkspaceStatusIdRef.current = statusBar.beginStatus("Adding project", true);
 
     try {
       await safely(() => noraWorkspaceClient.chooseProject());
@@ -99,7 +99,7 @@ export function useWorkspaceLifecycleActions({
 
   const handleRemoveWorkspace = useCallback(async (projectRoot: string): Promise<void> => {
     setRemovingWorkspaceRoots((current) => (current.includes(projectRoot) ? current : [...current, projectRoot]));
-    const statusId = statusBar.beginStatus("Removing workspace", true);
+    const statusId = statusBar.beginStatus("Removing project", true);
 
     try {
       await safely(() => noraWorkspaceManagementClient.removeWorkspace(projectRoot));

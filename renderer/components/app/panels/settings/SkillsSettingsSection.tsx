@@ -8,6 +8,7 @@ import {
 import type { SkillInstallTranscript } from "@/components/app/types/component.types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type {
   AgentSkillInstallOutputEvent,
   AgentSkillSearchResult
@@ -216,137 +217,155 @@ export function SkillsSettingsSection() {
             ) : null}
           </div>
 
-          <section className="rounded-[6px] border border-border/60 bg-background/50 px-4 py-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Find</div>
-              <div className="mt-1 text-sm font-medium text-foreground">Find skills</div>
-              <div className="mt-1 text-xs text-muted-foreground">
-                Runs <span className="font-mono">skills find &lt;query&gt;</span> and falls back to <span className="font-mono">npx skills find &lt;query&gt;</span>.
-              </div>
-              <div className="mt-3 flex gap-2">
-                <Input
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="react testing, auth, deployment..."
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={!searchQuery.trim() || isSearching || !sharedSkillsToolId}
-                  onClick={() => {
-                    if (!sharedSkillsToolId) {
-                      return;
-                    }
+          <Tabs defaultValue="find" className="rounded-[6px] border border-border/60 bg-card/40 p-1">
+            <TabsList className="grid w-full grid-cols-3 border-0 bg-transparent p-0">
+              <TabsTrigger value="find" className="justify-center py-2 text-sm">
+                Find
+              </TabsTrigger>
+              <TabsTrigger value="install" className="justify-center py-2 text-sm">
+                Install
+              </TabsTrigger>
+              <TabsTrigger value="installed" className="justify-center py-2 text-sm">
+                Installed
+              </TabsTrigger>
+            </TabsList>
 
-                    setIsSearching(true);
-                    void searchToolSkills(sharedSkillsToolId, searchQuery).then((nextResult) => {
-                      setSearchResult(nextResult);
-                    }).finally(() => {
-                      setIsSearching(false);
-                    });
-                  }}
-                >
-                  {isSearching ? "Searching..." : "Find"}
-                </Button>
-              </div>
-
-              {searchResult ? (
-                <>
-                  <SkillSearchMatches
-                    result={searchResult}
-                    installing={isInstalling}
-                    onInstallSkill={(reference) => startInstall(reference)}
+            <TabsContent value="find" className="px-3 pb-3 pt-4">
+              <section>
+                <div className="text-sm font-medium text-foreground">Find skills</div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  Runs <span className="font-mono">skills find &lt;query&gt;</span> and falls back to <span className="font-mono">npx skills find &lt;query&gt;</span>.
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <Input
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="react testing, auth, deployment..."
                   />
-                  <SkillSearchTranscript result={searchResult} />
-                </>
-              ) : null}
-          </section>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!searchQuery.trim() || isSearching || !sharedSkillsToolId}
+                    onClick={() => {
+                      if (!sharedSkillsToolId) {
+                        return;
+                      }
 
-          <section className="rounded-[6px] border border-border/60 bg-card/50 px-4 py-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Install</div>
-              <div className="mt-1 text-sm font-medium text-foreground">Install by reference</div>
-              <div className="mt-1 text-xs text-muted-foreground">
-                Enter a skill reference such as <span className="font-mono">vercel-labs/agent-skills@vercel-react-best-practices</span>. The app installs with <span className="font-mono">--yes --global</span> to avoid the interactive agent picker.
-              </div>
-              {installStatus ? (
-                <div className={["mt-2 text-xs", installStatus.kind === "error" ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"].join(" ")}>
-                  {installStatus.message}
+                      setIsSearching(true);
+                      void searchToolSkills(sharedSkillsToolId, searchQuery).then((nextResult) => {
+                        setSearchResult(nextResult);
+                      }).finally(() => {
+                        setIsSearching(false);
+                      });
+                    }}
+                  >
+                    {isSearching ? "Searching..." : "Find"}
+                  </Button>
                 </div>
-              ) : null}
-              {installTranscript ? (
-                <div className="mt-3 rounded-[4px] border border-border/60 bg-black/80 p-3">
-                  <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-                    {installTranscript.command || "Resolving skills command..."}
+
+                {searchResult ? (
+                  <>
+                    <SkillSearchMatches
+                      result={searchResult}
+                      installing={isInstalling}
+                      onInstallSkill={(reference) => startInstall(reference)}
+                    />
+                    <SkillSearchTranscript result={searchResult} />
+                  </>
+                ) : null}
+              </section>
+            </TabsContent>
+
+            <TabsContent value="install" className="px-3 pb-3 pt-4">
+              <section>
+                <div className="text-sm font-medium text-foreground">Install by reference</div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  Enter a skill reference such as <span className="font-mono">vercel-labs/agent-skills@vercel-react-best-practices</span>. The app installs with <span className="font-mono">--yes --global</span> to avoid the interactive agent picker.
+                </div>
+                {installStatus ? (
+                  <div className={["mt-2 text-xs", installStatus.kind === "error" ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"].join(" ")}>
+                    {installStatus.message}
                   </div>
-                  <pre className="terminal-text max-h-48 overflow-auto whitespace-pre-wrap break-words text-xs leading-5 text-slate-200">
-                    {installTranscript.lines.length
-                      ? installTranscript.lines.join("\n")
-                      : "Waiting for command output..."}
-                  </pre>
-                </div>
-              ) : null}
-              <div className="mt-3 flex gap-2">
-                <Input
-                  value={installReference}
-                  onChange={(event) => setInstallReference(event.target.value)}
-                  placeholder="owner/repo@skill"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={!installReference.trim() || isInstalling || !sharedSkillsToolId}
-                  onClick={() => startInstall(installReference)}
-                >
-                  {isInstalling ? "Installing..." : "Install"}
-                </Button>
-              </div>
-          </section>
-
-          <div className="rounded-[6px] border border-border/60 bg-card/50 px-4 py-4">
-            <div className="text-sm font-medium text-foreground">Installed skills</div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              Skills currently available from the shared agent directory.
-            </div>
-            <div className="mt-3">
-              {sharedSkillsCatalog.skills.length ? (
-                <div className="space-y-2">
-                  {sharedSkillsCatalog.skills.map((skill) => (
-                    <div
-                      key={skill.id}
-                      className="flex items-start justify-between gap-3 rounded-[4px] border border-border/50 bg-card/40 px-3 py-3"
-                    >
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <div className="font-medium text-foreground">{skill.name}</div>
-                          <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-700 dark:text-emerald-300">
-                            Enabled
-                          </span>
-                        </div>
-                        {skill.description ? (
-                          <div className="mt-1 text-sm text-muted-foreground">{skill.description}</div>
-                        ) : null}
-                        <div className="mt-2 break-all text-xs text-muted-foreground">{skill.path}</div>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          if (sharedSkillsToolId) {
-                            removeToolSkill(sharedSkillsToolId, skill.id);
-                          }
-                        }}
-                      >
-                        Remove
-                      </Button>
+                ) : null}
+                {installTranscript ? (
+                  <div className="mt-3 rounded-[4px] border border-border/60 bg-black/80 p-3">
+                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      {installTranscript.command || "Resolving skills command..."}
                     </div>
-                  ))}
+                    <pre className="terminal-text max-h-48 overflow-auto whitespace-pre-wrap break-words text-xs leading-5 text-slate-200">
+                      {installTranscript.lines.length
+                        ? installTranscript.lines.join("\n")
+                        : "Waiting for command output..."}
+                    </pre>
+                  </div>
+                ) : null}
+                <div className="mt-3 flex gap-2">
+                  <Input
+                    value={installReference}
+                    onChange={(event) => setInstallReference(event.target.value)}
+                    placeholder="owner/repo@skill"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!installReference.trim() || isInstalling || !sharedSkillsToolId}
+                    onClick={() => startInstall(installReference)}
+                  >
+                    {isInstalling ? "Installing..." : "Install"}
+                  </Button>
                 </div>
-              ) : (
-                <div className="text-sm text-muted-foreground">
-                  No shared skills are currently installed.
+              </section>
+            </TabsContent>
+
+            <TabsContent value="installed" className="px-3 pb-3 pt-4">
+              <section>
+                <div className="text-sm font-medium text-foreground">Installed skills</div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  Skills currently available from the shared agent directory.
                 </div>
-              )}
-            </div>
-          </div>
+                <div className="mt-3">
+                  {sharedSkillsCatalog.skills.length ? (
+                    <div className="space-y-2">
+                      {sharedSkillsCatalog.skills.map((skill) => (
+                        <div
+                          key={skill.id}
+                          className="flex items-start justify-between gap-3 rounded-[4px] border border-border/50 bg-background/45 px-3 py-3"
+                        >
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <div className="font-medium text-foreground">{skill.name}</div>
+                              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-700 dark:text-emerald-300">
+                                Enabled
+                              </span>
+                            </div>
+                            {skill.description ? (
+                              <div className="mt-1 text-sm text-muted-foreground">{skill.description}</div>
+                            ) : null}
+                            <div className="mt-2 break-all text-xs text-muted-foreground">{skill.path}</div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              if (sharedSkillsToolId) {
+                                removeToolSkill(sharedSkillsToolId, skill.id);
+                              }
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground">
+                      No shared skills are currently installed.
+                    </div>
+                  )}
+                </div>
+              </section>
+            </TabsContent>
+          </Tabs>
         </div>
       ) : (
         <div className="mt-6 rounded-[6px] border border-border/60 bg-card/50 px-4 py-4 text-sm text-muted-foreground">

@@ -187,7 +187,7 @@ export function buildLoopRunStages(run: LoopRun): LoopRunStage[] {
   return [
     {
       id: "worktree",
-      title: "Prepare workspace",
+      title: "Prepare project",
       description: run.worktreePath ? "Managed worktree ready" : "Creating an isolated worktree",
       status: preparationStatus,
       role: null
@@ -230,7 +230,7 @@ export function loopRunEventStatus(
 export function loopRunStatusCopy(run: LoopRun): { title: string; description: string } {
   switch (run.status) {
     case "preparing":
-      return { title: "Preparing workflow", description: "Nora is creating the managed workspace for this run." };
+      return { title: "Preparing workflow", description: "Nora is creating the managed project for this run." };
     case "running": {
       const activeRole = run.roles.find((role) => role.roleId === run.activeRoleId);
       return activeRole

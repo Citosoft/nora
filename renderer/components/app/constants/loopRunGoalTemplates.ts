@@ -35,7 +35,7 @@ export const LOOP_RUN_GOAL_TEMPLATES: LoopRunGoalTemplate[] = [
   {
     id: "implement-spec",
     label: "Implement spec",
-    description: "Build out the selected workspace spec with tests and verification.",
+    description: "Build out the selected project spec with tests and verification.",
     category: "delivery",
     goalKind: "spec",
     objective: [
@@ -77,7 +77,7 @@ export const LOOP_RUN_GOAL_TEMPLATES: LoopRunGoalTemplate[] = [
     category: "maintenance",
     goalKind: "custom",
     objective: [
-      "Identify the failing CI check affecting this branch or workspace.",
+      "Identify the failing CI check affecting this branch or project.",
       "Reproduce the failure locally when possible, implement the smallest correct fix,",
       "and verify with the same commands CI would run."
     ].join(" ")

@@ -5,22 +5,31 @@ import {
   workspaceSidebarHasPullRequestState
 } from "@/components/app/logic/workspaceSidebarPresentation";
 import { createQuickTerminalDialogDefaults, createQuickTerminalPayload } from "@/components/app/logic/terminalQuickLaunch";
+import { getExternalHarnessThreadDisplayTitle } from "@/components/app/logic/externalHarnessThreads";
+import {
+  buildExternalHarnessThreadResumePayload,
+  canResumeExternalHarnessThread
+} from "@/components/app/logic/externalHarnessThreadResume";
+import { formatTimestamp } from "@/components/app/logic/utils";
 import { setWorkspaceRelativePathDragData } from "@/components/app/logic/workspacePathDrag";
 import { createScriptTerminalDefaults, formatWorkspaceScriptActionLabel, getPreferredWorkspaceScripts } from "@/components/app/logic/workspaceScripts";
+import { canRemoveWorkspaceWorktree } from "@/components/app/logic/worktreeRemoval";
 import { setWorkspaceTaskDragData } from "@/components/app/logic/workspaceTaskDrag";
-import { WorkspaceProjectIcon } from "@/components/app/shared/Tooling";
+import { AgentToolIcon, WorkspaceProjectIcon } from "@/components/app/shared/Tooling";
 import { WorkspaceSidebarChildSectionLabel } from "@/components/app/sidebar/workspace-sidebar/WorkspaceSidebarChildSectionLabel";
 import { WorkspaceSidebarWorkspaceSessionRow } from "@/components/app/sidebar/workspace-sidebar/WorkspaceSidebarWorkspaceSessionRow";
 import { LoopWorkspaceSection } from "@/components/app/sidebar/workspace-sidebar/LoopWorkspaceSection";
 import { WorkspaceWorktreeActionsMenuItems } from "@/components/app/sidebar/workspace-sidebar/WorkspaceWorktreeActionsMenuItems";
 import { WorkspaceWorkspaceActionsMenuItems } from "@/components/app/sidebar/workspace-sidebar/WorkspaceWorkspaceActionsMenuItems";
 import type { WorkspaceSidebarWorkspaceGroupProps } from "@/components/app/types/workspaceSidebarWorkspaceGroup.types";
+import { useWorkspaceExternalHarnessSessions } from "@/components/app/hooks/useWorkspaceExternalHarnessSessions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import {
+  Archive,
   Bot,
   ChevronDown,
   ChevronLeft,
@@ -34,9 +43,12 @@ import {
   ScrollText,
   Sparkles,
   StickyNote,
-  TerminalSquare
+  TerminalSquare,
+  Trash2
 } from "lucide-react";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
+import { useStatusBar } from "@/components/app/logic/statusBarContext";
+import { useState } from "react";
 
 export const WorkspaceSidebarWorkspaceGroup = ({
   workspace,
@@ -46,13 +58,16 @@ export const WorkspaceSidebarWorkspaceGroup = ({
   onCollapsedWorkspaceIdsChange,
   collapsedWorkspaceWorktreeSectionIds,
   collapsedWorkspaceAgentSectionIds,
+  collapsedWorkspaceThreadSectionIds,
   collapsedWorkspaceTerminalSectionIds,
   collapsedWorkspaceAiChatSectionIds,
   collapsedWorkspaceNoteSectionIds,
   collapsedWorkspaceSpecSectionIds,
   collapsedWorkspaceTaskSectionIds,
+  externalThreadReloadToken: globalExternalThreadReloadToken,
   toggleWorkspaceWorktreeSection,
   toggleWorkspaceAgentSection,
+  toggleWorkspaceThreadSection,
   toggleWorkspaceTerminalSection,
   toggleWorkspaceAiChatSection,
   toggleWorkspaceNoteSection,
@@ -98,9 +113,12 @@ export const WorkspaceSidebarWorkspaceGroup = ({
   onOpenCreateTerminalOnWorktree,
   onOpenCreateWorktree,
   onLaunchQuickTerminalOnWorktree,
+  onCheckoutWorkspaceBranch,
   onLaunchWorktreeScript,
   onRemoveWorktree,
   onOpenCreateAgent,
+  onResumeThread,
+  onArchiveThread,
   onOpenCreateTerminal,
   onLaunchWorkspaceTerminal,
   onLaunchWorkspaceScript,
@@ -129,6 +147,17 @@ export const WorkspaceSidebarWorkspaceGroup = ({
   onRemoveProject
 }: WorkspaceSidebarWorkspaceGroupProps) => {
   const snapshot = useCanonicalAppSnapshot();
+  const statusBar = useStatusBar();
+  const isGroupCollapsedForThreads = collapsedWorkspaceIds[workspace.project.id] ?? false;
+  const isThreadSectionCollapsed = collapsedWorkspaceThreadSectionIds[workspace.project.id] ?? true;
+  const [openingThreadArtifactPath, setOpeningThreadArtifactPath] = useState<string | null>(null);
+  const [archivingThreadArtifactPath, setArchivingThreadArtifactPath] = useState<string | null>(null);
+  const [externalThreadReloadToken, setExternalThreadReloadToken] = useState(0);
+  const { sessions: externalThreadSessions, isLoading: isLoadingExternalThreadSessions } = useWorkspaceExternalHarnessSessions(
+    workspace.project.id,
+    workspace.project.rootPath,
+    { enabled: !isGroupCollapsedForThreads, reloadToken: externalThreadReloadToken + globalExternalThreadReloadToken }
+  );
   if (!snapshot) {
     return null;
   }
@@ -146,7 +175,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
     const directSshLabel = directSshLocation
       ? `${directSshLocation.user}@${directSshLocation.host}${directSshLocation.port ? `:${directSshLocation.port}` : ""}`
       : null;
-    const isGroupCollapsed = collapsedWorkspaceIds[workspace.project.id] ?? false;
+    const isGroupCollapsed = isGroupCollapsedForThreads;
     const isWorktreeSectionCollapsed = collapsedWorkspaceWorktreeSectionIds[workspace.project.id] ?? true;
     const isAgentSectionCollapsed = collapsedWorkspaceAgentSectionIds[workspace.project.id] ?? true;
     const isTerminalSectionCollapsed = collapsedWorkspaceTerminalSectionIds[workspace.project.id] ?? true;
@@ -202,6 +231,38 @@ export const WorkspaceSidebarWorkspaceGroup = ({
           null
         : null;
     const scripts = getPreferredWorkspaceScripts(workspace);
+    const handleResumeThread = async (
+      thread: typeof externalThreadSessions[number]
+    ) => {
+      const displayTitle = getExternalHarnessThreadDisplayTitle(thread);
+      const tool = snapshot.agentCatalog.find((entry) => entry.id === thread.toolId) ?? null;
+      const payload = buildExternalHarnessThreadResumePayload(thread, tool, displayTitle);
+      if (!payload) {
+        return;
+      }
+      setOpeningThreadArtifactPath(thread.primaryArtifactPath);
+      const statusId = statusBar.beginStatus(`Resuming ${displayTitle}`, true);
+      try {
+        await onResumeThread(workspace.project.id, payload);
+      } finally {
+        statusBar.endStatus(statusId);
+        setOpeningThreadArtifactPath(null);
+      }
+    };
+    const handleArchiveThread = async (
+      thread: typeof externalThreadSessions[number]
+    ) => {
+      const displayTitle = getExternalHarnessThreadDisplayTitle(thread);
+      setArchivingThreadArtifactPath(thread.primaryArtifactPath);
+      const statusId = statusBar.beginStatus(`Archiving ${displayTitle}`, true);
+      try {
+        await onArchiveThread(workspace.project.id, thread);
+        setExternalThreadReloadToken((token) => token + 1);
+      } finally {
+        statusBar.endStatus(statusId);
+        setArchivingThreadArtifactPath(null);
+      }
+    };
 
     return (
       <div
@@ -302,7 +363,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                     variant="ghost"
                     size="icon"
                     className="size-8 shrink-0 rounded-none self-center"
-                    aria-label={`Workspace actions for ${workspace.project.name}`}
+                    aria-label={`Project actions for ${workspace.project.name}`}
                     disabled={isRemoving}
                   >
                     <Ellipsis className="size-4" />
@@ -338,7 +399,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                   [workspace.project.id]: !isGroupCollapsed
                 }))
               }
-              aria-label={isGroupCollapsed ? "Expand workspace group" : "Collapse workspace group"}
+              aria-label={isGroupCollapsed ? "Expand project group" : "Collapse project group"}
               disabled={isRemoving}
             >
               {isGroupCollapsed ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4 rotate-[-90deg]" />}
@@ -347,6 +408,86 @@ export const WorkspaceSidebarWorkspaceGroup = ({
         </div>
         {isGroupCollapsed ? null : (
           <div className="border-t border-border/40 bg-background/10 pl-1.5">
+            <div className="py-1.5 pl-5 pr-4">
+              <div className="flex items-center justify-between gap-3">
+                <WorkspaceSidebarChildSectionLabel
+                  icon={<ScrollText className="size-3.5" />}
+                  label="Threads"
+                  count={externalThreadSessions.length}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7"
+                  onClick={() => toggleWorkspaceThreadSection(workspace.project.id)}
+                  aria-label={isThreadSectionCollapsed ? "Expand threads section" : "Collapse threads section"}
+                >
+                  {isThreadSectionCollapsed ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}
+                </Button>
+              </div>
+            </div>
+            {isThreadSectionCollapsed ? null : isLoadingExternalThreadSessions && externalThreadSessions.length === 0 ? (
+              <div className="flex items-center gap-2 border-l-2 border-transparent py-2 pl-5 pr-4 text-sm text-muted-foreground">
+                <LoaderCircle className="size-3.5 animate-spin" />
+                Loading threads
+              </div>
+            ) : externalThreadSessions.length ? (
+              externalThreadSessions.map((thread) => {
+                const displayTitle = getExternalHarnessThreadDisplayTitle(thread);
+                const isOpening = openingThreadArtifactPath === thread.primaryArtifactPath;
+                const isArchiving = archivingThreadArtifactPath === thread.primaryArtifactPath;
+                const isBusy = isOpening || isArchiving;
+                const canResume = canResumeExternalHarnessThread(thread);
+                return (
+                  <div
+                    key={`${thread.toolId}:${thread.primaryArtifactPath}`}
+                    className="group/thread flex h-8 w-full min-w-0 items-center border-l-2 border-transparent pr-1 transition hover:bg-accent/40 focus-within:bg-accent/40"
+                  >
+                    <button
+                      type="button"
+                      disabled={isBusy || !canResume}
+                      onClick={() => void handleResumeThread(thread)}
+                      className="flex h-full min-w-0 flex-1 items-center gap-2 pl-5 pr-2 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-inset disabled:pointer-events-none disabled:opacity-60"
+                      aria-label={`Resume thread: ${displayTitle}`}
+                      title={`${displayTitle}\n${thread.conversationId}\n${thread.primaryArtifactPath}`}
+                    >
+                      <AgentToolIcon
+                        toolId={thread.toolId}
+                        label={thread.toolLabel}
+                        className="size-5 shrink-0"
+                        imageClassName="size-4 rounded-sm"
+                      />
+                      <div className="flex min-w-0 flex-1 items-baseline gap-2">
+                        <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{displayTitle}</span>
+                        <span className="shrink-0 text-[11px] text-muted-foreground/75">
+                          {formatTimestamp(thread.lastUpdatedAt)}
+                        </span>
+                      </div>
+                      {isOpening ? <LoaderCircle className="size-3.5 shrink-0 animate-spin text-primary" /> : null}
+                    </button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-7 shrink-0 opacity-0 transition-opacity group-hover/thread:opacity-100 group-focus-within/thread:opacity-100"
+                      disabled={isBusy}
+                      onClick={() => void handleArchiveThread(thread)}
+                      aria-label={`Archive thread: ${displayTitle}`}
+                    >
+                      {isArchiving ? (
+                        <LoaderCircle className="size-3.5 animate-spin text-primary" />
+                      ) : (
+                        <Archive className="size-3.5" />
+                      )}
+                    </Button>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="w-full border-l-2 border-dashed border-border/60 py-2 pl-5 pr-4 text-left text-sm text-muted-foreground">
+                No resumable local threads detected
+              </div>
+            )}
             <div className="py-1.5 pl-5 pr-4">
               <div className="flex items-center justify-between gap-3">
                 <WorkspaceSidebarChildSectionLabel
@@ -384,18 +525,39 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                       pullRequestStatusByWorkspaceBranch[`${workspace.project.id}:${worktree.branch.trim()}`] ?? null;
                     const hasPullRequest = workspaceSidebarHasPullRequestState(pullRequestStatus?.state);
                     const isFocusedWorktree = focusedWorktreeId === worktree.id;
+                    const isRootWorktree =
+                      worktree.path === workspace.project.rootPath || worktree.createdFromRef === "ROOT";
+                    const canRemoveWorktree = canRemoveWorkspaceWorktree(workspace, worktree, isRootWorktree);
+                    const handleCheckoutBranch = async () => {
+                      const statusId = statusBar.beginStatus(`Checking out ${worktree.branch}`, true);
+                      try {
+                        await onCheckoutWorkspaceBranch(workspace.project.id, worktree.branch);
+                      } finally {
+                        statusBar.endStatus(statusId);
+                      }
+                    };
                     return (
                       <div
                         key={worktree.id}
                         className="group/worktree flex min-w-0 items-center gap-0.5 rounded-[4px] pr-1 transition hover:bg-accent/40"
                       >
-                        <button
-                          type="button"
+                        <div
+                          role="button"
+                          tabIndex={0}
                           onClick={() =>
                             isFocused
                               ? onFocusWorkspaceView(worktree.id)
                               : void onFocusWorkspaceWorktree(workspace.project.id, worktree.id)
                           }
+                          onKeyDown={(event) => {
+                            if (event.key !== "Enter" && event.key !== " ") {
+                              return;
+                            }
+                            event.preventDefault();
+                            void (isFocused
+                              ? onFocusWorkspaceView(worktree.id)
+                              : onFocusWorkspaceWorktree(workspace.project.id, worktree.id));
+                          }}
                           className={cn(
                             "flex min-w-0 flex-1 items-center gap-2 rounded-[4px] px-2 py-1 text-left transition",
                             isFocusedWorktree ? "bg-primary/10" : "hover:bg-accent/40"
@@ -404,7 +566,21 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                         >
                           {renderSubitemStatusDot(isFocusedWorktree ? "bg-primary" : "bg-muted-foreground/45")}
                           <div className="min-w-0 flex-1 truncate text-[12px] leading-tight">
-                            <span className="font-medium text-foreground">{worktree.branch}</span>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void handleCheckoutBranch();
+                              }}
+                              className={cn(
+                                "font-medium text-foreground underline-offset-2 transition hover:underline",
+                                worktree.status !== "ready" && "cursor-not-allowed opacity-70"
+                              )}
+                              disabled={worktree.status !== "ready"}
+                              title={`Check out ${worktree.branch} in the root project`}
+                            >
+                              {worktree.branch}
+                            </button>
                             <span className="text-muted-foreground"> · {locationLabel}</span>
                           </div>
                           {worktree.status === "creating" ? (
@@ -435,7 +611,26 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                               />
                             </Tooltip>
                           ) : null}
-                        </button>
+                        </div>
+                        {!isRootWorktree ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-7 shrink-0 text-muted-foreground hover:text-destructive disabled:opacity-30"
+                            aria-label={`Delete worktree ${worktree.branch}`}
+                            title={
+                              canRemoveWorktree
+                                ? `Delete worktree ${worktree.branch}`
+                                : "Remove attached agents and terminals before deleting this worktree"
+                            }
+                            disabled={isRemoving || !canRemoveWorktree}
+                            onClick={() =>
+                              onRemoveWorktree(workspace.project.id, worktree.id, worktree.branch)
+                            }
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        ) : null}
                         <DropdownMenu
                           align="end"
                           widthClassName="w-56"
@@ -456,9 +651,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                             worktree={worktree}
                             preferredShellId={preferredShellId}
                             pullRequestStatus={pullRequestStatus}
-                            isRootWorktree={
-                              worktree.path === workspace.project.rootPath || worktree.createdFromRef === "ROOT"
-                            }
+                            isRootWorktree={isRootWorktree}
                             onFocusWorktree={() =>
                               isFocused
                                 ? onFocusWorkspaceView(worktree.id)
@@ -699,7 +892,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                   </div>
                 ) : (
                   <div className="rounded-[4px] border border-dashed border-border/60 bg-background/30 px-3 py-2 text-sm text-muted-foreground">
-                    No tasks yet for this workspace.
+                    No tasks yet for this project.
                   </div>
                 )}
               </div>
@@ -770,7 +963,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                   </div>
                 ) : (
                   <div className="rounded-[4px] border border-dashed border-border/60 bg-background/30 px-3 py-2 text-sm text-muted-foreground">
-                    No specs yet for this workspace.
+                    No specs yet for this project.
                   </div>
                 )}
               </div>
@@ -841,7 +1034,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                   </div>
                 ) : (
                   <div className="rounded-[4px] border border-dashed border-border/60 bg-background/30 px-3 py-2 text-sm text-muted-foreground">
-                    No notes yet for this workspace.
+                    No notes yet for this project.
                   </div>
                 )}
               </div>

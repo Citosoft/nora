@@ -34,7 +34,7 @@ export function AppSignedInWorkspaceView() {
       {!isWorkspaceSidebarCollapsed ? (
         <div
           role="separator"
-          aria-label="Resize workspace sidebar"
+          aria-label="Resize projects sidebar"
           aria-orientation="vertical"
           className={[
             "absolute inset-y-0 z-20 w-1.5 cursor-col-resize bg-transparent transition hover:bg-border/60",

@@ -10,6 +10,8 @@ import type {
   TerminalPreset,
   WorkspaceFileRequest,
   WorkspaceGitStatusSummary,
+  CheckoutWorkspaceBranchPayload,
+  SetWorkspaceUpstreamPayload,
   WorkspaceNoteSummary,
   WorkspacePathStatResult,
   WorkspaceSearchRequest,
@@ -90,6 +92,11 @@ export class WorkspaceMainService implements WorkspaceService {
   ): Promise<ExternalHarnessSessionSummary[]> =>
     this.actions().listExternalHarnessContextSessionsByProject(projectId, rootPath);
 
+  archiveExternalHarnessThread = (
+    projectId: string,
+    ref: ExternalHarnessContextRef
+  ): Promise<void> => this.actions().archiveExternalHarnessThreadByProject(projectId, ref);
+
   composeExternalHarnessContextSelections = (
     projectId: string,
     ref: ExternalHarnessContextRef
@@ -131,6 +138,12 @@ export class WorkspaceMainService implements WorkspaceService {
     projectId: string;
     rootPath?: string;
   }): Promise<WorkspaceGitStatusSummary> => this.actions().getWorkspaceGitStatusSummary(payload);
+
+  checkoutWorkspaceBranch = (payload: CheckoutWorkspaceBranchPayload): Promise<AppState> =>
+    this.actions().checkoutWorkspaceBranch(payload);
+
+  setWorkspaceUpstream = (payload: SetWorkspaceUpstreamPayload): Promise<WorkspaceGitStatusSummary> =>
+    this.actions().setWorkspaceUpstream(payload);
 
   listWorkspaceTasks = (projectId: string): Promise<WorkspaceTaskSummary[]> =>
     this.actions().listWorkspaceTasksByProject(projectId);

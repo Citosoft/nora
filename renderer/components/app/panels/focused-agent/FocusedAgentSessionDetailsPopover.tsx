@@ -17,7 +17,7 @@ export const FocusedAgentSessionDetailsPopover = ({
       {agent ? <AgentInfoRow icon={Sparkles} label="Mode" value={formatAgentMode(agent.mode)} /> : null}
       <AgentInfoRow icon={GitBranch} label="Branch" value={(agent || terminal)?.branch || ""} />
       {terminal ? <AgentInfoRow icon={TerminalSquare} label="Shell" value={terminal.shellLabel} /> : null}
-      <AgentInfoRow icon={FolderGit2} label="Workspace" value={(agent || terminal)?.workspace || ""} />
+      <AgentInfoRow icon={FolderGit2} label="Project" value={(agent || terminal)?.workspace || ""} />
       <AgentInfoRow icon={TerminalSquare} label="Command" value={(agent || terminal)?.command || ""} />
     </div>
   </div>

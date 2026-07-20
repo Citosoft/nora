@@ -37,6 +37,8 @@ import type {
   VercelRuntimeLogStreamRequest,
   WorkspaceFileRequest,
   WorkspaceGitStatusSummary,
+  CheckoutWorkspaceBranchPayload,
+  SetWorkspaceUpstreamPayload,
   ImportedContextBundleSummary,
   NoraDetectableContextBundleSummary,
   WorkspaceNoteSummary,
@@ -104,6 +106,10 @@ export interface WorkspaceService {
     projectId: string,
     rootPath?: string
   ) => Promise<ExternalHarnessSessionSummary[]>;
+  archiveExternalHarnessThread: (
+    projectId: string,
+    ref: ExternalHarnessContextRef
+  ) => Promise<void>;
   composeExternalHarnessContextSelections: (
     projectId: string,
     ref: ExternalHarnessContextRef
@@ -137,6 +143,8 @@ export interface WorkspaceService {
     projectId: string;
     rootPath?: string;
   }) => Promise<WorkspaceGitStatusSummary>;
+  checkoutWorkspaceBranch: (payload: CheckoutWorkspaceBranchPayload) => Promise<AppState>;
+  setWorkspaceUpstream: (payload: SetWorkspaceUpstreamPayload) => Promise<WorkspaceGitStatusSummary>;
   listWorkspaceTasks: (projectId: string) => Promise<WorkspaceTaskSummary[]>;
   getWorkspaceTaskBoard: (projectId: string) => Promise<WorkspaceTaskBoard>;
   saveWorkspaceTaskBoard: (

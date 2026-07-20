@@ -50,8 +50,8 @@ export function useWorkspaceLoading({
       const targetLabel = inferredKind === "ssh"
         ? sshLocation
           ? `${sshLocation.user}@${sshLocation.host}${sshLocation.port ? `:${sshLocation.port}` : ""}`
-          : "Remote workspace"
-        : (targetProject?.rootPath || "Local workspace");
+          : "Remote project"
+        : (targetProject?.rootPath || "Local project");
 
       // Initial workspace opens can report progress under a provisional identifier
       // before the final project id is known. When that handoff happens, keep the
@@ -59,7 +59,7 @@ export function useWorkspaceLoading({
       return {
         token: current?.token ?? workspaceLoadingTokenRef.current + 1,
         projectId: payload.projectId,
-        projectName: targetProject?.name || "Workspace",
+        projectName: targetProject?.name || "Project",
         targetLabel,
         detail: payload.detail,
         command: payload.command,
@@ -80,29 +80,29 @@ export function useWorkspaceLoading({
     const token = ++workspaceLoadingTokenRef.current;
     const steps = isSsh
       ? [
-          "Connecting to the saved SSH workspace...",
+          "Connecting to the saved SSH project...",
           "Checking repository details on the remote host...",
           "Loading saved sessions and worktrees...",
-          "Refreshing workspace changes...",
-          "Still waiting on the remote host to answer git and workspace checks..."
+          "Refreshing project changes...",
+          "Still waiting on the remote host to answer git and project checks..."
         ]
       : [
-          "Opening workspace...",
+          "Opening project...",
           "Checking repository details...",
           "Loading saved sessions and worktrees...",
-          "Refreshing workspace changes...",
-          "Still waiting for the workspace refresh to finish..."
+          "Refreshing project changes...",
+          "Still waiting for the project refresh to finish..."
         ];
     const sshLocation = targetProject?.location?.kind === "ssh" ? targetProject.location : null;
     const targetLabel = sshLocation
       ? `${sshLocation.user}@${sshLocation.host}${sshLocation.port ? `:${sshLocation.port}` : ""}`
-      : (targetProject?.rootPath || "Local workspace");
+      : (targetProject?.rootPath || "Local project");
 
     clearWorkspaceLoadingTimers();
     setWorkspaceLoading({
       token,
       projectId,
-      projectName: targetProject?.name || "Workspace",
+      projectName: targetProject?.name || "Project",
       targetLabel,
       detail: steps[0],
       command: isSsh

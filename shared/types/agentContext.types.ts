@@ -63,6 +63,7 @@ export interface ExternalHarnessContextRef {
   conversationId: string;
   primaryArtifactPath: string;
   sessionLabel: string;
+  threadTitle?: string | null;
   workspacePath: string;
 }
 
@@ -71,6 +72,11 @@ export interface ExternalHarnessSessionSummary extends ExternalHarnessContextRef
   latestPreview: string;
   entryCount: number;
   estimate: AgentContextEstimate;
+}
+
+export interface ArchiveExternalHarnessThreadPayload {
+  projectId: string;
+  ref: ExternalHarnessContextRef;
 }
 
 export interface AgentContextSelection {

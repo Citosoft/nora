@@ -50,38 +50,44 @@
     --button-outline-bg: 210 8% 94%;
     --button-outline-border: 215 10% 78%;
     --button-outline-hover: 210 8% 90%;
+    --form-control-bg: 0 0% 100%;
+    --form-control-border: 214 22% 86%;
+    --form-control-hover: 210 32% 98%;
     --body-gradient-a: rgba(58, 174, 131, 0.14);
     --body-gradient-b: rgba(88, 137, 244, 0.1);
   }
 
   :root[data-theme="dark"] {
-    --background: 0 0% 4%;
+    --background: 0 0% 10%;
     --foreground: 210 20% 94%;
-    --card: 0 0% 8%;
+    --card: 0 0% 15%;
     --card-foreground: 210 20% 94%;
-    --popover: 0 0% 8%;
+    --popover: 0 0% 16%;
     --popover-foreground: 210 20% 94%;
     --primary: 153 74% 64%;
     --primary-foreground: 150 40% 8%;
-    --secondary: 0 0% 12%;
+    --secondary: 0 0% 17%;
     --secondary-foreground: 210 20% 94%;
-    --muted: 0 0% 11%;
+    --muted: 0 0% 18%;
     --muted-foreground: 215 10% 64%;
-    --accent: 0 0% 14%;
+    --accent: 0 0% 20%;
     --accent-foreground: 210 20% 94%;
     --destructive: 349 89% 60%;
     --destructive-foreground: 210 24% 98%;
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
+    --border: 0 0% 21%;
+    --input: 0 0% 21%;
     --ring: 153 74% 64%;
     --radius: 0.95rem;
-    --button-default-bg: 153 18% 13%;
-    --button-default-border: 153 18% 20%;
-    --button-default-hover: 153 18% 16%;
-    --button-default-active: 153 18% 19%;
-    --button-outline-bg: 0 0% 8%;
-    --button-outline-border: 0 0% 13%;
-    --button-outline-hover: 0 0% 11%;
+    --button-default-bg: 153 12% 18%;
+    --button-default-border: 153 10% 23%;
+    --button-default-hover: 153 12% 20%;
+    --button-default-active: 153 12% 22%;
+    --button-outline-bg: 0 0% 15%;
+    --button-outline-border: 0 0% 21%;
+    --button-outline-hover: 0 0% 18%;
+    --form-control-bg: 0 0% 17%;
+    --form-control-border: 0 0% 24%;
+    --form-control-hover: 0 0% 19%;
     --body-gradient-a: rgba(98, 227, 168, 0.1);
     --body-gradient-b: rgba(255, 255, 255, 0.035);
   }
@@ -132,6 +138,43 @@
 
   .button-outline-surface:hover {
     background-color: hsl(var(--button-outline-hover));
+  }
+
+  .form-control-surface {
+    background-color: hsl(var(--form-control-bg));
+    border-color: hsl(var(--form-control-border));
+    box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.03);
+  }
+
+  .form-control-surface:hover:not(:disabled) {
+    background-color: hsl(var(--form-control-hover));
+  }
+
+  .workspace-sidebar-section-divider {
+    border-color: hsl(var(--border) / 0.38);
+  }
+
+  .workspace-sidebar-section-header {
+    background-color: transparent;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .workspace-sidebar-section-title {
+    color: hsl(var(--muted-foreground) / 0.82);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+
+  .workspace-sidebar-section-detail {
+    color: hsl(var(--muted-foreground) / 0.7);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  :root[data-theme="dark"] .workspace-sidebar-section-title,
+  :root[data-theme="dark"] .workspace-sidebar-child-section-label {
+    color: hsl(var(--foreground));
   }
 
   .terminal-text {

@@ -41,6 +41,8 @@ export function createWorkspaceBridge(): WorkspaceBridge {
       invokeIpc("app:list-imported-context-bundles", projectId, rootPath),
     listExternalHarnessContextSessions: (projectId, rootPath) =>
       invokeIpc("app:list-external-harness-context-sessions", projectId, rootPath),
+    archiveExternalHarnessThread: (payload) =>
+      invokeIpc("app:archive-external-harness-thread", payload),
     composeExternalHarnessContextSelections: (projectId, ref) =>
       invokeIpc("app:compose-external-harness-context-selections", projectId, ref),
     listNoraDetectableContextBundles: (projectId, sessionId, worktreeId) =>
@@ -53,6 +55,8 @@ export function createWorkspaceBridge(): WorkspaceBridge {
       invokeIpc("app:delete-nora-detectable-context-bundle", payload),
     statWorkspacePath: (payload) => invokeIpc("app:stat-workspace-path", payload),
     getWorkspaceGitStatusSummary: (payload) => invokeIpc("app:get-workspace-git-status-summary", payload),
+    checkoutWorkspaceBranch: (payload) => invokeIpc("app:checkout-workspace-branch", payload),
+    setWorkspaceUpstream: (payload) => invokeIpc("app:set-workspace-upstream", payload),
     selectChange: (pathName) => invokeIpc("app:select-change", pathName),
     discardChange: (pathName) => invokeIpc("app:discard-change", pathName),
     inspectCommit: (hash) => invokeIpc("app:inspect-commit", hash),

@@ -95,7 +95,7 @@ export const AiChatPanel = (props: AiChatPanelProps) => {
     if (!model || !workspaceTools || !provider) {
       return null;
     }
-    const label = projectName?.trim() || "this workspace";
+    const label = projectName?.trim() || "this project";
     const modeInstruction =
       chatMode === "plan"
         ? [
@@ -106,12 +106,12 @@ export const AiChatPanel = (props: AiChatPanelProps) => {
             "When the conversation topic becomes clear, call set_chat_title with a concise subject-focused title.",
             "Once details are complete, call create_specs to write one or more markdown specs under .nora/specs."
           ].join(" ")
-        : "You are in Ask mode. Use read-only tools to inspect the workspace and answer accurately. When topic is clear, call set_chat_title with a concise subject-focused title.";
+        : "You are in Ask mode. Use read-only tools to inspect the project and answer accurately. When topic is clear, call set_chat_title with a concise subject-focused title.";
     const agent = new ToolLoopAgent({
       model,
       tools: workspaceTools,
       instructions: [
-        `You are helping with the Nora project workspace "${label}".`,
+        `You are helping with the Nora project "${label}".`,
         "Answer using tools when you need file contents, directory listings, text search, path existence, or git status. Do not guess file contents or repository layout.",
         "Prefer small reads: use line ranges for large files. Paths are repo-relative with forward slashes.",
         modeInstruction,
@@ -172,7 +172,7 @@ export const AiChatPanel = (props: AiChatPanelProps) => {
   const workspacePill = useMemo(() => {
     if (!projectId) {
       return {
-        label: "No workspace",
+        label: "No project",
         title: "Open or focus a project to scope file tools and paths."
       };
     }

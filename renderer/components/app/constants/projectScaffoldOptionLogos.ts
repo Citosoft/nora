@@ -1,5 +1,4 @@
-const scaffoldOptionFavicon = (domain: string): string =>
-  `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+import { productFaviconUrl } from "@/components/app/logic/productIcon";
 
 const PROJECT_SCAFFOLD_OPTION_LOGO_DOMAINS: Record<string, string> = {
   "2d": "godotengine.org",
@@ -240,5 +239,5 @@ const PROJECT_SCAFFOLD_OPTION_LOGO_DOMAINS: Record<string, string> = {
 
 export function resolveProjectScaffoldOptionLogoUrl(optionId: string): string | null {
   const domain = PROJECT_SCAFFOLD_OPTION_LOGO_DOMAINS[optionId];
-  return domain ? scaffoldOptionFavicon(domain) : null;
+  return domain ? productFaviconUrl(domain) : null;
 }

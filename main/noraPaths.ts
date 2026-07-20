@@ -49,6 +49,10 @@ export function getProjectFile(projectId: string): string {
   return path.join(getProjectDir(projectId), "project.json");
 }
 
+export function getExternalHarnessThreadArchiveFile(projectId: string): string {
+  return path.join(getProjectDir(projectId), "external-harness-thread-archive.json");
+}
+
 export function getWorkspaceSplitViewsPath(projectId: string): string {
   return path.join(getProjectDir(projectId), "split-views.json");
 }

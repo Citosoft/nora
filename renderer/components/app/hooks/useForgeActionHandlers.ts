@@ -78,7 +78,7 @@ export function useForgeActionHandlers({
           references: [
             { kind: "workspace-path", label: "Issue URL", value: forgeWorkItemDetail.item.webUrl },
             ...(workspaceInstructionPath
-              ? [{ kind: "workspace-path" as const, label: "Workspace instructions", value: workspaceInstructionPath }]
+              ? [{ kind: "workspace-path" as const, label: "Project instructions", value: workspaceInstructionPath }]
               : [])
           ]
         },
@@ -153,7 +153,7 @@ export function useForgeActionHandlers({
           references: [
             { kind: "workspace-path", label: "Merge request URL", value: forgeWorkItemDetail.item.webUrl },
             ...(workspaceInstructionPath
-              ? [{ kind: "workspace-path" as const, label: "Workspace instructions", value: workspaceInstructionPath }]
+              ? [{ kind: "workspace-path" as const, label: "Project instructions", value: workspaceInstructionPath }]
               : [])
           ]
         },
@@ -184,7 +184,7 @@ export function useForgeActionHandlers({
       return;
     }
 
-    const statusId = statusBar.beginStatus("Opening workspace in IDE", true);
+    const statusId = statusBar.beginStatus("Opening project in IDE", true);
     try {
       await noraSystemClient.openProjectInIde(ideId, snapshot.project.rootPath);
     } catch (error: unknown) {

@@ -64,7 +64,7 @@ export function useWorkspaceResources(): UseWorkspaceResourcesResult {
         [projectId]: {
           tasks: current[projectId]?.tasks ?? [],
           isLoading: false,
-          errorMessage: error instanceof Error ? error.message : "Unable to load workspace tasks."
+          errorMessage: error instanceof Error ? error.message : "Unable to load project tasks."
         }
       }));
     }
@@ -96,7 +96,7 @@ export function useWorkspaceResources(): UseWorkspaceResourcesResult {
         [projectId]: {
           specs: current[projectId]?.specs ?? [],
           isLoading: false,
-          errorMessage: error instanceof Error ? error.message : "Unable to load workspace specs."
+          errorMessage: error instanceof Error ? error.message : "Unable to load project specs."
         }
       }));
     }
@@ -128,7 +128,7 @@ export function useWorkspaceResources(): UseWorkspaceResourcesResult {
         [projectId]: {
           notes: current[projectId]?.notes ?? [],
           isLoading: false,
-          errorMessage: error instanceof Error ? error.message : "Unable to load workspace notes."
+          errorMessage: error instanceof Error ? error.message : "Unable to load project notes."
         }
       }));
     }
@@ -180,7 +180,7 @@ export function useWorkspaceResources(): UseWorkspaceResourcesResult {
         paths: [],
         directoryPaths: [],
         isLoading: false,
-        errorMessage: error instanceof Error ? error.message : "Unable to load workspace files."
+        errorMessage: error instanceof Error ? error.message : "Unable to load project files."
       });
     });
 
@@ -227,7 +227,7 @@ export function useWorkspaceResources(): UseWorkspaceResourcesResult {
           return {
             projectId: project.id,
             tasks: [],
-            errorMessage: error instanceof Error ? error.message : "Unable to load workspace tasks."
+            errorMessage: error instanceof Error ? error.message : "Unable to load project tasks."
           };
         }
       })
@@ -293,7 +293,7 @@ export function useWorkspaceResources(): UseWorkspaceResourcesResult {
           return {
             projectId: project.id,
             specs: [] as WorkspaceSpecSummary[],
-            errorMessage: error instanceof Error ? error.message : "Unable to load workspace specs."
+            errorMessage: error instanceof Error ? error.message : "Unable to load project specs."
           };
         }
       })
@@ -359,7 +359,7 @@ export function useWorkspaceResources(): UseWorkspaceResourcesResult {
           return {
             projectId: project.id,
             notes: [] as WorkspaceNoteSummary[],
-            errorMessage: error instanceof Error ? error.message : "Unable to load workspace notes."
+            errorMessage: error instanceof Error ? error.message : "Unable to load project notes."
           };
         }
       })

@@ -81,18 +81,18 @@ export const FocusedAgentWorkspaceHome = (props: FocusedAgentWorkspaceHomeProps)
       </div>
       <div className="space-y-2">
         <div className="text-lg font-medium text-foreground">No session selected</div>
-        <div>Open an agent, start a script terminal, or launch a blank terminal in this workspace.</div>
+        <div>Open an agent, start a script terminal, or launch a blank terminal in this project.</div>
       </div>
       <div className="grid gap-4 text-left lg:grid-cols-2 lg:items-start">
         <div className="rounded-[4px] border border-border/70 bg-background/30 p-4 text-left lg:col-start-2 lg:row-span-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-sm font-medium text-foreground">Workspace quick access</div>
+            <div className="text-sm font-medium text-foreground">Project quick access</div>
             <div className="text-xs text-muted-foreground">{workspace.project.name}</div>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={onOpenWorkspaceSwitcher}>
               <FolderGit2 className="size-4" />
-              {workspaceSwitcherShortcutLabel ? `Workspace switcher (${workspaceSwitcherShortcutLabel})` : "Workspace switcher"}
+              {workspaceSwitcherShortcutLabel ? `Project switcher (${workspaceSwitcherShortcutLabel})` : "Project switcher"}
             </Button>
             <Button variant="outline" size="sm" onClick={onOpenTaskBoard}>
               <FileText className="size-4" />
@@ -169,7 +169,7 @@ export const FocusedAgentWorkspaceHome = (props: FocusedAgentWorkspaceHomeProps)
               </div>
             ) : (
               <div className="rounded-[4px] border border-dashed border-border/70 bg-background/20 px-3 py-2 text-xs text-muted-foreground">
-                No active sessions in this workspace.
+                No active sessions in this project.
               </div>
             )}
           </div>
@@ -206,7 +206,7 @@ export const FocusedAgentWorkspaceHome = (props: FocusedAgentWorkspaceHomeProps)
               </div>
             ) : (
               <div className="rounded-[4px] border border-dashed border-border/70 bg-background/20 px-3 py-2 text-xs text-muted-foreground">
-                No active local ports in this workspace.
+                No active local ports in this project.
               </div>
             )}
           </div>
@@ -318,7 +318,7 @@ export const FocusedAgentWorkspaceHome = (props: FocusedAgentWorkspaceHomeProps)
           </Button>
           <Button variant="outline" onClick={() => onOpenWorkspaceTerminalPresets(workspace.project.id)}>
             <Wrench className="size-4" />
-            Workspace presets
+            Project presets
           </Button>
           {scripts.length ? (
             <DropdownMenu

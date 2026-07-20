@@ -36,13 +36,13 @@ export function WorkspaceTerminalPresetsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         onClose={() => onOpenChange(false)}
-        headerTitle={project ? `${project.name} Presets` : "Workspace Presets"}
+        headerTitle={project ? `${project.name} Presets` : "Project Presets"}
         className="!w-[min(1200px,calc(100vw-2rem))] max-w-none"
       >
         <DialogHeader>
-          <DialogTitle>Workspace terminal presets</DialogTitle>
+          <DialogTitle>Project terminal presets</DialogTitle>
           <DialogDescription>
-            These presets only appear for this workspace and use the same launch flow as global presets.
+            These presets only appear for this project and use the same launch flow as global presets.
           </DialogDescription>
         </DialogHeader>
         <DialogBody>

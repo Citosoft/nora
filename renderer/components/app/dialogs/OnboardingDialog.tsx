@@ -98,10 +98,10 @@ const ONBOARDING_STEP_COPY: Record<OnboardingStep, { title: string; description:
   },
   settings: {
     title: "Choose starter settings",
-    description: "Set your name, preferred IDE, workspace state location, and rendering defaults."
+    description: "Set your name, preferred IDE, project state location, and rendering defaults."
   },
   workspace: {
-    title: "Choose your first workspace",
+    title: "Choose your first project",
     description: "Open a repository now, or continue and add one later from the main app."
   }
 };
@@ -709,7 +709,7 @@ export function OnboardingDialog({
 
                   <label className="flex items-center justify-between gap-3 rounded-[4px] border border-border/70 bg-card/70 px-3 py-2">
                     <div className="flex-1">
-                      <div className="text-sm font-medium text-foreground">Workspace state location</div>
+                      <div className="text-sm font-medium text-foreground">Project state location</div>
                       <div className="mt-1 text-xs text-muted-foreground">
                         Choose whether tasks, specs, boards, and split views live in your home `.nora` folder or in each repo&apos;s `.nora` folder.
                       </div>
@@ -742,7 +742,7 @@ export function OnboardingDialog({
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="text-sm font-medium text-foreground">Choose your first workspace</div>
+              <div className="text-sm font-medium text-foreground">Choose your first project</div>
               <div className="mt-1 text-sm text-muted-foreground">
                 Pick a repository now, or continue and add one later from the main app.
               </div>
@@ -760,7 +760,7 @@ export function OnboardingDialog({
                     <div className="flex items-center gap-3">
                       <WorkspaceProjectIcon
                         framework={currentWorkspaceFramework}
-                        label={currentWorkspaceName || "Selected workspace"}
+                        label={currentWorkspaceName || "Selected project"}
                         className="size-8 shrink-0"
                         imageClassName="size-5"
                       />
@@ -785,7 +785,7 @@ export function OnboardingDialog({
                     </div>
                   </>
                 ) : (
-                  <div className="text-sm text-muted-foreground">No workspace selected yet.</div>
+                  <div className="text-sm text-muted-foreground">No project selected yet.</div>
                 )}
               </div>
             </div>

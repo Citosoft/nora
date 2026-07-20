@@ -1,7 +1,9 @@
 import { noraToolingClient } from "@/components/app/clients/noraToolingClient";
+import { productFaviconUrl } from "@/components/app/logic/productIcon";
 import { formatInstallLogText, stripTerminalControlSequences } from "@/components/app/logic/terminalLogText";
 import { formatTimestamp, statusVariant } from "@/components/app/logic/utils";
 import { resolveWorkspaceProjectIconMode, shouldInvertFrameworkLogoInDarkMode } from "@/components/app/logic/workspaceProjectIcon";
+import { ProductIcon } from "@/components/app/shared/ProductIcon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -56,7 +58,7 @@ export function toolLogoUrl(toolId: string): string {
   };
 
   const domain = domainByTool[toolId] ?? "example.com";
-  return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+  return productFaviconUrl(domain);
 }
 
 type LocalToolIconProps = SVGProps<SVGSVGElement> & {
@@ -124,8 +126,8 @@ export function AgentToolIcon({
           aria-hidden="true"
         />
       ) : (
-        <img
-          src={toolLogoUrl(toolId)}
+        <ProductIcon
+          sourceUrl={toolLogoUrl(toolId)}
           alt=""
           className={cn("object-contain", imageClassName)}
           aria-hidden="true"
@@ -163,8 +165,8 @@ export function FrameworkIcon({
   const icon = (
     <div className={cn("grid place-items-center overflow-hidden rounded-[4px] bg-background/60", className)}>
       {iconMode === "framework-logo" ? (
-        <img
-          src={framework.logoUrl}
+        <ProductIcon
+          sourceUrl={framework.logoUrl}
           alt=""
           className={cn(
             "object-contain",
@@ -172,7 +174,7 @@ export function FrameworkIcon({
             imageClassName
           )}
           aria-hidden="true"
-          onError={() => setFrameworkLogoFailed(true)}
+          onFinalError={() => setFrameworkLogoFailed(true)}
         />
       ) : (
         <FolderGit2 className={cn("text-muted-foreground", imageClassName)} aria-hidden="true" />
@@ -247,8 +249,8 @@ export function WorkspaceProjectIcon({
   if (iconMode === "framework-logo" && framework && frameworkLogoUrl) {
     const icon = (
       <div className={cn("grid place-items-center overflow-hidden rounded-[4px] bg-background/60", className)}>
-        <img
-          src={frameworkLogoUrl}
+        <ProductIcon
+          sourceUrl={frameworkLogoUrl}
           alt=""
           className={cn(
             "object-contain",
@@ -256,7 +258,7 @@ export function WorkspaceProjectIcon({
             imageClassName
           )}
           aria-hidden="true"
-          onError={() => setFrameworkLogoFailed(true)}
+          onFinalError={() => setFrameworkLogoFailed(true)}
         />
         <span className="sr-only">{framework.label}</span>
       </div>

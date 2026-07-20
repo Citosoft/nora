@@ -1,3 +1,5 @@
+import { productFaviconUrl } from "@/components/app/logic/productIcon";
+import { ProductIcon } from "@/components/app/shared/ProductIcon";
 import { cn } from "@/lib/utils";
 import type { AiProvider } from "@shared/appTypes";
 
@@ -8,7 +10,7 @@ const DOMAIN_BY_PROVIDER: Record<AiProvider, string> = {
 };
 
 export function aiProviderLogoUrl(provider: AiProvider): string {
-  return `https://www.google.com/s2/favicons?domain=${DOMAIN_BY_PROVIDER[provider]}&sz=64`;
+  return productFaviconUrl(DOMAIN_BY_PROVIDER[provider]);
 }
 
 export function AiProviderLogo({
@@ -27,8 +29,8 @@ export function AiProviderLogo({
         className
       )}
     >
-      <img
-        src={aiProviderLogoUrl(provider)}
+      <ProductIcon
+        sourceUrl={aiProviderLogoUrl(provider)}
         alt=""
         className={cn("size-3.5 object-contain", imgClassName)}
         aria-hidden

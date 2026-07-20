@@ -4,6 +4,7 @@ import type {
   ExternalHarnessContextRef,
   ExternalHarnessSessionSummary,
   ImportedContextBundleSummary,
+  SetWorkspaceUpstreamPayload,
   TerminalPreset,
   WorkspaceGitStatusSummary,
   WorkspaceNoteSummary,
@@ -64,6 +65,13 @@ export abstract class WorkspaceActionsApiBase {
     return this.getWorkspaceActions().listExternalHarnessContextSessionsByProject(projectId, rootPath);
   }
 
+  async archiveExternalHarnessThread(
+    projectId: string,
+    ref: ExternalHarnessContextRef
+  ): Promise<void> {
+    return this.getWorkspaceActions().archiveExternalHarnessThreadByProject(projectId, ref);
+  }
+
   async composeExternalHarnessContextSelections(
     projectId: string,
     ref: ExternalHarnessContextRef
@@ -77,6 +85,18 @@ export abstract class WorkspaceActionsApiBase {
 
   async getWorkspaceGitStatusSummary(payload: { projectId: string; rootPath?: string }): Promise<WorkspaceGitStatusSummary> {
     return this.getWorkspaceActions().getWorkspaceGitStatusSummary(payload);
+  }
+
+  async checkoutWorkspaceBranch(payload: {
+    projectId: string;
+    branch: string;
+    rootPath?: string;
+  }): Promise<AppState> {
+    return this.getWorkspaceActions().checkoutWorkspaceBranch(payload);
+  }
+
+  async setWorkspaceUpstream(payload: SetWorkspaceUpstreamPayload): Promise<WorkspaceGitStatusSummary> {
+    return this.getWorkspaceActions().setWorkspaceUpstream(payload);
   }
 
   async listWorkspaceTasks(projectId: string): Promise<WorkspaceTaskSummary[]> {

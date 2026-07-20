@@ -44,6 +44,7 @@ export const buildSyntheticExternalHarnessAgent = (options: {
     lastTerminalLine: "",
     resumeSessionId: resume,
     resumeCommand: null,
+    threadTitle: ref.threadTitle ?? ref.sessionLabel,
     contextFilePath,
     terminalStreamPath,
     isBusy: false,

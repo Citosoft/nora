@@ -1,4 +1,5 @@
 import { createScriptTerminalDefaults, formatWorkspaceScriptActionLabel } from "@/components/app/logic/workspaceScripts";
+import { canRemoveWorkspaceWorktree } from "@/components/app/logic/worktreeRemoval";
 import type { WorkspaceWorktreeActionsMenuItemsProps } from "@/components/app/types/workspaceSidebarWorktreeActionsMenu.types";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
@@ -21,13 +22,7 @@ export const WorkspaceWorktreeActionsMenuItems = ({
 }: WorkspaceWorktreeActionsMenuItemsProps) => {
   const isActionable = worktree.status === "ready" || worktree.status === "creating";
   const pullRequestWebUrl = pullRequestStatus?.webUrl ?? null;
-  const attachedAgentCount = workspace.agents.filter((agent) => agent.worktreeId === worktree.id).length;
-  const attachedTerminalCount = workspace.terminals.filter((terminal) => terminal.worktreeId === worktree.id).length;
-  const canRemoveWorktree =
-    !isRootWorktree &&
-    worktree.status !== "removing" &&
-    attachedAgentCount === 0 &&
-    attachedTerminalCount === 0;
+  const canRemoveWorktree = canRemoveWorkspaceWorktree(workspace, worktree, isRootWorktree);
 
   const onSelectWithClose = (action: () => void) => {
     action();

@@ -40,6 +40,6 @@ export function buildProjectScaffoldPrompt(input: ProjectScaffoldPromptInput): s
     "Selected testing and quality tools:",
     formatOptionList(input.testing),
     "",
-    "Create the project in this workspace. Prefer current stable framework conventions, keep the setup minimal but complete, add clear scripts or commands for running tests, and summarize the files and commands you created when finished."
+    "Create the project in this repository. Prefer current stable framework conventions, keep the setup minimal but complete, add clear scripts or commands for running tests, and summarize the files and commands you created when finished."
   ].join("\n");
 }

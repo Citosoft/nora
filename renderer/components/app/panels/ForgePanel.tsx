@@ -440,7 +440,7 @@ export function ForgePanel(props: ForgePanelProps) {
                   />
                 ) : (
                   <div className="rounded-[6px] border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">
-                    No GitLab remote detected for this workspace.
+                    No GitLab remote detected for this project.
                   </div>
                 )}
               </TabsContent>
@@ -465,7 +465,7 @@ export function ForgePanel(props: ForgePanelProps) {
             />
           ) : (
             <div className="rounded-[6px] border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">
-              No GitHub remote detected for this workspace.
+              No GitHub remote detected for this project.
             </div>
           )}
         </TabsContent>
@@ -480,7 +480,7 @@ export function ForgePanel(props: ForgePanelProps) {
             />
           ) : (
             <div className="rounded-[6px] border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">
-              No {activeProviderTab === "gitlab" ? "GitLab" : "GitHub"} remote detected for this workspace.
+              No {activeProviderTab === "gitlab" ? "GitLab" : "GitHub"} remote detected for this project.
             </div>
           )}
         </TabsContent>
@@ -494,7 +494,7 @@ export function ForgePanel(props: ForgePanelProps) {
             />
           ) : (
             <div className="rounded-[6px] border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">
-              No {activeProviderTab === "gitlab" ? "GitLab" : "GitHub"} remote detected for this workspace.
+              No {activeProviderTab === "gitlab" ? "GitLab" : "GitHub"} remote detected for this project.
             </div>
           )}
         </TabsContent>

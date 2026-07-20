@@ -28,8 +28,8 @@ export function AgentShortcutBar({
                 className="size-9"
                 disabled={disabled}
                 onClick={() => onCreateAgent(tool.id)}
-                tooltip={`Create a new ${tool.label} agent in the current workspace`}
-                aria-label={`Create a new ${tool.label} agent in the current workspace`}
+                tooltip={`Create a new ${tool.label} agent in the current project`}
+                aria-label={`Create a new ${tool.label} agent in the current project`}
               >
                 <AgentToolIcon
                   toolId={tool.id}

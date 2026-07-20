@@ -29,6 +29,7 @@ export function createTerminalStateHelpers(deps: TerminalStateHelperDeps): Termi
   const terminalLastStateUpdateAt = new Map<string, number>();
   const localTerminalLastStateUpdateAt = new Map<string, number>();
   const terminalIncompleteOsc7Sequences = new Map<string, string>();
+  const pendingAgentTitleLookups = new Set<string>();
 
   function updateAgent(agentId: string, partial: Partial<AgentSession>): void {
     deps.updateState((state) => ({
@@ -175,11 +176,59 @@ export function createTerminalStateHelpers(deps: TerminalStateHelperDeps): Termi
     if (resumeDetails) {
       const updatedAgent = deps.getSnapshot().agents.find((agent) => agent.id === agentId);
       if (updatedAgent) {
+        scheduleAgentTitleLookup(updatedAgent);
         const resumeTarget = deps.buildResumeCommand(updatedAgent) || updatedAgent.resumeSessionId;
         appendAgentSystemMessage(agentId, `[resume tracked${resumeTarget ? `: ${resumeTarget}` : ""}]`);
       }
     }
+    if (currentAgent?.resumeSessionId && !currentAgent.threadTitle) {
+      scheduleAgentTitleLookup(currentAgent);
+    }
     deps.emitTerminalData(agentId, chunk);
+  }
+
+  function scheduleAgentTitleLookup(agent: AgentSession): void {
+    if (agent.threadTitle || (agent.toolId !== "codex" && agent.toolId !== "claude") || !agent.resumeSessionId) {
+      return;
+    }
+
+    const lookupKey = `${agent.id}\0${agent.resumeSessionId}`;
+    if (pendingAgentTitleLookups.has(lookupKey)) {
+      return;
+    }
+
+    pendingAgentTitleLookups.add(lookupKey);
+    void deps.resolveAgentSessionTitle(agent)
+      .then((threadTitle) => {
+        if (!threadTitle) {
+          return;
+        }
+        deps.updateState((state) => ({
+          ...state,
+          agents: state.agents.map((current) =>
+            current.id === agent.id && current.resumeSessionId === agent.resumeSessionId
+              ? {
+                  ...current,
+                  threadTitle
+                }
+              : current
+          ),
+          workspaces: state.workspaces.map((workspace) => ({
+            ...workspace,
+            agents: workspace.agents.map((current) =>
+              current.id === agent.id && current.resumeSessionId === agent.resumeSessionId
+                ? {
+                    ...current,
+                    threadTitle
+                  }
+                : current
+            )
+          }))
+        }));
+      })
+      .finally(() => {
+        pendingAgentTitleLookups.delete(lookupKey);
+      });
   }
 
   function appendTerminalOutput(terminalId: string, chunk: string): void {

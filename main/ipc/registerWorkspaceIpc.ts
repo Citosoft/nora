@@ -2,6 +2,7 @@ import { listProviderModels } from "@main/ai/providerModels";
 import type { MainServices } from "@main/services/mainServices";
 import type {
   AgentContextSelection,
+  ArchiveExternalHarnessThreadPayload,
   AppSettings,
   AppState,
   CommitChangesPayload,
@@ -14,9 +15,10 @@ import type {
   GenerateCommitMessageResult,
   ImportBrowserImagePayload,
   ImportedContextBundleSummary,
-  NoraDetectableContextBundleSummary,
   ListAiModelsPayload,
   ListAiModelsResult,
+  NoraDetectableContextBundleSummary,
+  SetWorkspaceUpstreamPayload,
   TerminalPreset,
   WorkspaceFileRequest,
   WorkspaceNoteSummary,
@@ -77,6 +79,11 @@ export function registerWorkspaceIpc({
     "app:list-external-harness-context-sessions",
     (_event, projectId: string, rootPath?: string): Promise<ExternalHarnessSessionSummary[]> =>
       services.workspace.listExternalHarnessContextSessions(projectId, rootPath)
+  );
+  ipcMain.handle(
+    "app:archive-external-harness-thread",
+    (_event, payload: ArchiveExternalHarnessThreadPayload): Promise<void> =>
+      services.workspace.archiveExternalHarnessThread(payload.projectId, payload.ref)
   );
   ipcMain.handle(
     "app:compose-external-harness-context-selections",
@@ -144,6 +151,16 @@ export function registerWorkspaceIpc({
   ipcMain.handle(
     "app:get-workspace-git-status-summary",
     (_event, payload: { projectId: string; rootPath?: string }) => services.workspace.getWorkspaceGitStatusSummary(payload)
+  );
+  ipcMain.handle(
+    "app:checkout-workspace-branch",
+    (_event, payload: import("@shared/appTypes").CheckoutWorkspaceBranchPayload) =>
+      services.workspace.checkoutWorkspaceBranch(payload)
+  );
+  ipcMain.handle(
+    "app:set-workspace-upstream",
+    (_event, payload: SetWorkspaceUpstreamPayload) =>
+      services.workspace.setWorkspaceUpstream(payload)
   );
   ipcMain.handle("app:list-workspace-tasks", (_event, projectId: string) =>
     services.workspace.listWorkspaceTasks(projectId)

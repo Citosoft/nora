@@ -149,9 +149,9 @@ export function DiffReviewTray() {
               <div className="flex min-w-0 items-center gap-2">
                 <p
                   className="min-w-0 flex-1 truncate text-xs leading-none text-muted-foreground"
-                  title="Start an agent in this workspace to send these comments."
+                  title="Start an agent in this project to send these comments."
                 >
-                  Start an agent in this workspace to send these comments.
+                  Start an agent in this project to send these comments.
                 </p>
                 <Button
                   variant="outline"

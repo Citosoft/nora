@@ -2,7 +2,7 @@ import type { AllAgentsGroupBy } from "@/components/app/types/workspaceSidebarAl
 
 export const WORKSPACE_SIDEBAR_ALL_AGENTS_GROUP_BY_OPTIONS: readonly { value: AllAgentsGroupBy; label: string }[] = [
   { value: "none", label: "None" },
-  { value: "workspace", label: "Workspace" },
+  { value: "workspace", label: "Project" },
   { value: "pr_status", label: "PR status" }
 ];
 

@@ -27,7 +27,7 @@ export function BrowserSettingsSection() {
 
       <SettingRow
         title="Auto-open Browser On New Port"
-        description="Open a new internal browser tab when a workspace terminal detects a new local URL."
+        description="Open a new internal browser tab when a project terminal detects a new local URL."
         control={(
           <ToggleButton
             checked={appSettings.openInternalBrowserOnNewPortDetection}
