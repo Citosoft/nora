@@ -1,6 +1,7 @@
 import { PROJECT_SCAFFOLD_FRAMEWORKS } from "@/components/app/constants/projectScaffoldRegistry";
 import { resolveProjectScaffoldOptionLogoUrl } from "@/components/app/constants/projectScaffoldOptionLogos";
 import { ProductIcon } from "@/components/app/shared/ProductIcon";
+import { resolveDefaultAgentTool } from "@/components/app/logic/agentQuickLaunch";
 import { groupProjectScaffoldComponentOptions } from "@/components/app/logic/projectScaffoldOptionGroups";
 import {
   deleteProjectScaffoldFavorite,
@@ -143,13 +144,10 @@ export function AddWorkspaceDialog({
       ].some((value) => value.toLowerCase().includes(query));
     });
   }, [frameworkSearch, selectedFrameworkCategory]);
-  const defaultToolId = useMemo(() => {
-    if (preferredAgentToolId && availableTools.some((tool) => tool.id === preferredAgentToolId)) {
-      return preferredAgentToolId;
-    }
-
-    return availableTools[0]?.id ?? "";
-  }, [availableTools, preferredAgentToolId]);
+  const defaultToolId = useMemo(
+    () => resolveDefaultAgentTool(availableTools, preferredAgentToolId)?.id ?? "",
+    [availableTools, preferredAgentToolId]
+  );
   const [selectedToolId, setSelectedToolId] = useState(defaultToolId);
   const stepIndex = SCAFFOLD_STEPS.indexOf(step);
   const previousStep = stepIndex > 0 ? SCAFFOLD_STEPS[stepIndex - 1] : null;

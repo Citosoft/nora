@@ -33,6 +33,7 @@ export const WorkspaceSidebar = () => {
     gitlabHost,
     terminalPresets,
     terminalQuickLaunchDefaults,
+    defaultAgentTool,
     agentsNeedingAttention,
     focusedAgent,
     focusedTerminal,
@@ -66,6 +67,7 @@ export const WorkspaceSidebar = () => {
     onOpenCreateAgent,
     onOpenCreateTerminal,
     onResumeThread,
+    onQuickLaunchAgent,
     onArchiveThread,
     onLaunchWorkspaceTerminal,
     onLaunchWorkspaceScript,
@@ -336,6 +338,7 @@ export const WorkspaceSidebar = () => {
                         focusedTerminal={focusedTerminal}
                         preferredShellId={preferredShellId}
                         terminalQuickLaunchDefaults={terminalQuickLaunchDefaults}
+                        defaultAgentTool={defaultAgentTool}
                         runnableGlobalTerminalPresets={runnableGlobalTerminalPresets}
                         activeSessionPopoverId={activeSessionPopoverId}
                         setActiveSessionPopoverId={setActiveSessionPopoverId}
@@ -360,6 +363,7 @@ export const WorkspaceSidebar = () => {
                         onRemoveWorktree={onRemoveWorktree}
                         onOpenCreateAgent={onOpenCreateAgent}
                         onResumeThread={onResumeThread}
+                        onQuickLaunchAgent={onQuickLaunchAgent}
                         onArchiveThread={onArchiveThread}
                         onOpenCreateTerminal={onOpenCreateTerminal}
                         onLaunchWorkspaceTerminal={onLaunchWorkspaceTerminal}

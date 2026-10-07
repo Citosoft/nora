@@ -42,6 +42,7 @@ export function useAppRootWorkspaceSidebarSources({
   activeWorkspaceContentTab,
   terminalPresets,
   terminalQuickLaunchDefaults,
+  preferredAgentToolId,
   uiCommands,
   uiState,
   workspaceNotes,
@@ -93,6 +94,7 @@ export function useAppRootWorkspaceSidebarSources({
       agentCatalog: snapshot?.agentCatalog ?? [],
       terminalPresets,
       terminalQuickLaunchDefaults,
+      preferredAgentToolId,
       uiCommands: {
         clearBrowserAndForgeFocus: uiCommands.clearBrowserAndForgeFocus,
         clearSessionTabFocus: uiCommands.clearSessionTabFocus,
@@ -152,6 +154,7 @@ export function useAppRootWorkspaceSidebarSources({
     snapshot,
     terminalPresets,
     terminalQuickLaunchDefaults,
+    preferredAgentToolId,
     uiCommands,
     uiState.aiChatTabs,
     uiState.focusedAiChatTabId,

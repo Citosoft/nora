@@ -10,6 +10,7 @@ import type {
 import type {
   AgentCatalogEntry,
   AppState,
+  CheckoutWorkspaceBranchPayload,
   TerminalShellOption,
   WorkspaceScriptLauncher,
   WorkspaceSummary
@@ -43,6 +44,7 @@ export type WorkspaceSessionContextValue = {
   onRestart: (agentId: string) => Promise<AppState | null>;
   onRestartTerminal: (sessionId: string) => Promise<AppState | null>;
   onClearTerminal: (sessionId: string) => Promise<AppState | null>;
+  onCheckoutSessionBranch: (payload: CheckoutWorkspaceBranchPayload) => Promise<AppState | null>;
   onDestroyRequest: (agentId: string) => void;
   onDestroyTerminal: (sessionId: string) => Promise<AppState | null>;
   browserTabs: BrowserTabState[];

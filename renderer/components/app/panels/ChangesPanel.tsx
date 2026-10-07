@@ -10,12 +10,14 @@ import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainStat
 import { useWorkspaceAgentContextSources } from "@/components/app/hooks/useWorkspaceAgentContextSources";
 import { useWorkspaceExternalHarnessSessions } from "@/components/app/hooks/useWorkspaceExternalHarnessSessions";
 import { useStatusBar } from "@/components/app/logic/statusBarContext";
+import { getBranchCheckoutBlockedReason, getCheckoutableBranches } from "@/components/app/logic/branchCheckout";
 import { formatTimestamp } from "@/components/app/logic/utils";
 import { setWorkspaceRelativePathDragData } from "@/components/app/logic/workspacePathDrag";
 import { FileTreePanel } from "@/components/app/panels/FileTreePanel";
 import { ForgePanel } from "@/components/app/panels/ForgePanel";
 import { DiffReviewCountBadge, DiffReviewTray } from "@/components/app/panels/diff-annotation/DiffReviewTray";
 import { VercelPanel } from "@/components/app/panels/VercelPanel";
+import { BranchCheckoutMenu } from "@/components/app/shared/BranchCheckoutMenu";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { ForgeProviderIcon } from "@/components/app/views/ForgeProviderIcon";
 import { Button } from "@/components/ui/button";
@@ -473,21 +475,16 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
   const forgeProvider = forgeOverview?.repo?.provider ?? null;
   const changeCount = snapshot.changes.length;
   const checkoutableBranches = useMemo(
-    () =>
-      [...snapshot.projectBranches]
-        .filter((branch) => branch.trim() && branch !== activeBranch)
-        .sort((left, right) => left.localeCompare(right)),
+    () => getCheckoutableBranches(snapshot.projectBranches, activeBranch),
     [activeBranch, snapshot.projectBranches]
   );
-  const branchSwitcherDisabledReason = isInspectingCommit
-    ? "Return to working tree before switching branches"
-    : gitStatusIsDirty
-      ? "Commit or discard changes before switching branches"
-      : checkoutableBranches.length === 0
-        ? "No other local branches are available"
-        : null;
-  const canOpenBranchSwitcher =
-    !!snapshot.project && !isInspectingCommit && !gitStatusIsDirty && checkoutableBranches.length > 0 && !isCheckingOutBranch;
+  const branchCheckoutBlockedReason = snapshot.project
+    ? getBranchCheckoutBlockedReason({
+        isInspectingCommit,
+        hasUncommittedChanges: gitStatusIsDirty,
+        checkoutableBranchCount: checkoutableBranches.length
+      })
+    : "Open a project to switch branches";
   const fileCount = filePaths.length;
   const additionsTotal = snapshot.changes.reduce((total, change) => total + change.additions, 0);
   const deletionsTotal = snapshot.changes.reduce((total, change) => total + change.deletions, 0);
@@ -996,40 +993,13 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
               </div>
               {activeTab === "git" ? (
                 <>
-                  <DropdownMenu
-                    align="end"
-                    widthClassName="w-64"
-                    trigger={(
-                      <Button
-                        variant="outline"
-                        className="h-7 max-w-[180px] shrink-0 gap-1.5 rounded-[4px] border-border/60 bg-background/60 px-2 py-1 text-[11px] font-medium text-foreground"
-                        disabled={!canOpenBranchSwitcher}
-                        tooltip={
-                          branchSwitcherDisabledReason ??
-                          (activeBranch ? `Switch branch from ${activeBranch}` : "Switch branch")
-                        }
-                        aria-label={activeBranch ? `Active branch: ${activeBranch}` : "Active branch unavailable"}
-                      >
-                        {isCheckingOutBranch ? (
-                          <LoaderCircle className="size-3.5 shrink-0 animate-spin text-primary" />
-                        ) : (
-                          <GitBranch className="size-3.5 shrink-0 text-primary" />
-                        )}
-                        <span className="truncate">{activeBranch || "unknown branch"}</span>
-                        <ChevronDown className="size-3 shrink-0 text-muted-foreground" />
-                      </Button>
-                    )}
-                  >
-                    {checkoutableBranches.map((branch) => (
-                      <DropdownMenuItem
-                        key={branch}
-                        onSelect={() => void handleCheckoutBranch(branch)}
-                      >
-                        <GitBranch className="size-4" />
-                        <span className="truncate">{branch}</span>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenu>
+                  <BranchCheckoutMenu
+                    activeBranch={activeBranch}
+                    checkoutableBranches={checkoutableBranches}
+                    blockedReason={branchCheckoutBlockedReason}
+                    isCheckingOut={isCheckingOutBranch}
+                    onCheckout={(branch) => void handleCheckoutBranch(branch)}
+                  />
                   <div className="flex items-center gap-1 text-muted-foreground" title={`${additionsTotal} additions`}>
                     <Plus className="size-3.5 text-emerald-500" />
                     <span>{additionsTotal}</span>

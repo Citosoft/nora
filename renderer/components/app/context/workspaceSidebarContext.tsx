@@ -3,6 +3,7 @@ import { noraIntegrationClient } from "@/components/app/clients/noraIntegrationC
 import { noraToolingManagementClient } from "@/components/app/clients/noraToolingManagementClient";
 import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
 import { noraWorkspaceManagementClient } from "@/components/app/clients/noraWorkspaceManagementClient";
+import { createQuickAgentPayload, resolveDefaultAgentTool } from "@/components/app/logic/agentQuickLaunch";
 import { createOpenTaskInWorkspaceHandler } from "@/components/app/logic/createOpenTaskInWorkspaceHandler";
 import { createQuickTerminalDialogDefaults, createQuickTerminalPayload } from "@/components/app/logic/terminalQuickLaunch";
 import { createWorkspaceTerminalNavigation } from "@/components/app/logic/workspaceTerminalNavigation";
@@ -18,6 +19,7 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
     activeProjectId: d.activeProjectId
   });
   const terminalNavigation = createWorkspaceTerminalNavigation(d);
+  const defaultAgentTool = resolveDefaultAgentTool(d.agentCatalog, d.preferredAgentToolId);
   const runInWorkspace = (projectId: string, action: () => void) => {
     if (d.activeProjectId === projectId) {
       action();
@@ -37,6 +39,7 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
     gitlabHost: d.gitlabHost,
     terminalPresets: d.terminalPresets,
     terminalQuickLaunchDefaults: d.terminalQuickLaunchDefaults,
+    defaultAgentTool,
     agentsNeedingAttention: d.agentsNeedingAttention,
     focusedWorkspace: d.focusedWorkspace,
     focusedAgent: d.focusedAgent,
@@ -75,6 +78,17 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
         return;
       }
       await d.safely(() => noraSessionClient.createAgent(payload));
+    },
+    onQuickLaunchAgent: (projectId) => {
+      if (!defaultAgentTool) {
+        // Nothing usable to launch; the dialog explains how to install or enable a harness.
+        runInWorkspace(projectId, () => d.uiCommands.openCreateAgentDialog());
+        return;
+      }
+      const payload = createQuickAgentPayload(defaultAgentTool.id);
+      void d.focusWorkspaceWithRecovery(projectId).then((focused) =>
+        focused ? d.safely(() => noraSessionClient.createAgent(payload)) : null
+      );
     },
     onArchiveThread: async (projectId, ref) => {
       await noraWorkspaceClient.archiveExternalHarnessThread({ projectId, ref });
@@ -320,6 +334,7 @@ type WorkspaceSidebarRuntimeValue = Pick<
   | "gitlabHost"
   | "terminalPresets"
   | "terminalQuickLaunchDefaults"
+  | "defaultAgentTool"
   | "agentsNeedingAttention"
   | "focusedWorkspace"
   | "focusedAgent"
@@ -371,6 +386,7 @@ export function WorkspaceSidebarProvider({
     gitlabHost: value.gitlabHost,
     terminalPresets: value.terminalPresets,
     terminalQuickLaunchDefaults: value.terminalQuickLaunchDefaults,
+    defaultAgentTool: value.defaultAgentTool,
     agentsNeedingAttention: value.agentsNeedingAttention,
     focusedWorkspace: value.focusedWorkspace,
     focusedAgent: value.focusedAgent,
@@ -410,6 +426,7 @@ export function WorkspaceSidebarProvider({
     onOpenCreateAgent: value.onOpenCreateAgent,
     onOpenCreateTerminal: value.onOpenCreateTerminal,
     onResumeThread: value.onResumeThread,
+    onQuickLaunchAgent: value.onQuickLaunchAgent,
     onArchiveThread: value.onArchiveThread,
     onLaunchWorkspaceTerminal: value.onLaunchWorkspaceTerminal,
     onLaunchWorkspaceScript: value.onLaunchWorkspaceScript,

@@ -1,5 +1,6 @@
 import { noraSessionClient } from "@/components/app/clients/noraSessionClient";
 import { noraToolingManagementClient } from "@/components/app/clients/noraToolingManagementClient";
+import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
 import { parseForgeWorkflowRunNumber } from "@/components/app/logic/forgeWorkflowRuns";
 import { requestCloseFileEditorTab } from "@/components/app/logic/requestCloseFileEditorTab";
 import { buildDestroyTerminalGuardMessage } from "@/components/app/logic/sessionCloseGuard";
@@ -223,6 +224,7 @@ export const createWorkspaceSessionPanelValue = (d: WorkspaceSessionPanelBuildDe
   onRestart: (agentId) => d.safely(() => noraSessionClient.restartAgent(agentId)),
   onRestartTerminal: (sessionId) => d.safely(() => noraSessionClient.restartTerminal(sessionId)),
   onClearTerminal: (sessionId) => d.safely(() => noraSessionClient.clearTerminal(sessionId)),
+  onCheckoutSessionBranch: (payload) => d.safely(() => noraWorkspaceClient.checkoutWorkspaceBranch(payload)),
   onDestroyRequest: (agentId) => d.uiCommands.setDestroyAgentId(agentId),
   onDestroyAgent: (agentId) => d.safely(() => noraSessionClient.destroyAgent(agentId)),
   onDestroyTerminal: (sessionId) => {
@@ -470,6 +472,7 @@ export function WorkspaceSessionPanelProvider({
     onRestart: value.onRestart,
     onRestartTerminal: value.onRestartTerminal,
     onClearTerminal: value.onClearTerminal,
+    onCheckoutSessionBranch: value.onCheckoutSessionBranch,
     onDestroyRequest: value.onDestroyRequest,
     onDestroyAgent: value.onDestroyAgent,
     onDestroyTerminal: value.onDestroyTerminal,

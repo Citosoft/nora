@@ -17,6 +17,7 @@ import type {
   WorkspaceLoadingState
 } from "@/components/app/types";
 import type {
+  AgentCatalogEntry,
   AgentSession,
   AgentSkillCatalog,
   AiProvider,
@@ -191,6 +192,7 @@ export type WorkspaceSidebarProps = {
   gitlabHost: string;
   terminalPresets: AppSettings["terminalPresets"];
   terminalQuickLaunchDefaults: AppSettings["terminalQuickLaunchDefaults"];
+  defaultAgentTool: AgentCatalogEntry | null;
   agentsNeedingAttention: Record<string, boolean>;
   focusedWorkspace: WorkspaceSummary | null;
   focusedAgent: AgentSession | null;
@@ -220,6 +222,7 @@ export type WorkspaceSidebarProps = {
   onOpenCreateAgent: (defaults?: CreateAgentDialogDefaults) => void;
   onOpenCreateTerminal: (defaults: CreateTerminalDialogDefaults) => void;
   onResumeThread: (projectId: string, payload: CreateAgentPayload) => Promise<void>;
+  onQuickLaunchAgent: (projectId: string) => void;
   onArchiveThread: (projectId: string, ref: ExternalHarnessContextRef) => Promise<void>;
   onLaunchWorkspaceTerminal: (projectId: string, payload: CreateTerminalPayload) => void;
   onLaunchWorkspaceScript: (projectId: string, defaults: CreateTerminalDialogDefaults) => void;

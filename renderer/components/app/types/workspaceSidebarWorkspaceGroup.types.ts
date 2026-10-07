@@ -1,6 +1,7 @@
 import type { NoteListEntry, SpecListEntry, TaskListEntry } from "@/components/app/types/component.types";
 import type { AiChatTabState, CreateAgentDialogDefaults, CreateTerminalDialogDefaults } from "@/components/app/types";
 import type {
+  AgentCatalogEntry,
   AgentSession,
   CreateAgentPayload,
   CreateTerminalPayload,
@@ -58,6 +59,7 @@ export type WorkspaceSidebarWorkspaceGroupProps = {
   focusedTerminal: TerminalSession | null;
   preferredShellId: string | null;
   terminalQuickLaunchDefaults: TerminalQuickLaunchDefaults;
+  defaultAgentTool: AgentCatalogEntry | null;
   runnableGlobalTerminalPresets: TerminalPreset[];
   activeSessionPopoverId: string | null;
   setActiveSessionPopoverId: Dispatch<SetStateAction<string | null>>;
@@ -82,6 +84,7 @@ export type WorkspaceSidebarWorkspaceGroupProps = {
   onRemoveWorktree: (projectId: string, worktreeId: string, branch: string) => void;
   onOpenCreateAgent: (defaults?: CreateAgentDialogDefaults) => void;
   onResumeThread: (projectId: string, payload: CreateAgentPayload) => Promise<void>;
+  onQuickLaunchAgent: (projectId: string) => void;
   onArchiveThread: (projectId: string, ref: ExternalHarnessContextRef) => Promise<void>;
   onOpenCreateTerminal: (defaults: CreateTerminalDialogDefaults) => void;
   onLaunchWorkspaceTerminal: (projectId: string, payload: CreateTerminalPayload) => void;

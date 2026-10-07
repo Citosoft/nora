@@ -3,7 +3,7 @@ import type { FileEditorState, UiState } from "@/components/app/types";
 import type { UseWorkspaceContentControllerResult } from "@/components/app/types/appHooks.types";
 import type { SettingsGroup } from "@/components/app/types/settings.types";
 import type { WorkspaceSidebarProps } from "@/components/app/types/workflow.types";
-import type { AppState, CreateTerminalPayload, WorkspaceSummary } from "@shared/appTypes";
+import type { AppSettings, AppState, CreateTerminalPayload, WorkspaceSummary } from "@shared/appTypes";
 import type { Dispatch, SetStateAction } from "react";
 
 export type WorkspaceSidebarBuildDeps = Pick<
@@ -64,6 +64,7 @@ export type WorkspaceSidebarBuildDeps = Pick<
   agentCatalog: AppState["agentCatalog"];
   terminalPresets: WorkspaceSidebarProps["terminalPresets"];
   terminalQuickLaunchDefaults: WorkspaceSidebarProps["terminalQuickLaunchDefaults"];
+  preferredAgentToolId: AppSettings["preferredAgentToolId"];
   activeWorkspaceContentTab: "file" | "diff" | null;
   uiCommands: Pick<
     AppUiCommands,

@@ -1,3 +1,4 @@
+import { resolveDefaultAgentTool } from "@/components/app/logic/agentQuickLaunch";
 import { AGENT_ROLE_OPTIONS, getAgentRolePrompt } from "@/components/app/logic/agentRoles";
 import { createLaunchTargetFormState, launchTargetModeFromTarget, resolveSupportedLaunchTargetMode } from "@/components/app/logic/createAgentLaunchTarget";
 import { useWorkspaceAgentContextSources } from "@/components/app/hooks/useWorkspaceAgentContextSources";
@@ -163,8 +164,7 @@ export function CreateAgentDialog({
         ? findPreparePresetEntryByCommand(preparePresetEntries, defaultWorktreePrepareCommand)
         : null;
       const initialToolId = defaults?.toolId
-        ?? (preferredAgentToolId && detectedTools.some((tool) => tool.id === preferredAgentToolId) ? preferredAgentToolId : null)
-        ?? detectedTools[0]?.id
+        ?? resolveDefaultAgentTool(detectedTools, preferredAgentToolId)?.id
         ?? "";
       setFormState({
         toolId: initialToolId,

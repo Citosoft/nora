@@ -639,6 +639,7 @@ function SignedInAppRootContent({
     activeWorkspaceContentTab,
     terminalPresets: props.preferences.appSettings.terminalPresets,
     terminalQuickLaunchDefaults: props.preferences.appSettings.terminalQuickLaunchDefaults,
+    preferredAgentToolId: props.preferences.appSettings.preferredAgentToolId,
     uiCommands: props.uiCommands,
     uiState,
     workspaceNotes: derived.allWorkspaceNotes,

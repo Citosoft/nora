@@ -44,6 +44,7 @@ export const assembleSignedInWorkspaceSidebarBuild = (
     },
     terminalPresets: core.appSettings.terminalPresets,
     terminalQuickLaunchDefaults: core.appSettings.terminalQuickLaunchDefaults,
+    preferredAgentToolId: core.appSettings.preferredAgentToolId,
     activeWorkspaceContentTab: sessionSurface.activeWorkspaceContentTab,
     setWorkspaceSessionActiveViewId: sessionSurface.workspaceSessionViews.setActiveViewId
   };

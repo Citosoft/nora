@@ -1,3 +1,4 @@
+import { getPathLeafName } from "@/components/app/logic/pathLeaf";
 import type {
   WorkspaceQuickSearchGroupId,
   WorkspaceQuickSearchRow,
@@ -49,26 +50,16 @@ const matchesTokens = (haystack: string, tokens: string[]): boolean => {
   return true;
 };
 
-const pathBasename = (path: string): string => {
-  const normalized = path.replace(/\\/g, "/").trim();
-  if (!normalized) {
-    return "";
-  }
-
-  const segments = normalized.split("/").filter(Boolean);
-  return segments.length ? segments[segments.length - 1] ?? "" : "";
-};
-
 const worktreeSearchFragments = (workspace: string, worktreePath: string | null): string[] => {
   const parts = [workspace, worktreePath ?? ""].filter(Boolean);
   if (worktreePath) {
-    const base = pathBasename(worktreePath);
+    const base = getPathLeafName(worktreePath);
     if (base) {
       parts.push(base);
     }
   }
 
-  const fromWorkspace = pathBasename(workspace);
+  const fromWorkspace = getPathLeafName(workspace);
   if (fromWorkspace && !parts.includes(fromWorkspace)) {
     parts.push(fromWorkspace);
   }
@@ -92,7 +83,7 @@ export const buildWorkspaceQuickSearchRows = (source: WorkspaceQuickSearchSource
       .toLowerCase();
 
     const branchLabel = agent.branch.trim();
-    const worktreeName = pathBasename(agent.worktreePath ?? "") || pathBasename(agent.workspace);
+    const worktreeName = getPathLeafName(agent.worktreePath ?? "") || getPathLeafName(agent.workspace);
     const taskLine = agent.task.trim();
     const subtitleParts: string[] = [];
     if (worktreeName) {

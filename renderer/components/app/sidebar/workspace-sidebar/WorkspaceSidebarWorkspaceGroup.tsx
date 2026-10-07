@@ -94,6 +94,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
   focusedTerminal,
   preferredShellId,
   terminalQuickLaunchDefaults,
+  defaultAgentTool,
   runnableGlobalTerminalPresets,
   activeSessionPopoverId,
   setActiveSessionPopoverId,
@@ -118,6 +119,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
   onRemoveWorktree,
   onOpenCreateAgent,
   onResumeThread,
+  onQuickLaunchAgent,
   onArchiveThread,
   onOpenCreateTerminal,
   onLaunchWorkspaceTerminal,
@@ -231,6 +233,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
           null
         : null;
     const scripts = getPreferredWorkspaceScripts(workspace);
+    const quickLaunchAgentLabel = defaultAgentTool ? `New ${defaultAgentTool.label} agent` : "New agent";
     const handleResumeThread = async (
       thread: typeof externalThreadSessions[number]
     ) => {
@@ -320,6 +323,18 @@ export const WorkspaceSidebarWorkspaceGroup = ({
           </button>
           <div className="flex items-center pr-2">
             <div className="flex items-center opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+              <Tooltip content={quickLaunchAgentLabel}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 shrink-0 rounded-[4px] self-center"
+                  aria-label={`${quickLaunchAgentLabel} in ${workspace.project.name}`}
+                  disabled={isRemoving}
+                  onClick={() => onQuickLaunchAgent(workspace.project.id)}
+                >
+                  <Plus className="size-4" />
+                </Button>
+              </Tooltip>
               {scripts.length && preferredShellId ? (
                 <DropdownMenu
                   align="end"
