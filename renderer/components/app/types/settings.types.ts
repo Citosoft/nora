@@ -114,9 +114,6 @@ export type SettingsRuntimeValue = {
     isWorkspaceSidebarCollapsed: boolean;
     isChangesSidebarCollapsed: boolean;
     sidebarsSwapped: boolean;
-    isRemoteMountsSectionCollapsed: boolean;
-    isPortsSectionCollapsed: boolean;
-    isChatbotsSectionCollapsed: boolean;
     isCliSectionCollapsed: boolean;
     isSkillsSectionCollapsed: boolean;
     isSpecsSectionCollapsed: boolean;

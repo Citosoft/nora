@@ -859,7 +859,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
     : "w-full rounded-md border border-border/60 bg-background/30 px-2 py-2 text-left outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
   return (
-    <section className={cn("workspace-shell-surface flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-card/95", collapsed && "changes-sidebar-collapsed-surface")}>
+    <section className="workspace-shell-surface flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-card/95">
       {!collapsed ? (
         <CardHeader className="min-w-0 border-b border-border/60 px-0 py-2">
           <div className="mb-2 flex items-center gap-3 px-4">
@@ -1319,34 +1319,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
         </CardHeader>
       ) : null}
 
-      {collapsed ? (
-        <CardContent className="flex h-full min-h-0 flex-col items-center gap-3 px-2 py-4">
-          {activeTab === "git"
-            ? <FolderGit2 className="size-4 text-primary" />
-              : activeTab === "files"
-                ? <FileText className="size-4 text-primary" />
-              : activeTab === "context"
-                ? <Brain className="size-4 text-primary" />
-              : activeTab === "vercel"
-                ? <VercelMark className="size-4 text-primary" />
-              : forgeProvider
-                ? <ForgeProviderIcon provider={forgeProvider} className="size-4 text-primary" />
-                : <GitPullRequest className="size-4 text-primary" />}
-          <div className="border border-border/70 px-2 py-1 text-xs text-muted-foreground">
-            {activeTab === "git"
-              ? changeCount
-              : activeTab === "files"
-                ? fileCount
-                : activeTab === "context"
-                  ? importedBundlesUnique.length + workspaceAgentContextGroupCount
-                : activeTab === "vercel"
-                  ? linkedVercelProject
-                    ? vercelDeployments.length
-                    : vercelProjects.length
-                  : (forgeOverview?.pullRequests?.length || 0) + (forgeOverview?.issues?.length || 0) + (forgeOverview?.workflowRuns?.length || 0)}
-          </div>
-        </CardContent>
-      ) : (
+      {!collapsed ? (
         <CardContent className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden p-0">
           {activeTab === "files" ? (
               <FileTreePanel
@@ -1878,7 +1851,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
           )}
           {activeTab === "git" && !isInspectingCommit ? <DiffReviewTray /> : null}
         </CardContent>
-      )}
+      ) : null}
     </section>
   );
 }

@@ -10,16 +10,10 @@ export type UseAppUiLayoutStateResult = {
   setCollapsedWorkspaceIds: Dispatch<SetStateAction<Record<string, boolean>>>;
   isChangesSidebarCollapsed: boolean;
   setIsChangesSidebarCollapsed: Dispatch<SetStateAction<boolean>>;
-  isChatbotsSectionCollapsed: boolean;
-  setIsChatbotsSectionCollapsed: Dispatch<SetStateAction<boolean>>;
   isCliSectionCollapsed: boolean;
   setIsCliSectionCollapsed: Dispatch<SetStateAction<boolean>>;
   isLocalTerminalDockCollapsed: boolean;
   setIsLocalTerminalDockCollapsed: Dispatch<SetStateAction<boolean>>;
-  isPortsSectionCollapsed: boolean;
-  setIsPortsSectionCollapsed: Dispatch<SetStateAction<boolean>>;
-  isRemoteMountsSectionCollapsed: boolean;
-  setIsRemoteMountsSectionCollapsed: Dispatch<SetStateAction<boolean>>;
   isSkillsSectionCollapsed: boolean;
   setIsSkillsSectionCollapsed: Dispatch<SetStateAction<boolean>>;
   isSpecsSectionCollapsed: boolean;

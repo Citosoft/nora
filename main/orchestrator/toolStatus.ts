@@ -1,8 +1,13 @@
-import type { AgentCatalogEntry } from "@shared/appTypes";
+import type { AgentCatalogEntry, ToolUsageInfo } from "@shared/appTypes";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { resolveClaudeConfigDir } from "../agent-usage/claudeConfigDir";
+import { parseCliUsageLines } from "../agent-usage/cliUsageLines";
+import { resolveCursorStateDbPath } from "../agent-usage/cursorAuthState";
+import { createToolUsageInfo } from "../agent-usage/toolUsageInfo";
 import { buildProcessEnv } from "../processEnv";
+import type { CliStatusCapture } from "../types/agent-usage/toolUsageInfo.types";
 import type { ToolStatusHelperDeps, ToolStatusHelpers } from "../types/orchestratorToolStatus.types";
 
 function normalizeBase64Url(value: string): string {
@@ -95,14 +100,18 @@ async function readGeminiAuthHints(): Promise<string[]> {
   }
 }
 
-async function readClaudeAuthHints(): Promise<string[]> {
-  const configPath = path.join(os.homedir(), ".claude.json");
+async function readClaudeAuthHints(env: NodeJS.ProcessEnv): Promise<string[]> {
+  // Claude Code keeps `.claude.json` inside its config root only when CLAUDE_CONFIG_DIR is set.
+  const configPath = env.CLAUDE_CONFIG_DIR?.trim()
+    ? path.join(resolveClaudeConfigDir(env), ".claude.json")
+    : path.join(os.homedir(), ".claude.json");
   try {
     console.log("[nora main] claude auth hint read start", { configPath });
     const raw = await fs.readFile(configPath, "utf8");
     const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const email = asString(asRecord(parsed.oauthAccount)?.emailAddress);
     const userId = asString(parsed.userID);
-    const hints = userId ? [`User ID: ${userId}`] : [];
+    const hints = email ? [`User: ${email}`] : userId ? [`User ID: ${userId}`] : [];
     console.log("[nora main] claude auth hint read success", {
       configPath,
       hintCount: hints.length
@@ -119,6 +128,8 @@ function dedupeLines(lines: string[]): string[] {
 }
 
 export function createToolStatusHelpers(deps: ToolStatusHelperDeps): ToolStatusHelpers {
+  const getClaudeEnv = (): NodeJS.ProcessEnv => ({ ...process.env, ...deps.getToolEnv("claude") });
+
   function getToolStatusArgs(toolId: string): { title: string; args: string[] } | null {
     if (toolId === "codex") {
       return { title: "Codex CLI Usage", args: [] };
@@ -127,10 +138,10 @@ export function createToolStatusHelpers(deps: ToolStatusHelperDeps): ToolStatusH
       return { title: "Gemini CLI Status", args: ["--version"] };
     }
     if (toolId === "claude") {
-      return { title: "Claude CLI Status", args: ["--version"] };
+      return { title: "Claude Code Usage", args: [] };
     }
     if (toolId === "cursor") {
-      return { title: "Cursor Agent Status", args: ["status"] };
+      return { title: "Cursor Usage", args: [] };
     }
     return null;
   }
@@ -143,7 +154,7 @@ export function createToolStatusHelpers(deps: ToolStatusHelperDeps): ToolStatusH
       return readGeminiAuthHints();
     }
     if (toolId === "claude") {
-      return readClaudeAuthHints();
+      return readClaudeAuthHints(getClaudeEnv());
     }
     return [];
   }
@@ -182,15 +193,15 @@ export function createToolStatusHelpers(deps: ToolStatusHelperDeps): ToolStatusH
           toolId: tool.id,
           reason: codexAuthHints?.readable ? "no-auth-hints" : "auth-file-unreadable"
         });
-        return {
-          status: "unavailable" as const,
+        return createToolUsageInfo({
+          status: "unavailable",
           title: statusCommand.title,
-          lines: ["Codex is not signed in."],
+          notice: "Codex is not signed in.",
           fetchedAt: deps.nowIso()
-        };
+        });
       }
 
-      const interactiveStatus = await deps.getInteractiveCodexStatus(statusCommand.title, tool);
+      const interactiveStatus = await deps.getInteractiveCodexStatus(tool);
       const dedupedLines = dedupeLines([...authHints, ...interactiveStatus.lines]).slice(-24);
       console.log("[nora main] tool status probe success", {
         toolId: tool.id,
@@ -199,10 +210,44 @@ export function createToolStatusHelpers(deps: ToolStatusHelperDeps): ToolStatusH
         lines: dedupedLines,
         source: "interactive-status"
       });
-      return {
+      return buildCliUsageInfo(tool, statusCommand.title, {
         ...interactiveStatus,
         lines: dedupedLines
-      };
+      });
+    }
+
+    if (tool.id === "claude") {
+      const claudeUsage = await deps.getClaudeUsageStatus({
+        title: statusCommand.title,
+        configDir: resolveClaudeConfigDir(getClaudeEnv()),
+        account: parseCliUsageLines(authHints).account,
+        hintLines: authHints,
+        nowIso: deps.nowIso
+      });
+      console.log("[nora main] tool status probe success", {
+        toolId: tool.id,
+        title: statusCommand.title,
+        status: claudeUsage.status,
+        lineCount: claudeUsage.lines.length,
+        source: "oauth-usage"
+      });
+      return claudeUsage;
+    }
+
+    if (tool.id === "cursor") {
+      const cursorUsage = await deps.getCursorUsageStatus({
+        title: statusCommand.title,
+        stateDbPath: resolveCursorStateDbPath(),
+        nowIso: deps.nowIso
+      });
+      console.log("[nora main] tool status probe success", {
+        toolId: tool.id,
+        title: statusCommand.title,
+        status: cursorUsage.status,
+        windowCount: cursorUsage.windows.length,
+        source: "dashboard-usage"
+      });
+      return cursorUsage;
     }
 
     try {
@@ -229,12 +274,10 @@ export function createToolStatusHelpers(deps: ToolStatusHelperDeps): ToolStatusH
         lineCount: dedupedLines.length,
         lines: dedupedLines
       });
-      return {
-        status: "available" as const,
-        title: statusCommand.title,
-        lines: dedupedLines.length ? dedupedLines : [`${tool.label} returned no status output.`],
-        fetchedAt: deps.nowIso()
-      };
+      return buildCliUsageInfo(tool, statusCommand.title, {
+        status: "available",
+        lines: dedupedLines.length ? dedupedLines : [`${tool.label} returned no status output.`]
+      });
     } catch (error: unknown) {
       const stdout = deps.getExecStdout(error);
       const stderr =
@@ -255,13 +298,28 @@ export function createToolStatusHelpers(deps: ToolStatusHelperDeps): ToolStatusH
         lines: dedupedLines
       });
 
-      return {
-        status: "error" as const,
-        title: `${tool.label} Status Failed`,
-        lines: dedupedLines.length ? dedupedLines : [error instanceof Error ? error.message : "Unknown error"],
-        fetchedAt: deps.nowIso()
-      };
+      return buildCliUsageInfo(tool, `${tool.label} Status Failed`, {
+        status: "error",
+        lines: dedupedLines.length ? dedupedLines : [error instanceof Error ? error.message : "Unknown error"]
+      });
     }
+  }
+
+  /** Normalizes captured CLI text into structured windows so the renderer never parses provider output. */
+  function buildCliUsageInfo(tool: AgentCatalogEntry, title: string, capture: CliStatusCapture): ToolUsageInfo {
+    const { windows, account } = parseCliUsageLines(capture.lines);
+    return createToolUsageInfo({
+      status: capture.status,
+      title,
+      windows,
+      account,
+      lines: capture.lines,
+      ...(capture.status === "error" && !windows.length
+        ? { notice: `${tool.label} did not return usage information.` }
+        : {}),
+      ...(capture.rawOutput ? { rawOutput: capture.rawOutput } : {}),
+      fetchedAt: deps.nowIso()
+    });
   }
 
   return { getToolStatusArgs, getCliToolStatus };

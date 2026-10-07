@@ -72,7 +72,9 @@ export type {
   TerminalPreset,
   TerminalShellOption,
   TerminalStatus,
-  ToolUsageInfo
+  ToolUsageDetail,
+  ToolUsageInfo,
+  ToolUsageWindow
 } from "./system.types";
 
 export type {

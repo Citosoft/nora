@@ -202,9 +202,6 @@ export const buildSettingsRuntimeValue = (d: BuildSettingsRuntimeValueDeps): Set
     isWorkspaceSidebarCollapsed: d.isWorkspaceSidebarCollapsed,
     isChangesSidebarCollapsed: d.isChangesSidebarCollapsed,
     sidebarsSwapped: d.sidebarsSwapped,
-    isRemoteMountsSectionCollapsed: d.isRemoteMountsSectionCollapsed,
-    isPortsSectionCollapsed: d.isPortsSectionCollapsed,
-    isChatbotsSectionCollapsed: d.isChatbotsSectionCollapsed,
     isCliSectionCollapsed: d.isCliSectionCollapsed,
     isSkillsSectionCollapsed: d.isSkillsSectionCollapsed,
     isSpecsSectionCollapsed: d.isSpecsSectionCollapsed,
@@ -214,9 +211,6 @@ export const buildSettingsRuntimeValue = (d: BuildSettingsRuntimeValueDeps): Set
     if (typeof next.isWorkspaceSidebarCollapsed === "boolean") d.setIsWorkspaceSidebarCollapsed(next.isWorkspaceSidebarCollapsed);
     if (typeof next.isChangesSidebarCollapsed === "boolean") d.setIsChangesSidebarCollapsed(next.isChangesSidebarCollapsed);
     if (typeof next.sidebarsSwapped === "boolean") d.setSidebarsSwapped(next.sidebarsSwapped);
-    if (typeof next.isRemoteMountsSectionCollapsed === "boolean") d.setIsRemoteMountsSectionCollapsed(next.isRemoteMountsSectionCollapsed);
-    if (typeof next.isPortsSectionCollapsed === "boolean") d.setIsPortsSectionCollapsed(next.isPortsSectionCollapsed);
-    if (typeof next.isChatbotsSectionCollapsed === "boolean") d.setIsChatbotsSectionCollapsed(next.isChatbotsSectionCollapsed);
     if (typeof next.isCliSectionCollapsed === "boolean") d.setIsCliSectionCollapsed(next.isCliSectionCollapsed);
     if (typeof next.isSkillsSectionCollapsed === "boolean") d.setIsSkillsSectionCollapsed(next.isSkillsSectionCollapsed);
     if (typeof next.isSpecsSectionCollapsed === "boolean") d.setIsSpecsSectionCollapsed(next.isSpecsSectionCollapsed);

@@ -1,6 +1,6 @@
-import type { AgentCatalogEntry, AgentToolConfig, ToolUsageInfo } from "@shared/appTypes";
+import type { AgentCatalogEntry, AgentToolConfig } from "@shared/appTypes";
+import type { CliStatusCapture } from "../types/agent-usage/toolUsageInfo.types";
 import { getInteractiveCodexStatusFromDeps, getToolEnvFromConfigs } from "./runtimeFacade";
-import { nowIso } from "./time";
 
 export class ToolingRuntimeService {
   constructor(private readonly getToolConfigs: () => Record<string, AgentToolConfig>) {}
@@ -9,11 +9,9 @@ export class ToolingRuntimeService {
     return getToolEnvFromConfigs(this.getToolConfigs(), toolId);
   }
 
-  async getInteractiveCodexStatus(title: string, tool: AgentCatalogEntry): Promise<ToolUsageInfo> {
+  async getInteractiveCodexStatus(tool: AgentCatalogEntry): Promise<CliStatusCapture> {
     return getInteractiveCodexStatusFromDeps({
-      title,
       tool,
-      nowIso,
       getToolEnv: (toolId) => this.getToolEnv(toolId)
     });
   }

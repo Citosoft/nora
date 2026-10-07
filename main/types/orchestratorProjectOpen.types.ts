@@ -80,7 +80,8 @@ export interface ProjectOpenHelperDeps {
     command: string | null
   ) => void;
   unsuppressWorkspace: (projectRoot: string, projectId?: string | null) => void;
-  toolConfigs: Record<string, AgentToolConfig>;
+  /** Read live: configs load after the helpers are constructed and are replaced on every tool settings save. */
+  getToolConfigs: () => Record<string, AgentToolConfig>;
 }
 
 export interface ProjectOpenHelpers {

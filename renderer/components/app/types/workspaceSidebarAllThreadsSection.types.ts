@@ -1,6 +1,6 @@
 import type {
   AllThreadsGroupBy,
-  AllThreadsGroupSection,
+  AllThreadsVisibleGroupSection,
   AllWorkspaceThreadListEntry
 } from "@/components/app/types/workspaceSidebarAllThreads.types";
 import type { CreateAgentPayload, ExternalHarnessContextRef } from "@shared/appTypes";
@@ -18,7 +18,8 @@ export type WorkspaceSidebarAllThreadsSectionProps = {
   isAllThreadsSectionCollapsed: boolean;
   setIsAllThreadsSectionCollapsed: Dispatch<SetStateAction<boolean>>;
   filteredAllWorkspaceThreadEntries: AllWorkspaceThreadListEntry[];
-  allThreadsGroupSections: AllThreadsGroupSection[];
+  allThreadsGroupSections: AllThreadsVisibleGroupSection[];
+  onToggleGroupExpanded: (groupKey: string) => void;
   isLoadingAllThreads: boolean;
   onResumeThread: (projectId: string, payload: CreateAgentPayload) => Promise<void>;
   onArchiveThread: (projectId: string, ref: ExternalHarnessContextRef) => Promise<void>;

@@ -32,3 +32,13 @@ test("mac application Help menu includes Resource Monitor", () => {
 
   assert.ok(labels.includes("Resource Monitor"));
 });
+
+test("mac application View menu exposes native reload roles as a recovery path", () => {
+  const template = buildMacApplicationMenuTemplate(() => null, payload);
+  const viewMenu = findMenu(template, "View");
+  assert.ok(Array.isArray(viewMenu.submenu));
+
+  const roles = viewMenu.submenu.map((item) => item.role).filter((role) => role !== undefined);
+
+  assert.deepEqual(roles, ["reload", "forceReload", "toggleDevTools"]);
+});

@@ -60,7 +60,7 @@ test("resolveAgentSessionTitles reads Codex thread names from the session index"
 
 test("resolveAgentSessionTitles reads Claude custom titles from project transcripts", async () => {
   const configDir = await fs.mkdtemp(path.join(os.tmpdir(), "nora-agent-title-claude-"));
-  const transcriptPath = path.join(configDir, "projects", "tmp-project", "claude-session-1.jsonl");
+  const transcriptPath = path.join(configDir, "projects", "-tmp-project", "claude-session-1.jsonl");
   await writeJsonl(transcriptPath, [
     {
       type: "user",
@@ -74,7 +74,8 @@ test("resolveAgentSessionTitles reads Claude custom titles from project transcri
     },
     {
       type: "custom-title",
-      title: "Sidebar polish pass"
+      customTitle: "Sidebar polish pass",
+      sessionId: "claude-session-1"
     }
   ]);
 
@@ -96,7 +97,7 @@ test("resolveAgentSessionTitles reads Claude custom titles from project transcri
 
 test("resolveAgentSessionTitles falls back to the first Claude prompt when no title is stored", async () => {
   const configDir = await fs.mkdtemp(path.join(os.tmpdir(), "nora-agent-title-claude-prompt-"));
-  const transcriptPath = path.join(configDir, "projects", "tmp-project", "claude-session-2.jsonl");
+  const transcriptPath = path.join(configDir, "projects", "-tmp-project", "claude-session-2.jsonl");
   await writeJsonl(transcriptPath, [
     {
       type: "user",

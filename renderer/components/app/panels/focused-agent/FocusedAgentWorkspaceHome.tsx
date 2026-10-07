@@ -1,4 +1,5 @@
 import { getCurrentBrowserUrl } from "@/components/app/logic/browserTabs";
+import { formatHomepageLabel } from "@/components/app/logic/projectHomepage";
 import { rememberTerminalShell } from "@/components/app/logic/terminalShellPreferences";
 import { statusVariant } from "@/components/app/logic/utils";
 import { createScriptTerminalDefaults, formatWorkspaceScriptActionLabel } from "@/components/app/logic/workspaceScripts";
@@ -14,6 +15,7 @@ export const FocusedAgentWorkspaceHome = (props: FocusedAgentWorkspaceHomeProps)
   const {
     workspace,
     workspaceProjectFaviconUrl,
+    workspaceProjectHomepageUrl,
     workspaceSwitcherShortcutLabel,
     activeSessionCount,
     workspaceBrowserTabs,
@@ -78,6 +80,18 @@ export const FocusedAgentWorkspaceHome = (props: FocusedAgentWorkspaceHomeProps)
           </div>
         </div>
         <div className="truncate text-sm text-muted-foreground">{workspace.project.rootPath}</div>
+        {workspaceProjectHomepageUrl ? (
+          <button
+            type="button"
+            onClick={() => onOpenWorkspaceBrowser(workspace.project.id, workspaceProjectHomepageUrl)}
+            className="flex max-w-full items-center gap-1.5 rounded-[4px] text-sm text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            title={workspaceProjectHomepageUrl}
+            aria-label={`Open project homepage ${workspaceProjectHomepageUrl}`}
+          >
+            <Globe className="size-3.5 shrink-0" aria-hidden="true" />
+            <span className="truncate underline-offset-2 hover:underline">{formatHomepageLabel(workspaceProjectHomepageUrl)}</span>
+          </button>
+        ) : null}
       </div>
       <div className="space-y-2">
         <div className="text-lg font-medium text-foreground">No session selected</div>

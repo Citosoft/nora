@@ -267,16 +267,10 @@ export const WorkspaceSidebarWorkspaceGroup = ({
     return (
       <div
         key={workspace.project.id}
-        className={cn(
-          "border-b border-border/60",
-          "bg-background/30"
-        )}
+        className="px-2 py-0.5"
       >
         <div
-          className={cn(
-            "group flex items-stretch border-l-2",
-            isFocused ? "border-primary bg-primary/5" : "border-transparent"
-          )}
+          className="group relative flex items-stretch rounded-[4px] transition hover:bg-accent/40"
           onContextMenu={(event) => {
             if (isRemoving) {
               return;
@@ -284,14 +278,18 @@ export const WorkspaceSidebarWorkspaceGroup = ({
             openWorkspaceMenu(workspace.project.id, event);
           }}
         >
+          {isFocused ? (
+            <span aria-hidden className="pointer-events-none absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-full bg-primary" />
+          ) : null}
           <button
             type="button"
+            aria-current={isFocused ? "true" : undefined}
             onClick={() =>
               isFocused && workspaceViewWorktreeId
                 ? onFocusWorkspaceView(workspaceViewWorktreeId)
                 : onFocusWorkspace(workspace.project.id)
             }
-            className="min-w-0 flex-1 px-4 py-3 text-left transition hover:bg-accent/30"
+            className="min-w-0 flex-1 rounded-[4px] px-2 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-inset"
           >
             <div className="min-w-0">
               <div className="flex items-center gap-3">
@@ -303,7 +301,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                   imageClassName="size-3.5"
                 />
                 <Tooltip content={directSshLabel ? `${directSshLabel}\n${workspace.project.rootPath}` : workspace.project.rootPath}>
-                  <div className="truncate text-sm font-medium">
+                  <div className={cn("truncate text-sm", isFocused ? "font-semibold text-foreground" : "font-medium text-foreground/85")}>
                     {workspace.project.name}
                   </div>
                 </Tooltip>
@@ -321,7 +319,6 @@ export const WorkspaceSidebarWorkspaceGroup = ({
             </div>
           </button>
           <div className="flex items-center pr-2">
-            <Badge variant="outline">{sessionCount}</Badge>
             <div className="flex items-center opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
               {scripts.length && preferredShellId ? (
                 <DropdownMenu
@@ -331,7 +328,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-8 shrink-0 rounded-none self-center"
+                      className="size-8 shrink-0 rounded-[4px] self-center"
                       aria-label={`Run scripts for ${workspace.project.name}`}
                       disabled={isRemoving}
                     >
@@ -362,7 +359,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="size-8 shrink-0 rounded-none self-center"
+                    className="size-8 shrink-0 rounded-[4px] self-center"
                     aria-label={`Project actions for ${workspace.project.name}`}
                     disabled={isRemoving}
                   >
@@ -389,10 +386,12 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                 />
               </DropdownMenu>
             </div>
+            {/* Count sits beside the fixed-width chevron so optional hover actions never shift it. */}
+            <Badge variant="outline">{sessionCount}</Badge>
             <Button
               variant="ghost"
               size="icon"
-              className="size-8 shrink-0 rounded-none self-center"
+              className="size-8 shrink-0 rounded-[4px] self-center"
               onClick={() =>
                 onCollapsedWorkspaceIdsChange((current) => ({
                   ...current,
@@ -407,7 +406,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
           </div>
         </div>
         {isGroupCollapsed ? null : (
-          <div className="border-t border-border/40 bg-background/10 pl-1.5">
+          <div className="pb-1">
             <div className="py-1.5 pl-5 pr-4">
               <div className="flex items-center justify-between gap-3">
                 <WorkspaceSidebarChildSectionLabel
@@ -441,7 +440,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                 return (
                   <div
                     key={`${thread.toolId}:${thread.primaryArtifactPath}`}
-                    className="group/thread flex h-8 w-full min-w-0 items-center border-l-2 border-transparent pr-1 transition hover:bg-accent/40 focus-within:bg-accent/40"
+                    className="group/thread flex h-8 w-full min-w-0 items-center rounded-[4px] border-l-2 border-transparent pr-1 transition hover:bg-accent/40 focus-within:bg-accent/40"
                   >
                     <button
                       type="button"

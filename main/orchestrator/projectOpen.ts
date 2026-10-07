@@ -203,7 +203,7 @@ export function createProjectOpenHelpers(deps: ProjectOpenHelperDeps): ProjectOp
     const catalogDetections = project.location?.kind === "ssh"
       ? project.remoteAgentCatalog || []
       : (peekLocalAgentCatalogDetections() ?? createUndetectedLocalAgentDetections());
-    const catalog = deps.buildAgentCatalog(catalogDetections, deps.getSnapshot().agentCatalog, deps.toolConfigs);
+    const catalog = deps.buildAgentCatalog(catalogDetections, deps.getSnapshot().agentCatalog, deps.getToolConfigs());
     const agentSkillCatalogs = await deps.readAgentSkillCatalogs([...catalog.map((tool) => tool.id), deps.sharedAgentSkillsToolId]);
 
     deps.updateState((state) => ({

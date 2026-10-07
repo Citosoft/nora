@@ -19,13 +19,6 @@ export const useAppUiLayoutState = (): UseAppUiLayoutStateResult => {
     storedLayout.collapsedWorkspaceIds
   );
   const [isTasksSectionCollapsed, setIsTasksSectionCollapsed] = useState(storedLayout.isTasksSectionCollapsed);
-  const [isRemoteMountsSectionCollapsed, setIsRemoteMountsSectionCollapsed] = useState(
-    storedLayout.isRemoteMountsSectionCollapsed
-  );
-  const [isPortsSectionCollapsed, setIsPortsSectionCollapsed] = useState(storedLayout.isPortsSectionCollapsed);
-  const [isChatbotsSectionCollapsed, setIsChatbotsSectionCollapsed] = useState(
-    storedLayout.isChatbotsSectionCollapsed
-  );
   const [isCliSectionCollapsed, setIsCliSectionCollapsed] = useState(storedLayout.isCliSectionCollapsed);
   const [isSkillsSectionCollapsed, setIsSkillsSectionCollapsed] = useState(storedLayout.isSkillsSectionCollapsed);
   const [isSpecsSectionCollapsed, setIsSpecsSectionCollapsed] = useState(storedLayout.isSpecsSectionCollapsed);
@@ -44,9 +37,6 @@ export const useAppUiLayoutState = (): UseAppUiLayoutStateResult => {
       activeChangesPanelTab,
       collapsedWorkspaceIds,
       isTasksSectionCollapsed,
-      isRemoteMountsSectionCollapsed,
-      isPortsSectionCollapsed,
-      isChatbotsSectionCollapsed,
       isCliSectionCollapsed,
       isSkillsSectionCollapsed,
       isSpecsSectionCollapsed,
@@ -58,11 +48,8 @@ export const useAppUiLayoutState = (): UseAppUiLayoutStateResult => {
     changesSidebarWidth,
     collapsedWorkspaceIds,
     isChangesSidebarCollapsed,
-    isChatbotsSectionCollapsed,
     isCliSectionCollapsed,
     isLocalTerminalDockCollapsed,
-    isPortsSectionCollapsed,
-    isRemoteMountsSectionCollapsed,
     isSkillsSectionCollapsed,
     isSpecsSectionCollapsed,
     isTasksSectionCollapsed,
@@ -81,16 +68,10 @@ export const useAppUiLayoutState = (): UseAppUiLayoutStateResult => {
     setCollapsedWorkspaceIds,
     isChangesSidebarCollapsed,
     setIsChangesSidebarCollapsed,
-    isChatbotsSectionCollapsed,
-    setIsChatbotsSectionCollapsed,
     isCliSectionCollapsed,
     setIsCliSectionCollapsed,
     isLocalTerminalDockCollapsed,
     setIsLocalTerminalDockCollapsed,
-    isPortsSectionCollapsed,
-    setIsPortsSectionCollapsed,
-    isRemoteMountsSectionCollapsed,
-    setIsRemoteMountsSectionCollapsed,
     isSkillsSectionCollapsed,
     setIsSkillsSectionCollapsed,
     isSpecsSectionCollapsed,

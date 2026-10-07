@@ -204,9 +204,6 @@ export type StoredUiLayout = {
   activeChangesPanelTab: "git" | "files" | "context" | "forge" | "vercel";
   collapsedWorkspaceIds: Record<string, boolean>;
   isTasksSectionCollapsed: boolean;
-  isRemoteMountsSectionCollapsed: boolean;
-  isPortsSectionCollapsed: boolean;
-  isChatbotsSectionCollapsed: boolean;
   isCliSectionCollapsed: boolean;
   isSkillsSectionCollapsed: boolean;
   isSpecsSectionCollapsed: boolean;

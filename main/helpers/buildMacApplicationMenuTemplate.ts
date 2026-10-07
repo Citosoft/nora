@@ -143,7 +143,12 @@ export function buildMacApplicationMenuTemplate(
       click: () => {
         emitMenuCommand(getMainWindow, { kind: "focus-next-session-tab" });
       }
-    }
+    },
+    // Native roles so these keep working when the renderer is broken and cannot handle menu commands.
+    { type: "separator" },
+    { role: "reload" },
+    { role: "forceReload" },
+    { role: "toggleDevTools" }
   ];
 
   const helpSubmenu: MenuItemConstructorOptions[] = [

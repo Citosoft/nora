@@ -1,4 +1,7 @@
 import type { AgentCatalogEntry, ToolUsageInfo } from "@shared/appTypes";
+import type { ClaudeUsageStatusInput } from "./agent-usage/claudeUsageLimits.types";
+import type { CursorUsageStatusInput } from "./agent-usage/cursorUsage.types";
+import type { CliStatusCapture } from "./agent-usage/toolUsageInfo.types";
 
 export interface ToolStatusHelperDeps {
   nowIso: () => string;
@@ -16,7 +19,9 @@ export interface ToolStatusHelperDeps {
   getShellArgs: (command: string) => string[];
   getToolEnv: (toolId: string) => Record<string, string>;
   getExecStdout: (error: unknown) => string;
-  getInteractiveCodexStatus: (title: string, tool: AgentCatalogEntry) => Promise<ToolUsageInfo>;
+  getInteractiveCodexStatus: (tool: AgentCatalogEntry) => Promise<CliStatusCapture>;
+  getClaudeUsageStatus: (input: ClaudeUsageStatusInput) => Promise<ToolUsageInfo>;
+  getCursorUsageStatus: (input: CursorUsageStatusInput) => Promise<ToolUsageInfo>;
 }
 
 export interface ToolStatusHelpers {

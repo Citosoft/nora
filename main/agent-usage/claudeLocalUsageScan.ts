@@ -8,13 +8,12 @@ import type { ClaudeAssistantUsageSource } from "@main/types/agent-usage/claudeL
 import type { Dirent } from "node:fs";
 import { createReadStream } from "node:fs";
 import { readdir } from "node:fs/promises";
-import { homedir } from "node:os";
 import path from "node:path";
 import { createInterface } from "node:readline";
 import type { AgentUsageWorktreeInput } from "@shared/types/agentUsageStats.types";
+import { resolveClaudeConfigDir } from "./claudeConfigDir";
 import { buildCanonicalWorktrees, resolveWorktreeForProjectCwd } from "./worktreeAttribution";
 
-const CLAUDE_PROJECTS_DIR = path.join(homedir(), ".claude", "projects");
 const YIELD_EVERY_FILES = 10;
 const RECENT_DAY_COUNT = 14;
 
@@ -59,7 +58,7 @@ async function walkJsonlFiles(dirPath: string): Promise<string[]> {
 
 export async function listClaudeTranscriptFiles(): Promise<string[]> {
   try {
-    return (await walkJsonlFiles(CLAUDE_PROJECTS_DIR)).sort();
+    return (await walkJsonlFiles(path.join(resolveClaudeConfigDir(), "projects"))).sort();
   } catch {
     return [];
   }

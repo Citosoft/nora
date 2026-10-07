@@ -74,7 +74,7 @@ test("agent definitions expose footer management capabilities only where support
     supportsAccountSwitch: false
   });
   assert.deepEqual(capabilitiesByTool.get("cursor"), {
-    supportsUsageStatus: false,
+    supportsUsageStatus: true,
     usageDashboardUrl: "https://www.cursor.com/dashboard",
     supportsAccountSwitch: true
   });

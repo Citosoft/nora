@@ -1,3 +1,4 @@
+import { useSettingRowReveal } from "@/components/app/hooks/useSettingRowReveal";
 import { useSettingsRuntime } from "@/components/app/hooks/useSettingsRuntime";
 import { AiSettingsSection } from "@/components/app/panels/settings/AiSettingsSection";
 import { AppearanceSettingsSection } from "@/components/app/panels/settings/AppearanceSettingsSection";
@@ -13,48 +14,26 @@ import { TerminalSettingsSection } from "@/components/app/panels/settings/Termin
 import { AgentUsageStatsSection } from "@/components/app/panels/settings/AgentUsageStatsSection";
 import { VoiceSettingsSection } from "@/components/app/panels/settings/VoiceSettingsSection";
 import { WorkbenchSettingsSection } from "@/components/app/panels/settings/WorkbenchSettingsSection";
+import { SettingsSidebar } from "@/components/app/panels/settings/SettingsSidebar";
 import type { SettingsGroup, SettingsPageProps } from "@/components/app/types/component.types";
+import type { SettingRowRevealTarget, SettingsSearchEntry } from "@/components/app/types/settingsSearch.types";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  BarChart3,
-  Bot,
-  Cpu,
-  FlaskConical,
-  Globe,
-  LayoutDashboard,
-  Mic2,
-  Palette,
-  Plug,
-  Shield,
-  SlidersHorizontal,
-  Sparkles,
-  TerminalSquare,
-  type LucideIcon
-} from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-
-const SETTINGS_GROUP_ITEMS: { value: SettingsGroup; label: string; icon: LucideIcon }[] = [
-  { value: "appearance", label: "Appearance", icon: Palette },
-  { value: "general", label: "General", icon: SlidersHorizontal },
-  { value: "workbench", label: "Workbench", icon: LayoutDashboard },
-  { value: "terminal", label: "Terminal", icon: TerminalSquare },
-  { value: "browser", label: "Browser", icon: Globe },
-  { value: "cli", label: "Agents", icon: Bot },
-  { value: "agentUsage", label: "Agent usage", icon: BarChart3 },
-  { value: "skills", label: "Skills", icon: Sparkles },
-  { value: "integrations", label: "Integrations", icon: Plug },
-  { value: "ai", label: "AI", icon: Bot },
-  { value: "voice", label: "Voice", icon: Mic2 },
-  { value: "privacy", label: "Privacy", icon: Shield },
-  { value: "system", label: "System", icon: Cpu },
-  ...(!__NORA_IS_PRODUCTION__ ? [{ value: "dev" as const, label: "Dev", icon: FlaskConical }] : [])
-];
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { ArrowLeft } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export function SettingsPage({ initialGroup }: SettingsPageProps) {
   const { closeSettingsPage } = useSettingsRuntime();
   const [group, setGroup] = useState<SettingsGroup>(initialGroup ?? "appearance");
   const previousInitialGroupRef = useRef<SettingsGroup | undefined>(initialGroup);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [revealTarget, setRevealTarget] = useState<SettingRowRevealTarget | null>(null);
+  useSettingRowReveal(contentRef, group, revealTarget);
+
+  const revealSetting = useCallback((entry: SettingsSearchEntry) => {
+    setGroup(entry.group);
+    setRevealTarget((previous) => ({ group: entry.group, title: entry.title, requestId: (previous?.requestId ?? 0) + 1 }));
+  }, []);
 
   useEffect(() => {
     if (initialGroup && initialGroup !== previousInitialGroupRef.current) {
@@ -65,16 +44,11 @@ export function SettingsPage({ initialGroup }: SettingsPageProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-white dark:bg-background">
-      <div className="border-b border-border/60 px-8 py-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Preferences</div>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground">Settings</h1>
-          </div>
-          <Button variant="outline" onClick={closeSettingsPage}>
-            Back
-          </Button>
-        </div>
+      <div className="border-b border-border/60 px-8 py-4">
+        <Button variant="outline" onClick={closeSettingsPage}>
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          Back
+        </Button>
       </div>
 
       <Tabs
@@ -83,25 +57,9 @@ export function SettingsPage({ initialGroup }: SettingsPageProps) {
         orientation="vertical"
         className="grid min-h-0 flex-1 grid-cols-[220px_minmax(0,1fr)]"
       >
-        <div className="border-r border-border/60 bg-card/40 px-4 py-5">
-          <TabsList className="flex w-full flex-col items-stretch gap-1 border-0 bg-transparent p-0">
-            {SETTINGS_GROUP_ITEMS.map((item) => {
-              const Icon = item.icon;
-              return (
-                <TabsTrigger
-                  key={item.value}
-                  value={item.value}
-                  className="w-full justify-start px-3 py-2 text-sm data-[state=active]:bg-accent data-[state=active]:text-foreground"
-                >
-                  <Icon className="size-4" aria-hidden="true" />
-                  {item.label}
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
-        </div>
+        <SettingsSidebar activeGroup={group} onSelectGroup={setGroup} onRevealSetting={revealSetting} />
 
-        <div className="min-h-0 overflow-y-auto px-8 py-6">
+        <div ref={contentRef} className="min-h-0 overflow-y-auto px-8 py-6">
           <TabsContent value="appearance" className="mt-0">
             <AppearanceSettingsSection />
           </TabsContent>

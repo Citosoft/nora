@@ -202,6 +202,7 @@ export const AGENT_DEFINITIONS: AgentDefinition[] = [
     installTemplate: CURSOR_INSTALL_TEMPLATE,
     description: "Cursor agent shell entrypoint",
     usageDashboardUrl: "https://www.cursor.com/dashboard",
+    supportsUsageStatus: true,
     supportsAccountSwitch: true,
     usageNotes: [
       "Launches the Cursor agent entrypoint inside the current worktree.",

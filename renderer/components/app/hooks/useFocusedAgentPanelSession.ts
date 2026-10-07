@@ -9,7 +9,7 @@ import { noraTerminalClient } from "@/components/app/clients/noraTerminalClient"
 import { useWorkspaceSessionContext } from "@/components/app/context/workspaceSessionContext";
 import { useVoiceInputLevelTracker } from "@/components/app/hooks/useVoiceInputLevelTracker";
 import { useWorkspaceAgentContextSources } from "@/components/app/hooks/useWorkspaceAgentContextSources";
-import { useWorkspaceProjectFavicon } from "@/components/app/hooks/useWorkspaceProjectFavicon";
+import { useWorkspaceProjectBranding } from "@/components/app/hooks/useWorkspaceProjectBranding";
 import {
   buildAgentInputBodyText,
   buildPlainTerminalInputWithWorkspacePaths,
@@ -100,7 +100,8 @@ export const useFocusedAgentPanelSession = ({
   const [isTranscribingVoiceInput, setIsTranscribingVoiceInput] = useState(false);
   const [voiceInputMediaStream, setVoiceInputMediaStream] = useState<MediaStream | null>(null);
   const voiceInputLevels = useVoiceInputLevelTracker(isListeningVoiceInput, voiceInputMediaStream);
-  const workspaceProjectFaviconUrl = useWorkspaceProjectFavicon(workspace?.project.id ?? null, workspace?.project.rootPath ?? null);
+  const workspaceProjectBranding = useWorkspaceProjectBranding(workspace?.project.id ?? null, workspace?.project.rootPath ?? null);
+  const workspaceProjectFaviconUrl = workspaceProjectBranding.faviconUrl;
   const [terminalSubmission, setTerminalSubmission] = useState<TerminalSubmission | null>(null);
   const [terminalResetVersion, setTerminalResetVersion] = useState(0);
   const [isRefreshingRemoteTools, setIsRefreshingRemoteTools] = useState(false);
@@ -679,6 +680,7 @@ export const useFocusedAgentPanelSession = ({
           return {
             workspace,
             workspaceProjectFaviconUrl,
+            workspaceProjectHomepageUrl: workspaceProjectBranding.homepageUrl,
             workspaceSwitcherShortcutLabel,
             activeSessionCount,
             workspaceBrowserTabs,

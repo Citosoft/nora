@@ -1,11 +1,15 @@
 import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
-import { buildAllThreadsGroupSections } from "@/components/app/logic/allWorkspaceThreadsGroup";
+import {
+  buildAllThreadsGroupSections,
+  limitAllThreadsGroupSections
+} from "@/components/app/logic/allWorkspaceThreadsGroup";
+import { WORKSPACE_SIDEBAR_ALL_THREADS_VISIBLE_LIMIT } from "@/components/app/logic/workspaceSidebarAllThreadsConstants";
 import type {
   AllThreadsGroupBy,
   AllWorkspaceThreadListEntry
 } from "@/components/app/types/workspaceSidebarAllThreads.types";
 import type { ExternalHarnessSessionSummary, WorkspaceSummary } from "@shared/appTypes";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type WorkspaceThreadLoadResult = {
   workspace: WorkspaceSummary;
@@ -25,6 +29,7 @@ export function useWorkspaceSidebarAllThreads({
   const [allThreadsGroupBy, setAllThreadsGroupBy] = useState<AllThreadsGroupBy>("workspace");
   const [workspaceThreadResults, setWorkspaceThreadResults] = useState<WorkspaceThreadLoadResult[]>([]);
   const [isLoadingAllThreads, setIsLoadingAllThreads] = useState(false);
+  const [expandedGroupKeys, setExpandedGroupKeys] = useState<ReadonlySet<string>>(() => new Set());
 
   const workspaceLoadKey = useMemo(
     () => workspaceGroups.map((workspace) => `${workspace.project.id}:${workspace.project.rootPath}`).sort().join("|"),
@@ -115,9 +120,24 @@ export function useWorkspaceSidebarAllThreads({
   );
 
   const allThreadsGroupSections = useMemo(
-    () => buildAllThreadsGroupSections(filteredAllWorkspaceThreadEntries, allThreadsGroupBy),
-    [allThreadsGroupBy, filteredAllWorkspaceThreadEntries]
+    () =>
+      limitAllThreadsGroupSections(
+        buildAllThreadsGroupSections(filteredAllWorkspaceThreadEntries, allThreadsGroupBy),
+        expandedGroupKeys,
+        WORKSPACE_SIDEBAR_ALL_THREADS_VISIBLE_LIMIT
+      ),
+    [allThreadsGroupBy, expandedGroupKeys, filteredAllWorkspaceThreadEntries]
   );
+
+  const toggleAllThreadsGroupExpanded = useCallback((groupKey: string): void => {
+    setExpandedGroupKeys((current) => {
+      const next = new Set(current);
+      if (!next.delete(groupKey)) {
+        next.add(groupKey);
+      }
+      return next;
+    });
+  }, []);
 
   return {
     allThreadsGroupBy,
@@ -132,6 +152,7 @@ export function useWorkspaceSidebarAllThreads({
     setAllThreadsGroupBy,
     setAllThreadsHarnessFilter,
     setAllThreadsWorkspaceFilter,
-    setIsAllThreadsSectionCollapsed
+    setIsAllThreadsSectionCollapsed,
+    toggleAllThreadsGroupExpanded
   };
 }

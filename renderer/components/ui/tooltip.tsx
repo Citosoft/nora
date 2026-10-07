@@ -6,10 +6,11 @@ export function Tooltip({
   content,
   children,
   className,
+  triggerClassName,
   side = "bottom",
   sideOffset = 8,
   followCursor = false
-}: PropsWithChildren<{ content: ReactNode; className?: string; side?: "top" | "right" | "bottom" | "left"; sideOffset?: number; followCursor?: boolean }>) {
+}: PropsWithChildren<{ content: ReactNode; className?: string; triggerClassName?: string; side?: "top" | "right" | "bottom" | "left"; sideOffset?: number; followCursor?: boolean }>) {
   const triggerRef = useRef<HTMLDivElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
@@ -127,7 +128,7 @@ export function Tooltip({
     <>
       <div
         ref={triggerRef}
-        className="min-w-0"
+        className={cn("min-w-0", triggerClassName)}
         onMouseEnter={(event) => {
           if (followCursor) {
             setCursorPoint({ x: event.clientX, y: event.clientY });

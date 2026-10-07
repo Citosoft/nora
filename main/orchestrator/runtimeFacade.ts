@@ -1,4 +1,5 @@
-import type { AgentCatalogEntry, AgentToolConfig, TerminalShellOption, ToolUsageInfo } from "@shared/appTypes";
+import type { AgentCatalogEntry, AgentToolConfig, TerminalShellOption } from "@shared/appTypes";
+import type { CliStatusCapture } from "../types/agent-usage/toolUsageInfo.types";
 import { getInteractiveCodexStatus } from "./shell";
 
 type ResolveTerminalShellDeps = {
@@ -30,21 +31,14 @@ export function getToolEnvFromConfigs(
 }
 
 type InteractiveCodexStatusDeps = {
-  title: string;
   tool: AgentCatalogEntry;
-  nowIso: () => string;
   getToolEnv: (toolId: string) => Record<string, string>;
 };
 
 export async function getInteractiveCodexStatusFromDeps({
-  title,
   tool,
-  nowIso,
   getToolEnv
-}: InteractiveCodexStatusDeps): Promise<ToolUsageInfo> {
-  return getInteractiveCodexStatus(title, tool, {
-    nowIso,
-    getToolEnv
-  });
+}: InteractiveCodexStatusDeps): Promise<CliStatusCapture> {
+  return getInteractiveCodexStatus(tool, { getToolEnv });
 }
 

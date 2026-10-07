@@ -126,6 +126,8 @@ import { OrchestratorWorkspaceReadSurface } from "./orchestrator/workspaceReadSu
 import { createTerminalStateHelpers } from "./orchestrator/terminalState";
 import { TerminalMutationFacade } from "./orchestrator/terminalMutationFacade";
 import { createToolingHelpers } from "./orchestrator/tooling";
+import { getClaudeUsageStatus } from "./agent-usage/claudeUsageStatus";
+import { getCursorUsageStatus } from "./agent-usage/cursorUsageStatus";
 import { createToolStatusHelpers } from "./orchestrator/toolStatus";
 import { createTranscriptHelpers } from "./orchestrator/transcripts";
 import { createWorkspaceLifecycleHelpers } from "./orchestrator/workspaceLifecycle";
@@ -405,7 +407,9 @@ export class Orchestrator implements OrchestratorFacade {
       getShellArgs,
       getToolEnv: (toolId) => this.toolingRuntimeService.getToolEnv(toolId),
       getExecStdout,
-      getInteractiveCodexStatus: (title, tool) => this.toolingRuntimeService.getInteractiveCodexStatus(title, tool)
+      getInteractiveCodexStatus: (tool) => this.toolingRuntimeService.getInteractiveCodexStatus(tool),
+      getClaudeUsageStatus,
+      getCursorUsageStatus
     });
     this.sessionLifecycleHelpers = createSessionLifecycleHelpers({
       nowIso,
@@ -534,7 +538,7 @@ export class Orchestrator implements OrchestratorFacade {
       refreshProjectState: () => this.refreshProjectState(),
       reportWorkspaceLoadingProgress: (projectId, detail, command) => this.reportWorkspaceLoadingProgress(projectId, detail, command),
       unsuppressWorkspace: (projectRoot, projectId) => this.workspaceStateService.unsuppressWorkspace(projectRoot, projectId),
-      toolConfigs: this.toolingState.getToolConfigs()
+      getToolConfigs: () => this.toolingState.getToolConfigs()
     });
     this.workspaceRefreshHelpers = createWorkspaceRefreshHelpers({
       nowIso,

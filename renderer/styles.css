@@ -216,10 +216,6 @@
     background-color: hsl(var(--background) / 0.7);
   }
 
-  :root[data-theme="light"] .changes-sidebar-collapsed-surface {
-    background-color: hsl(var(--background) / 0.7);
-  }
-
   :root[data-theme="light"] .collapsed-sidebar-bottom-metric {
     color: hsl(215 25% 30%);
   }

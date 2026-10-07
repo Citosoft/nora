@@ -44,10 +44,33 @@ export interface AgentToolConfig {
   updatedAt: string | null;
 }
 
+/** Extra provider-reported facts shown as label/value rows (plan, credits, limit status). */
+export interface ToolUsageDetail {
+  label: string;
+  value: string;
+}
+
+/** One rate-limit or billing window, normalized in main so the renderer never parses provider output. */
+export interface ToolUsageWindow {
+  id: string;
+  label: string;
+  /** One-or-two letter tag for the compact footer readout (e.g. "S", "W", "M"). */
+  shortLabel: string;
+  percentLeft: number;
+  resetsLabel: string | null;
+}
+
 export interface ToolUsageInfo {
   status: "available" | "unavailable" | "error";
   title: string;
+  /** Primary windows first; the footer readout shows the first two. */
+  windows: ToolUsageWindow[];
+  account: string | null;
+  /** Plain-text transcript of what was read, for the tool details panel. */
   lines: string[];
+  /** User-facing reason usage could not be read (signed out, expired, rate limited). */
+  notice?: string;
+  details?: ToolUsageDetail[];
   rawOutput?: string;
   fetchedAt: string;
 }
