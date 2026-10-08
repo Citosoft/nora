@@ -102,7 +102,7 @@ const ONBOARDING_STEP_COPY: Record<OnboardingStep, { title: string; description:
   },
   workspace: {
     title: "Choose your first project",
-    description: "Open a repository now, or continue and add one later from the main app."
+    description: "Open a project folder now, or continue and add one later from the main app."
   }
 };
 
@@ -744,13 +744,13 @@ export function OnboardingDialog({
             <div className="space-y-4">
               <div className="text-sm font-medium text-foreground">Choose your first project</div>
               <div className="mt-1 text-sm text-muted-foreground">
-                Pick a repository now, or continue and add one later from the main app.
+                Pick a project folder now, or continue and add one later from the main app.
               </div>
 
               <div className="mt-4 flex flex-wrap gap-3">
                 <Button onClick={onChooseWorkspace} disabled={isChoosingWorkspace}>
                   {isChoosingWorkspace ? <LoaderCircle className="size-4 animate-spin" /> : null}
-                  Choose repository
+                  Choose project folder
                 </Button>
               </div>
 

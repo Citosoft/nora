@@ -5,6 +5,7 @@ import type {
   SessionRecord,
   WorktreeRecord
 } from "@shared/appTypes";
+import { isGitProject } from "@shared/projectVersionControl";
 import type {
   WorktreeSelectionDeps,
   WorktreeSelectionHelpers
@@ -55,6 +56,11 @@ export function createWorktreeSelectionHelpers(deps: WorktreeSelectionDeps): Wor
         worktree = candidate;
       }
     } else if (target.kind === "root") {
+      worktree = await deps.getOrCreateRootWorktree(project, session, state.worktrees);
+    }
+
+    // Plain folders have no worktrees to branch from, so every launch shares the project root.
+    if (!worktree && !isGitProject(project)) {
       worktree = await deps.getOrCreateRootWorktree(project, session, state.worktrees);
     }
 

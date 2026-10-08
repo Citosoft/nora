@@ -1,4 +1,5 @@
-import type { AgentCatalogEntry, ToolUsageInfo } from "@shared/appTypes";
+import type { AgentCatalogEntry } from "@shared/appTypes";
+import type { CliStatusCapture, InteractiveStatusDeps } from "../types/agent-usage/toolUsageInfo.types";
 import { spawn as spawnPty } from "node-pty";
 import fs from "node:fs";
 import { buildProcessEnv } from "../processEnv";
@@ -203,17 +204,11 @@ function sanitizeCliStatusLine(line: string): string {
     .trim();
 }
 
-export type InteractiveStatusDeps = {
-  nowIso: () => string;
-  getToolEnv: (toolId: string) => Record<string, string>;
-};
-
 export async function getInteractiveCodexStatus(
-  title: string,
   tool: AgentCatalogEntry,
   deps: InteractiveStatusDeps
-): Promise<ToolUsageInfo> {
-  return new Promise<ToolUsageInfo>((resolve) => {
+): Promise<CliStatusCapture> {
+  return new Promise<CliStatusCapture>((resolve) => {
     const command = `${tool.detectedCommand || "codex"} --no-alt-screen`;
     const ptyProcess = spawnPty(getShell(), getPtyShellArgs(command), {
       name: "xterm-256color",
@@ -238,7 +233,7 @@ export async function getInteractiveCodexStatus(
     let idleTimer: NodeJS.Timeout | null = null;
     let hardTimer: NodeJS.Timeout | null = null;
 
-    const finish = (status: ToolUsageInfo["status"], fallback?: string): void => {
+    const finish = (status: CliStatusCapture["status"], fallback?: string): void => {
       if (settled) {
         return;
       }
@@ -277,10 +272,8 @@ export async function getInteractiveCodexStatus(
 
       resolve({
         status,
-        title,
         lines: rawLines.length ? rawLines : [fallback || "Codex returned no status output."],
-        rawOutput: relevantOutput,
-        fetchedAt: deps.nowIso()
+        rawOutput: relevantOutput
       });
     };
 

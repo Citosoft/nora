@@ -46,39 +46,6 @@ export function WorkbenchSettingsSection() {
         }
       />
       <SettingRow
-        title="Remote Mounts Section"
-        description="Keep the remote mounts section collapsed in the projects sidebar."
-        control={
-          <ToggleButton
-            checked={workbenchLayout.isRemoteMountsSectionCollapsed}
-            onChange={(checked) => updateWorkbenchLayout({ isRemoteMountsSectionCollapsed: checked })}
-            label={workbenchLayout.isRemoteMountsSectionCollapsed ? "Collapsed" : "Expanded"}
-          />
-        }
-      />
-      <SettingRow
-        title="Active Ports Section"
-        description="Keep the active ports section collapsed in the projects sidebar."
-        control={
-          <ToggleButton
-            checked={workbenchLayout.isPortsSectionCollapsed}
-            onChange={(checked) => updateWorkbenchLayout({ isPortsSectionCollapsed: checked })}
-            label={workbenchLayout.isPortsSectionCollapsed ? "Collapsed" : "Expanded"}
-          />
-        }
-      />
-      <SettingRow
-        title="AI Chatbots Section"
-        description="Keep the AI chatbot shortcuts section collapsed in the projects sidebar."
-        control={
-          <ToggleButton
-            checked={workbenchLayout.isChatbotsSectionCollapsed}
-            onChange={(checked) => updateWorkbenchLayout({ isChatbotsSectionCollapsed: checked })}
-            label={workbenchLayout.isChatbotsSectionCollapsed ? "Collapsed" : "Expanded"}
-          />
-        }
-      />
-      <SettingRow
         title="Agent CLIs Section"
         description="Keep the agent CLI section collapsed in the projects sidebar."
         control={

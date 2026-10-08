@@ -1,6 +1,8 @@
 import { useSettingsRuntime } from "@/components/app/hooks/useSettingsRuntime";
 import { createAgentSkillCatalogMap } from "@/components/app/logic/agentSkills";
+import { settingAnchorAttributes } from "@/components/app/logic/settingsSearch";
 import { formatInstallLogText } from "@/components/app/logic/terminalLogText";
+import { settingRevealHighlightClassName } from "@/components/app/panels/settings/settingsUi";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
@@ -66,7 +68,10 @@ export function CliSettingsSection() {
       </div>
 
       <div className="mt-6 space-y-3">
-        <div className="rounded-[6px] border border-border/60 bg-card/40 px-4 py-4">
+        <div
+          {...settingAnchorAttributes("Preferred Agent CLI")}
+          className={`rounded-[6px] border border-border/60 bg-card/40 px-4 py-4 ${settingRevealHighlightClassName}`}
+        >
           <div className="mb-2 text-sm font-medium text-foreground">Preferred Agent CLI</div>
           <div className="mb-3 text-sm text-muted-foreground">
             Choose which detected CLI Nora should preselect by default in the New Agent dialog.

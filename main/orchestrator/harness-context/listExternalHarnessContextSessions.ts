@@ -1,5 +1,6 @@
 import type {
   AgentCatalogEntry,
+  AgentContextEntry,
   AgentContextSelection,
   AgentSession,
   AppState,
@@ -15,6 +16,7 @@ import { resolveAgentSessionTitle } from "../agentSessionTitles";
 import { readMergedAgentContextEntries } from "./contextRepository";
 import { externalHarnessDiscoveryAdapters } from "./externalHarnessDiscoveryRegistry";
 import { buildSyntheticExternalHarnessAgent } from "./externalHarnessSyntheticAgent";
+import { buildPromptThreadTitle } from "./promptThreadTitle";
 
 export const resolveWorktreeIdForWorkspacePath = (
   snapshot: AppState,
@@ -50,6 +52,17 @@ export const buildOccupiedExternalHarnessKeys = (agents: AgentSession[], workspa
     occupied.add(`${agent.toolId}:${normalizeStoredResumeSessionId(resume)}`);
   }
   return occupied;
+};
+
+/** Harnesses without a stored thread name (or untitled threads) are identified by their opening prompt. */
+const resolveFirstPromptTitle = (entries: AgentContextEntry[]): string | null => {
+  for (const entry of entries) {
+    const title = entry.kind === "user-prompt" ? buildPromptThreadTitle(entry.content) : null;
+    if (title) {
+      return title;
+    }
+  }
+  return null;
 };
 
 const resolveToolLabel = (catalog: AgentCatalogEntry[], toolId: string): string =>
@@ -122,6 +135,7 @@ export const listExternalHarnessContextSessions = async (options: {
     const latestPreview = entries[entries.length - 1]?.preview || "";
     summaries.push({
       ...ref,
+      threadTitle: ref.threadTitle || resolveFirstPromptTitle(entries),
       lastUpdatedAt: candidate.lastUpdatedAt,
       latestPreview,
       entryCount: entries.length,

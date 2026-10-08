@@ -1,9 +1,10 @@
 import type { AgentSession } from "@shared/appTypes";
-import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { promisify } from "node:util";
+import { resolveClaudeConfigDir } from "../agent-usage/claudeConfigDir";
+import { queryReadOnlySqlite } from "../helpers/readOnlySqlite";
+import { buildClaudeProjectDirectoryName } from "./harness-context/claudeAdapter";
 import { normalizeStoredResumeSessionId } from "./resumeCommandUtils";
 import type {
   AgentSessionTitleLookupInput,
@@ -11,7 +12,6 @@ import type {
 } from "../types/agentSessionTitle.types";
 
 const TITLE_MAX_LENGTH = 96;
-const execFileAsync = promisify(execFile);
 
 const readObjectField = (value: unknown, key: string): unknown =>
   value && typeof value === "object" && key in value
@@ -39,7 +39,7 @@ const parseJsonLine = (line: string): unknown | null => {
   }
 };
 
-const normalizeThreadTitle = (value: string): string | null => {
+export const normalizeThreadTitle = (value: string): string | null => {
   const collapsed = value.replace(/\s+/g, " ").trim();
   if (!collapsed) {
     return null;
@@ -68,9 +68,6 @@ const readTextContent = (value: unknown): string | null => {
   return normalizeThreadTitle(parts.join(" "));
 };
 
-const buildClaudeProjectDirectoryName = (workspacePath: string): string =>
-  workspacePath.replace(/\//g, "-").replace(/^[-]+/, "");
-
 async function readCodexThreadTitle(
   agent: AgentSessionTitleLookupInput,
   options: AgentSessionTitleResolverOptions
@@ -98,26 +95,15 @@ async function readCodexThreadTitle(
   return title || readCodexSqliteThreadTitle(resumeSessionId, path.join(codexHome, "state_5.sqlite"));
 }
 
-async function readCodexSqliteThreadTitle(resumeSessionId: string, databasePath: string): Promise<string | null> {
-  const exists = await fs.access(databasePath).then(() => true).catch(() => false);
-  if (!exists) {
-    return null;
-  }
-
-  const escapedResumeSessionId = resumeSessionId.replace(/'/g, "''");
-  const query = [
-    "SELECT title FROM threads",
-    `WHERE id = '${escapedResumeSessionId}'`,
-    "AND title IS NOT NULL",
-    "AND length(trim(title)) > 0",
-    "ORDER BY updated_at DESC",
-    "LIMIT 1;"
-  ].join(" ");
-  const { stdout } = await execFileAsync("sqlite3", ["-batch", "-noheader", databasePath, query], {
-    timeout: 1000,
-    maxBuffer: 1024 * 32
-  }).catch(() => ({ stdout: "" }));
-  return normalizeThreadTitle(stdout);
+/** Newer Codex builds keep thread titles in their state database instead of the session index. */
+function readCodexSqliteThreadTitle(resumeSessionId: string, databasePath: string): string | null {
+  const rows = queryReadOnlySqlite(
+    databasePath,
+    "SELECT title FROM threads WHERE id = ? AND title IS NOT NULL AND length(trim(title)) > 0 ORDER BY updated_at DESC LIMIT 1",
+    [resumeSessionId]
+  );
+  const title = rows?.[0]?.title;
+  return typeof title === "string" ? normalizeThreadTitle(title) : null;
 }
 
 async function readClaudeThreadTitle(
@@ -129,7 +115,7 @@ async function readClaudeThreadTitle(
     return null;
   }
 
-  const configDir = options.claudeConfigDir || process.env.CLAUDE_CONFIG_DIR?.trim() || path.join(os.homedir(), ".claude");
+  const configDir = options.claudeConfigDir || resolveClaudeConfigDir();
   const transcriptPath = path.join(
     configDir,
     "projects",

@@ -1,3 +1,5 @@
+import { settingAnchorAttributes } from "@/components/app/logic/settingsSearch";
+import { settingRevealHighlightClassName } from "@/components/app/panels/settings/settingsUi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -84,7 +86,10 @@ export function TerminalPresetsSettingsSection({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-[6px] border border-border/60 bg-card/40 p-4">
+      <div
+        {...settingAnchorAttributes("Terminal presets")}
+        className={`rounded-[6px] border border-border/60 bg-card/40 p-4 ${settingRevealHighlightClassName}`}
+      >
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="text-sm font-medium text-foreground">Terminal presets</div>

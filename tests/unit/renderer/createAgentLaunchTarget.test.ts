@@ -3,9 +3,16 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 test("resolveSupportedLaunchTargetMode falls back when existing worktree or branch options are unavailable", () => {
-  assert.equal(resolveSupportedLaunchTargetMode("existing", [], ["main"]), "current-branch");
-  assert.equal(resolveSupportedLaunchTargetMode("branch-existing", [{ id: "w1" }], []), "current-branch");
-  assert.equal(resolveSupportedLaunchTargetMode("new", [], []), "new");
+  assert.equal(resolveSupportedLaunchTargetMode("existing", { worktrees: [], projectBranches: ["main"], isGitProject: true }), "current-branch");
+  assert.equal(resolveSupportedLaunchTargetMode("branch-existing", { worktrees: [{ id: "w1" }], projectBranches: [], isGitProject: true }), "current-branch");
+  assert.equal(resolveSupportedLaunchTargetMode("new", { worktrees: [], projectBranches: [], isGitProject: true }), "new");
+});
+
+test("resolveSupportedLaunchTargetMode launches plain folders in the project folder", () => {
+  const availability = { worktrees: [{ id: "w1" }], projectBranches: ["main"], isGitProject: false };
+  assert.equal(resolveSupportedLaunchTargetMode("new", availability), "current-branch");
+  assert.equal(resolveSupportedLaunchTargetMode("existing", availability), "current-branch");
+  assert.equal(resolveSupportedLaunchTargetMode("branch-new", availability), "current-branch");
 });
 
 test("launchTargetModeFromTarget maps worktree targets to dialog modes", () => {

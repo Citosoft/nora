@@ -1,4 +1,5 @@
 import type { ChangeEntry, CommitHistoryEntry, WorkspaceSummary } from "@shared/appTypes";
+import { isGitProject } from "@shared/projectVersionControl";
 import type { WorkspaceRefreshHelperDeps, WorkspaceRefreshHelpers } from "../types/orchestratorWorkspaceRefresh.types";
 
 export function createWorkspaceRefreshHelpers(deps: WorkspaceRefreshHelperDeps): WorkspaceRefreshHelpers {
@@ -14,39 +15,59 @@ export function createWorkspaceRefreshHelpers(deps: WorkspaceRefreshHelperDeps):
       return deps.getSnapshot();
     }
 
+    const refreshedProjectId = state.project.id;
+    // Opening another project mid-refresh supersedes this run: it must not report progress
+    // (which would reopen the loading modal for a project that is no longer opening) or
+    // write its results onto the newly opened project.
+    const isRefreshStillCurrent = () => deps.getSnapshot().project?.id === refreshedProjectId;
+    const reportProgress = (detail: string, command: string | null) => {
+      if (isRefreshStillCurrent()) {
+        deps.reportWorkspaceLoadingProgress(refreshedProjectId, detail, command);
+      }
+    };
     const changesRoot = deps.getActiveChangesRoot(state);
     const isDirectSshProject = state.project.location?.kind === "ssh";
+    // Plain folders skip every git read; their changes, history, and branches stay empty.
+    const isGit = isGitProject(state.project);
     const projectTarget = deps.getProjectTarget(state.project);
     const changesRootTarget = { path: changesRoot, location: state.project.location };
-    const currentBranch = await deps.readCurrentBranch(projectTarget).catch(() => state.project?.baseBranch || "main");
-    const commitHistoryCommand = await deps.getGitProgressCommand(changesRootTarget, ["log", "--date=iso", "--decorate", "--max-count=40"]);
-    const branchListingCommand = await deps.getGitProgressCommand(projectTarget, ["for-each-ref", "--format=%(refname:short)", "refs/heads"]);
-    const worktreeStatusCommand = await deps.getGitProgressCommand(projectTarget, ["status", "--short"]);
-    const selectedChangesCommand = await deps.getGitProgressCommand(changesRootTarget, ["status", "--short"]);
+    const gitProgressCommand = (target: typeof projectTarget, args: string[]) =>
+      isGit ? deps.getGitProgressCommand(target, args) : Promise.resolve(null);
+    const currentBranch = isGit
+      ? await deps.readCurrentBranch(projectTarget).catch(() => state.project?.baseBranch || "main")
+      : "";
+    const commitHistoryCommand = await gitProgressCommand(changesRootTarget, ["log", "--date=iso", "--decorate", "--max-count=40"]);
+    const branchListingCommand = await gitProgressCommand(projectTarget, ["for-each-ref", "--format=%(refname:short)", "refs/heads"]);
+    const worktreeStatusCommand = await gitProgressCommand(projectTarget, ["status", "--short"]);
+    const selectedChangesCommand = await gitProgressCommand(changesRootTarget, ["status", "--short"]);
 
-    deps.reportWorkspaceLoadingProgress(state.project.id, "Refreshing workspace scripts...", "read package.json");
+    reportProgress("Refreshing workspace scripts...", "read package.json");
     const projectScriptsPromise = isDirectSshProject
       ? Promise.resolve(state.projectScripts)
       : deps.detectWorkspaceScripts(projectTarget);
-    deps.reportWorkspaceLoadingProgress(state.project.id, "Refreshing workspace tooling...", "check lockfiles and package.json");
+    reportProgress("Refreshing workspace tooling...", "check lockfiles and package.json");
     const defaultWorktreePrepareCommandPromise = isDirectSshProject
       ? state.defaultWorktreePrepareCommand
       : deps.detectDefaultWorktreePrepareCommand(projectTarget);
-    deps.reportWorkspaceLoadingProgress(state.project.id, "Refreshing workspace instructions...", "check AGENTS.md");
+    reportProgress("Refreshing workspace instructions...", "check AGENTS.md");
     const workspaceInstructionFilePromise = deps.detectWorkspaceInstructionFile(projectTarget);
-    deps.reportWorkspaceLoadingProgress(state.project.id, "Reading commit history...", commitHistoryCommand);
-    const commitHistoryPromise = deps.readCommitHistory(changesRootTarget).catch(() => [] as CommitHistoryEntry[]);
+    reportProgress("Reading commit history...", commitHistoryCommand);
+    const commitHistoryPromise = isGit
+      ? deps.readCommitHistory(changesRootTarget).catch(() => [] as CommitHistoryEntry[])
+      : Promise.resolve([] as CommitHistoryEntry[]);
     const activeRemoteMountsPromise = deps.readActiveRemoteMounts();
-    deps.reportWorkspaceLoadingProgress(state.project.id, "Reading local branches...", branchListingCommand);
-    const projectBranchesPromise = isDirectSshProject
+    reportProgress("Reading local branches...", branchListingCommand);
+    const projectBranchesPromise = !isGit
+      ? Promise.resolve([] as string[])
+      : isDirectSshProject
       ? Promise.resolve(state.projectBranches.length ? state.projectBranches : [state.project?.baseBranch || "main"])
       : deps.readProjectBranches(projectTarget).catch(() => [state.project?.baseBranch || "main"]);
 
     const worktreeChangeEntriesPromise = Promise.all(
       state.worktrees.map(async (worktree) => {
         const worktreeTarget = deps.getWorktreeTarget(state.project!, worktree);
-        const changes = await deps.readGitChanges(worktreeTarget).catch(() => [] as ChangeEntry[]);
-        const branch = await deps.readCurrentBranch(worktreeTarget).catch(() => worktree.branch);
+        const changes = isGit ? await deps.readGitChanges(worktreeTarget).catch(() => [] as ChangeEntry[]) : [];
+        const branch = isGit ? await deps.readCurrentBranch(worktreeTarget).catch(() => worktree.branch) : worktree.branch;
         const scripts = isDirectSshProject ? (worktree.scripts || []) : await deps.detectWorkspaceScripts(worktreeTarget);
         return {
           worktreeId: worktree.id,
@@ -90,34 +111,33 @@ export function createWorkspaceRefreshHelpers(deps: WorkspaceRefreshHelperDeps):
     const scriptsByWorktree = new Map(
       worktreeChangeEntries.map((entry) => [entry.worktreeId, entry.scripts])
     );
-    deps.reportWorkspaceLoadingProgress(state.project.id, "Refreshing worktree changes...", worktreeStatusCommand);
+    reportProgress("Refreshing worktree changes...", worktreeStatusCommand);
     const rootWorktree = state.worktrees.find((worktree) => worktree.path === state.project?.rootPath) ?? null;
-    const rootBranch =
+    const rootBranch = !isGit ? "" :
       currentBranch ||
       (rootWorktree ? branchByWorktree.get(rootWorktree.id) : null) ||
       state.project?.baseBranch ||
       "main";
-    deps.reportWorkspaceLoadingProgress(state.project.id, "Refreshing selected workspace changes...", selectedChangesCommand);
+    reportProgress("Refreshing selected workspace changes...", selectedChangesCommand);
     const normalizedChangesRoot = deps.normalizeLocalPath(changesRoot);
     const workingTreeChanges =
       worktreeChangeEntries.find((entry) =>
         state.worktrees.find((worktree) => worktree.id === entry.worktreeId)?.path === changesRoot
       )?.changes ??
       cachedChangesByPath.get(normalizedChangesRoot) ??
-      await deps.readGitChanges(changesRootTarget).catch((error: unknown) => {
+      (!isGit ? [] : await deps.readGitChanges(changesRootTarget).catch((error: unknown) => {
         if (deps.isExecTimeoutError(error)) {
           refreshWarning = deps.describeGitTimeout("Refreshing git status");
           return [] as ChangeEntry[];
         }
         throw error;
-      });
-    deps.reportWorkspaceLoadingProgress(state.project.id, "Applying workspace change snapshot...", "summarize git status results");
+      }));
+    reportProgress("Applying workspace change snapshot...", "summarize git status results");
     let selectedCommit = state.selectedCommitHash
       ? (commitHistory.find((entry) => entry.hash === state.selectedCommitHash) || null)
       : null;
-    if (!selectedCommit && state.selectedCommitHash) {
-      deps.reportWorkspaceLoadingProgress(
-        state.project.id,
+    if (isGit && !selectedCommit && state.selectedCommitHash) {
+      reportProgress(
         "Reading selected commit details...",
         await deps.getGitProgressCommand(changesRootTarget, ["log", "--pretty=format:%H%x09%h%x09%an%x09%aI%x09%s", "-n", "1", state.selectedCommitHash])
       );
@@ -125,8 +145,7 @@ export function createWorkspaceRefreshHelpers(deps: WorkspaceRefreshHelperDeps):
     }
     const changes = selectedCommit
       ? await (async () => {
-          deps.reportWorkspaceLoadingProgress(
-            state.project!.id,
+          reportProgress(
             "Reading selected commit changes...",
             await deps.getGitProgressCommand(changesRootTarget, ["show", "--format=", "--name-status", "--find-renames", selectedCommit.hash])
           );
@@ -136,6 +155,10 @@ export function createWorkspaceRefreshHelpers(deps: WorkspaceRefreshHelperDeps):
     const nextSelectedCommitHash = selectedCommit && changes !== workingTreeChanges ? selectedCommit.hash : null;
 
     const refreshedAgents = await deps.resolveAgentSessionTitles(state.agents);
+
+    if (!isRefreshStillCurrent()) {
+      return deps.getSnapshot();
+    }
 
     deps.updateState((currentState) => {
       const refreshedAgentTitleById = new Map(refreshedAgents.map((agent) => [agent.id, agent.threadTitle ?? null]));
@@ -182,7 +205,7 @@ export function createWorkspaceRefreshHelpers(deps: WorkspaceRefreshHelperDeps):
       };
     });
 
-    deps.reportWorkspaceLoadingProgress(state.project.id, "Reconciling workspace summaries...", "read project index and session state");
+    reportProgress("Reconciling workspace summaries...", "read project index and session state");
     await deps.refreshWorkspaceSummaries("refreshProjectState");
     return deps.getSnapshot();
   }

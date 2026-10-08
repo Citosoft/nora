@@ -11,11 +11,13 @@ import { FocusedAgentWorktreePreparingBanner } from "@/components/app/panels/foc
 import { LiveTerminal } from "@/components/app/panels/focused-agent/LiveTerminal";
 import type { FocusedAgentPanelProps } from "@/components/app/types/component.types";
 import { Card, CardContent } from "@/components/ui/card";
+import { isGitProject } from "@shared/projectVersionControl";
 import { Dialog, DialogBody, DialogContent } from "@/components/ui/dialog";
 import { memo, useMemo } from "react";
 
 function FocusedAgentPanelComponent({ agent, terminal, compact = false }: FocusedAgentPanelProps) {
   const s = useFocusedAgentPanelSession({ agent, terminal });
+  const showBranch = isGitProject(s.project);
   const terminalOverlayBackground = useMemo(() => {
     const rootStyles = getComputedStyle(document.documentElement);
     return resolveTerminalTheme(s.terminalThemeId, s.resolvedTheme, rootStyles).background || "";
@@ -64,6 +66,7 @@ function FocusedAgentPanelComponent({ agent, terminal, compact = false }: Focuse
               agent={agent}
               terminal={terminal}
               focusedSession={s.focusedSession}
+              showBranch={showBranch}
               onToggleSessionInfo={() => s.setShowInfo((current) => !current)}
               onToggleContext={() => s.setShowContext((current) => !current)}
               onClearTerminal={s.handleClearTerminal}
@@ -83,6 +86,7 @@ function FocusedAgentPanelComponent({ agent, terminal, compact = false }: Focuse
                 infoPopoverRef={s.infoPopoverRef}
                 agent={agent}
                 terminal={terminal}
+                showBranch={showBranch}
               />
             ) : null}
             {s.isPreparingWorktree ? <FocusedAgentWorktreePreparingBanner /> : null}

@@ -355,6 +355,8 @@ export const ToolPopover = forwardRef<HTMLDivElement, {
         setUsageInfo({
           status: "error",
           title: "Usage Lookup Failed",
+          windows: [],
+          account: null,
           lines: [error instanceof Error ? error.message : "Unknown error"],
           fetchedAt: new Date().toISOString()
         });

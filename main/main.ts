@@ -23,6 +23,7 @@ import { applyMacDockIcon as applyMacDockIconHelper, getAppIcon as getAppIconHel
 import { getImportedImageTargetPath } from "./helpers/browserImageImport";
 import { createLaunchCommandQueueController } from "./helpers/launchCommandQueue";
 import { createMainWindowNotifications } from "./helpers/mainWindowNotifications";
+import { attachMainWindowRecovery } from "./helpers/mainWindowRecovery";
 import { createMainUserInteractionsController } from "./helpers/mainUserInteractions";
 import { createProjectWorkspace } from "./helpers/projectWorkspaceCreation";
 import { handleSquirrelLifecycle, loadEnvFile } from "./helpers/startupRuntime";
@@ -331,6 +332,11 @@ function createWindow(): void {
   mainWindow.setMenuBarVisibility(false);
   attachWindowStateListeners(mainWindow);
   attachCloseSessionTabShortcutForwarding(mainWindow);
+  attachMainWindowRecovery({
+    window: mainWindow,
+    isClosing: () => isClosingMainWindow,
+    quit: () => app.quit()
+  });
   mainWindow.maximize();
 
   void mainWindow.loadFile(path.join(__dirname, "..", "renderer", "index.html"));

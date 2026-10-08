@@ -181,15 +181,21 @@ export interface WorkspaceInstructionFile {
   absolutePath: string;
 }
 
+/** How a project folder is versioned; "none" projects are plain folders with git features disabled. */
+export type ProjectVersionControl = "git" | "none";
+
 export interface ProjectSummary {
   id: string;
   name: string;
   rootPath: string;
+  versionControl: ProjectVersionControl;
+  /** Empty when `versionControl` is "none". */
   gitCommonDir: string;
   location?: WorkspaceLocation;
   remoteAgentCatalog?: AgentDetectionInfo[] | null;
   workspaceInstructionFile?: WorkspaceInstructionFile | null;
   workspaceTerminalPresets?: TerminalPreset[];
+  /** Empty when `versionControl` is "none". */
   baseBranch: string;
   framework: WorkspaceFramework | null;
   platform: string;

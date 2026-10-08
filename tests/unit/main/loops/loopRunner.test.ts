@@ -43,6 +43,7 @@ test("loop runner completes when the headless writer returns a matching completi
         rootPath: "/tmp/project",
         baseBranch: "main",
         gitCommonDir: ".git",
+        versionControl: "git",
         framework: null,
         platform: "local",
         createdAt: "2026-06-09T00:00:00.000Z",

@@ -38,6 +38,7 @@ import type {
   AppSettings,
   AppState,
   ChangeEntry,
+  CheckoutWorkspaceBranchPayload,
   CreateTerminalPayload,
   ForgeAddCommentPayload,
   ForgeOverview,
@@ -452,6 +453,7 @@ export type WorkspaceSessionPanelProps = {
   onRestart: (agentId: string) => Promise<AppState | null>;
   onRestartTerminal: (sessionId: string) => Promise<AppState | null>;
   onClearTerminal: (sessionId: string) => Promise<AppState | null>;
+  onCheckoutSessionBranch: (payload: CheckoutWorkspaceBranchPayload) => Promise<AppState | null>;
   onDestroyRequest: (agentId: string) => void;
   onDestroyAgent: (agentId: string) => Promise<AppState | null>;
   onDestroyTerminal: (sessionId: string) => Promise<AppState | null>;

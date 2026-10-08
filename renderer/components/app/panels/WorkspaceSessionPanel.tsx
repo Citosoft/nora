@@ -35,6 +35,7 @@ import { WorkspaceSplitViewPanel } from "@/components/app/panels/WorkspaceSplitV
 import type { CreateAgentDialogDefaults, CreateTerminalDialogDefaults } from "@/components/app/types";
 import type { FileEditorAgentSendTarget } from "@/components/app/types/fileEditor.types";
 import type { WorkspaceSessionTab } from "@/components/app/types/workflow.types";
+import type { CheckoutWorkspaceBranchPayload } from "@shared/appTypes";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
@@ -137,6 +138,7 @@ export function WorkspaceSessionPanel() {
     onRestart,
     onRestartTerminal,
     onClearTerminal,
+    onCheckoutSessionBranch,
     onDestroyRequest,
     onDestroyAgent,
     onDestroyTerminal,
@@ -177,6 +179,7 @@ export function WorkspaceSessionPanel() {
   const restartRef = useRef(onRestart);
   const restartTerminalRef = useRef(onRestartTerminal);
   const clearTerminalRef = useRef(onClearTerminal);
+  const checkoutSessionBranchRef = useRef(onCheckoutSessionBranch);
   const destroyRequestRef = useRef(onDestroyRequest);
   const destroyAgentRef = useRef(onDestroyAgent);
   const destroyTerminalRef = useRef(onDestroyTerminal);
@@ -199,6 +202,7 @@ export function WorkspaceSessionPanel() {
     restartRef.current = onRestart;
     restartTerminalRef.current = onRestartTerminal;
     clearTerminalRef.current = onClearTerminal;
+    checkoutSessionBranchRef.current = onCheckoutSessionBranch;
     destroyRequestRef.current = onDestroyRequest;
     destroyAgentRef.current = onDestroyAgent;
     destroyTerminalRef.current = onDestroyTerminal;
@@ -220,6 +224,7 @@ export function WorkspaceSessionPanel() {
     onRestart,
     onRestartTerminal,
     onClearTerminal,
+    onCheckoutSessionBranch,
     onDestroyRequest,
     onDestroyAgent,
     onDestroyTerminal
@@ -243,6 +248,10 @@ export function WorkspaceSessionPanel() {
   const restart = useCallback((agentId: string) => restartRef.current(agentId), []);
   const restartTerminal = useCallback((sessionId: string) => restartTerminalRef.current(sessionId), []);
   const clearTerminal = useCallback((sessionId: string) => clearTerminalRef.current(sessionId), []);
+  const checkoutSessionBranch = useCallback(
+    (payload: CheckoutWorkspaceBranchPayload) => checkoutSessionBranchRef.current(payload),
+    []
+  );
   const destroyRequest = useCallback((agentId: string) => destroyRequestRef.current(agentId), []);
   const destroyAgent = useCallback((agentId: string) => destroyAgentRef.current(agentId), []);
   const destroyTerminal = useCallback((sessionId: string) => destroyTerminalRef.current(sessionId), []);
@@ -458,6 +467,7 @@ export function WorkspaceSessionPanel() {
     onRestart: restart,
     onRestartTerminal: restartTerminal,
     onClearTerminal: clearTerminal,
+    onCheckoutSessionBranch: checkoutSessionBranch,
     onDestroyRequest: destroyRequest,
     onDestroyTerminal: destroyTerminal,
     browserTabs: stableBrowserTabs

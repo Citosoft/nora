@@ -1,4 +1,5 @@
 import type { CreateAgentPayload } from "@shared/appTypes";
+import { resolveLaunchBranchCheckout } from "@main/orchestrator/launchBranchCheckout";
 import type {
   PrepareLoopRunWorktreeDeps,
   PrepareLoopRunWorktreeInput,
@@ -89,12 +90,7 @@ export async function prepareLoopRunWorktree(
     };
   });
 
-  const branchCheckout = payload.branchCheckout?.branchName.trim()
-    ? {
-        ...payload.branchCheckout,
-        branchName: payload.branchCheckout.branchName.trim()
-      }
-    : null;
+  const branchCheckout = resolveLaunchBranchCheckout(project, payload.branchCheckout);
 
   if (branchCheckout) {
     await input.onProgress?.(

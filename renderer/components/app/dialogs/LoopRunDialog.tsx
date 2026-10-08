@@ -3,6 +3,7 @@ import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClien
 import { LOOP_RUN_GOAL_TEMPLATE_GROUPS, LOOP_RUN_GOAL_TEMPLATES } from "@/components/app/constants/loopRunGoalTemplates";
 import { DEFAULT_LOOP_WORKTREE_BRANCH_PREFIX, WORKTREE_BRANCH_PREFIX_OPTIONS } from "@/components/app/constants/worktreeBranchPrefixOptions";
 import { LoopRunReviewFeedbackPicker } from "@/components/app/dialogs/LoopRunReviewFeedbackPicker";
+import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
 import { useLoopRunReviewFeedback } from "@/components/app/hooks/useLoopRunReviewFeedback";
 import { applyLoopRunGoalTemplate } from "@/components/app/logic/applyLoopRunGoalTemplate";
 import { formatWorktreeBranchPreview } from "@/components/app/logic/formatWorktreeBranchPreview";
@@ -34,6 +35,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { WorkspaceSpecSummary, WorkspaceTaskSummary } from "@shared/appTypes";
 import { buildLoopLimitsFromDraft, isLoopLimitsDraftValid, loopLimitsToDraft } from "@shared/loopLimits";
 import { hasLoopRunGoal } from "@shared/loopRunGoal";
+import { isGitProject } from "@shared/projectVersionControl";
 import {
   GitBranch,
   ArrowLeft,
@@ -98,6 +100,9 @@ function goalSourceLabel(
 }
 
 export function LoopRunDialog({ open, definition, onOpenChange, onStarted }: LoopRunDialogProps) {
+  const snapshot = useCanonicalAppSnapshot();
+  // Plain (non-git) folders run the writer in the project folder instead of a managed worktree.
+  const createsWorktree = !snapshot?.project || isGitProject(snapshot.project);
   const [step, setStep] = useState<LoopRunStep>("goal");
   const [goalKind, setGoalKind] = useState<LoopRunGoalKind>("spec");
   const [specs, setSpecs] = useState<WorkspaceSpecSummary[]>([]);
@@ -172,7 +177,7 @@ export function LoopRunDialog({ open, definition, onOpenChange, onStarted }: Loo
   );
   const goalReady = reviewFeedbackReady && isGoalReady(goalKind, selectedSpecPath, selectedTaskPath, objective);
   const limitsReady = isLoopLimitsDraftValid(limitsDraft);
-  const worktreeReady = branchName.trim().length > 0;
+  const worktreeReady = !createsWorktree || branchName.trim().length > 0;
   const canStart = !!definition && goalReady && limitsReady && worktreeReady;
   const stepIndex = LOOP_RUN_STEPS.indexOf(step);
   const stepCopy = LOOP_RUN_STEP_COPY[step];
@@ -256,11 +261,13 @@ export function LoopRunDialog({ open, definition, onOpenChange, onStarted }: Loo
         taskPath: goalKind === "task" ? selectedTaskPath || null : null,
         handoffPath,
         limits: buildLoopLimitsFromDraft(limitsDraft),
-        target: { kind: "new" },
-        worktreeBranch: {
-          prefix: branchPrefix.trim() || DEFAULT_LOOP_WORKTREE_BRANCH_PREFIX,
-          name: branchName.trim()
-        }
+        target: createsWorktree ? { kind: "new" } : { kind: "root" },
+        worktreeBranch: createsWorktree
+          ? {
+              prefix: branchPrefix.trim() || DEFAULT_LOOP_WORKTREE_BRANCH_PREFIX,
+              name: branchName.trim()
+            }
+          : null
       });
       onStarted(run);
       onOpenChange(false);
@@ -441,7 +448,11 @@ export function LoopRunDialog({ open, definition, onOpenChange, onStarted }: Loo
                   </div>
                   <div>
                     <h3 className="font-semibold">{definition?.name ?? "Workflow"}</h3>
-                    <p className="text-sm text-muted-foreground">Ready to create a managed worktree and start the writer.</p>
+                    <p className="text-sm text-muted-foreground">
+                      {createsWorktree
+                        ? "Ready to create a managed worktree and start the writer."
+                        : "Ready to start the writer in the project folder."}
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-4 text-sm">
@@ -455,7 +466,7 @@ export function LoopRunDialog({ open, definition, onOpenChange, onStarted }: Loo
                     </p>
                     <p className="mt-1 whitespace-pre-wrap leading-6 text-muted-foreground">{objective.trim()}</p>
                   </div> : null}
-                  <div className="space-y-4 border-t border-border pt-4">
+                  {createsWorktree ? <div className="space-y-4 border-t border-border pt-4">
                     <div className="flex items-center gap-2">
                       <GitBranch className="size-4 text-muted-foreground" aria-hidden="true" />
                       <p className="text-sm font-medium">Worktree branch</p>
@@ -481,7 +492,7 @@ export function LoopRunDialog({ open, definition, onOpenChange, onStarted }: Loo
                       Git branch <span className="font-medium text-foreground">{worktreeBranchPreview}</span>
                       {" "}with a short unique suffix added when the run starts.
                     </p>
-                  </div>
+                  </div> : null}
                 </div>
               </section>
 
@@ -514,8 +525,8 @@ export function LoopRunDialog({ open, definition, onOpenChange, onStarted }: Loo
                     ) : null}
                   </div>
                   <div className="flex items-center justify-between gap-4">
-                    <span className="text-muted-foreground">Worktree branch</span>
-                    <span className="font-medium">{worktreeBranchPreview}</span>
+                    <span className="text-muted-foreground">{createsWorktree ? "Worktree branch" : "Workspace"}</span>
+                    <span className="font-medium">{createsWorktree ? worktreeBranchPreview : "Project folder"}</span>
                   </div>
                   <div className="flex items-center justify-between gap-4">
                     <span className="text-muted-foreground">Maximum iterations</span>

@@ -1,13 +1,3 @@
-const IMAGE_EXTENSIONS = new Set([
-  "png",
-  "jpg",
-  "jpeg",
-  "gif",
-  "webp",
-  "bmp",
-  "svg"
-]);
-
 function normalizeWorkspaceLinkPath(pathName: string): string | null {
   const segments = pathName.replace(/\\/g, "/").split("/");
   const normalized: string[] = [];
@@ -112,7 +102,3 @@ export function buildWorkspaceMarkdownLink(currentPath: string, targetPath: stri
   return `[${label}](${wrappedHref})`;
 }
 
-export function isWorkspaceImageLinkTarget(pathName: string): boolean {
-  const extension = pathName.split(".").pop()?.toLowerCase() ?? "";
-  return IMAGE_EXTENSIONS.has(extension);
-}

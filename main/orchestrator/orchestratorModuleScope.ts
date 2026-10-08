@@ -33,7 +33,8 @@ import { nowIso } from "./time";
 import {
   computeWorkspaceProjectId,
   createGetProjectMetadata,
-  getWorkspaceLocation
+  getWorkspaceLocation,
+  localProjectFolderExists
 } from "./workspaceTarget";
 import { createWorkspaceDiscoveryHelpers } from "./workspaceDiscovery";
 import { detectWorkspaceFramework as detectWorkspaceFrameworkFromPackageJson } from "./workspaceFramework";
@@ -106,7 +107,7 @@ const {
   listWorkspaceTaskPaths,
   listWorkspaceSpecs,
   listWorkspaceTasks,
-  listWorkspaceTrackedAndUntrackedFiles,
+  listWorkspaceFilePaths,
   listImportedContextBundles,
   listWorkspaceDirectories,
   createWorkspaceDirectory,
@@ -116,6 +117,7 @@ const {
   readWorkspaceTaskBoard,
   readWorkspaceTextFile,
   resolveExistingWorkspaceAbsolutePath,
+  resolveLocalWorkspaceFilePath,
   removeWorkspaceTaskBoardPosition,
   renameWorkspaceTaskBoardPosition,
   searchWorkspaceFiles,
@@ -154,7 +156,8 @@ const getProjectMetadata = createGetProjectMetadata({
   detectWorkspaceFramework,
   detectWorkspaceInstructionFile,
   computeWorkspaceProjectId: computeWorkspaceProjectIdWithSlug,
-  getWorkspaceLocation
+  getWorkspaceLocation,
+  projectFolderExists: localProjectFolderExists
 });
 
 export {
@@ -189,7 +192,7 @@ export {
   listWorkspaceSpecs,
   listWorkspaceTaskPaths,
   listWorkspaceTasks,
-  listWorkspaceTrackedAndUntrackedFiles,
+  listWorkspaceFilePaths,
   moveWorkspaceFile,
   performForgeWorkItemActionForRepo,
   pullWorkspaceChanges,
@@ -208,6 +211,7 @@ export {
   removeWorkspaceTaskBoardPosition,
   renameWorkspaceTaskBoardPosition,
   resolveExistingWorkspaceAbsolutePath,
+  resolveLocalWorkspaceFilePath,
   runRemoteSshCommand,
   searchWorkspaceFiles,
   statWorkspacePath,

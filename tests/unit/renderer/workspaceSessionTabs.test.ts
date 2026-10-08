@@ -59,6 +59,7 @@ test("getWorkspaceSessionTabs uses terminal currentWorkingDirectory for terminal
       name: "Project",
       rootPath: "/repo/project",
       gitCommonDir: "/repo/project/.git",
+      versionControl: "git",
       baseBranch: "main",
       platform: "unknown",
       createdAt: "2026-06-04T00:00:00.000Z",

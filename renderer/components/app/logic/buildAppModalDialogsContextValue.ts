@@ -119,13 +119,11 @@ export const buildAppModalDialogsContextValue = (d: AppModalDialogsBuildDeps): A
   },
   removeMissingWorkspace: {
     projectRoot: d.uiState.removeMissingWorkspaceRoot,
-    errorMessage: d.uiState.removeMissingWorkspaceError,
     open: d.uiState.removeMissingWorkspaceRoot !== null,
     onOpenChange: (open) =>
       d.setUiState((current) => ({
         ...current,
-        removeMissingWorkspaceRoot: open ? current.removeMissingWorkspaceRoot : null,
-        removeMissingWorkspaceError: open ? current.removeMissingWorkspaceError : null
+        removeMissingWorkspaceRoot: open ? current.removeMissingWorkspaceRoot : null
       })),
     onConfirm: () => {
       const projectRoot = d.uiState.removeMissingWorkspaceRoot;
@@ -138,8 +136,7 @@ export const buildAppModalDialogsContextValue = (d: AppModalDialogsBuildDeps): A
         .then(() => {
           d.setUiState((current) => ({
             ...current,
-            removeMissingWorkspaceRoot: null,
-            removeMissingWorkspaceError: null
+            removeMissingWorkspaceRoot: null
           }));
         })
         .then(() => undefined);

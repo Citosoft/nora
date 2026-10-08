@@ -8,6 +8,8 @@ export type FocusedAgentSessionToolbarProps = {
   agent: AgentSession | null;
   terminal: TerminalSession | null;
   focusedSession: AgentSession | TerminalSession | null;
+  /** False for plain (non-git) folders, which have no branch to show or switch. */
+  showBranch: boolean;
   onToggleSessionInfo: () => void;
   onToggleContext: () => void;
   onClearTerminal: () => void | Promise<void>;
@@ -19,6 +21,7 @@ export type FocusedAgentSessionDetailsPopoverProps = {
   infoPopoverRef: RefObject<HTMLDivElement | null>;
   agent: AgentSession | null;
   terminal: TerminalSession | null;
+  showBranch: boolean;
 };
 
 export type FocusedAgentInputComposerProps = {

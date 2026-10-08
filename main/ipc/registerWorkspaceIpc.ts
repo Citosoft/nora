@@ -31,6 +31,7 @@ import type {
 import type { WorkspaceImageFileContent } from "@shared/types/workspaceFile.types";
 import { ipcMain } from "electron";
 import { generateCommitMessageFromChanges } from "@main/ai/commitMessageGenerator";
+import { openPathWithDefaultApp } from "@main/helpers/openPathWithDefaultApp";
 
 interface RegisterWorkspaceIpcDeps {
   services: MainServices;
@@ -98,6 +99,9 @@ export function registerWorkspaceIpc({
   );
   ipcMain.handle("app:read-workspace-image-file", (_event, payload: WorkspaceFileRequest): Promise<WorkspaceImageFileContent> =>
     services.workspace.readWorkspaceImageFile(payload)
+  );
+  ipcMain.handle("app:open-workspace-file-externally", async (_event, payload: WorkspaceFileRequest): Promise<void> =>
+    openPathWithDefaultApp(await services.workspace.resolveWorkspaceFileForExternalOpen(payload))
   );
   ipcMain.handle("app:list-workspace-files", (_event, projectId: string, rootPath?: string) =>
     services.workspace.listWorkspaceFiles(projectId, rootPath)

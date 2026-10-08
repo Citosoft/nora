@@ -6,8 +6,10 @@ import type {
   ForgeRequestOptions,
   ForgeWorkItemAction,
   ForgeWorkItemKind,
-  ForgeWorkItemSummary
+  ForgeWorkItemSummary,
+  ProjectSummary
 } from "@shared/appTypes";
+import { isGitProject } from "@shared/projectVersionControl";
 import type { ForgeHelperDeps, ForgeHelpers } from "../types/orchestratorForge.types";
 
 const NO_REPO_ERROR = "No supported GitHub or GitLab origin remote was found for this workspace.";
@@ -49,7 +51,17 @@ export function createForgeHelpers(deps: ForgeHelperDeps): ForgeHelpers {
     }
 
     const project = await deps.resolveProjectSummaryById(projectId);
-    return deps.getWorkspaceForgeRepo(deps.getProjectTarget(project), { gitlabHost: options.gitlabHost });
+    return readProjectForgeRepo(project, options);
+  }
+
+  /** Plain folders have no git remotes, so they never resolve to a forge repository. */
+  async function readProjectForgeRepo(
+    project: ProjectSummary,
+    options: ForgeRequestOptions
+  ): Promise<ForgeRepoSummary | null> {
+    return isGitProject(project)
+      ? deps.getWorkspaceForgeRepo(deps.getProjectTarget(project), { gitlabHost: options.gitlabHost })
+      : null;
   }
 
   async function getForgeOverview(projectId: string, options: ForgeRequestOptions) {
@@ -57,7 +69,7 @@ export function createForgeHelpers(deps: ForgeHelperDeps): ForgeHelpers {
     let gitlabUserMergeRequests: ForgeWorkItemSummary[] = [];
     let gitlabUserMergeRequestsErrorMessage: string | null = null;
     try {
-      const repo = await deps.getWorkspaceForgeRepo(deps.getProjectTarget(project), { gitlabHost: options.gitlabHost });
+      const repo = await readProjectForgeRepo(project, options);
       if (options.gitlabToken?.trim()) {
         const gitlabHost = normalizeGitlabHost(options.gitlabHost) ?? (repo?.provider === "gitlab" ? repo.host : "gitlab.com");
         try {
@@ -108,6 +120,9 @@ export function createForgeHelpers(deps: ForgeHelperDeps): ForgeHelpers {
     }
 
     const project = await deps.resolveProjectSummaryById(projectId);
+    if (!isGitProject(project)) {
+      return null;
+    }
     try {
       const state = deps.getSnapshot();
       const sourcePath = state.project?.id === projectId
@@ -127,7 +142,7 @@ export function createForgeHelpers(deps: ForgeHelperDeps): ForgeHelpers {
         hasRemoteBranch,
         hasPublishedBranch
       });
-      const repo = await deps.getWorkspaceForgeRepo(deps.getProjectTarget(project), { gitlabHost: options.gitlabHost });
+      const repo = await readProjectForgeRepo(project, options);
       if (!repo) {
         console.info("[forge-pr-debug][main] no forge repo resolved", {
           projectId,
@@ -238,7 +253,7 @@ export function createForgeHelpers(deps: ForgeHelperDeps): ForgeHelpers {
   ) {
     const state = deps.getSnapshot();
     const project = await deps.resolveProjectSummaryById(projectId);
-    const repo = await deps.getWorkspaceForgeRepo(deps.getProjectTarget(project), { gitlabHost: options.gitlabHost });
+    const repo = await readProjectForgeRepo(project, options);
     if (!repo) {
       throw new Error(NO_REPO_ERROR);
     }

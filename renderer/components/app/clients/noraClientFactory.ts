@@ -35,6 +35,7 @@ export const NORA_WORKSPACE_CLIENT_METHODS = [
   "saveWorkspaceTerminalPresets",
   "readWorkspaceFile",
   "readWorkspaceImageFile",
+  "openWorkspaceFileExternally",
   "writeWorkspaceFile",
   "createWorkspaceDirectory",
   "importBrowserImageToWorkspace",

@@ -1,4 +1,5 @@
 import type { AppState, CommitChangesPayload } from "@shared/appTypes";
+import { assertGitProject } from "@shared/projectVersionControl";
 import type { WorkspaceTarget } from "../types/internal.types";
 
 type SessionActionsDependencies = {
@@ -42,6 +43,7 @@ export async function commitChangesWithValidation(
   if (!state.project) {
     throw new Error("Choose a project before committing changes.");
   }
+  assertGitProject(state.project);
 
   const message = payload.message.trim();
   if (!message) {
@@ -71,6 +73,7 @@ export async function pushChangesWithValidation(deps: SessionActionsDependencies
   if (!state.project) {
     throw new Error("Choose a project before pushing changes.");
   }
+  assertGitProject(state.project);
 
   const changesRoot = getActiveChangesRoot(state);
   await deps.pushWorkspaceChanges({ path: changesRoot, location: state.project.location });
@@ -82,6 +85,7 @@ export async function pullChangesWithValidation(deps: SessionActionsDependencies
   if (!state.project) {
     throw new Error("Choose a project before pulling changes.");
   }
+  assertGitProject(state.project);
 
   const changesRoot = getActiveChangesRoot(state);
   try {

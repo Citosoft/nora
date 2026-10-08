@@ -378,14 +378,3 @@ export function isRemoteMountedProject(snapshot: AppState | null): boolean {
   });
 }
 
-export function shouldPromptToRemoveMissingWorkspace(error: unknown): error is Error {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-
-  const message = error.message.toLowerCase();
-  return (
-    message.includes("unable to open the selected git repository") ||
-    message.includes("selected folder is not a git repository")
-  );
-}

@@ -42,6 +42,7 @@ export function IntegrationsSettingsSection() {
 
       <SettingRow
         title={<IntegrationTitle provider="github" label="GitHub Token" />}
+        searchTitle="GitHub Token"
         description="Optional personal access token used for GitHub repositories. Add one for private repos or to avoid strict anonymous rate limits."
         control={(
           <div className="space-y-3">
@@ -87,6 +88,7 @@ export function IntegrationsSettingsSection() {
       />
       <SettingRow
         title={<IntegrationTitle provider="gitlab" label="GitLab Token" />}
+        searchTitle="GitLab Token"
         description="Optional personal or project access token used for GitLab repositories, including self-hosted GitLab instances whose remote host contains gitlab."
         control={(
           <div className="space-y-3">
@@ -158,6 +160,7 @@ export function IntegrationsSettingsSection() {
       />
       <SettingRow
         title={<IntegrationTitle provider="vercel" label="Vercel Token" />}
+        searchTitle="Vercel Token"
         description="Personal access token used for Vercel account access. This is used for project-level Vercel features such as project linking and deployments."
         control={(
           <div className="space-y-3">

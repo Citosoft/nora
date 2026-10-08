@@ -15,6 +15,7 @@ const project: ProjectSummary = {
   name: "workspace",
   rootPath: "/workspace",
   gitCommonDir: "/workspace/.git",
+  versionControl: "git",
   baseBranch: "main",
   framework: null,
   platform: "darwin",
@@ -45,8 +46,9 @@ function createWorkspaceActionsForTest(overrides: Partial<WorkspaceActionsDepend
     readWorkspaceTextFile: async () => "",
     resolveExistingWorkspaceAbsolutePath: async () => target.path,
     readWorkspaceBinaryFile: async () => Buffer.from(""),
+    resolveLocalWorkspaceFilePath: async (_target, _projectId, filePath) => `${target.path}/${filePath}`,
     getWorkspaceImageMimeType: () => "image/png",
-    listWorkspaceTrackedAndUntrackedFiles: async () => [],
+    listWorkspaceFilePaths: async () => [],
     listImportedContextBundles: async () => [],
     listWorkspaceDirectories: async () => [],
     listWorkspaceSpecs: async () => [],
@@ -89,4 +91,39 @@ test("checkoutWorkspaceBranch checks out the requested branch and refreshes stat
 
   assert.deepEqual(calls, [["checkout", "dev"]]);
   assert.equal(refreshCount, 1);
+});
+
+test("resolveWorkspaceFileForExternalOpen resolves document files to a local path", async () => {
+  const resolved: Array<{ targetPath: string; filePath: string }> = [];
+  const actions = createWorkspaceActionsForTest({
+    resolveLocalWorkspaceFilePath: async (workspaceTarget, _projectId, filePath) => {
+      resolved.push({ targetPath: workspaceTarget.path, filePath });
+      return `/tmp/copies/${filePath}`;
+    }
+  });
+
+  const localPath = await actions.resolveWorkspaceFileForExternalOpen({
+    projectId: project.id,
+    path: "docs/spec.pdf",
+    rootPath: "/workspace-worktree"
+  });
+
+  assert.equal(localPath, "/tmp/copies/docs/spec.pdf");
+  assert.deepEqual(resolved, [{ targetPath: "/workspace-worktree", filePath: "docs/spec.pdf" }]);
+});
+
+test("resolveWorkspaceFileForExternalOpen refuses files that are not documents", async () => {
+  let resolveCount = 0;
+  const actions = createWorkspaceActionsForTest({
+    resolveLocalWorkspaceFilePath: async () => {
+      resolveCount += 1;
+      return "/workspace/scripts/install.sh";
+    }
+  });
+
+  await assert.rejects(
+    actions.resolveWorkspaceFileForExternalOpen({ projectId: project.id, path: "scripts/install.sh" }),
+    /only opens document files/
+  );
+  assert.equal(resolveCount, 0);
 });

@@ -1,19 +1,20 @@
 import type { AgentContextEntry } from "@shared/appTypes";
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import type { ClaudeSessionRecord } from "../../types/harness-context/claude.types";
 import type { HarnessContextAdapter, HarnessContextReadInput } from "../../types/harnessContext.types";
 import type { ExternalHarnessArtifactCandidate } from "../../types/externalHarnessDiscovery.types";
+import { resolveClaudeConfigDir } from "../../agent-usage/claudeConfigDir";
 import { normalizeStoredResumeSessionId } from "../resumeCommandUtils";
 import { buildHarnessContextEntry, hasExactUserPromptDuplicate, parseIsoTimestamp } from "./contextEntryFactory";
 
 function getClaudeProjectsRootPath(): string {
-  return path.join(os.homedir(), ".claude", "projects");
+  return path.join(resolveClaudeConfigDir(), "projects");
 }
 
+/** Claude Code stores transcripts under `~/.claude/projects/<cwd with every non-alphanumeric char as "-">`. */
 export function buildClaudeProjectDirectoryName(workspacePath: string): string {
-  return workspacePath.replace(/[\\/]+/g, "-");
+  return workspacePath.replace(/[^a-zA-Z0-9]/g, "-");
 }
 
 function collectClaudeUserText(content: unknown): string {

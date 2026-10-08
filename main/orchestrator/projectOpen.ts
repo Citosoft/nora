@@ -1,6 +1,7 @@
 import type { WorkspaceTarget } from "@main/types/internal.types";
 import { isLocalAgentDetectionInFlight, peekLocalAgentCatalogDetections } from "@main/agentDetectionCache";
 import { createUndetectedLocalAgentDetections } from "@main/orchestrator/environmentDetection";
+import { isGitProject } from "@shared/projectVersionControl";
 import type {
   AppState,
   AgentSession,
@@ -180,10 +181,12 @@ export function createProjectOpenHelpers(deps: ProjectOpenHelperDeps): ProjectOp
         ? initialState.defaultWorktreePrepareCommand
         : null
       : null;
+    const isGit = isGitProject(project);
+    const fallbackProjectBranches = isGit ? [project.baseBranch] : [];
     const projectBranches = project.location?.kind === "ssh"
       ? initialState.project?.id === project.id && initialState.projectBranches.length
         ? initialState.projectBranches
-        : [project.baseBranch]
+        : fallbackProjectBranches
       : null;
     const localMetadata = project.location?.kind === "ssh"
       ? null
@@ -192,8 +195,10 @@ export function createProjectOpenHelpers(deps: ProjectOpenHelperDeps): ProjectOp
             deps.detectWorkspaceScripts(projectTargetForMetadata)),
           (deps.reportWorkspaceLoadingProgress(project.id, "Inspecting workspace tooling...", "check lockfiles and package.json"),
             deps.detectDefaultWorktreePrepareCommand(projectTargetForMetadata)),
-          (deps.reportWorkspaceLoadingProgress(project.id, "Reading local branches...", "git for-each-ref --format=%(refname:short) refs/heads"),
-            deps.readProjectBranches(projectTargetForMetadata).catch(() => [project.baseBranch]))
+          isGit
+            ? (deps.reportWorkspaceLoadingProgress(project.id, "Reading local branches...", "git for-each-ref --format=%(refname:short) refs/heads"),
+              deps.readProjectBranches(projectTargetForMetadata).catch(() => fallbackProjectBranches))
+            : Promise.resolve(fallbackProjectBranches)
         ]);
     const worktrees = ensuredSessions.flatMap((sessionState) => sessionState.worktrees);
     const normalizedRecoveredTerminals = normalizeRecoveredTerminals(mergedRecoveredTerminals, worktrees);
@@ -203,7 +208,7 @@ export function createProjectOpenHelpers(deps: ProjectOpenHelperDeps): ProjectOp
     const catalogDetections = project.location?.kind === "ssh"
       ? project.remoteAgentCatalog || []
       : (peekLocalAgentCatalogDetections() ?? createUndetectedLocalAgentDetections());
-    const catalog = deps.buildAgentCatalog(catalogDetections, deps.getSnapshot().agentCatalog, deps.toolConfigs);
+    const catalog = deps.buildAgentCatalog(catalogDetections, deps.getSnapshot().agentCatalog, deps.getToolConfigs());
     const agentSkillCatalogs = await deps.readAgentSkillCatalogs([...catalog.map((tool) => tool.id), deps.sharedAgentSkillsToolId]);
 
     deps.updateState((state) => ({
@@ -236,7 +241,7 @@ export function createProjectOpenHelpers(deps: ProjectOpenHelperDeps): ProjectOp
       commitHistory: [],
       activeRemoteMounts,
       projectScripts: project.location?.kind === "ssh" ? (projectScripts || []) : (localMetadata?.[0] || []),
-      projectBranches: project.location?.kind === "ssh" ? (projectBranches || [project.baseBranch]) : (localMetadata?.[2] || [project.baseBranch]),
+      projectBranches: project.location?.kind === "ssh" ? (projectBranches || fallbackProjectBranches) : (localMetadata?.[2] || fallbackProjectBranches),
       defaultWorktreePrepareCommand: project.location?.kind === "ssh" ? (defaultWorktreePrepareCommand || null) : (localMetadata?.[1] || null),
       agentCatalog: catalog,
       agentSkillCatalogs,

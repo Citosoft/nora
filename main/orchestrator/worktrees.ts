@@ -8,6 +8,7 @@ import type {
   WorkspaceSummary,
   WorktreeRecord
 } from "@shared/appTypes";
+import { assertGitProject, isGitProject } from "@shared/projectVersionControl";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -72,7 +73,9 @@ export function createWorktreeHelpers(deps: WorktreeHelperDeps) {
     session: SessionRecord,
     existingWorktrees: WorktreeRecord[]
   ): Promise<WorktreeRecord> {
-    const actualBranch = await deps.readCurrentBranch(deps.getProjectTarget(project)).catch(() => project.baseBranch);
+    const actualBranch = isGitProject(project)
+      ? await deps.readCurrentBranch(deps.getProjectTarget(project)).catch(() => project.baseBranch)
+      : project.baseBranch;
     const existing = existingWorktrees.find((item) =>
       item.projectId === project.id &&
       item.sessionId === session.id &&
@@ -160,6 +163,7 @@ export function createWorktreeHelpers(deps: WorktreeHelperDeps) {
     agentName: string,
     plannedWorktree?: WorktreeRecord
   ): Promise<WorktreeRecord> {
+    assertGitProject(project);
     const worktree = plannedWorktree || planManagedWorktree(project, session, agentName);
     await fs.mkdir(getWorktreeDir(project.id, session.id, worktree.id), { recursive: true });
     if (project.location?.kind !== "ssh") {

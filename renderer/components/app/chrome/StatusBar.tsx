@@ -1,5 +1,8 @@
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { noraToolingClient } from "@/components/app/clients/noraToolingClient";
+import { StatusBarChatbotsPopover } from "@/components/app/chrome/StatusBarChatbotsPopover";
+import { StatusBarPortsPopover } from "@/components/app/chrome/StatusBarPortsPopover";
+import { StatusBarRemoteMountsPopover } from "@/components/app/chrome/StatusBarRemoteMountsPopover";
 import { createAgentSkillCatalogMap, getAgentSkillCatalogSummaries } from "@/components/app/logic/agentSkills";
 import { getEnabledStatusBarTools, getUsagePollingToolIds } from "@/components/app/logic/statusBarTools";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
@@ -7,9 +10,9 @@ import type { StatusBarEntry } from "@/components/app/types";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import type { AgentCatalogEntry, AgentSkillCatalog, ToolUsageInfo } from "@shared/appTypes";
-import { GitBranch, LoaderCircle, RefreshCcw, Sparkles, UserRound, Wrench } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import type { AgentCatalogEntry, AgentSkillCatalog, ToolUsageInfo, ToolUsageWindow } from "@shared/appTypes";
+import { ExternalLink, GitBranch, LoaderCircle, RefreshCcw, Sparkles, UserRound, Wrench } from "lucide-react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 
 interface StatusBarProps {
   entries: StatusBarEntry[];
@@ -24,89 +27,29 @@ interface StatusBarProps {
 
 const FOOTER_USAGE_POLL_INTERVAL_MS = 5 * 60 * 1000;
 
-type UsageWindowSummary = {
-  raw: string;
-  percentLeft: number | null;
-  resetAt: string | null;
-};
-
-type UsageSummary = {
-  hourly: UsageWindowSummary;
-  weekly: UsageWindowSummary;
-  account: string;
-};
-
-function formatAbbreviatedRemainingUsage(summary: UsageSummary): string | null {
-  const parts: string[] = [];
-  if (summary.hourly.percentLeft !== null) {
-    parts.push(`H${summary.hourly.percentLeft}%`);
-  }
-  if (summary.weekly.percentLeft !== null) {
-    parts.push(`W${summary.weekly.percentLeft}%`);
-  }
-  if (!parts.length) {
-    return null;
-  }
-  return parts.join(" ");
+/** Compact footer readout, e.g. "S90% W85%", from the two primary windows main reported. */
+function formatAbbreviatedRemainingUsage(usageInfo: ToolUsageInfo | null): string | null {
+  const parts = (usageInfo?.windows ?? []).slice(0, 2).map((window) => `${window.shortLabel}${window.percentLeft}%`);
+  return parts.length ? parts.join(" ") : null;
 }
 
-function extractPercentLeft(line: string | null): number | null {
-  if (!line) {
-    return null;
-  }
-  const match = line.match(/(\d{1,3})%\s*left/i);
-  if (!match?.[1]) {
-    return null;
-  }
-  const value = Number.parseInt(match[1], 10);
-  if (!Number.isFinite(value)) {
-    return null;
-  }
-  return Math.max(0, Math.min(100, value));
-}
-
-function extractResetAt(line: string | null): string | null {
-  if (!line) {
-    return null;
-  }
-  const match = line.match(/\(?\s*resets?\s+([^)]+)\)?/i);
-  return match?.[1]?.trim() || null;
-}
-
-function buildWindowSummary(raw: string | null): UsageWindowSummary {
-  return {
-    raw: raw ?? "Not reported",
-    percentLeft: extractPercentLeft(raw),
-    resetAt: extractResetAt(raw)
-  };
-}
-
-function extractUsageSummary(usageInfo: ToolUsageInfo | null): UsageSummary {
-  if (!usageInfo) {
-    return {
-      hourly: buildWindowSummary(null),
-      weekly: buildWindowSummary(null),
-      account: "Unknown"
-    };
-  }
-
-  const lines = [usageInfo.title, ...usageInfo.lines].map((line) => line.trim()).filter(Boolean);
-  const hourlyLine = lines.find((line) =>
-    (/hour|hourly|hr/i.test(line) && /(limit|remaining|used|usage|quota)/i.test(line))
-    || /^5h limit:/i.test(line)
-    || /^\d+h limit:/i.test(line)
-  ) ?? null;
-  const weeklyLine = lines.find((line) => /week|weekly|7d/i.test(line) && /(limit|remaining|used|usage|quota)/i.test(line)) ?? null;
-  const emailLine = lines.find((line) => /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(line)) ?? null;
-  const labeledAccountLine = lines.find((line) => /logged in as|account|user/i.test(line)) ?? null;
-  const accountLine = emailLine ?? labeledAccountLine;
-  const accountMatch = accountLine?.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] ?? null;
-
-  return {
-    hourly: buildWindowSummary(hourlyLine),
-    weekly: buildWindowSummary(weeklyLine),
-    account: accountMatch ?? accountLine ?? "Unknown"
-  };
+function UsageWindowRow({ window }: { window: ToolUsageWindow }) {
+  return (
+    <>
+      <div className="text-[11px] text-muted-foreground">{window.label}</div>
+      <div className="min-w-0 space-y-1">
+        <div className="flex items-center gap-2">
+          <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-primary/80" style={{ width: `${window.percentLeft}%` }} />
+          </div>
+          <div className="w-16 shrink-0 text-right text-xs tabular-nums text-foreground">{window.percentLeft}% left</div>
+        </div>
+        <div className="truncate text-xs text-muted-foreground" title={window.resetsLabel ?? "Reset time not reported"}>
+          {window.resetsLabel ? `Resets ${window.resetsLabel}` : "Reset time not reported"}
+        </div>
+      </div>
+    </>
+  );
 }
 
 export function StatusBar({
@@ -258,8 +201,7 @@ export function StatusBar({
         <div className="flex items-center gap-1.5">
           {visibleTools.map((tool) => {
             const usageInfo = usageByToolId[tool.id] ?? null;
-            const summary = extractUsageSummary(usageInfo);
-            const abbreviatedUsage = formatAbbreviatedRemainingUsage(summary);
+            const abbreviatedUsage = formatAbbreviatedRemainingUsage(usageInfo);
             const isUsageLoading = usageLoadingToolId === tool.id;
             const isActionLoading = actionToolId === tool.id;
             const usageDashboardUrl = tool.usageDashboardUrl;
@@ -341,7 +283,7 @@ export function StatusBar({
                         {tool.installStatus === "running" || isActionLoading ? <LoaderCircle className="size-4 animate-spin" /> : <Wrench className="size-4" />}
                         {installActionLabel}
                       </Button>
-                    ) : usageDashboardUrl ? (
+                    ) : usageDashboardUrl && !tool.supportsUsageStatus ? (
                       <div className="space-y-2">
                         <Button
                           type="button"
@@ -374,43 +316,23 @@ export function StatusBar({
                     ) : tool.supportsUsageStatus ? (
                       <>
                         <div className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 text-sm">
-                          <div className="text-[11px] text-muted-foreground">Hourly</div>
-                          <div className="min-w-0 space-y-1">
-                            <div className="flex items-center gap-2">
-                              <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
-                                <div
-                                  className="h-full rounded-full bg-primary/80"
-                                  style={{ width: `${summary.hourly.percentLeft ?? 0}%` }}
-                                />
-                              </div>
-                              <div className="w-16 shrink-0 text-right text-xs tabular-nums text-foreground">
-                                {summary.hourly.percentLeft !== null ? `${summary.hourly.percentLeft}% left` : "--"}
-                              </div>
-                            </div>
-                            <div className="truncate text-xs text-muted-foreground" title={summary.hourly.resetAt ?? "Reset time not reported"}>
-                              {summary.hourly.resetAt ? `Resets ${summary.hourly.resetAt}` : "Reset time not reported"}
-                            </div>
-                          </div>
-                          <div className="text-[11px] text-muted-foreground">Weekly</div>
-                          <div className="min-w-0 space-y-1">
-                            <div className="flex items-center gap-2">
-                              <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
-                                <div
-                                  className="h-full rounded-full bg-primary/80"
-                                  style={{ width: `${summary.weekly.percentLeft ?? 0}%` }}
-                                />
-                              </div>
-                              <div className="w-16 shrink-0 text-right text-xs tabular-nums text-foreground">
-                                {summary.weekly.percentLeft !== null ? `${summary.weekly.percentLeft}% left` : "--"}
-                              </div>
-                            </div>
-                            <div className="truncate text-xs text-muted-foreground" title={summary.weekly.resetAt ?? "Reset time not reported"}>
-                              {summary.weekly.resetAt ? `Resets ${summary.weekly.resetAt}` : "Reset time not reported"}
-                            </div>
-                          </div>
-                          <div className="text-[11px] text-muted-foreground">User</div>
-                          <div className="min-w-0 truncate text-foreground" title={summary.account}>{summary.account}</div>
+                          {usageInfo?.windows.map((window) => <UsageWindowRow key={window.id} window={window} />)}
+                          {usageInfo?.account ? (
+                            <>
+                              <div className="text-[11px] text-muted-foreground">User</div>
+                              <div className="min-w-0 truncate text-foreground" title={usageInfo.account}>{usageInfo.account}</div>
+                            </>
+                          ) : null}
+                          {usageInfo?.details?.map((detail) => (
+                            <Fragment key={detail.label}>
+                              <div className="text-[11px] text-muted-foreground">{detail.label}</div>
+                              <div className="min-w-0 truncate text-foreground" title={detail.value}>{detail.value}</div>
+                            </Fragment>
+                          ))}
                         </div>
+                        {usageInfo?.notice ? (
+                          <div role="status" className="text-xs text-muted-foreground">{usageInfo.notice}</div>
+                        ) : null}
                         <div className="flex items-center gap-2">
                           {tool.supportsAccountSwitch ? (
                             <Button
@@ -437,6 +359,19 @@ export function StatusBar({
                           >
                             <RefreshCcw className="size-4" />
                           </Button>
+                          {usageDashboardUrl ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                void noraSystemClient.openExternalUrl(usageDashboardUrl);
+                              }}
+                              aria-label={`Open ${tool.label} usage dashboard`}
+                              title="Open usage dashboard"
+                            >
+                              <ExternalLink className="size-4" />
+                            </Button>
+                          ) : null}
                         </div>
                       </>
                     ) : tool.supportsAccountSwitch ? (
@@ -536,6 +471,11 @@ export function StatusBar({
         </div>
       </div>
       <div className="flex items-center gap-4">
+        <div className="flex items-center gap-1.5">
+          <StatusBarChatbotsPopover />
+          <StatusBarRemoteMountsPopover />
+          <StatusBarPortsPopover />
+        </div>
         {activeWorkspaceBranch || activeWorkspaceWorktreeName ? (
           <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
             <GitBranch className="size-3.5" />

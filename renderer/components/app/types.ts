@@ -1,3 +1,4 @@
+import type { ChangesPanelTab } from "@/components/app/types/changesPanelTab.types";
 import type {
   AgentSession,
   AppState,
@@ -10,6 +11,7 @@ import type {
   WorkspaceTaskBoard,
   WorkspaceTaskSummary
 } from "@shared/appTypes";
+import type { WorkspaceFileViewKind } from "@shared/types/workspaceFile.types";
 
 export type WindowUiState = {
   isMaximized: boolean;
@@ -73,7 +75,7 @@ export type FileEditorTab = {
   projectId: string;
   path: string;
   rootPath: string | null;
-  kind: "text" | "image";
+  kind: WorkspaceFileViewKind;
   content: string;
   savedContent: string;
   imageDataUrl: string | null;
@@ -201,12 +203,9 @@ export type StoredUiLayout = {
   sidebarsSwapped: boolean;
   workspaceSidebarWidth: number;
   changesSidebarWidth: number;
-  activeChangesPanelTab: "git" | "files" | "context" | "forge" | "vercel";
+  activeChangesPanelTab: ChangesPanelTab;
   collapsedWorkspaceIds: Record<string, boolean>;
   isTasksSectionCollapsed: boolean;
-  isRemoteMountsSectionCollapsed: boolean;
-  isPortsSectionCollapsed: boolean;
-  isChatbotsSectionCollapsed: boolean;
   isCliSectionCollapsed: boolean;
   isSkillsSectionCollapsed: boolean;
   isSpecsSectionCollapsed: boolean;
@@ -229,7 +228,6 @@ export type UiState = {
   showWorkspaceSwitcherDialog: boolean;
   destroyAgentId: string | null;
   removeMissingWorkspaceRoot: string | null;
-  removeMissingWorkspaceError: string | null;
   showResetWorkspacesDialog: boolean;
   workspaceTerminalPresetsProjectId: string | null;
   browserTabs: BrowserTabState[];

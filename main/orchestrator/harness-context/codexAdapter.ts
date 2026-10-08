@@ -1,8 +1,10 @@
 import type { AgentContextEntry } from "@shared/appTypes";
 import type { Dirent } from "node:fs";
+import { createReadStream } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { createInterface } from "node:readline";
 import type {
   CodexEventMessagePayload,
   CodexRolloutRecord,
@@ -22,6 +24,14 @@ import {
 const ROLLOUT_FILE_NAME_PREFIX = "rollout-";
 const ROLLOUT_FILE_NAME_SUFFIX = ".jsonl";
 const CODEX_ROLLOUT_MATCH_SKEW_MS = 5 * 60_000;
+/** `session_meta` is written first; give up after a few records rather than scanning a huge rollout. */
+const SESSION_META_MAX_LINES = 8;
+
+/**
+ * Rollouts are append-only and `session_meta` never changes, so a summary read once stays valid.
+ * Rollouts can reach hundreds of MB; never read them whole just to identify the session.
+ */
+const rolloutSummaryCache = new Map<string, CodexRolloutSummary>();
 
 function getCodexSessionsRootPath(): string {
   return path.join(os.homedir(), ".codex", "sessions");
@@ -61,39 +71,74 @@ export async function listCodexRolloutFilePaths(directoryPath: string): Promise<
   return nested.flat();
 }
 
-function parseCodexRolloutSummary(raw: string): CodexRolloutSummary {
-  const defaultSummary: CodexRolloutSummary = {
-    sessionId: null,
-    cwd: null,
-    sessionStartedAtMs: null
+const EMPTY_ROLLOUT_SUMMARY: CodexRolloutSummary = {
+  sessionId: null,
+  cwd: null,
+  sessionStartedAtMs: null
+};
+
+function parseCodexRolloutRecord(line: string): CodexRolloutRecord | null {
+  const trimmed = line.trim();
+  if (!trimmed) {
+    return null;
+  }
+  try {
+    return JSON.parse(trimmed) as CodexRolloutRecord;
+  } catch {
+    return null;
+  }
+}
+
+function parseCodexSessionMeta(record: CodexRolloutRecord): CodexRolloutSummary | null {
+  if (record.type !== "session_meta" || !isRecord(record.payload)) {
+    return null;
+  }
+  const payload = record.payload as CodexSessionMetaPayload;
+  return {
+    sessionId: typeof payload.id === "string" && payload.id.trim().length > 0 ? payload.id : null,
+    cwd: typeof payload.cwd === "string" && payload.cwd.trim().length > 0 ? payload.cwd : null,
+    sessionStartedAtMs: parseIsoTimestamp(payload.timestamp)
   };
+}
 
-  for (const line of raw.split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed) {
-      continue;
-    }
+/** Streams a rollout line by line so memory stays bounded by the longest single record. */
+async function* readCodexRolloutLines(filePath: string): AsyncGenerator<string> {
+  const stream = createReadStream(filePath, { encoding: "utf8" });
+  const lines = createInterface({ input: stream, crlfDelay: Infinity });
+  try {
+    yield* lines;
+  } finally {
+    lines.close();
+    stream.destroy();
+  }
+}
 
-    let parsed: CodexRolloutRecord;
-    try {
-      parsed = JSON.parse(trimmed) as CodexRolloutRecord;
-    } catch {
-      continue;
-    }
-
-    if (parsed.type !== "session_meta" || !isRecord(parsed.payload)) {
-      continue;
-    }
-
-    const payload = parsed.payload as CodexSessionMetaPayload;
-    return {
-      sessionId: typeof payload.id === "string" && payload.id.trim().length > 0 ? payload.id : null,
-      cwd: typeof payload.cwd === "string" && payload.cwd.trim().length > 0 ? payload.cwd : null,
-      sessionStartedAtMs: parseIsoTimestamp(payload.timestamp)
-    };
+async function readCodexRolloutSummary(filePath: string): Promise<CodexRolloutSummary> {
+  const cached = rolloutSummaryCache.get(filePath);
+  if (cached) {
+    return cached;
   }
 
-  return defaultSummary;
+  let summary = EMPTY_ROLLOUT_SUMMARY;
+  let linesRead = 0;
+  for await (const line of readCodexRolloutLines(filePath)) {
+    const record = parseCodexRolloutRecord(line);
+    const meta = record ? parseCodexSessionMeta(record) : null;
+    if (meta) {
+      summary = meta;
+      break;
+    }
+    linesRead += 1;
+    if (linesRead >= SESSION_META_MAX_LINES) {
+      break;
+    }
+  }
+
+  // Only cache a found session_meta: a just-created rollout may not have flushed it yet.
+  if (summary !== EMPTY_ROLLOUT_SUMMARY) {
+    rolloutSummaryCache.set(filePath, summary);
+  }
+  return summary;
 }
 
 function buildCodexResumeRolloutFileNameSuffix(resumeSessionId: string): string {
@@ -132,14 +177,11 @@ async function chooseCodexRolloutFilePath(
   const candidates = await Promise.all(
     rolloutFilePaths.map(async (filePath) => {
       try {
-        const [raw, stat] = await Promise.all([
-          fs.readFile(filePath, "utf8"),
-          fs.stat(filePath)
-        ]);
+        const [summary, stat] = await Promise.all([readCodexRolloutSummary(filePath), fs.stat(filePath)]);
         return {
           filePath,
           modifiedAtMs: stat.mtimeMs,
-          summary: parseCodexRolloutSummary(raw)
+          summary
         };
       } catch {
         return null;
@@ -163,75 +205,59 @@ async function chooseCodexRolloutFilePath(
   return bestMatch?.filePath || null;
 }
 
-function parseCodexHarnessEntries(
-  raw: string,
+function parseCodexHarnessEntry(
+  record: CodexRolloutRecord,
+  lineIndex: number,
   input: HarnessContextReadInput,
   sessionId: string
-): AgentContextEntry[] {
-  const out: AgentContextEntry[] = [];
+): AgentContextEntry | null {
+  if (record.type !== "event_msg" || !isRecord(record.payload)) {
+    return null;
+  }
 
-  raw.split("\n").forEach((line, lineIndex) => {
-    const trimmed = line.trim();
-    if (!trimmed) {
-      return;
+  const createdAtMs = parseIsoTimestamp(record.timestamp);
+  if (createdAtMs === null || createdAtMs < input.contextBoundaryMs) {
+    return null;
+  }
+
+  const payload = record.payload as CodexEventMessagePayload;
+  const messageType = typeof payload.type === "string" ? payload.type : "";
+  const content = collectCodexMessageText(payload);
+  if (!content) {
+    return null;
+  }
+
+  if (messageType === "user_message") {
+    if (hasExactUserPromptDuplicate(input.exactEntries, content)) {
+      return null;
     }
 
-    let parsed: CodexRolloutRecord;
-    try {
-      parsed = JSON.parse(trimmed) as CodexRolloutRecord;
-    } catch {
-      return;
-    }
+    return buildHarnessContextEntry({
+      adapterKey: "codex",
+      agent: input.agent,
+      uniqueSuffix: `${sessionId}-${createdAtMs}-${lineIndex}`,
+      createdAt: new Date(createdAtMs).toISOString(),
+      kind: "user-prompt",
+      title: "Prompt sent to agent",
+      content,
+      conversationId: sessionId
+    });
+  }
 
-    if (parsed.type !== "event_msg" || !isRecord(parsed.payload)) {
-      return;
-    }
+  if (messageType === "agent_message") {
+    return buildHarnessContextEntry({
+      adapterKey: "codex",
+      agent: input.agent,
+      uniqueSuffix: `${sessionId}-${createdAtMs}-${lineIndex}`,
+      createdAt: new Date(createdAtMs).toISOString(),
+      kind: "agent-output",
+      title: `${input.agent.name} output`,
+      content,
+      conversationId: sessionId
+    });
+  }
 
-    const createdAtMs = parseIsoTimestamp(parsed.timestamp);
-    if (createdAtMs === null || createdAtMs < input.contextBoundaryMs) {
-      return;
-    }
-
-    const payload = parsed.payload as CodexEventMessagePayload;
-    const messageType = typeof payload.type === "string" ? payload.type : "";
-    const content = collectCodexMessageText(payload);
-    if (!content) {
-      return;
-    }
-
-    if (messageType === "user_message") {
-      if (hasExactUserPromptDuplicate(input.exactEntries, content)) {
-        return;
-      }
-
-      out.push(buildHarnessContextEntry({
-        adapterKey: "codex",
-        agent: input.agent,
-        uniqueSuffix: `${sessionId}-${createdAtMs}-${lineIndex}`,
-        createdAt: new Date(createdAtMs).toISOString(),
-        kind: "user-prompt",
-        title: "Prompt sent to agent",
-        content,
-        conversationId: sessionId
-      }));
-      return;
-    }
-
-    if (messageType === "agent_message") {
-      out.push(buildHarnessContextEntry({
-        adapterKey: "codex",
-        agent: input.agent,
-        uniqueSuffix: `${sessionId}-${createdAtMs}-${lineIndex}`,
-        createdAt: new Date(createdAtMs).toISOString(),
-        kind: "agent-output",
-        title: `${input.agent.name} output`,
-        content,
-        conversationId: sessionId
-      }));
-    }
-  });
-
-  return out;
+  return null;
 }
 
 export async function readCodexHarnessEntries(options: {
@@ -244,9 +270,19 @@ export async function readCodexHarnessEntries(options: {
   }
 
   try {
-    const raw = await fs.readFile(filePath, "utf8");
-    const summary = parseCodexRolloutSummary(raw);
-    return parseCodexHarnessEntries(raw, options.input, summary.sessionId || path.basename(filePath, ".jsonl"));
+    const summary = await readCodexRolloutSummary(filePath);
+    const sessionId = summary.sessionId || path.basename(filePath, ".jsonl");
+    const entries: AgentContextEntry[] = [];
+    let lineIndex = 0;
+    for await (const line of readCodexRolloutLines(filePath)) {
+      const record = parseCodexRolloutRecord(line);
+      const entry = record ? parseCodexHarnessEntry(record, lineIndex, options.input, sessionId) : null;
+      if (entry) {
+        entries.push(entry);
+      }
+      lineIndex += 1;
+    }
+    return entries;
   } catch {
     return [];
   }
@@ -285,8 +321,7 @@ export async function discoverCodexExternalHarnessCandidates(
 
   for (const filePath of rolloutFilePaths) {
     try {
-      const [raw, stat] = await Promise.all([fs.readFile(filePath, "utf8"), fs.stat(filePath)]);
-      const summary = parseCodexRolloutSummary(raw);
+      const summary = await readCodexRolloutSummary(filePath);
       if (!codexWorkspacePathsMatch(summary.cwd, workspaceAbsolutePath)) {
         continue;
       }
@@ -298,7 +333,7 @@ export async function discoverCodexExternalHarnessCandidates(
       if (occupiedKeys.has(occKey)) {
         continue;
       }
-      const mtime = stat.mtimeMs;
+      const mtime = (await fs.stat(filePath)).mtimeMs;
       const existing = bestBySession.get(sessionId);
       if (!existing || mtime > existing.mtime) {
         bestBySession.set(sessionId, { filePath, mtime, summary, sessionId });

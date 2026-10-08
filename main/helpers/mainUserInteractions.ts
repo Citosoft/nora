@@ -79,7 +79,7 @@ export function createMainUserInteractionsController({
     }
 
     const result = await dialog.showOpenDialog(mainWindow, {
-      title: "Choose a project repository",
+      title: "Choose a project folder",
       properties: ["openDirectory"]
     });
 
@@ -97,7 +97,7 @@ export function createMainUserInteractionsController({
     }
 
     const result = await dialog.showOpenDialog(mainWindow, {
-      title: title || "Choose a project repository",
+      title: title || "Choose a project folder",
       defaultPath,
       properties: ["openDirectory"]
     });
@@ -117,7 +117,7 @@ export function createMainUserInteractionsController({
 
     try {
       const result = await dialog.showOpenDialog(mainWindow, {
-        title: `Choose a repository on ${host}`,
+        title: `Choose a project folder on ${host}`,
         defaultPath: mountPoint,
         properties: ["openDirectory"]
       });

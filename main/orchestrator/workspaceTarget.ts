@@ -1,5 +1,7 @@
 import type { ProjectSummary, WorkspaceLocation } from "@shared/appTypes";
+import { createMissingProjectFolderError } from "@shared/projectFolderErrors";
 import { createHash } from "node:crypto";
+import fs from "node:fs/promises";
 import path from "node:path";
 import type { WorkspaceTarget } from "../types/internal.types";
 
@@ -11,6 +13,7 @@ type ProjectMetadataDependencies = {
   detectWorkspaceInstructionFile: (target: WorkspaceTarget) => Promise<ProjectSummary["workspaceInstructionFile"]>;
   computeWorkspaceProjectId: (target: WorkspaceTarget, rootPath: string) => string;
   getWorkspaceLocation: (target: WorkspaceTarget) => WorkspaceLocation;
+  projectFolderExists: (target: WorkspaceTarget) => Promise<boolean>;
 };
 
 function isUnbornHeadError(error: unknown): boolean {
@@ -37,6 +40,17 @@ async function readCurrentBranchName(
 
 export function getWorkspaceLocation(target: WorkspaceTarget): WorkspaceLocation {
   return target.location || { kind: "local" };
+}
+
+/**
+ * Local folders are checked directly. SSH folders report true so the remote git call surfaces
+ * connection problems instead of being misreported as a deleted folder.
+ */
+export async function localProjectFolderExists(target: WorkspaceTarget): Promise<boolean> {
+  if (getWorkspaceLocation(target).kind === "ssh") {
+    return true;
+  }
+  return fs.stat(target.path).then((stats) => stats.isDirectory(), () => false);
 }
 
 export function getWorkspaceScope(target: WorkspaceTarget, rootPath = target.path): string {
@@ -97,19 +111,57 @@ export function mergePersistedProjectSummary(
   };
 }
 
+function isNotGitRepositoryError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.toLowerCase().includes("not a git repository");
+}
+
+type GitProjectInfo = Pick<ProjectSummary, "versionControl" | "rootPath" | "gitCommonDir" | "baseBranch">;
+
 export function createGetProjectMetadata(deps: ProjectMetadataDependencies) {
+  async function readGitProjectInfo(
+    target: WorkspaceTarget,
+    reporter?: (detail: string, command: string) => Promise<void> | void
+  ): Promise<GitProjectInfo> {
+    await reporter?.("Checking repository root...", await deps.getGitProgressCommand(target, ["rev-parse", "--show-toplevel"]));
+    let topLevel: string;
+    try {
+      topLevel = (await deps.execGit(target, ["rev-parse", "--show-toplevel"])).stdout.trim();
+    } catch (error) {
+      if (!isNotGitRepositoryError(error)) {
+        throw error;
+      }
+      const location = deps.getWorkspaceLocation(target);
+      return {
+        versionControl: "none",
+        rootPath: location.kind === "ssh" ? target.path : path.resolve(target.path),
+        gitCommonDir: "",
+        baseBranch: ""
+      };
+    }
+    await reporter?.("Reading current branch...", await deps.getGitProgressCommand(target, ["rev-parse", "--abbrev-ref", "HEAD"]));
+    const baseBranch = await readCurrentBranchName(target, deps.execGit);
+    await reporter?.("Resolving git common dir...", await deps.getGitProgressCommand(target, ["rev-parse", "--git-common-dir"]));
+    const { stdout: gitCommonDirStdout } = await deps.execGit(target, ["rev-parse", "--git-common-dir"]);
+    const gitCommonDir = gitCommonDirStdout.trim();
+    return {
+      versionControl: "git",
+      rootPath: topLevel,
+      gitCommonDir: deps.getWorkspaceLocation(target).kind === "ssh" ? gitCommonDir : path.resolve(topLevel, gitCommonDir),
+      baseBranch
+    };
+  }
+
   return async (
     target: WorkspaceTarget,
     reporter?: (detail: string, command: string) => Promise<void> | void
   ): Promise<ProjectSummary> => {
-    await reporter?.("Checking repository root...", await deps.getGitProgressCommand(target, ["rev-parse", "--show-toplevel"]));
-    const { stdout: topLevel } = await deps.execGit(target, ["rev-parse", "--show-toplevel"]);
-    await reporter?.("Reading current branch...", await deps.getGitProgressCommand(target, ["rev-parse", "--abbrev-ref", "HEAD"]));
-    const branchName = await readCurrentBranchName(target, deps.execGit);
-    await reporter?.("Resolving git common dir...", await deps.getGitProgressCommand(target, ["rev-parse", "--git-common-dir"]));
-    const { stdout: gitCommonDirStdout } = await deps.execGit(target, ["rev-parse", "--git-common-dir"]);
-
-    const rootPath = topLevel.trim();
+    // Checked first so a deleted folder is not mistaken for a git failure or a plain folder.
+    if (!(await deps.projectFolderExists(target))) {
+      throw createMissingProjectFolderError(target.path);
+    }
+    const gitInfo = await readGitProjectInfo(target, reporter);
+    const { rootPath } = gitInfo;
     const timestamp = deps.nowIso();
     const location = deps.getWorkspaceLocation(target);
     await reporter?.("Inspecting framework metadata...", "read package.json");
@@ -120,11 +172,9 @@ export function createGetProjectMetadata(deps: ProjectMetadataDependencies) {
     return {
       id: deps.computeWorkspaceProjectId({ ...target, path: rootPath, location }, rootPath),
       name: path.posix.basename(rootPath.replace(/\\/g, "/")) || path.basename(rootPath),
-      rootPath,
-      gitCommonDir: location.kind === "ssh" ? gitCommonDirStdout.trim() : path.resolve(rootPath, gitCommonDirStdout.trim()),
+      ...gitInfo,
       location,
       workspaceTerminalPresets: [],
-      baseBranch: branchName,
       workspaceInstructionFile,
       framework,
       platform: location.kind === "ssh" ? "ssh" : process.platform,

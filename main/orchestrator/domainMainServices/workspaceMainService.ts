@@ -68,6 +68,9 @@ export class WorkspaceMainService implements WorkspaceService {
   readWorkspaceImageFile = (payload: WorkspaceFileRequest): Promise<WorkspaceImageFileContent> =>
     this.actions().readWorkspaceImageFile(payload);
 
+  resolveWorkspaceFileForExternalOpen = (payload: WorkspaceFileRequest): Promise<string> =>
+    this.actions().resolveWorkspaceFileForExternalOpen(payload);
+
   listWorkspaceFiles = (projectId: string, rootPath?: string): Promise<string[]> =>
     this.actions().listWorkspaceFiles(projectId, rootPath);
 

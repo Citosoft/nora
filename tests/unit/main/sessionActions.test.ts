@@ -10,6 +10,7 @@ function createProject(): ProjectSummary {
     name: "Project",
     rootPath: "/repo/project",
     gitCommonDir: "/repo/project/.git",
+    versionControl: "git",
     location: { kind: "local" },
     remoteAgentCatalog: null,
     workspaceInstructionFile: null,

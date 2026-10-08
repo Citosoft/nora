@@ -10,12 +10,14 @@ import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainStat
 import { useWorkspaceAgentContextSources } from "@/components/app/hooks/useWorkspaceAgentContextSources";
 import { useWorkspaceExternalHarnessSessions } from "@/components/app/hooks/useWorkspaceExternalHarnessSessions";
 import { useStatusBar } from "@/components/app/logic/statusBarContext";
+import { getBranchCheckoutBlockedReason, getCheckoutableBranches } from "@/components/app/logic/branchCheckout";
 import { formatTimestamp } from "@/components/app/logic/utils";
 import { setWorkspaceRelativePathDragData } from "@/components/app/logic/workspacePathDrag";
 import { FileTreePanel } from "@/components/app/panels/FileTreePanel";
 import { ForgePanel } from "@/components/app/panels/ForgePanel";
 import { DiffReviewCountBadge, DiffReviewTray } from "@/components/app/panels/diff-annotation/DiffReviewTray";
 import { VercelPanel } from "@/components/app/panels/VercelPanel";
+import { BranchCheckoutMenu } from "@/components/app/shared/BranchCheckoutMenu";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { ForgeProviderIcon } from "@/components/app/views/ForgeProviderIcon";
 import { Button } from "@/components/ui/button";
@@ -23,6 +25,7 @@ import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { ChangesPanelTab, ChangesPanelTabPresentation } from "@/components/app/types/changesPanelTab.types";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type {
@@ -196,6 +199,18 @@ function getPullRequestStatusDotClass(state: GithubBranchPullRequestState | null
   return "bg-muted-foreground/60";
 }
 
+const CHANGES_PANEL_TAB_PRESENTATION: Record<ChangesPanelTab, ChangesPanelTabPresentation> = {
+  git: { label: "Git", Icon: FolderGit2 },
+  files: { label: "Files", Icon: FileText },
+  context: {
+    label: "Context",
+    Icon: Brain,
+    title: "Project agent context you can attach to a new agent, and files under .nora/imported_context"
+  },
+  vercel: { label: "Vercel", Icon: VercelMark },
+  forge: { label: "Forge", Icon: GitBranch }
+};
+
 function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
   const { tools, onOpenCreateAgentDialog } = useChangesPanelWorkspace();
   const {
@@ -256,6 +271,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
     resolvedTheme,
     collapsed,
     activeTab,
+    availableTabs,
     activeFilePath,
     activeBranch,
     selectedChange,
@@ -473,21 +489,16 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
   const forgeProvider = forgeOverview?.repo?.provider ?? null;
   const changeCount = snapshot.changes.length;
   const checkoutableBranches = useMemo(
-    () =>
-      [...snapshot.projectBranches]
-        .filter((branch) => branch.trim() && branch !== activeBranch)
-        .sort((left, right) => left.localeCompare(right)),
+    () => getCheckoutableBranches(snapshot.projectBranches, activeBranch),
     [activeBranch, snapshot.projectBranches]
   );
-  const branchSwitcherDisabledReason = isInspectingCommit
-    ? "Return to working tree before switching branches"
-    : gitStatusIsDirty
-      ? "Commit or discard changes before switching branches"
-      : checkoutableBranches.length === 0
-        ? "No other local branches are available"
-        : null;
-  const canOpenBranchSwitcher =
-    !!snapshot.project && !isInspectingCommit && !gitStatusIsDirty && checkoutableBranches.length > 0 && !isCheckingOutBranch;
+  const branchCheckoutBlockedReason = snapshot.project
+    ? getBranchCheckoutBlockedReason({
+        isInspectingCommit,
+        hasUncommittedChanges: gitStatusIsDirty,
+        checkoutableBranchCount: checkoutableBranches.length
+      })
+    : "Open a project to switch branches";
   const fileCount = filePaths.length;
   const additionsTotal = snapshot.changes.reduce((total, change) => total + change.additions, 0);
   const deletionsTotal = snapshot.changes.reduce((total, change) => total + change.deletions, 0);
@@ -858,90 +869,54 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
     ? "w-full rounded-md border border-slate-300/90 bg-white px-2 py-2 text-left outline-none transition-colors hover:border-slate-400 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     : "w-full rounded-md border border-border/60 bg-background/30 px-2 py-2 text-left outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
+  const gitTabPullRequestStatusDot = forgeOverview?.repo?.provider === "github" && activeBranch ? (
+    <Tooltip
+      content={
+        forgeBranchPullRequestStatus?.branchExistsOnRemote === false
+          ? "PR status: No pull request (branch not pushed)"
+          : forgeBranchPullRequestStatus?.pullRequestNumber
+          ? `PR status: ${forgeBranchPullRequestStatus.label} (#${forgeBranchPullRequestStatus.pullRequestNumber})`
+          : `PR status: ${forgeBranchPullRequestStatus?.label ?? "No pull request"}`
+      }
+      side="bottom"
+    >
+      <span
+        className={cn("inline-flex size-2 rounded-full", getPullRequestStatusDotClass(forgeBranchPullRequestStatus?.state ?? "no_pull_request"))}
+        aria-label={
+          forgeBranchPullRequestStatus?.branchExistsOnRemote === false
+            ? "Pull request status: No pull request, branch not pushed"
+            : `Pull request status: ${forgeBranchPullRequestStatus?.label ?? "No pull request"}`
+        }
+      />
+    </Tooltip>
+  ) : null;
+
   return (
-    <section className={cn("workspace-shell-surface flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-card/95", collapsed && "changes-sidebar-collapsed-surface")}>
+    <section className="workspace-shell-surface flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-card/95">
       {!collapsed ? (
         <CardHeader className="min-w-0 border-b border-border/60 px-0 py-2">
           <div className="mb-2 flex items-center gap-3 px-4">
             <div className="min-w-0 flex-1">
               <div className="flex w-full flex-wrap items-center rounded-[4px] border border-border/60 bg-background/40 p-1 sm:flex-nowrap">
-                <button
-                  type="button"
-                  className={cn(
-                    "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[3px] px-2 py-1.5 text-[11px] font-medium transition sm:gap-1.5 sm:px-3 sm:text-xs",
-                    activeTab === "git" ? activeSidebarTabClass : inactiveSidebarTabClass
-                  )}
-                  onClick={() => onActiveTabChange("git")}
-                >
-                  <FolderGit2 className="size-3.5" />
-                  Git
-                  {forgeOverview?.repo?.provider === "github" && activeBranch ? (
-                    <Tooltip
-                      content={
-                        forgeBranchPullRequestStatus?.branchExistsOnRemote === false
-                          ? "PR status: No pull request (branch not pushed)"
-                          : forgeBranchPullRequestStatus?.pullRequestNumber
-                          ? `PR status: ${forgeBranchPullRequestStatus.label} (#${forgeBranchPullRequestStatus.pullRequestNumber})`
-                          : `PR status: ${forgeBranchPullRequestStatus?.label ?? "No pull request"}`
-                      }
-                      side="bottom"
+                {availableTabs.map((tab) => {
+                  const { label, Icon, title } = CHANGES_PANEL_TAB_PRESENTATION[tab];
+                  return (
+                    <button
+                      key={tab}
+                      type="button"
+                      className={cn(
+                        "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[3px] px-2 py-1.5 text-[11px] font-medium transition sm:gap-1.5 sm:px-3 sm:text-xs",
+                        activeTab === tab ? activeSidebarTabClass : inactiveSidebarTabClass
+                      )}
+                      onClick={() => onActiveTabChange(tab)}
+                      title={title}
                     >
-                      <span
-                        className={cn("inline-flex size-2 rounded-full", getPullRequestStatusDotClass(forgeBranchPullRequestStatus?.state ?? "no_pull_request"))}
-                        aria-label={
-                          forgeBranchPullRequestStatus?.branchExistsOnRemote === false
-                            ? "Pull request status: No pull request, branch not pushed"
-                            : `Pull request status: ${forgeBranchPullRequestStatus?.label ?? "No pull request"}`
-                        }
-                      />
-                    </Tooltip>
-                  ) : null}
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[3px] px-2 py-1.5 text-[11px] font-medium transition sm:gap-1.5 sm:px-3 sm:text-xs",
-                    activeTab === "files" ? activeSidebarTabClass : inactiveSidebarTabClass
-                  )}
-                  onClick={() => onActiveTabChange("files")}
-                >
-                  <FileText className="size-3.5" />
-                  Files
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[3px] px-2 py-1.5 text-[11px] font-medium transition sm:gap-1.5 sm:px-3 sm:text-xs",
-                    activeTab === "context" ? activeSidebarTabClass : inactiveSidebarTabClass
-                  )}
-                  onClick={() => onActiveTabChange("context")}
-                  title="Project agent context you can attach to a new agent, and files under .nora/imported_context"
-                >
-                  <Brain className="size-3.5 shrink-0" />
-                  <span className="truncate">Context</span>
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[3px] px-2 py-1.5 text-[11px] font-medium transition sm:gap-1.5 sm:px-3 sm:text-xs",
-                    activeTab === "vercel" ? activeSidebarTabClass : inactiveSidebarTabClass
-                  )}
-                  onClick={() => onActiveTabChange("vercel")}
-                >
-                  <VercelMark className="size-3.5" />
-                  Vercel
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[3px] px-2 py-1.5 text-[11px] font-medium transition sm:gap-1.5 sm:px-3 sm:text-xs",
-                    activeTab === "forge" ? activeSidebarTabClass : inactiveSidebarTabClass
-                  )}
-                  onClick={() => onActiveTabChange("forge")}
-                >
-                  <GitBranch className="size-3.5" />
-                  Forge
-                </button>
+                      <Icon className="size-3.5 shrink-0" />
+                      <span className="truncate">{label}</span>
+                      {tab === "git" ? gitTabPullRequestStatusDot : null}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -996,40 +971,13 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
               </div>
               {activeTab === "git" ? (
                 <>
-                  <DropdownMenu
-                    align="end"
-                    widthClassName="w-64"
-                    trigger={(
-                      <Button
-                        variant="outline"
-                        className="h-7 max-w-[180px] shrink-0 gap-1.5 rounded-[4px] border-border/60 bg-background/60 px-2 py-1 text-[11px] font-medium text-foreground"
-                        disabled={!canOpenBranchSwitcher}
-                        tooltip={
-                          branchSwitcherDisabledReason ??
-                          (activeBranch ? `Switch branch from ${activeBranch}` : "Switch branch")
-                        }
-                        aria-label={activeBranch ? `Active branch: ${activeBranch}` : "Active branch unavailable"}
-                      >
-                        {isCheckingOutBranch ? (
-                          <LoaderCircle className="size-3.5 shrink-0 animate-spin text-primary" />
-                        ) : (
-                          <GitBranch className="size-3.5 shrink-0 text-primary" />
-                        )}
-                        <span className="truncate">{activeBranch || "unknown branch"}</span>
-                        <ChevronDown className="size-3 shrink-0 text-muted-foreground" />
-                      </Button>
-                    )}
-                  >
-                    {checkoutableBranches.map((branch) => (
-                      <DropdownMenuItem
-                        key={branch}
-                        onSelect={() => void handleCheckoutBranch(branch)}
-                      >
-                        <GitBranch className="size-4" />
-                        <span className="truncate">{branch}</span>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenu>
+                  <BranchCheckoutMenu
+                    activeBranch={activeBranch}
+                    checkoutableBranches={checkoutableBranches}
+                    blockedReason={branchCheckoutBlockedReason}
+                    isCheckingOut={isCheckingOutBranch}
+                    onCheckout={(branch) => void handleCheckoutBranch(branch)}
+                  />
                   <div className="flex items-center gap-1 text-muted-foreground" title={`${additionsTotal} additions`}>
                     <Plus className="size-3.5 text-emerald-500" />
                     <span>{additionsTotal}</span>
@@ -1319,34 +1267,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
         </CardHeader>
       ) : null}
 
-      {collapsed ? (
-        <CardContent className="flex h-full min-h-0 flex-col items-center gap-3 px-2 py-4">
-          {activeTab === "git"
-            ? <FolderGit2 className="size-4 text-primary" />
-              : activeTab === "files"
-                ? <FileText className="size-4 text-primary" />
-              : activeTab === "context"
-                ? <Brain className="size-4 text-primary" />
-              : activeTab === "vercel"
-                ? <VercelMark className="size-4 text-primary" />
-              : forgeProvider
-                ? <ForgeProviderIcon provider={forgeProvider} className="size-4 text-primary" />
-                : <GitPullRequest className="size-4 text-primary" />}
-          <div className="border border-border/70 px-2 py-1 text-xs text-muted-foreground">
-            {activeTab === "git"
-              ? changeCount
-              : activeTab === "files"
-                ? fileCount
-                : activeTab === "context"
-                  ? importedBundlesUnique.length + workspaceAgentContextGroupCount
-                : activeTab === "vercel"
-                  ? linkedVercelProject
-                    ? vercelDeployments.length
-                    : vercelProjects.length
-                  : (forgeOverview?.pullRequests?.length || 0) + (forgeOverview?.issues?.length || 0) + (forgeOverview?.workflowRuns?.length || 0)}
-          </div>
-        </CardContent>
-      ) : (
+      {!collapsed ? (
         <CardContent className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden p-0">
           {activeTab === "files" ? (
               <FileTreePanel
@@ -1878,7 +1799,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
           )}
           {activeTab === "git" && !isInspectingCommit ? <DiffReviewTray /> : null}
         </CardContent>
-      )}
+      ) : null}
     </section>
   );
 }

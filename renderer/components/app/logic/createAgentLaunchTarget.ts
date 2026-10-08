@@ -1,24 +1,19 @@
-import type { LaunchTargetMode } from "@/components/app/types/component.types";
+import type { LaunchTargetAvailability, LaunchTargetMode } from "@/components/app/types/chromeDialog.types";
 import type { CreateAgentPayload, WorktreeRecord, WorktreeTarget } from "@shared/appTypes";
-
-function hasAvailableExistingWorktree(worktrees: Array<Pick<WorktreeRecord, "id">>): boolean {
-  return worktrees.length > 0;
-}
-
-function hasAvailableProjectBranches(projectBranches: string[]): boolean {
-  return projectBranches.length > 0;
-}
 
 export function resolveSupportedLaunchTargetMode(
   preferredMode: LaunchTargetMode,
-  worktrees: Array<Pick<WorktreeRecord, "id">>,
-  projectBranches: string[]
+  { worktrees, projectBranches, isGitProject }: LaunchTargetAvailability
 ): LaunchTargetMode {
-  if (preferredMode === "existing" && !hasAvailableExistingWorktree(worktrees)) {
+  if (!isGitProject) {
     return "current-branch";
   }
 
-  if (preferredMode === "branch-existing" && !hasAvailableProjectBranches(projectBranches)) {
+  if (preferredMode === "existing" && !worktrees.length) {
+    return "current-branch";
+  }
+
+  if (preferredMode === "branch-existing" && !projectBranches.length) {
     return "current-branch";
   }
 

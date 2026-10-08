@@ -66,6 +66,7 @@ function createExactUserPromptEntry(agent: AgentSession, content: string): Agent
 
 test("buildClaudeProjectDirectoryName mirrors Claude's workspace directory naming", () => {
   assert.equal(buildClaudeProjectDirectoryName("/home/daniel/dev/claudetest"), "-home-daniel-dev-claudetest");
+  assert.equal(buildClaudeProjectDirectoryName("/home/daniel/dev/my_app.web"), "-home-daniel-dev-my-app-web");
 });
 
 test("readClaudeHarnessEntries normalizes Claude session files and skips duplicate exact prompts", async () => {

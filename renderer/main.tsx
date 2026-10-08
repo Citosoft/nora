@@ -1,4 +1,5 @@
 import { App } from "@/App";
+import { AppErrorBoundary } from "@/components/app/views/AppErrorBoundary";
 import { PostHogProvider } from "@posthog/react";
 import "@xterm/xterm/css/xterm.css";
 import posthog from "posthog-js";
@@ -18,12 +19,14 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    {posthogToken ? (
-      <PostHogProvider client={posthog}>
+    <AppErrorBoundary>
+      {posthogToken ? (
+        <PostHogProvider client={posthog}>
+          <App />
+        </PostHogProvider>
+      ) : (
         <App />
-      </PostHogProvider>
-    ) : (
-      <App />
-    )}
+      )}
+    </AppErrorBoundary>
   </StrictMode>
 );

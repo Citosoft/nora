@@ -97,9 +97,6 @@ export type BuildSettingsRuntimeValueDeps = {
   isWorkspaceSidebarCollapsed: boolean;
   isChangesSidebarCollapsed: boolean;
   sidebarsSwapped: boolean;
-  isRemoteMountsSectionCollapsed: boolean;
-  isPortsSectionCollapsed: boolean;
-  isChatbotsSectionCollapsed: boolean;
   isCliSectionCollapsed: boolean;
   isSkillsSectionCollapsed: boolean;
   isSpecsSectionCollapsed: boolean;
@@ -107,9 +104,6 @@ export type BuildSettingsRuntimeValueDeps = {
   setIsWorkspaceSidebarCollapsed: Dispatch<SetStateAction<boolean>>;
   setIsChangesSidebarCollapsed: Dispatch<SetStateAction<boolean>>;
   setSidebarsSwapped: Dispatch<SetStateAction<boolean>>;
-  setIsRemoteMountsSectionCollapsed: Dispatch<SetStateAction<boolean>>;
-  setIsPortsSectionCollapsed: Dispatch<SetStateAction<boolean>>;
-  setIsChatbotsSectionCollapsed: Dispatch<SetStateAction<boolean>>;
   setIsCliSectionCollapsed: Dispatch<SetStateAction<boolean>>;
   setIsSkillsSectionCollapsed: Dispatch<SetStateAction<boolean>>;
   setIsSpecsSectionCollapsed: Dispatch<SetStateAction<boolean>>;

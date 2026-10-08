@@ -46,8 +46,9 @@ export function AppSignedInWorkspaceView() {
     </div>
   );
 
+  // Stays mounted while collapsed (zero-width, invisible) so panel drafts like the commit message survive toggling.
   const changesSidebarCell = hasActiveWorkspace ? (
-    <div className="relative min-h-0">
+    <div className={isChangesSidebarCollapsed ? "invisible min-h-0 overflow-hidden" : "relative min-h-0"}>
       <ChangesPanelSection {...changesPanelSectionProps} />
       {!isChangesSidebarCollapsed ? (
         <div

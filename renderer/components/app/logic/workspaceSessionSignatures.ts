@@ -56,6 +56,7 @@ export const getWorkspaceContextSignature = (workspace: WorkspaceSummary | null)
     project.id,
     project.name,
     project.rootPath,
+    project.versionControl,
     project.baseBranch,
     framework?.label ?? "",
     framework?.version ?? "",

@@ -17,6 +17,7 @@ import type {
   WorkspaceLoadingState
 } from "@/components/app/types";
 import type {
+  AgentCatalogEntry,
   AgentSession,
   AgentSkillCatalog,
   AiProvider,
@@ -191,6 +192,7 @@ export type WorkspaceSidebarProps = {
   gitlabHost: string;
   terminalPresets: AppSettings["terminalPresets"];
   terminalQuickLaunchDefaults: AppSettings["terminalQuickLaunchDefaults"];
+  defaultAgentTool: AgentCatalogEntry | null;
   agentsNeedingAttention: Record<string, boolean>;
   focusedWorkspace: WorkspaceSummary | null;
   focusedAgent: AgentSession | null;
@@ -198,9 +200,6 @@ export type WorkspaceSidebarProps = {
   removingWorkspaceRoots: string[];
   collapsed: boolean;
   collapsedWorkspaceIds: Record<string, boolean>;
-  isRemoteMountsSectionCollapsed: boolean;
-  isPortsSectionCollapsed: boolean;
-  isChatbotsSectionCollapsed: boolean;
   isCliSectionCollapsed: boolean;
   workspaceTasks: Array<WorkspaceTaskSummary & { projectId: string; projectName: string; projectRootPath: string }>;
   workspaceSpecs: Array<WorkspaceSpecSummary & { projectId: string; projectName: string; projectRootPath: string }>;
@@ -217,14 +216,13 @@ export type WorkspaceSidebarProps = {
   onChooseProject: () => void;
   onCloseProject: () => void;
   onRemoveProject: (projectRoot: string) => void;
-  onUnmountRemoteMount: (mountPoint: string) => Promise<AppState | null>;
-  onChooseProjectAtPath: (defaultPath: string, title?: string) => Promise<void>;
   onRefresh: () => void;
   onRefreshCatalog: () => void;
   onResetWorkspaces: () => void;
   onOpenCreateAgent: (defaults?: CreateAgentDialogDefaults) => void;
   onOpenCreateTerminal: (defaults: CreateTerminalDialogDefaults) => void;
   onResumeThread: (projectId: string, payload: CreateAgentPayload) => Promise<void>;
+  onQuickLaunchAgent: (projectId: string) => void;
   onArchiveThread: (projectId: string, ref: ExternalHarnessContextRef) => Promise<void>;
   onLaunchWorkspaceTerminal: (projectId: string, payload: CreateTerminalPayload) => void;
   onLaunchWorkspaceScript: (projectId: string, defaults: CreateTerminalDialogDefaults) => void;
@@ -272,9 +270,6 @@ export type WorkspaceSidebarProps = {
   onInstallTool: (toolId: string) => void;
   onRemoveTool: (toolId: string) => void;
   onCollapsedWorkspaceIdsChange: Dispatch<SetStateAction<Record<string, boolean>>>;
-  onRemoteMountsSectionCollapsedChange: Dispatch<SetStateAction<boolean>>;
-  onPortsSectionCollapsedChange: Dispatch<SetStateAction<boolean>>;
-  onChatbotsSectionCollapsedChange: Dispatch<SetStateAction<boolean>>;
   onCliSectionCollapsedChange: Dispatch<SetStateAction<boolean>>;
   onOpenCliSettings: () => void;
   onToggleCollapsed: () => void;

@@ -5,6 +5,7 @@ import type {
   ExternalHarnessSessionSummary,
   ImportedContextBundleSummary,
   ProjectSummary,
+  ProjectVersionControl,
   TerminalPreset,
   WorkspaceGitStatusSummary,
   SetWorkspaceUpstreamPayload,
@@ -17,7 +18,9 @@ import type {
   WorkspaceTaskBoard,
   WorkspaceTaskSummary
 } from "@shared/appTypes";
+import { assertGitProject, isGitProject } from "@shared/projectVersionControl";
 import { createTaskDraft, deriveTaskTitle } from "@shared/taskDraft";
+import { resolveWorkspaceFileViewKind } from "@shared/workspaceFileViewKind";
 import type { WorkspaceImageFileContent } from "@shared/types/workspaceFile.types";
 import fs from "node:fs/promises";
 import { getProjectFile } from "../noraPaths";
@@ -48,13 +51,19 @@ export type WorkspaceActionsDependencies = {
   readWorkspaceTextFile: (target: WorkspaceTarget, projectId: string, filePath: string) => Promise<string>;
   resolveExistingWorkspaceAbsolutePath: (target: WorkspaceTarget, projectId: string, filePath: string) => Promise<string>;
   readWorkspaceBinaryFile: (target: WorkspaceTarget, projectId: string, filePath: string) => Promise<Buffer>;
+  resolveLocalWorkspaceFilePath: (target: WorkspaceTarget, projectId: string, filePath: string) => Promise<string>;
   getWorkspaceImageMimeType: (filePath: string) => string;
-  listWorkspaceTrackedAndUntrackedFiles: (target: WorkspaceTarget) => Promise<string[]>;
+  listWorkspaceFilePaths: (target: WorkspaceTarget, versionControl: ProjectVersionControl) => Promise<string[]>;
   listImportedContextBundles: (target: WorkspaceTarget, projectId: string) => Promise<ImportedContextBundleSummary[]>;
-  listWorkspaceDirectories: (target: WorkspaceTarget) => Promise<string[]>;
+  listWorkspaceDirectories: (target: WorkspaceTarget, versionControl: ProjectVersionControl) => Promise<string[]>;
   listWorkspaceSpecs: (target: WorkspaceTarget, projectId: string) => Promise<WorkspaceSpecSummary[]>;
   listWorkspaceNotes: (target: WorkspaceTarget, projectId: string) => Promise<WorkspaceNoteSummary[]>;
-  searchWorkspaceFiles: (target: WorkspaceTarget, query: string, caseSensitive: boolean) => Promise<WorkspaceSearchResult[]>;
+  searchWorkspaceFiles: (
+    target: WorkspaceTarget,
+    query: string,
+    caseSensitive: boolean,
+    versionControl: ProjectVersionControl
+  ) => Promise<WorkspaceSearchResult[]>;
   statWorkspacePath: (target: WorkspaceTarget, projectId: string, filePath: string) => Promise<WorkspacePathStatResult>;
   execGit: (target: WorkspaceTarget, args: string[], maxBuffer?: number) => Promise<{ stdout: string; stderr: string }>;
   listWorkspaceTasks: (target: WorkspaceTarget, projectId: string) => Promise<WorkspaceTaskSummary[]>;
@@ -77,6 +86,17 @@ export type WorkspaceActionsDependencies = {
   listArchivedExternalHarnessThreadKeys: (projectId: string) => Promise<Set<string>>;
   archiveExternalHarnessThread: (projectId: string, ref: ExternalHarnessContextRef, archivedAt: string) => Promise<void>;
   saveProject: (project: ProjectSummary) => Promise<void>;
+};
+
+const EMPTY_WORKSPACE_GIT_STATUS_SUMMARY: WorkspaceGitStatusSummary = {
+  branch: null,
+  upstreamBranch: null,
+  hasConfiguredUpstream: false,
+  remoteBranches: [],
+  aheadCount: 0,
+  behindCount: 0,
+  lines: [],
+  truncated: false
 };
 
 export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
@@ -104,14 +124,23 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
     };
   };
 
+  const resolveWorkspaceFileForExternalOpen = async (payload: { projectId: string; path: string; rootPath?: string }): Promise<string> => {
+    // Only document formats Nora cannot render may be handed to the OS, so this can never launch scripts or apps.
+    if (resolveWorkspaceFileViewKind(payload.path) !== "external") {
+      throw new Error(`Nora only opens document files such as PDFs in the default app, not ${payload.path}.`);
+    }
+    const project = await deps.resolveProjectSummaryById(payload.projectId);
+    return deps.resolveLocalWorkspaceFilePath(deps.resolveWorkspaceFileTarget(project, payload.rootPath), project.id, payload.path);
+  };
+
   const listWorkspaceFiles = async (projectId: string, rootPath?: string): Promise<string[]> => {
     const project = await deps.resolveProjectSummaryById(projectId);
-    return deps.listWorkspaceTrackedAndUntrackedFiles(deps.resolveWorkspaceFileTarget(project, rootPath));
+    return deps.listWorkspaceFilePaths(deps.resolveWorkspaceFileTarget(project, rootPath), project.versionControl);
   };
 
   const listWorkspaceDirectoriesByProject = async (projectId: string, rootPath?: string): Promise<string[]> => {
     const project = await deps.resolveProjectSummaryById(projectId);
-    return deps.listWorkspaceDirectories(deps.resolveWorkspaceFileTarget(project, rootPath));
+    return deps.listWorkspaceDirectories(deps.resolveWorkspaceFileTarget(project, rootPath), project.versionControl);
   };
 
   const listImportedContextBundlesByProject = async (
@@ -179,7 +208,8 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
     return deps.searchWorkspaceFiles(
       deps.resolveWorkspaceFileTarget(project, payload.rootPath),
       payload.query,
-      payload.caseSensitive === true
+      payload.caseSensitive === true,
+      project.versionControl
     );
   };
 
@@ -190,6 +220,9 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
 
   const getWorkspaceGitStatusSummary = async (payload: { projectId: string; rootPath?: string }): Promise<WorkspaceGitStatusSummary> => {
     const project = await deps.resolveProjectSummaryById(payload.projectId);
+    if (!isGitProject(project)) {
+      return EMPTY_WORKSPACE_GIT_STATUS_SUMMARY;
+    }
     const target = deps.resolveWorkspaceFileTarget(project, payload.rootPath);
     try {
       const { stdout: branchStdout } = await deps.execGit(target, ["rev-parse", "--abbrev-ref", "HEAD"], 64 * 1024);
@@ -232,7 +265,7 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
       const lines = rawLines.slice(0, deps.maxWorkspaceGitStatusLines);
       return { branch, upstreamBranch, hasConfiguredUpstream, remoteBranches, aheadCount, behindCount, lines, truncated };
     } catch {
-      return { branch: null, upstreamBranch: null, hasConfiguredUpstream: false, remoteBranches: [], aheadCount: 0, behindCount: 0, lines: [], truncated: false };
+      return EMPTY_WORKSPACE_GIT_STATUS_SUMMARY;
     }
   };
 
@@ -242,6 +275,7 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
     rootPath?: string;
   }): Promise<AppState> => {
     const project = await deps.resolveProjectSummaryById(payload.projectId);
+    assertGitProject(project);
     const target = deps.resolveWorkspaceFileTarget(project, payload.rootPath);
     const branch = payload.branch.trim();
     if (!branch) {
@@ -254,6 +288,7 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
 
   const setWorkspaceUpstream = async (payload: SetWorkspaceUpstreamPayload): Promise<WorkspaceGitStatusSummary> => {
     const project = await deps.resolveProjectSummaryById(payload.projectId);
+    assertGitProject(project);
     const target = deps.resolveWorkspaceFileTarget(project, payload.rootPath);
     const remoteBranch = payload.remoteBranch.trim();
     const { stdout } = await deps.execGit(target, ["rev-parse", "--abbrev-ref", "HEAD"], 64 * 1024);
@@ -355,6 +390,7 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
     readWorkspaceFile,
     resolveWorkspaceStatePath,
     readWorkspaceImageFile,
+    resolveWorkspaceFileForExternalOpen,
     listWorkspaceFiles,
     listImportedContextBundlesByProject,
     listExternalHarnessContextSessionsByProject,

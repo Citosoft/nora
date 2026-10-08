@@ -1,3 +1,4 @@
+import { settingAnchorAttributes } from "@/components/app/logic/settingsSearch";
 import { getTerminalFontFamily, getTerminalPreviewPalette } from "@/components/app/logic/terminalPresentation";
 import type { ResolvedTheme, TerminalFontId, TerminalThemeId } from "@/components/app/types";
 import { ForgeProviderIcon } from "@/components/app/views/ForgeProviderIcon";
@@ -55,17 +56,26 @@ export function TerminalThemePreview({
   );
 }
 
+/** Applied to setting containers that search can reveal (see `useSettingRowReveal`). */
+export const settingRevealHighlightClassName = "transition-colors duration-500 data-[search-revealed=true]:bg-accent/50";
+
 export function SettingRow({
   title,
+  searchTitle,
   description,
   control
 }: {
   title: ReactNode;
+  /** Search index title; defaults to `title` when it is a string. */
+  searchTitle?: string;
   description: string;
   control: ReactNode;
 }) {
   return (
-    <div className="grid gap-4 border-b border-border/60 py-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+    <div
+      {...settingAnchorAttributes(searchTitle ?? (typeof title === "string" ? title : undefined))}
+      className={`grid gap-4 rounded-[6px] border-b border-border/60 py-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start ${settingRevealHighlightClassName}`}
+    >
       <div className="min-w-0">
         <div className="text-sm font-medium text-foreground">{title}</div>
         <div className="mt-1 text-sm leading-6 text-muted-foreground">{description}</div>

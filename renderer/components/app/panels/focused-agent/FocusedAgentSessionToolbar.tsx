@@ -1,6 +1,8 @@
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { statusVariant } from "@/components/app/logic/utils";
 import type { FocusedAgentSessionToolbarProps } from "@/components/app/types/focusedAgentSessionChrome.types";
+import { SessionBranchSelect } from "@/components/app/shared/SessionBranchSelect";
+import { SessionFolderBadge } from "@/components/app/shared/SessionFolderBadge";
 import { SessionPidBadge } from "@/components/app/shared/SessionPidBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +13,7 @@ export const FocusedAgentSessionToolbar = ({
   agent,
   terminal,
   focusedSession,
+  showBranch,
   onToggleSessionInfo,
   onToggleContext,
   onClearTerminal,
@@ -18,6 +21,12 @@ export const FocusedAgentSessionToolbar = ({
   onDestroy
 }: FocusedAgentSessionToolbarProps) => (
   <div className="pointer-events-none absolute right-6 top-3 z-20 flex items-center gap-2">
+    {!compact && focusedSession ? (
+      <div className="pointer-events-auto flex min-w-0 items-center gap-2">
+        <SessionFolderBadge workspace={focusedSession.workspace} />
+        {showBranch ? <SessionBranchSelect session={focusedSession} /> : null}
+      </div>
+    ) : null}
     {compact ? (
       <Badge variant={statusVariant(focusedSession?.status || "stopped")} className="pointer-events-auto px-1.5 py-0 text-[10px]">
         {focusedSession?.status || "stopped"}

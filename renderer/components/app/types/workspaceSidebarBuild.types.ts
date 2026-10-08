@@ -3,7 +3,7 @@ import type { FileEditorState, UiState } from "@/components/app/types";
 import type { UseWorkspaceContentControllerResult } from "@/components/app/types/appHooks.types";
 import type { SettingsGroup } from "@/components/app/types/settings.types";
 import type { WorkspaceSidebarProps } from "@/components/app/types/workflow.types";
-import type { AppState, CreateTerminalPayload, WorkspaceSummary } from "@shared/appTypes";
+import type { AppSettings, AppState, CreateTerminalPayload, WorkspaceSummary } from "@shared/appTypes";
 import type { Dispatch, SetStateAction } from "react";
 
 export type WorkspaceSidebarBuildDeps = Pick<
@@ -43,10 +43,7 @@ export type WorkspaceSidebarBuildDeps = Pick<
   handleChooseWorkspaceAtPath: (defaultPath: string, title?: string) => Promise<void>;
   handleOpenWorkspaceBrowser: (projectId: string, url?: string) => void;
   handleRemoveWorkspace: (projectRoot: string) => Promise<void>;
-  isChatbotsSectionCollapsed: boolean;
   isCliSectionCollapsed: boolean;
-  isPortsSectionCollapsed: boolean;
-  isRemoteMountsSectionCollapsed: boolean;
   isWorkspaceSidebarCollapsed: boolean;
   launchTerminalInWorkspace: (projectId: string, payload: CreateTerminalPayload) => Promise<void>;
   setIsCreatePullRequestDialogOpen: Dispatch<SetStateAction<boolean>>;
@@ -60,16 +57,14 @@ export type WorkspaceSidebarBuildDeps = Pick<
   setCollapsedWorkspaceIds: Dispatch<SetStateAction<Record<string, boolean>>>;
   setFileEditorState: Dispatch<SetStateAction<FileEditorState | null>>;
   setIsCenterDiffExpanded: Dispatch<SetStateAction<boolean>>;
-  setIsChatbotsSectionCollapsed: Dispatch<SetStateAction<boolean>>;
   setIsCliSectionCollapsed: Dispatch<SetStateAction<boolean>>;
-  setIsPortsSectionCollapsed: Dispatch<SetStateAction<boolean>>;
-  setIsRemoteMountsSectionCollapsed: Dispatch<SetStateAction<boolean>>;
   setIsWorkspaceSidebarCollapsed: Dispatch<SetStateAction<boolean>>;
   setWorkspaceSessionActiveViewId: Dispatch<SetStateAction<string | null>>;
   activeProjectId: string | null;
   agentCatalog: AppState["agentCatalog"];
   terminalPresets: WorkspaceSidebarProps["terminalPresets"];
   terminalQuickLaunchDefaults: WorkspaceSidebarProps["terminalQuickLaunchDefaults"];
+  preferredAgentToolId: AppSettings["preferredAgentToolId"];
   activeWorkspaceContentTab: "file" | "diff" | null;
   uiCommands: Pick<
     AppUiCommands,

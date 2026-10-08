@@ -1,6 +1,7 @@
 import type { ProjectSummary } from "@shared/appTypes";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { parseStoredProjectSummaries } from "./helpers/storedProjectSummary";
 
 export class ProjectIndexStore {
   constructor(
@@ -12,7 +13,7 @@ export class ProjectIndexStore {
     try {
       const raw = await fs.readFile(this.indexPath, "utf8");
       const parsed = JSON.parse(raw) as unknown;
-      return Array.isArray(parsed) ? parsed.filter(isProjectSummary) : [];
+      return parseStoredProjectSummaries(parsed);
     } catch {
       return [];
     }
@@ -48,23 +49,4 @@ export class ProjectIndexStore {
     }).catch(() => {});
     return next;
   }
-}
-
-function isProjectSummary(value: unknown): value is ProjectSummary {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const candidate = value as Partial<ProjectSummary>;
-  return (
-    typeof candidate.id === "string" &&
-    typeof candidate.name === "string" &&
-    typeof candidate.rootPath === "string" &&
-    typeof candidate.gitCommonDir === "string" &&
-    typeof candidate.baseBranch === "string" &&
-    typeof candidate.platform === "string" &&
-    typeof candidate.createdAt === "string" &&
-    typeof candidate.updatedAt === "string" &&
-    typeof candidate.lastOpenedAt === "string"
-  );
 }

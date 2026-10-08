@@ -27,11 +27,9 @@ export function useSignedInWorkspaceViewMount(): ReactElement | null {
     const workspaceTrack = layout.isWorkspaceSidebarCollapsed
       ? `${COLLAPSED_SIDEBAR_WIDTH}px`
       : `${layout.workspaceSidebarWidth}px`;
-    const changesTrack = layout.hasActiveWorkspace
-      ? layout.isChangesSidebarCollapsed
-        ? `${COLLAPSED_SIDEBAR_WIDTH}px`
-        : `${layout.changesSidebarWidth}px`
-      : "0px";
+    // A collapsed changes sidebar is fully hidden; the title bar toggle reopens it.
+    const changesTrack =
+      layout.hasActiveWorkspace && !layout.isChangesSidebarCollapsed ? `${layout.changesSidebarWidth}px` : "0px";
     const gridTemplateColumns = layout.sidebarsSwapped
       ? `${changesTrack} minmax(0, 1fr) ${workspaceTrack}`
       : `${workspaceTrack} minmax(0, 1fr) ${changesTrack}`;

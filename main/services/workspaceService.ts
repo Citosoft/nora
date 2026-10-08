@@ -15,6 +15,7 @@ export function createWorkspaceService(deps: WorkspaceServiceDeps): WorkspaceSer
     readWorkspaceFile: deps.readWorkspaceFile,
     resolveWorkspaceStatePath: deps.resolveWorkspaceStatePath,
     readWorkspaceImageFile: deps.readWorkspaceImageFile,
+    resolveWorkspaceFileForExternalOpen: deps.resolveWorkspaceFileForExternalOpen,
     listWorkspaceFiles: deps.listWorkspaceFiles,
     listWorkspaceDirectories: deps.listWorkspaceDirectories,
     listWorkspaceSpecs: deps.listWorkspaceSpecs,

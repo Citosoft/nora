@@ -3,8 +3,10 @@ import { noraIntegrationClient } from "@/components/app/clients/noraIntegrationC
 import { noraToolingManagementClient } from "@/components/app/clients/noraToolingManagementClient";
 import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
 import { noraWorkspaceManagementClient } from "@/components/app/clients/noraWorkspaceManagementClient";
+import { createQuickAgentPayload, resolveDefaultAgentTool } from "@/components/app/logic/agentQuickLaunch";
 import { createOpenTaskInWorkspaceHandler } from "@/components/app/logic/createOpenTaskInWorkspaceHandler";
 import { createQuickTerminalDialogDefaults, createQuickTerminalPayload } from "@/components/app/logic/terminalQuickLaunch";
+import { createWorkspaceTerminalNavigation } from "@/components/app/logic/workspaceTerminalNavigation";
 import type { WorkspaceSidebarProps } from "@/components/app/types/component.types";
 import type { CreateTerminalPayload } from "@shared/appTypes";
 import type { WorkspaceSidebarBuildDeps } from "@/components/app/types/workspaceSidebarBuild.types";
@@ -16,6 +18,8 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
     openTaskEditor: d.openTaskEditor,
     activeProjectId: d.activeProjectId
   });
+  const terminalNavigation = createWorkspaceTerminalNavigation(d);
+  const defaultAgentTool = resolveDefaultAgentTool(d.agentCatalog, d.preferredAgentToolId);
   const runInWorkspace = (projectId: string, action: () => void) => {
     if (d.activeProjectId === projectId) {
       action();
@@ -35,6 +39,7 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
     gitlabHost: d.gitlabHost,
     terminalPresets: d.terminalPresets,
     terminalQuickLaunchDefaults: d.terminalQuickLaunchDefaults,
+    defaultAgentTool,
     agentsNeedingAttention: d.agentsNeedingAttention,
     focusedWorkspace: d.focusedWorkspace,
     focusedAgent: d.focusedAgent,
@@ -42,9 +47,6 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
     removingWorkspaceRoots: d.removingWorkspaceRoots,
     collapsed: d.isWorkspaceSidebarCollapsed,
     collapsedWorkspaceIds: d.collapsedWorkspaceIds,
-    isRemoteMountsSectionCollapsed: d.isRemoteMountsSectionCollapsed,
-    isPortsSectionCollapsed: d.isPortsSectionCollapsed,
-    isChatbotsSectionCollapsed: d.isChatbotsSectionCollapsed,
     isCliSectionCollapsed: d.isCliSectionCollapsed,
     workspaceTasks: d.workspaceTasks,
     workspaceSpecs: d.workspaceSpecs,
@@ -65,8 +67,6 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
     onRemoveProject: (projectRoot) => {
       void d.handleRemoveWorkspace(projectRoot);
     },
-    onUnmountRemoteMount: (mountPoint) => d.safely(() => noraWorkspaceManagementClient.unmountRemoteMount(mountPoint)),
-    onChooseProjectAtPath: (defaultPath, title) => d.handleChooseWorkspaceAtPath(defaultPath, title),
     onRefresh: () => d.safely(() => noraWorkspaceManagementClient.refreshWorkspace()),
     onRefreshCatalog: () => d.safely(() => noraToolingManagementClient.refreshToolCatalog()),
     onResetWorkspaces: d.uiCommands.openResetWorkspacesDialog,
@@ -78,6 +78,17 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
         return;
       }
       await d.safely(() => noraSessionClient.createAgent(payload));
+    },
+    onQuickLaunchAgent: (projectId) => {
+      if (!defaultAgentTool) {
+        // Nothing usable to launch; the dialog explains how to install or enable a harness.
+        runInWorkspace(projectId, () => d.uiCommands.openCreateAgentDialog());
+        return;
+      }
+      const payload = createQuickAgentPayload(defaultAgentTool.id);
+      void d.focusWorkspaceWithRecovery(projectId).then((focused) =>
+        focused ? d.safely(() => noraSessionClient.createAgent(payload)) : null
+      );
     },
     onArchiveThread: async (projectId, ref) => {
       await noraWorkspaceClient.archiveExternalHarnessThread({ projectId, ref });
@@ -94,14 +105,7 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
       });
     },
     onOpenWorkspaceTerminalPresets: (projectId) => d.uiCommands.openWorkspaceTerminalPresetsDialog(projectId),
-    onOpenWorkspaceBrowser: (projectId, url) => {
-      void d.focusWorkspaceWithRecovery(projectId).then((next) => {
-        if (!next) {
-          return;
-        }
-        d.handleOpenWorkspaceBrowser(projectId, url);
-      });
-    },
+    onOpenWorkspaceBrowser: terminalNavigation.openWorkspaceBrowser,
     onFocusWorkspace: (projectId) => {
       void d.focusWorkspaceWithRecovery(projectId);
     },
@@ -207,15 +211,7 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
       d.uiCommands.clearSessionTabFocus();
       void d.safely(() => noraSessionClient.focusAgent(agentId));
     },
-    onFocusTerminal: (sessionId) => {
-      d.setIsTaskBoardOpen(false);
-      d.setIsSpecBrowserOpen(false);
-      d.setIsNoteBrowserOpen(false);
-      d.setTaskEditorState(null);
-      d.setWorkspaceSessionActiveViewId(null);
-      d.uiCommands.clearSessionTabFocus();
-      void d.safely(() => noraSessionClient.focusTerminal(sessionId));
-    },
+    onFocusTerminal: terminalNavigation.focusTerminal,
     onFocusWorkspaceAgent: (projectId, agentId) =>
       d.focusWorkspaceWithRecovery(projectId).then((next) =>
         next
@@ -239,26 +235,7 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
     onRestartAgent: (agentId) => d.safely(() => noraSessionClient.restartAgent(agentId)),
     onDestroyAgentRequest: (agentId) => d.uiCommands.setDestroyAgentId(agentId),
     onRenameTerminal: (sessionId, nextName) => d.safely(() => noraSessionClient.renameTerminal(sessionId, nextName)),
-    onFocusWorkspaceTerminal: (projectId, sessionId) =>
-      d.focusWorkspaceWithRecovery(projectId).then((next) =>
-        next
-          ? next.focusedTerminalId === sessionId
-            ? (d.setIsTaskBoardOpen(false),
-              d.setIsSpecBrowserOpen(false),
-              d.setIsNoteBrowserOpen(false),
-              d.setTaskEditorState(null),
-              d.setWorkspaceSessionActiveViewId(null),
-              d.uiCommands.clearBrowserAndForgeFocus(),
-              Promise.resolve(next))
-            : (d.setIsTaskBoardOpen(false),
-              d.setIsSpecBrowserOpen(false),
-              d.setIsNoteBrowserOpen(false),
-              d.setTaskEditorState(null),
-              d.setWorkspaceSessionActiveViewId(null),
-              d.uiCommands.clearBrowserAndForgeFocus(),
-              d.safely(() => noraSessionClient.focusTerminal(sessionId)))
-          : null
-      ),
+    onFocusWorkspaceTerminal: terminalNavigation.focusWorkspaceTerminal,
     onDestroyTerminal: (sessionId) => d.safely(() => noraSessionClient.destroyTerminal(sessionId)),
     onOpenTask,
     onCreateTask: (projectId) => {
@@ -344,9 +321,6 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
         })
       ),
     onCollapsedWorkspaceIdsChange: d.setCollapsedWorkspaceIds,
-    onRemoteMountsSectionCollapsedChange: d.setIsRemoteMountsSectionCollapsed,
-    onPortsSectionCollapsedChange: d.setIsPortsSectionCollapsed,
-    onChatbotsSectionCollapsedChange: d.setIsChatbotsSectionCollapsed,
     onCliSectionCollapsedChange: d.setIsCliSectionCollapsed,
     onOpenCliSettings: () => d.openSettingsPage("cli"),
     onToggleCollapsed: () => d.setIsWorkspaceSidebarCollapsed((current) => !current)
@@ -360,6 +334,7 @@ type WorkspaceSidebarRuntimeValue = Pick<
   | "gitlabHost"
   | "terminalPresets"
   | "terminalQuickLaunchDefaults"
+  | "defaultAgentTool"
   | "agentsNeedingAttention"
   | "focusedWorkspace"
   | "focusedAgent"
@@ -386,14 +361,8 @@ type WorkspaceSidebarUiValue = Pick<
   WorkspaceSidebarProps,
   | "collapsed"
   | "collapsedWorkspaceIds"
-  | "isRemoteMountsSectionCollapsed"
-  | "isPortsSectionCollapsed"
-  | "isChatbotsSectionCollapsed"
   | "isCliSectionCollapsed"
   | "onCollapsedWorkspaceIdsChange"
-  | "onRemoteMountsSectionCollapsedChange"
-  | "onPortsSectionCollapsedChange"
-  | "onChatbotsSectionCollapsedChange"
   | "onCliSectionCollapsedChange"
   | "onToggleCollapsed"
 >;
@@ -417,6 +386,7 @@ export function WorkspaceSidebarProvider({
     gitlabHost: value.gitlabHost,
     terminalPresets: value.terminalPresets,
     terminalQuickLaunchDefaults: value.terminalQuickLaunchDefaults,
+    defaultAgentTool: value.defaultAgentTool,
     agentsNeedingAttention: value.agentsNeedingAttention,
     focusedWorkspace: value.focusedWorkspace,
     focusedAgent: value.focusedAgent,
@@ -441,14 +411,8 @@ export function WorkspaceSidebarProvider({
   const uiValue: WorkspaceSidebarUiValue = {
     collapsed: value.collapsed,
     collapsedWorkspaceIds: value.collapsedWorkspaceIds,
-    isRemoteMountsSectionCollapsed: value.isRemoteMountsSectionCollapsed,
-    isPortsSectionCollapsed: value.isPortsSectionCollapsed,
-    isChatbotsSectionCollapsed: value.isChatbotsSectionCollapsed,
     isCliSectionCollapsed: value.isCliSectionCollapsed,
     onCollapsedWorkspaceIdsChange: value.onCollapsedWorkspaceIdsChange,
-    onRemoteMountsSectionCollapsedChange: value.onRemoteMountsSectionCollapsedChange,
-    onPortsSectionCollapsedChange: value.onPortsSectionCollapsedChange,
-    onChatbotsSectionCollapsedChange: value.onChatbotsSectionCollapsedChange,
     onCliSectionCollapsedChange: value.onCliSectionCollapsedChange,
     onToggleCollapsed: value.onToggleCollapsed
   };
@@ -456,14 +420,13 @@ export function WorkspaceSidebarProvider({
     onChooseProject: value.onChooseProject,
     onCloseProject: value.onCloseProject,
     onRemoveProject: value.onRemoveProject,
-    onUnmountRemoteMount: value.onUnmountRemoteMount,
-    onChooseProjectAtPath: value.onChooseProjectAtPath,
     onRefresh: value.onRefresh,
     onRefreshCatalog: value.onRefreshCatalog,
     onResetWorkspaces: value.onResetWorkspaces,
     onOpenCreateAgent: value.onOpenCreateAgent,
     onOpenCreateTerminal: value.onOpenCreateTerminal,
     onResumeThread: value.onResumeThread,
+    onQuickLaunchAgent: value.onQuickLaunchAgent,
     onArchiveThread: value.onArchiveThread,
     onLaunchWorkspaceTerminal: value.onLaunchWorkspaceTerminal,
     onLaunchWorkspaceScript: value.onLaunchWorkspaceScript,

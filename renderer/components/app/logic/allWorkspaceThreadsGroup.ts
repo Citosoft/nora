@@ -1,6 +1,7 @@
 import type {
   AllThreadsGroupBy,
   AllThreadsGroupSection,
+  AllThreadsVisibleGroupSection,
   AllWorkspaceThreadListEntry
 } from "@/components/app/types/workspaceSidebarAllThreads.types";
 
@@ -59,3 +60,18 @@ export const buildAllThreadsGroupSections = (
     }))
     .sort((left, right) => collator.compare(left.groupLabel, right.groupLabel));
 };
+
+export const limitAllThreadsGroupSections = (
+  sections: AllThreadsGroupSection[],
+  expandedGroupKeys: ReadonlySet<string>,
+  visibleLimit: number
+): AllThreadsVisibleGroupSection[] =>
+  sections.map((section) => {
+    const isExpanded = expandedGroupKeys.has(section.groupKey);
+    return {
+      ...section,
+      visibleEntries: isExpanded ? section.entries : section.entries.slice(0, visibleLimit),
+      overflowEntryCount: Math.max(section.entries.length - visibleLimit, 0),
+      isExpanded
+    };
+  });

@@ -1,6 +1,7 @@
 import { PROJECT_SCAFFOLD_FRAMEWORKS } from "@/components/app/constants/projectScaffoldRegistry";
 import { resolveProjectScaffoldOptionLogoUrl } from "@/components/app/constants/projectScaffoldOptionLogos";
 import { ProductIcon } from "@/components/app/shared/ProductIcon";
+import { resolveDefaultAgentTool } from "@/components/app/logic/agentQuickLaunch";
 import { groupProjectScaffoldComponentOptions } from "@/components/app/logic/projectScaffoldOptionGroups";
 import {
   deleteProjectScaffoldFavorite,
@@ -143,13 +144,10 @@ export function AddWorkspaceDialog({
       ].some((value) => value.toLowerCase().includes(query));
     });
   }, [frameworkSearch, selectedFrameworkCategory]);
-  const defaultToolId = useMemo(() => {
-    if (preferredAgentToolId && availableTools.some((tool) => tool.id === preferredAgentToolId)) {
-      return preferredAgentToolId;
-    }
-
-    return availableTools[0]?.id ?? "";
-  }, [availableTools, preferredAgentToolId]);
+  const defaultToolId = useMemo(
+    () => resolveDefaultAgentTool(availableTools, preferredAgentToolId)?.id ?? "",
+    [availableTools, preferredAgentToolId]
+  );
   const [selectedToolId, setSelectedToolId] = useState(defaultToolId);
   const stepIndex = SCAFFOLD_STEPS.indexOf(step);
   const previousStep = stepIndex > 0 ? SCAFFOLD_STEPS[stepIndex - 1] : null;
@@ -308,7 +306,7 @@ export function AddWorkspaceDialog({
           <DialogDescription>
             {isScaffoldWizardOpen
               ? "Choose a framework and options, then create a git-initialized project for an agent to scaffold."
-              : "Choose whether to open an existing repository or scaffold a new project with an agent."}
+              : "Choose whether to open an existing folder or scaffold a new project with an agent."}
           </DialogDescription>
         </DialogHeader>
         <DialogBody className={isScaffoldWizardOpen ? "flex min-h-0 flex-col gap-5" : "space-y-3"}>
@@ -658,7 +656,7 @@ export function AddWorkspaceDialog({
                 <div className="min-w-0">
                   <div className="text-sm font-medium">Local folder</div>
                   <div className="mt-1 text-sm text-muted-foreground">
-                    Pick a repository from a local disk or an already mounted network drive.
+                    Pick a project folder from a local disk or an already mounted network drive.
                   </div>
                 </div>
               </button>
@@ -673,7 +671,7 @@ export function AddWorkspaceDialog({
                 <div className="min-w-0">
                   <div className="text-sm font-medium">Remote over SSH</div>
                   <div className="mt-1 text-sm text-muted-foreground">
-                    Mount an SSH host, then choose a repository on it as if it were local.
+                    Mount an SSH host, then choose a project folder on it as if it were local.
                   </div>
                 </div>
               </button>

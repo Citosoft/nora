@@ -17,6 +17,7 @@ export type FocusedAgentDetectedPortRow = {
 export type FocusedAgentWorkspaceHomeProps = {
   workspace: WorkspaceSummary;
   workspaceProjectFaviconUrl: string | null;
+  workspaceProjectHomepageUrl: string | null;
   workspaceSwitcherShortcutLabel: string | null;
   activeSessionCount: number;
   workspaceBrowserTabs: BrowserTabState[];

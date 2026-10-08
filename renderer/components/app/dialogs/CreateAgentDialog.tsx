@@ -1,3 +1,4 @@
+import { resolveDefaultAgentTool } from "@/components/app/logic/agentQuickLaunch";
 import { AGENT_ROLE_OPTIONS, getAgentRolePrompt } from "@/components/app/logic/agentRoles";
 import { createLaunchTargetFormState, launchTargetModeFromTarget, resolveSupportedLaunchTargetMode } from "@/components/app/logic/createAgentLaunchTarget";
 import { useWorkspaceAgentContextSources } from "@/components/app/hooks/useWorkspaceAgentContextSources";
@@ -12,6 +13,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { isAgentToolAvailable } from "@shared/agentToolState";
+import { isGitProject } from "@shared/projectVersionControl";
 import { resolveManagedAgentLaunchOptions } from "@shared/agentStartupCapabilities";
 import type {
   CreateAgentPayload,
@@ -98,6 +100,7 @@ export function CreateAgentDialog({
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [selectedTaskPath, setSelectedTaskPath] = useState("");
   const [selectedRoleId, setSelectedRoleId] = useState<AgentRoleId>("developer");
+  const supportsGitLaunchTargets = isGitProject(project);
   const currentBranchLabel = activeBranch || project?.baseBranch || "unknown";
   const [formState, setFormState] = useState<CreateAgentPayload>({
     toolId: "",
@@ -151,9 +154,10 @@ export function CreateAgentDialog({
         defaults?.target?.kind === "session-default"
           ? defaultTarget
           : defaults?.target ?? defaultTarget;
-      const initialMode = defaults?.target
-        ? launchTargetModeFromTarget(initialTarget)
-        : resolveSupportedLaunchTargetMode(defaultLaunchTargetMode, worktrees, projectBranches);
+      const initialMode = resolveSupportedLaunchTargetMode(
+        defaults?.target ? launchTargetModeFromTarget(initialTarget) : defaultLaunchTargetMode,
+        { worktrees, projectBranches, isGitProject: supportsGitLaunchTargets }
+      );
       const initialLaunchState = createLaunchTargetFormState(
         initialMode,
         worktrees,
@@ -163,8 +167,7 @@ export function CreateAgentDialog({
         ? findPreparePresetEntryByCommand(preparePresetEntries, defaultWorktreePrepareCommand)
         : null;
       const initialToolId = defaults?.toolId
-        ?? (preferredAgentToolId && detectedTools.some((tool) => tool.id === preferredAgentToolId) ? preferredAgentToolId : null)
-        ?? detectedTools[0]?.id
+        ?? resolveDefaultAgentTool(detectedTools, preferredAgentToolId)?.id
         ?? "";
       setFormState({
         toolId: initialToolId,
@@ -201,6 +204,7 @@ export function CreateAgentDialog({
     preferredAgentToolId,
     worktrees,
     projectBranches,
+    supportsGitLaunchTargets,
     preparePresetEntries,
     defaults?.initialWizardStepIndex
   ]);
@@ -258,7 +262,9 @@ export function CreateAgentDialog({
             ? formState.branchCheckout?.branchName.trim()
               ? `Create branch • ${formState.branchCheckout.branchName.trim()}`
               : "Create new branch"
-            : `Current branch • ${currentBranchLabel}`;
+            : supportsGitLaunchTargets
+              ? `Current branch • ${currentBranchLabel}`
+              : "Project folder";
 
   const isWorkspaceStepBlocked =
     (launchTargetMode === "existing" && formState.target.kind === "existing" && !formState.target.worktreeId) ||
@@ -459,13 +465,24 @@ export function CreateAgentDialog({
                   <div className="space-y-5">
                     <Field label="Launch target">
                       <Select value={launchTargetMode} onChange={(event) => handleLaunchTargetChange(event.target.value)}>
-                        <option value="current-branch">Current branch [{currentBranchLabel}]</option>
-                        <option value="new">New worktree</option>
-                        {worktrees.length ? <option value="existing">Existing worktree</option> : null}
-                        <option value="branch-existing">Checkout existing branch</option>
-                        <option value="branch-new">Create and checkout new branch</option>
+                        {supportsGitLaunchTargets ? (
+                          <>
+                            <option value="current-branch">Current branch [{currentBranchLabel}]</option>
+                            <option value="new">New worktree</option>
+                            {worktrees.length ? <option value="existing">Existing worktree</option> : null}
+                            <option value="branch-existing">Checkout existing branch</option>
+                            <option value="branch-new">Create and checkout new branch</option>
+                          </>
+                        ) : (
+                          <option value="current-branch">Project folder</option>
+                        )}
                       </Select>
                     </Field>
+                    {!supportsGitLaunchTargets ? (
+                      <p className="text-xs text-muted-foreground">
+                        This folder is not a git repository, so agents run directly in it without worktrees or branches.
+                      </p>
+                    ) : null}
                     {launchTargetMode === "existing" ? (
                       <Field label="Existing worktree">
                         <Select
@@ -558,6 +575,7 @@ export function CreateAgentDialog({
                     </div>
                   </div>
 
+                  {supportsGitLaunchTargets ? (
                   <div className="space-y-4 border-t border-border/80 pt-6">
                     <div>
                       <p className="text-sm font-medium text-foreground">Prepare new worktree</p>
@@ -604,6 +622,7 @@ export function CreateAgentDialog({
                       </p>
                     )}
                   </div>
+                  ) : null}
                 </div>
               ) : null}
 

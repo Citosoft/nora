@@ -14,6 +14,7 @@ import type { WorkspaceSidebarAllThreadsSectionProps } from "@/components/app/ty
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select } from "@/components/ui/select";
+import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Archive, ChevronDown, ChevronRight, LoaderCircle, SlidersHorizontal } from "lucide-react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
@@ -33,6 +34,7 @@ export const WorkspaceSidebarAllThreadsSection = ({
   setIsAllThreadsSectionCollapsed,
   filteredAllWorkspaceThreadEntries,
   allThreadsGroupSections,
+  onToggleGroupExpanded,
   isLoadingAllThreads,
   onResumeThread,
   onArchiveThread,
@@ -195,63 +197,61 @@ export const WorkspaceSidebarAllThreadsSection = ({
                     </div>
                   ) : null}
                   <div>
-                    {section.entries.map((entry) => {
+                    {section.visibleEntries.map((entry) => {
                       const displayTitle = getExternalHarnessThreadDisplayTitle(entry.thread);
                       const threadKey = buildThreadKey(entry.workspaceId, entry.thread.toolId, entry.thread.primaryArtifactPath);
                       const isOpening = openingThreadKey === threadKey;
                       const isArchiving = archivingThreadKey === threadKey;
                       const isBusy = isOpening || isArchiving;
                       const canResume = canResumeExternalHarnessThread(entry.thread);
-                      const secondaryLabel =
-                        allThreadsGroupBy === "workspace"
-                          ? entry.thread.toolLabel
-                          : allThreadsGroupBy === "harness"
-                            ? entry.workspaceName
-                            : `${entry.workspaceName} · ${entry.thread.toolLabel}`;
                       return (
                         <div
                           key={threadKey}
                           className="group/thread flex h-8 w-full min-w-0 items-center rounded-[4px] pr-1 transition hover:bg-accent/40 focus-within:bg-accent/40"
                         >
-                          <button
-                            type="button"
-                            disabled={isBusy || !canResume}
-                            onClick={() => {
-                              const tool = snapshot.agentCatalog.find((catalogEntry) => catalogEntry.id === entry.thread.toolId) ?? null;
-                              const payload = buildExternalHarnessThreadResumePayload(entry.thread, tool, displayTitle);
-                              if (!payload) {
-                                return;
-                              }
-                              setOpeningThreadKey(threadKey);
-                              const statusId = statusBar.beginStatus(`Resuming ${displayTitle}`, true);
-                              void onResumeThread(entry.workspaceId, payload).finally(() => {
-                                statusBar.endStatus(statusId);
-                                setOpeningThreadKey(null);
-                              });
-                            }}
-                            className="flex h-full min-w-0 flex-1 items-center gap-2 px-2 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-inset disabled:pointer-events-none disabled:opacity-60"
-                            aria-label={`Resume thread: ${displayTitle}`}
-                            title={`${displayTitle}\n${entry.thread.conversationId}\n${entry.thread.primaryArtifactPath}`}
+                          <Tooltip
+                            triggerClassName="flex h-full flex-1"
+                            side="right"
+                            content={
+                              <div className="space-y-0.5">
+                                <div className="font-medium">{displayTitle}</div>
+                                <div className="opacity-70">
+                                  {entry.thread.toolLabel} · {entry.workspaceName} · {formatTimestamp(entry.thread.lastUpdatedAt)}
+                                </div>
+                              </div>
+                            }
                           >
-                            <AgentToolIcon
-                              toolId={entry.thread.toolId}
-                              label={entry.thread.toolLabel}
-                              className="size-5 shrink-0"
-                              imageClassName="size-4 rounded-sm"
-                            />
-                            <div className="flex min-w-0 flex-1 items-baseline gap-2">
+                            <button
+                              type="button"
+                              disabled={isBusy || !canResume}
+                              onClick={() => {
+                                const tool = snapshot.agentCatalog.find((catalogEntry) => catalogEntry.id === entry.thread.toolId) ?? null;
+                                const payload = buildExternalHarnessThreadResumePayload(entry.thread, tool, displayTitle);
+                                if (!payload) {
+                                  return;
+                                }
+                                setOpeningThreadKey(threadKey);
+                                const statusId = statusBar.beginStatus(`Resuming ${displayTitle}`, true);
+                                void onResumeThread(entry.workspaceId, payload).finally(() => {
+                                  statusBar.endStatus(statusId);
+                                  setOpeningThreadKey(null);
+                                });
+                              }}
+                              className="flex h-full min-w-0 flex-1 items-center gap-2 px-2 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-inset disabled:pointer-events-none disabled:opacity-60"
+                              aria-label={`Resume thread: ${displayTitle}`}
+                            >
+                              <AgentToolIcon
+                                toolId={entry.thread.toolId}
+                                label={entry.thread.toolLabel}
+                                className="size-5 shrink-0"
+                                imageClassName="size-4 rounded-sm"
+                              />
                               <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-foreground">
                                 {displayTitle}
                               </span>
-                              <span className="shrink-0 text-[11px] text-muted-foreground/75">
-                                {formatTimestamp(entry.thread.lastUpdatedAt)}
-                              </span>
-                            </div>
-                            <span className="max-w-20 shrink-0 truncate text-[11px] text-muted-foreground/75">
-                              {secondaryLabel}
-                            </span>
-                            {isOpening ? <LoaderCircle className="size-3.5 shrink-0 animate-spin text-primary" /> : null}
-                          </button>
+                              {isOpening ? <LoaderCircle className="size-3.5 shrink-0 animate-spin text-primary" /> : null}
+                            </button>
+                          </Tooltip>
                           <Button
                             type="button"
                             variant="ghost"
@@ -278,6 +278,16 @@ export const WorkspaceSidebarAllThreadsSection = ({
                         </div>
                       );
                     })}
+                    {section.overflowEntryCount > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => onToggleGroupExpanded(section.groupKey)}
+                        aria-expanded={section.isExpanded}
+                        className="flex h-7 w-full items-center rounded-[4px] px-2 text-[11px] font-medium text-muted-foreground outline-none transition hover:bg-accent/40 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-inset"
+                      >
+                        {section.isExpanded ? "Show fewer" : `Show ${section.overflowEntryCount} more`}
+                      </button>
+                    ) : null}
                   </div>
                 </div>
               ))}
