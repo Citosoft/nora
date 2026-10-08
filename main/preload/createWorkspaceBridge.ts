@@ -31,6 +31,7 @@ export function createWorkspaceBridge(): WorkspaceBridge {
     saveWorkspaceTerminalPresets: (projectId, presets) => invokeIpc("app:save-workspace-terminal-presets", projectId, presets),
     readWorkspaceFile: (payload) => invokeIpc("app:read-workspace-file", payload),
     readWorkspaceImageFile: (payload) => invokeIpc("app:read-workspace-image-file", payload),
+    openWorkspaceFileExternally: (payload) => invokeIpc("app:open-workspace-file-externally", payload),
     writeWorkspaceFile: (payload) => invokeIpc("app:write-workspace-file", payload),
     createWorkspaceDirectory: (payload) => invokeIpc("app:create-workspace-directory", payload),
     importBrowserImageToWorkspace: (payload) => invokeIpc("app:import-browser-image-to-workspace", payload),

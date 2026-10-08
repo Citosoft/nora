@@ -1,5 +1,6 @@
 import type { ProjectSummary } from "@shared/appTypes";
 import fs from "node:fs/promises";
+import { parseStoredProjectSummary } from "../helpers/storedProjectSummary";
 import { getProjectFile, getProjectsDir } from "../noraPaths";
 
 export const readStoredProjectFiles = async (): Promise<ProjectSummary[]> => {
@@ -11,7 +12,7 @@ export const readStoredProjectFiles = async (): Promise<ProjectSummary[]> => {
         .map(async (entry) => {
           try {
             const raw = await fs.readFile(getProjectFile(entry.name), "utf8");
-            return JSON.parse(raw) as ProjectSummary;
+            return parseStoredProjectSummary(JSON.parse(raw));
           } catch {
             return null;
           }

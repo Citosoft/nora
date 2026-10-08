@@ -1,5 +1,6 @@
 import type {
   ImportedContextBundleSummary,
+  ProjectVersionControl,
   WorkspaceNoteSummary,
   WorkspacePathStatResult,
   WorkspaceSearchResult,
@@ -10,10 +11,17 @@ import type {
 } from "@shared/appTypes";
 import { createDefaultWorkspaceSplitViewCollection } from "@shared/appTypes";
 import { NORA_IMPORTED_CONTEXT_RELATIVE } from "@shared/constants/noraImportedContext";
+import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { md5HexOfFile, md5HexOfUtf8String } from "./fileContentMd5";
 import { buildImportedContextBundleListMetadata } from "./importedContextBundleMetadata";
+import {
+  buildRemoteWorkspaceFileFindCommand,
+  buildUnversionedGrepPathspecs,
+  walkLocalWorkspaceFiles
+} from "./unversionedWorkspaceFiles";
 import { normalizeWorkspaceTaskBoard, WORKSPACE_TASK_BOARD_PATH } from "../taskBoardStore";
 import type { WorkspaceTarget } from "../types/internal.types";
 import { normalizeWorkspaceSplitViewCollection } from "../workspaceSplitViewStore";
@@ -136,6 +144,29 @@ export function createWorkspaceOperations(deps: WorkspaceOpsDeps) {
     }
 
     return fs.readFile(absolutePath);
+  }
+
+  /**
+   * Returns a path on this machine the OS can open. Local workspaces use the file in place; SSH workspaces
+   * get a temp copy (keyed by remote path so reopening overwrites rather than accumulating copies).
+   */
+  async function resolveLocalWorkspaceFilePath(target: WorkspaceTarget, projectId: string, relativePath: string): Promise<string> {
+    const safeRelativePath = deps.normalizeWorkspaceRelativePath(relativePath);
+    const absolutePath = await resolveExistingWorkspaceAbsolutePath(target, projectId, safeRelativePath);
+    if (deps.getWorkspaceLocation(target).kind === "local") {
+      return absolutePath;
+    }
+
+    const content = await readWorkspaceBinaryFile(target, projectId, safeRelativePath);
+    const copyDirectory = path.join(
+      os.tmpdir(),
+      "nora-remote-file-copies",
+      createHash("sha256").update(`${projectId}\0${absolutePath}`).digest("hex").slice(0, 16)
+    );
+    await fs.mkdir(copyDirectory, { recursive: true });
+    const copyPath = path.join(copyDirectory, path.posix.basename(safeRelativePath));
+    await fs.writeFile(copyPath, content);
+    return copyPath;
   }
 
   function getWorkspaceImageMimeType(relativePath: string): string {
@@ -337,22 +368,30 @@ export function createWorkspaceOperations(deps: WorkspaceOpsDeps) {
     return Array.from(directories);
   }
 
+  function renderRemoteWorkspaceRoot(target: WorkspaceTarget): string {
+    const normalizedRoot = deps.normalizeRemoteShellPath(target.path.replace(/\\/g, "/"));
+    return normalizedRoot.startsWith("$HOME/") ? normalizedRoot : deps.shellQuote(normalizedRoot);
+  }
+
+  function toRemoteWorkspaceRelativePaths(target: WorkspaceTarget, stdout: string): string[] {
+    return stdout
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((absolutePath) => path.posix.relative(target.path.replace(/\\/g, "/"), absolutePath))
+      .map((relativePath) => relativePath.replace(/\\/g, "/").replace(/^\.\/+/, "").replace(/^\/+/, ""))
+      .filter((relativePath) => relativePath.length > 0 && !relativePath.startsWith("../"));
+  }
+
   async function listWorkspaceEmptyDirectories(target: WorkspaceTarget): Promise<string[]> {
     const location = deps.getWorkspaceLocation(target);
     if (location.kind === "ssh") {
-      const normalizedRoot = deps.normalizeRemoteShellPath(target.path.replace(/\\/g, "/"));
-      const renderedRoot = normalizedRoot.startsWith("$HOME/") ? normalizedRoot : deps.shellQuote(normalizedRoot);
+      const renderedRoot = renderRemoteWorkspaceRoot(target);
       const { stdout } = await deps.runRemoteSshCommand(
         target,
         `if [ -d ${renderedRoot} ]; then find ${renderedRoot} -path '*/.git' -prune -o -type d -empty -print; fi`
       );
-      return stdout
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map((absolutePath) => path.posix.relative(target.path.replace(/\\/g, "/"), absolutePath))
-        .map((relativePath) => relativePath.replace(/\\/g, "/").replace(/^\.\/+/, "").replace(/^\/+/, ""))
-        .filter((relativePath) => relativePath.length > 0 && !relativePath.startsWith("../"));
+      return toRemoteWorkspaceRelativePaths(target, stdout);
     }
 
     const emptyDirectories: string[] = [];
@@ -381,24 +420,40 @@ export function createWorkspaceOperations(deps: WorkspaceOpsDeps) {
     return emptyDirectories;
   }
 
-  async function listWorkspaceDirectories(target: WorkspaceTarget): Promise<string[]> {
-    const filePaths = await listWorkspaceTrackedAndUntrackedFiles(target);
+  async function listWorkspaceDirectories(target: WorkspaceTarget, versionControl: ProjectVersionControl): Promise<string[]> {
+    const filePaths = await listWorkspaceFilePaths(target, versionControl);
     const trackedDirectories = collectAncestorDirectories(filePaths);
     const emptyDirectories = await listWorkspaceEmptyDirectories(target);
     const unique = new Set<string>([...trackedDirectories, ...emptyDirectories]);
     return Array.from(unique).sort((left, right) => left.localeCompare(right));
   }
 
-  async function listWorkspaceTrackedAndUntrackedFiles(target: WorkspaceTarget): Promise<string[]> {
+  async function listGitWorkspaceFiles(target: WorkspaceTarget): Promise<string[]> {
     const { stdout } = await deps.execGit(
       target,
       ["ls-files", "--cached", "--others", "--exclude-standard", "--full-name"],
       WORKSPACE_FILE_LIST_MAX_BUFFER_BYTES
     );
-    const unique = new Set(
-      stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+    return stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  }
+
+  async function listUnversionedWorkspaceFiles(target: WorkspaceTarget): Promise<string[]> {
+    if (deps.getWorkspaceLocation(target).kind !== "ssh") {
+      return walkLocalWorkspaceFiles(target.path);
+    }
+    const { stdout } = await deps.runRemoteSshCommand(
+      target,
+      buildRemoteWorkspaceFileFindCommand(renderRemoteWorkspaceRoot(target))
     );
-    return Array.from(unique).sort((left, right) => left.localeCompare(right));
+    return toRemoteWorkspaceRelativePaths(target, stdout);
+  }
+
+  /** Git projects list tracked plus unignored files; plain folders walk the filesystem. */
+  async function listWorkspaceFilePaths(target: WorkspaceTarget, versionControl: ProjectVersionControl): Promise<string[]> {
+    const filePaths = versionControl === "git"
+      ? await listGitWorkspaceFiles(target)
+      : await listUnversionedWorkspaceFiles(target);
+    return Array.from(new Set(filePaths)).sort((left, right) => left.localeCompare(right));
   }
 
   function normalizeWorkspaceSearchTerms(query: string): string[] {
@@ -439,13 +494,21 @@ export function createWorkspaceOperations(deps: WorkspaceOpsDeps) {
     return { exists: false, kind: null };
   }
 
-  async function searchWorkspaceFiles(target: WorkspaceTarget, query: string, caseSensitive = false): Promise<WorkspaceSearchResult[]> {
+  async function searchWorkspaceFiles(
+    target: WorkspaceTarget,
+    query: string,
+    caseSensitive: boolean,
+    versionControl: ProjectVersionControl
+  ): Promise<WorkspaceSearchResult[]> {
     const terms = normalizeWorkspaceSearchTerms(query);
     if (!terms.length) {
       return [];
     }
 
-    const args = ["grep", "-n", "-I", "--full-name", "--no-color", "--untracked"];
+    // `--no-index` lets git grep search plain folders that have no repository.
+    const args = versionControl === "git"
+      ? ["grep", "-n", "-I", "--full-name", "--no-color", "--untracked"]
+      : ["grep", "--no-index", "-n", "-I", "--no-color"];
     if (!caseSensitive) {
       args.push("-i");
     }
@@ -455,6 +518,9 @@ export function createWorkspaceOperations(deps: WorkspaceOpsDeps) {
       }
       args.push("-e", term);
     });
+    if (versionControl === "none") {
+      args.push("--", ...buildUnversionedGrepPathspecs());
+    }
 
     try {
       const { stdout } = await deps.execGit(target, args);
@@ -971,7 +1037,7 @@ export function createWorkspaceOperations(deps: WorkspaceOpsDeps) {
     listWorkspaceSpecs,
     listWorkspaceTaskPaths,
     listWorkspaceTasks,
-    listWorkspaceTrackedAndUntrackedFiles,
+    listWorkspaceFilePaths,
     listImportedContextBundles,
     listWorkspaceDirectories,
     createWorkspaceDirectory,
@@ -981,6 +1047,7 @@ export function createWorkspaceOperations(deps: WorkspaceOpsDeps) {
     readWorkspaceTaskBoard,
     readWorkspaceTextFile,
     resolveExistingWorkspaceAbsolutePath,
+    resolveLocalWorkspaceFilePath,
     removeWorkspaceTaskBoardPosition,
     renameWorkspaceTaskBoardPosition,
     searchWorkspaceFiles,

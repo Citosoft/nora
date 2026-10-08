@@ -19,6 +19,7 @@ import { Select } from "@/components/ui/select";
 import type {
   CreateTerminalPayload
 } from "@shared/appTypes";
+import { isGitProject } from "@shared/projectVersionControl";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 export function CreateTerminalDialog({
@@ -128,7 +129,7 @@ export function CreateTerminalDialog({
               }}
             >
               <option value="root">
-                Repo root {project ? `(${rootBranchLabel})` : ""}
+                {isGitProject(project) ? `Repo root${project ? ` (${rootBranchLabel})` : ""}` : "Project folder"}
               </option>
               {existingWorktrees.map((worktree) => (
                 <option key={worktree.id} value={`existing:${worktree.id}`}>

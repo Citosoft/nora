@@ -12,7 +12,6 @@ import { normalizeBrowserUrl } from "@/components/app/logic/browserTabs";
 import { buildFileEditorBreadcrumbs, getFileEditorLeafName } from "@/components/app/logic/fileEditorPath";
 import {
   buildWorkspaceMarkdownLink,
-  isWorkspaceImageLinkTarget,
   resolveWorkspaceMarkdownLinkTarget
 } from "@/components/app/logic/markdownLinkTargets";
 import {
@@ -26,9 +25,11 @@ import {
   resolveFileEditorMonacoTheme,
   resolveMonacoLanguageId
 } from "@/components/app/logic/fileEditorMonaco";
+import { ExternalFilePlaceholder } from "@/components/app/panels/file-editor/ExternalFilePlaceholder";
 import { MarkdownRenderer } from "@/components/app/shared/MarkdownRenderer";
 import type { FileEditorPanelProps } from "@/components/app/types/component.types";
 import { cn } from "@/lib/utils";
+import { resolveWorkspaceFileViewKind } from "@shared/workspaceFileViewKind";
 import type { BeforeMount, Monaco, OnMount } from "@monaco-editor/react";
 import Editor from "@monaco-editor/react";
 import { AlertCircle, Columns2, Eye, Image as ImageIcon, LoaderCircle, PencilLine, X } from "lucide-react";
@@ -94,17 +95,19 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
   const isSaving = activeTab?.isSaving ?? false;
   const errorMessage = activeTab?.errorMessage ?? null;
   const isImage = activeTab?.kind === "image";
+  const isExternal = activeTab?.kind === "external";
+  const isTextTab = activeTab?.kind === "text";
   const imageDataUrl = activeTab?.imageDataUrl ?? null;
   const isReadOnlyTab = activeTab?.isReadOnly === true;
-  const isDirty = !isImage && !isReadOnlyTab && content !== savedContent;
+  const isDirty = isTextTab && !isReadOnlyTab && content !== savedContent;
   const breadcrumbs = useMemo(() => buildFileEditorBreadcrumbs(pathName), [pathName]);
   const language = useMemo(() => resolveMonacoLanguageId(pathName), [pathName]);
   const disposeSendActionsRef = useRef<(() => void) | null>(null);
   const [monacoEditor, setMonacoEditor] = useState<editor.IStandaloneCodeEditor | null>(null);
   const [markdownViewByTabPath, setMarkdownViewByTabPath] = useState<Record<string, MarkdownEditorTabView>>({});
-  const isMarkdownFile = !isImage && /\.(md|markdown)$/i.test(pathName);
+  const isMarkdownFile = isTextTab && /\.(md|markdown)$/i.test(pathName);
   const supportsWorkspaceFileLinkDrop =
-    !isImage &&
+    isTextTab &&
     !isReadOnlyTab &&
     (isWorkspaceNoteMarkdownPath(pathName) || isWorkspaceSpecMarkdownPath(pathName));
   const monacoRef = useRef<Monaco | null>(null);
@@ -182,18 +185,17 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
       const rootPath = editorRootPath ?? sessionData.project?.rootPath ?? null;
 
       try {
-        if (isWorkspaceImageLinkTarget(workspaceLinkTarget)) {
-          await noraWorkspaceClient.readWorkspaceImageFile({
-            projectId,
-            path: workspaceLinkTarget,
-            rootPath: rootPath || undefined
-          });
+        const linkTargetRequest = { projectId, path: workspaceLinkTarget, rootPath: rootPath || undefined };
+        const linkTargetKind = resolveWorkspaceFileViewKind(workspaceLinkTarget);
+        if (linkTargetKind === "image") {
+          await noraWorkspaceClient.readWorkspaceImageFile(linkTargetRequest);
+        } else if (linkTargetKind === "external") {
+          const stat = await noraWorkspaceClient.statWorkspacePath(linkTargetRequest);
+          if (stat.kind !== "file") {
+            throw new Error(`${workspaceLinkTarget} is not a workspace file.`);
+          }
         } else {
-          await noraWorkspaceClient.readWorkspaceFile({
-            projectId,
-            path: workspaceLinkTarget,
-            rootPath: rootPath || undefined
-          });
+          await noraWorkspaceClient.readWorkspaceFile(linkTargetRequest);
         }
 
         await onOpenFileEditor(workspaceLinkTarget, {
@@ -244,16 +246,16 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
   });
 
   useEffect(() => {
-    if (isImage) {
+    if (!isTextTab) {
       setMonacoEditor(null);
     }
-  }, [isImage]);
+  }, [isTextTab]);
 
   useLayoutEffect(() => {
     disposeSendActionsRef.current?.();
     disposeSendActionsRef.current = null;
 
-    if (!monacoEditor || isImage) {
+    if (!monacoEditor || !isTextTab) {
       return;
     }
 
@@ -308,14 +310,14 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
       disposeSendActionsRef.current?.();
       disposeSendActionsRef.current = null;
     };
-  }, [isImage, monacoEditor, onExitFileEditorForAgentHandoff, sendTargetsKey]);
+  }, [isTextTab, monacoEditor, onExitFileEditorForAgentHandoff, sendTargetsKey]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
         event.preventDefault();
         event.stopPropagation();
-        if (!isLoading && !isSaving && !isImage && !isReadOnlyTab) {
+        if (!isLoading && !isSaving && isTextTab && !isReadOnlyTab) {
           onSave();
         }
       }
@@ -325,7 +327,7 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isImage, isLoading, isReadOnlyTab, isSaving, onSave]);
+  }, [isTextTab, isLoading, isReadOnlyTab, isSaving, onSave]);
 
   const monacoFileEditor = (
     <Editor
@@ -472,7 +474,7 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
       <div className="border-b border-border/50 bg-transparent px-2 pt-2">
         <div className="thin-scrollbar flex items-end gap-1 overflow-x-auto pb-0.5">
           {tabs.map((tab) => {
-            const tabDirty = tab.kind !== "image" && tab.isReadOnly !== true && tab.content !== tab.savedContent;
+            const tabDirty = tab.kind === "text" && tab.isReadOnly !== true && tab.content !== tab.savedContent;
             const isActive = tab.path === activePath;
             const label = getFileEditorLeafName(tab.path);
             return (
@@ -525,6 +527,8 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
               <LoaderCircle className="size-4 animate-spin" />
               Loading file contents...
             </div>
+          ) : isExternal && activeTab ? (
+            <ExternalFilePlaceholder tab={activeTab} />
           ) : isImage ? (
             imageDataUrl ? (
               <div className="flex h-full items-center justify-center bg-muted/20 p-6">

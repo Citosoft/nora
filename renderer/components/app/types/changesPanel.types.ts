@@ -1,4 +1,5 @@
 import type { CreateAgentDialogDefaults, ResolvedTheme } from "@/components/app/types";
+import type { ChangesPanelTab } from "@/components/app/types/changesPanelTab.types";
 import type {
   ForgeReviewAgentTargetMode,
   ForgeReviewCommentSelection
@@ -93,11 +94,13 @@ export type ChangesPanelVercelSlice = {
 export type ChangesPanelChromeSlice = {
   resolvedTheme: ResolvedTheme;
   collapsed: boolean;
-  activeTab: "git" | "files" | "context" | "forge" | "vercel";
+  activeTab: ChangesPanelTab;
+  /** Tabs the current project supports; git-only tabs are omitted for plain folders. */
+  availableTabs: ChangesPanelTab[];
   activeFilePath: string | null;
   activeBranch: string;
   selectedChange: ChangeEntry | null;
-  onActiveTabChange: (tab: "git" | "files" | "context" | "forge" | "vercel") => void;
+  onActiveTabChange: (tab: ChangesPanelTab) => void;
   onRefreshChanges: () => Promise<void>;
   onSelectChange: (pathName: string) => Promise<void>;
   onDiscardChange: (pathName: string) => Promise<AppState | null>;

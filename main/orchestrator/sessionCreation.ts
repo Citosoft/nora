@@ -6,6 +6,7 @@ import type {
   TerminalSession
 } from "@shared/appTypes";
 import { buildLaunchContextEntry } from "./agentContextArtifacts";
+import { resolveLaunchBranchCheckout } from "./launchBranchCheckout";
 import type {
   SessionCreationDeps,
   SessionCreationHelpers
@@ -112,12 +113,7 @@ export function createSessionCreationHelpers(deps: SessionCreationDeps): Session
     const prepareCommand = (payload.prepareCommand || "").trim();
     const shouldPrepareWorktree = createdWorktree && !!payload.prepareWorktree && !!prepareCommand;
     const pendingAgent = provisionalAgent;
-    const branchCheckout = payload.branchCheckout?.branchName.trim()
-      ? {
-          ...payload.branchCheckout,
-          branchName: payload.branchCheckout.branchName.trim()
-        }
-      : null;
+    const branchCheckout = resolveLaunchBranchCheckout(project, payload.branchCheckout);
     const branchCheckoutStatusLine = branchCheckout
       ? (branchCheckout.mode === "new" ? "Creating branch..." : "Checking out branch...")
       : null;

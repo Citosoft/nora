@@ -1,9 +1,10 @@
 import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
-import { normalizeSnapshot, shouldPromptToRemoveMissingWorkspace } from "@/components/app/logic/appUtils";
+import { normalizeSnapshot } from "@/components/app/logic/appUtils";
 import type { WorkspaceLoadingState } from "@/components/app/types";
 import type { UseWorkspaceLoadingArgs, UseWorkspaceLoadingResult } from "@/components/app/types/component.types";
 import { trackAnalyticsEvent } from "@/lib/analytics";
 import type { AppState } from "@shared/appTypes";
+import { isMissingProjectFolderError } from "@shared/projectFolderErrors";
 import { useEffect, useRef, useState } from "react";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
 
@@ -15,6 +16,10 @@ export function useWorkspaceLoading({
   const [workspaceLoading, setWorkspaceLoading] = useState<WorkspaceLoadingState | null>(null);
   const workspaceLoadingTokenRef = useRef(0);
   const workspaceLoadingTimerIdsRef = useRef<number[]>([]);
+  // The progress listener subscribes once, so it reads the latest snapshot through a ref
+  // instead of the snapshot captured on mount.
+  const latestSnapshotRef = useRef(snapshot);
+  latestSnapshotRef.current = snapshot;
 
   useEffect(() => () => {
     workspaceLoadingTimerIdsRef.current.forEach((timerId) => window.clearTimeout(timerId));
@@ -35,15 +40,16 @@ export function useWorkspaceLoading({
   }, [snapshot?.project?.id, workspaceLoading]);
 
   useEffect(() => noraWorkspaceClient.onWorkspaceLoadingProgress((payload) => {
+    const latestSnapshot = latestSnapshotRef.current;
     setWorkspaceLoading((current) => {
       // Only create a new loading state for workspace transitions. Once a workspace
       // is already active, background refreshes for that same project should not
       // resurrect the blocking modal.
-      if (!current && snapshot?.project?.id === payload.projectId) {
+      if (!current && latestSnapshot?.project?.id === payload.projectId) {
         return null;
       }
 
-      const targetWorkspace = snapshot?.workspaces.find((workspace) => workspace.project.id === payload.projectId) ?? null;
+      const targetWorkspace = latestSnapshot?.workspaces.find((workspace) => workspace.project.id === payload.projectId) ?? null;
       const targetProject = targetWorkspace?.project ?? null;
       const inferredKind = payload.command?.startsWith("ssh ") ? "ssh" : "local";
       const sshLocation = targetProject?.location?.kind === "ssh" ? targetProject.location : null;
@@ -157,11 +163,13 @@ export function useWorkspaceLoading({
       });
       return next;
     } catch (error: unknown) {
-      if (shouldPromptToRemoveMissingWorkspace(error)) {
+      const missingProjectRoot = isMissingProjectFolderError(error)
+        ? latestSnapshotRef.current?.workspaces.find((workspace) => workspace.project.id === projectId)?.project.rootPath ?? null
+        : null;
+      if (missingProjectRoot) {
         setUiState((current) => ({
           ...current,
-          removeMissingWorkspaceRoot: null,
-          removeMissingWorkspaceError: error.message
+          removeMissingWorkspaceRoot: missingProjectRoot
         }));
         return null;
       }

@@ -85,6 +85,8 @@ export interface WorkspaceService {
   readWorkspaceImageFile: (
     payload: WorkspaceFileRequest
   ) => Promise<WorkspaceImageFileContent>;
+  /** Local path of a document file (temp copy for SSH workspaces) for opening in the OS default app. */
+  resolveWorkspaceFileForExternalOpen: (payload: WorkspaceFileRequest) => Promise<string>;
   listWorkspaceFiles: (
     projectId: string,
     rootPath?: string

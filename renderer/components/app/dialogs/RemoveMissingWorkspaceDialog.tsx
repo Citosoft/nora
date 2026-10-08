@@ -14,7 +14,6 @@ import { useEffect, useState } from "react";
 
 export function RemoveMissingWorkspaceDialog({
   projectRoot,
-  errorMessage,
   open,
   onOpenChange,
   onConfirm
@@ -32,7 +31,8 @@ export function RemoveMissingWorkspaceDialog({
       <DialogContent headerTitle="Remove Missing Project">
         <DialogHeader>
           <DialogDescription>
-            {APP_SHORT_NAME} could not open this project. It may belong to a remote mount that is no longer available.
+            {APP_SHORT_NAME} could not find this project&apos;s folder. It may have been moved or deleted, or it may be on a
+            remote mount that is no longer available.
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
@@ -41,9 +41,6 @@ export function RemoveMissingWorkspaceDialog({
               <div className="break-all">
                 <span className="font-medium">Project:</span> {projectRoot}
               </div>
-            ) : null}
-            {errorMessage ? (
-              <div className="mt-2 text-muted-foreground">{errorMessage}</div>
             ) : null}
           </div>
         </DialogBody>

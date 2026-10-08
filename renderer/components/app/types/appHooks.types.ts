@@ -1,3 +1,4 @@
+import type { ChangesPanelTab } from "@/components/app/types/changesPanelTab.types";
 import type {
   AppView,
   BrowserTabState,
@@ -160,7 +161,7 @@ export type UseAppAutoUpdateResult = {
 };
 
 export type UseVercelIntegrationArgs = {
-  activeChangesPanelTab: "git" | "files" | "context" | "forge" | "vercel";
+  activeChangesPanelTab: ChangesPanelTab;
   forgeOverview: ForgeOverview | null;
   vercelToken: string;
   vercelWorkspaceLinks: Record<string, { vercelProjectId: string; teamId: string | null }>;
@@ -205,7 +206,7 @@ export type UseForgeIntegrationArgs = {
   updateVercelAccountLabel: (label: string | null) => void;
   statusBar: StatusBarContextValue;
   captureError: (error: unknown) => void;
-  setActiveChangesPanelTab: Dispatch<SetStateAction<"git" | "files" | "context" | "forge" | "vercel">>;
+  setActiveChangesPanelTab: Dispatch<SetStateAction<ChangesPanelTab>>;
   setIsCreatePullRequestDialogOpen: Dispatch<SetStateAction<boolean>>;
 };
 

@@ -13,6 +13,7 @@ export const FocusedAgentSessionToolbar = ({
   agent,
   terminal,
   focusedSession,
+  showBranch,
   onToggleSessionInfo,
   onToggleContext,
   onClearTerminal,
@@ -23,7 +24,7 @@ export const FocusedAgentSessionToolbar = ({
     {!compact && focusedSession ? (
       <div className="pointer-events-auto flex min-w-0 items-center gap-2">
         <SessionFolderBadge workspace={focusedSession.workspace} />
-        <SessionBranchSelect session={focusedSession} />
+        {showBranch ? <SessionBranchSelect session={focusedSession} /> : null}
       </div>
     ) : null}
     {compact ? (

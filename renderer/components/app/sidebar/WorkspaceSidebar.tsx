@@ -395,11 +395,11 @@ export const WorkspaceSidebar = () => {
                     ))
                   ) : snapshot.project ? (
                     <div className="mx-2 rounded-[4px] border border-dashed border-border/60 bg-background/30 px-3 py-2 text-sm text-muted-foreground">
-                      Add a repository to start grouping agents by project.
+                      Add a project folder to start grouping agents by project.
                     </div>
                   ) : (
                     <div className="mx-2 rounded-[4px] border border-dashed border-border/60 bg-background/30 px-3 py-2 text-sm text-muted-foreground">
-                      Pick a repository once and it will appear here.
+                      Pick a project folder once and it will appear here.
                     </div>
                   )}
                 </div>

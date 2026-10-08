@@ -4,20 +4,8 @@ import type { FileEditorState, FileEditorTab } from "@/components/app/types";
 import type { UseFileEditorStateArgs, UseFileEditorStateResult } from "@/components/app/types/component.types";
 import type { OpenWorkspaceFileEditorOptions } from "@/components/app/types/workflow.types";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
+import { resolveWorkspaceFileViewKind } from "@shared/workspaceFileViewKind";
 import { useEffect, useState } from "react";
-
-function isImageFilePath(pathName: string): boolean {
-  const normalized = pathName.toLowerCase();
-  return (
-    normalized.endsWith(".png") ||
-    normalized.endsWith(".jpg") ||
-    normalized.endsWith(".jpeg") ||
-    normalized.endsWith(".gif") ||
-    normalized.endsWith(".webp") ||
-    normalized.endsWith(".bmp") ||
-    normalized.endsWith(".svg")
-  );
-}
 
 export function useFileEditorState({
   safely,
@@ -90,7 +78,7 @@ export function useFileEditorState({
       projectId: snapshot.project.id,
       path: pathName,
       rootPath: options?.rootPath ?? snapshot.changesRoot ?? snapshot.project.rootPath,
-      kind: isImageFilePath(pathName) ? "image" : "text",
+      kind: resolveWorkspaceFileViewKind(pathName),
       content: "",
       savedContent: "",
       imageDataUrl: null,
@@ -99,6 +87,11 @@ export function useFileEditorState({
       isSaving: false,
       errorMessage: null
     };
+    // Files Nora cannot render get a tab that offers the OS default app instead of reading their bytes.
+    if (baseTab.kind === "external") {
+      upsertFileEditorTab({ ...baseTab, isLoading: false });
+      return;
+    }
     upsertFileEditorTab(baseTab);
 
     try {

@@ -6,7 +6,8 @@ import { Bot, FolderGit2, GitBranch, Sparkles, TerminalSquare } from "lucide-rea
 export const FocusedAgentSessionDetailsPopover = ({
   infoPopoverRef,
   agent,
-  terminal
+  terminal,
+  showBranch
 }: FocusedAgentSessionDetailsPopoverProps) => (
   <div
     ref={infoPopoverRef}
@@ -15,7 +16,7 @@ export const FocusedAgentSessionDetailsPopover = ({
     <div className="space-y-3 text-sm">
       {agent ? <AgentInfoRow icon={Bot} label="Tool" value={agent.toolLabel} /> : null}
       {agent ? <AgentInfoRow icon={Sparkles} label="Mode" value={formatAgentMode(agent.mode)} /> : null}
-      <AgentInfoRow icon={GitBranch} label="Branch" value={(agent || terminal)?.branch || ""} />
+      {showBranch ? <AgentInfoRow icon={GitBranch} label="Branch" value={(agent || terminal)?.branch || ""} /> : null}
       {terminal ? <AgentInfoRow icon={TerminalSquare} label="Shell" value={terminal.shellLabel} /> : null}
       <AgentInfoRow icon={FolderGit2} label="Project" value={(agent || terminal)?.workspace || ""} />
       <AgentInfoRow icon={TerminalSquare} label="Command" value={(agent || terminal)?.command || ""} />

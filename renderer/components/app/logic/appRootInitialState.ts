@@ -15,7 +15,6 @@ export const appRootInitialUiState: UiState = {
   showWorkspaceSwitcherDialog: false,
   destroyAgentId: null,
   removeMissingWorkspaceRoot: null,
-  removeMissingWorkspaceError: null,
   showResetWorkspacesDialog: false,
   workspaceTerminalPresetsProjectId: null,
   browserTabs: [],

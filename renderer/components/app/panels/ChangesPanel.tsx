@@ -25,6 +25,7 @@ import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { ChangesPanelTab, ChangesPanelTabPresentation } from "@/components/app/types/changesPanelTab.types";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type {
@@ -198,6 +199,18 @@ function getPullRequestStatusDotClass(state: GithubBranchPullRequestState | null
   return "bg-muted-foreground/60";
 }
 
+const CHANGES_PANEL_TAB_PRESENTATION: Record<ChangesPanelTab, ChangesPanelTabPresentation> = {
+  git: { label: "Git", Icon: FolderGit2 },
+  files: { label: "Files", Icon: FileText },
+  context: {
+    label: "Context",
+    Icon: Brain,
+    title: "Project agent context you can attach to a new agent, and files under .nora/imported_context"
+  },
+  vercel: { label: "Vercel", Icon: VercelMark },
+  forge: { label: "Forge", Icon: GitBranch }
+};
+
 function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
   const { tools, onOpenCreateAgentDialog } = useChangesPanelWorkspace();
   const {
@@ -258,6 +271,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
     resolvedTheme,
     collapsed,
     activeTab,
+    availableTabs,
     activeFilePath,
     activeBranch,
     selectedChange,
@@ -855,6 +869,28 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
     ? "w-full rounded-md border border-slate-300/90 bg-white px-2 py-2 text-left outline-none transition-colors hover:border-slate-400 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     : "w-full rounded-md border border-border/60 bg-background/30 px-2 py-2 text-left outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
+  const gitTabPullRequestStatusDot = forgeOverview?.repo?.provider === "github" && activeBranch ? (
+    <Tooltip
+      content={
+        forgeBranchPullRequestStatus?.branchExistsOnRemote === false
+          ? "PR status: No pull request (branch not pushed)"
+          : forgeBranchPullRequestStatus?.pullRequestNumber
+          ? `PR status: ${forgeBranchPullRequestStatus.label} (#${forgeBranchPullRequestStatus.pullRequestNumber})`
+          : `PR status: ${forgeBranchPullRequestStatus?.label ?? "No pull request"}`
+      }
+      side="bottom"
+    >
+      <span
+        className={cn("inline-flex size-2 rounded-full", getPullRequestStatusDotClass(forgeBranchPullRequestStatus?.state ?? "no_pull_request"))}
+        aria-label={
+          forgeBranchPullRequestStatus?.branchExistsOnRemote === false
+            ? "Pull request status: No pull request, branch not pushed"
+            : `Pull request status: ${forgeBranchPullRequestStatus?.label ?? "No pull request"}`
+        }
+      />
+    </Tooltip>
+  ) : null;
+
   return (
     <section className="workspace-shell-surface flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-card/95">
       {!collapsed ? (
@@ -862,83 +898,25 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
           <div className="mb-2 flex items-center gap-3 px-4">
             <div className="min-w-0 flex-1">
               <div className="flex w-full flex-wrap items-center rounded-[4px] border border-border/60 bg-background/40 p-1 sm:flex-nowrap">
-                <button
-                  type="button"
-                  className={cn(
-                    "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[3px] px-2 py-1.5 text-[11px] font-medium transition sm:gap-1.5 sm:px-3 sm:text-xs",
-                    activeTab === "git" ? activeSidebarTabClass : inactiveSidebarTabClass
-                  )}
-                  onClick={() => onActiveTabChange("git")}
-                >
-                  <FolderGit2 className="size-3.5" />
-                  Git
-                  {forgeOverview?.repo?.provider === "github" && activeBranch ? (
-                    <Tooltip
-                      content={
-                        forgeBranchPullRequestStatus?.branchExistsOnRemote === false
-                          ? "PR status: No pull request (branch not pushed)"
-                          : forgeBranchPullRequestStatus?.pullRequestNumber
-                          ? `PR status: ${forgeBranchPullRequestStatus.label} (#${forgeBranchPullRequestStatus.pullRequestNumber})`
-                          : `PR status: ${forgeBranchPullRequestStatus?.label ?? "No pull request"}`
-                      }
-                      side="bottom"
+                {availableTabs.map((tab) => {
+                  const { label, Icon, title } = CHANGES_PANEL_TAB_PRESENTATION[tab];
+                  return (
+                    <button
+                      key={tab}
+                      type="button"
+                      className={cn(
+                        "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[3px] px-2 py-1.5 text-[11px] font-medium transition sm:gap-1.5 sm:px-3 sm:text-xs",
+                        activeTab === tab ? activeSidebarTabClass : inactiveSidebarTabClass
+                      )}
+                      onClick={() => onActiveTabChange(tab)}
+                      title={title}
                     >
-                      <span
-                        className={cn("inline-flex size-2 rounded-full", getPullRequestStatusDotClass(forgeBranchPullRequestStatus?.state ?? "no_pull_request"))}
-                        aria-label={
-                          forgeBranchPullRequestStatus?.branchExistsOnRemote === false
-                            ? "Pull request status: No pull request, branch not pushed"
-                            : `Pull request status: ${forgeBranchPullRequestStatus?.label ?? "No pull request"}`
-                        }
-                      />
-                    </Tooltip>
-                  ) : null}
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[3px] px-2 py-1.5 text-[11px] font-medium transition sm:gap-1.5 sm:px-3 sm:text-xs",
-                    activeTab === "files" ? activeSidebarTabClass : inactiveSidebarTabClass
-                  )}
-                  onClick={() => onActiveTabChange("files")}
-                >
-                  <FileText className="size-3.5" />
-                  Files
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[3px] px-2 py-1.5 text-[11px] font-medium transition sm:gap-1.5 sm:px-3 sm:text-xs",
-                    activeTab === "context" ? activeSidebarTabClass : inactiveSidebarTabClass
-                  )}
-                  onClick={() => onActiveTabChange("context")}
-                  title="Project agent context you can attach to a new agent, and files under .nora/imported_context"
-                >
-                  <Brain className="size-3.5 shrink-0" />
-                  <span className="truncate">Context</span>
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[3px] px-2 py-1.5 text-[11px] font-medium transition sm:gap-1.5 sm:px-3 sm:text-xs",
-                    activeTab === "vercel" ? activeSidebarTabClass : inactiveSidebarTabClass
-                  )}
-                  onClick={() => onActiveTabChange("vercel")}
-                >
-                  <VercelMark className="size-3.5" />
-                  Vercel
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    "flex min-w-0 flex-1 items-center justify-center gap-1 rounded-[3px] px-2 py-1.5 text-[11px] font-medium transition sm:gap-1.5 sm:px-3 sm:text-xs",
-                    activeTab === "forge" ? activeSidebarTabClass : inactiveSidebarTabClass
-                  )}
-                  onClick={() => onActiveTabChange("forge")}
-                >
-                  <GitBranch className="size-3.5" />
-                  Forge
-                </button>
+                      <Icon className="size-3.5 shrink-0" />
+                      <span className="truncate">{label}</span>
+                      {tab === "git" ? gitTabPullRequestStatusDot : null}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>

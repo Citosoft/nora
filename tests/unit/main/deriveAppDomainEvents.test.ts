@@ -69,6 +69,7 @@ function createSnapshot(): AppState {
       name: "project",
       rootPath: "/tmp/project",
       gitCommonDir: "/tmp/project/.git",
+      versionControl: "git",
       location: undefined,
       remoteAgentCatalog: null,
       workspaceInstructionFile: null,

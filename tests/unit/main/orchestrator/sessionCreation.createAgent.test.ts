@@ -28,6 +28,7 @@ function createProjectSummary(location: ProjectSummary["location"] | undefined):
     name: "project",
     rootPath: "/tmp/project",
     gitCommonDir: "/tmp/project/.git",
+    versionControl: "git",
     location,
     remoteAgentCatalog: null,
     workspaceInstructionFile: null,

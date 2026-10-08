@@ -127,6 +127,14 @@ export type CreateAgentDialogProps = {
 
 export type LaunchTargetMode = AgentLaunchTargetPreference;
 
+/** What the current project can offer as agent launch targets. */
+export type LaunchTargetAvailability = {
+  worktrees: Array<Pick<WorktreeRecord, "id">>;
+  projectBranches: string[];
+  /** Plain (non-git) folders only support launching in the project folder itself. */
+  isGitProject: boolean;
+};
+
 export type CreatePullRequestDialogProps = {
   open: boolean;
   provider: ForgeProvider | null;
@@ -249,7 +257,6 @@ export type RemoteWorkspaceDialogProps = {
 
 export type RemoveMissingWorkspaceDialogProps = {
   projectRoot: string | null;
-  errorMessage: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => Promise<void>;

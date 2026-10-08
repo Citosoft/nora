@@ -306,7 +306,7 @@ export function AddWorkspaceDialog({
           <DialogDescription>
             {isScaffoldWizardOpen
               ? "Choose a framework and options, then create a git-initialized project for an agent to scaffold."
-              : "Choose whether to open an existing repository or scaffold a new project with an agent."}
+              : "Choose whether to open an existing folder or scaffold a new project with an agent."}
           </DialogDescription>
         </DialogHeader>
         <DialogBody className={isScaffoldWizardOpen ? "flex min-h-0 flex-col gap-5" : "space-y-3"}>
@@ -656,7 +656,7 @@ export function AddWorkspaceDialog({
                 <div className="min-w-0">
                   <div className="text-sm font-medium">Local folder</div>
                   <div className="mt-1 text-sm text-muted-foreground">
-                    Pick a repository from a local disk or an already mounted network drive.
+                    Pick a project folder from a local disk or an already mounted network drive.
                   </div>
                 </div>
               </button>
@@ -671,7 +671,7 @@ export function AddWorkspaceDialog({
                 <div className="min-w-0">
                   <div className="text-sm font-medium">Remote over SSH</div>
                   <div className="mt-1 text-sm text-muted-foreground">
-                    Mount an SSH host, then choose a repository on it as if it were local.
+                    Mount an SSH host, then choose a project folder on it as if it were local.
                   </div>
                 </div>
               </button>

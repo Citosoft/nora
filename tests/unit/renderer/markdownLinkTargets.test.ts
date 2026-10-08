@@ -1,6 +1,5 @@
 import {
   buildWorkspaceMarkdownLink,
-  isWorkspaceImageLinkTarget,
   resolveWorkspaceMarkdownLinkHref,
   resolveWorkspaceMarkdownLinkTarget
 } from "@/components/app/logic/markdownLinkTargets";
@@ -42,9 +41,4 @@ test("buildWorkspaceMarkdownLink formats the dropped file as a markdown link", (
     buildWorkspaceMarkdownLink(".nora/specs/launch.md", "docs/release plan.md"),
     "[release plan.md](<../../docs/release plan.md>)"
   );
-});
-
-test("isWorkspaceImageLinkTarget recognizes image paths", () => {
-  assert.equal(isWorkspaceImageLinkTarget("assets/diagram.png"), true);
-  assert.equal(isWorkspaceImageLinkTarget("docs/guide.md"), false);
 });

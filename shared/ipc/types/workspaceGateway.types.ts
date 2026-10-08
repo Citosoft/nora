@@ -67,6 +67,8 @@ export interface WorkspaceBridge {
   saveWorkspaceTerminalPresets: (projectId: string, presets: TerminalPreset[]) => Promise<AppState>;
   readWorkspaceFile: (payload: WorkspaceFileRequest) => Promise<string>;
   readWorkspaceImageFile: (payload: WorkspaceFileRequest) => Promise<WorkspaceImageFileContent>;
+  /** Opens a document file (e.g. a PDF) Nora cannot render in the OS default app. */
+  openWorkspaceFileExternally: (payload: WorkspaceFileRequest) => Promise<void>;
   writeWorkspaceFile: (payload: WriteWorkspaceFilePayload) => Promise<AppState>;
   createWorkspaceDirectory: (payload: CreateWorkspaceDirectoryPayload) => Promise<AppState>;
   importBrowserImageToWorkspace: (payload: ImportBrowserImagePayload) => Promise<AppState>;
