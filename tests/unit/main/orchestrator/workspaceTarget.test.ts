@@ -70,7 +70,7 @@ test("createGetProjectMetadata opens non-git folders as plain projects", async (
   const project = await getProjectMetadata(target);
 
   assert.equal(project.versionControl, "none");
-  assert.equal(project.rootPath, "/tmp/new-project");
+  assert.equal(project.rootPath, path.resolve(target.path));
   assert.equal(project.gitCommonDir, "");
   assert.equal(project.baseBranch, "");
   assert.deepEqual(calls, ["rev-parse --show-toplevel"]);
