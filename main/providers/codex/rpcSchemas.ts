@@ -1,0 +1,13 @@
+import { z } from "zod";
+
+export const jsonSchema = z.json();
+export const rpcMessageSchema = z.object({
+  id: z.union([z.string(), z.number()]).optional(),
+  method: z.string().optional(),
+  params: jsonSchema.optional(),
+  result: jsonSchema.optional(),
+  error: z.object({ code: z.number(), message: z.string() }).optional()
+});
+export const initializedSchema = z.object({ userAgent: z.string() });
+export const threadSchema = z.object({ thread: z.object({ id: z.string() }) });
+export const turnSchema = z.object({ turn: z.object({ id: z.string() }) });

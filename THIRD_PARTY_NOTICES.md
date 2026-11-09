@@ -2,7 +2,7 @@
 
 This product includes third-party open-source software.
 
-Generated: 2026-07-20T21:08:37.638Z
+Generated: 2026-10-21T11:51:33.085Z
 
 | Package | Version | License |
 | --- | --- | --- |
@@ -10,6 +10,7 @@ Generated: 2026-07-20T21:08:37.638Z
 | @ai-sdk/google | 3.0.80 | Apache-2.0 |
 | @ai-sdk/openai | 3.0.67 | Apache-2.0 |
 | @ai-sdk/react | 3.0.196 | Apache-2.0 |
+| @anthropic-ai/claude-agent-sdk | 0.3.306 | SEE LICENSE IN README.md |
 | @icons-pack/react-simple-icons | 13.13.0 | MIT |
 | @monaco-editor/react | 4.7.0 | MIT |
 | @posthog/react | 1.9.1 | MIT |
