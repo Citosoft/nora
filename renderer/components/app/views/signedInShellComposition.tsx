@@ -1,3 +1,4 @@
+import { WorkspaceNavigationProvider } from "@/components/app/context/workspaceNavigationContext";
 import { AppRootShellFrameProvider } from "@/components/app/context/appRootShellFrameContext";
 import {
   AppChromeShellComposeProvider,
@@ -19,6 +20,7 @@ import {
 } from "@/components/app/logic/buildSignedInRegionPortsFromAssembly";
 import type { SignedInShellCompositionProps } from "@/components/app/types/signedInShellComposition.types";
 import { useMemo, type ReactElement } from "react";
+import { createBranchRequestReader } from "@/components/app/logic/createBranchRequestReader";
 
 /**
  * Signed-in shell: settings + region port providers (memoized assembly slices), layout + frame.
@@ -31,6 +33,11 @@ export const SignedInShellComposition = ({
 }: SignedInShellCompositionProps): ReactElement => {
   const { signedInAssemblySources, modalDialogsBuild, settingsRuntimeBuild, chromeShellCompose, shellLayout } = signedIn;
   const a = signedInAssemblySources;
+  const readBranchRequest = useMemo(() => createBranchRequestReader({
+    githubToken: a.workspaceSidebarRest.githubToken,
+    gitlabToken: a.workspaceSidebarRest.gitlabToken,
+    gitlabHost: a.workspaceSidebarRest.gitlabHost
+  }), [a.workspaceSidebarRest.githubToken, a.workspaceSidebarRest.gitlabToken, a.workspaceSidebarRest.gitlabHost]);
 
   const sessionCenterPorts = useMemo(
     () => buildSessionCenterPortsFromAssembly(a),
@@ -53,8 +60,8 @@ export const SignedInShellComposition = ({
   );
   const modalClusterPorts = useMemo(() => buildModalClusterPorts(modalDialogsBuild), [modalDialogsBuild]);
   const workspaceSidebarPorts = useMemo(
-    () => buildWorkspaceSidebarPortsFromAssembly(a),
-    [a.core, a.workspaceCatalog, a.workspaceContent, a.workspaceSidebarRest, a.chromeShell, a.sessionSurface]
+    () => buildWorkspaceSidebarPortsFromAssembly(a, chromeShellCompose, readBranchRequest),
+    [a.core, a.workspaceCatalog, a.workspaceContent, a.workspaceSidebarRest, a.chromeShell, a.sessionSurface, chromeShellCompose, readBranchRequest]
   );
   const chromeShellPorts = useMemo(
     () => buildChromeShellPorts(chromeShellCompose, a.chromeShell),
@@ -71,7 +78,7 @@ export const SignedInShellComposition = ({
                 <ChromeShellPortsProvider value={chromeShellPorts}>
                   <AppChromeShellComposeProvider value={chromeShellCompose}>
                     <AppShellLayoutProvider value={shellLayout}>
-                      <AppRootShellFrameProvider value={shellFrameValue}>{children}</AppRootShellFrameProvider>
+                      <AppRootShellFrameProvider value={shellFrameValue}><WorkspaceNavigationProvider>{children}</WorkspaceNavigationProvider></AppRootShellFrameProvider>
                     </AppShellLayoutProvider>
                   </AppChromeShellComposeProvider>
                 </ChromeShellPortsProvider>

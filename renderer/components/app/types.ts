@@ -29,6 +29,7 @@ export type ThemeMode = "system" | "light" | "dark";
 export type ResolvedTheme = "light" | "dark";
 
 export type UiFontId =
+  | "system"
   | "inter"
   | "geist"
   | "manrope"

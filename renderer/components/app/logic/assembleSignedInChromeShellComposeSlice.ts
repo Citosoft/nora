@@ -81,7 +81,7 @@ export const assembleSignedInChromeShellComposeSlice = (s: SignedInChromeShellAs
       onOpenLinuxRelease: chromeShell.handleOpenLinuxRelease,
       onDismissLinuxUpdate: chromeShell.dismissLinuxUpdateNotice
     },
-    statusBarChrome: {
+    workspaceStatus: {
       entries: chromeShell.statusEntries,
       tools: core.snapshot.agentCatalog,
       agentSkillCatalogs: core.snapshot.agentSkillCatalogs,

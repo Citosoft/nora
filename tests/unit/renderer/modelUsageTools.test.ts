@@ -1,4 +1,4 @@
-import { getEnabledStatusBarTools, getUsagePollingToolIds } from "@/components/app/logic/statusBarTools";
+import { getEnabledUsageTools, getUsagePollingToolIds } from "@/components/app/logic/modelUsageTools";
 import type { AgentCatalogEntry } from "@shared/appTypes";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -33,7 +33,7 @@ function createTool(overrides: Partial<AgentCatalogEntry>): AgentCatalogEntry {
   };
 }
 
-test("getEnabledStatusBarTools returns only detected and enabled agent tools", () => {
+test("getEnabledUsageTools returns only detected and enabled agent tools", () => {
   const tools = [
     createTool({ id: "codex", detected: true, enabled: true }),
     createTool({ id: "claude", detected: true, enabled: false }),
@@ -41,7 +41,7 @@ test("getEnabledStatusBarTools returns only detected and enabled agent tools", (
     createTool({ id: "gemini", detected: false, enabled: false })
   ];
 
-  assert.deepEqual(getEnabledStatusBarTools(tools).map((tool) => tool.id), ["codex"]);
+  assert.deepEqual(getEnabledUsageTools(tools).map((tool) => tool.id), ["codex"]);
 });
 
 test("getUsagePollingToolIds returns only available tools with inline usage support", () => {

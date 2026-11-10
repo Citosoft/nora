@@ -23,7 +23,7 @@ import {
 import { resolveHardwareAccelerationEnabledAtStartup } from "./hardwareAcceleration";
 import { parseLaunchCommand } from "./launchCommand";
 import { getAppSettingsPath, getProjectsIndexPath, getRecentProjectsPath, getSessionsIndexPath, getToolConfigPath, getStateDir, getNoraRoot } from "./noraPaths";
-import { applyMacDockIcon as applyMacDockIconHelper, getAppIcon as getAppIconHelper, pathIsWithinAnyMount } from "./helpers/appRuntimeAssets";
+import { applyLinuxDesktopIdentity, applyMacDockIcon as applyMacDockIconHelper, getAppIcon as getAppIconHelper, pathIsWithinAnyMount } from "./helpers/appRuntimeAssets";
 import { getImportedImageTargetPath } from "./helpers/browserImageImport";
 import { createLaunchCommandQueueController } from "./helpers/launchCommandQueue";
 import { createMainWindowNotifications } from "./helpers/mainWindowNotifications";
@@ -278,6 +278,7 @@ if (!shouldExitForSquirrelLifecycle && !hardwareAccelerationEnabledAtStartup) {
 
 if (!shouldExitForSquirrelLifecycle) {
   app.setName(APP_SHORT_NAME);
+  applyLinuxDesktopIdentity();
 }
 
 if (!shouldExitForSquirrelLifecycle) {

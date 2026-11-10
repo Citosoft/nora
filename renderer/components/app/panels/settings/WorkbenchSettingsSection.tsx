@@ -69,12 +69,12 @@ export function WorkbenchSettingsSection() {
       />
       <SettingRow
         title="Local Terminal Dock"
-        description="Start with the bottom local terminal dock collapsed."
+        description="Hide the local terminal until you open it from the sidebar."
         control={
           <ToggleButton
             checked={workbenchLayout.isLocalTerminalDockCollapsed}
             onChange={(checked) => updateWorkbenchLayout({ isLocalTerminalDockCollapsed: checked })}
-            label={workbenchLayout.isLocalTerminalDockCollapsed ? "Collapsed" : "Expanded"}
+            label={workbenchLayout.isLocalTerminalDockCollapsed ? "Hidden" : "Visible"}
           />
         }
       />

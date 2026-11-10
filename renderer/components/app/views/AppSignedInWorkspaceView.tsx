@@ -28,9 +28,7 @@ export function AppSignedInWorkspaceView() {
 
   const workspaceSidebarCell = (
     <div className="relative min-h-0">
-      <WorkspaceSidebarProvider value={workspaceSidebarContextValue}>
-        <AppWorkspaceSidebar />
-      </WorkspaceSidebarProvider>
+      <AppWorkspaceSidebar />
       {!isWorkspaceSidebarCollapsed ? (
         <div
           role="separator"
@@ -82,6 +80,7 @@ export function AppSignedInWorkspaceView() {
   );
 
   return (
+    <WorkspaceSidebarProvider value={workspaceSidebarContextValue}>
     <WorkspaceRuntimeProvider value={workspaceRuntimeValue}>
       <div
         className="grid h-full min-h-0"
@@ -104,5 +103,6 @@ export function AppSignedInWorkspaceView() {
         )}
       </div>
     </WorkspaceRuntimeProvider>
+    </WorkspaceSidebarProvider>
   );
 }

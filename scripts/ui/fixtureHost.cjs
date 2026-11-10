@@ -8,7 +8,7 @@ const root = resolve(__dirname, '../..');
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 /** Isolated, no-preload Chromium host shared by component acceptance suites. */
-async function createFixtureHost(entry) {
+async function createFixtureHost(entry, options = {}) {
   const directory = await fs.mkdtemp(join(tmpdir(), 'nora-component-ui-'));
   app.setPath('userData', join(directory, 'electron'));
   let window;
@@ -20,7 +20,7 @@ async function createFixtureHost(entry) {
     const css = pathToFileURL(join(root, 'dist/renderer/styles.css')).href;
     await fs.writeFile(join(directory, 'index.html'), `<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="${css}"></head><body><div id="app"></div><script src="bundle.js"></script></body></html>`);
     await app.whenReady();
-    window = new BrowserWindow({ show: false, width: 1024, height: 900, webPreferences: { offscreen: true, nodeIntegration: false, contextIsolation: true } });
+    window = new BrowserWindow({ show: false, width: 1024, height: 900, webPreferences: { offscreen: true, nodeIntegration: false, contextIsolation: true, preload: options.preload } });
     const evaluate = code => window.webContents.executeJavaScript(code, true);
     const wait = async code => { for (let i = 0; i < 120; i++) { if (await evaluate(code)) return; await pause(40); } throw new Error('UI condition timed out: ' + code); };
     const click = async selector => {

@@ -12,7 +12,6 @@ import {
   readStoredTerminalThemeId,
   readStoredThemeMode,
   readStoredUiFontId,
-  readStoredUserDisplayName,
   readStoredVercelAccountLabel,
   readStoredVercelToken,
   readStoredVercelWorkspaceLinks,
@@ -27,11 +26,13 @@ import {
   writeStoredTerminalThemeId,
   writeStoredThemeMode,
   writeStoredUiFontId,
-  writeStoredUserDisplayName,
   writeStoredVercelToken,
   writeStoredVercelWorkspaceLinks
 } from "@/components/app/logic/appPersistence";
 import { applyAccentColor, applyTheme, applyUiFont, resolveThemeMode } from "@/components/app/logic/appTheme";
+import { DEFAULT_UI_FONT_ID } from "@/components/app/logic/appUiFonts";
+import { readUserDisplayName, writeUserDisplayName } from "@/components/app/logic/userDisplayName";
+import { useUserDisplayName } from "@/components/app/hooks/useUserDisplayName";
 import type {
   AccentColor,
   ResolvedTheme,
@@ -98,10 +99,10 @@ export function useAppPreferences(): AppPreferences {
   const [accentColor, setAccentColor] = useState<AccentColor>("silver");
   const [terminalThemeId, setTerminalThemeId] = useState<TerminalThemeId>("app");
   const [terminalFontId, setTerminalFontId] = useState<TerminalFontId>("ibm-plex-mono");
-  const [uiFontId, setUiFontId] = useState<UiFontId>("inter");
+  const [uiFontId, setUiFontId] = useState<UiFontId>(DEFAULT_UI_FONT_ID);
   const [defaultIdeId, setDefaultIdeId] = useState<string | null>(null);
   const [forceMacTitleBarPreview, setForceMacTitleBarPreview] = useState(false);
-  const [userDisplayName, setUserDisplayName] = useState("");
+  const userDisplayName = useUserDisplayName();
   const [githubToken, setGithubToken] = useState("");
   const [gitlabToken, setGitlabToken] = useState("");
   const [gitlabHost, setGitlabHost] = useState("");
@@ -126,7 +127,6 @@ export function useAppPreferences(): AppPreferences {
     const storedUiFontId = readStoredUiFontId();
     const storedDefaultIdeId = readStoredDefaultIdeId();
     const storedForceMacTitleBarPreview = readStoredForceMacTitleBarPreview();
-    const storedUserDisplayName = readStoredUserDisplayName();
     const storedGithubToken = readStoredGithubToken();
     const storedGitlabToken = readStoredGitlabToken();
     const storedGitlabHost = readStoredGitlabHost();
@@ -143,7 +143,6 @@ export function useAppPreferences(): AppPreferences {
     setUiFontId(storedUiFontId);
     setDefaultIdeId(storedDefaultIdeId);
     setForceMacTitleBarPreview(storedForceMacTitleBarPreview);
-    setUserDisplayName(storedUserDisplayName);
     setGithubToken(storedGithubToken);
     setGitlabToken(storedGitlabToken);
     setGitlabHost(storedGitlabHost);
@@ -166,18 +165,17 @@ export function useAppPreferences(): AppPreferences {
   }, []);
 
   useEffect(() => {
-    if (readStoredUserDisplayName().trim()) {
+    if (readUserDisplayName()) {
       return;
     }
 
     noraSystemClient.getDetectedUserIdentity().then((identity) => {
       const nextDisplayName = identity.displayName?.trim() || "";
-      if (!nextDisplayName) {
+      if (!nextDisplayName || readUserDisplayName()) {
         return;
       }
 
-      writeStoredUserDisplayName(nextDisplayName);
-      setUserDisplayName(nextDisplayName);
+      writeUserDisplayName(nextDisplayName);
     }).catch(() => undefined);
   }, []);
 
@@ -240,10 +238,7 @@ export function useAppPreferences(): AppPreferences {
     setForceMacTitleBarPreview(enabled);
   };
 
-  const updateUserDisplayName = (nextDisplayName: string) => {
-    writeStoredUserDisplayName(nextDisplayName);
-    setUserDisplayName(nextDisplayName.trim());
-  };
+  const updateUserDisplayName = writeUserDisplayName;
 
   const updateGithubToken = (nextToken: string) => {
     writeStoredGithubToken(nextToken);

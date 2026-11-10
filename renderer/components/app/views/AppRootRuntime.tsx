@@ -1,4 +1,4 @@
-import { StatusBar as AppStatusBar } from "@/components/app/chrome/StatusBar";
+import { ActivityNotice } from "@/components/app/chrome/ActivityNotice";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { noraTerminalClient } from "@/components/app/clients/noraTerminalClient";
 import { AppRootDialogsProvider, useAppRootDialogs } from "@/components/app/context/appRootDialogsContext";
@@ -355,17 +355,8 @@ function AppRootRuntimeContent({
     showToast,
     captureError
   });
-  const loadingFooter = <AppStatusBar entries={statusEntries} />;
-  const onboardingFooter = (
-    <AppStatusBar
-      entries={statusEntries}
-      tools={snapshot?.agentCatalog ?? []}
-      agentSkillCatalogs={snapshot?.agentSkillCatalogs ?? []}
-      onInstallTool={toolInstallFlows.installStatusBarTool}
-      onSwitchToolAccount={toolInstallFlows.switchStatusBarToolAccount}
-      onOpenSkillsSettings={() => navigation.openSettingsPage("skills")}
-    />
-  );
+  const loadingActivity = <ActivityNotice entries={statusEntries} />;
+  const onboardingActivity = <ActivityNotice entries={statusEntries} />;
   const { shouldRenderPreLaunch, preLaunchViewProps } = useAppPreLaunchViewProps({
     isOnboardingOpen: dialogs.isOnboardingOpen,
     statusBar,
@@ -418,8 +409,8 @@ function AppRootRuntimeContent({
     installOnboardingTool: toolInstallFlows.installOnboardingTool,
     setOnboardingToolEnabled: toolInstallFlows.setOnboardingToolEnabled,
     completeOnboarding: dialogs.completeOnboarding,
-    loadingFooter,
-    onboardingFooter,
+    loadingActivity,
+    onboardingActivity,
     handleChooseLocalWorkspace: workspaceLifecycle.handleChooseLocalWorkspace,
     normalizeSnapshot,
     dismissWorkspaceLoading: workspaceLoading.dismissWorkspaceLoading,

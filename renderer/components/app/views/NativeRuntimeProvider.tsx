@@ -8,6 +8,7 @@ import { createThreadWorkspaceStore } from "@/components/app/logic/thread-worksp
 import { createThreadLayoutPersistence } from "@/components/app/logic/thread-workspace/persistence";
 import { RoleOnboarding } from "@/components/app/panels/personalization/RoleOnboarding";
 import { ThreadWorkspaceComposition } from "./ThreadWorkspaceComposition";
+import { SetupWindowShell } from "./SetupWindowShell";
 import type { NativeBoot, PersonalizationRequest } from "@shared/ipc/types/personalizationGateway.types";
 import type { NativeRuntimeProviderProps, NativeRuntimePorts, ThreadLaunchInput } from "@/components/app/types/thread-workspace/runtime.types";
 
@@ -38,12 +39,12 @@ export function NativeRuntimeProvider({ children }: NativeRuntimeProviderProps) 
     return store.openDraft({ source: input.source, workspaceId: workspace.id, ...(text ? { text } : {}) });
   }, [store, request]);
   const ports = useMemo<NativeRuntimePorts | null>(() => store && boot ? { store, boot, request, launch } : null, [store, boot, request, launch]);
-  if (!boot || !ports) return <div role={error ? "alert" : "status"} className="flex h-screen flex-col items-center justify-center gap-4 p-6 text-sm"><p>{error ?? "Opening Nora…"}</p>{error && <Button onClick={reload}>Reconnect</Button>}</div>;
-  if (!boot.personalization.defaultRole) return <RoleOnboarding busy={busy} error={error} onComplete={async (role) => {
+  if (!boot || !ports) return <SetupWindowShell><div role={error ? "alert" : "status"} className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-sm"><p>{error ?? "Opening Nora…"}</p>{error && <Button onClick={reload}>Reconnect</Button>}</div></SetupWindowShell>;
+  if (!boot.personalization.defaultRole) return <SetupWindowShell><RoleOnboarding busy={busy} error={error} onComplete={async (role) => {
     if (busy) return; setBusy(true); setError(null);
     try { await request({ kind: "onboard", role }); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Setup could not be saved. Try again."); }
     finally { setBusy(false); }
-  }} />;
+  }} /></SetupWindowShell>;
   return <NativeRuntimeContext.Provider value={ports}><ThreadWorkspaceComposition store={ports.store}>{children}</ThreadWorkspaceComposition></NativeRuntimeContext.Provider>;
 }

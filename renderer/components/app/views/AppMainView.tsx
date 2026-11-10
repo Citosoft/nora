@@ -5,18 +5,14 @@ export function AppMainView() {
   const {
     titleBar,
     topBanners,
-    showSettingsPage,
-    settingsPage,
-    signedInWorkspaceView,
-    statusBar
+    signedInWorkspaceView
   } = useAppMainView();
 
   return (
     <AppMainChromeShell
       titleBar={titleBar}
       topBanners={topBanners}
-      mainScrollChildren={showSettingsPage ? settingsPage : signedInWorkspaceView}
-      statusBar={statusBar}
+      mainScrollChildren={signedInWorkspaceView}
     />
   );
 }

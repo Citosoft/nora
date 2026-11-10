@@ -1,420 +1,52 @@
-import {
-useWorkspaceSidebarActions,
-useWorkspaceSidebarRuntime,
-useWorkspaceSidebarUi
-} from "@/components/app/context/workspaceSidebarContext";
+import { useMemo, useState } from "react";
+import { Plus, Search } from "lucide-react";
+import { useWorkspaceSidebarActions, useWorkspaceSidebarRuntime, useWorkspaceSidebarUi } from "@/components/app/context/workspaceSidebarContext";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
-import { useWorkspaceSidebarAllAgents } from "@/components/app/hooks/useWorkspaceSidebarAllAgents";
-import { buildWorkspaceCollapseAllMap,useWorkspaceSidebarDerived } from "@/components/app/hooks/useWorkspaceSidebarDerived";
-import { useWorkspaceSidebarOverlays } from "@/components/app/hooks/useWorkspaceSidebarOverlays";
-import { useWorkspaceSidebarSectionState } from "@/components/app/hooks/useWorkspaceSidebarSectionState";
-import { getWorkspaceSidebarTooltip } from "@/components/app/logic/workspaceSidebarPresentation";
-import {
-WorkspaceSidebarCollapsedRail
-} from "@/components/app/sidebar/WorkspaceSidebarSections";
-import { WorkspaceSidebarContextMenus } from "@/components/app/sidebar/workspace-sidebar/WorkspaceSidebarContextMenus";
-import { WorkspaceSidebarWorkspaceGroup } from "@/components/app/sidebar/workspace-sidebar/WorkspaceSidebarWorkspaceGroup";
-import { WorkspaceSidebarWorkspacesHeader } from "@/components/app/sidebar/workspace-sidebar/WorkspaceSidebarWorkspacesHeader";
-import { Card,CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useNativeRuntimePorts } from "@/components/app/hooks/useNativeRuntimePorts";
+import { useWorkspaceNavigation } from "@/components/app/hooks/useWorkspaceNavigation";
+import { useWorkspaceSidebarPorts } from "@/components/app/hooks/useWorkspaceSidebarPorts";
+import { buildWorkspaceGroups } from "@/components/app/logic/workspaceGroups";
+import { ThreadNavigation } from "@/components/app/panels/threads/ThreadNavigation";
+import { WorkspaceUtilities } from "@/components/app/sidebar/WorkspaceUtilities";
+import { WorkspaceActions } from "@/components/app/sidebar/workspace-navigation/WorkspaceActions";
+import { WorkspaceShortcuts } from "@/components/app/sidebar/workspace-navigation/WorkspaceShortcuts";
+import { WorkspaceSwitcher } from "@/components/app/sidebar/workspace-navigation/WorkspaceSwitcher";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { effectiveRole } from "@shared/personalization/profiles";
 
-export const WorkspaceSidebar = () => {
-  const [editingTerminalSessionId, setEditingTerminalSessionId] = useState<string | null>(null);
-  const [editingTerminalNameDraft, setEditingTerminalNameDraft] = useState("");
-  const [externalThreadReloadToken, setExternalThreadReloadToken] = useState(0);
+export function WorkspaceSidebar() {
   const snapshot = useCanonicalAppSnapshot();
-  const {
-    githubToken,
-    gitlabToken,
-    gitlabHost,
-    terminalPresets,
-    terminalQuickLaunchDefaults,
-    defaultAgentTool,
-    agentsNeedingAttention,
-    focusedAgent,
-    focusedTerminal,
-    removingWorkspaceRoots,
-    workspaceTasks,
-    workspaceSpecs,
-    workspaceNotes,
-    aiChatTabs,
-    focusedAiChatTabId,
-    focusedBrowserTabId,
-    focusedForgeViewerTabId,
-    activeWorkspaceContentTab,
-    isTaskBoardOpen,
-    isSpecBrowserOpen,
-    isNoteBrowserOpen,
-    isCreatingTask,
-    isCreatingSpec,
-    isCreatingNote
-  } = useWorkspaceSidebarRuntime();
-  const {
-    collapsed,
-    collapsedWorkspaceIds,
-    onCollapsedWorkspaceIdsChange,
-  } = useWorkspaceSidebarUi();
-  const {
-    onChooseProject,
-    onCloseProject,
-    onRemoveProject,
-    onRefresh,
-    onResetWorkspaces,
-    onOpenCreateAgent,
-    onOpenCreateTerminal,
-    onResumeThread,
-    onQuickLaunchAgent,
-    onArchiveThread,
-    onLaunchWorkspaceTerminal,
-    onLaunchWorkspaceScript,
-    onOpenWorkspaceTerminalPresets,
-    onOpenWorkspaceBrowser,
-    onFocusWorkspace,
-    onFocusWorkspaceView,
-    onFocusWorkspaceWorktree,
-    onOpenWorkflowRunChangeRequest,
-    onOpenCreateAgentOnWorktree,
-    onOpenCreateTerminalOnWorktree,
-    onOpenCreateWorktree,
-    onLaunchQuickTerminalOnWorktree,
-    onCheckoutWorkspaceBranch,
-    onLaunchWorktreeScript,
-    onRemoveWorktree,
-    onFocusAgent,
-    onFocusTerminal,
-    onFocusWorkspaceAgent,
-    onFocusWorkspaceTerminal,
-    onRestartAgent,
-    onDestroyAgentRequest,
-    onRenameTerminal,
-    onDestroyTerminal,
-    onOpenTask,
-    onCreateTask,
-    onOpenSpec,
-    onCreateSpec,
-    onDeleteSpec,
-    onGenerateTasksFromSpec,
-    onOpenNote,
-    onCreateNote,
-    onDeleteNote,
-    onOpenTaskBoard,
-    onOpenSpecBrowser,
-    onOpenNoteBrowser,
-    onOpenAiChatFromSidebar,
-    onFocusWorkspaceAiChatTab,
-    onToggleTaskComplete,
-    onDeleteTask
-  } = useWorkspaceSidebarActions();
-
-  const {
-    now,
-    activeSessionPopoverId,
-    setActiveSessionPopoverId,
-    activeTaskMenu,
-    activeSpecMenu,
-    activeNoteMenu,
-    activeWorkspaceMenu,
-    activeAgentMenu,
-    activeTerminalMenu,
-    openTaskMenu,
-    openSpecMenu,
-    openNoteMenu,
-    openWorkspaceMenu,
-    openAgentSessionMenu,
-    openTerminalSessionMenu,
-    openSessionPopover,
-    scheduleSessionPopoverClose,
-    setActiveTaskMenu,
-    setActiveSpecMenu,
-    setActiveNoteMenu,
-    setActiveWorkspaceMenu,
-    setActiveAgentMenu,
-    setActiveTerminalMenu
-  } = useWorkspaceSidebarOverlays();
-
-  const {
-    removingWorkspaceRootSet,
-    preferredShellId,
-    runnableGlobalTerminalPresets,
-    workspaceGroups,
-    projectFaviconUrlByProjectId,
-    workspaceGroupIds,
-    allWorkspaceGroupsCollapsed
-  } = useWorkspaceSidebarDerived({
-    removingWorkspaceRoots,
-    terminalPresets,
-    collapsedWorkspaceIds
-  });
-
-  const {
-    pullRequestStatusByWorkspaceBranch  } = useWorkspaceSidebarAllAgents({
-    workspaceGroups,
-    githubToken,
-    gitlabToken,
-    gitlabHost
-  });
-
-  const {
-    collapsedWorkspaceWorktreeSectionIds,
-    collapsedWorkspaceAgentSectionIds,
-    collapsedWorkspaceThreadSectionIds,
-    collapsedWorkspaceTerminalSectionIds,
-    collapsedWorkspaceAiChatSectionIds,
-    collapsedWorkspaceNoteSectionIds,
-    collapsedWorkspaceSpecSectionIds,
-    collapsedWorkspaceTaskSectionIds,
-    toggleWorkspaceWorktreeSection,
-    toggleWorkspaceAgentSection,
-    toggleWorkspaceThreadSection,
-    toggleWorkspaceTerminalSection,
-    toggleWorkspaceAiChatSection,
-    toggleWorkspaceNoteSection,
-    toggleWorkspaceSpecSection,
-    toggleWorkspaceTaskSection
-  } = useWorkspaceSidebarSectionState();
-
-  if (!snapshot) {
-    return null;
-  }
-
-  const handleToggleCollapseAllWorkspaces = () => {
-    if (!workspaceGroupIds.length) {
-      return;
-    }
-    const nextCollapsedState = !allWorkspaceGroupsCollapsed;
-    onCollapsedWorkspaceIdsChange((current) => ({
-      ...current,
-      ...buildWorkspaceCollapseAllMap(workspaceGroupIds, nextCollapsedState)
-    }));
+  const native = useNativeRuntimePorts();
+  const navigation = useWorkspaceNavigation();
+  const { recentWorkspaces, onOpenRecentWorkspace } = useWorkspaceSidebarPorts();
+  const { removingWorkspaceRoots } = useWorkspaceSidebarRuntime();
+  const { collapsed } = useWorkspaceSidebarUi();
+  const actions = useWorkspaceSidebarActions();
+  const [query, setQuery] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const workspaces = useMemo(() => buildWorkspaceGroups(snapshot, new Set(removingWorkspaceRoots)), [snapshot, removingWorkspaceRoots]);
+  const workspace = workspaces.find((entry) => entry.project.id === snapshot?.project?.id);
+  const nativeWorkspace = native.boot.workspaces.find((entry) => entry.shellProjectId === workspace?.project.id);
+  const role = nativeWorkspace ? effectiveRole(native.boot.personalization, nativeWorkspace.id) : native.boot.personalization.defaultRole;
+  const chooseWorkspace = (projectId: string) => { navigation.closeTool(); setQuery(""); setError(null); actions.onFocusWorkspace(projectId); };
+  const newThread = () => {
+    setError(null); navigation.closeTool();
+    void native.launch(workspace ? { projectId: workspace.project.id } : {}).catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "Thread could not be opened."));
   };
-  const handleBeginTerminalRename = (sessionId: string, currentName: string) => {
-    setEditingTerminalSessionId(sessionId);
-    setEditingTerminalNameDraft(currentName);
-  };
-  const handleCancelTerminalRename = () => {
-    setEditingTerminalSessionId(null);
-    setEditingTerminalNameDraft("");
-  };
-  const handleSubmitTerminalRename = (sessionId: string, currentName: string) => {
-    const nextName = editingTerminalNameDraft.trim();
-    const previousName = currentName.trim();
-    if (!nextName || nextName === previousName) {
-      handleCancelTerminalRename();
-      return;
-    }
-    void onRenameTerminal(sessionId, nextName);
-    handleCancelTerminalRename();
-  };
-
-  return (
-    <Card
-      className={cn(
-        "workspace-shell-surface h-full min-h-0 overflow-hidden rounded-none border-0 bg-card/95 shadow-none dark:bg-muted/35",
-        collapsed && "workspace-sidebar-collapsed-surface"
-      )}
-    >
-      <CardContent className="flex h-full min-h-0 flex-col gap-0 p-0">
-        {collapsed ? (
-          <WorkspaceSidebarCollapsedRail
-            workspaceGroups={workspaceGroups}
-            projectFaviconUrlByProjectId={projectFaviconUrlByProjectId}
-            workspaceTasksCount={workspaceTasks.length}
-            workspaceSpecsCount={workspaceSpecs.length}
-            workspaceNotesCount={workspaceNotes.length}
-            focusedWorkspaceId={snapshot.project?.id ?? null}
-            onChooseProject={onChooseProject}
-            onRefresh={onRefresh}
-            onResetWorkspaces={onResetWorkspaces}
-            onCloseProject={onCloseProject}
-            onFocusWorkspace={onFocusWorkspace}
-            hasActiveProject={Boolean(snapshot.project)}
-            renderWorkspaceTitle={getWorkspaceSidebarTooltip}
-          />
-        ) : (
-          <div className="flex-1 overflow-x-hidden overflow-y-auto">
-            <div className="pb-4">
-              <section>
-                {snapshot.project ? (
-                  <WorkspaceSidebarWorkspacesHeader
-                    variant="active-project"
-                    workspaceGroupIds={workspaceGroupIds}
-                    allWorkspaceGroupsCollapsed={allWorkspaceGroupsCollapsed}
-                    onChooseProject={onChooseProject}
-                    onToggleCollapseAllWorkspaces={handleToggleCollapseAllWorkspaces}
-                    onRefresh={onRefresh}
-                    onResetWorkspaces={onResetWorkspaces}
-                    onCloseProject={onCloseProject}
-                  />
-                ) : (
-                  <WorkspaceSidebarWorkspacesHeader
-                    variant="no-project"
-                    workspaceGroupIds={workspaceGroupIds}
-                    allWorkspaceGroupsCollapsed={allWorkspaceGroupsCollapsed}
-                    onChooseProject={onChooseProject}
-                    onToggleCollapseAllWorkspaces={handleToggleCollapseAllWorkspaces}
-                    onResetWorkspaces={onResetWorkspaces}
-                  />
-                )}
-                <div>
-                  {workspaceGroups.length ? (
-                    workspaceGroups.map((workspace) => (
-                      <WorkspaceSidebarWorkspaceGroup
-                        key={workspace.project.id}
-                        workspace={workspace}
-                        removingWorkspaceRootSet={removingWorkspaceRootSet}
-                        projectFaviconUrlByProjectId={projectFaviconUrlByProjectId}
-                        collapsedWorkspaceIds={collapsedWorkspaceIds}
-                        onCollapsedWorkspaceIdsChange={onCollapsedWorkspaceIdsChange}
-                        collapsedWorkspaceWorktreeSectionIds={collapsedWorkspaceWorktreeSectionIds}
-                        collapsedWorkspaceAgentSectionIds={collapsedWorkspaceAgentSectionIds}
-                        collapsedWorkspaceThreadSectionIds={collapsedWorkspaceThreadSectionIds}
-                        collapsedWorkspaceTerminalSectionIds={collapsedWorkspaceTerminalSectionIds}
-                        collapsedWorkspaceAiChatSectionIds={collapsedWorkspaceAiChatSectionIds}
-                        collapsedWorkspaceNoteSectionIds={collapsedWorkspaceNoteSectionIds}
-                        collapsedWorkspaceSpecSectionIds={collapsedWorkspaceSpecSectionIds}
-                        collapsedWorkspaceTaskSectionIds={collapsedWorkspaceTaskSectionIds}
-                        externalThreadReloadToken={externalThreadReloadToken}
-                        toggleWorkspaceWorktreeSection={toggleWorkspaceWorktreeSection}
-                        toggleWorkspaceAgentSection={toggleWorkspaceAgentSection}
-                        toggleWorkspaceThreadSection={toggleWorkspaceThreadSection}
-                        toggleWorkspaceTerminalSection={toggleWorkspaceTerminalSection}
-                        toggleWorkspaceAiChatSection={toggleWorkspaceAiChatSection}
-                        toggleWorkspaceNoteSection={toggleWorkspaceNoteSection}
-                        toggleWorkspaceSpecSection={toggleWorkspaceSpecSection}
-                        toggleWorkspaceTaskSection={toggleWorkspaceTaskSection}
-                        workspaceTasks={workspaceTasks}
-                        workspaceSpecs={workspaceSpecs}
-                        workspaceNotes={workspaceNotes}
-                        aiChatTabs={aiChatTabs}
-                        focusedAiChatTabId={focusedAiChatTabId}
-                        focusedBrowserTabId={focusedBrowserTabId}
-                        focusedForgeViewerTabId={focusedForgeViewerTabId}
-                        activeWorkspaceContentTab={activeWorkspaceContentTab}
-                        isTaskBoardOpen={isTaskBoardOpen}
-                        isSpecBrowserOpen={isSpecBrowserOpen}
-                        isNoteBrowserOpen={isNoteBrowserOpen}
-                        isCreatingTask={isCreatingTask}
-                        isCreatingSpec={isCreatingSpec}
-                        isCreatingNote={isCreatingNote}
-                        pullRequestStatusByWorkspaceBranch={pullRequestStatusByWorkspaceBranch}
-                        agentsNeedingAttention={agentsNeedingAttention}
-                        now={now}
-                        focusedAgent={focusedAgent}
-                        focusedTerminal={focusedTerminal}
-                        preferredShellId={preferredShellId}
-                        terminalQuickLaunchDefaults={terminalQuickLaunchDefaults}
-                        defaultAgentTool={defaultAgentTool}
-                        runnableGlobalTerminalPresets={runnableGlobalTerminalPresets}
-                        activeSessionPopoverId={activeSessionPopoverId}
-                        setActiveSessionPopoverId={setActiveSessionPopoverId}
-                        openSessionPopover={openSessionPopover}
-                        scheduleSessionPopoverClose={scheduleSessionPopoverClose}
-                        openAgentSessionMenu={openAgentSessionMenu}
-                        openTerminalSessionMenu={openTerminalSessionMenu}
-                        openTaskMenu={openTaskMenu}
-                        openSpecMenu={openSpecMenu}
-                        openNoteMenu={openNoteMenu}
-                        openWorkspaceMenu={openWorkspaceMenu}
-                        onFocusWorkspace={onFocusWorkspace}
-                        onFocusWorkspaceView={onFocusWorkspaceView}
-                        onFocusWorkspaceWorktree={onFocusWorkspaceWorktree}
-                        onOpenWorkflowRunChangeRequest={onOpenWorkflowRunChangeRequest}
-                        onOpenCreateAgentOnWorktree={onOpenCreateAgentOnWorktree}
-                        onOpenCreateTerminalOnWorktree={onOpenCreateTerminalOnWorktree}
-                        onOpenCreateWorktree={onOpenCreateWorktree}
-                        onLaunchQuickTerminalOnWorktree={onLaunchQuickTerminalOnWorktree}
-                        onCheckoutWorkspaceBranch={onCheckoutWorkspaceBranch}
-                        onLaunchWorktreeScript={onLaunchWorktreeScript}
-                        onRemoveWorktree={onRemoveWorktree}
-                        onOpenCreateAgent={onOpenCreateAgent}
-                        onResumeThread={onResumeThread}
-                        onQuickLaunchAgent={onQuickLaunchAgent}
-                        onArchiveThread={onArchiveThread}
-                        onOpenCreateTerminal={onOpenCreateTerminal}
-                        onLaunchWorkspaceTerminal={onLaunchWorkspaceTerminal}
-                        onLaunchWorkspaceScript={onLaunchWorkspaceScript}
-                        onOpenWorkspaceTerminalPresets={onOpenWorkspaceTerminalPresets}
-                        onOpenWorkspaceBrowser={onOpenWorkspaceBrowser}
-                        onFocusAgent={onFocusAgent}
-                        onFocusTerminal={onFocusTerminal}
-                        onFocusWorkspaceAgent={onFocusWorkspaceAgent}
-                        onFocusWorkspaceTerminal={onFocusWorkspaceTerminal}
-                        editingTerminalSessionId={editingTerminalSessionId}
-                        editingTerminalNameDraft={editingTerminalNameDraft}
-                        onEditingTerminalNameDraftChange={setEditingTerminalNameDraft}
-                        onSubmitTerminalRename={handleSubmitTerminalRename}
-                        onCancelTerminalRename={handleCancelTerminalRename}
-                        onOpenTask={onOpenTask}
-                        onCreateTask={onCreateTask}
-                        onOpenTaskBoard={onOpenTaskBoard}
-                        onOpenSpec={onOpenSpec}
-                        onCreateSpec={onCreateSpec}
-                        onOpenSpecBrowser={onOpenSpecBrowser}
-                        onOpenNote={onOpenNote}
-                        onCreateNote={onCreateNote}
-                        onOpenNoteBrowser={onOpenNoteBrowser}
-                        onFocusWorkspaceAiChatTab={onFocusWorkspaceAiChatTab}
-                        onOpenAiChatFromSidebar={onOpenAiChatFromSidebar}
-                        onRemoveProject={onRemoveProject}
-                      />
-                    ))
-                  ) : snapshot.project ? (
-                    <div className="mx-2 rounded-[4px] border border-dashed border-border/60 bg-background/30 px-3 py-2 text-sm text-muted-foreground">
-                      Add a project folder to start grouping agents by project.
-                    </div>
-                  ) : (
-                    <div className="mx-2 rounded-[4px] border border-dashed border-border/60 bg-background/30 px-3 py-2 text-sm text-muted-foreground">
-                      Pick a project folder once and it will appear here.
-                    </div>
-                  )}
-                </div>
-              </section>
-
-            </div>
-          </div>
-        )}
-      </CardContent>
-      <WorkspaceSidebarContextMenus
-        workspaceGroups={workspaceGroups}
-        focusedProjectId={snapshot.project?.id ?? null}
-        terminalShells={snapshot.terminalShells}
-        preferredShellId={preferredShellId}
-        terminalQuickLaunchDefaults={terminalQuickLaunchDefaults}
-        runnableGlobalTerminalPresets={runnableGlobalTerminalPresets}
-        activeTaskMenu={activeTaskMenu}
-        activeSpecMenu={activeSpecMenu}
-        activeNoteMenu={activeNoteMenu}
-        activeWorkspaceMenu={activeWorkspaceMenu}
-        activeAgentMenu={activeAgentMenu}
-        activeTerminalMenu={activeTerminalMenu}
-        setActiveTaskMenu={setActiveTaskMenu}
-        setActiveSpecMenu={setActiveSpecMenu}
-        setActiveNoteMenu={setActiveNoteMenu}
-        setActiveWorkspaceMenu={setActiveWorkspaceMenu}
-        setActiveAgentMenu={setActiveAgentMenu}
-        setActiveTerminalMenu={setActiveTerminalMenu}
-        onToggleTaskComplete={onToggleTaskComplete}
-        onDeleteTask={onDeleteTask}
-        onGenerateTasksFromSpec={onGenerateTasksFromSpec}
-        onDeleteSpec={onDeleteSpec}
-        onDeleteNote={onDeleteNote}
-        onOpenCreateAgent={onOpenCreateAgent}
-        onFocusWorkspace={onFocusWorkspace}
-        onOpenWorkspaceBrowser={onOpenWorkspaceBrowser}
-        onLaunchWorkspaceTerminal={onLaunchWorkspaceTerminal}
-        onOpenCreateTerminal={onOpenCreateTerminal}
-        onOpenWorkspaceTerminalPresets={onOpenWorkspaceTerminalPresets}
-        onCreateTask={onCreateTask}
-        onCreateSpec={onCreateSpec}
-        onRemoveProject={onRemoveProject}
-        onFocusAgent={onFocusAgent}
-        onFocusWorkspaceAgent={onFocusWorkspaceAgent}
-        onRestartAgent={onRestartAgent}
-        onDestroyAgentRequest={onDestroyAgentRequest}
-        onBeginTerminalRename={handleBeginTerminalRename}
-        onDestroyTerminal={onDestroyTerminal}
-      />
-    </Card>
-  );
-};
+  return <aside aria-label="Workspace navigation" className={`workspace-shell-surface flex h-full min-h-0 flex-col overflow-hidden ${collapsed ? "items-center" : ""}`}>
+    <div className={`flex w-full shrink-0 items-center ${collapsed ? "justify-center px-1 py-3" : "gap-1 px-3 pt-3"}`}>
+      <WorkspaceSwitcher workspaces={workspaces} activeId={snapshot?.project?.id ?? null} collapsed={collapsed} recentWorkspaces={recentWorkspaces}
+        onSelect={chooseWorkspace} onOpenRecent={(rootPath, name) => { navigation.closeTool(); onOpenRecentWorkspace(rootPath, name); }} onAdd={actions.onChooseProject} />
+      {!collapsed && workspace && <WorkspaceActions workspace={workspace} />}
+    </div>
+    <div className={`w-full shrink-0 ${collapsed ? "flex flex-col items-center gap-1 pb-1" : "space-y-2 px-3 pb-3 pt-2"}`}>
+      <Button variant="ghost" size={collapsed ? "icon" : "default"} className={collapsed ? "size-8" : "h-9 w-full justify-start px-2 text-sm font-normal"} onClick={newThread} aria-label="New thread" tooltip={collapsed ? "New thread" : undefined}><Plus className="size-4 text-muted-foreground" aria-hidden="true" />{!collapsed && "New thread"}</Button>
+      {!collapsed && <div className="relative"><Search className="pointer-events-none absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" aria-hidden="true" /><Input type="search" className="h-8 rounded-lg border-transparent bg-transparent pl-8 text-xs shadow-none hover:bg-muted/40 focus-visible:border-border" placeholder="Search threads…" aria-label="Search threads" value={query} onChange={(event) => setQuery(event.target.value)} /></div>}
+    </div>
+    {workspace && <WorkspaceShortcuts workspace={workspace} role={role} collapsed={collapsed} />}
+    {!collapsed && (error || navigation.preferenceError) && <p role="alert" className="px-4 pb-3 text-xs text-destructive">{error ?? navigation.preferenceError}</p>}
+    {collapsed ? <div className="min-h-0 flex-1" /> : <ThreadNavigation workspaceId={nativeWorkspace?.id ?? (workspace ? `unregistered:${workspace.project.id}` : null)} query={query} unified onNavigate={navigation.closeTool} />}
+    <div className="w-full shrink-0"><WorkspaceUtilities collapsed={collapsed} /></div>
+  </aside>;
+}

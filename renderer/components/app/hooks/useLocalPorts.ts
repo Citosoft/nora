@@ -3,11 +3,11 @@ import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainStat
 import { collectActiveLocalPorts } from "@/components/app/logic/activeLocalPorts";
 import { buildWorkspaceGroups } from "@/components/app/logic/workspaceGroups";
 import { createWorkspaceTerminalNavigation } from "@/components/app/logic/workspaceTerminalNavigation";
-import type { StatusBarLocalPortsModel } from "@/components/app/types/statusBarLocalPorts.types";
+import type { LocalPortsModel } from "@/components/app/types/localPorts.types";
 import { useMemo } from "react";
 
-/** Returns null outside the signed-in shell (loading / onboarding footers), where there is nothing to navigate to. */
-export const useStatusBarLocalPorts = (): StatusBarLocalPortsModel | null => {
+/** Returns null outside the signed-in shell (startup screens), where there is nothing to navigate to. */
+export const useLocalPorts = (): LocalPortsModel | null => {
   const sidebarBuild = useOptionalWorkspaceSidebarPorts()?.sidebarBuild ?? null;
   const snapshot = useCanonicalAppSnapshot();
   const removingWorkspaceRoots = sidebarBuild?.removingWorkspaceRoots;

@@ -389,6 +389,7 @@ function SignedInAppRootContent({
     sidebarsSwapped,
     setIsChangesSidebarCollapsed,
     setIsWorkspaceSidebarCollapsed,
+    isLocalTerminalDockCollapsed,
     setIsLocalTerminalDockCollapsed,
     settingsGroup
   });

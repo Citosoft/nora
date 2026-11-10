@@ -1,3 +1,5 @@
+import { AppTools } from "@/components/app/sidebar/workspace-utilities/AppTools";
+import { buildAppToolsProps } from "@/components/app/logic/buildAppToolsProps";
 import { SplashScreen as AppSplashScreen } from "@/components/app/chrome/SplashScreen";
 import { TitleBar as AppTitleBar } from "@/components/app/chrome/TitleBar";
 import { AboutDialog as AppAboutDialog } from "@/components/app/dialogs/AboutDialog";
@@ -22,8 +24,8 @@ export function AppPreLaunchView({
   loadingOnboardingDialogProps,
   onboardingOnboardingDialogProps,
   startupDependenciesDialogProps,
-  loadingFooter,
-  onboardingFooter,
+  loadingActivity,
+  onboardingActivity,
   addWorkspaceDialogProps,
   remoteWorkspaceDialogProps,
   keyboardShortcutsDialogProps,
@@ -49,7 +51,8 @@ export function AppPreLaunchView({
             <AppResourceMonitorDialog {...resourceMonitorDialogProps} />
           </>
         }
-        footer={loadingFooter}
+        activity={loadingActivity}
+        appTools={<AppTools {...buildAppToolsProps(loadingTitleBarProps)} collapsed />}
       />
     );
   }
@@ -71,7 +74,8 @@ export function AppPreLaunchView({
             <AppAboutDialog {...aboutDialogProps} />
           </>
         }
-        footer={onboardingFooter}
+        activity={onboardingActivity}
+        appTools={<AppTools {...buildAppToolsProps(onboardingTitleBarProps)} collapsed />}
       />
     );
   }

@@ -15,6 +15,20 @@ let host;
   };
   await wait(`!!document.querySelector('button[aria-label="Send instruction"]:not(:disabled)') || !!document.querySelector(${JSON.stringify(visibleComposer)})`);
   await wait(`document.body.textContent.includes('First model')`);
+  const greeting = 'section[aria-label="New thread"] h1';
+  assert.equal(await evaluate(`document.querySelector(${JSON.stringify(greeting)}).textContent`), 'What would you like to work on?');
+  await evaluate(`localStorage.setItem('nora-user-display-name','  Daniel Smith  ');window.dispatchEvent(new StorageEvent('storage',{key:'nora-user-display-name',storageArea:localStorage}));`);
+  await wait(`document.querySelector(${JSON.stringify(greeting)}).textContent==='What would you like to work on, Daniel?'`);
+  assert.equal(await evaluate(`document.querySelector(${JSON.stringify(greeting)}).querySelector('span').textContent`), 'Daniel');
+  for (const theme of ['light', 'dark']) {
+    await evaluate(`document.documentElement.dataset.theme='${theme}';document.documentElement.classList.toggle('dark','${theme}'==='dark')`);
+    assert.equal(await evaluate(`(()=>{const heading=document.querySelector(${JSON.stringify(greeting)});return getComputedStyle(heading).color!==getComputedStyle(heading.querySelector('span')).color})()`), true);
+    await click(visibleComposer);
+    const inputSurface = await evaluate(`(()=>{const style=getComputedStyle(document.querySelector(${JSON.stringify(visibleComposer)}));return {background:style.backgroundColor,border:style.borderTopWidth}})()`);
+    assert.deepEqual(inputSurface, { background: 'rgba(0, 0, 0, 0)', border: '0px' }, 'Chat input must blend into the composer while hovered and focused');
+  }
+  await evaluate(`localStorage.removeItem('nora-user-display-name');window.dispatchEvent(new StorageEvent('storage',{key:'nora-user-display-name',storageArea:localStorage}));`);
+  await wait(`document.querySelector(${JSON.stringify(greeting)}).textContent==='What would you like to work on?'`);
   if (process.env.NORA_UI_EVIDENCE_DIR) {
     await fs.mkdir(process.env.NORA_UI_EVIDENCE_DIR, { recursive: true });
     await fs.writeFile(join(process.env.NORA_UI_EVIDENCE_DIR, 'new-thread.png'), (await window.webContents.capturePage()).toPNG());
@@ -57,7 +71,7 @@ let host;
     await evaluate(`document.documentElement.classList.add('dark');document.documentElement.dataset.theme='dark'`); await pause(100);
     await fs.writeFile(join(process.env.NORA_UI_EVIDENCE_DIR, 'thread-regions-dark.png'), (await window.webContents.capturePage()).toPNG());
   }
-  console.log('PASS: connected sidebar/tabs/composer, independent drafts, inert focus, close/reopen, first-send stable identity, lost reply retry and preserved follow-up. No inference.');
+  console.log('PASS: first-name greeting and updates, seamless chat input in both themes, connected sidebar/tabs/composer, independent drafts, inert focus, close/reopen, stable identity and retry. No inference.');
 })().then(async () => { await host?.close(); app.exit(0); }).catch(async error => {
   console.error(error); if (host) console.error(await host.evaluate('document.body.innerText').catch(() => 'Renderer unavailable'));
   await host?.close(); app.exit(1);

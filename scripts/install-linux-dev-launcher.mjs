@@ -4,14 +4,16 @@ import { spawn } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 
 if (process.platform !== "linux") {
   throw new Error("Linux dev launcher installation is only supported on Linux.");
 }
 
-const root = process.cwd();
-const desktopDir = path.join(os.homedir(), ".local", "share", "applications");
-const iconDir = path.join(os.homedir(), ".local", "share", "icons", "hicolor", "256x256", "apps");
+const root = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
+const dataDir = process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local", "share");
+const desktopDir = path.join(dataDir, "applications");
+const iconDir = path.join(dataDir, "icons", "hicolor", "256x256", "apps");
 const desktopFilePath = path.join(desktopDir, "nora-dev.desktop");
 const iconSourcePath = path.join(root, "renderer", "icon-256.png");
 const iconHash = createHash("sha1").update(await readFile(iconSourcePath)).digest("hex").slice(0, 8);
@@ -31,8 +33,7 @@ const desktopFile = [
   "Terminal=false",
   "Categories=Development;IDE;",
   "StartupNotify=true",
-  "StartupWMClass=Nora",
-  "X-GNOME-WMClass=Nora",
+  "StartupWMClass=nora-dev",
   ""
 ].join("\n");
 
@@ -42,7 +43,7 @@ await cp(iconSourcePath, iconThemePath);
 await writeFile(desktopFilePath, desktopFile, "utf8");
 await removeOldDevIcons(iconDir, iconName);
 await runIfAvailable("update-desktop-database", [desktopDir]);
-await runIfAvailable("gtk-update-icon-cache", ["-f", path.join(os.homedir(), ".local", "share", "icons", "hicolor")]);
+await runIfAvailable("gtk-update-icon-cache", ["-f", path.join(dataDir, "icons", "hicolor")]);
 
 console.log(`Installed Linux dev launcher at ${desktopFilePath}`);
 console.log(`Installed Linux dev icon at ${iconThemePath}`);

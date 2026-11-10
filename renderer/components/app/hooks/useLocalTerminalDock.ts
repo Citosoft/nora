@@ -53,12 +53,12 @@ export function useLocalTerminalDock({
   ]);
 
   useEffect(() => {
-    if (localTerminalState || isCreatingLocalTerminal) {
+    if (isLocalTerminalDockCollapsed || localTerminalState || isCreatingLocalTerminal) {
       return;
     }
 
     void openLocalTerminalDock();
-  }, [isCreatingLocalTerminal, localTerminalState, openLocalTerminalDock]);
+  }, [isCreatingLocalTerminal, isLocalTerminalDockCollapsed, localTerminalState, openLocalTerminalDock]);
 
   return {
     isCreatingLocalTerminal,

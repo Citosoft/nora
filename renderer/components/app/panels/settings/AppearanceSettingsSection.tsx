@@ -100,7 +100,7 @@ export function AppearanceSettingsSection() {
       />
       <SettingRow
         title="UI Font"
-        description={`Choose the typeface used across ${APP_SHORT_NAME}'s interface. Inter and Geist are bundled locally; the rest use modern web fonts when available.`}
+        description={`Choose the typeface used across ${APP_SHORT_NAME}'s interface. System uses your device's native font. Inter and Geist are bundled locally; other choices use web fonts when available.`}
         control={
           <div className="space-y-3">
             <Select value={uiFontId} onChange={(event) => updateUiFont(event.target.value as UiFontId)}>
@@ -112,7 +112,7 @@ export function AppearanceSettingsSection() {
             </Select>
             <div
               className="rounded-[6px] border border-border/70 bg-background/60 px-3 py-2.5 text-sm text-foreground"
-              style={{ fontFamily: `${getUiFontFamily(uiFontId)}, "Segoe UI", sans-serif` }}
+              style={{ fontFamily: `${getUiFontFamily(uiFontId)}, var(--app-system-font)` }}
             >
               The quick brown fox jumps over the lazy dog.
             </div>

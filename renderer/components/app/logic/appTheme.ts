@@ -29,14 +29,14 @@ const ACCENT_PALETTES: Record<AccentColor, Record<ResolvedTheme, {
     dark: {
       primary: "220 11% 74%",
       primaryForeground: "220 35% 11%",
-      accent: "220 14% 17%",
+      accent: "220 14% 10%",
       accentForeground: "210 20% 94%",
       ring: "220 11% 74%",
-      buttonDefaultBg: "220 16% 25%",
-      buttonDefaultBorder: "220 12% 40%",
-      buttonDefaultHover: "220 17% 29%",
-      bodyGradientA: "rgba(148, 163, 184, 0.12)",
-      bodyGradientB: "rgba(255, 255, 255, 0.03)"
+      buttonDefaultBg: "220 16% 12%",
+      buttonDefaultBorder: "220 12% 23%",
+      buttonDefaultHover: "220 17% 16%",
+      bodyGradientA: "rgba(148, 163, 184, 0.06)",
+      bodyGradientB: "rgba(255, 255, 255, 0.015)"
     }
   },
   green: {
@@ -55,14 +55,14 @@ const ACCENT_PALETTES: Record<AccentColor, Record<ResolvedTheme, {
     dark: {
       primary: "153 74% 64%",
       primaryForeground: "150 40% 8%",
-      accent: "0 0% 14%",
+      accent: "0 0% 10%",
       accentForeground: "210 20% 94%",
       ring: "153 74% 64%",
-      buttonDefaultBg: "153 28% 22%",
-      buttonDefaultBorder: "153 42% 34%",
-      buttonDefaultHover: "153 30% 26%",
-      bodyGradientA: "rgba(98, 227, 168, 0.1)",
-      bodyGradientB: "rgba(255, 255, 255, 0.035)"
+      buttonDefaultBg: "153 28% 12%",
+      buttonDefaultBorder: "153 42% 23%",
+      buttonDefaultHover: "153 30% 16%",
+      bodyGradientA: "rgba(98, 227, 168, 0.06)",
+      bodyGradientB: "rgba(255, 255, 255, 0.015)"
     }
   },
   blue: {
@@ -81,14 +81,14 @@ const ACCENT_PALETTES: Record<AccentColor, Record<ResolvedTheme, {
     dark: {
       primary: "211 96% 68%",
       primaryForeground: "221 47% 12%",
-      accent: "218 34% 16%",
+      accent: "218 34% 10%",
       accentForeground: "210 20% 94%",
       ring: "211 96% 68%",
-      buttonDefaultBg: "217 41% 23%",
-      buttonDefaultBorder: "214 59% 38%",
-      buttonDefaultHover: "217 41% 27%",
-      bodyGradientA: "rgba(93, 160, 255, 0.13)",
-      bodyGradientB: "rgba(255, 255, 255, 0.03)"
+      buttonDefaultBg: "217 41% 12%",
+      buttonDefaultBorder: "214 59% 23%",
+      buttonDefaultHover: "217 41% 16%",
+      bodyGradientA: "rgba(93, 160, 255, 0.06)",
+      bodyGradientB: "rgba(255, 255, 255, 0.015)"
     }
   },
   amber: {
@@ -107,14 +107,14 @@ const ACCENT_PALETTES: Record<AccentColor, Record<ResolvedTheme, {
     dark: {
       primary: "38 96% 64%",
       primaryForeground: "28 58% 10%",
-      accent: "32 18% 16%",
+      accent: "32 18% 10%",
       accentForeground: "42 50% 92%",
       ring: "38 96% 64%",
-      buttonDefaultBg: "33 37% 23%",
-      buttonDefaultBorder: "34 56% 37%",
-      buttonDefaultHover: "33 39% 27%",
-      bodyGradientA: "rgba(255, 191, 82, 0.13)",
-      bodyGradientB: "rgba(255, 255, 255, 0.03)"
+      buttonDefaultBg: "33 37% 12%",
+      buttonDefaultBorder: "34 56% 23%",
+      buttonDefaultHover: "33 39% 16%",
+      bodyGradientA: "rgba(255, 191, 82, 0.06)",
+      bodyGradientB: "rgba(255, 255, 255, 0.015)"
     }
   },
   rose: {
@@ -133,14 +133,14 @@ const ACCENT_PALETTES: Record<AccentColor, Record<ResolvedTheme, {
     dark: {
       primary: "343 82% 69%",
       primaryForeground: "345 45% 11%",
-      accent: "340 20% 15%",
+      accent: "340 20% 10%",
       accentForeground: "210 20% 94%",
       ring: "343 82% 69%",
-      buttonDefaultBg: "340 29% 22%",
-      buttonDefaultBorder: "341 43% 35%",
-      buttonDefaultHover: "340 31% 26%",
-      bodyGradientA: "rgba(247, 115, 148, 0.12)",
-      bodyGradientB: "rgba(255, 255, 255, 0.03)"
+      buttonDefaultBg: "340 29% 12%",
+      buttonDefaultBorder: "341 43% 23%",
+      buttonDefaultHover: "340 31% 16%",
+      bodyGradientA: "rgba(247, 115, 148, 0.06)",
+      bodyGradientB: "rgba(255, 255, 255, 0.015)"
     }
   },
   violet: {
@@ -159,14 +159,14 @@ const ACCENT_PALETTES: Record<AccentColor, Record<ResolvedTheme, {
     dark: {
       primary: "263 92% 74%",
       primaryForeground: "258 49% 12%",
-      accent: "257 22% 16%",
+      accent: "257 22% 10%",
       accentForeground: "210 20% 94%",
       ring: "263 92% 74%",
-      buttonDefaultBg: "258 30% 24%",
-      buttonDefaultBorder: "260 43% 38%",
-      buttonDefaultHover: "258 32% 28%",
-      bodyGradientA: "rgba(167, 139, 250, 0.13)",
-      bodyGradientB: "rgba(255, 255, 255, 0.03)"
+      buttonDefaultBg: "258 30% 12%",
+      buttonDefaultBorder: "260 43% 23%",
+      buttonDefaultHover: "258 32% 16%",
+      bodyGradientA: "rgba(167, 139, 250, 0.06)",
+      bodyGradientB: "rgba(255, 255, 255, 0.015)"
     }
   }
 };

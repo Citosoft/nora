@@ -1,8 +1,7 @@
-import { StatusBar as AppStatusBar } from "@/components/app/chrome/StatusBar";
 import { TitleBar as AppTitleBar } from "@/components/app/chrome/TitleBar";
 import { buildTitleBarProps } from "@/components/app/logic/buildTitleBarProps";
 import { SettingsRuntimeProvider } from "@/components/app/panels/settings/SettingsRuntimeProvider";
-import { SettingsPage as AppSettingsPage } from "@/components/app/panels/SettingsPage";
+import { SettingsDialog } from "@/components/app/dialogs/SettingsDialog";
 import type {
   AppChromeCompositionArgs,
   AppChromeCompositionValue
@@ -20,21 +19,11 @@ export function useAppChromeComposition(args: AppChromeCompositionArgs): AppChro
       onOpenLinuxRelease: args.topBanners.onOpenLinuxRelease,
       onDismissLinuxUpdate: args.topBanners.onDismissLinuxUpdate
     }),
-    statusBar: createElement(AppStatusBar, {
-      entries: args.statusBar.entries,
-      tools: args.statusBar.tools,
-      agentSkillCatalogs: args.statusBar.agentSkillCatalogs,
-      activeWorkspaceBranch: args.statusBar.activeWorkspaceBranch,
-      activeWorkspaceWorktreeName: args.statusBar.activeWorkspaceWorktreeName,
-      onInstallTool: args.statusBar.onInstallTool,
-      onSwitchToolAccount: args.statusBar.onSwitchToolAccount,
-      onOpenSkillsSettings: args.statusBar.onOpenSkillsSettings
-    }),
-    settingsPage: createElement(
+    settingsDialog: createElement(
       SettingsRuntimeProvider,
       {
         value: args.settings.runtimeValue,
-        children: createElement(AppSettingsPage, { initialGroup: args.settings.initialGroup })
+        children: createElement(SettingsDialog, { open: args.settings.open, initialGroup: args.settings.initialGroup })
       }
     ),
   };

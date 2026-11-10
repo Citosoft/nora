@@ -15,7 +15,7 @@ export type WorkspaceTerminalNavigationDeps = Pick<
   uiCommands: Pick<WorkspaceSidebarBuildDeps["uiCommands"], "clearBrowserAndForgeFocus" | "clearSessionTabFocus">;
 };
 
-/** Focus/open actions for terminals and workspace browsers, shared by the sidebar and footer surfaces. */
+/** Focus/open actions for terminals and workspace browsers, shared by the workspace surfaces. */
 export type WorkspaceTerminalNavigation = {
   focusTerminal: (sessionId: string) => void;
   focusWorkspaceTerminal: (projectId: string, sessionId: string) => Promise<AppState | null>;

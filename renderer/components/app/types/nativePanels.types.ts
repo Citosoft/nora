@@ -4,6 +4,7 @@ import type { NativeWorkspace } from "@shared/types/personalization/workspaces.t
 import type { ConversationClient } from "./conversationClient.types";
 import type { ConversationReview } from "@shared/types/conversation/review.types";
 import type { ThreadDocument, ThreadDocumentRuntime } from "./thread-workspace/state.types";
+import type { BranchRequestReader } from "./threadInsights.types";
 
 export interface NativeTimelineProps { items: readonly TimelineItem[]; }
 export interface NativeReviewProps { result: ConversationReview; }
@@ -13,6 +14,8 @@ export interface NativeRequestProps {
   onRespond(response: RequestResponse): Promise<void>;
 }
 export interface NativeConversationPorts {
+  userDisplayName: string;
+  readBranchRequest: BranchRequestReader | null;
   client: ConversationClient;
   workspace: NativeWorkspace;
   state: NativeBoot;

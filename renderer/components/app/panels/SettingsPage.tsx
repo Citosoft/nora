@@ -1,5 +1,4 @@
 import { useSettingRowReveal } from "@/components/app/hooks/useSettingRowReveal";
-import { useSettingsRuntime } from "@/components/app/hooks/useSettingsRuntime";
 import { AiSettingsSection } from "@/components/app/panels/settings/AiSettingsSection";
 import { AppearanceSettingsSection } from "@/components/app/panels/settings/AppearanceSettingsSection";
 import { BrowserSettingsSection } from "@/components/app/panels/settings/BrowserSettingsSection";
@@ -17,13 +16,10 @@ import { WorkbenchSettingsSection } from "@/components/app/panels/settings/Workb
 import { SettingsSidebar } from "@/components/app/panels/settings/SettingsSidebar";
 import type { SettingsGroup, SettingsPageProps } from "@/components/app/types/component.types";
 import type { SettingRowRevealTarget, SettingsSearchEntry } from "@/components/app/types/settingsSearch.types";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { ArrowLeft } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export function SettingsPage({ initialGroup }: SettingsPageProps) {
-  const { closeSettingsPage } = useSettingsRuntime();
   const [group, setGroup] = useState<SettingsGroup>(initialGroup ?? "appearance");
   const previousInitialGroupRef = useRef<SettingsGroup | undefined>(initialGroup);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -44,13 +40,6 @@ export function SettingsPage({ initialGroup }: SettingsPageProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-white dark:bg-background">
-      <div className="border-b border-border/60 px-8 py-4">
-        <Button variant="outline" onClick={closeSettingsPage}>
-          <ArrowLeft className="size-4" aria-hidden="true" />
-          Back
-        </Button>
-      </div>
-
       <Tabs
         value={group}
         onValueChange={(value: string) => setGroup(value as SettingsGroup)}

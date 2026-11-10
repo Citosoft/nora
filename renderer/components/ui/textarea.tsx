@@ -1,13 +1,17 @@
 import { cn } from "@/lib/utils";
 import * as React from "react";
+import type { TextareaProps } from "@/lib/types/textarea.types";
 
-export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
+export type { TextareaProps } from "@/lib/types/textarea.types";
 
-const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(({ className, ...props }, ref) => {
+const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(({ className, variant = "default", ...props }, ref) => {
   return (
     <textarea
       className={cn(
-        "form-control-surface flex min-h-[80px] w-full rounded-[5px] border px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+        "flex min-h-[80px] w-full rounded-[5px] px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+        variant === "embedded"
+          ? "border-0 bg-transparent shadow-none"
+          : "form-control-surface border ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         className
       )}
       ref={ref}

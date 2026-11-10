@@ -1,6 +1,8 @@
 import { assembleSignedInCenterContentBuild } from "@/components/app/logic/assembleSignedInCenterContentBuild";
 import { assembleSignedInChangesPanelSectionBuild } from "@/components/app/logic/assembleSignedInChangesPanelSectionBuild";
 import { assembleSignedInWorkspaceSidebarBuild } from "@/components/app/logic/assembleSignedInWorkspaceSidebarBuild";
+import { buildAppToolsProps } from "@/components/app/logic/buildAppToolsProps";
+import { buildTitleBarProps } from "@/components/app/logic/buildTitleBarProps";
 import type { AppShellSignedInAssemblySources } from "@/components/app/types/appShellSignedInAssemblySources.types";
 import type { ChangesColumnPorts } from "@/components/app/types/changesColumnPorts.types";
 import type { ChromeShellPorts } from "@/components/app/types/chromeShellPorts.types";
@@ -9,6 +11,7 @@ import type { SessionCenterPorts } from "@/components/app/types/sessionCenterPor
 import type { WorkspaceSidebarPorts } from "@/components/app/types/workspaceSidebarPorts.types";
 import type { AppChromeShellComposeSlice } from "@/components/app/types/appChromeShellComposeSlice.types";
 import type { AppModalDialogsBuildDeps } from "@/components/app/types/appModalDialogsBuild.types";
+import type { BranchRequestReader } from "@/components/app/types/threadInsights.types";
 
 /** Session center surface fields (terminal dock theme + tabs/editor slices) without center-column build deps. */
 export const buildSessionCenterSurfacePortsFromAssembly = (
@@ -40,8 +43,22 @@ export const buildModalClusterPorts = (modalDialogs: AppModalDialogsBuildDeps): 
   modalDialogs
 });
 
-export const buildWorkspaceSidebarPortsFromAssembly = (a: AppShellSignedInAssemblySources): WorkspaceSidebarPorts => ({
-  sidebarBuild: assembleSignedInWorkspaceSidebarBuild(a)
+export const buildWorkspaceSidebarPortsFromAssembly = (a: AppShellSignedInAssemblySources, chrome: AppChromeShellComposeSlice, readBranchRequest: BranchRequestReader): WorkspaceSidebarPorts => ({
+  sidebarBuild: assembleSignedInWorkspaceSidebarBuild(a),
+  utilities: {
+    status: chrome.workspaceStatus,
+    appTools: buildAppToolsProps(buildTitleBarProps(chrome.titleBar)),
+    terminal: {
+      isOpen: !a.chromeShell.isLocalTerminalDockCollapsed,
+      onToggle: () => {
+        if (a.chromeShell.isLocalTerminalDockCollapsed) void a.chromeShell.focusLocalTerminalDock();
+        else a.chromeShell.setIsLocalTerminalDockCollapsed(true);
+      }
+    }
+  },
+  readBranchRequest,
+  recentWorkspaces: chrome.titleBar.recentWorkspaces,
+  onOpenRecentWorkspace: chrome.titleBar.handleOpenRecentWorkspace
 });
 
 export const buildChromeShellPorts = (

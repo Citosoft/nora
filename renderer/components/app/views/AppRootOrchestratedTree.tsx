@@ -21,25 +21,22 @@ export function AppRootOrchestratedTree(): ReactElement {
   const appModalDialogsValue = useAppModalDialogsValue();
   const settingsRuntimeValue = useSettingsRuntimeValue();
 
-  const signedInWorkspaceView = useSignedInWorkspaceViewMount();
-
   const appChromeComposition = useAppChromeComposition({
     titleBar: chrome.titleBar,
     topBanners: chrome.topBanners,
-    statusBar: chrome.statusBarChrome,
     settings: {
+      open: chrome.titleBar.activeView === "settings",
       runtimeValue: settingsRuntimeValue,
       initialGroup: chrome.settingsGroup
     }
   });
 
+  const signedInWorkspaceView = useSignedInWorkspaceViewMount();
+
   const appMainViewValue = useAppMainViewValue({
     titleBar: appChromeComposition.titleBar,
     topBanners: appChromeComposition.topBanners,
-    showSettingsPage: chrome.titleBar.activeView === "settings",
-    settingsPage: appChromeComposition.settingsPage,
-    signedInWorkspaceView,
-    statusBar: appChromeComposition.statusBar
+    signedInWorkspaceView
   });
 
   return (
@@ -50,6 +47,7 @@ export function AppRootOrchestratedTree(): ReactElement {
             <AppMainView />
           </AppMainViewProvider>
 
+          {appChromeComposition.settingsDialog}
           <AppModalDialogs />
           <AppToastStack toasts={toasts} onDismiss={dismissToast} />
           <ToastViewport />

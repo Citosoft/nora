@@ -1,11 +1,11 @@
 import { useOptionalWorkspaceSidebarPorts } from "@/components/app/context/workspaceSidebarPortsContext";
 import { CHATBOT_SHORTCUTS } from "@/components/app/logic/chatbotShortcuts";
 import { createWorkspaceTerminalNavigation } from "@/components/app/logic/workspaceTerminalNavigation";
-import type { StatusBarChatbotsModel } from "@/components/app/types/statusBarChatbots.types";
+import type { ChatbotShortcutsModel } from "@/components/app/types/chatbotShortcuts.types";
 import { useMemo } from "react";
 
-/** Returns null outside the signed-in shell (loading / onboarding footers), where there is no browser to open. */
-export const useStatusBarChatbots = (): StatusBarChatbotsModel | null => {
+/** Returns null outside the signed-in shell (startup screens), where there is no browser to open. */
+export const useChatbotShortcuts = (): ChatbotShortcutsModel | null => {
   const sidebarBuild = useOptionalWorkspaceSidebarPorts()?.sidebarBuild ?? null;
 
   return useMemo(() => {

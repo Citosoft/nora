@@ -1,11 +1,19 @@
 import type { RoleSelection } from "@shared/types/personalization/roles.types";
 import type { NativeBoot } from "@shared/ipc/types/personalizationGateway.types";
 import type { PersonalizationRequest } from "@shared/ipc/types/personalizationGateway.types";
+import type { LucideIcon } from "lucide-react";
+
+export interface RolePresentation {
+  icon: LucideIcon;
+  shortLabel: string;
+  description: string;
+}
 
 export interface RolePickerProps {
   value: RoleSelection | null;
   onChange(value: RoleSelection | null): void;
   disabled?: boolean;
+  variant?: "cards" | "compact";
 }
 export interface RoleOnboardingProps {
   busy: boolean;

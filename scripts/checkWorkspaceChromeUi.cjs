@@ -1,0 +1,73 @@
+const { app, ipcMain } = require('electron');
+const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const { join } = require('node:path');
+const { createFixtureHost } = require('./ui/fixtureHost.cjs');
+app.disableHardwareAcceleration();
+let host;
+let usageReads = 0;
+const openedUrls = [];
+ipcMain.handle('fixture:tool-usage', () => {
+  usageReads++;
+  return { status: 'available', title: 'Codex usage', windows: [{ id: 'session', label: 'Session', shortLabel: 'S', percentLeft: 90, resetsLabel: 'in 2 hours' },
+    { id: 'weekly', label: 'Weekly', shortLabel: 'W', percentLeft: 85, resetsLabel: 'in 4 days' }], account: 'Fixture account', lines: [], fetchedAt: '2026-11-10T10:00:00.000Z' };
+});
+ipcMain.handle('fixture:open-url', (_event, url) => { openedUrls.push(url); });
+(async () => {
+  host = await createFixtureHost('tests/ui/WorkspaceChromeHarness.tsx', { preload: join(__dirname, 'ui/workspaceChromePreload.cjs') });
+  const { evaluate, wait, click, byText, window, pause } = host;
+  window.setSize(1440, 900);
+  const events = async () => JSON.parse(await evaluate('document.getElementById("chrome-events").textContent'));
+  const closePopover = async () => { window.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' }); window.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' }); await pause(80); };
+  await wait(`!!document.querySelector('button[aria-label="Open model usage"]') && document.body.textContent.includes('#42')`);
+  assert.equal(await evaluate(`document.querySelector('[aria-label="Workspace utilities"]').querySelectorAll('button').length`), 3);
+  assert.equal(await evaluate(`getComputedStyle(document.querySelector('[aria-label="Workspace utilities"]')).borderTopWidth`), '0px');
+  assert.equal(await evaluate(`!!document.querySelector('.app-drag button[aria-label="Open settings"],.app-drag button[aria-label="Open support menu"],.app-drag button[aria-label="Open keyboard shortcuts"]')`), false);
+  assert.equal(await evaluate(`!!document.querySelector('footer,.workspace-shell-footer-surface')`), false);
+  assert.equal(await evaluate(`document.querySelector('[aria-label="Workspace utilities"]').getBoundingClientRect().bottom<=innerHeight`), true);
+  assert.equal(await evaluate(`getComputedStyle(document.querySelector('[aria-label="Thread details"]')).position`), 'absolute');
+  await click('button[aria-label="Open model usage"]'); await wait(`document.body.textContent.includes('S90% W85%')`);
+  await click('button[aria-label="Codex"]'); await wait(`document.body.textContent.includes('90% left')`);
+  await byText('Switch account'); await wait(`document.getElementById('chrome-events').textContent.includes('account')`);
+  await closePopover();
+  const readsBeforeSettings = usageReads;
+  await click('button[aria-label="Open app menu"]'); await click('button[aria-label="Open settings"]'); await wait(`!!document.querySelector('[role="dialog"]')`);
+  assert.equal(await evaluate(`!!document.querySelector('[aria-label="Workspace utilities"] button[aria-label="Open app menu"]')`), true);
+  await pause(100); assert.equal(usageReads, readsBeforeSettings, 'Settings must not remount usage polling');
+  assert.equal(await evaluate(`!!document.querySelector('[aria-label="Thread details"]')`), true);
+  await click('button[aria-label="Close settings"]');
+  await click('button[aria-label="Open app menu"]'); await byText('Resource monitor'); assert.ok((await events()).includes('resources'));
+  await click('button[aria-label="Open app menu"]'); await click('button[aria-label="Open keyboard shortcuts"]'); assert.ok((await events()).includes('shortcuts'));
+  await click('button[aria-label="Open app menu"]'); await click('button[aria-label="Switch to light theme"]'); assert.equal(await evaluate('document.documentElement.dataset.theme'), 'light');
+  await click('button[aria-label="Open workspace tools"]'); await byText('Workspace status'); await wait(`!!document.querySelector('[aria-label="Workspace status"]')`);
+  assert.equal(await evaluate(`document.querySelector('[aria-label="Workspace status"]').textContent.includes('feat/workspace-chrome')`), true);
+  await closePopover();
+  await click('button[aria-label="Open workspace tools"]'); await byText('Skills'); await byText('Open skills settings');
+  await click('button[aria-label="Close settings"]'); await wait(`!!document.querySelector('[aria-label="Thread details"]')`);
+  await evaluate(`document.querySelector('[aria-label="Thread details"]').querySelectorAll('button')[2].click()`);
+  await pause(80); assert.deepEqual(openedUrls, ['https://example.com/nora/pull/42']);
+  const scenario = async value => evaluate(`(()=>{const input=document.getElementById('request-scenario');input.value=${JSON.stringify(value)};input.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+  await scenario('none'); await click('button[aria-label="Refresh thread change request"]'); await wait(`document.body.textContent.includes('No pull or merge request found.')`);
+  await scenario('failed'); await click('button[aria-label="Refresh thread change request"]'); await wait(`document.body.textContent.includes("Could not load this branch's change request.")`);
+  await scenario('ready'); await click('button[aria-label="Refresh thread change request"]'); await wait(`document.body.textContent.includes('#42')`);
+  await click('[aria-label="Thread details"] > button'); assert.equal(await evaluate(`document.querySelector('[aria-label="Thread details"] > button').getAttribute('aria-expanded')`), 'false');
+  await click('[aria-label="Thread details"] > button');
+  await click('button[aria-label="Collapse projects sidebar"]'); assert.equal(await evaluate(`document.querySelector('[aria-label="Projects sidebar"]').getBoundingClientRect().width`), 64);
+  await click('button[aria-label="Open app menu"]'); await byText('About Nora'); assert.ok((await events()).includes('about'));
+  window.setSize(720, 760); await pause(180);
+  assert.equal(await evaluate(`document.documentElement.scrollWidth<=innerWidth`), true);
+  assert.equal(await evaluate(`getComputedStyle(document.querySelector('[aria-label="Thread details"]')).position`), 'static');
+  assert.equal(await evaluate(`(()=>{const panel=document.querySelector('[aria-label="Thread details"]').getBoundingClientRect();const composer=document.querySelector('textarea').getBoundingClientRect();return panel.bottom<=composer.top})()`), true);
+  await byText('Archive'); assert.ok((await events()).includes('archive'));
+  if (process.env.NORA_UI_EVIDENCE_DIR) {
+    await fs.mkdir(process.env.NORA_UI_EVIDENCE_DIR, { recursive: true });
+    await fs.writeFile(join(process.env.NORA_UI_EVIDENCE_DIR, 'workspace-chrome-narrow.png'), (await window.webContents.capturePage()).toPNG());
+    window.setSize(1440, 900); await click('button[aria-label="Expand projects sidebar"]');
+    await click('button[aria-label="Open app menu"]'); await click('button[aria-label="Switch to dark theme"]'); await pause(100);
+    await fs.writeFile(join(process.env.NORA_UI_EVIDENCE_DIR, 'workspace-chrome-dark.png'), (await window.webContents.capturePage()).toPNG());
+  }
+  console.log('PASS: sidebar controls, model usage/account switching, persistent settings utilities, status/skills, no footer, responsive thread insights, branch request refresh/errors/links and archive. No provider execution.');
+})().then(async () => { await host?.close(); app.exit(0); }).catch(async error => {
+  console.error(error); if (host) console.error(await host.evaluate('document.body.innerText').catch(() => 'Renderer unavailable'));
+  await host?.close(); app.exit(1);
+});

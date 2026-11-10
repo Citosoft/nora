@@ -1,12 +1,14 @@
 import { useEffect, useMemo } from "react";
 import { ThreadNavigationContext, ThreadCenterContext, ThreadTabsContext } from "@/components/app/context/threadWorkspaceContext";
 import { useThreadWorkspaceSnapshot } from "@/components/app/hooks/useThreadWorkspaceSnapshot";
+import { useUserDisplayName } from "@/components/app/hooks/useUserDisplayName";
 import { threadDocumentTitle } from "@/components/app/logic/thread-workspace/changes";
 import type { ThreadWorkspaceCompositionProps, ThreadNavigationPorts, ThreadCenterPorts, ThreadTabsPorts } from "@/components/app/types/thread-workspace/ports.types";
 
 /** Region providers mount inside Nora's shell; this component renders no replacement chrome or layout. */
 export function ThreadWorkspaceComposition({ store, children }: ThreadWorkspaceCompositionProps) {
   const state = useThreadWorkspaceSnapshot(store);
+  const userDisplayName = useUserDisplayName();
   useEffect(() => store.start(), [store]);
   const actions = useMemo(() => ({
     focusWorkspace: store.focusWorkspace,
@@ -18,7 +20,7 @@ export function ThreadWorkspaceComposition({ store, children }: ThreadWorkspaceC
     togglePin: store.togglePin, refresh: () => { void store.refresh(); }
   }), [store]);
   const navigation = useMemo<ThreadNavigationPorts>(() => ({ state, ...actions }), [state, actions]);
-  const center = useMemo<ThreadCenterPorts>(() => ({ state, store }), [state, store]);
+  const center = useMemo<ThreadCenterPorts>(() => ({ state, store, userDisplayName }), [state, store, userDisplayName]);
   const tabs = useMemo<ThreadTabsPorts>(() => ({
     documents: state.layout.openIds.flatMap((id) => {
       const entry = state.layout.documents.find((document) => document.id === id);

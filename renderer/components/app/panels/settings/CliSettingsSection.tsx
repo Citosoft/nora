@@ -56,10 +56,10 @@ export function CliSettingsSection() {
         <div>
           <div className="flex items-center gap-2 text-foreground">
             <Bot className="size-5" aria-hidden="true" />
-            <div className="text-xl font-semibold">Agents</div>
+            <div className="text-xl font-semibold">Providers</div>
           </div>
           <div className="mt-1 text-sm text-muted-foreground">
-            Review detected agent CLIs, choose which ones can appear in launch surfaces, and inspect each CLI-specific skill directory.
+            Enable and configure your coding providers, choose a default, and manage provider skills.
           </div>
         </div>
         <Button variant="outline" size="sm" onClick={refreshAgentCatalog}>
@@ -69,12 +69,12 @@ export function CliSettingsSection() {
 
       <div className="mt-6 space-y-3">
         <div
-          {...settingAnchorAttributes("Preferred Agent CLI")}
+          {...settingAnchorAttributes("Preferred Provider")}
           className={`rounded-[6px] border border-border/60 bg-card/40 px-4 py-4 ${settingRevealHighlightClassName}`}
         >
-          <div className="mb-2 text-sm font-medium text-foreground">Preferred Agent CLI</div>
+          <div className="mb-2 text-sm font-medium text-foreground">Preferred Provider</div>
           <div className="mb-3 text-sm text-muted-foreground">
-            Choose which detected CLI Nora should preselect by default in the New Agent dialog.
+            Choose which enabled provider Nora should select by default for new threads.
           </div>
           <DropdownMenu
             align="start"
@@ -83,13 +83,13 @@ export function CliSettingsSection() {
               <button
                 type="button"
                 className="form-control-surface flex h-10 w-full items-center justify-between rounded-[5px] border px-3 py-2 text-sm ring-offset-background transition"
-                aria-label="Choose preferred agent CLI"
+                aria-label="Choose preferred provider"
               >
                 <span className="flex min-w-0 items-center gap-2">
                   {selectedPreferredAgentToolId ? (
                     <AgentToolIcon
                       toolId={selectedPreferredAgentToolId}
-                      label={availableDetectedTools.find((tool) => tool.id === selectedPreferredAgentToolId)?.label || "Preferred CLI"}
+                      label={availableDetectedTools.find((tool) => tool.id === selectedPreferredAgentToolId)?.label || "Preferred provider"}
                       className="size-4 shrink-0 rounded-sm"
                       imageClassName="size-3 rounded-sm"
                     />
@@ -98,7 +98,7 @@ export function CliSettingsSection() {
                   )}
                   <span className="truncate">
                     {selectedPreferredAgentToolId
-                      ? (availableDetectedTools.find((tool) => tool.id === selectedPreferredAgentToolId)?.label || "Preferred CLI")
+                      ? (availableDetectedTools.find((tool) => tool.id === selectedPreferredAgentToolId)?.label || "Preferred provider")
                       : "Automatic (first detected)"}
                   </span>
                 </span>
@@ -289,7 +289,7 @@ export function CliSettingsSection() {
                           </div>
                         ) : (
                           <div className="text-sm text-muted-foreground">
-                            No visible global skills are installed for this CLI.
+                            No visible global skills are installed for this provider.
                           </div>
                         )}
                       </div>
@@ -324,8 +324,8 @@ export function CliSettingsSection() {
 
       <div className="mt-5 text-sm text-muted-foreground">
         {detectedTools.length
-          ? `${detectedTools.filter((tool) => isAgentToolAvailable(tool)).length} of ${detectedTools.length} detected CLIs enabled`
-          : "No supported agent CLIs are currently detected on this machine."}
+          ? `${detectedTools.filter((tool) => isAgentToolAvailable(tool)).length} of ${detectedTools.length} detected providers enabled`
+          : "No supported providers are currently detected on this machine."}
       </div>
     </div>
   );

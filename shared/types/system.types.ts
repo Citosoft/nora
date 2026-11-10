@@ -55,7 +55,7 @@ export interface ToolUsageDetail {
 export interface ToolUsageWindow {
   id: string;
   label: string;
-  /** One-or-two letter tag for the compact footer readout (e.g. "S", "W", "M"). */
+  /** One-or-two letter tag for the compact usage readout (e.g. "S", "W", "M"). */
   shortLabel: string;
   percentLeft: number;
   resetsLabel: string | null;
@@ -64,7 +64,7 @@ export interface ToolUsageWindow {
 export interface ToolUsageInfo {
   status: "available" | "unavailable" | "error";
   title: string;
-  /** Primary windows first; the footer readout shows the first two. */
+  /** Primary windows first; the sidebar readout shows the first two. */
   windows: ToolUsageWindow[];
   account: string | null;
   /** Plain-text transcript of what was read, for the tool details panel. */

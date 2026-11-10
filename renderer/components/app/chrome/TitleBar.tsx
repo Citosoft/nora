@@ -1,5 +1,4 @@
-import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
-import { APP_DOCS_URL } from "@shared/appMeta";
+import { TitleBarControls } from "@/components/app/chrome/TitleBarControls";
 import { TitleBarWorkspaceQuickSearch } from "@/components/app/chrome/TitleBarWorkspaceQuickSearch";
 import { AppMark } from "@/components/app/shared/AppMark";
 import { IdeBadge } from "@/components/app/shared/IdeBadge";
@@ -8,83 +7,13 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { Activity, BookOpen, Bot, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, Code2, Compass, Copy, FolderGit2, Globe, History, Keyboard, Minus, Moon, PanelBottom, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, RefreshCcw, Settings, Square, Sun, TerminalSquare, Wrench, X } from "lucide-react";
+import { Bot, ChevronDown, ChevronLeft, ChevronRight, Code2, FolderGit2, Globe, History, PanelBottom, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, RefreshCcw, TerminalSquare, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-
-function TitleBarControls({
-  useMacTitleBarChrome,
-  isMaximized,
-  iconToneClass
-}: {
-  useMacTitleBarChrome: boolean;
-  isMaximized: boolean;
-  iconToneClass: string;
-}) {
-  if (useMacTitleBarChrome) {
-    return (
-      <div className="app-no-drag flex items-center gap-2 px-3">
-        <button
-          type="button"
-          onClick={() => void noraSystemClient.closeWindow()}
-          aria-label="Close window"
-          className="size-3 rounded-full bg-[#ff5f57] transition hover:brightness-95"
-        />
-        <button
-          type="button"
-          onClick={() => void noraSystemClient.minimizeWindow()}
-          aria-label="Minimize window"
-          className="size-3 rounded-full bg-[#febc2e] transition hover:brightness-95"
-        />
-        <button
-          type="button"
-          onClick={() => void noraSystemClient.toggleMaximizeWindow()}
-          aria-label={isMaximized ? "Restore window" : "Maximize window"}
-          className="size-3 rounded-full bg-[#28c840] transition hover:brightness-95"
-        />
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <button
-        type="button"
-        className={`grid h-8 w-10 shrink-0 place-items-center self-center ${iconToneClass} transition hover:bg-accent hover:text-foreground`}
-        onClick={() => void noraSystemClient.minimizeWindow()}
-        aria-label="Minimize window"
-      >
-        <Minus className="size-3.5" />
-      </button>
-      <button
-        type="button"
-        className={`grid h-8 w-10 shrink-0 place-items-center self-center ${iconToneClass} transition hover:bg-accent hover:text-foreground`}
-        onClick={() => void noraSystemClient.toggleMaximizeWindow()}
-        aria-label={isMaximized ? "Restore window" : "Maximize window"}
-      >
-        {isMaximized ? <Copy className="size-3.5" /> : <Square className="size-3.5" />}
-      </button>
-      <button
-        type="button"
-        className={`grid h-8 w-10 shrink-0 place-items-center self-center ${iconToneClass} transition hover:bg-destructive/80 hover:text-destructive-foreground`}
-        onClick={() => void noraSystemClient.closeWindow()}
-        aria-label="Close window"
-      >
-        <X className="size-3.5" />
-      </button>
-    </>
-  );
-}
 
 export function TitleBar({
   windowUiState,
   useMacTitleBarChrome,
   resolvedTheme,
-  onToggleTheme,
-  onOpenSettings,
-  settingsActive,
-  onOpenKeyboardShortcuts,
-  onOpenAbout,
-  onSubmitIssue,
   canOpenProjectInIde,
   installedIdes,
   isLoadingInstalledIdes,
@@ -110,9 +39,6 @@ export function TitleBar({
   onFocusLocalTerminalDock,
   onFocusPreviousSessionTab,
   onFocusNextSessionTab,
-  onOpenStartupDependencies,
-  onOpenResourceMonitor,
-  onOpenOnboarding,
   splitViewSelection,
   workspaceQuickSearch
 }: TitleBarProps) {
@@ -186,14 +112,9 @@ export function TitleBar({
         {useMacTitleBarChrome ? (
           <TitleBarControls useMacTitleBarChrome isMaximized={windowUiState.isMaximized} iconToneClass={titleBarIconToneClass} />
         ) : null}
-        <button
-          type="button"
-          className="app-no-drag flex items-center gap-2 rounded-[4px] px-1 py-0.5 text-left transition hover:bg-accent/60"
-          onClick={onOpenAbout}
-          aria-label="Open about dialog"
-        >
+        <div className="flex items-center gap-2 px-1 py-0.5">
           <AppMark className="size-[18px] shrink-0 text-primary" />
-        </button>
+        </div>
         <button
           type="button"
           className={`app-no-drag grid h-8 w-8 place-items-center rounded-[4px] ${titleBarIconToneClass} transition hover:bg-accent/60 hover:text-foreground`}
@@ -352,49 +273,6 @@ export function TitleBar({
               <DropdownMenuItem onSelect={onFocusNextSessionTab}>
                 <ChevronRight className="size-4" />
                 <span>Next Session Tab</span>
-              </DropdownMenuItem>
-            </DropdownMenu>
-            <DropdownMenu
-              align="start"
-              widthClassName="w-56 titlebar-dropdown-menu"
-              trigger={(
-                <button
-                  type="button"
-                  className={`app-no-drag flex h-8 items-center gap-1 rounded-[4px] px-2 text-xs font-medium ${titleBarIconToneClass} transition hover:bg-accent/60 hover:text-foreground`}
-                  aria-label="Open Help menu"
-                >
-                  <span>Help</span>
-                  <ChevronDown className="size-3.5" />
-                </button>
-              )}
-            >
-              <DropdownMenuItem onSelect={() => void noraSystemClient.openExternalUrl(APP_DOCS_URL)}>
-                <BookOpen className="size-4" />
-                <span>Documentation</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={onOpenKeyboardShortcuts}>
-                <Keyboard className="size-4" />
-                <span>Keyboard Shortcuts</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={onOpenStartupDependencies}>
-                <Wrench className="size-4" />
-                <span>Startup Dependencies</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={onOpenResourceMonitor}>
-                <Activity className="size-4" />
-                <span>Resource Monitor</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={onOpenOnboarding}>
-                <Compass className="size-4" />
-                <span>Open Onboarding</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={onSubmitIssue}>
-                <CircleHelp className="size-4" />
-                <span>Submit Issue</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={onOpenAbout}>
-                <AppMark className="size-4 text-primary" />
-                <span>About</span>
               </DropdownMenuItem>
             </DropdownMenu>
           </>
@@ -558,61 +436,6 @@ export function TitleBar({
           ) : (
             <PanelRightClose className="size-3.5" />
           )}
-        </button>
-        <button
-          type="button"
-          className={`grid h-8 w-11 shrink-0 place-items-center ${titleBarIconToneClass} transition hover:bg-accent hover:text-foreground`}
-          onClick={onOpenKeyboardShortcuts}
-          aria-label="Open keyboard shortcuts"
-        >
-          <Keyboard className="size-3.5" />
-        </button>
-        <DropdownMenu
-          align="end"
-          widthClassName="w-52 titlebar-dropdown-menu"
-          trigger={(
-            <button
-              type="button"
-              className={`grid h-8 w-11 shrink-0 place-items-center ${titleBarIconToneClass} transition hover:bg-accent hover:text-foreground`}
-              aria-label="Open support menu"
-            >
-              <CircleHelp className="size-3.5" />
-            </button>
-          )}
-        >
-          <DropdownMenuItem onSelect={() => void noraSystemClient.openExternalUrl(APP_DOCS_URL)}>
-            <BookOpen className="size-4" />
-            <span>Documentation</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={onOpenOnboarding}>
-            <Compass className="size-4" />
-            <span>Open Onboarding</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={onSubmitIssue}>
-            <CircleHelp className="size-4" />
-            <span>Submit Issue</span>
-          </DropdownMenuItem>
-        </DropdownMenu>
-        <button
-          type="button"
-          className={`grid h-8 w-11 shrink-0 place-items-center ${titleBarIconToneClass} transition hover:bg-accent hover:text-foreground`}
-          onClick={onToggleTheme}
-          aria-label={`Switch to ${resolvedTheme === "dark" ? "light" : "dark"} theme`}
-        >
-          {resolvedTheme === "dark" ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
-        </button>
-        <button
-          type="button"
-          className={[
-            "grid h-8 w-11 shrink-0 place-items-center transition",
-            settingsActive
-              ? "bg-accent text-foreground"
-              : `${titleBarIconToneClass} hover:bg-accent hover:text-foreground`
-          ].join(" ")}
-          onClick={onOpenSettings}
-          aria-label="Open settings"
-        >
-          <Settings className="size-3.5" />
         </button>
         {!useMacTitleBarChrome ? (
           <TitleBarControls useMacTitleBarChrome={false} isMaximized={windowUiState.isMaximized} iconToneClass={titleBarIconToneClass} />

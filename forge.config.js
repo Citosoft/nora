@@ -143,7 +143,9 @@ module.exports = {
     }),
     new MakerDeb({
       options: {
-        bin: "Nora"
+        bin: "Nora",
+        icon: iconPngPath,
+        categories: ["Development", "IDE"]
       }
     }, ["linux"]),
     new MakerDMG(

@@ -32,5 +32,5 @@ export function useNativeConversation({ client, conversationId }: NativeConversa
         ? { ...current, items: mergeTimeline(page.items, current.items), nextBefore: page.nextBefore } : current);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Older messages could not be loaded"); }
   }, [view?.nextBefore, conversationId, client]);
-  return { view, error, older, reload: () => setRevision((value) => value + 1) };
+  return { view: view?.header.conversation.id === conversationId ? view : null, error, older, reload: () => setRevision((value) => value + 1) };
 }

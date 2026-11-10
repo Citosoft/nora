@@ -4,12 +4,11 @@ import { SessionTerminal } from "@/components/app/panels/SessionTerminal";
 import { SessionPidBadge } from "@/components/app/shared/SessionPidBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronUp, LoaderCircle, TerminalSquare } from "lucide-react";
+import { LoaderCircle, TerminalSquare, X } from "lucide-react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 
 const MIN_DOCK_HEIGHT = 180;
 const MAX_DOCK_HEIGHT = 520;
-const COLLAPSED_DOCK_HEIGHT = 44;
 
 export function LocalTerminalDock() {
   const {
@@ -19,7 +18,6 @@ export function LocalTerminalDock() {
     terminalFontId,
     height,
     isCollapsed,
-    isCreating,
     focusVersion,
     onHeightChange,
     onToggleCollapsed
@@ -53,49 +51,17 @@ export function LocalTerminalDock() {
     window.addEventListener("pointerup", stopResize);
   };
 
-  if (isCollapsed) {
-    return (
-      <div
-        className="shrink-0 border-t border-border/60 bg-card/95"
-        style={{ height: COLLAPSED_DOCK_HEIGHT }}
-      >
-        <div className="flex h-full items-center justify-between px-4">
-          <div className="flex min-w-0 items-center gap-2 text-sm font-medium">
-            <TerminalSquare className="size-4 shrink-0 text-primary" />
-            <span className="truncate">Local Terminal</span>
-            {terminal ? <Badge variant="outline">{terminal.shellLabel}</Badge> : null}
-          </div>
-          <div className="flex items-center gap-2">
-            {terminal ? (
-              terminal.pid ? (
-                <SessionPidBadge pid={terminal.pid} />
-              ) : (
-                <Badge variant={statusVariant(terminal.status)}>{terminal.status}</Badge>
-              )
-            ) : null}
-            {!terminal && isCreating ? <LoaderCircle className="size-4 animate-spin text-muted-foreground" /> : null}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8"
-              onClick={onToggleCollapsed}
-              aria-label="Expand local terminal"
-            >
-              <ChevronUp className="size-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
+      id="local-terminal-dock"
+      role="region"
+      aria-label="Local terminal"
+      hidden={isCollapsed}
       className="shrink-0 border-t border-border/60 bg-card/90"
       style={{ height: clampedHeight }}
     >
       <div
-        className="group grid h-2 cursor-row-resize place-items-center"
+        className="workspace-shell-surface group grid h-2 cursor-row-resize place-items-center"
         onPointerDown={startResize}
         role="separator"
         aria-label="Resize local terminal"
@@ -105,7 +71,7 @@ export function LocalTerminalDock() {
       </div>
       {terminal ? (
         <div className="flex h-[calc(100%-0.5rem)] min-h-0 flex-col bg-card/95">
-          <div className="flex items-center justify-between border-b border-border/60 px-4 py-2.5">
+          <div className="workspace-shell-surface flex items-center justify-between border-b border-border/60 px-4 py-2.5">
             <div className="flex min-w-0 items-center gap-2 text-sm font-medium">
               <TerminalSquare className="size-4 shrink-0 text-primary" />
               <span className="truncate">Local Terminal</span>
@@ -125,9 +91,9 @@ export function LocalTerminalDock() {
                 size="icon"
                 className="size-8"
                 onClick={onToggleCollapsed}
-                aria-label="Collapse local terminal"
+                aria-label="Close local terminal"
               >
-                <ChevronDown className="size-4" />
+                <X className="size-4" aria-hidden="true" />
               </Button>
             </div>
           </div>
@@ -155,8 +121,8 @@ export function LocalTerminalDock() {
               </div>
             </div>
             <Button variant="ghost" size="sm" onClick={onToggleCollapsed}>
-              <ChevronDown className="size-4" />
-              Collapse
+              <X className="size-4" aria-hidden="true" />
+              Close
             </Button>
           </div>
         </div>

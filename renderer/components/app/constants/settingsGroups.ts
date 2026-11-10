@@ -21,7 +21,7 @@ export const SETTINGS_GROUP_ITEMS: readonly SettingsGroupItem[] = [
   { value: "workbench", label: "Workbench", icon: LayoutDashboard },
   { value: "terminal", label: "Terminal", icon: TerminalSquare },
   { value: "browser", label: "Browser", icon: Globe },
-  { value: "cli", label: "Agents", icon: Bot },
+  { value: "cli", label: "Providers", icon: Bot },
   { value: "agentUsage", label: "Agent usage", icon: BarChart3 },
   { value: "skills", label: "Skills", icon: Sparkles },
   { value: "integrations", label: "Integrations", icon: Plug },

@@ -231,8 +231,8 @@ export type AppShellSignedInChromeShellSources = {
   handleOpenLinuxRelease: AppChromeShellComposeSlice["topBanners"]["onOpenLinuxRelease"];
   dismissLinuxUpdateNotice: AppChromeShellComposeSlice["topBanners"]["onDismissLinuxUpdate"];
   statusEntries: StatusBarEntry[];
-  installStatusBarTool: AppChromeShellComposeSlice["statusBarChrome"]["onInstallTool"];
-  switchStatusBarToolAccount: AppChromeShellComposeSlice["statusBarChrome"]["onSwitchToolAccount"];
+  installStatusBarTool: AppChromeShellComposeSlice["workspaceStatus"]["onInstallTool"];
+  switchStatusBarToolAccount: AppChromeShellComposeSlice["workspaceStatus"]["onSwitchToolAccount"];
   toggleSettingsPage: () => void;
   openStartupDependenciesDialog: () => void;
   openOnboardingFlow: () => void;
@@ -248,6 +248,7 @@ export type AppShellSignedInChromeShellSources = {
   sidebarsSwapped: boolean;
   setIsChangesSidebarCollapsed: Dispatch<SetStateAction<boolean>>;
   setIsWorkspaceSidebarCollapsed: Dispatch<SetStateAction<boolean>>;
+  isLocalTerminalDockCollapsed: boolean;
   setIsLocalTerminalDockCollapsed: Dispatch<SetStateAction<boolean>>;
   settingsGroup: SettingsGroup;
 };

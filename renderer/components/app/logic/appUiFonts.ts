@@ -1,5 +1,7 @@
 import type { UiFontId } from "@/components/app/types";
 
+export const DEFAULT_UI_FONT_ID: UiFontId = "system";
+
 export type UiFontOption = {
   id: UiFontId;
   label: string;
@@ -7,6 +9,7 @@ export type UiFontOption = {
 };
 
 export const UI_FONT_OPTIONS: readonly UiFontOption[] = [
+  { id: "system", label: "System (default)", family: "var(--app-system-font)" },
   { id: "inter", label: "Inter", family: "\"Inter\"" },
   { id: "geist", label: "Geist", family: "\"Geist\"" },
   { id: "manrope", label: "Manrope", family: "\"Manrope\"" },

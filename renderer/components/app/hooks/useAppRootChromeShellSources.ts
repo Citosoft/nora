@@ -43,6 +43,7 @@ export function useAppRootChromeShellSources({
   sidebarsSwapped,
   setIsChangesSidebarCollapsed,
   setIsWorkspaceSidebarCollapsed,
+  isLocalTerminalDockCollapsed,
   setIsLocalTerminalDockCollapsed,
   settingsGroup
 }: UseAppRootChromeShellSourcesArgs): UseAppRootChromeShellSourcesResult {
@@ -85,6 +86,7 @@ export function useAppRootChromeShellSources({
     sidebarsSwapped,
     setIsChangesSidebarCollapsed,
     setIsWorkspaceSidebarCollapsed,
+    isLocalTerminalDockCollapsed,
     setIsLocalTerminalDockCollapsed,
     settingsGroup
   }), [
@@ -126,6 +128,7 @@ export function useAppRootChromeShellSources({
     sidebarsSwapped,
     setIsChangesSidebarCollapsed,
     setIsWorkspaceSidebarCollapsed,
+    isLocalTerminalDockCollapsed,
     setIsLocalTerminalDockCollapsed,
     settingsGroup
   ]);

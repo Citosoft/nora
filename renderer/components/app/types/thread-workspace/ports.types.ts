@@ -27,7 +27,7 @@ export interface ThreadNavigationPorts {
   togglePin(conversationId: string): void;
   refresh(): void;
 }
-export interface ThreadCenterPorts { state: ThreadWorkspaceSnapshot; store: ThreadWorkspaceStore; }
+export interface ThreadCenterPorts { state: ThreadWorkspaceSnapshot; store: ThreadWorkspaceStore; userDisplayName: string; }
 export interface ThreadTabsPorts {
   documents: readonly ThreadDocument[];
   titles: Readonly<Record<string, string>>;
@@ -45,4 +45,4 @@ export interface ThreadWorkspacePickerProps {
 }
 export type ThreadRunState = ConversationRun["state"];
 
-export interface ThreadNavigationProps { workspaceId?: string | null; onNew?(): void; }
+export interface ThreadNavigationProps { workspaceId?: string | null; onNew?(): void; query?: string; unified?: boolean; onNavigate?(): void; }

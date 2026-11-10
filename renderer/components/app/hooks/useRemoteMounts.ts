@@ -1,11 +1,11 @@
 import { noraWorkspaceManagementClient } from "@/components/app/clients/noraWorkspaceManagementClient";
 import { useOptionalWorkspaceSidebarPorts } from "@/components/app/context/workspaceSidebarPortsContext";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
-import type { StatusBarRemoteMountsModel } from "@/components/app/types/statusBarRemoteMounts.types";
+import type { RemoteMountsModel } from "@/components/app/types/remoteMounts.types";
 import { useCallback, useMemo, useState } from "react";
 
-/** Returns null outside the signed-in shell (loading / onboarding footers), where mounts cannot be acted on. */
-export const useStatusBarRemoteMounts = (): StatusBarRemoteMountsModel | null => {
+/** Returns null outside the signed-in shell (startup screens), where mounts cannot be acted on. */
+export const useRemoteMounts = (): RemoteMountsModel | null => {
   const sidebarBuild = useOptionalWorkspaceSidebarPorts()?.sidebarBuild ?? null;
   const mounts = useCanonicalAppSnapshot()?.activeRemoteMounts;
   const [unmountingMountPoint, setUnmountingMountPoint] = useState<string | null>(null);
