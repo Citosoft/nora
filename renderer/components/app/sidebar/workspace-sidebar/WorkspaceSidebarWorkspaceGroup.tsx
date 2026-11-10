@@ -1,76 +1,63 @@
-import {
-  formatWorkspaceSidebarWorktreeLocationLabel,
-  getWorkspaceSidebarPullRequestDotClass,
-  sortWorkspaceSidebarWorktrees,
-  workspaceSidebarHasPullRequestState
-} from "@/components/app/logic/workspaceSidebarPresentation";
-import { createQuickTerminalDialogDefaults, createQuickTerminalPayload } from "@/components/app/logic/terminalQuickLaunch";
-import { getExternalHarnessThreadDisplayTitle } from "@/components/app/logic/externalHarnessThreads";
-import {
-  buildExternalHarnessThreadResumePayload,
-  canResumeExternalHarnessThread
-} from "@/components/app/logic/externalHarnessThreadResume";
-import { formatTimestamp } from "@/components/app/logic/utils";
+import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
+import { useNativeRuntimePorts } from "@/components/app/hooks/useNativeRuntimePorts";
+import { useStatusBar } from "@/components/app/logic/statusBarContext";
+import { createQuickTerminalDialogDefaults,createQuickTerminalPayload } from "@/components/app/logic/terminalQuickLaunch";
 import { setWorkspaceRelativePathDragData } from "@/components/app/logic/workspacePathDrag";
-import { createScriptTerminalDefaults, formatWorkspaceScriptActionLabel, getPreferredWorkspaceScripts } from "@/components/app/logic/workspaceScripts";
-import { canRemoveWorkspaceWorktree } from "@/components/app/logic/worktreeRemoval";
+import { createScriptTerminalDefaults,formatWorkspaceScriptActionLabel,getPreferredWorkspaceScripts } from "@/components/app/logic/workspaceScripts";
+import {
+formatWorkspaceSidebarWorktreeLocationLabel,
+getWorkspaceSidebarPullRequestDotClass,
+sortWorkspaceSidebarWorktrees,
+workspaceSidebarHasPullRequestState
+} from "@/components/app/logic/workspaceSidebarPresentation";
 import { setWorkspaceTaskDragData } from "@/components/app/logic/workspaceTaskDrag";
-import { AgentToolIcon, WorkspaceProjectIcon } from "@/components/app/shared/Tooling";
+import { canRemoveWorkspaceWorktree } from "@/components/app/logic/worktreeRemoval";
+import { ThreadNavigation } from "@/components/app/panels/threads/ThreadNavigation";
+import { WorkspaceProjectIcon } from "@/components/app/shared/Tooling";
+import { LoopWorkspaceSection } from "@/components/app/sidebar/workspace-sidebar/LoopWorkspaceSection";
 import { WorkspaceSidebarChildSectionLabel } from "@/components/app/sidebar/workspace-sidebar/WorkspaceSidebarChildSectionLabel";
 import { WorkspaceSidebarWorkspaceSessionRow } from "@/components/app/sidebar/workspace-sidebar/WorkspaceSidebarWorkspaceSessionRow";
-import { LoopWorkspaceSection } from "@/components/app/sidebar/workspace-sidebar/LoopWorkspaceSection";
-import { WorkspaceWorktreeActionsMenuItems } from "@/components/app/sidebar/workspace-sidebar/WorkspaceWorktreeActionsMenuItems";
 import { WorkspaceWorkspaceActionsMenuItems } from "@/components/app/sidebar/workspace-sidebar/WorkspaceWorkspaceActionsMenuItems";
+import { WorkspaceWorktreeActionsMenuItems } from "@/components/app/sidebar/workspace-sidebar/WorkspaceWorktreeActionsMenuItems";
 import type { WorkspaceSidebarWorkspaceGroupProps } from "@/components/app/types/workspaceSidebarWorkspaceGroup.types";
-import { useWorkspaceExternalHarnessSessions } from "@/components/app/hooks/useWorkspaceExternalHarnessSessions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { DropdownMenu,DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import {
-  Archive,
-  Bot,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Ellipsis,
-  FileText,
-  FolderKanban,
-  GitBranch,
-  LoaderCircle,
-  Plus,
-  ScrollText,
-  Sparkles,
-  StickyNote,
-  TerminalSquare,
-  Trash2
-} from "lucide-react";
-import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
-import { useStatusBar } from "@/components/app/logic/statusBarContext";
 import { isGitProject } from "@shared/projectVersionControl";
+import {
+ChevronDown,
+ChevronLeft,
+ChevronRight,
+Ellipsis,
+FileText,
+FolderKanban,
+GitBranch,
+LoaderCircle,
+Plus,
+ScrollText,
+StickyNote,
+TerminalSquare,
+Trash2
+} from "lucide-react";
 import { useState } from "react";
 
 export const WorkspaceSidebarWorkspaceGroup = ({
   workspace,
+  collapsedWorkspaceIds,
   removingWorkspaceRootSet,
   projectFaviconUrlByProjectId,
-  collapsedWorkspaceIds,
   onCollapsedWorkspaceIdsChange,
   collapsedWorkspaceWorktreeSectionIds,
   collapsedWorkspaceAgentSectionIds,
-  collapsedWorkspaceThreadSectionIds,
   collapsedWorkspaceTerminalSectionIds,
   collapsedWorkspaceAiChatSectionIds,
   collapsedWorkspaceNoteSectionIds,
   collapsedWorkspaceSpecSectionIds,
   collapsedWorkspaceTaskSectionIds,
-  externalThreadReloadToken: globalExternalThreadReloadToken,
   toggleWorkspaceWorktreeSection,
-  toggleWorkspaceAgentSection,
-  toggleWorkspaceThreadSection,
   toggleWorkspaceTerminalSection,
-  toggleWorkspaceAiChatSection,
   toggleWorkspaceNoteSection,
   toggleWorkspaceSpecSection,
   toggleWorkspaceTaskSection,
@@ -95,7 +82,6 @@ export const WorkspaceSidebarWorkspaceGroup = ({
   focusedTerminal,
   preferredShellId,
   terminalQuickLaunchDefaults,
-  defaultAgentTool,
   runnableGlobalTerminalPresets,
   activeSessionPopoverId,
   setActiveSessionPopoverId,
@@ -119,9 +105,6 @@ export const WorkspaceSidebarWorkspaceGroup = ({
   onLaunchWorktreeScript,
   onRemoveWorktree,
   onOpenCreateAgent,
-  onResumeThread,
-  onQuickLaunchAgent,
-  onArchiveThread,
   onOpenCreateTerminal,
   onLaunchWorkspaceTerminal,
   onLaunchWorkspaceScript,
@@ -145,22 +128,17 @@ export const WorkspaceSidebarWorkspaceGroup = ({
   onOpenNote,
   onCreateNote,
   onOpenNoteBrowser,
-  onFocusWorkspaceAiChatTab,
-  onOpenAiChatFromSidebar,
   onRemoveProject
 }: WorkspaceSidebarWorkspaceGroupProps) => {
   const snapshot = useCanonicalAppSnapshot();
+  const native = useNativeRuntimePorts();
   const statusBar = useStatusBar();
-  const isGroupCollapsedForThreads = collapsedWorkspaceIds[workspace.project.id] ?? false;
-  const isThreadSectionCollapsed = collapsedWorkspaceThreadSectionIds[workspace.project.id] ?? true;
-  const [openingThreadArtifactPath, setOpeningThreadArtifactPath] = useState<string | null>(null);
-  const [archivingThreadArtifactPath, setArchivingThreadArtifactPath] = useState<string | null>(null);
-  const [externalThreadReloadToken, setExternalThreadReloadToken] = useState(0);
-  const { sessions: externalThreadSessions, isLoading: isLoadingExternalThreadSessions } = useWorkspaceExternalHarnessSessions(
-    workspace.project.id,
-    workspace.project.rootPath,
-    { enabled: !isGroupCollapsedForThreads, reloadToken: externalThreadReloadToken + globalExternalThreadReloadToken }
-  );
+  const [threadError, setThreadError] = useState<string | null>(null);
+  const nativeWorkspace = native.boot.workspaces.find((entry) => entry.shellProjectId === workspace.project.id);
+  const openThread = (): void => {
+    setThreadError(null);
+    void native.launch({ projectId: workspace.project.id }).catch((cause: unknown) => setThreadError(cause instanceof Error ? cause.message : "Thread could not be opened."));
+  };
   if (!snapshot) {
     return null;
   }
@@ -179,14 +157,12 @@ export const WorkspaceSidebarWorkspaceGroup = ({
     const directSshLabel = directSshLocation
       ? `${directSshLocation.user}@${directSshLocation.host}${directSshLocation.port ? `:${directSshLocation.port}` : ""}`
       : null;
-    const isGroupCollapsed = isGroupCollapsedForThreads;
+    const isGroupCollapsed = collapsedWorkspaceIds[workspace.project.id] ?? false;
     const isWorktreeSectionCollapsed = collapsedWorkspaceWorktreeSectionIds[workspace.project.id] ?? true;
-    const isAgentSectionCollapsed = collapsedWorkspaceAgentSectionIds[workspace.project.id] ?? true;
     const isTerminalSectionCollapsed = collapsedWorkspaceTerminalSectionIds[workspace.project.id] ?? true;
     const isTaskSectionCollapsed = collapsedWorkspaceTaskSectionIds[workspace.project.id] ?? true;
     const isSpecSectionCollapsed = collapsedWorkspaceSpecSectionIds[workspace.project.id] ?? true;
     const isNoteSectionCollapsed = collapsedWorkspaceNoteSectionIds[workspace.project.id] ?? true;
-    const isAiChatSectionCollapsed = collapsedWorkspaceAiChatSectionIds[workspace.project.id] ?? true;
     const workspaceViewWorktreeId =
       workspace.sessions[0]?.focusedWorktreeId ||
       workspace.worktrees[0]?.id ||
@@ -226,7 +202,6 @@ export const WorkspaceSidebarWorkspaceGroup = ({
     const workspaceTaskEntries = workspaceTasks.filter((task) => task.projectId === workspace.project.id);
     const workspaceSpecEntries = workspaceSpecs.filter((spec) => spec.projectId === workspace.project.id);
     const workspaceNoteEntries = workspaceNotes.filter((note) => note.projectId === workspace.project.id);
-    const workspaceAiChatEntries = aiChatTabs.filter((tab) => tab.projectId === workspace.project.id);
     const workspaceWorktreeEntries = sortWorkspaceSidebarWorktrees(workspace.worktrees, workspace.project.rootPath);
     const focusedWorktreeId =
       isFocused
@@ -235,39 +210,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
           null
         : null;
     const scripts = getPreferredWorkspaceScripts(workspace);
-    const quickLaunchAgentLabel = defaultAgentTool ? `New ${defaultAgentTool.label} agent` : "New agent";
-    const handleResumeThread = async (
-      thread: typeof externalThreadSessions[number]
-    ) => {
-      const displayTitle = getExternalHarnessThreadDisplayTitle(thread);
-      const tool = snapshot.agentCatalog.find((entry) => entry.id === thread.toolId) ?? null;
-      const payload = buildExternalHarnessThreadResumePayload(thread, tool, displayTitle);
-      if (!payload) {
-        return;
-      }
-      setOpeningThreadArtifactPath(thread.primaryArtifactPath);
-      const statusId = statusBar.beginStatus(`Resuming ${displayTitle}`, true);
-      try {
-        await onResumeThread(workspace.project.id, payload);
-      } finally {
-        statusBar.endStatus(statusId);
-        setOpeningThreadArtifactPath(null);
-      }
-    };
-    const handleArchiveThread = async (
-      thread: typeof externalThreadSessions[number]
-    ) => {
-      const displayTitle = getExternalHarnessThreadDisplayTitle(thread);
-      setArchivingThreadArtifactPath(thread.primaryArtifactPath);
-      const statusId = statusBar.beginStatus(`Archiving ${displayTitle}`, true);
-      try {
-        await onArchiveThread(workspace.project.id, thread);
-        setExternalThreadReloadToken((token) => token + 1);
-      } finally {
-        statusBar.endStatus(statusId);
-        setArchivingThreadArtifactPath(null);
-      }
-    };
+    const quickLaunchAgentLabel = "New thread";
 
     return (
       <div
@@ -332,7 +275,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                   className="size-8 shrink-0 rounded-[4px] self-center"
                   aria-label={`${quickLaunchAgentLabel} in ${workspace.project.name}`}
                   disabled={isRemoving}
-                  onClick={() => onQuickLaunchAgent(workspace.project.id)}
+                  onClick={openThread}
                 >
                   <Plus className="size-4" />
                 </Button>
@@ -424,86 +367,8 @@ export const WorkspaceSidebarWorkspaceGroup = ({
         </div>
         {isGroupCollapsed ? null : (
           <div className="pb-1">
-            <div className="py-1.5 pl-5 pr-4">
-              <div className="flex items-center justify-between gap-3">
-                <WorkspaceSidebarChildSectionLabel
-                  icon={<ScrollText className="size-3.5" />}
-                  label="Threads"
-                  count={externalThreadSessions.length}
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-7"
-                  onClick={() => toggleWorkspaceThreadSection(workspace.project.id)}
-                  aria-label={isThreadSectionCollapsed ? "Expand threads section" : "Collapse threads section"}
-                >
-                  {isThreadSectionCollapsed ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}
-                </Button>
-              </div>
-            </div>
-            {isThreadSectionCollapsed ? null : isLoadingExternalThreadSessions && externalThreadSessions.length === 0 ? (
-              <div className="flex items-center gap-2 border-l-2 border-transparent py-2 pl-5 pr-4 text-sm text-muted-foreground">
-                <LoaderCircle className="size-3.5 animate-spin" />
-                Loading threads
-              </div>
-            ) : externalThreadSessions.length ? (
-              externalThreadSessions.map((thread) => {
-                const displayTitle = getExternalHarnessThreadDisplayTitle(thread);
-                const isOpening = openingThreadArtifactPath === thread.primaryArtifactPath;
-                const isArchiving = archivingThreadArtifactPath === thread.primaryArtifactPath;
-                const isBusy = isOpening || isArchiving;
-                const canResume = canResumeExternalHarnessThread(thread);
-                return (
-                  <div
-                    key={`${thread.toolId}:${thread.primaryArtifactPath}`}
-                    className="group/thread flex h-8 w-full min-w-0 items-center rounded-[4px] border-l-2 border-transparent pr-1 transition hover:bg-accent/40 focus-within:bg-accent/40"
-                  >
-                    <button
-                      type="button"
-                      disabled={isBusy || !canResume}
-                      onClick={() => void handleResumeThread(thread)}
-                      className="flex h-full min-w-0 flex-1 items-center gap-2 pl-5 pr-2 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-inset disabled:pointer-events-none disabled:opacity-60"
-                      aria-label={`Resume thread: ${displayTitle}`}
-                      title={`${displayTitle}\n${thread.conversationId}\n${thread.primaryArtifactPath}`}
-                    >
-                      <AgentToolIcon
-                        toolId={thread.toolId}
-                        label={thread.toolLabel}
-                        className="size-5 shrink-0"
-                        imageClassName="size-4 rounded-sm"
-                      />
-                      <div className="flex min-w-0 flex-1 items-baseline gap-2">
-                        <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{displayTitle}</span>
-                        <span className="shrink-0 text-[11px] text-muted-foreground/75">
-                          {formatTimestamp(thread.lastUpdatedAt)}
-                        </span>
-                      </div>
-                      {isOpening ? <LoaderCircle className="size-3.5 shrink-0 animate-spin text-primary" /> : null}
-                    </button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="size-7 shrink-0 opacity-0 transition-opacity group-hover/thread:opacity-100 group-focus-within/thread:opacity-100"
-                      disabled={isBusy}
-                      onClick={() => void handleArchiveThread(thread)}
-                      aria-label={`Archive thread: ${displayTitle}`}
-                    >
-                      {isArchiving ? (
-                        <LoaderCircle className="size-3.5 animate-spin text-primary" />
-                      ) : (
-                        <Archive className="size-3.5" />
-                      )}
-                    </Button>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="w-full border-l-2 border-dashed border-border/60 py-2 pl-5 pr-4 text-left text-sm text-muted-foreground">
-                No resumable local threads detected
-              </div>
-            )}
+            {threadError && <p role="alert" className="px-4 py-2 text-xs text-destructive">{threadError}</p>}
+            <ThreadNavigation workspaceId={nativeWorkspace?.id ?? `unregistered:${workspace.project.id}`} onNew={openThread} />
             {isGitWorkspace ? (
               <div className="py-1.5 pl-5 pr-4">
                 <div className="flex items-center justify-between gap-3">
@@ -703,56 +568,6 @@ export const WorkspaceSidebarWorkspaceGroup = ({
                 return onOpenWorkflowRunChangeRequest(run.projectId, run.worktreeId);
               }}
             />
-            <div className="py-1.5 pl-5 pr-4">
-              <div className="flex items-center justify-between gap-3">
-                <WorkspaceSidebarChildSectionLabel icon={<Bot className="size-3.5" />} label="Agents" count={workspace.agents.length} />
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-7"
-                    aria-label={`Create agent for ${workspace.project.name}`}
-                    onClick={() =>
-                      workspace.project.id === snapshot.project?.id
-                        ? onOpenCreateAgent()
-                        : onFocusWorkspace(workspace.project.id)
-                    }
-                  >
-                    <Plus className="size-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-7"
-                    onClick={() => toggleWorkspaceAgentSection(workspace.project.id)}
-                    aria-label={isAgentSectionCollapsed ? "Expand agents section" : "Collapse agents section"}
-                  >
-                    {isAgentSectionCollapsed ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}
-                  </Button>
-                </div>
-              </div>
-            </div>
-            {isAgentSectionCollapsed ? null : workspace.agents.length ? (
-              workspace.agents.map((agent) => (
-                <WorkspaceSidebarWorkspaceSessionRow
-                  key={agent.id}
-                  {...sessionRowSharedProps}
-                  entry={{ kind: "agent", item: agent }}
-                />
-              ))
-            ) : (
-              <button
-                type="button"
-                onClick={() =>
-                  isFocused && workspaceViewWorktreeId
-                    ? onFocusWorkspaceView(workspaceViewWorktreeId)
-                    : onFocusWorkspace(workspace.project.id)
-                }
-                className="w-full border-l-2 border-dashed border-border/60 py-2 pl-5 pr-4 text-left text-sm text-muted-foreground transition hover:bg-accent/40"
-              >
-                No agents yet
-              </button>
-            )}
             <div className="py-1.5 pl-5 pr-4">
               <div className="flex items-center justify-between gap-3">
                 <WorkspaceSidebarChildSectionLabel
@@ -1058,72 +873,7 @@ export const WorkspaceSidebarWorkspaceGroup = ({
               </div>
               )}
             </div>
-            <div className="py-1.5 pl-5 pr-4">
-              <div className="flex items-center justify-between gap-3">
-                <WorkspaceSidebarChildSectionLabel
-                  icon={<Sparkles className="size-3.5" />}
-                  label="AI chats"
-                  count={workspaceAiChatEntries.length}
-                />
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-7"
-                    onClick={() => onOpenAiChatFromSidebar(workspace.project.id)}
-                    aria-label={`Open AI chat for ${workspace.project.name}`}
-                  >
-                    <Plus className="size-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-7"
-                    onClick={() =>
-                      toggleWorkspaceAiChatSection(workspace.project.id)
-                    }
-                    aria-label={isAiChatSectionCollapsed ? "Expand AI chats section" : "Collapse AI chats section"}
-                  >
-                    {isAiChatSectionCollapsed ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}
-                  </Button>
-                </div>
-              </div>
-              {isAiChatSectionCollapsed ? null : (
-              <div className="mt-1">
-                {workspaceAiChatEntries.length ? (
-                  <div className="space-y-1">
-                    {workspaceAiChatEntries.map((chat) => {
-                      const isActive =
-                        workspace.project.id === snapshot.project?.id && focusedAiChatTabId === chat.id;
-                      return (
-                        <button
-                          key={chat.id}
-                          type="button"
-                          onClick={() => onFocusWorkspaceAiChatTab(workspace.project.id, chat.id)}
-                          className={cn(
-                            "flex w-full min-w-0 items-start gap-2 rounded-[4px] border px-2 py-1.5 text-left transition",
-                            isActive
-                              ? "border-primary/40 bg-primary/10"
-                              : "border-transparent hover:bg-accent/40"
-                          )}
-                          title={chat.title}
-                        >
-                          {renderSubitemStatusDot(isActive ? "bg-primary" : "bg-muted-foreground/45")}
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-[13px] font-medium text-foreground">{chat.title}</div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="rounded-[4px] border border-dashed border-border/60 bg-background/30 px-3 py-2 text-sm text-muted-foreground">
-                    No AI chats yet. Use + to start one.
-                  </div>
-                )}
-              </div>
-              )}
-            </div>
+
           </div>
         )}
       </div>

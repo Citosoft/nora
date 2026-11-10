@@ -6,7 +6,7 @@ import { ChangesPanel as AppChangesPanel } from "@/components/app/panels/Changes
 import type { ChangesPanelProps, ChangesPanelSectionProps } from "@/components/app/types/changesPanel.types";
 import { useMemo } from "react";
 
-export const ChangesPanelSection = ({ forge, vercel, chrome, fileHandlers, openCreateAgentDialog }: ChangesPanelSectionProps) => {
+export const ChangesPanelSection = ({ forge, vercel, chrome, fileHandlers, openNewThread }: ChangesPanelSectionProps) => {
   const snapshot = useCanonicalAppSnapshot();
   const { workspaceFileTree, fileChangeCounts, safely } = useWorkspaceRuntime();
 
@@ -14,7 +14,7 @@ export const ChangesPanelSection = ({ forge, vercel, chrome, fileHandlers, openC
     () => ({
       workspace: {
         tools: snapshot?.agentCatalog ?? [],
-        onOpenCreateAgentDialog: openCreateAgentDialog
+        onOpenCreateAgentDialog: openNewThread
       },
       files: {
         paths: workspaceFileTree.paths,
@@ -60,7 +60,7 @@ export const ChangesPanelSection = ({ forge, vercel, chrome, fileHandlers, openC
       forge,
       vercel,
       chrome,
-      openCreateAgentDialog
+      openNewThread
     }),
     [
       snapshot,

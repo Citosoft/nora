@@ -2,24 +2,21 @@ import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { conversationSchema, requestSchema, runSchema, timelineItemSchema } from "@shared/conversations/contracts";
 import type { ConversationSnapshot, WorkspaceRef } from "@shared/types/conversation/contracts.types";
-import { isPathWithinComparableRoot } from "@shared/pathComparison";
+import { workspacesOverlap } from "./workspaceConflict";
+import { loadCheckpoint } from "./checkpoints/storage";
+import { readJsonRow } from "./sqliteRows";
 import type { ConversationHeader, ConversationHistoryPage, ConversationSummary, HistoryQuery } from "@shared/types/conversation/queries.types";
 import type { ConversationState, ExecutionState } from "@main/types/execution/store.types";
 import { activeRunStates, isActiveRun } from "./projection";
 import { summarizeConversation } from "./summaries";
 import { ExecutionCommandError } from "./errors";
 
-const jsonRowSchema = z.object({ json: z.string() });
 const headSchema = z.object({ cursor: z.number().int().nonnegative(), json: z.string() });
 const idRowSchema = z.object({ id: z.string() });
 const positionRowSchema = z.object({ position: z.number().int().positive(), json: z.string() });
 const countRowSchema = z.object({ count: z.number().int().nonnegative() });
 // These literals come exclusively from the domain enum, never command or provider input.
 const activeSql = activeRunStates.map((state) => `'${state}'`).join(", ");
-
-export function readJsonRow<T>(row: unknown, schema: z.ZodType<T>): T {
-  return schema.parse(JSON.parse(jsonRowSchema.parse(row).json));
-}
 
 export class SqliteQueries {
   constructor(protected readonly database: DatabaseSync) {}
@@ -78,15 +75,25 @@ export class SqliteQueries {
     const row = this.database.prepare("SELECT json FROM conversation_requests WHERE conversation_id = ? AND id = ?").get(conversationId, requestId);
     return row ? readJsonRow(row, requestSchema) : null;
   }
+  checkpoint(conversationId: string, runId: string) {
+    return loadCheckpoint(this.database, conversationId, runId);
+  }
+  checkpointReservations(): WorkspaceRef[] {
+    return this.database.prepare(`SELECT DISTINCT h.id, h.json FROM conversation_heads h JOIN turn_checkpoints c ON c.conversation_id = h.id
+      JOIN effects e ON json_extract(e.json, '$.conversationId') = c.conversation_id AND json_extract(e.json, '$.runId') = c.run_id
+      WHERE c.baseline_ready = 1 AND json_extract(e.json, '$.action.kind') = 'review'
+      AND json_extract(e.json, '$.status') IN ('pending', 'claimed')`).all()
+      .map((row) => readJsonRow(row, conversationSchema).workspace);
+  }
   writers(workspace: WorkspaceRef): string[] {
     return this.database.prepare(`SELECT h.id, h.json FROM conversation_heads h WHERE h.access = 'write'
-      AND EXISTS (SELECT 1 FROM conversation_runs r WHERE r.conversation_id = h.id AND r.state IN (${activeSql}))`)
-      .all().filter((row) => {
-        const other = readJsonRow(row, conversationSchema).workspace;
-        const options = { windows: process.platform === "win32" };
-        return other.checkoutId === workspace.checkoutId || isPathWithinComparableRoot(other.path, workspace.path, options)
-          || isPathWithinComparableRoot(workspace.path, other.path, options);
-      }).map((row) => idRowSchema.parse(row).id);
+      AND (EXISTS (SELECT 1 FROM conversation_runs r WHERE r.conversation_id = h.id AND r.state IN (${activeSql}))
+        OR EXISTS (SELECT 1 FROM turn_checkpoints c JOIN effects e ON json_extract(e.json, '$.conversationId') = c.conversation_id
+          AND json_extract(e.json, '$.runId') = c.run_id WHERE c.conversation_id = h.id
+          AND c.baseline_ready = 1 AND json_extract(e.json, '$.action.kind') = 'review'
+          AND json_extract(e.json, '$.status') IN ('pending', 'claimed')))`)
+      .all().filter((row) => workspacesOverlap(readJsonRow(row, conversationSchema).workspace, workspace))
+      .map((row) => idRowSchema.parse(row).id);
   }
   summaries(projectId?: string): ConversationSummary[] {
     const heads = projectId === undefined

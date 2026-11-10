@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-export const reasoningEffortSchema = z.enum(["none", "minimal", "low", "medium", "high", "xhigh"]);
+// Codex 0.167 advertises non-empty effort identifiers rather than a closed enum.
+export const reasoningEffortSchema = z.string().min(1).max(128);
 const turnErrorSchema = z.object({ codexErrorInfo: z.string().or(z.record(z.string(), z.json())).nullable().optional() });
 export const turnEventSchema = z.object({ threadId: z.string(), turn: z.object({ id: z.string(), status: z.string(), error: turnErrorSchema.nullable().optional() }) });
 export const deltaSchema = z.object({ threadId: z.string(), turnId: z.string(), itemId: z.string(), delta: z.string() });

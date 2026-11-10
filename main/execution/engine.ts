@@ -9,6 +9,14 @@ import { ExecutionCommandError } from "./errors";
 import { isActiveRun } from "./projection";
 import { providerUpdateSchema } from "./providerUpdateSchema";
 import { commandFingerprint } from "./commandIdentity";
+import { finalizeReview } from "./finalizeReview";
+import { recoverExecution } from "./recoverExecution";
+import { conversationReviewSchema } from "@shared/conversations/review";
+import type { ConversationReview } from "@shared/types/conversation/review.types";
+import type { CheckpointCapture } from "@main/types/execution/checkpoints.types";
+import { recordCheckpoint } from "./checkpoints/record";
+import { hasPendingCheckpointReview } from "./checkpoints/admission";
+import type { RoleSelection } from "@shared/types/personalization/roles.types";
 
 export class ConversationEngine {
   private readonly subscriptions = new Set<ActiveSubscription>();
@@ -32,11 +40,12 @@ export class ConversationEngine {
     return previous.receipt;
   }
 
-  execute(input: ConversationCommand, preparedWorkspace?: WorkspaceRef): CommandReceipt {
+  execute(input: ConversationCommand, preparedWorkspace?: WorkspaceRef, preparedRole?: RoleSelection | null): CommandReceipt {
     this.deps.assertOwnership();
     const command = conversationCommandSchema.parse(input);
-    const decisionCommand = command.kind === "create" && preparedWorkspace
-      ? { ...command, workspace: workspaceRefSchema.parse(preparedWorkspace) } : command;
+    const decisionCommand = command.kind === "create"
+      ? { ...command, ...(preparedWorkspace ? { workspace: workspaceRefSchema.parse(preparedWorkspace) } : {}),
+        ...(preparedRole ? { role: preparedRole } : {}) } : command;
     const fingerprint = commandFingerprint(command);
     const key = JSON.stringify(["command", command.conversationId, command.commandId]);
     const result = this.deps.store.transaction((transaction) => {
@@ -77,6 +86,10 @@ export class ConversationEngine {
         writers: transaction.writers(snapshot.conversation.workspace), effects: transaction.unfinishedEffects(),
         previousItem: update.kind === "item" ? transaction.item(update.conversationId, update.item.id) : null,
         previousRequest: update.kind === "request" ? transaction.request(update.conversationId, update.request.id) : null });
+      if (decision.events.some((payload) => payload.kind === "run" && payload.run.state === "recovering")) {
+        const checkpoint = transaction.checkpoint(update.conversationId, update.runId);
+        if (checkpoint && !checkpoint.final) transaction.putCheckpoint({ ...checkpoint, continuity: "interrupted" });
+      }
       const cursor = this.commitEvents(transaction, update.conversationId, now, decision.events);
       for (const effect of decision.effects) transaction.putEffect(effect);
       transaction.putReceipt({ key: commandId, fingerprint, receipt: { commandId, conversationId: update.conversationId, cursor, acceptedAt: now } });
@@ -86,6 +99,12 @@ export class ConversationEngine {
 
   snapshot(conversationId: string): ConversationSnapshot | null { return this.deps.store.snapshot(conversationId); }
   execution(conversationId: string, runId: string) { return this.deps.store.execution(conversationId, runId); }
+  checkpoint(conversationId: string, runId: string) { return this.deps.store.checkpoint(conversationId, runId); }
+
+  recordCheckpoint(effectId: string, phase: "baseline" | "final", capture: CheckpointCapture): boolean {
+    this.deps.assertOwnership();
+    return this.deps.store.transaction((transaction) => recordCheckpoint(transaction, effectId, phase, capture));
+  }
 
   claimEffect(allowed?: readonly ExecutionEffect["action"]["kind"][]): ExecutionEffect | null {
     this.deps.assertOwnership();
@@ -95,7 +114,10 @@ export class ConversationEngine {
         if (allowed && !allowed.includes(effect.action.kind)) continue;
         const snapshot = transaction.state(effect.conversationId, effect.runId);
         const run = snapshot?.runs.find((entry) => entry.id === effect.runId && entry.attemptId === effect.attemptId);
-        if (!run || !isActiveRun(run)) { transaction.putEffect({ ...effect, status: "done" }); continue; }
+        const reviewable = run && !isActiveRun(run) && run.state !== "queued" && run.review === "pending";
+        if (!run || (effect.action.kind === "review" ? !reviewable : !isActiveRun(run))) {
+          transaction.putEffect({ ...effect, status: "done" }); continue;
+        }
         if (run.state === "recovering" && effect.action.kind !== "reconcile") {
           transaction.putEffect({ ...effect, status: "done" }); continue;
         }
@@ -103,6 +125,7 @@ export class ConversationEngine {
           transaction.putEffect({ ...effect, status: "done" });
           continue;
         }
+        if (effect.action.kind === "start" && snapshot && hasPendingCheckpointReview(transaction, snapshot.conversation.workspace)) continue;
         if (effect.action.kind === "respond") {
           const { requestId } = effect.action;
           const request = snapshot?.requests.find((entry) => entry.id === requestId);
@@ -124,8 +147,22 @@ export class ConversationEngine {
     this.deps.store.transaction((transaction) => {
       const effect = transaction.effect(effectId);
       if (!effect || effect.status !== "claimed") throw new ExecutionCommandError("conflict", "Effect is not claimed");
+      if (effect.action.kind === "review") throw new ExecutionCommandError("conflict", "Review evidence must be finalized before retiring its effect");
       transaction.putEffect({ ...effect, status: "done" });
     });
+  }
+
+  finishReview(effectId: string, input: ConversationReview): void {
+    this.deps.assertOwnership();
+    const result = conversationReviewSchema.parse(input);
+    this.deps.store.transaction((transaction) => {
+      const effect = transaction.effect(effectId);
+      if (!effect || effect.action.kind !== "review") throw new ExecutionCommandError("conflict", "Effect is not a review");
+      if (effect.status === "done") return;
+      if (effect.status !== "claimed") throw new ExecutionCommandError("conflict", "Review is not claimed");
+      finalizeReview(transaction, effect, result, this.deps.now(), this.deps.nextId);
+    });
+    this.publish();
   }
 
   expireRequests(): void {
@@ -145,28 +182,7 @@ export class ConversationEngine {
     this.deps.assertOwnership();
     this.deps.store.transaction((transaction) => {
       const now = this.deps.now();
-      for (const snapshot of transaction.activeStates()) {
-        const events: EventPayload[] = [];
-        for (const run of snapshot.runs.filter(isActiveRun)) {
-          const effects = transaction.unfinishedEffects().filter((effect) => effect.attemptId === run.attemptId && effect.conversationId === snapshot.conversation.id);
-          // Unclaimed starts are known not to have crossed the native boundary.
-          if (run.state === "starting" && effects.some((effect) => effect.action.kind === "start" && effect.status === "pending")) continue;
-          for (const effect of effects.filter((entry) => entry.status !== "done")) transaction.putEffect({ ...effect, status: "done" });
-          for (const request of snapshot.requests.filter((entry) => entry.runId === run.id && ["pending", "responding"].includes(entry.status))) {
-            events.push({ kind: "request", request: { ...request, status: "expired" } });
-          }
-          events.push({ kind: "run", run: { ...run, state: "recovering", updatedAt: now,
-            failure: { code: "uncertain", message: "Native execution must be reconciled before continuing", retryable: false } } });
-          const id = JSON.stringify([run.attemptId, "reconcile", this.deps.nextId()]);
-          transaction.putEffect({ id, conversationId: snapshot.conversation.id, runId: run.id,
-            attemptId: run.attemptId, status: "pending", action: { kind: "reconcile" } });
-        }
-        this.commitEvents(transaction, snapshot.conversation.id, now, events);
-      }
-      for (const effect of transaction.unfinishedEffects()) {
-        const owner = transaction.state(effect.conversationId, effect.runId)?.runs.find((run) => run.id === effect.runId && run.attemptId === effect.attemptId);
-        if (effect.status !== "done" && (!owner || !isActiveRun(owner))) transaction.putEffect({ ...effect, status: "done" });
-      }
+      recoverExecution(transaction, now, this.deps.nextId);
     });
     this.publish();
   }

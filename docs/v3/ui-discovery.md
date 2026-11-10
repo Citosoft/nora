@@ -4,6 +4,38 @@ Status: consultation decisions recorded from the supplied implementation plan on
 
 The supplied plan is the source of owner intent. The IDs below organize its 39 decisions for traceability; they do not reconstruct an unavailable questionnaire transcript. Approval of individual decisions does not approve implementation of the complete interface.
 
+## Additional owner direction — 2026-11-09
+
+D40: Nora should support any kind of work, with development remaining a core strength. Ask the user's role on first launch and use it to shape app behavior. ChatGPT Desktop is an additional experience reference for this broader scope; no new reference research has been completed in this update.
+
+This direction is confirmed by the owner's request. The owner subsequently confirmed that role selection shapes tools, defaults, assistant instructions and suggested workflows, with an app-wide default and per-workspace overrides. The owner also confirmed the following decisions; concrete mappings and layouts remain proposed in [role onboarding](role-onboarding.md). The 2026-10-21 approval covers the existing baseline and does not approve these new interface details.
+
+| ID | Topic | Confirmed decision — 2026-11-09 |
+| --- | --- | --- |
+| D41 | Role picker | Developer, Designer, Product & project management, Writing & content, Research & analysis, Business & operations, General, plus Describe my role. |
+| D42 | No-folder start | Automatically create a Personal workspace. |
+| D43 | Role changes | Apply to new conversations only; existing conversations retain their role for later instructions and resumed work. |
+
+The [role proposal](role-onboarding.md) records proposed tool mappings, first-run flow, general workspace storage, inheritance and acceptance. Questionnaire answers confirm D41–D43; they do not approve the complete new interface. Implementation approval for this extension remains pending.
+
+## Role approval and shell correction — 2026-11-09
+
+The owner approved the onboarding flow and role mappings with “looks good”, then authorized implementation with “do everything you need”. The owner also clarified that v3 replaces v2 execution on this branch; there is no requirement for a v2 runtime mode or parallel production system.
+
+**D44: Preserve Nora's existing UI as the implementation base.** After the first implementation attempt replaced the whole shell, the owner said “we seem to have completly abanonded the v2 UI”. Retain its navigation, chrome, mixed tabs, grids, panels and reusable tools. Replace the agent interaction surface with native conversations and integrate onboarding/personalization into that shell. Earlier approval of role behavior does not authorize discarding the existing interface. The detached replacement shell and its premature production wiring were removed; the original app/bootstrap entry points are restored.
+
+## Thread-first adaptation — 2026-11-09
+
+**D45: Adapt the whole UI to v3's unified thread model.** The owner clarified that agents and threads are effectively the same product concept. The existing UI must evolve wherever v3 replaces the underlying behavior. Ordinary creation goes directly to a New thread chat screen with model/branch selection and other relevant inline controls, replacing complicated agent dialogs. New and ongoing thread screens should be polished to the quality of Claude Desktop and ChatGPT Desktop while retaining Nora’s adapted workbench.
+
+The source-backed [transition map](ui-transition.md) identifies affected surfaces and their retain/adapt/replace/add treatment. It includes creation/handoff callers outside the main agent panel. Detailed filter names and final composition are recommendations for screen review, not newly confirmed owner decisions. D44 preserves the UI foundation; it does not freeze v2’s duplicate labels, navigation or execution workflows.
+
+## Component polish and model picker — 2026-11-09
+
+**D46: Provider/model selection uses a two-column popover.** The owner accepted the thread-pane mockup as a good start and specified a provider chooser with icons on the left and the selected provider’s models on the right. All components must receive the same attention to interaction and visual polish. The owner explicitly approved the picker preview with “perfect” and then requested implementation with “carry on”. This is a component-level decision, not approval of a finished integrated app.
+
+Provider browsing should not commit a new binding. Selecting a model commits the provider/model choice and closes the popover; Escape/outside dismiss preserves the previous selection. Use real installed-runtime catalogs, explicit selected/loading/empty/error/auth states, keyboard/focus support and existing local product icons. Reuse the Radix popover in implementation. No live catalog entitlement is established by representative models in the design preview.
+
 ## Reference evidence
 
 The [current UI audit](audit.md#current-interface-inventory) identifies actual Nora components and wiring. Prior discovery inspected T3's [ChatView](https://github.com/pingdotgg/t3code/blob/main/apps/web/src/components/ChatView.tsx), [composer](https://github.com/pingdotgg/t3code/blob/main/apps/web/src/components/chat/ChatComposer.tsx), [footer](https://github.com/pingdotgg/t3code/blob/main/apps/web/src/components/chat/ComposerFooterControls.tsx), [approval panel](https://github.com/pingdotgg/t3code/blob/main/apps/web/src/components/chat/ComposerPendingApprovalPanel.tsx), [changed files](https://github.com/pingdotgg/t3code/blob/main/apps/web/src/components/chat/ChangedFilesTree.tsx) and [right panel](https://github.com/pingdotgg/t3code/blob/main/apps/web/src/components/chat/ChatRightPanel.tsx). These are moving source links, not pinned dependencies.

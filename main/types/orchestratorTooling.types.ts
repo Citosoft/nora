@@ -53,7 +53,6 @@ export interface ToolingHelperDeps {
   setToolConfigs: (configs: Record<string, AgentToolConfig>) => void;
   getCliToolStatus: (tool: AgentCatalogEntry) => Promise<ToolUsageInfo | null>;
   searchAgentSkills: (toolId: string, query: string) => Promise<AgentSkillSearchResult>;
-  reconcileWorkspaceAgentsAfterCatalogRefresh: () => Promise<void>;
 }
 
 export interface ToolAccountSwitchExecution {

@@ -5,7 +5,7 @@ export interface WorkspaceAuthority {
   verify(workspace: WorkspaceRef): Promise<void>;
 }
 export interface WorkspaceRegistration { projectId: string; checkoutId: string; path: string }
-export interface CheckoutInspection { rootPath: string; branch: string }
+export interface CheckoutInspection { rootPath: string; branch: string; versionControl?: "git" | "none" }
 export interface LocalWorkspaceOptions {
   environmentId: string;
   registrations: () => readonly WorkspaceRegistration[];

@@ -33,6 +33,7 @@ export function decideUpdate(snapshot: ConversationState, update: ProviderUpdate
         state: run.state === "stopping" ? "stopping" : "running", failure: null, updatedAt: context.now } });
       break;
     case "item": {
+      if (update.item.kind === "review") throw new ExecutionCommandError("invalid", "Review evidence belongs to the execution host");
       if (update.item.runId !== run.id) throw new ExecutionCommandError("invalid", "Timeline item belongs to another run");
       const previous = context.previousItem;
       if (previous && (previous.runId !== run.id || previous.kind !== update.item.kind)) {
@@ -92,6 +93,8 @@ export function decideUpdate(snapshot: ConversationState, update: ProviderUpdate
       add({ kind: "run", run: { ...run, state: update.status, failure: update.failure, usage: update.usage, updatedAt: context.now } });
       add({ kind: "conversation", conversation: { ...snapshot.conversation,
         queuePaused: snapshot.conversation.queuePaused || update.status !== "completed", updatedAt: context.now } });
+      decision.effects.push({ id: JSON.stringify([run.attemptId, "review"]), conversationId: snapshot.conversation.id,
+        runId: run.id, attemptId: run.attemptId, status: "pending", action: { kind: "review" } });
       if (update.status === "completed" && !snapshot.conversation.queuePaused) {
         const nextSnapshot = decision.events.reduce(projectState, snapshot);
         const nextContext = { ...context, state: nextSnapshot };

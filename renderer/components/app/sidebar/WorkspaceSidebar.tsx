@@ -1,25 +1,22 @@
 import {
-  useWorkspaceSidebarActions,
-  useWorkspaceSidebarRuntime,
-  useWorkspaceSidebarUi
+useWorkspaceSidebarActions,
+useWorkspaceSidebarRuntime,
+useWorkspaceSidebarUi
 } from "@/components/app/context/workspaceSidebarContext";
+import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
 import { useWorkspaceSidebarAllAgents } from "@/components/app/hooks/useWorkspaceSidebarAllAgents";
-import { useWorkspaceSidebarAllThreads } from "@/components/app/hooks/useWorkspaceSidebarAllThreads";
-import { buildWorkspaceCollapseAllMap, useWorkspaceSidebarDerived } from "@/components/app/hooks/useWorkspaceSidebarDerived";
+import { buildWorkspaceCollapseAllMap,useWorkspaceSidebarDerived } from "@/components/app/hooks/useWorkspaceSidebarDerived";
 import { useWorkspaceSidebarOverlays } from "@/components/app/hooks/useWorkspaceSidebarOverlays";
 import { useWorkspaceSidebarSectionState } from "@/components/app/hooks/useWorkspaceSidebarSectionState";
 import { getWorkspaceSidebarTooltip } from "@/components/app/logic/workspaceSidebarPresentation";
 import {
-  WorkspaceSidebarCollapsedRail
+WorkspaceSidebarCollapsedRail
 } from "@/components/app/sidebar/WorkspaceSidebarSections";
-import { WorkspaceSidebarAllAgentsSection } from "@/components/app/sidebar/workspace-sidebar/WorkspaceSidebarAllAgentsSection";
-import { WorkspaceSidebarAllThreadsSection } from "@/components/app/sidebar/workspace-sidebar/WorkspaceSidebarAllThreadsSection";
 import { WorkspaceSidebarContextMenus } from "@/components/app/sidebar/workspace-sidebar/WorkspaceSidebarContextMenus";
 import { WorkspaceSidebarWorkspaceGroup } from "@/components/app/sidebar/workspace-sidebar/WorkspaceSidebarWorkspaceGroup";
 import { WorkspaceSidebarWorkspacesHeader } from "@/components/app/sidebar/workspace-sidebar/WorkspaceSidebarWorkspacesHeader";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card,CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
 import { useState } from "react";
 
 export const WorkspaceSidebar = () => {
@@ -151,42 +148,11 @@ export const WorkspaceSidebar = () => {
   });
 
   const {
-    allAgentsGroupBy,
-    allAgentsGroupSections,
-    allAgentsPrFilter,
-    allAgentsWorkspaceFilter,
-    allAgentsWorkspaceFilterOptions,
-    filteredAllWorkspaceAgentEntries,
-    isAllAgentsSectionCollapsed,
-    pullRequestStatusByWorkspaceBranch,
-    setAllAgentsGroupBy,
-    setAllAgentsPrFilter,
-    setAllAgentsWorkspaceFilter,
-    setIsAllAgentsSectionCollapsed
-  } = useWorkspaceSidebarAllAgents({
+    pullRequestStatusByWorkspaceBranch  } = useWorkspaceSidebarAllAgents({
     workspaceGroups,
     githubToken,
     gitlabToken,
     gitlabHost
-  });
-  const {
-    allThreadsGroupBy,
-    allThreadsGroupSections,
-    allThreadsHarnessFilter,
-    allThreadsHarnessFilterOptions,
-    allThreadsWorkspaceFilter,
-    allThreadsWorkspaceFilterOptions,
-    filteredAllWorkspaceThreadEntries,
-    isAllThreadsSectionCollapsed,
-    isLoadingAllThreads,
-    setAllThreadsGroupBy,
-    setAllThreadsHarnessFilter,
-    setAllThreadsWorkspaceFilter,
-    setIsAllThreadsSectionCollapsed,
-    toggleAllThreadsGroupExpanded
-  } = useWorkspaceSidebarAllThreads({
-    workspaceGroups,
-    reloadToken: externalThreadReloadToken
   });
 
   const {
@@ -404,43 +370,7 @@ export const WorkspaceSidebar = () => {
                   )}
                 </div>
               </section>
-              <WorkspaceSidebarAllThreadsSection
-                allThreadsWorkspaceFilter={allThreadsWorkspaceFilter}
-                setAllThreadsWorkspaceFilter={setAllThreadsWorkspaceFilter}
-                allThreadsWorkspaceFilterOptions={allThreadsWorkspaceFilterOptions}
-                allThreadsHarnessFilter={allThreadsHarnessFilter}
-                setAllThreadsHarnessFilter={setAllThreadsHarnessFilter}
-                allThreadsHarnessFilterOptions={allThreadsHarnessFilterOptions}
-                allThreadsGroupBy={allThreadsGroupBy}
-                setAllThreadsGroupBy={setAllThreadsGroupBy}
-                isAllThreadsSectionCollapsed={isAllThreadsSectionCollapsed}
-                setIsAllThreadsSectionCollapsed={setIsAllThreadsSectionCollapsed}
-                filteredAllWorkspaceThreadEntries={filteredAllWorkspaceThreadEntries}
-                allThreadsGroupSections={allThreadsGroupSections}
-                onToggleGroupExpanded={toggleAllThreadsGroupExpanded}
-                isLoadingAllThreads={isLoadingAllThreads}
-                onResumeThread={onResumeThread}
-                onArchiveThread={onArchiveThread}
-                onThreadsChanged={() => setExternalThreadReloadToken((current) => current + 1)}
-              />
-              <WorkspaceSidebarAllAgentsSection
-                focusedAgent={focusedAgent}
-                now={now}
-                allAgentsWorkspaceFilter={allAgentsWorkspaceFilter}
-                setAllAgentsWorkspaceFilter={setAllAgentsWorkspaceFilter}
-                allAgentsWorkspaceFilterOptions={allAgentsWorkspaceFilterOptions}
-                allAgentsPrFilter={allAgentsPrFilter}
-                setAllAgentsPrFilter={setAllAgentsPrFilter}
-                allAgentsGroupBy={allAgentsGroupBy}
-                setAllAgentsGroupBy={setAllAgentsGroupBy}
-                isAllAgentsSectionCollapsed={isAllAgentsSectionCollapsed}
-                setIsAllAgentsSectionCollapsed={setIsAllAgentsSectionCollapsed}
-                filteredAllWorkspaceAgentEntries={filteredAllWorkspaceAgentEntries}
-                allAgentsGroupSections={allAgentsGroupSections}
-                openAgentSessionMenu={openAgentSessionMenu}
-                onFocusAgent={onFocusAgent}
-                onFocusWorkspaceAgent={onFocusWorkspaceAgent}
-              />
+
             </div>
           </div>
         )}

@@ -20,6 +20,7 @@ export interface ClaudeOpenInput {
   sessionId: string;
   resume: boolean;
   instruction: string;
+  guidance?: string;
   nativeTurnId: ReturnType<typeof randomUUID>;
   cwd: string;
   model: string;

@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { conversationReviewSchema } from "./review";
+import { roleSelectionSchema, roleSnapshotSchema } from "@shared/personalization/contracts";
 
 const id = z.string().min(1).max(512);
 const time = z.string().datetime();
@@ -15,6 +17,7 @@ export const workspaceRefSchema = z.object({
   checkoutId: id,
   path: z.string().min(1),
   branch: z.string(),
+  versionControl: z.enum(["git", "none"]).optional(),
   access: z.enum(["read", "write"])
 }).strict();
 export const failureSchema = z.object({
@@ -26,8 +29,11 @@ export const usageSchema = z.object({
   inputTokens: z.number().int().nonnegative(),
   outputTokens: z.number().int().nonnegative()
 }).strict();
+export const conversationSourceSchema = z.object({ kind: z.literal("task"), projectId: id, path: z.string().min(1) }).strict();
 export const conversationSchema = z.object({
   id,
+  source: conversationSourceSchema.optional(),
+  role: roleSnapshotSchema.nullable().optional(),
   title: z.string().min(1),
   workspace: workspaceRefSchema,
   provider: providerBindingSchema,
@@ -59,7 +65,8 @@ export const timelineItemSchema = z.discriminatedUnion("kind", [
   z.object({ ...itemBase, kind: z.literal("milestone"), text: z.string() }).strict(),
   z.object({ ...itemBase, kind: z.literal("plan"), steps: z.array(z.object({ text: z.string(), state: z.enum(["pending", "running", "completed"]) }).strict()) }).strict(),
   z.object({ ...itemBase, kind: z.literal("subagent"), label: z.string(), nativeId: id, state: z.enum(["running", "completed", "failed"]) }).strict(),
-  z.object({ ...itemBase, kind: z.literal("changes"), paths: z.array(z.string()), attribution: z.enum(["turn", "workspace"]) }).strict()
+  z.object({ ...itemBase, kind: z.literal("changes"), paths: z.array(z.string()), attribution: z.enum(["turn", "workspace"]) }).strict(),
+  z.object({ ...itemBase, kind: z.literal("review"), result: conversationReviewSchema }).strict()
 ]);
 const requestBase = {
   id, runId: id, attemptId: id, nativeId: id,
@@ -85,9 +92,11 @@ export const snapshotSchema = z.object({
 }).strict();
 
 const commandBase = { commandId: id, conversationId: id };
+export const createConversationCommandSchema = z.object({ ...commandBase, kind: z.literal("create"), title: z.string().trim().min(1), workspace: workspaceRefSchema, provider: providerBindingSchema, parentId: id.nullable(), role: roleSelectionSchema.optional(), source: conversationSourceSchema.optional() }).strict();
+export const submitConversationCommandSchema = z.object({ ...commandBase, kind: z.literal("submit"), runId: id, instruction: z.string().trim().min(1) }).strict();
 export const conversationCommandSchema = z.discriminatedUnion("kind", [
-  z.object({ ...commandBase, kind: z.literal("create"), title: z.string().trim().min(1), workspace: workspaceRefSchema, provider: providerBindingSchema, parentId: id.nullable() }).strict(),
-  z.object({ ...commandBase, kind: z.literal("submit"), runId: id, instruction: z.string().trim().min(1) }).strict(),
+  createConversationCommandSchema,
+  submitConversationCommandSchema,
   z.object({ ...commandBase, kind: z.literal("edit-queued"), runId: id, instruction: z.string().trim().min(1) }).strict(),
   z.object({ ...commandBase, kind: z.literal("remove-queued"), runId: id }).strict(),
   z.object({ ...commandBase, kind: z.literal("continue-queue") }).strict(),

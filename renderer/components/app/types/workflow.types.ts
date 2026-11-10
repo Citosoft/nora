@@ -1,49 +1,49 @@
 import type {
-  AccentColor,
-  AiChatTabState,
-  BrowserTabState,
-  CreateAgentDialogDefaults,
-  CreateTerminalDialogDefaults,
-  FileEditorTab,
-  FileEditorState,
-  ResolvedTheme,
-  UiFontId,
-  StoredVercelWorkspaceLinks,
-  TerminalFontId,
-  TerminalThemeId,
-  ThemeMode,
-  UiState,
-  WindowUiState,
-  WorkspaceLoadingState
+AccentColor,
+AiChatTabState,
+BrowserTabState,
+CreateTerminalDialogDefaults,
+FileEditorState,
+FileEditorTab,
+ResolvedTheme,
+StoredVercelWorkspaceLinks,
+TerminalFontId,
+TerminalThemeId,
+ThemeMode,
+UiFontId,
+UiState,
+WindowUiState,
+WorkspaceLoadingState
 } from "@/components/app/types";
+import type { ThreadLaunchInput } from "@/components/app/types/thread-workspace/runtime.types";
 import type {
-  AgentCatalogEntry,
-  AgentSession,
-  AgentSkillCatalog,
-  AiProvider,
-  AnalyticsRuntimeConfig,
-  AppSettings,
-  AppState,
-  CreateAgentPayload,
-  CreateTerminalPayload,
-  ExternalHarnessContextRef,
-  ForgeOAuthProviderConfig,
-  ForgeProvider,
-  InstalledIde,
-  LinuxAptSetupStatus,
-  LinuxUpdateStatus,
-  TerminalSession,
-  WorkspaceNoteSummary,
-  WorkspaceSpecSummary,
-  WorkspaceSplitView,
-  WorkspaceSplitViewCollection,
-  WorkspaceSplitViewTile,
-  WorkspaceSummary,
-  WorkspaceTaskBoard,
-  WorkspaceTaskBoardSection,
-  WorkspaceTaskSummary
+AgentCatalogEntry,
+AgentSession,
+AgentSkillCatalog,
+AiProvider,
+AnalyticsRuntimeConfig,
+AppSettings,
+AppState,
+CreateAgentPayload,
+CreateTerminalPayload,
+ExternalHarnessContextRef,
+ForgeOAuthProviderConfig,
+ForgeProvider,
+InstalledIde,
+LinuxAptSetupStatus,
+LinuxUpdateStatus,
+TerminalSession,
+WorkspaceNoteSummary,
+WorkspaceSpecSummary,
+WorkspaceSplitView,
+WorkspaceSplitViewCollection,
+WorkspaceSplitViewTile,
+WorkspaceSummary,
+WorkspaceTaskBoard,
+WorkspaceTaskBoardSection,
+WorkspaceTaskSummary
 } from "@shared/appTypes";
-import type { Dispatch, SetStateAction, SVGProps } from "react";
+import type { Dispatch,SetStateAction,SVGProps } from "react";
 
 export type ForgeProviderIconProps = SVGProps<SVGSVGElement> & {
   provider: ForgeProvider;
@@ -219,7 +219,7 @@ export type WorkspaceSidebarProps = {
   onRefresh: () => void;
   onRefreshCatalog: () => void;
   onResetWorkspaces: () => void;
-  onOpenCreateAgent: (defaults?: CreateAgentDialogDefaults) => void;
+  onOpenCreateAgent: (defaults?: ThreadLaunchInput) => void;
   onOpenCreateTerminal: (defaults: CreateTerminalDialogDefaults) => void;
   onResumeThread: (projectId: string, payload: CreateAgentPayload) => Promise<void>;
   onQuickLaunchAgent: (projectId: string) => void;
@@ -455,6 +455,7 @@ export type UseWorkspaceSessionViewsArgs = {
 };
 
 export type WorkspaceSessionTab =
+  | { id: string; kind: "thread"; name: string; status: "running" | "idle" | "error" }
   | {
       id: string;
       kind: "agent";

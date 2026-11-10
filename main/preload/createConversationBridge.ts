@@ -7,7 +7,7 @@ import { subscribeToIpcEvent } from "./subscribeToIpcEvent";
 
 const incompatible = (): ConversationAccessError => new ConversationAccessError({ code: "unavailable", message: "Conversation transport returned an incompatible response; reconnect to the owning host" });
 
-/** Not exposed on the live v2 bridge until production cutover. */
+/** Validates normalized native conversation results; exposed when existing shell callers are migrated together. */
 export function createConversationBridge(transport: ConversationTransport = {
   invoke: (channel, payload) => invokeIpc(channel, payload),
   onCursor: (listener) => subscribeToIpcEvent<unknown>(conversationChannels.cursor, listener)

@@ -8,6 +8,7 @@
   },
   "include": [
     "tests/unit/**/*.ts",
+    "tests/native/crash/**/*.ts",
     "main/**/*.ts",
     "shared/**/*.ts",
     "renderer/components/app/constants/uiLayout.ts",

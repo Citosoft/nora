@@ -29,7 +29,7 @@ export type PreLaunchOnboardingTitleBarWorkspaceInput = {
   snapshot: AppState;
   safely: (action: () => Promise<AppState>) => Promise<AppState | null>;
   setActiveView: Dispatch<SetStateAction<AppView>>;
-  uiCommands: Pick<AppUiCommands, "openCreateAgentDialog" | "openCreateTerminalDialog">;
+  uiCommands: Pick<AppUiCommands, "openNewThread" | "openCreateTerminalDialog">;
   setIsLocalTerminalDockCollapsed: Dispatch<SetStateAction<boolean>>;
   focusLocalTerminalDock: () => void | Promise<void>;
   focusPreviousSessionTab: () => void;

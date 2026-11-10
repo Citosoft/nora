@@ -21,6 +21,7 @@ function openClaudeSession(input: ClaudeOpenInput, runtime: ClaudeRuntimeOptions
   }
   const native = query({ prompt: prompt(), options: {
     cwd: input.cwd, model: input.model, permissionMode: input.permissionMode,
+    ...(input.guidance ? { systemPrompt: { type: "preset" as const, preset: "claude_code" as const, append: input.guidance } } : {}),
     ...(input.effort ? { effort: input.effort } : {}),
     pathToClaudeCodeExecutable: runtime.executablePath,
     env: { ...process.env, ...runtime.environment },

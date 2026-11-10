@@ -1,3 +1,5 @@
+import { useNativeRuntimePorts } from "@/components/app/hooks/useNativeRuntimePorts";
+import { handoffThread } from "@/components/app/logic/thread-workspace/handoff";
 import {
   useWorkspaceSessionPanelActions,
   useWorkspaceSessionPanelData
@@ -63,6 +65,7 @@ function getMultiSelectionText(ed: editor.ICodeEditor): string | null {
 }
 
 export function FileEditorPanel(props: FileEditorPanelContextProps) {
+  const native = useNativeRuntimePorts();
   const sessionData = useWorkspaceSessionPanelData();
   const sessionActions = useWorkspaceSessionPanelActions();
   const { sessionSurface } = useSessionCenterPorts();
@@ -279,23 +282,7 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
             }
             void (async () => {
               onExitFileEditorForAgentHandoff?.();
-              await handoffPromptToAgent({
-                agentId: target.id,
-                prompt: {
-                  source: "file-editor",
-                  title: `Selection from ${getFileEditorLeafName(pathName)}`,
-                  text,
-                  workspacePaths: editorRootPath ? [{ path: joinWorkspacePath(editorRootPath, pathName), kind: "file" }] : [],
-                  contextSelections: [],
-                  references: editorRootPath
-                    ? [{ kind: "workspace-path", label: "Source file", value: joinWorkspacePath(editorRootPath, pathName) }]
-                    : []
-                },
-                focusAgent: async (agentId) => {
-                  await noraAgentClient.focusAgent(agentId);
-                },
-                updateSnapshot: () => {}
-              });
+              await handoffThread(native.store, target.id, `${text}\n\nSource file: ${editorRootPath ? joinWorkspacePath(editorRootPath, pathName) : pathName}`);
             })();
           }
         })

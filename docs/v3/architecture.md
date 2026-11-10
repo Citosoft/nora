@@ -74,7 +74,7 @@ Provider input is an untyped external boundary: validate it there, normalize it 
 
 ### Codex evidence
 
-[Official App Server documentation](https://learn.chatgpt.com/docs/app-server) describes a bidirectional structured protocol. The installed `codex-cli 0.132.0` can generate its own protocol schemas; generation succeeded during discovery. Its schemas include:
+[Official App Server documentation](https://learn.chatgpt.com/docs/app-server) describes a bidirectional structured protocol. Codex can generate its own protocol schemas; discovery used `codex-cli 0.132.0`, and local native acceptance now includes `0.167.0`. See [native acceptance](native-acceptance.md) for exact tested scope and schema evidence. Its schemas include:
 
 - `initialize`, `thread/start`, `thread/resume`, `turn/start`, `turn/interrupt`, `turn/steer` and `model/list`.
 - `item/agentMessage/delta`, item lifecycle notifications and `turn/completed`.
@@ -82,11 +82,11 @@ Provider input is an untyped external boundary: validate it there, normalize it 
 
 Initialize and wait for acknowledgement before sending `initialized` and subsequent commands. Track request correlation and native thread/turn/item IDs. Only a terminal turn status establishes execution outcome; a request response is insufficient.
 
-Online documentation already describes history methods absent from the locally generated stable request schema. Version-check the installed binary and generate/pin bindings for supported versions; do not blindly implement against the newest website examples. Use the supported history methods of the negotiated version.
+Online documentation already describes history methods absent from the locally generated stable request schema. Current effort identifiers are runtime-advertised non-empty strings and are validated against the selected model. Version-check the installed binary and generate/pin bindings for supported versions; do not blindly implement against the newest website examples. Use the supported history methods of the negotiated version.
 
 ### Claude evidence
 
-The [Agent SDK overview](https://code.claude.com/docs/en/agent-sdk/overview) distinguishes embedding the Claude harness from writing an application-owned tool loop. The SDK is not currently a Nora dependency.
+The [Agent SDK overview](https://code.claude.com/docs/en/agent-sdk/overview) distinguishes embedding the Claude harness from writing an application-owned tool loop. Nora now pins `@anthropic-ai/claude-agent-sdk@0.3.306`; authenticated Claude lifecycle acceptance remains pending.
 
 [Sessions](https://code.claude.com/docs/en/agent-sdk/sessions) document native session IDs and continuation. [Streaming](https://code.claude.com/docs/en/agent-sdk/streaming-output) documents partial events in addition to complete messages; normalize both without duplicating text. [User input](https://code.claude.com/docs/en/agent-sdk/user-input) uses `canUseTool` for approvals and questions, with cancellation tied to the active request.
 
@@ -155,6 +155,14 @@ This is an initial state model, not a finalized exhaustive reducer. Reconciled b
 - Persist pending interaction metadata, but never reapply an approval after its native request has expired or been answered.
 - Convert expected provider errors, authentication failures and usage limits into typed domain outcomes with meaningful messages.
 - Batch high-frequency presentation updates without sacrificing durable event order or cancellation responsiveness.
+
+## Review finalization
+
+Schema v5 extends host-owned review effects with private, deduplicated before/after checkpoints. A baseline commits before native input. A terminal provider outcome schedules review atomically and remains visible while review finalizes in a separate worker group. Pending turn evidence reserves the checkout against later Nora starts, including overlapping roots, while independent checkouts and native controls continue. Workspace-only fallback reviews retain their independent scheduling.
+
+Turn evidence compares saved working-tree bytes and is labeled changes **observed during the turn**, not proof of authorship or successful validation. Pre-existing edits are excluded; external writes during the interval can remain included. Provider-reported file changes stay separate. Bounded text patches and metadata cross IPC; snapshots remain private to the owning host. Plain folders still execute, with Git capture/review unavailable.
+
+Review publication, run review status and effect retirement commit together. Saved pairs survive restart and rebuild review without recapture. Missing final capture, host/provider loss or uncertain native interactions cannot establish the original attribution boundary; retain evidence and expose unavailable/current-workspace scope. Schema upgrades preserve legacy history without fabricating checkpoints. See [checkpoint semantics and limits](checkpoints.md) for file coverage, resource bounds and pending restore/SSH/artifact work.
 
 ## Remote ownership and workspace conflicts
 

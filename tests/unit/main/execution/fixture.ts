@@ -8,6 +8,7 @@ import { SqliteExecutionStore } from "@main/execution/sqliteStore";
 import type { ConversationCommand, ConversationSnapshot, ProviderBinding } from "@shared/types/conversation/contracts.types";
 import type { WorkspaceAuthority } from "@main/types/execution/workspace.types";
 import type { ProviderUpdate } from "@main/types/execution/provider.types";
+import type { RoleSelection } from "@shared/types/personalization/roles.types";
 
 export const workspaceAuthority: WorkspaceAuthority = { async prepare(selection) { return selection; }, async verify() {} };
 
@@ -23,8 +24,9 @@ export function fixture(t: TestContext) {
   let engine = new ConversationEngine(deps());
   t.after(() => { store.close(); rmSync(directory, { recursive: true, force: true }); });
   const command = (input: ConversationCommand) => engine.execute(input);
-  const create = (id = "conversation", checkoutId = id, binding = provider) => command({ kind: "create", commandId: `create-${id}`,
+  const create = (id = "conversation", checkoutId = id, binding = provider, role?: RoleSelection) => command({ kind: "create", commandId: `create-${id}`,
     conversationId: id, title: id, parentId: null, provider: binding,
+    ...(role ? { role } : {}),
     workspace: { environmentId: "local", projectId: "project", checkoutId, path: `/test/${checkoutId}`, branch: "main", access: "write" } });
   const submit = (runId = "run", conversationId = "conversation") => command({ kind: "submit", commandId: `submit-${conversationId}-${runId}`, conversationId, runId, instruction: runId });
   const snapshot = (id = "conversation"): ConversationSnapshot => {

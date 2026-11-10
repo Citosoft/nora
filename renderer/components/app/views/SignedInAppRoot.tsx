@@ -1,3 +1,4 @@
+import { useNativeShellNavigation } from "@/components/app/hooks/useNativeShellNavigation";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { noraToolingClient } from "@/components/app/clients/noraToolingClient";
 import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
@@ -135,6 +136,13 @@ function SignedInAppRootContent({
     derived,
     mainSurface
   } = useAppRootWorkspaceSession();
+  useNativeShellNavigation({ projectId: snapshot?.project?.id ?? null, focusWorkspace: props.workspaceLoading.focusWorkspaceWithRecovery,
+    onError: props.captureError, showThread: () => {
+      setActiveView("main"); setActiveWorkspaceContentTab(null);
+      layout.workspaceSessionViews.setActiveViewId(null);
+      content.setTaskEditorState(null); content.setIsTaskBoardOpen(false); content.setIsSpecBrowserOpen(false); content.setIsNoteBrowserOpen(false);
+      props.uiCommands.clearSessionTabFocus();
+    } });
   const canPreviewMacTitleBarChrome = !__NORA_IS_PRODUCTION__ && props.bootstrap.windowUiState.platform !== "darwin";
   const useMacTitleBarChrome =
     props.bootstrap.windowUiState.platform === "darwin" ||
@@ -177,7 +185,7 @@ function SignedInAppRootContent({
         snapshot,
         uiCommands: {
           openAddWorkspaceDialog: props.uiCommands.openAddWorkspaceDialog,
-          openCreateAgentDialog: props.uiCommands.openCreateAgentDialog,
+          openNewThread: props.uiCommands.openNewThread,
           openCreateTerminalDialog: props.uiCommands.openCreateTerminalDialog,
           openKeyboardShortcutsDialog: props.uiCommands.openKeyboardShortcutsDialog,
           openWorkspaceSwitcherDialog: props.uiCommands.openWorkspaceSwitcherDialog,
@@ -223,7 +231,7 @@ function SignedInAppRootContent({
       setIsWorkspaceSidebarCollapsed,
       setWorkspaceQuickSearchRequestId,
       props.uiCommands.openAddWorkspaceDialog,
-      props.uiCommands.openCreateAgentDialog,
+      props.uiCommands.openNewThread,
       props.uiCommands.openCreateTerminalDialog,
       props.uiCommands.openKeyboardShortcutsDialog,
       props.uiCommands.openWorkspaceSwitcherDialog,
@@ -789,7 +797,7 @@ function SignedInAppRootContent({
           },
           openFileEditor: sessionActions.openFileEditor,
           openForgeViewer: props.centerTabs.openForgeViewer,
-          openCreateAgentDialog: props.uiCommands.openCreateAgentDialog
+          openNewThread: props.uiCommands.openNewThread
         },
         chromeShell: chromeShellSources
       },

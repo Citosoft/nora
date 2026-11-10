@@ -21,7 +21,8 @@ export class LocalWorkspaceAuthority implements WorkspaceAuthority {
   async verify(workspace: WorkspaceRef): Promise<void> {
     this.assertEnvironment(workspace);
     const current = await this.resolve(workspace);
-    if (current.checkoutId !== workspace.checkoutId || current.branch !== workspace.branch || current.path !== workspace.path) {
+    if (current.checkoutId !== workspace.checkoutId || current.branch !== workspace.branch || current.path !== workspace.path
+      || (workspace.versionControl !== undefined && current.versionControl !== workspace.versionControl)) {
       throw new ExecutionCommandError("conflict", "Workspace identity or branch changed; review the checkout before continuing");
     }
   }
@@ -41,7 +42,8 @@ export class LocalWorkspaceAuthority implements WorkspaceAuthority {
       // File identity detects replacement at the same path; realpath merges symlink aliases.
       const identity = JSON.stringify([workspace.environmentId, comparable, String(info.dev), String(info.ino)]);
       const checkoutId = `checkout:${createHash("sha256").update(identity).digest("hex")}`;
-      return { ...workspace, path: root, branch: inspection.branch, checkoutId };
+      return { ...workspace, path: root, branch: inspection.branch, checkoutId,
+        ...(inspection.versionControl ? { versionControl: inspection.versionControl } : {}) };
     } catch (error) {
       if (error instanceof ExecutionCommandError) throw error;
       throw new ExecutionCommandError("invalid", "The registered checkout could not be inspected on its execution host");

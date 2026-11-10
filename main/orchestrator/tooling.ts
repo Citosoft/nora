@@ -77,7 +77,6 @@ export function createToolingHelpers(deps: ToolingHelperDeps): ToolingHelpers {
       }));
     }
 
-    await deps.reconcileWorkspaceAgentsAfterCatalogRefresh();
   }
 
   async function refreshCatalog(options: RefreshCatalogOptions = {}): Promise<AppState> {

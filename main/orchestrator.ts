@@ -53,7 +53,7 @@ import { slugify } from "./orchestrator/slug";
 import { detectLocalUrlFromOutput, didReturnToShellPrompt } from "./orchestrator/terminalOutputDetect";
 import { delay, futureIso, nowIso } from "./orchestrator/time";
 import { createPersistenceHelpers } from "./orchestrator/persistence";
-import { reconcileWorkspaceAgentsAfterCatalogRefresh } from "./orchestrator/agentCatalogReconciliation";
+import { archiveLegacySessions } from "./helpers/archiveLegacySessions";
 import { createProjectOpenHelpers } from "./orchestrator/projectOpen";
 import { createRuntimeHelpers } from "./orchestrator/runtime";
 import { resolveAgentSessionTitle, resolveAgentSessionTitles } from "./orchestrator/agentSessionTitles";
@@ -513,20 +513,14 @@ export class Orchestrator implements OrchestratorFacade {
       },
       loadStatesForProject: (projectId) => this.sessionIndexStore.loadStatesForProject(projectId),
       createInitialSessionState: (project) => this.worktreeHelpers.createInitialSessionState(project),
-      getRestorableAgents: (agents) => this.persistenceHelpers.getRestorableAgents(agents),
+      archiveLegacySessions,
       getRestorableTerminals: (terminals) => this.persistenceHelpers.getRestorableTerminals(terminals),
       getLiveTerminalSnapshots: () => this.sessionRuntime.getLiveTerminalSnapshots(),
       getProjectTarget: (project) => this.getProjectTarget(project),
       updateState: (updater) => {
         this.stateGateway.updateState(updater);
       },
-      updateAgent: (agentId, partial) => this.terminalMutationFacade.updateAgent(agentId, partial),
-      buildResumeCommand,
-      normalizeAgentLaunchCommand,
-      resetAgentTranscript: (agent) => this.terminalMutationFacade.resetAgentTranscript(agent),
       getWorktreeTarget: (project, worktree) => this.getWorktreeTarget(project, worktree),
-      getToolEnv: (toolId) => this.toolingRuntimeService.getToolEnv(toolId),
-      spawnAgentPty: (agentId, command, target, toolEnv) => this.runtimeHelpers.spawnAgentPty(agentId, command, target, toolEnv),
       hasRuntimeSession: (sessionId) => this.sessionRuntime.hasRuntimeSession(sessionId),
       resetTerminalTranscript: (terminal) => this.terminalMutationFacade.resetTerminalTranscript(terminal),
       resolveTerminalShell: (shellId) =>
@@ -622,19 +616,7 @@ export class Orchestrator implements OrchestratorFacade {
       },
       getCliToolStatus: (tool) => this.toolStatusHelpers.getCliToolStatus(tool) as Promise<ToolUsageInfo>,
       searchAgentSkills: (toolId, query) => searchAgentSkills(toolId, query),
-      reconcileWorkspaceAgentsAfterCatalogRefresh: () =>
-        reconcileWorkspaceAgentsAfterCatalogRefresh({
-          nowIso,
-          getSnapshot: () => this.getSnapshot(),
-          updateAgent: (agentId, partial) => this.terminalMutationFacade.updateAgent(agentId, partial),
-          hasRuntimeSession: (sessionId) => this.sessionRuntime.hasRuntimeSession(sessionId),
-          buildResumeCommand,
-          normalizeAgentLaunchCommand,
-          resetAgentTranscript: (agent) => this.terminalMutationFacade.resetAgentTranscript(agent),
-          getWorktreeTarget: (project, worktree) => this.getWorktreeTarget(project, worktree),
-          getToolEnv: (toolId) => this.toolingRuntimeService.getToolEnv(toolId),
-          spawnAgentPty: (agentId, command, target, toolEnv) => this.runtimeHelpers.spawnAgentPty(agentId, command, target, toolEnv)
-        })
+
     });
     this.toolingMainService = new ToolingMainService(this.toolingHelpers);
     this.forgeHelpers = createForgeHelpers({

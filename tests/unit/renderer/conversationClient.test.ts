@@ -10,6 +10,8 @@ import type { ConversationEvent } from "@shared/types/conversation/contracts.typ
 import { fixture, workspaceAuthority } from "../main/execution/fixture";
 import { GatewayFixture, FixtureSubscriber } from "../main/execution/gatewayFixture";
 import { ProviderDouble } from "../main/execution/providerDouble";
+import { snapshot } from "../main/execution/checkpoints/fixture";
+import { compareSnapshots } from "@main/execution/checkpoints/diff";
 
 function deferred<T>() {
   let resolve = (_value: T): void => {};
@@ -70,6 +72,37 @@ test("a hint arriving while an empty replay page is in flight cannot skip the ne
     await until(() => seen.length === 1 || errors.length > 0);
     assert.deepEqual(afters, [9, 10]); assert.deepEqual(seen, [11]); assert.deepEqual(errors, []);
   } finally { close(); }
+});
+
+test("turn review patches cross the typed IPC/client boundary without exposing unchanged checkpoint contents", async (t) => {
+  const f = fixture(t); f.create();
+  const providers = new ProviderRegistry(); const provider = new ProviderDouble(); providers.register(provider);
+  let current = snapshot({ "document.md": "Before\n", "private.md": "Private unchanged bytes\n" });
+  const host = new ExecutionHost({ store: f.store, providers, workspaces: workspaceAuthority,
+    owner: { id: randomUUID(), processId: process.pid }, isProcessAlive: () => true,
+    now: () => "2026-11-09T10:00:00.000Z", nextId: randomUUID, onFailure(failure) { assert.fail(failure.message); },
+    checkpoints: { async capture() { return { status: "ready", snapshot: current }; }, compare: (before, after) => compareSnapshots("git", before, after) } });
+  host.start(); const ipc = new GatewayFixture({ resolveHost: () => host });
+  const client = createConversationClient(ipc.bridge(new FixtureSubscriber(1)), "local");
+  const seen: ConversationEvent[] = []; const errors: Error[] = [];
+  const close = client.subscribe({ after: host.eventCursor(), conversationId: "conversation",
+    onEvent: (event) => seen.push(event), onError: (error) => errors.push(error) });
+  try {
+    await client.execute({ kind: "submit", commandId: "send", conversationId: "conversation", runId: "run", instruction: "Fixture" });
+    await until(() => provider.active.size === 1);
+    current = snapshot({ "document.md": "After\n", "private.md": "Private unchanged bytes\n" }, "2026-11-09T10:01:00.000Z");
+    const run = host.header("conversation")?.activeRuns[0]; assert.ok(run);
+    provider.finish(run.attemptId, "completed");
+    await until(() => seen.some((event) => event.payload.kind === "item" && event.payload.item.kind === "review") || errors.length > 0);
+    assert.deepEqual(errors, []);
+    const history = await client.history({ conversationId: "conversation", scope: "timeline", limit: 100 });
+    assert.ok(history.scope === "timeline");
+    const item = history.items.find((entry) => entry.kind === "review");
+    assert.ok(item?.kind === "review" && item.result.status === "ready" && item.result.scope === "turn");
+    assert.ok(item.result.changes[0].patch?.includes("-Before\n+After"));
+    assert.equal(JSON.stringify(seen).includes("Private unchanged bytes"), false);
+    assert.equal(JSON.stringify(history).includes(Buffer.from("Private unchanged bytes\n").toString("base64")), false);
+  } finally { close(); ipc.dispose(); await host.shutdown(); }
 });
 
 test("closing before the watch handshake returns cleans up its eventual remote registration", async () => {

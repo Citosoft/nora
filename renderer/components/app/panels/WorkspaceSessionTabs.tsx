@@ -28,11 +28,10 @@ export function WorkspaceSessionTabs({
   onSelect,
   onClose,
   onCloseMany,
-  onCreateAgent,
+  onCreateThread,
   onCreateTerminalFromDefaults,
   onCreateTerminal,
   onCreateBrowser,
-  onCreateAiChat
 }: WorkspaceSessionTabsProps) {
   const availableTools = tools.filter((tool) => isAgentToolAvailable(tool));
   const [now, setNow] = useState(() => Date.now());
@@ -98,7 +97,7 @@ export function WorkspaceSessionTabs({
                       <TerminalSquare className="size-4 shrink-0" />
                     ) : tab.kind === "forge" ? (
                       <GitPullRequest className="size-4 shrink-0" />
-                    ) : tab.kind === "ai-chat" ? (
+                    ) : tab.kind === "thread" ? (
                       <MessageSquare className="size-4 shrink-0" />
                     ) : tab.kind === "view" ? (
                       <LayoutPanelTop className="size-4 shrink-0" />
@@ -197,23 +196,10 @@ export function WorkspaceSessionTabs({
               </Button>
             )}
           >
-            {availableTools.length ? availableTools.map((tool) => (
-              <DropdownMenuItem key={tool.id} onSelect={() => onCreateAgent(tool.id)}>
-                <AgentToolIcon
-                  toolId={tool.id}
-                  label={tool.label}
-                  className="size-4 shrink-0 rounded-sm bg-transparent"
-                  imageClassName="size-4 rounded-sm"
-                />
-                <span className="whitespace-nowrap text-xs">New {tool.label} agent</span>
-                <span className="ml-auto text-[11px] text-muted-foreground">{newAgentShortcut}</span>
-              </DropdownMenuItem>
-            )) : (
-              <DropdownMenuItem onSelect={() => {}}>
-                <Bot className="size-4" />
-                <span className="whitespace-nowrap text-xs">No agent CLIs available</span>
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem onSelect={onCreateThread}>
+              <MessageSquare className="size-4" /><span className="whitespace-nowrap text-xs">New thread</span>
+              <span className="ml-auto text-[11px] text-muted-foreground">{newAgentShortcut}</span>
+            </DropdownMenuItem>
             <DropdownMenuItem onSelect={onCreateTerminalFromDefaults}>
               <TerminalSquare className="size-4" />
               <span className="whitespace-nowrap text-xs">New Terminal (Defaults)</span>
@@ -229,10 +215,7 @@ export function WorkspaceSessionTabs({
               <span className="whitespace-nowrap text-xs">New browser</span>
               <span className="ml-auto text-[11px] text-muted-foreground">{newBrowserShortcut}</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={onCreateAiChat}>
-              <MessageSquare className="size-4" />
-              <span className="whitespace-nowrap text-xs">New AI chat</span>
-            </DropdownMenuItem>
+
           </DropdownMenu>
         </div>
       </div>

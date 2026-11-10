@@ -3,11 +3,17 @@ import type { ExecutionEffect } from "@main/types/execution/store.types";
 import type { WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import { isActiveRun } from "./projection";
 import { ConversationEngine } from "./engine";
+import type { WorkspaceReviewer } from "@main/types/execution/review.types";
+import type { TurnCheckpoints } from "@main/types/execution/checkpoints.types";
+import { safeCapture } from "./checkpoints/safeCapture";
+import { reviewExecution } from "./checkpoints/review";
 
 export class EffectWorker {
   constructor(private readonly engine: ConversationEngine, private readonly providers: ProviderResolver,
     private readonly emit: EmitProviderUpdate = engine.accept.bind(engine),
-    private readonly beforeStart?: (workspace: WorkspaceRef) => Promise<void>) {}
+    private readonly beforeStart?: (workspace: WorkspaceRef) => Promise<void>,
+    private readonly reviewer: WorkspaceReviewer = async () => ({ status: "unavailable", reason: "unsupported" }),
+    private readonly checkpoints?: TurnCheckpoints) {}
 
   /** Multiple calls may drain concurrently; claim is committed before any native side effect. */
   async runNext(allowed?: readonly ExecutionEffect["action"]["kind"][]): Promise<boolean> {
@@ -27,26 +33,30 @@ export class EffectWorker {
     let snapshot = this.engine.execution(effect.conversationId, effect.runId);
     let run = snapshot?.runs.find((entry) => entry.id === effect.runId);
     if (!snapshot || !run) throw new Error("Claimed effect has no execution owner");
+    if (effect.action.kind === "review") {
+      const result = await reviewExecution(this.engine, effect, snapshot.conversation.workspace, this.reviewer, this.checkpoints);
+      this.engine.finishReview(effect.id, result);
+      return;
+    }
+    if (effect.action.kind === "start") {
+      if (!await this.verifyWorkspace(effect, snapshot.conversation.workspace)) return;
+      if (this.checkpoints) {
+        const capture = await safeCapture(this.checkpoints, snapshot.conversation.workspace);
+        this.engine.recordCheckpoint(effect.id, "baseline", capture);
+        if (!await this.verifyWorkspace(effect, snapshot.conversation.workspace)) return;
+      }
+      // Interruption can arrive while preparation awaits. No native instruction has been submitted.
+      snapshot = this.engine.execution(effect.conversationId, effect.runId);
+      run = snapshot?.runs.find((entry) => entry.id === effect.runId);
+      if (!snapshot || !run) throw new Error("Prepared effect lost its execution owner");
+      if (run.state !== "starting") {
+        if (isActiveRun(run)) this.emit({ eventId: JSON.stringify([effect.id, "cancelled-before-start"]), conversationId: effect.conversationId,
+          runId: effect.runId, attemptId: effect.attemptId, kind: "finished", status: "interrupted", failure: null, usage: null });
+        this.engine.finishEffect(effect.id); return;
+      }
+    }
     const emit = this.emit;
     try {
-      if (effect.action.kind === "start" && this.beforeStart) {
-        try { await this.beforeStart(snapshot.conversation.workspace); }
-        catch {
-          emit({ eventId: JSON.stringify([effect.id, "workspace"]), conversationId: effect.conversationId,
-            runId: effect.runId, attemptId: effect.attemptId, kind: "finished", status: "failed", usage: null,
-            failure: { code: "host", message: "Workspace is unavailable or has changed; review the checkout before retrying", retryable: true } });
-          this.engine.finishEffect(effect.id); return;
-        }
-        // Interruption can arrive while filesystem checks await. No native instruction has been submitted.
-        snapshot = this.engine.execution(effect.conversationId, effect.runId);
-        run = snapshot?.runs.find((entry) => entry.id === effect.runId);
-        if (!snapshot || !run) throw new Error("Prepared effect lost its execution owner");
-        if (run.state !== "starting") {
-          if (isActiveRun(run)) emit({ eventId: JSON.stringify([effect.id, "cancelled-before-start"]), conversationId: effect.conversationId,
-            runId: effect.runId, attemptId: effect.attemptId, kind: "finished", status: "interrupted", failure: null, usage: null });
-          this.engine.finishEffect(effect.id); return;
-        }
-      }
       const provider = this.providers.resolve(snapshot.conversation.provider.kind, snapshot.conversation.provider.instanceId);
       const execution = { snapshot, run };
       switch (effect.action.kind) {
@@ -70,4 +80,15 @@ export class EffectWorker {
       this.engine.finishEffect(effect.id);
     }
   }
+  private async verifyWorkspace(effect: ExecutionEffect, workspace: WorkspaceRef): Promise<boolean> {
+    try { await this.beforeStart?.(workspace); }
+    catch {
+      this.emit({ eventId: JSON.stringify([effect.id, "workspace"]), conversationId: effect.conversationId,
+        runId: effect.runId, attemptId: effect.attemptId, kind: "finished", status: "failed", usage: null,
+        failure: { code: "host", message: "Workspace is unavailable or has changed; review the checkout before retrying", retryable: true } });
+      this.engine.finishEffect(effect.id); return false;
+    }
+    return true;
+  }
+
 }

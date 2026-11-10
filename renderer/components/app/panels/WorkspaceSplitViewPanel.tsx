@@ -13,7 +13,7 @@ import {
 } from "@/components/app/context/workspaceSessionPanelContext";
 import { BrowserTabPanel } from "@/components/app/panels/BrowserTabPanel";
 import { FileEditorPanel } from "@/components/app/panels/FileEditorPanel";
-import { FocusedAgentPanel } from "@/components/app/panels/FocusedAgentPanel";
+import { ManualTerminal } from "@/components/app/panels/ManualTerminal";
 import type { WorkspaceSplitViewPanelProps } from "@/components/app/types/component.types";
 import type { BrowserTabState, FileEditorTab } from "@/components/app/types";
 import { Button } from "@/components/ui/button";
@@ -533,12 +533,8 @@ export function WorkspaceSplitViewPanel({ view }: WorkspaceSplitViewPanelProps) 
                       </div>
                     </CardContent>
                   </Card>
-                ) : agent || terminal ? (
-                  <FocusedAgentPanel
-                    agent={agent}
-                    terminal={terminal}
-                    compact
-                  />
+                ) : terminal ? (
+                  <ManualTerminal terminal={terminal} />
                 ) : browserTab ? (
                   <BrowserTabPanel tab={browserTab} />
                 ) : fileTab ? (

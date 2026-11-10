@@ -1,0 +1,61 @@
+/** Run after build: real Chromium/Radix acceptance with a fixture catalog; no native provider calls. */
+const { app } = require('electron');
+const fs = require('node:fs/promises');
+const assert = require('node:assert/strict');
+const { join } = require('node:path');
+const { createFixtureHost } = require('./ui/fixtureHost.cjs');
+let host, window;
+(async () => {
+  host = await createFixtureHost('tests/ui/ModelPickerHarness.tsx');
+  const { evaluate, wait, click, byText, pause } = host;
+  window = host.window;
+  const binding = async () => JSON.parse(await evaluate('document.getElementById("picker-binding").textContent'));
+  const scenario = value => evaluate(`(()=>{const e=document.getElementById('picker-scenario');e.value=${JSON.stringify(value)};e.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+  await wait(`document.getElementById('picker-binding')?.textContent.includes('first')`);
+  const initial = await binding(); assert.equal(initial.kind, 'codex'); assert.equal(initial.permissionPolicy, 'read');
+  const trigger = 'button[aria-label^="Choose provider and model"]';
+  await click(trigger); await wait(`!!document.querySelector('[role="dialog"]')`);
+  await scenario('reorder'); await click('button[aria-label="Refresh provider models"]');
+  await wait(`document.getElementById('picker-binding').textContent.includes('first')`);
+  assert.deepEqual(await binding(), initial, 'Inherited model and permission defaults must stay fixed on catalog reorder');
+  await scenario('ready'); await click('button[aria-label="Refresh provider models"]');
+  await wait(`document.getElementById('picker-binding').textContent.includes('first')`);
+  await click('button[aria-label="Claude (account)"]');
+  await wait(`document.body.textContent.includes('Claude Alpha')`);
+  assert.deepEqual(await binding(), initial, 'Browsing must not commit');
+  await evaluate(`document.querySelector('[role="dialog"]').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));`);
+  await wait(`!document.querySelector('[role="dialog"]')`);
+  assert.equal(await evaluate(`document.activeElement===document.querySelector(${JSON.stringify(trigger)})`), true);
+  await click(trigger); await click('button[aria-label="Claude (account)"]'); await byText('Claude Beta');
+  await wait(`!document.querySelector('[role="dialog"]')`); assert.equal(await binding(), null, 'Cross-provider permissions need confirmation');
+  await click('button[aria-label="Thread options"]');
+  await click('[role="combobox"]'); await wait(`!!document.querySelector('[role="option"]')`); await byText('Read only');
+  await wait(`document.getElementById('picker-binding').textContent.includes('claude')`);
+  assert.equal((await binding()).model, 'second');
+  await evaluate(`document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));`); await pause(80);
+  await click(trigger); await scenario('reorder'); await click('button[aria-label="Refresh provider models"]');
+  await wait(`document.body.textContent.includes('Claude Alpha')`); assert.equal((await binding()).model, 'second'); assert.equal((await binding()).permissionPolicy, 'read');
+  await scenario('error'); await click('button[aria-label="Refresh provider models"]');
+  await wait(`document.body.textContent.includes('Models could not be loaded')`); assert.equal(await binding(), null);
+  assert.equal(await evaluate(`document.body.textContent.includes('Private failure')`), false);
+  await scenario('empty'); await click('button[aria-label="Refresh provider models"]'); await wait(`document.body.textContent.includes('no available models')`);
+  await scenario('auth'); await click('button[aria-label="Refresh provider models"]'); await wait(`document.body.textContent.includes('Sign in using this provider')`); assert.equal(await binding(), null);
+  await scenario('ready'); await click('button[aria-label="Refresh provider models"]'); await wait(`document.getElementById('picker-binding').textContent.includes('claude')`);
+  assert.equal(await evaluate('document.getElementById("picker-draft").value'), 'A draft that must survive model selection');
+  await evaluate(`document.querySelector('[role="dialog"]').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));`); await pause(70);
+  await click('#picker-lock'); await click(trigger); await byText('Claude Alpha');
+  assert.equal((await binding()).model, 'second', 'Locked settings must be retained');
+  window.setSize(360, 680); await pause(200);
+  assert.equal(await evaluate(`(()=>{const r=document.querySelector('[role="dialog"]').getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight})()`), true, 'Popover must fit narrow viewport');
+  if (process.env.NORA_UI_EVIDENCE_DIR) {
+    await fs.mkdir(process.env.NORA_UI_EVIDENCE_DIR, { recursive: true });
+    await fs.writeFile(join(process.env.NORA_UI_EVIDENCE_DIR, 'model-picker-narrow.png'), (await window.webContents.capturePage()).toPNG());
+    window.setSize(1024, 900); await pause(150);
+    await fs.writeFile(join(process.env.NORA_UI_EVIDENCE_DIR, 'model-picker.png'), (await window.webContents.capturePage()).toPNG());
+    await evaluate(`document.documentElement.dataset.theme='dark';document.documentElement.style.colorScheme='dark';document.documentElement.classList.add('dark')`);
+    await pause(100);
+    await fs.writeFile(join(process.env.NORA_UI_EVIDENCE_DIR, 'model-picker-dark.png'), (await window.webContents.capturePage()).toPNG());
+  }
+  console.log('PASS: Chromium/Radix provider browsing, commit/cancel/focus, permission confirmation, refresh/reordering, errors/empty/auth, locked binding, draft preservation and narrow fit. No inference.');
+})().then(async () => { await host?.close(); app.exit(0); })
+.catch(async error => { console.error(error); if (window) console.error(await window.webContents.executeJavaScript('document.body.innerText').catch(() => 'Renderer unavailable')); await host?.close(); app.exit(1); });

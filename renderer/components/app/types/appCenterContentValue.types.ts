@@ -85,7 +85,7 @@ export type AppCenterContentValueArgs = {
   uiCommands: Pick<
     AppUiCommands,
     | "clearSessionTabFocus"
-    | "openCreateAgentDialog"
+    | "openNewThread"
     | "openCreateTerminalDialog"
     | "openWorkspaceSwitcherDialog"
     | "openWorkspaceTerminalPresetsDialog"

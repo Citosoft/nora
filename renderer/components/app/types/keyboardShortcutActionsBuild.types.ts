@@ -34,7 +34,7 @@ export type KeyboardShortcutActionsBuildDeps = {
   uiCommands: Pick<
     AppUiCommands,
     | "openAddWorkspaceDialog"
-    | "openCreateAgentDialog"
+    | "openNewThread"
     | "openCreateTerminalDialog"
     | "openKeyboardShortcutsDialog"
     | "openWorkspaceSwitcherDialog"

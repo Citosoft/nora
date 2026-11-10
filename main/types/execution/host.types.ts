@@ -3,12 +3,18 @@ import type { ExecutionStore, ExecutionEffect } from "./store.types";
 import type { OwnershipStore, ExecutionOwner } from "./ownership.types";
 import type { ProviderResolver } from "./provider.types";
 import type { WorkspaceAuthority } from "./workspace.types";
+import type { WorkspaceReviewer } from "./review.types";
+import type { TurnCheckpoints } from "./checkpoints.types";
+import type { RoleSelection } from "@shared/types/personalization/roles.types";
 
 export interface ProviderSupervisor extends ProviderResolver { close(): Promise<void> }
 export interface HostDependencies {
+  roleForWorkspace?: (workspaceId: string) => RoleSelection | null;
   store: ExecutionStore & OwnershipStore;
   providers: ProviderSupervisor;
   workspaces: WorkspaceAuthority;
+  reviewer?: WorkspaceReviewer;
+  checkpoints?: TurnCheckpoints;
   owner: ExecutionOwner;
   isProcessAlive: (processId: number) => boolean;
   now: () => string;

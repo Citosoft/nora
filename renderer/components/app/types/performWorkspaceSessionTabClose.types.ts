@@ -1,4 +1,5 @@
 export type WorkspaceSessionTabCloseHandlers = {
+  closeThread?: (documentId: string) => void;
   closeAgent: (agentId: string) => void;
   closeTerminal: (sessionId: string) => void;
   closeBrowser: (browserTabId: string) => void;

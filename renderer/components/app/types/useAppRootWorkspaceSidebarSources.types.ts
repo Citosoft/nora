@@ -16,7 +16,7 @@ export type UseAppRootWorkspaceSidebarSourcesArgs = Omit<
     AppUiCommands,
     | "clearBrowserAndForgeFocus"
     | "clearSessionTabFocus"
-    | "openCreateAgentDialog"
+    | "openNewThread"
     | "openCreateTerminalDialog"
     | "openResetWorkspacesDialog"
     | "openWorkspaceTerminalPresetsDialog"

@@ -43,6 +43,7 @@ export class ClaudeAdapter implements ExecutionProvider {
     emit({ ...base, eventId: "native-binding", kind: "bound", nativeConversationId: sessionId });
     const session = this.options.open({ sessionId, resume: !!snapshot.conversation.nativeConversationId,
       nativeTurnId, instruction: run.instruction, cwd: snapshot.conversation.workspace.path,
+      ...(snapshot.conversation.role ? { guidance: snapshot.conversation.role.guidance } : {}),
       model: snapshot.conversation.provider.model, permissionMode: mode,
       effort: effort.data,
       onRequest: (prompt) => this.ask(execution, prompt, emit) });

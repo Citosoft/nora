@@ -12,8 +12,10 @@ import { createCheckoutInspector } from "./workspaceGit";
 import { ProviderRegistry } from "./providerRegistry";
 import { SqliteExecutionStore } from "./sqliteStore";
 import { isProcessAlive } from "./ownership";
+import { createGitReviewer } from "./reviewGit";
+import { createGitCheckpoints } from "./checkpoints/gitService";
 
-/** Composition for a filesystem owner. Not registered in application bootstrap before cutover. */
+/** Composition for a filesystem owner. Bootstrap wiring belongs to the complete replacement of managed execution. */
 export async function openLocalHost(options: LocalHostOptions): Promise<ExecutionHost> {
   if (!isAbsolute(options.databasePath)) throw new Error("Execution storage must have an absolute environment-owned path");
   await mkdir(dirname(options.databasePath), { recursive: true, mode: 0o700 });
@@ -30,7 +32,11 @@ export async function openLocalHost(options: LocalHostOptions): Promise<Executio
     }
     const workspaces = new LocalWorkspaceAuthority({ environmentId: options.environmentId, registrations: options.registrations,
       inspectCheckout: createCheckoutInspector(options.gitExecutable) });
-    const host = new ExecutionHost({ store, providers, workspaces, owner: { id: randomUUID(), processId: process.pid },
+    const host = new ExecutionHost({ store, providers, workspaces, reviewer: createGitReviewer(options.gitExecutable, workspaces),
+      roleForWorkspace: options.roleForWorkspace,
+      checkpoints: createGitCheckpoints(options.gitExecutable, workspaces, now,
+        [options.databasePath, `${options.databasePath}-wal`, `${options.databasePath}-shm`]),
+      owner: { id: randomUUID(), processId: process.pid },
       isProcessAlive, now, nextId: randomUUID, onFailure: options.onFailure,
       effectConcurrency: options.effectConcurrency, shutdownGraceMs: options.shutdownGraceMs });
     host.start();

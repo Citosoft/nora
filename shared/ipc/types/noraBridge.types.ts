@@ -5,6 +5,8 @@ import type { SessionBridge } from "./sessionGateway.types";
 import type { SystemBridge } from "./systemGateway.types";
 import type { ToolingBridge } from "./toolingGateway.types";
 import type { WorkspaceBridge } from "./workspaceGateway.types";
+import type { ConversationBridge } from "./conversationGateway.types";
+import type { PersonalizationBridge } from "./personalizationGateway.types";
 
 export interface NoraBridge
   extends AppBridge,
@@ -13,4 +15,7 @@ export interface NoraBridge
     SessionBridge,
     SystemBridge,
     ToolingBridge,
-    WorkspaceBridge {}
+    WorkspaceBridge {
+  conversations: ConversationBridge;
+  personalization: PersonalizationBridge;
+}

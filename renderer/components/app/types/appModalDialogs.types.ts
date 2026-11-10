@@ -1,23 +1,21 @@
 import type { WindowUiState } from "@/components/app/types";
 import type {
-  AboutDialogProps,
-  AddWorkspaceDialogProps,
-  AnalyticsConsentDialogProps,
-  BrowserCookieImportPromptDialogProps,
-  CreateAgentDialogProps,
-  CreatePullRequestDialogProps,
-  CreateTerminalDialogProps,
-  DestroyAgentDialogProps,
-  ErrorDialogProps,
-  LinuxAptSetupDialogProps,
-  OAuthDeviceCodeDialogProps,
-  RemoteWorkspaceDialogProps,
-  RemoveMissingWorkspaceDialogProps,
-  ResetWorkspacesDialogProps,
-  ResourceMonitorDialogProps,
-  StartupDependenciesDialogProps,
-  WorkspaceSwitcherDialogProps,
-  WorkspaceTerminalPresetsDialogProps
+AboutDialogProps,
+AddWorkspaceDialogProps,
+AnalyticsConsentDialogProps,
+BrowserCookieImportPromptDialogProps,
+CreatePullRequestDialogProps,
+CreateTerminalDialogProps,
+ErrorDialogProps,
+LinuxAptSetupDialogProps,
+OAuthDeviceCodeDialogProps,
+RemoteWorkspaceDialogProps,
+RemoveMissingWorkspaceDialogProps,
+ResetWorkspacesDialogProps,
+ResourceMonitorDialogProps,
+StartupDependenciesDialogProps,
+WorkspaceSwitcherDialogProps,
+WorkspaceTerminalPresetsDialogProps
 } from "@/components/app/types/chromeDialog.types";
 
 export type AppModalDialogsKeyboardShortcutsSlice = {
@@ -27,8 +25,6 @@ export type AppModalDialogsKeyboardShortcutsSlice = {
 };
 
 export type AppModalDialogsContextValue = {
-  createAgent: CreateAgentDialogProps;
-  destroyAgent: DestroyAgentDialogProps;
   error: ErrorDialogProps;
   oauthDevice: OAuthDeviceCodeDialogProps;
   startupDependencies: StartupDependenciesDialogProps;

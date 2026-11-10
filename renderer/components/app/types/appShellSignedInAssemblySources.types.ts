@@ -206,7 +206,7 @@ export type AppShellSignedInWorkspaceSidebarRestSources = Omit<
 
 export type AppShellSignedInChangesFileHandlersSources = Pick<
   ChangesPanelSectionBuildDeps,
-  "fileHandlers" | "fileEditorActivePath" | "openFileEditor" | "openForgeViewer" | "openCreateAgentDialog"
+  "fileHandlers" | "fileEditorActivePath" | "openFileEditor" | "openForgeViewer" | "openNewThread"
 >;
 
 export type AppShellSignedInChromeShellSources = {

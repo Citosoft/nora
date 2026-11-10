@@ -9,7 +9,11 @@ import type {
 } from "@shared/appTypes";
 import { randomUUID } from "node:crypto";
 import { DEFAULT_APP_SETTINGS } from "@shared/appTypes";
-import { app, BrowserWindow, session } from "electron";
+import { app, BrowserWindow, session, dialog, ipcMain, shell } from "electron";
+import { openNativeRuntime } from "./helpers/nativeRuntime";
+import { registerConversationIpc } from "./ipc/registerConversationIpc";
+import { registerPersonalizationIpc } from "./ipc/registerPersonalizationIpc";
+import type { NativeRuntime } from "./types/native-runtime/runtime.types";
 import path from "node:path";
 import { AppSettingsStore } from "./appSettingsStore";
 import {
@@ -18,7 +22,7 @@ import {
 } from "./autoUpdates";
 import { resolveHardwareAccelerationEnabledAtStartup } from "./hardwareAcceleration";
 import { parseLaunchCommand } from "./launchCommand";
-import { getAppSettingsPath, getProjectsIndexPath, getRecentProjectsPath, getSessionsIndexPath, getToolConfigPath } from "./noraPaths";
+import { getAppSettingsPath, getProjectsIndexPath, getRecentProjectsPath, getSessionsIndexPath, getToolConfigPath, getStateDir, getNoraRoot } from "./noraPaths";
 import { applyMacDockIcon as applyMacDockIconHelper, getAppIcon as getAppIconHelper, pathIsWithinAnyMount } from "./helpers/appRuntimeAssets";
 import { getImportedImageTargetPath } from "./helpers/browserImageImport";
 import { createLaunchCommandQueueController } from "./helpers/launchCommandQueue";
@@ -68,6 +72,7 @@ import type { LoopRunner } from "./types/loopRunner.types";
 let mainWindow: BrowserWindow | null = null;
 let orchestrator: OrchestratorFacade;
 let services: MainServices;
+let nativeRuntime: NativeRuntime;
 let loopRunner: LoopRunner;
 let stopRendererWatcher: (() => void) | null = null;
 let isClosingMainWindow = false;
@@ -369,6 +374,7 @@ function focusMainWindow(): void {
 
 async function shutdownMainWindow(): Promise<void> {
   loopRunner?.dispose();
+  await nativeRuntime?.host.shutdown();
   await shutdownMainWindowHelper({
     getMainWindow: () => mainWindow,
     getIsClosing: () => isClosingMainWindow,
@@ -398,6 +404,11 @@ async function withSnapshot(action: () => Promise<AppState>): Promise<AppState> 
 }
 
 function registerIpc(): void {
+  const isAllowedSender = (event: import("./types/execution/gateway.types").ConversationInvocation): boolean =>
+    !!mainWindow && !mainWindow.isDestroyed() && event.sender.id === mainWindow.webContents.id
+      && event.senderFrame?.url === mainWindow.webContents.getURL();
+  registerConversationIpc({ ipc: ipcMain, isAllowedSender, resolveHost: (environmentId) => environmentId === nativeRuntime.host.environmentId ? nativeRuntime.host : null });
+  registerPersonalizationIpc({ ipc: ipcMain, isAllowedSender, service: nativeRuntime.personalization });
   onAutoUpdateStatusChanged((status) => {
     notifyAutoUpdateStatus(status);
   });
@@ -533,10 +544,20 @@ async function bootstrap(): Promise<void> {
   orchestrator.onAgentTerminalData((sessionId, data) => {
     notifyTerminalData(sessionId, data);
   });
+  const initialSnapshot = await orchestrator.initialize();
+  nativeRuntime = await openNativeRuntime({ stateDirectory: getStateDir(), personalDirectory: path.join(getNoraRoot(), "Personal"),
+    readSettings: () => appSettings, saveSettings: async (next) => { appSettings = await appSettingsStore.save(next); return appSettings; },
+    projects: () => {
+      const state = services.snapshot.getSnapshot();
+      return [...new Map([...(state.project ? [state.project] : []), ...state.workspaces.map((entry) => entry.project)].map((project) => [project.id, project])).values()];
+    },
+    activateWorkspace: async (selectedPath) => { await services.workspace.selectProject(selectedPath); },
+    chooseFolder: async () => { const selection = await dialog.showOpenDialog({ properties: ["openDirectory"], title: "Add workspace" });
+      const selectedPath = selection.canceled ? null : selection.filePaths[0]; return selectedPath ? { path: selectedPath, name: path.basename(selectedPath) } : null; },
+    openFolder: async (selectedPath) => { const error = await shell.openPath(selectedPath); if (error) throw new Error(error); }
+  });
   registerIpc();
   createWindow();
-
-  const initialSnapshot = await orchestrator.initialize();
   notifyStateChanged(initialSnapshot);
   setLastBroadcastSnapshot(initialSnapshot);
   notifyWindowStateChanged();

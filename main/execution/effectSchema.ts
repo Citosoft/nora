@@ -6,6 +6,7 @@ export const effectSchema = z.object({
   attemptId: z.string().min(1), status: z.enum(["pending", "claimed", "done"]),
   action: z.discriminatedUnion("kind", [
     z.object({ kind: z.literal("start") }).strict(),
+    z.object({ kind: z.literal("review") }).strict(),
     z.object({ kind: z.literal("interrupt") }).strict(),
     z.object({ kind: z.literal("respond"), requestId: z.string(), response: requestResponseSchema }).strict(),
     z.object({ kind: z.literal("reconcile") }).strict()

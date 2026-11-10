@@ -2,16 +2,17 @@ import { spawn } from "node:child_process";
 import { APP_VERSION } from "@shared/appMeta";
 import { z } from "zod";
 import type { ExecutionProvider, EmitProviderUpdate, ProviderExecution } from "@main/types/execution/provider.types";
-import type { CodexActive, CodexOptions, CodexPendingRequest, CodexModelPage } from "@main/types/execution/codex.types";
+import type { CodexActive, CodexOptions, CodexPendingRequest } from "@main/types/execution/codex.types";
 import type { JsonValue } from "@main/types/execution/rpc.types";
 import type { ExecutionFailure, RequestResponse, RuntimeRequest, TimelineItem, WorkspaceRef } from "@shared/types/conversation/contracts.types";
-import type { ProviderCatalogResult, ProviderModel } from "@shared/types/provider/catalog.types";
+import type { ProviderCatalogResult } from "@shared/types/provider/catalog.types";
 import { StdioRpc } from "./stdioRpc";
+import { readCodexModels } from "./catalog";
 import { nativeCapabilities } from "@main/execution/providerCapabilities";
 import { initializedSchema, threadSchema, turnSchema } from "./rpcSchemas";
-import { accountSchema, approvalSchema, deltaSchema, itemEventSchema, modelListSchema, questionSchema, readThreadSchema, reasoningEffortSchema, routingSchema, turnEventSchema, usageEventSchema } from "./nativeSchemas";
+import { accountSchema, approvalSchema, deltaSchema, itemEventSchema, questionSchema, readThreadSchema, reasoningEffortSchema, routingSchema, turnEventSchema, usageEventSchema } from "./nativeSchemas";
 
-/** Protocol bindings validated against codex-cli 0.132.0; never routes through a PTY. */
+/** Structured protocol boundary; capabilities are discovered from the configured runtime. */
 export class CodexAdapter implements ExecutionProvider {
   readonly kind = "codex";
   readonly instanceId: string;
@@ -27,21 +28,9 @@ export class CodexAdapter implements ExecutionProvider {
     try {
       const rpc = await this.connect();
       const account = await rpc.request("account/read", { refreshToken: false }, accountSchema);
-      const models = new Map<string, ProviderModel>();
-      const cursors = new Set<string>();
-      let cursor: string | null = null;
-      do {
-        const page: CodexModelPage = await rpc.request("model/list", { cursor, limit: 100, includeHidden: false }, modelListSchema);
-        for (const model of page.data.filter((entry) => !entry.hidden)) models.set(model.model, { id: model.model, name: model.displayName,
-          description: model.description, defaultReasoningEffort: model.defaultReasoningEffort,
-          reasoningEfforts: model.supportedReasoningEfforts.map((effort) => effort.reasoningEffort) });
-        cursor = page.nextCursor ?? null;
-        if (cursor && cursors.has(cursor)) throw new Error("Codex catalog cursor did not advance");
-        if (cursor) cursors.add(cursor);
-        if (cursors.size > 100) throw new Error("Codex catalog pagination exceeded the supported limit");
-      } while (cursor);
+      const models = await readCodexModels(rpc);
       return { status: "available", catalog: { kind: this.kind, instanceId: this.instanceId, capabilities: this.capabilities,
-        models: [...models.values()], policies: Object.entries(this.options.policies).map(([id, policy]) => ({ id, label: `${policy.approvalPolicy} · ${policy.sandbox}` })),
+        models, policies: Object.entries(this.options.policies).map(([id, policy]) => ({ id, label: `${policy.approvalPolicy} · ${policy.sandbox}` })),
         authentication: account.account || !account.requiresOpenaiAuth ? "present" : "required" } };
     } catch {
       return { status: "unavailable", failure: { code: "provider", message: "Codex model discovery is unavailable; check the configured runtime and authentication", retryable: true } };
@@ -86,20 +75,42 @@ export class CodexAdapter implements ExecutionProvider {
     void ready.catch(() => {});
     const active: CodexActive = { ...execution, emit, items: new Map(), usage: null, nativeTurnId: null, ready, resolveReady, rejectReady };
     this.byAttempt.set(run.attemptId, active);
+    const fail = (eventId: string, failure: ExecutionFailure): void => {
+      emit({ ...base, eventId, kind: "finished", status: "failed", usage: null, failure });
+      this.byAttempt.delete(run.attemptId);
+    };
     const policy = this.options.policies[snapshot.conversation.provider.permissionPolicy];
     const effort = reasoningEffortSchema.nullable().safeParse(snapshot.conversation.provider.reasoning);
     if (!policy) {
-      emit({ ...base, eventId: "unsupported-policy", kind: "finished", status: "failed", usage: null,
-        failure: { code: "unsupported", message: "Configure a supported Codex permission policy before sending", retryable: false } });
-      this.byAttempt.delete(run.attemptId); return;
+      fail("unsupported-policy", { code: "unsupported", message: "Configure a supported Codex permission policy before sending", retryable: false });
+      return;
     }
     if (!effort.success) {
-      emit({ ...base, eventId: "unsupported-reasoning", kind: "finished", status: "failed", usage: null,
-        failure: { code: "unsupported", message: "Select a supported Codex reasoning effort", retryable: false } });
-      this.byAttempt.delete(run.attemptId); return;
+      fail("unsupported-reasoning", { code: "unsupported", message: "Select a supported Codex reasoning effort", retryable: false });
+      return;
     }
-    const rpc = await this.connect();
-    const params = { model: snapshot.conversation.provider.model, cwd: snapshot.conversation.workspace.path, ...policy };
+    let rpc: StdioRpc;
+    try {
+      rpc = await this.connect();
+      const account = await rpc.request("account/read", { refreshToken: false }, accountSchema);
+      if (account.requiresOpenaiAuth && !account.account) {
+        fail("authentication-required", { code: "authentication", message: "Sign in to the configured Codex account before sending", retryable: true });
+        return;
+      }
+      if (effort.data) {
+        const model = (await readCodexModels(rpc)).find((entry) => entry.id === snapshot.conversation.provider.model);
+        if (!model?.reasoningEfforts.includes(effort.data)) {
+          fail("unsupported-reasoning", { code: "unsupported", message: "Select a reasoning effort advertised for this Codex model", retryable: false });
+          return;
+        }
+      }
+    } catch {
+      // No thread/turn instruction has crossed the native boundary during readiness checks.
+      fail("readiness-unavailable", { code: "provider", message: "Codex runtime readiness is unavailable; check its configuration and sign-in before retrying", retryable: true });
+      return;
+    }
+    const params = { model: snapshot.conversation.provider.model, cwd: snapshot.conversation.workspace.path, ...policy,
+      ...(snapshot.conversation.role ? { developerInstructions: snapshot.conversation.role.guidance } : {}) };
     const binding = snapshot.conversation.nativeConversationId
       ? await rpc.request("thread/resume", { threadId: snapshot.conversation.nativeConversationId, ...params }, threadSchema)
       : await rpc.request("thread/start", params, threadSchema);

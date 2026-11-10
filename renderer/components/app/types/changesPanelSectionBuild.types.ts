@@ -1,22 +1,23 @@
-import type { CreateAgentDialogDefaults, ResolvedTheme, TaskEditorState } from "@/components/app/types";
+import type { ResolvedTheme,TaskEditorState } from "@/components/app/types";
 import type {
-  ChangesPanelChromeSlice,
-  ChangesPanelForgeSlice,
-  ChangesPanelSectionFileHandlers,
-  ChangesPanelVercelSlice
+ChangesPanelChromeSlice,
+ChangesPanelForgeSlice,
+ChangesPanelSectionFileHandlers,
+ChangesPanelVercelSlice
 } from "@/components/app/types/changesPanel.types";
 import type { SettingsGroup } from "@/components/app/types/settings.types";
+import type { ThreadLaunchInput } from "@/components/app/types/thread-workspace/runtime.types";
 import type {
-  AiSettings,
-  AppState,
-  ChangeEntry,
-  ForgeAddCommentPayload,
-  ForgeWorkItemDetail,
-  ForgeWorkItemKind,
-  ForgeWorkItemSummary,
-  VercelDeploymentSummary
+AiSettings,
+AppState,
+ChangeEntry,
+ForgeAddCommentPayload,
+ForgeWorkItemDetail,
+ForgeWorkItemKind,
+ForgeWorkItemSummary,
+VercelDeploymentSummary
 } from "@shared/appTypes";
-import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch,SetStateAction } from "react";
 
 export type ChangesPanelSectionBuildDeps = {
   activeBranch: string;
@@ -43,7 +44,7 @@ export type ChangesPanelSectionBuildDeps = {
     pathName: string,
     options: { rootPath?: string | null }
   ) => void | Promise<void>;
-  openCreateAgentDialog: (defaults?: CreateAgentDialogDefaults | null) => void;
+  openNewThread: (defaults?: ThreadLaunchInput | null) => void;
   openForgeViewer: (
     projectId: string,
     kind: ForgeWorkItemKind | "workflow_run",

@@ -40,40 +40,6 @@ export const copyForgeOAuthDeviceCode = async (code: string): Promise<void> => {
 };
 
 export const buildAppModalDialogsContextValue = (d: AppModalDialogsBuildDeps): AppModalDialogsContextValue => ({
-  createAgent: {
-    open: d.uiState.showCreateAgentModal,
-    project: d.snapshot.project,
-    tools: d.snapshot.agentCatalog,
-    agentSkillCatalogs: d.snapshot.agentSkillCatalogs,
-    workspaceTasks: d.snapshot.project ? (d.workspaceTasks[d.snapshot.project.id]?.tasks ?? []) : [],
-    worktrees: d.snapshot.worktrees,
-    projectBranches: d.snapshot.projectBranches,
-    activeBranch: d.parentRepoBranch,
-    defaultLaunchTargetMode: d.appSettings.defaultAgentLaunchTarget,
-    defaultWorktreePrepareCommand: d.snapshot.defaultWorktreePrepareCommand,
-    preferredAgentToolId: d.appSettings.preferredAgentToolId,
-    defaults: d.uiState.createAgentDefaults,
-    workspaceTerminalPresets: d.snapshot.project?.workspaceTerminalPresets ?? [],
-    globalTerminalPresets: d.appSettings.terminalPresets,
-    onOpenChange: d.uiCommands.setCreateAgentDialogOpen,
-    onCreateAgent: (payload, taskPath) => {
-      d.uiCommands.closeCreateAgentDialog();
-      void d.handleCreateAgentFromDialog(payload, taskPath);
-    }
-  },
-  destroyAgent: {
-    agent: d.agentPendingDestroy,
-    open: d.uiState.destroyAgentId !== null,
-    onOpenChange: d.uiCommands.setDestroyAgentDialogOpen,
-    onConfirm: () =>
-      d.agentPendingDestroy
-        ? d.safely(() => noraAgentClient.destroyAgent(d.agentPendingDestroy!.id)).then((next) => {
-            if (next) {
-              d.uiCommands.setDestroyAgentId(null);
-            }
-          })
-        : Promise.resolve()
-  },
   error: {
     open: d.uiState.activeErrorMessage !== null,
     message: d.uiState.activeErrorMessage,

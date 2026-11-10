@@ -9,6 +9,8 @@ import { SqliteQueries } from "./sqliteQueries";
 import { migrateExecutionSchema } from "./sqliteSchema";
 import { projectSqliteEvent } from "./sqliteProjection";
 import type { ExecutionOwner, OwnershipStore } from "@main/types/execution/ownership.types";
+import type { StoredCheckpoint } from "@main/types/execution/checkpoints.types";
+import { saveCheckpoint } from "./checkpoints/storage";
 
 const storedReceiptSchema = z.object({ key: z.string(), fingerprint: z.string(), receipt: commandReceiptSchema }).strict();
 const cursorRowSchema = z.object({ cursor: z.number().int().nonnegative() });
@@ -110,6 +112,10 @@ export class SqliteExecutionStore extends SqliteQueries implements ExecutionStor
     this.requireTransaction();
     this.database.prepare("INSERT INTO effects VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET json = excluded.json")
       .run(effect.id, JSON.stringify(effectSchema.parse(effect)));
+  }
+  putCheckpoint(checkpoint: StoredCheckpoint): void {
+    this.requireTransaction();
+    saveCheckpoint(this.database, checkpoint);
   }
   appendEvent(id: string, conversationId: string, at: string, payload: EventPayload): ConversationEvent {
     this.requireTransaction();

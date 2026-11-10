@@ -107,7 +107,7 @@ export type WorkspaceSessionPanelOrchestrationDeps = {
   uiCommands: Pick<
     AppUiCommands,
     | "clearSessionTabFocus"
-    | "openCreateAgentDialog"
+    | "openNewThread"
     | "openCreateTerminalDialog"
     | "openWorkspaceSwitcherDialog"
     | "openWorkspaceTerminalPresetsDialog"

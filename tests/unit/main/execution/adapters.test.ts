@@ -30,6 +30,46 @@ function waitFor(engine: ConversationEngine, state: string): Promise<void> {
   });
 }
 
+test("Codex sends the saved role through structured thread instructions on start and resume", async (t) => {
+  const f = fixture(t); f.create("conversation", "checkout", provider, { id: "writing" });
+  const guidance = f.snapshot().conversation.role?.guidance;
+  assert.ok(guidance);
+  const adapter = new CodexAdapter({ instanceId: "account-a", executable: process.execPath, arguments: [server],
+    environment: { NORA_CODEX_FIXTURE_MODE: "guidance", NORA_CODEX_EXPECT_GUIDANCE: guidance },
+    policies: { "native-default": { approvalPolicy: "on-request", sandbox: "workspace-write" } }, now });
+  const registry = new ProviderRegistry(); registry.register(adapter);
+  const worker = new EffectWorker(f.engine, registry);
+  try {
+    for (const runId of ["first", "follow-up"]) {
+      f.submit(runId);
+      const done = waitFor(f.engine, "completed");
+      await worker.runNext(); await done; await worker.runNext(["review"]);
+      assert.equal(f.snapshot().conversation.role?.guidance, guidance);
+    }
+  } finally { await registry.close(); }
+});
+
+test("Claude receives a separate saved guidance field while the user's instruction stays unchanged", async (t) => {
+  const f = fixture(t); f.create("conversation", "checkout", { ...provider, kind: "claude" }, { id: "research" });
+  const opened: ClaudeOpenInput[] = [];
+  const adapter = new ClaudeAdapter({ instanceId: "account-a", policies: { "native-default": "default" }, now, nextId: randomUUID, discover,
+    open(input) {
+      opened.push(input);
+      return { async interrupt() {}, close() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
+        yield { kind: "init", eventId: "init", sessionId: input.sessionId };
+        yield { kind: "finished", eventId: "done", status: "completed", failure: null, usage: { inputTokens: 0, outputTokens: 0 } };
+      } };
+    } });
+  const registry = new ProviderRegistry(); registry.register(adapter);
+  const worker = new EffectWorker(f.engine, registry);
+  for (const id of ["first", "follow-up"]) { f.submit(id); await worker.runNext(); await worker.runNext(["review"]); }
+  assert.equal(opened.length, 2);
+  assert.equal(opened[0].instruction, "first"); assert.equal(opened[1].instruction, "follow-up");
+  assert.equal(opened[0].guidance, f.snapshot().conversation.role?.guidance);
+  assert.equal(opened[1].guidance, opened[0].guidance); assert.equal(opened[1].resume, true);
+  await registry.close();
+});
+
 test("Codex RPC correlates replies, preserves split UTF-8 and rejects malformed frames without diagnostic leakage", async () => {
   const rpc = new StdioRpc({ process: spawn(process.execPath, [server]), onNotification() {},
     async onRequest() { return null; }, onDisconnect() {} });
@@ -58,6 +98,7 @@ for (const mode of ["approval", "question"]) {
       f.command({ kind: "respond", commandId: "answer", conversationId: "conversation", requestId: request.id,
         response: mode === "approval" ? { kind: "approval", optionId: "accept" } : { kind: "question", answers: { pick: ["A"] } } });
       await worker.runNext(); await completed;
+      await worker.runNext(["review"]);
       assert.equal(f.snapshot().requests[0].status, "resolved");
       assert.equal(f.snapshot().runs[0].state, "completed");
       f.submit("second");
@@ -128,6 +169,7 @@ test("Claude SDK lifecycle preserves native continuation and serves approval thr
   const request = f.snapshot().requests[0];
   f.command({ kind: "respond", commandId: "answer", conversationId: "conversation", requestId: request.id, response: { kind: "approval", optionId: "allow" } });
   await worker.runNext(); await running;
+  await worker.runNext(["review"]);
   const messages = f.snapshot().items.filter((item) => item.kind === "message" && item.role === "assistant");
   assert.equal(messages.length, 1);
   assert.equal(f.snapshot().runs[0].state, "completed");
@@ -195,7 +237,7 @@ test("provider instances remain distinct and cannot be overwritten", () => {
   assert.throws(() => registry.resolve("claude", "first"), /not configured/);
 });
 
-test("Codex model discovery paginates without invoking a turn or implying authentication", async (t) => {
+test("Codex model discovery paginates and preserves advertised reasoning without invoking a turn", async (t) => {
   const f = fixture(t); f.create();
   const adapter = new CodexAdapter({ instanceId: "account-a", executable: process.execPath, arguments: [server], policies: {
     "native-default": { approvalPolicy: "on-request", sandbox: "read-only" } }, now });
@@ -203,8 +245,9 @@ test("Codex model discovery paginates without invoking a turn or implying authen
     const result = await adapter.catalog(f.snapshot().conversation.workspace);
     assert.equal(result.status, "available");
     assert.ok(result.status === "available");
-    assert.equal(result.catalog.authentication, "required");
+    assert.equal(result.catalog.authentication, "present");
     assert.deepEqual(result.catalog.models.map((model) => model.id), ["first-model", "second-model"]);
+    assert.deepEqual(result.catalog.models[0].reasoningEfforts, ["medium", "ultra"]);
     assert.equal(f.snapshot().runs.length, 0);
     assert.equal(f.snapshot().conversation.nativeConversationId, null);
   } finally { await adapter.close(); }

@@ -29,7 +29,7 @@ At complete cutover remove managed PTY launch/input/resize, output-based busy in
 3. Create/resume/send/interrupt, partial/final reconciliation, scoped approval/question choices, request expiry, crashes, auth/usage failures for both native integrations.
 4. Reconcile uncertain effects before resubmission; distinguish absence from unreachable state; no completion inferred from disconnect/quiet; gap-free cursor hydration/replay.
 5. View/window closure, tray/reopen, explicit Quit, persisted recovery and unconfirmed unreachable remote stop.
-6. Queues, IME/keyboard, notifications, long histories, sheets/grids, themes/focus/accessibility, turn/workspace review and evidence.
+6. Queues, IME/keyboard, notifications, long histories, sheets/grids, themes/focus/accessibility, turn/workspace review and evidence, excluding pre-existing edits; captured-pair restart recovery, invalidated attribution after loss, queued-turn isolation and explicit limits without partial checkpoints.
 7. Editor/browser/forge handoffs, independent local/SSH shells, history preservation and restartable migration without secret leakage.
 
 Run `npm run test:unit`, `npm run check:path-hygiene`, `npm run check:shell-assembly-imports`, `npm run check:nora-bridge-usage` and relevant builds with Node 24.16.0 or the supported range. Smoke tests use temporary state and declare authentication, network and possible usage charges. Doubles do not establish real provider/SSH acceptance.

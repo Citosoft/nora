@@ -38,6 +38,37 @@ test("host controls cannot be starved by the only long-running root effect", asy
   } finally { assert.deepEqual(await host.shutdown(), { unconfirmedRuns: [] }); }
 });
 
+test("slow review cannot block the next native turn or its interrupt control", async (t) => {
+  const f = fixture(t); f.create();
+  const provider = new ProviderDouble(); const providers = new ProviderRegistry(); providers.register(provider);
+  let release = (): void => {};
+  let entered = (): void => {};
+  const startedReview = new Promise<void>((resolve) => { entered = resolve; });
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  const failures: string[] = [];
+  const host = new ExecutionHost({ store: f.store, providers, workspaces: workspaceAuthority,
+    owner: { id: randomUUID(), processId: process.pid }, isProcessAlive: () => true,
+    now: () => "2026-10-21T10:00:00.000Z", nextId: randomUUID, effectConcurrency: 1,
+    reviewer: async () => { entered(); await gate; return { status: "ready", scope: "workspace", paths: [] }; },
+    onFailure: (failure) => failures.push(failure.message) });
+  host.start();
+  try {
+    const running = waitFor(host, "running");
+    await host.execute({ kind: "submit", commandId: "send", conversationId: "conversation", runId: "run", instruction: "Run" });
+    await running;
+    await host.execute({ kind: "submit", commandId: "next", conversationId: "conversation", runId: "next", instruction: "Next" });
+    const nextRunning = waitFor(host, "running", "next");
+    const attempt = f.snapshot().runs[0].attemptId;
+    provider.finish(attempt, "completed");
+    await Promise.all([startedReview, nextRunning]);
+    assert.equal(f.snapshot().runs[0].state, "completed"); assert.equal(f.snapshot().runs[0].review, "pending");
+    const interrupted = waitFor(host, "interrupted", "next");
+    await host.execute({ kind: "interrupt", commandId: "stop", conversationId: "conversation", runId: "next" });
+    await interrupted;
+    assert.equal(provider.starts, 2); assert.deepEqual(failures, []);
+  } finally { release(); await host.shutdown(); }
+});
+
 test("host serves a native request while its root worker waits, then dispatches the next queued turn", async (t) => {
   const f = fixture(t); f.create();
   const provider = new ProviderDouble(true, true);

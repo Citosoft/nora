@@ -10,6 +10,7 @@ import { safeStorage } from "electron";
 import fsPromises from "node:fs/promises";
 import path from "node:path";
 import { isNodeError } from "./nodeErrors";
+import { readPersonalization } from "@shared/personalization/settings";
 
 const ENCRYPTED_SECRET_PREFIX = "enc:v1:";
 
@@ -47,6 +48,7 @@ function parseAppSettings(raw: string): AppSettings {
     const decryptedAiSettings = parseAiSettings(candidate.ai);
     const voiceSettings = parseVoiceSettings(candidate.voice);
     return {
+      personalization: readPersonalization(candidate.personalization),
       hardwareAccelerationEnabled: candidate.hardwareAccelerationEnabled !== false,
       workspaceStateStorageMode:
         candidate.workspaceStateStorageMode === "home" || candidate.workspaceStateStorageMode === "repo"

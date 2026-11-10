@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "outDir": "dist-native", "types": ["node"] },
+  "include": ["tests/native/**/*.ts"],
+  "exclude": ["node_modules", "dist", "dist-tests", "dist-native"]
+}

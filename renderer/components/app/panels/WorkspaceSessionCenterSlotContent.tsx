@@ -3,11 +3,12 @@ import type { FileEditorAgentSendTarget } from "@/components/app/types/fileEdito
 import type { OpenWorkspaceFileEditorOptions } from "@/components/app/types/workflow.types";
 import type { ForgeDetailPanelProps } from "@/components/app/types/panel.types";
 import type { WorkspaceSessionCenterSlot } from "@/components/app/types/workspaceSessionCenterSlots.types";
-import { AiChatPanel } from "@/components/app/panels/AiChatPanel";
 import { BrowserTabPanel } from "@/components/app/panels/BrowserTabPanel";
 import { DiffViewer } from "@/components/app/panels/DiffViewer";
 import { FileEditorPanel } from "@/components/app/panels/FileEditorPanel";
-import { FocusedAgentPanel } from "@/components/app/panels/FocusedAgentPanel";
+import { ManualTerminal } from "@/components/app/panels/ManualTerminal";
+import { ThreadWorkspaceCenter } from "@/components/app/panels/threads/ThreadWorkspaceCenter";
+import { useThreadCenterPorts } from "@/components/app/hooks/useThreadCenterPorts";
 import { ForgeDetailPanel } from "@/components/app/panels/ForgePanel";
 import { ForgeWorkflowRunPanel } from "@/components/app/panels/ForgeWorkflowRunPanel";
 import { FullDiffViewer } from "@/components/app/panels/FullDiffViewer";
@@ -67,6 +68,7 @@ export type WorkspaceSessionCenterSlotContentProps = {
 
 export function WorkspaceSessionCenterSlotContent(props: WorkspaceSessionCenterSlotContentProps) {
   const { slot } = props;
+  const threads = useThreadCenterPorts();
 
   switch (slot.kind) {
     case "diff-full":
@@ -122,28 +124,12 @@ export function WorkspaceSessionCenterSlotContent(props: WorkspaceSessionCenterS
           repoProvider={props.forgeOverview?.repo?.provider ?? "github"}
         />
       );
-    case "ai-chat": {
-      const chatTab = slot.payload.tab;
-      return (
-        <AiChatPanel
-          tabId={chatTab.id}
-          reasoningMode={chatTab.reasoningMode}
-          messages={chatTab.messages}
-          onReasoningModeChange={(mode) => props.onUpdateAiChatTabReasoningMode(chatTab.id, mode)}
-          onSetChatTitle={(title) => props.onUpdateAiChatTabTitle(chatTab.id, title)}
-          onMessagesChange={(nextMessages) => props.onUpdateAiChatTabMessages(chatTab.id, () => nextMessages)}
-          aiSettings={props.aiSettings}
-          aiModelOptions={props.aiModelOptions}
-          aiModelLoading={props.aiModelLoading}
-          onSelectAiChatProviderModel={props.onSelectAiChatProviderModel}
-          onOpenAiSettings={props.onOpenAiSettings}
-        />
-      );
-    }
+    case "ai-chat":
+      return <div className="p-6 text-sm text-muted-foreground">This conversation belongs to archived chat history.</div>;
     case "browser":
       return <BrowserTabPanel tab={slot.payload.tab} />;
     case "agent-terminal":
-      return <FocusedAgentPanel agent={props.stableAgent} terminal={props.stableTerminal} />;
+      return threads.state.layout.activeId || !props.stableTerminal ? <ThreadWorkspaceCenter /> : <ManualTerminal terminal={props.stableTerminal} />;
     default: {
       const _exhaustive: never = slot;
       return _exhaustive;

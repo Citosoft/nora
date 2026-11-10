@@ -1,69 +1,69 @@
 import type {
-  AiChatMessage,
-  AiChatReasoningLevel,
-  AiChatTabState,
-  BrowserTabState,
-  CreateAgentDialogDefaults,
-  CreateTerminalDialogDefaults,
-  FileEditorState,
-  FileEditorTab,
-  ForgeViewerTabState,
-  ResolvedTheme,
-  TaskBoardViewMode,
-  TerminalFontId,
-  TerminalSubmission,
-  TerminalThemeId,
-  WindowUiState,
-  WorkspaceNotesState,
-  WorkspaceSpecsState,
-  WorkspaceTaskBoardsState,
-  WorkspaceTasksState
+AiChatMessage,
+AiChatReasoningLevel,
+AiChatTabState,
+BrowserTabState,
+CreateTerminalDialogDefaults,
+FileEditorState,
+FileEditorTab,
+ForgeViewerTabState,
+ResolvedTheme,
+TaskBoardViewMode,
+TerminalFontId,
+TerminalSubmission,
+TerminalThemeId,
+WindowUiState,
+WorkspaceNotesState,
+WorkspaceSpecsState,
+WorkspaceTaskBoardsState,
+WorkspaceTasksState
 } from "@/components/app/types";
-import type {
-  ForgeReviewAgentTargetMode,
-  ForgeReviewCommentSelection
-} from "@/components/app/types/forgeReviewHandoff.types";
 import type { FileEditorAgentSendTarget } from "@/components/app/types/fileEditor.types";
 import type {
-  OpenWorkspaceFileEditorOptions,
-  TaskCenterTaskReference,
-  WorkspaceSessionTab
+ForgeReviewAgentTargetMode,
+ForgeReviewCommentSelection
+} from "@/components/app/types/forgeReviewHandoff.types";
+import type { ThreadLaunchInput } from "@/components/app/types/thread-workspace/runtime.types";
+import type {
+OpenWorkspaceFileEditorOptions,
+TaskCenterTaskReference,
+WorkspaceSessionTab
 } from "@/components/app/types/workflow.types";
 import type {
-  AgentCatalogEntry,
-  AgentSession,
-  AiModelCatalogEntry,
-  AiProvider,
-  AiSettings,
-  AppSettings,
-  AppState,
-  ChangeEntry,
-  CheckoutWorkspaceBranchPayload,
-  CreateTerminalPayload,
-  ForgeAddCommentPayload,
-  ForgeOverview,
-  ForgeWorkItemAction,
-  ForgeWorkflowRunSummary,
-  ForgeWorkItemDetail,
-  ForgeWorkItemKind,
-  ForgeWorkItemSummary,
-  LocalTerminalState,
-  TerminalSession,
-  TerminalShellOption,
-  VercelDeploymentSummary,
-  VercelProjectSummary,
-  WorkspaceNoteSummary,
-  WorkspaceScriptLauncher,
-  WorkspaceSearchResult,
-  WorkspaceSpecSummary,
-  WorkspaceSplitView,
-  WorkspaceSplitViewCollection,
-  WorkspaceSplitViewItemReference,
-  WorkspaceSummary,
-  WorkspaceTaskBoard,
-  WorkspaceTaskSummary
+AgentCatalogEntry,
+AgentSession,
+AiModelCatalogEntry,
+AiProvider,
+AiSettings,
+AppSettings,
+AppState,
+ChangeEntry,
+CheckoutWorkspaceBranchPayload,
+CreateTerminalPayload,
+ForgeAddCommentPayload,
+ForgeOverview,
+ForgeWorkflowRunSummary,
+ForgeWorkItemAction,
+ForgeWorkItemDetail,
+ForgeWorkItemKind,
+ForgeWorkItemSummary,
+LocalTerminalState,
+TerminalSession,
+TerminalShellOption,
+VercelDeploymentSummary,
+VercelProjectSummary,
+WorkspaceNoteSummary,
+WorkspaceScriptLauncher,
+WorkspaceSearchResult,
+WorkspaceSpecSummary,
+WorkspaceSplitView,
+WorkspaceSplitViewCollection,
+WorkspaceSplitViewItemReference,
+WorkspaceSummary,
+WorkspaceTaskBoard,
+WorkspaceTaskSummary
 } from "@shared/appTypes";
-import type { Dispatch, ReactNode, SetStateAction } from "react";
+import type { Dispatch,ReactNode,SetStateAction } from "react";
 
 export type AgentContextCardProps = {
   state: import("@shared/appTypes").AgentContextState | null;
@@ -415,7 +415,7 @@ export type WorkspaceSessionPanelProps = {
   activeGridRows: WorkspaceSplitView["gridRows"];
   onChooseProject: () => Promise<AppState | null>;
   onRefreshCatalog: () => Promise<AppState | null>;
-  onCreateInWorkspace: (defaults: CreateAgentDialogDefaults) => void;
+  onCreateInWorkspace: (defaults: ThreadLaunchInput) => void;
   onLaunchTerminalFromDefaults: (payload: CreateTerminalPayload) => void;
   onOpenCreateTerminal: (defaults: CreateTerminalDialogDefaults) => void;
   onOpenWorkspaceTerminalPresets: (projectId: string) => void;
@@ -493,7 +493,7 @@ export type WorkspaceSessionTabsProps = {
   onSelect: (tab: WorkspaceSessionTab) => void;
   onClose: (tab: WorkspaceSessionTab) => void;
   onCloseMany: (tabs: WorkspaceSessionTab[]) => void;
-  onCreateAgent: (toolId: string) => void;
+  onCreateThread: () => void;
   onCreateTerminalFromDefaults: () => void;
   onCreateTerminal: () => void;
   onCreateBrowser: () => void;

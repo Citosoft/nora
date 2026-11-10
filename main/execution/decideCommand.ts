@@ -2,6 +2,7 @@ import type { ConversationCommand, ConversationRun, RequestResponse, RuntimeRequ
 import type { Decision, DecisionContext } from "@main/types/execution/decisions.types";
 import { ExecutionCommandError } from "./errors";
 import { isActiveRun, projectState } from "./projection";
+import { snapshotRole } from "@shared/personalization/profiles";
 
 export function validateResponse(request: RuntimeRequest, response: RequestResponse): void {
   if (request.kind === "approval" && response.kind === "approval") {
@@ -31,7 +32,9 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
       throw new ExecutionCommandError("environment", "Workspace belongs to a different execution host");
     }
     add({ kind: "conversation", conversation: {
+      ...(command.source ? { source: command.source } : {}),
       id: command.conversationId, title: command.title, workspace: command.workspace,
+      role: command.role ? snapshotRole(command.role) : null,
       provider: command.provider, parentId: command.parentId, nativeConversationId: null,
       archivedAt: null, queuePaused: false, createdAt: context.now, updatedAt: context.now
     } });

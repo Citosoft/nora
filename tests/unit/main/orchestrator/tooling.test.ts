@@ -95,14 +95,12 @@ function createAgentDetectionCacheDeps(
   | "resolveLocalAgentCatalogDetections"
   | "peekLocalAgentCatalogDetections"
   | "invalidateLocalAgentDetectionCache"
-  | "reconcileWorkspaceAgentsAfterCatalogRefresh"
 > {
   return {
     detectLocalAgentCatalog: async () => [],
     resolveLocalAgentCatalogDetections: async () => [],
     peekLocalAgentCatalogDetections: () => null,
     invalidateLocalAgentDetectionCache: () => undefined,
-    reconcileWorkspaceAgentsAfterCatalogRefresh: async () => undefined,
     ...partial
   };
 }

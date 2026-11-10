@@ -2,6 +2,7 @@ import type { AiSettings } from "./ai.types";
 import type { AnalyticsConsentStatus } from "./analytics.types";
 import type { FileEditorThemeId } from "./fileEditorTheme.types";
 import type { VoiceSettings } from "./voice.types";
+import type { Personalization } from "./personalization/roles.types";
 
 export type Screen = "project-selector" | "workspace";
 
@@ -262,6 +263,7 @@ export type AgentLaunchTargetPreference =
   | "branch-new";
 
 export interface AppSettings {
+  personalization: Personalization;
   hardwareAccelerationEnabled: boolean;
   workspaceStateStorageMode: WorkspaceStateStorageMode;
   defaultAgentLaunchTarget: AgentLaunchTargetPreference;
@@ -284,6 +286,7 @@ export interface AppSettings {
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
+  personalization: { defaultRole: null, workspaceRoles: {} },
   hardwareAccelerationEnabled: true,
   workspaceStateStorageMode: "repo",
   defaultAgentLaunchTarget: "new",

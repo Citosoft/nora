@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noEmit": true },
+  "include": ["tests/ui/**/*.tsx", "tests/ui/**/*.ts", "renderer/**/*.d.ts"],
+  "exclude": ["dist", "dist-tests", "node_modules"]
+}

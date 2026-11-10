@@ -2,6 +2,26 @@
 
 Status: complete written specification reflecting [D1–D39](ui-discovery.md#owner-decision-record), explicitly approved for implementation on 2026-10-21. Final experience sign-off is separate and pending.
 
+## Role and thread scope extensions
+
+The owner expanded the brief on **2026-11-09**: Nora should support any kind of work while retaining development as a core strength, and first-launch role selection must shape app behavior. See [the authoritative scope extension](../V3.md#product-scope-extension-role-aware-workspaces).
+
+The approved layouts below are the development baseline. The owner confirmed role-shaped tools, defaults, assistant guidance and workflows, with an app default and workspace overrides. D41–D43 additionally confirm seven presets plus custom, automatic Personal workspace creation, and role changes applying to new conversations only.
+
+The [role-aware onboarding proposal](role-onboarding.md) specifies the proposed first-run flow, tool mappings, general-folder behavior, conversation guidance snapshots, returning-user handling and acceptance contract. The owner approved the role flow/mappings, then clarified through D44–D45 that they must integrate into Nora’s adapted workbench. Final integrated screen review remains required. In the extension, Workspaces is the proposed common sidebar label; Git-specific controls appear by workspace capability. The baseline below continues to use development terminology where relevant.
+
+## Existing-shell implementation constraint
+
+D44 (2026-11-09) keeps Nora's existing shell as the implementation base. Retain its chrome, navigation, mixed tabs/grids, editor/browser/forge, manual terminals and supporting panels. Native conversations replace the managed-agent interaction surface; role onboarding/settings integrate with the existing shell ports. The conceptual diagram below describes region responsibilities, not permission to discard the current UI. The separate replacement shell from the initial attempt has been removed. D45 requires adapting every affected UI surface: retaining the base does not preserve duplicate agent/thread/API-chat concepts or complicated launch dialogs. Use [the UI transition map](ui-transition.md) as the complete source-backed checklist.
+
+## New thread is the creation flow
+
+The primary creation action opens the actual thread screen in Nora’s existing center/tab/grid region, with a focused composer and inline provider/model/workspace/branch selection. Existing defaults reduce setup; advanced controls stay contextual. First send creates native execution. Task/spec/review/browser/editor launchers prefill this same screen or explicitly send context to an existing thread, while workflow Run remains deliberate automation through the same engine.
+
+Use **thread** consistently as the user-facing conversation/execution unit. Consolidate overlapping live Agents, Threads and API Chat surfaces. Native subagents remain parent activity unless independently supported; manual terminals remain separate shells. Model names, branch choices and capabilities must come from the selected owning runtime/workspace, rather than decorative controls.
+
+The [chat design contract](ui-transition.md#chat-design-contract) defines empty/ongoing composition, reading/composer quality, compact activity, request/queue behavior and polish. Claude Desktop and ChatGPT Desktop are interaction-quality references; Nora’s tools, chrome, tabs, panels and branding remain the base.
+
 ## Shell and information architecture
 
 ```text
@@ -29,7 +49,7 @@ All agents shows running work and attention across projects with project, host, 
 | --- | --- | --- |
 | Project workspace | Sidebar, mixed tabs, optional Changes/Files. Project tools expose tasks/specs/notes/workflows/history/integrations. | Empty project offers New conversation and project tools; loading summaries use labeled placeholders. |
 | All agents | Global active work/attention list, conversation links and supported interrupt. | No running work empty state; disconnected hosts remain visible with unconfirmed status. |
-| Draft conversation | Inherited provider/model and effective policy in composer row; checkout/branch/host in header. | First message creates durable intent, then native execution. Missing readiness blocks send with setup action and preserves draft. |
+| New thread | Direct chat screen replaces ordinary agent creation dialogs; inherited provider/model and compact editable workspace/branch/host controls. | First message creates durable intent, then native execution. Missing readiness blocks send with setup action and preserves draft. |
 | Writer conflict | Explain conflict and owner; offer existing conversation, another checkout or isolated worktree. | Admission waits for resolution; read/write intent does not claim sandbox enforcement. |
 | Conversation | Header, centered timeline, progress/request and sticky input. User bubbles right, assistant text left. | Hydrate history before replay, stable IDs prevent duplicates; older-page loads preserve scroll. |
 | Request | Native approval/question above composer with scope and actual native choices. | Answer is pending delivery until confirmed. Expired requests disable responses and explain reconciliation. |
@@ -54,6 +74,14 @@ The sticky composer includes input, removable attachment/context chips and provi
 @ opens file/context mentions; / opens supported commands/skills. Add/paste/drop create labeled chips; rejected content gives a local error without clearing text. Enter sends idle or queues busy; Shift+Enter inserts newline. Composition events and `isComposing` prevent IME submission. Buttons expose their Send/Queue action accessibly.
 
 Drafting remains enabled during execution. A queue strip above input shows ordered unsent messages with edit/remove. Editing changes only unsent intent. Steering is separate and capability checked. Interrupt preserves drafts/queues; failure/interruption pauses queued dispatch until explicit continuation/removal. Retry/Resume is offered only after capability and uncertainty checks; uncertain execution is never silently repeated.
+
+## Provider/model picker
+
+D46 replaces separate provider/model dropdowns with one compact trigger and a polished two-column popover. The trigger shows the selected provider icon, model name and disclosure affordance. In the popover, the left icon rail chooses a provider/account instance and the right pane lists that instance’s actual native models. Use existing local product assets, accessible provider names/tooltips, clear selection marks and concise metadata only when supplied by the catalog. Distinguish account instances even when they use the same provider logo.
+
+Browsing providers changes only the right-hand list. Choosing a model commits the binding and closes; dismissal leaves the prior selection intact. Reasoning choices refresh for the selected model without silently changing permissions. Preserve composer text throughout. Existing-thread provider changes follow the explicit handoff rules; ongoing work cannot be silently rebound.
+
+Use the existing Radix popover and shared controls in the production component. Handle loading, no models, unavailable runtime and authentication without blank panels, invented models or disabled controls with no explanation. Keyboard users can reach both columns, select a model, dismiss with Escape and return focus to the trigger. Narrow panes must fit both areas or use an equivalent provider rail; touch targets and light/dark contrast remain usable. The design preview is illustrative; runtime catalogs remain authoritative.
 
 ## State presentation
 
@@ -149,3 +177,9 @@ View closure/reload is absent from execution transitions. Provider change goes t
 No unresolved product choice blocks written-spec review. Capability discovery, exact responsive thresholds and platform tray behavior require truthful implementation validation. Backend tests do not establish UI acceptance.
 
 Before frontend work, explicitly approve the complete specification and decision record. Before final sign-off, review both themes, narrow/split layouts, keyboard/IME/screen-reader paths, long streaming histories, background requests, diff fallback and restart recovery. Record this experience review separately from implementation approval.
+
+## Model picker implementation checkpoint
+
+The prepared native-thread components now use [NativeModelPopover](../../renderer/components/app/panels/conversations/NativeModelPopover.tsx) for D46, with the existing Radix popover and provider logos. [NativeProviderPicker](../../renderer/components/app/panels/conversations/NativeProviderPicker.tsx) owns committed settings; browsing remains local to the popover. A workspace-scoped [catalog store](../../renderer/components/app/logic/modelCatalogStore.ts) deduplicates reads and rejects late/mismatched results. Explicit choices and initial defaults are retained across catalog reorder; cross-provider selection requires a supported permission choice. Reasoning/permissions live in Thread options, with effective policy visible in its trigger.
+
+`npm run build` followed by `npm run test:ui:models` typechecks and runs real Electron/Chromium component acceptance using fixture catalogs and temporary state, with no provider inference. Optional `NORA_UI_EVIDENCE_DIR` saves screenshots. This verifies the component, not the full integrated shell or provider entitlement. The existing application entry points are unchanged; complete shell/navigation/launch migration is still required before activating the native-thread UI.

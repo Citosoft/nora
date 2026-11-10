@@ -75,7 +75,7 @@ export const buildPreLaunchTitleBarOnboardingProps = (
       }
 
       workspace.setActiveView("main");
-      workspace.uiCommands.openCreateAgentDialog();
+      workspace.uiCommands.openNewThread();
     },
     onCreateBrowser: () => {
       if (!snapshot.project) {

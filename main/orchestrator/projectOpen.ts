@@ -1,16 +1,16 @@
-import type { WorkspaceTarget } from "@main/types/internal.types";
-import { isLocalAgentDetectionInFlight, peekLocalAgentCatalogDetections } from "@main/agentDetectionCache";
+import { peekLocalAgentCatalogDetections } from "@main/agentDetectionCache";
 import { createUndetectedLocalAgentDetections } from "@main/orchestrator/environmentDetection";
-import { isGitProject } from "@shared/projectVersionControl";
+import type { WorkspaceTarget } from "@main/types/internal.types";
 import type {
-  AppState,
-  AgentSession,
-  ProjectSummary,
-  TerminalSession,
-  WorktreeRecord,
-  WorkspaceSummary
+AgentSession,
+AppState,
+ProjectSummary,
+TerminalSession,
+WorkspaceSummary,
+WorktreeRecord
 } from "@shared/appTypes";
-import type { OpenProjectOptions, ProjectOpenHelperDeps, ProjectOpenHelpers } from "../types/orchestratorProjectOpen.types";
+import { isGitProject } from "@shared/projectVersionControl";
+import type { OpenProjectOptions,ProjectOpenHelperDeps,ProjectOpenHelpers } from "../types/orchestratorProjectOpen.types";
 
 function mergeRecoveredTerminals(
   projectId: string,
@@ -154,9 +154,7 @@ export function createProjectOpenHelpers(deps: ProjectOpenHelperDeps): ProjectOp
       : [await deps.createInitialSessionState(project)];
     const currentSnapshot = deps.getSnapshot();
     const existingWorkspaceSummary = currentSnapshot.workspaces.find((workspace) => workspace.project.id === project.id) || null;
-    const recoveredAgents = await deps.getRestorableAgents(
-      ensuredSessions.flatMap((sessionState) => sessionState.agents)
-    );
+    await deps.archiveLegacySessions(project.id, ensuredSessions);
     const recoveredTerminals = await deps.getRestorableTerminals(
       ensuredSessions.flatMap((sessionState) => sessionState.terminals)
     );
@@ -204,7 +202,6 @@ export function createProjectOpenHelpers(deps: ProjectOpenHelperDeps): ProjectOp
     const normalizedRecoveredTerminals = normalizeRecoveredTerminals(mergedRecoveredTerminals, worktrees);
     const sessions = ensuredSessions.map((sessionState) => sessionState.session);
     const currentSessionId = sessions[0]?.id || null;
-    const agentDetectionPending = project.location?.kind !== "ssh" && isLocalAgentDetectionInFlight();
     const catalogDetections = project.location?.kind === "ssh"
       ? project.remoteAgentCatalog || []
       : (peekLocalAgentCatalogDetections() ?? createUndetectedLocalAgentDetections());
@@ -219,13 +216,11 @@ export function createProjectOpenHelpers(deps: ProjectOpenHelperDeps): ProjectOp
       sessions,
       worktrees,
       recentProjects,
-      agents: recoveredAgents,
+      agents: [],
       terminals: normalizedRecoveredTerminals,
-      focusedAgentId: options.focusedAgentMode === "first-agent" ? (recoveredAgents[0]?.id || null) : null,
+      focusedAgentId: null,
       focusedTerminalId:
-        options.focusedAgentMode === "first-agent"
-          ? (recoveredAgents.length ? null : (normalizedRecoveredTerminals[0]?.id || null))
-          : (normalizedRecoveredTerminals[0]?.id || null),
+        normalizedRecoveredTerminals[0]?.id || null,
       selectedChangePath: ensuredSessions[0]?.selectedChangePath || null,
       selectedCommitHash: ensuredSessions[0]?.selectedCommitHash || null,
       selectedCommit: null,
@@ -233,7 +228,7 @@ export function createProjectOpenHelpers(deps: ProjectOpenHelperDeps): ProjectOp
         getRecoveredSessionChangesRoot({
           project,
           focusedAgentMode: options.focusedAgentMode,
-          agents: recoveredAgents,
+          agents: [],
           terminals: normalizedRecoveredTerminals,
           worktrees
         }),
@@ -247,39 +242,6 @@ export function createProjectOpenHelpers(deps: ProjectOpenHelperDeps): ProjectOp
       agentSkillCatalogs,
       errorMessage: null
     }));
-
-    for (const agent of recoveredAgents) {
-      const tool = deps.getSnapshot().agentCatalog.find((item) => item.id === agent.toolId);
-      if (project.location?.kind !== "ssh" && (!tool?.detected || !tool.enabled)) {
-        if (agentDetectionPending) {
-          continue;
-        }
-        deps.updateAgent(agent.id, {
-          status: "error",
-          lastEventAt: deps.nowIso()
-        });
-        continue;
-      }
-
-      const launchCommand = deps.normalizeAgentLaunchCommand(
-        agent.toolId,
-        deps.buildResumeCommand(agent) || agent.command
-      );
-      await deps.resetAgentTranscript(agent);
-      deps.updateAgent(agent.id, {
-        rawTerminalOutput: "",
-        lastTerminalLine: launchCommand === agent.command
-          ? `Launching ${agent.toolLabel}`
-          : `Resuming ${agent.toolLabel}`
-      });
-
-      void deps.spawnAgentPty(
-        agent.id,
-        launchCommand,
-        deps.getWorktreeTarget(project, { path: agent.workspace, location: project.location }),
-        deps.getToolEnv(agent.toolId)
-      );
-    }
 
     for (const terminal of normalizedRecoveredTerminals) {
       if (deps.hasRuntimeSession(terminal.id)) {

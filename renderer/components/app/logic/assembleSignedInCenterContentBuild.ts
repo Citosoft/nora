@@ -36,7 +36,7 @@ export const assembleSignedInCenterContentBuild = (s: SignedInCenterContentAssem
     uiState: core.uiState,
     uiCommands: {
       clearSessionTabFocus: core.uiCommands.clearSessionTabFocus,
-      openCreateAgentDialog: core.uiCommands.openCreateAgentDialog,
+      openNewThread: core.uiCommands.openNewThread,
       openCreateTerminalDialog: core.uiCommands.openCreateTerminalDialog,
       openWorkspaceSwitcherDialog: core.uiCommands.openWorkspaceSwitcherDialog,
       openWorkspaceTerminalPresetsDialog: core.uiCommands.openWorkspaceTerminalPresetsDialog,

@@ -1,6 +1,6 @@
 import type { z } from "zod";
 import type {
-  commandReceiptSchema, conversationCommandSchema, conversationEventSchema, conversationSchema,
+  conversationSourceSchema, commandReceiptSchema, conversationCommandSchema, conversationEventSchema, conversationSchema,
   eventPayloadSchema, failureSchema, providerBindingSchema, requestResponseSchema, requestSchema,
   runSchema, snapshotSchema, timelineItemSchema, usageSchema, workspaceRefSchema
 } from "@shared/conversations/contracts";
@@ -19,3 +19,5 @@ export type ConversationCommand = z.infer<typeof conversationCommandSchema>;
 export type CommandReceipt = z.infer<typeof commandReceiptSchema>;
 export type EventPayload = z.infer<typeof eventPayloadSchema>;
 export type ConversationEvent = z.infer<typeof conversationEventSchema>;
+
+export type ConversationSource = z.infer<typeof conversationSourceSchema>;

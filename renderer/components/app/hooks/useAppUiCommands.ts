@@ -1,6 +1,9 @@
-import type { CreateAgentDialogDefaults, CreateTerminalDialogDefaults, UiState } from "@/components/app/types";
-import type { Dispatch, SetStateAction } from "react";
+import type { CreateTerminalDialogDefaults,UiState } from "@/components/app/types";
+import type { ThreadLaunchInput } from "@/components/app/types/thread-workspace/runtime.types";
+import type { Dispatch,SetStateAction } from "react";
 import { useCallback } from "react";
+import { useCanonicalAppSnapshot } from "./useAppDomainState";
+import { useNativeRuntimePorts } from "./useNativeRuntimePorts";
 
 export type AppUiCommands = {
   openAboutDialog: () => void;
@@ -15,7 +18,7 @@ export type AppUiCommands = {
   setRemoteWorkspaceDialogOpen: (open: boolean) => void;
   closeWorkspaceDialogStack: () => void;
   openResetWorkspacesDialog: () => void;
-  openCreateAgentDialog: (defaults?: CreateAgentDialogDefaults | null) => void;
+  openNewThread: (defaults?: ThreadLaunchInput | null) => void;
   openCreateTerminalDialog: (defaults: CreateTerminalDialogDefaults) => void;
   openWorkspaceTerminalPresetsDialog: (projectId: string) => void;
   openWorkspaceSwitcherDialog: () => void;
@@ -35,6 +38,8 @@ export type AppUiCommands = {
 };
 
 export function useAppUiCommands(setUiState: Dispatch<SetStateAction<UiState>>): AppUiCommands {
+  const native = useNativeRuntimePorts();
+  const projectId = useCanonicalAppSnapshot()?.project?.id;
   const openAboutDialog = useCallback(() => {
     setUiState((current) => ({ ...current, showAboutDialog: true }));
   }, [setUiState]);
@@ -91,13 +96,11 @@ export function useAppUiCommands(setUiState: Dispatch<SetStateAction<UiState>>):
     setUiState((current) => ({ ...current, showResetWorkspacesDialog: true }));
   }, [setUiState]);
 
-  const openCreateAgentDialog = useCallback((defaults?: CreateAgentDialogDefaults | null) => {
-    setUiState((current) => ({
-      ...current,
-      showCreateAgentModal: true,
-      createAgentDefaults: defaults ?? null
-    }));
-  }, [setUiState]);
+  const openNewThread = useCallback((defaults?: ThreadLaunchInput | null) => {
+    void native.launch({ projectId, ...defaults }).catch((cause: unknown) => {
+      setUiState((current) => ({ ...current, activeErrorMessage: cause instanceof Error ? cause.message : "Thread could not be opened." }));
+    });
+  }, [native.launch, projectId, setUiState]);
 
   const openCreateTerminalDialog = useCallback((defaults: CreateTerminalDialogDefaults) => {
     setUiState((current) => ({
@@ -223,7 +226,7 @@ export function useAppUiCommands(setUiState: Dispatch<SetStateAction<UiState>>):
     setRemoteWorkspaceDialogOpen,
     closeWorkspaceDialogStack,
     openResetWorkspacesDialog,
-    openCreateAgentDialog,
+    openNewThread,
     openCreateTerminalDialog,
     openWorkspaceTerminalPresetsDialog,
     openWorkspaceSwitcherDialog,

@@ -1,5 +1,7 @@
 # Current implementation audit
 
+The updated [whole-UI transition map](ui-transition.md) applies the owner’s D44–D45 clarification to this inventory, including all creation/handoff surfaces and the unified thread model.
+
 ## Scope and evidence limits
 
 This is a source-level audit of the principal execution and presentation paths, not a completed runtime acceptance audit. It does not establish that every existing feature works, that remote workflows have parity, or that the current UI has been visually reviewed. Those checks remain on the [discovery checklist](README.md#progress).

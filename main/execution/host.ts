@@ -18,6 +18,7 @@ export class ExecutionHost {
   private readonly groups: WorkerGroup[] = [
     { kinds: ["start"], controls: false, operations: new Set() },
     { kinds: ["reconcile"], controls: false, operations: new Set() },
+    { kinds: ["review"], controls: false, operations: new Set() },
     { kinds: ["interrupt", "respond"], controls: true, operations: new Set() }
   ];
   private lifecycle: HostLifecycle = "idle";
@@ -35,7 +36,7 @@ export class ExecutionHost {
     this.worker = new EffectWorker(this.engine, deps.providers, (update) => {
       if (this.lifecycle !== "running" && this.lifecycle !== "stopping") return;
       try { this.engine.accept(update); } catch { this.fault(); }
-    }, deps.workspaces.verify.bind(deps.workspaces));
+    }, deps.workspaces.verify.bind(deps.workspaces), deps.reviewer, deps.checkpoints);
   }
 
   start(): void {
@@ -58,7 +59,8 @@ export class ExecutionHost {
     const workspace = command.kind === "create" ? await this.deps.workspaces.prepare(command.workspace) : undefined;
     if (this.lifecycle !== "running") throw new ExecutionCommandError("conflict", "Execution host is not accepting instructions");
     if (command.kind === "create") this.deps.providers.resolve(command.provider.kind, command.provider.instanceId);
-    const receipt = this.engine.execute(command, workspace);
+    const role = command.kind === "create" ? command.role ?? this.deps.roleForWorkspace?.(command.workspace.projectId) : undefined;
+    const receipt = this.engine.execute(command, workspace, role);
     this.schedule();
     return receipt;
   }

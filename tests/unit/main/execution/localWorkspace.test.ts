@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, rename, rm, symlink } from "node:fs/promises";
+import { mkdtemp, mkdir, realpath, rename, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -15,7 +15,7 @@ const selection: WorkspaceRef = { environmentId: "local", projectId: "project", 
   path: "/caller/forgery", branch: "forged-branch", access: "write" };
 
 test("registered root and symlink aliases share identity; unrelated checkouts and environments do not", async (t) => {
-  const directory = await mkdtemp(join(tmpdir(), "nora-workspaces-"));
+  const directory = await realpath(await mkdtemp(join(tmpdir(), "nora-workspaces-")));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const root = join(directory, "checkout"); const alias = join(directory, "alias"); const isolated = join(directory, "isolated");
   await mkdir(root); await mkdir(isolated); await symlink(root, alias, process.platform === "win32" ? "junction" : "dir");
@@ -39,7 +39,7 @@ test("registered root and symlink aliases share identity; unrelated checkouts an
 
 test("host canonicalizes create, serializes writers across aliases and keeps retry receipts after filesystem loss", async (t) => {
   const f = fixture(t);
-  const directory = await mkdtemp(join(tmpdir(), "nora-admission-"));
+  const directory = await realpath(await mkdtemp(join(tmpdir(), "nora-admission-")));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const alias = join(directory, "alias"); const root = join(directory, "root"); await mkdir(root); await symlink(root, alias, "dir");
   const workspaces = new LocalWorkspaceAuthority({ environmentId: "local", registrations: () => [

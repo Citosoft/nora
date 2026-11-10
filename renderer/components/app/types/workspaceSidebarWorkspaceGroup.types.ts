@@ -1,5 +1,6 @@
+import type { ThreadLaunchInput } from "@/components/app/types/thread-workspace/runtime.types";
 import type { NoteListEntry, SpecListEntry, TaskListEntry } from "@/components/app/types/component.types";
-import type { AiChatTabState, CreateAgentDialogDefaults, CreateTerminalDialogDefaults } from "@/components/app/types";
+import type { AiChatTabState, CreateTerminalDialogDefaults } from "@/components/app/types";
 import type {
   AgentCatalogEntry,
   AgentSession,
@@ -82,7 +83,7 @@ export type WorkspaceSidebarWorkspaceGroupProps = {
   onCheckoutWorkspaceBranch: (projectId: string, branch: string) => Promise<AppState | null>;
   onLaunchWorktreeScript: (projectId: string, payload: CreateTerminalPayload) => void;
   onRemoveWorktree: (projectId: string, worktreeId: string, branch: string) => void;
-  onOpenCreateAgent: (defaults?: CreateAgentDialogDefaults) => void;
+  onOpenCreateAgent: (defaults?: ThreadLaunchInput) => void;
   onResumeThread: (projectId: string, payload: CreateAgentPayload) => Promise<void>;
   onQuickLaunchAgent: (projectId: string) => void;
   onArchiveThread: (projectId: string, ref: ExternalHarnessContextRef) => Promise<void>;

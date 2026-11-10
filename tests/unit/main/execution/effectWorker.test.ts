@@ -28,5 +28,6 @@ test("interrupt while workspace verification awaits cannot send the instruction 
   release(); await operation;
   assert.equal(provider.starts, 0); assert.equal(f.snapshot().runs[0].state, "interrupted");
   assert.equal(f.snapshot().conversation.queuePaused, true);
+  await worker.runNext(["review"]);
   assert.equal(f.store.unfinishedEffects().length, 0);
 });

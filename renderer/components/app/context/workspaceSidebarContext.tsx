@@ -70,7 +70,7 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
     onRefresh: () => d.safely(() => noraWorkspaceManagementClient.refreshWorkspace()),
     onRefreshCatalog: () => d.safely(() => noraToolingManagementClient.refreshToolCatalog()),
     onResetWorkspaces: d.uiCommands.openResetWorkspacesDialog,
-    onOpenCreateAgent: (defaults) => d.uiCommands.openCreateAgentDialog(defaults),
+    onOpenCreateAgent: (defaults) => d.uiCommands.openNewThread(defaults),
     onOpenCreateTerminal: (defaults) => d.uiCommands.openCreateTerminalDialog(defaults),
     onResumeThread: async (projectId, payload) => {
       const focused = await d.focusWorkspaceWithRecovery(projectId);
@@ -82,7 +82,7 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
     onQuickLaunchAgent: (projectId) => {
       if (!defaultAgentTool) {
         // Nothing usable to launch; the dialog explains how to install or enable a harness.
-        runInWorkspace(projectId, () => d.uiCommands.openCreateAgentDialog());
+        runInWorkspace(projectId, () => d.uiCommands.openNewThread());
         return;
       }
       const payload = createQuickAgentPayload(defaultAgentTool.id);
@@ -155,8 +155,8 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
     },
     onOpenCreateAgentOnWorktree: (projectId, worktreeId) => {
       runInWorkspace(projectId, () =>
-        d.uiCommands.openCreateAgentDialog({
-          target: { kind: "existing", worktreeId }
+        d.uiCommands.openNewThread({
+          projectId, worktreeId
         })
       );
     },
@@ -170,9 +170,8 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
     },
     onOpenCreateWorktree: (projectId) => {
       runInWorkspace(projectId, () =>
-        d.uiCommands.openCreateAgentDialog({
-          target: { kind: "new" },
-          initialWizardStepIndex: 1
+        d.uiCommands.openNewThread({
+          projectId
         })
       );
     },

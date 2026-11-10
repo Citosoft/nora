@@ -292,7 +292,7 @@ function AppRootRuntimeContent({
       snapshot,
       uiCommands: {
         openAddWorkspaceDialog: uiCommands.openAddWorkspaceDialog,
-        openCreateAgentDialog: uiCommands.openCreateAgentDialog,
+        openNewThread: uiCommands.openNewThread,
         openCreateTerminalDialog: uiCommands.openCreateTerminalDialog,
         openKeyboardShortcutsDialog: uiCommands.openKeyboardShortcutsDialog,
         openWorkspaceSwitcherDialog: uiCommands.openWorkspaceSwitcherDialog,
@@ -331,7 +331,7 @@ function AppRootRuntimeContent({
     setWorkspaceQuickSearchRequestId,
     snapshot,
     uiCommands.openAddWorkspaceDialog,
-    uiCommands.openCreateAgentDialog,
+    uiCommands.openNewThread,
     uiCommands.openCreateTerminalDialog,
     uiCommands.openKeyboardShortcutsDialog,
     uiCommands.openWorkspaceSwitcherDialog,

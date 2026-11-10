@@ -55,7 +55,7 @@ export const createWorkspaceSessionPanelValue = (d: WorkspaceSessionPanelBuildDe
   activeGridRows: d.activeGridRows,
   onChooseProject: d.openAddWorkspaceModal,
   onRefreshCatalog: () => d.safely(() => noraToolingManagementClient.refreshToolCatalog()),
-  onCreateInWorkspace: (defaults) => d.uiCommands.openCreateAgentDialog(defaults),
+  onCreateInWorkspace: (defaults) => d.uiCommands.openNewThread(defaults),
   onLaunchTerminalFromDefaults: (payload) => {
     void d.createTerminalWithStatus(payload);
   },

@@ -4,13 +4,21 @@ Status: written UI specification and D1–D39 explicitly approved on 2026-10-21.
 
 This directory turns [the v3 brief](../V3.md) into an evidence-backed implementation plan and an owner-reviewed interface specification. The supplied plan and recorded owner decisions supersede the initial alternatives.
 
+## Latest product direction
+
+On **2026-11-09**, the owner expanded the scope to any kind of work while retaining development as a core strength. First-launch role selection must shape the experience. See [the brief extension](../V3.md#product-scope-extension-role-aware-workspaces) and D40 in the decision record. The earlier written UI approval remains the baseline; D41–D43 confirm presets plus custom, automatic Personal workspace and role changes for new conversations only. The role flow/mappings have been approved. D44 preserves Nora’s existing shell as the UI base; the detached replacement shell was removed.
+
 ## Documents
 
 - [Current implementation audit](audit.md): execution paths, persistence, existing UI, reuse and removal boundaries.
 - [Architecture proposal](architecture.md): domain ownership, provider integration, durable execution, migration and implementation order.
 - [UI discovery and decision record](ui-discovery.md): reviewed references, all 39 decisions and explicit approval.
+- [Role-aware onboarding proposal](role-onboarding.md): confirmed presets, Personal workspace, new-conversation-only role changes and proposed mappings/layouts.
+- [Whole-UI transition map](ui-transition.md): unified thread model, direct New thread flow and source-backed changes across every affected surface.
 - [Interface specification](ui-specification.md): screen layouts, component inventory, states and interactions.
 - [Delivery and acceptance](delivery.md): migration/cutover boundaries and validation matrix.
+- [Native lifecycle acceptance](native-acceptance.md): isolated real-runtime results, compatibility fixes and outstanding cases.
+- [Turn checkpoints and review diffs](checkpoints.md): evidence semantics, persistence, recovery and limits.
 - [Implementation handoff](progress.md): completed work, verification, limitations and continuation entry points.
 
 ## Evidence baseline
@@ -39,7 +47,7 @@ Research includes Nora source, T3 Code source on its moving `main` branch, offic
 
 ## Next implementation boundary
 
-The isolated backend deliverable now provides a tested durable lifecycle, injected provider fixtures and native adapters without production routing. It now includes canonical local workspace admission, schema-v3 per-record projections, bounded history and an isolated IPC/preload/client flow. Tests cover a 5,000-message history but do not establish authenticated-provider, packaged, production-scale or SSH acceptance. Continue using [the architecture deliverables](architecture.md#implementation-slices) and the concrete remaining checklist in [progress.md](progress.md).
+The isolated backend deliverable now provides a tested durable lifecycle, injected provider fixtures and native adapters without production routing. It now includes canonical local workspace admission, schema-v5 storage with per-record projections, durable turn checkpoints and scoped review diffs, bounded history and an isolated IPC/preload/client flow. Tests cover a 5,000-message history but do not establish authenticated-provider, packaged, production-scale or SSH acceptance. Continue using [the architecture deliverables](architecture.md#implementation-slices) and the concrete remaining checklist in [progress.md](progress.md).
 
 Backend and approved interface work may proceed; the written UI approval is recorded. Switching production workflows to v3 requires complete call-site migration, persistence migration, relevant tests, and removal of the superseded managed execution path in that deliverable. An isolated spike does not count as a migrated feature.
 
@@ -47,6 +55,6 @@ Backend and approved interface work may proceed; the written UI approval is reco
 
 The execution engine, SQLite store and native adapters are isolated from production callers. Existing managed sessions, loops and API chats remain active until the complete migration/cutover deliverable. Do not expose a competing runtime through partial production wiring.
 
-Current tests, smoke results and outstanding acceptance work are recorded in [progress.md](progress.md). The store has passed writable/restart/recovery smoke checks under Node 24.16.0 and bundled Electron 42.3.1 (Node 24.15.0). This establishes local runtime support, not packaged application or remote-host acceptance. Codex initialization uses an isolated temporary home with no inference; real authenticated provider lifecycle tests remain separate.
+Current tests, smoke results and outstanding acceptance work are recorded in [progress.md](progress.md). The store has passed writable/restart/recovery smoke checks under Node 24.16.0 and bundled Electron 42.3.1 (Node 24.15.0). This establishes local runtime support, not packaged application or remote-host acceptance. The initialization smoke uses an isolated temporary home with no inference. Separate authenticated Codex lifecycle, approval, scoped question and two local hard-crash runs now pass; see [native acceptance](native-acceptance.md). Claude, additional failure windows, still-live turn/request reconnection, packaged and remote acceptance remain incomplete.
 
-Root package version remains `0.2.2`; the upcoming changelog is `changelogs/v0.2.3.md`. Discovery documentation has no changelog line; isolated execution groundwork has one Improvements line and is not described as an enabled production feature.
+Root package version remains `0.2.2`; the upcoming changelog is `changelogs/v0.2.3.md`. Discovery documentation has no changelog line; isolated execution groundwork, workspace review finalization and turn checkpoints each have one Improvements line. They are not enabled production features.

@@ -1,17 +1,16 @@
 import type {
-  AgentCatalogEntry,
-  AgentDetectionInfo,
-  AgentSession,
-  AgentSkillCatalog,
-  AgentToolConfig,
-  AppState,
-  ProjectSummary,
-  TerminalSession,
-  TerminalShellOption,
-  WorkspaceScriptLauncher,
-  WorktreeRecord
+AgentCatalogEntry,
+AgentDetectionInfo,
+AgentSkillCatalog,
+AgentToolConfig,
+AppState,
+ProjectSummary,
+TerminalSession,
+TerminalShellOption,
+WorkspaceScriptLauncher,
+WorktreeRecord
 } from "@shared/appTypes";
-import type { PersistedSessionState, WorkspaceTarget } from "./internal.types";
+import type { PersistedSessionState,WorkspaceTarget } from "./internal.types";
 
 export interface OpenProjectOptions {
   focusedAgentMode: "first-agent" | "none";
@@ -47,23 +46,12 @@ export interface ProjectOpenHelperDeps {
   saveProject: (project: ProjectSummary) => Promise<void>;
   loadStatesForProject: (projectId: string) => Promise<PersistedSessionState[]>;
   createInitialSessionState: (project: ProjectSummary) => Promise<PersistedSessionState>;
-  getRestorableAgents: (agents: AgentSession[]) => Promise<AgentSession[]>;
+  archiveLegacySessions: (projectId: string, sessions: readonly PersistedSessionState[]) => Promise<void>;
   getRestorableTerminals: (terminals: TerminalSession[]) => Promise<TerminalSession[]>;
   getLiveTerminalSnapshots: () => TerminalSession[];
   getProjectTarget: (project: ProjectSummary) => WorkspaceTarget;
   updateState: (updater: (state: AppState) => AppState) => void;
-  updateAgent: (agentId: string, partial: Partial<AgentSession>) => void;
-  buildResumeCommand: (agent: Pick<AgentSession, "toolId" | "command" | "resumeSessionId" | "resumeCommand">) => string | null;
-  normalizeAgentLaunchCommand: (toolId: string, command: string) => string;
-  resetAgentTranscript: (agent: AgentSession) => Promise<void>;
   getWorktreeTarget: (project: ProjectSummary, worktree: Pick<WorktreeRecord, "path" | "location">) => WorkspaceTarget;
-  getToolEnv: (toolId: string) => Record<string, string>;
-  spawnAgentPty: (
-    agentId: string,
-    command: string,
-    target: WorkspaceTarget,
-    toolEnv: Record<string, string>
-  ) => Promise<void>;
   hasRuntimeSession: (sessionId: string) => boolean;
   resetTerminalTranscript: (terminal: TerminalSession) => Promise<void>;
   resolveTerminalShell: (shellId?: string) => TerminalShellOption;

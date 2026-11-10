@@ -750,8 +750,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
 
   const handleOpenCreateAgentFromContextGroup = (source: AgentContextSourceSummary, group: AgentContextEntryGroup) => {
     onOpenCreateAgentDialog({
-      contextSelections: buildAgentContextSelectionForGroup(source.agentId, group),
-      initialWizardStepIndex: 2
+      contextSelections: buildAgentContextSelectionForGroup(source.agentId, group)
     });
   };
 
@@ -764,8 +763,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
       const selections = await noraWorkspaceClient.composeExternalHarnessContextSelections(snapshot.project.id, session);
       if (selections.length > 0) {
         onOpenCreateAgentDialog({
-          contextSelections: selections,
-          initialWizardStepIndex: 2
+          contextSelections: selections
         });
       }
     } finally {

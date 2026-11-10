@@ -1,3 +1,4 @@
+import { useNativeRuntimePorts } from "./useNativeRuntimePorts";
 import { noraAgentClient } from "@/components/app/clients/noraAgentClient";
 import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
 import { formatTaskFileInstruction } from "@/components/app/logic/appUtils";
@@ -38,6 +39,7 @@ export function useWorkspaceContentController({
   trackAgentCreation
 }: UseWorkspaceContentControllerArgs): UseWorkspaceContentControllerResult {
   const snapshot = useCanonicalAppSnapshot();
+  const native = useNativeRuntimePorts();
   const [taskEditorState, setTaskEditorState] = useState<TaskEditorState | null>(null);
   const [isCreatingSpec, setIsCreatingSpec] = useState(false);
   const [isCreatingNote, setIsCreatingNote] = useState(false);
@@ -133,38 +135,6 @@ export function useWorkspaceContentController({
       assignedAt: assignment.assignedAt,
       isActive: activeAgentIds.has(assignment.agentId)
     }));
-  };
-
-  const recordTaskAssignment = async (
-    projectId: string,
-    taskPath: string,
-    assignment: {
-      agentId: string;
-      sessionId: string;
-      agentName: string;
-      toolId: string;
-      toolLabel: string;
-    }
-  ): Promise<void> => {
-    await updateWorkspaceTaskBoard(projectId, (currentBoard) => {
-      const existingAssignments = currentBoard.taskAssignments[taskPath] ?? [];
-      const nextAssignment = {
-        ...assignment,
-        assignedAt: new Date().toISOString()
-      };
-
-      return {
-        ...currentBoard,
-        taskAssignments: {
-          ...currentBoard.taskAssignments,
-          [taskPath]: [...existingAssignments, nextAssignment]
-        }
-      };
-    });
-  };
-
-  const focusCreatedAgent = async (agentId: string): Promise<void> => {
-    await safelyAndRefresh(() => noraAgentClient.focusAgent(agentId));
   };
 
   const appendTaskContext = (content: string, contextText?: string): string => {
@@ -699,307 +669,32 @@ export function useWorkspaceContentController({
     }
   };
 
-  const handleSpawnTaskAgent = async (toolId: string): Promise<void> => {
-    if (!taskEditorState) {
-      return;
-    }
-
-    const activeTaskEditor = taskEditorState;
-    const absoluteTaskPath = await resolveWorkspaceStatePath(activeTaskEditor.projectId, activeTaskEditor.path);
-    const instruction = formatTaskFileInstruction(absoluteTaskPath);
-    const workspaceInstruction = buildWorkspaceInstructionPromptDetails(activeTaskEditor.projectId);
-    const payload: CreateAgentPayload = {
-      toolId,
-      name: activeTaskEditor.title,
-      task: `Open task file ${absoluteTaskPath}`,
-      commandOverride: "",
-      launchSource: "task-panel",
-      mode: "write",
-      target: { kind: "new" }
-    };
-    try {
-      const launchResult = await launchAgentWithInstruction({
-        payload,
-        createAgent: (agentPayload) => runWithStatus("Creating agent", () => noraAgentClient.createAgent(agentPayload)),
-        instruction,
-        prompt: {
-          source: "task-panel",
-          title: "Task details",
-          contextSelections: payload.contextSelections ?? [],
-          workspacePaths: [
-            { path: absoluteTaskPath, kind: "file" },
-            ...workspaceInstruction.workspacePaths
-          ],
-          references: [
-            { kind: "workspace-path", label: "Task file", value: absoluteTaskPath },
-            ...workspaceInstruction.references
-          ]
-        },
-        handoffStatusMessage: "Sending task details",
-        statusBar,
-        updateSnapshot: updateSnapshotState,
-        focusAgent: focusCreatedAgent,
-        trackCreation: (agentPayload) => {
-          trackAgentCreation(agentPayload, "task-panel");
-        },
-        onCreated: async () => {
-          setTaskEditorState(null);
-        }
-      });
-      if (!launchResult) {
-        return;
-      }
-
-      await recordTaskAssignment(activeTaskEditor.projectId, activeTaskEditor.path, {
-        agentId: launchResult.agentId,
-        sessionId: launchResult.createdAgent?.sessionId ?? "",
-        agentName: launchResult.createdAgent?.name ?? activeTaskEditor.title,
-        toolId: launchResult.createdAgent?.toolId ?? toolId,
-        toolLabel: launchResult.createdAgent?.toolLabel ?? toolId
-      });
-    } catch (error: unknown) {
-      captureError(error);
-    }
+  const openTaskThread = async (task: TaskCenterTaskReference): Promise<void> => {
+    const absolutePath = await resolveWorkspaceStatePath(task.projectId, task.path);
+    const id = await native.launch({ projectId: task.projectId, text: formatTaskFileInstruction(absolutePath),
+      source: { kind: "task", projectId: task.projectId, path: task.path } });
+    if (id) { setTaskEditorState(null); setIsTaskBoardOpen(false); setIsSpecBrowserOpen(false); setIsNoteBrowserOpen(false); }
   };
-
-  const createAgentForTaskReference = async (toolId: string, task: TaskCenterTaskReference): Promise<void> => {
-    const nextWorkspaceState =
-      snapshot?.project?.id === task.projectId
-        ? snapshot
-        : await focusWorkspaceWithRecovery(task.projectId);
-    if (!nextWorkspaceState) {
-      return;
-    }
-
-    const absoluteTaskPath = await resolveWorkspaceStatePath(task.projectId, task.path);
-    const instruction = formatTaskFileInstruction(absoluteTaskPath);
-    const workspaceInstruction = buildWorkspaceInstructionPromptDetails(task.projectId);
-    const payload: CreateAgentPayload = {
-      toolId,
-      name: task.title,
-      task: `Open task file ${absoluteTaskPath}`,
-      commandOverride: "",
-      launchSource: "task-reference",
-      mode: "write",
-      target: { kind: "new" }
-    };
-    const launchResult = await launchAgentWithInstruction({
-      payload,
-      createAgent: noraAgentClient.createAgent,
-      instruction,
-      prompt: {
-        source: "task-reference",
-        title: "Task details",
-        contextSelections: payload.contextSelections ?? [],
-        workspacePaths: [
-          { path: absoluteTaskPath, kind: "file" },
-          ...workspaceInstruction.workspacePaths
-        ],
-        references: [
-          { kind: "workspace-path", label: "Task file", value: absoluteTaskPath },
-          ...workspaceInstruction.references
-        ]
-      },
-      handoffStatusMessage: "Sending task details",
-      statusBar,
-      updateSnapshot: updateSnapshotState,
-      focusAgent: focusCreatedAgent,
-      trackCreation: (agentPayload) => {
-        trackAgentCreation(agentPayload, "task-reference");
-      },
-      onCreated: async ({ snapshot: nextSnapshot }) => {
-        updateSnapshotState(nextSnapshot);
-      }
-    });
-    if (!launchResult) {
-      throw new Error(`Unable to determine the created agent for ${task.title}.`);
-    }
-
-    await recordTaskAssignment(task.projectId, task.path, {
-      agentId: launchResult.agentId,
-      sessionId: launchResult.createdAgent?.sessionId ?? "",
-      agentName: launchResult.createdAgent?.name ?? task.title,
-      toolId: launchResult.createdAgent?.toolId ?? toolId,
-      toolLabel: launchResult.createdAgent?.toolLabel ?? toolId
-    });
+  const handleSpawnTaskAgent = async (_toolId: string): Promise<void> => {
+    if (!taskEditorState) return;
+    try { await openTaskThread(taskEditorState); } catch (cause) { captureError(cause); }
   };
-
-  const handleSpawnAgentsForTasks = async (toolId: string, tasks: TaskCenterTaskReference[]): Promise<void> => {
-    if (!tasks.length) {
-      return;
-    }
-
-    const statusId = statusBar.beginStatus(`Creating ${tasks.length} task agents`, true);
-    try {
-      for (const task of tasks) {
-        await createAgentForTaskReference(toolId, task);
-      }
-      setTaskEditorState(null);
-      setIsTaskBoardOpen(false);
-      setIsSpecBrowserOpen(false);
-      setIsNoteBrowserOpen(false);
-    } catch (error: unknown) {
-      captureError(error);
-    } finally {
-      statusBar.endStatus(statusId);
-    }
+  const handleSpawnAgentsForTasks = async (_toolId: string, tasks: TaskCenterTaskReference[]): Promise<void> => {
+    try { for (const task of tasks) await openTaskThread(task); } catch (cause) { captureError(cause); }
   };
-
-  const generateWorkspaceTasksWithAgent = async (
-    projectId: string,
-    toolId: string,
-    brief: string | null,
-    specPath: string | null
-  ): Promise<void> => {
-    const nextWorkspaceState =
-      snapshot?.project?.id === projectId
-        ? snapshot
-        : await focusWorkspaceWithRecovery(projectId);
-    if (!nextWorkspaceState?.project || nextWorkspaceState.project.id !== projectId) {
-      return;
-    }
-
-    const projectName = nextWorkspaceState.project.name;
-    const projectRootPath = nextWorkspaceState.project.rootPath;
-    const workspaceInstruction = buildWorkspaceInstructionPromptDetails(projectId);
-    const absoluteSpecPath = specPath ? await resolveWorkspaceStatePath(projectId, specPath) : null;
-    const instruction = createTaskPlanningInstruction({
-      projectName,
-      projectRootPath,
-      brief,
-      specPath
-    });
-
-    const payload: CreateAgentPayload = {
-      toolId,
-      name: `${projectName} planner`,
-      task: `Plan and create project tasks for ${projectName}`,
-      commandOverride: "",
-      launchSource: "task-planner",
-      mode: "write",
-      target: { kind: "root" }
-    };
-    try {
-      await launchAgentWithInstruction({
-        payload,
-        createAgent: (agentPayload) => runWithStatus("Creating planning agent", () => noraAgentClient.createAgent(agentPayload)),
-        instruction,
-        prompt: {
-          source: "task-planner",
-          title: "Planning brief",
-          contextSelections: payload.contextSelections ?? [],
-          workspacePaths: [
-            ...workspaceInstruction.workspacePaths,
-            ...(absoluteSpecPath ? [{ path: absoluteSpecPath, kind: "file" as const }] : [])
-          ],
-          references: [
-            ...workspaceInstruction.references,
-            ...(absoluteSpecPath ? [{ kind: "workspace-path" as const, label: "Spec file", value: absoluteSpecPath }] : [])
-          ]
-        },
-        handoffStatusMessage: "Sending planning brief",
-        statusBar,
-        updateSnapshot: updateSnapshotState,
-        focusAgent: focusCreatedAgent,
-        trackCreation: (agentPayload) => {
-          trackAgentCreation(agentPayload, "task-planner");
-        },
-        onCreated: async () => {
-          setTaskEditorState(null);
-          setIsTaskBoardOpen(false);
-          setIsSpecBrowserOpen(false);
-          setIsNoteBrowserOpen(false);
-        }
-      });
-    } catch (error: unknown) {
-      captureError(error);
-    }
+  const generateWorkspaceTasksWithAgent = async (projectId: string, _toolId: string, brief: string | null, specPath: string | null): Promise<void> => {
+    const project = snapshot?.workspaces.find((entry) => entry.project.id === projectId)?.project ?? (snapshot?.project?.id === projectId ? snapshot.project : null);
+    if (!project) return;
+    try { await native.launch({ projectId, text: createTaskPlanningInstruction({ projectName: project.name, projectRootPath: project.rootPath, brief, specPath }) });
+      setTaskEditorState(null); setIsTaskBoardOpen(false); setIsSpecBrowserOpen(false); setIsNoteBrowserOpen(false);
+    } catch (cause) { captureError(cause); }
   };
-
   const handleCreateAgentFromDialog = async (payload: CreateAgentPayload, taskPath: string | null): Promise<void> => {
-    try {
-      const dialogContextSelections = payload.contextSelections ?? [];
-      const dialogInitialPrompt = payload.initialPrompt?.trim() ?? "";
-      const shouldHandoffInitialPrompt =
-        dialogInitialPrompt.length > 0 && payload.initialPromptDelivery !== "launch-command";
-      const resolvedDialogTaskPath =
-        taskPath && snapshot?.project ? await resolveWorkspaceStatePath(snapshot.project.id, taskPath) : null;
-      const workspaceInstruction = resolvedDialogTaskPath && snapshot?.project
-        ? buildWorkspaceInstructionPromptDetails(snapshot.project.id)
-        : { workspacePaths: [], references: [], reminderText: "" };
-      const launchResult = resolvedDialogTaskPath && snapshot?.project
-        ? await launchAgentWithInstruction({
-          payload,
-          createAgent: (agentPayload) => runWithStatus("Creating agent", () => noraAgentClient.createAgent(agentPayload)),
-          instruction: formatTaskFileInstruction(resolvedDialogTaskPath),
-          prompt: {
-            source: "dialog",
-            title: "Task details",
-            contextSelections: dialogContextSelections,
-            workspacePaths: [
-              { path: resolvedDialogTaskPath, kind: "file" },
-              ...workspaceInstruction.workspacePaths
-            ],
-            references: [
-              { kind: "workspace-path", label: "Task file", value: resolvedDialogTaskPath },
-              ...workspaceInstruction.references
-            ]
-          },
-          handoffStatusMessage: "Sending task details",
-          statusBar,
-          updateSnapshot: updateSnapshotState,
-          focusAgent: focusCreatedAgent,
-          trackCreation: (agentPayload) => {
-            trackAgentCreation(agentPayload, "dialog");
-          }
-        })
-        : dialogContextSelections.length > 0 || shouldHandoffInitialPrompt
-        ? await launchAgent({
-          payload,
-          createAgent: (agentPayload) => runWithStatus("Creating agent", () => noraAgentClient.createAgent(agentPayload)),
-          focusAgent: focusCreatedAgent,
-          trackCreation: (agentPayload) => {
-            trackAgentCreation(agentPayload, "dialog");
-          },
-          handoff: {
-            prompt: {
-              source: "dialog",
-              title: shouldHandoffInitialPrompt ? "Initial prompt" : "Shared agent context",
-              text: shouldHandoffInitialPrompt ? dialogInitialPrompt : workspaceInstruction.reminderText,
-              workspacePaths: workspaceInstruction.workspacePaths,
-              contextSelections: dialogContextSelections,
-              references: workspaceInstruction.references
-            },
-            statusBar,
-            statusMessage: "Sharing selected context",
-            updateSnapshot: updateSnapshotState
-          }
-        })
-        : await launchAgent({
-        payload,
-        createAgent: (agentPayload) => runWithStatus("Creating agent", () => noraAgentClient.createAgent(agentPayload)),
-        trackCreation: (agentPayload) => {
-          trackAgentCreation(agentPayload, "dialog");
-        }
-      });
-      if (!launchResult) {
-        return;
-      }
-
-      if (!taskPath || !snapshot?.project) {
-        return;
-      }
-
-      await recordTaskAssignment(snapshot.project.id, taskPath, {
-        agentId: launchResult.agentId,
-        sessionId: launchResult.createdAgent?.sessionId ?? "",
-        agentName: launchResult.createdAgent?.name ?? (payload.name || "Agent"),
-        toolId: launchResult.createdAgent?.toolId ?? payload.toolId,
-        toolLabel: launchResult.createdAgent?.toolLabel ?? payload.toolId
-      });
-    } catch (error: unknown) {
-      captureError(error);
-    }
+    if (!snapshot?.project) return;
+    try { await native.launch({ projectId: snapshot.project.id, text: payload.initialPrompt || payload.task,
+      contextSelections: payload.contextSelections,
+      ...(taskPath ? { source: { kind: "task", projectId: snapshot.project.id, path: taskPath } as const } : {}) });
+    } catch (cause) { captureError(cause); }
   };
 
   return {

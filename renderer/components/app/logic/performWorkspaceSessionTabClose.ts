@@ -6,6 +6,7 @@ export const performWorkspaceSessionTabClose = (
   handlers: WorkspaceSessionTabCloseHandlers
 ): void => {
   switch (tab.kind) {
+    case "thread": handlers.closeThread?.(tab.id); return;
     case "agent":
       handlers.closeAgent(tab.id);
       return;
