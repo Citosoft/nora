@@ -1,5 +1,7 @@
 import { CodexMcpDiscovery } from "./mcp";
+import { codexAccount } from "./account";
 import type { McpAction, McpResult } from "@shared/types/provider/mcp.types";
+import type { ProviderAccountAction, ProviderAccountResult } from "@shared/types/provider/account.types";
 import { spawn } from "node:child_process";
 import { APP_VERSION } from "@shared/appMeta";
 import { z } from "zod";
@@ -37,13 +39,23 @@ export class CodexAdapter implements ExecutionProvider {
 
   constructor(private readonly options: CodexOptions) { this.instanceId = options.instanceId; }
 
-  async mcp(workspace: WorkspaceRef, action: McpAction): Promise<McpResult> {
+  async mcp(workspace: WorkspaceRef | null, action: McpAction): Promise<McpResult> {
     try {
       const rpc = await this.connect();
       this.mcpDiscovery ??= new CodexMcpDiscovery(rpc);
-      return await this.mcpDiscovery.request(workspace.path, action);
+      return await this.mcpDiscovery.request(workspace?.path ?? null, action);
     } catch {
       return { kind: "unavailable", message: "Codex MCP discovery is unavailable; check the configured runtime and refresh." };
+    }
+  }
+
+  async account(action: ProviderAccountAction): Promise<ProviderAccountResult> {
+    try {
+      return await codexAccount(await this.connect(), action);
+    } catch {
+      return { kind: "unavailable", message: action.kind === "login"
+        ? "Codex could not start sign-in. Check the configured runtime, then try again."
+        : "Codex's account could not be read. Check the configured runtime, then refresh." };
     }
   }
 

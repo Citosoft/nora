@@ -5,6 +5,7 @@ import { BrowserSettingsSection } from "@/components/app/panels/settings/Browser
 import { CliSettingsSection } from "@/components/app/panels/settings/CliSettingsSection";
 import { DevSettingsSection } from "@/components/app/panels/settings/DevSettingsSection";
 import { GeneralSettingsSection } from "@/components/app/panels/settings/GeneralSettingsSection";
+import { McpServersSettingsSection } from "@/components/app/panels/settings/McpServersSettingsSection";
 import { IntegrationsSettingsSection } from "@/components/app/panels/settings/IntegrationsSettingsSection";
 import { PrivacySettingsSection } from "@/components/app/panels/settings/PrivacySettingsSection";
 import { SkillsSettingsSection } from "@/components/app/panels/settings/SkillsSettingsSection";
@@ -71,6 +72,10 @@ export function SettingsPage({ initialGroup }: SettingsPageProps) {
 
           <TabsContent value="cli" className="mt-0">
             <CliSettingsSection />
+          </TabsContent>
+
+          <TabsContent value="mcp" className="mt-0">
+            <McpServersSettingsSection />
           </TabsContent>
 
           <TabsContent value="agentUsage" className="mt-0">

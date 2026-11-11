@@ -14,9 +14,12 @@ export interface ProviderExecution {
   run: ConversationRun;
 }
 import type { McpAction, McpResult } from "@shared/types/provider/mcp.types";
+import type { ProviderAccountAction, ProviderAccountResult } from "@shared/types/provider/account.types";
 
 export interface ExecutionProvider {
-  mcp?(workspace: WorkspaceRef, action: McpAction): Promise<McpResult>;
+  mcp?(workspace: WorkspaceRef | null, action: McpAction): Promise<McpResult>;
+  /** Reads or starts sign-in for the runtime's own account, through the runtime's API where it offers one. */
+  account?(action: ProviderAccountAction): Promise<ProviderAccountResult>;
   readonly kind: ProviderBinding["kind"];
   readonly instanceId: string;
   readonly capabilities: ProviderCapabilities;

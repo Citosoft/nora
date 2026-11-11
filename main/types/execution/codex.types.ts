@@ -40,3 +40,6 @@ export interface CodexApproval {
   request: Pick<ApprovalRequest, "title" | "details" | "options">;
   decisions: Readonly<Record<string, JsonValue>>;
 }
+
+/** Config layer type (`user`, `project`, `system`, …) keyed by each `mcp_servers.*` config path. */
+export type CodexMcpOrigins = Readonly<Record<string, string>>;

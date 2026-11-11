@@ -1,6 +1,7 @@
 import type { CommandReceipt, ConversationCommand, ProviderBinding, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ConversationEventPage, ConversationHeader, ConversationHistoryPage, ConversationSummary, HistoryQuery, HostShutdownResult } from "@shared/types/conversation/queries.types";
 import type { McpRequest, McpResult } from "@shared/types/provider/mcp.types";
+import type { ProviderAccountRequest, ProviderAccountResult } from "@shared/types/provider/account.types";
 import type { ProviderCatalogResult } from "@shared/types/provider/catalog.types";
 import type { HostDependencies, HostLifecycle, WorkerGroup } from "@main/types/execution/host.types";
 import type { EventSubscription } from "@main/types/execution/engine.types";
@@ -108,13 +109,25 @@ export class ExecutionHost {
   }
 
   async mcp(request: McpRequest): Promise<McpResult> {
-    const workspace = await this.deps.workspaces.prepare(request.workspace);
-    if (this.lifecycle !== "running" || workspace.environmentId !== this.environmentId) {
+    const workspace = request.workspace ? await this.deps.workspaces.prepare(request.workspace) : null;
+    if (this.lifecycle !== "running" || (workspace?.environmentId ?? request.environmentId) !== this.environmentId) {
       throw new ExecutionCommandError("environment", "MCP discovery must run on the owning execution host");
     }
     const provider = this.deps.providers.resolve(request.providerKind, request.instanceId);
-    return provider.mcp ? provider.mcp(workspace, request.action)
-      : { kind: "unavailable", message: "This runtime does not expose MCP connections." };
+    if (!provider.mcp) return { kind: "unavailable", message: "This runtime does not expose MCP connections." };
+    const result = await provider.mcp(workspace, request.action);
+    // Without a workspace, runtimes resolve from a neutral directory; never present its project config as global.
+    return workspace || result.kind !== "servers" ? result
+      : { ...result, servers: result.servers.filter((server) => server.scope !== "workspace") };
+  }
+
+  async account(request: ProviderAccountRequest): Promise<ProviderAccountResult> {
+    if (this.lifecycle !== "running" || request.environmentId !== this.environmentId) {
+      throw new ExecutionCommandError("environment", "Provider accounts must be read on the owning execution host");
+    }
+    const provider = this.deps.providers.resolve(request.providerKind, request.instanceId);
+    return provider.account ? provider.account(request.action)
+      : { kind: "unavailable", message: "This runtime does not expose its account." };
   }
 
   private schedule(): void {

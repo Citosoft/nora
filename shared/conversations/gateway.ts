@@ -2,6 +2,7 @@ import { z } from "zod";
 import { commandReceiptSchema, conversationCommandSchema, conversationEventSchema, conversationSchema,
   requestSchema, runSchema, timelineItemSchema, workspaceRefSchema } from "./contracts";
 import { mcpResultSchema } from "@shared/providers/mcp";
+import { providerAccountResultSchema } from "@shared/providers/account";
 import { catalogResultSchema } from "./catalog";
 
 const id = z.string().min(1).max(512);
@@ -46,11 +47,12 @@ export const gatewayReplySchema = z.discriminatedUnion("ok", [
   z.object({ ok: z.literal(true), value: z.discriminatedUnion("kind", [
     ...readResultSchema.options,
     z.object({ kind: z.literal("mcp"), result: mcpResultSchema }).strict(),
+    z.object({ kind: z.literal("account"), result: providerAccountResultSchema }).strict(),
     z.object({ kind: z.literal("receipt"), receipt: commandReceiptSchema }).strict(),
     z.object({ kind: z.literal("watch"), receipt: watchReceiptSchema }).strict(),
     z.object({ kind: z.literal("unwatched") }).strict()
   ]) }).strict(),
   z.object({ ok: z.literal(false), error: gatewayErrorSchema }).strict()
 ]);
-export const conversationChannels = Object.freeze({ execute: "conversation:execute", read: "conversation:read", mcp: "provider:mcp",
+export const conversationChannels = Object.freeze({ execute: "conversation:execute", read: "conversation:read", mcp: "provider:mcp", account: "provider:account",
   watch: "conversation:watch", unwatch: "conversation:unwatch", cursor: "conversation:cursor" });

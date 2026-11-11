@@ -2,12 +2,12 @@ import { z } from "zod";
 import { gatewayReplySchema, readResultSchema } from "@shared/conversations/gateway";
 import type { ExecuteConversationRequest, ReadConversationRequest, ReadConversationResult, WatchConversationRequest, ConversationCursorHint,
   ConversationGatewayReply } from "@shared/ipc/types/conversationGateway.types";
-import type { GatewayDependencies, WatchHandle } from "@main/types/execution/gateway.types";
+import type { ConversationReplyValue, GatewayDependencies, WatchHandle } from "@main/types/execution/gateway.types";
 import { ExecutionCommandError } from "./errors";
 
 /** Validates the IPC input immediately and never returns raw transport/provider exceptions. */
 export async function conversationReply<T>(schema: z.ZodType<T>, input: unknown,
-  work: (request: T) => Promise<Extract<ConversationGatewayReply, { ok: true }>["value"]>): Promise<ConversationGatewayReply> {
+  work: (request: T) => Promise<ConversationReplyValue>): Promise<ConversationGatewayReply> {
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { ok: false, error: { code: "invalid", message: "Conversation request is invalid or uses an unsupported schema" } };
   try { return gatewayReplySchema.parse({ ok: true, value: await work(parsed.data) }); }

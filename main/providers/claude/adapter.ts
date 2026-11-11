@@ -1,4 +1,5 @@
 import type { McpAction, McpResult } from "@shared/types/provider/mcp.types";
+import type { ProviderAccountAction, ProviderAccountResult } from "@shared/types/provider/account.types";
 import type { ExecutionProvider, EmitProviderUpdate, ProviderExecution } from "@main/types/execution/provider.types";
 import type { ClaudeActive, ClaudeOptions, ClaudePending, ClaudePrompt } from "@main/types/execution/claude.types";
 import type { RequestResponse, RuntimeRequest, ToolActivity, WorkspaceRef } from "@shared/types/conversation/contracts.types";
@@ -14,10 +15,15 @@ export class ClaudeAdapter implements ExecutionProvider {
   private readonly requests = new Map<string, ClaudePending>();
   constructor(private readonly options: ClaudeOptions) { this.instanceId = options.instanceId; }
 
-  async mcp(workspace: WorkspaceRef, action: McpAction): Promise<McpResult> {
+  async mcp(workspace: WorkspaceRef | null, action: McpAction): Promise<McpResult> {
     if (action.kind === "login") return { kind: "unavailable", message: "Sign in to this MCP server in an interactive Claude Code session on the same machine, then refresh in Nora." };
-    return this.options.readMcp ? this.options.readMcp(workspace.path)
+    return this.options.readMcp ? this.options.readMcp(workspace?.path ?? null)
       : { kind: "unavailable", message: "This Claude runtime does not expose MCP discovery." };
+  }
+
+  async account(action: ProviderAccountAction): Promise<ProviderAccountResult> {
+    return this.options.account ? this.options.account(action)
+      : { kind: "unavailable", message: "This Claude runtime does not expose its account." };
   }
 
   async catalog(workspace: WorkspaceRef): Promise<ProviderCatalogResult> {

@@ -26,7 +26,7 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingsSearchEntry[] = [
   { group: "terminal", title: "Terminal presets", keywords: ["commands", "scripts"] },
   { group: "browser", title: "Auto-open Browser On New Port", keywords: ["localhost", "url", "dev server"] },
   { group: "browser", title: "Import Chrome Cookies", keywords: ["login", "session", "profile"] },
-  { group: "cli", title: "MCP Connections", keywords: ["mcp", "servers", "tools", "connections", "runtime", "authentication"] },
+  { group: "mcp", title: "MCP Servers", keywords: ["mcp", "servers", "tools", "connections", "discovered", "runtime", "authentication", "claude", "codex"] },
   { group: "cli", title: "Preferred Provider", keywords: ["providers", "claude", "codex", "cursor", "default", "agents", "cli", "enable", "configure"] },
   { group: "agentUsage", title: "Claude Code", keywords: ["tokens", "usage"] },
   { group: "agentUsage", title: "Codex", keywords: ["tokens", "usage"] },

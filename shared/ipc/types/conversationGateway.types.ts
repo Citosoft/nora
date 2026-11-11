@@ -14,9 +14,11 @@ export type ConversationGatewayError = z.infer<typeof gatewayErrorSchema>;
 export type ConversationGatewayReply = z.infer<typeof gatewayReplySchema>;
 
 import type { McpRequest, McpResult } from "@shared/types/provider/mcp.types";
+import type { ProviderAccountRequest, ProviderAccountResult } from "@shared/types/provider/account.types";
 
 export interface ConversationBridge {
   mcp(request: McpRequest): Promise<McpResult>;
+  account(request: ProviderAccountRequest): Promise<ProviderAccountResult>;
   execute(request: ExecuteConversationRequest): Promise<CommandReceipt>;
   read(request: ReadConversationRequest): Promise<ReadConversationResult>;
   watch(request: WatchConversationRequest): Promise<ConversationWatchReceipt>;

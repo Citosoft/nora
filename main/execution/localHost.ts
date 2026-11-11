@@ -1,4 +1,5 @@
 import { createClaudeMcpReader } from "@main/providers/claude/mcp";
+import { createClaudeAccount } from "@main/providers/claude/account";
 import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { dirname, isAbsolute } from "node:path";
@@ -28,7 +29,7 @@ export async function openLocalHost(options: LocalHostOptions): Promise<Executio
       switch (instance.kind) {
         case "codex": providers.register(new CodexAdapter({ ...instance.options, now })); break;
         case "claude": providers.register(new ClaudeAdapter({ instanceId: instance.instanceId, policies: instance.policies,
-          open: createClaudeOpener(instance.runtime), discover: createClaudeDiscovery(instance.runtime), readMcp: createClaudeMcpReader(instance.runtime), now, nextId: randomUUID })); break;
+          open: createClaudeOpener(instance.runtime), discover: createClaudeDiscovery(instance.runtime), readMcp: createClaudeMcpReader(instance.runtime), account: createClaudeAccount(instance.runtime), now, nextId: randomUUID })); break;
       }
     }
     const workspaces = new LocalWorkspaceAuthority({ environmentId: options.environmentId, registrations: options.registrations,

@@ -1,3 +1,4 @@
+import type { ProviderAccountAction, ProviderAccountResult } from "@shared/types/provider/account.types";
 import type { McpResult } from "@shared/types/provider/mcp.types";
 import type { EffortLevel, PermissionMode } from "@anthropic-ai/claude-agent-sdk";
 import type { randomUUID } from "node:crypto";
@@ -33,7 +34,8 @@ export interface ClaudeOptions {
   instanceId: string;
   policies: Readonly<Record<string, PermissionMode>>;
   open: (input: ClaudeOpenInput) => ClaudeSession;
-  readMcp?: (cwd: string) => Promise<McpResult>;
+  readMcp?: (cwd: string | null) => Promise<McpResult>;
+  account?: (action: ProviderAccountAction) => Promise<ProviderAccountResult>;
   discover: (cwd: string) => Promise<ClaudeDiscovery>;
   now: () => string;
   nextId: () => ReturnType<typeof randomUUID>;

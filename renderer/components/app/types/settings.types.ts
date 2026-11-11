@@ -130,6 +130,7 @@ export type SettingsGroup =
   | "terminal"
   | "browser"
   | "cli"
+  | "mcp"
   | "agentUsage"
   | "skills"
   | "integrations"

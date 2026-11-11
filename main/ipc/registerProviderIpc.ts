@@ -1,22 +1,31 @@
+import type { z } from "zod";
 import { conversationChannels } from "@shared/conversations/gateway";
 import { mcpRequestSchema } from "@shared/providers/mcp";
+import { providerAccountRequestSchema } from "@shared/providers/account";
 import { conversationReply } from "@main/execution/gateway";
 import { ExecutionCommandError } from "@main/execution/errors";
-import type { RegisterConversationDeps } from "@main/types/execution/gateway.types";
+import type { ConversationHost, ConversationReplyValue, RegisterConversationDeps } from "@main/types/execution/gateway.types";
 
-/** Provider connections belong to the selected workspace's execution host. */
+/** Provider connections and accounts belong to the owning execution host. */
 export function registerProviderIpc(deps: RegisterConversationDeps): () => void {
-  deps.ipc.handle(conversationChannels.mcp, async (event, input) => {
-    if (event.sender.isDestroyed() || !deps.isAllowedSender(event)) {
-      return { ok: false, error: { code: "environment", message: "Provider access is unavailable for this window" } };
-    }
-    return conversationReply(mcpRequestSchema, input, async (request) => {
-      const host = deps.resolveHost(request.environmentId);
-      if (!host || host.environmentId !== request.environmentId) {
-        throw new ExecutionCommandError("environment", "The owning execution host is unavailable; reconnect to that environment");
+  function handle<T extends { environmentId: string }>(channel: string, schema: z.ZodType<T>, run: (host: ConversationHost, request: T) => Promise<ConversationReplyValue>): void {
+    deps.ipc.handle(channel, async (event, input) => {
+      if (event.sender.isDestroyed() || !deps.isAllowedSender(event)) {
+        return { ok: false, error: { code: "environment", message: "Provider access is unavailable for this window" } };
       }
-      return { kind: "mcp", result: await host.mcp(request) };
+      return conversationReply(schema, input, async (request) => {
+        const host = deps.resolveHost(request.environmentId);
+        if (!host || host.environmentId !== request.environmentId) {
+          throw new ExecutionCommandError("environment", "The owning execution host is unavailable; reconnect to that environment");
+        }
+        return run(host, request);
+      });
     });
-  });
-  return () => deps.ipc.removeHandler(conversationChannels.mcp);
+  }
+  handle(conversationChannels.mcp, mcpRequestSchema, async (host, request) => ({ kind: "mcp", result: await host.mcp(request) }));
+  handle(conversationChannels.account, providerAccountRequestSchema, async (host, request) => ({ kind: "account", result: await host.account(request) }));
+  return () => {
+    deps.ipc.removeHandler(conversationChannels.mcp);
+    deps.ipc.removeHandler(conversationChannels.account);
+  };
 }
