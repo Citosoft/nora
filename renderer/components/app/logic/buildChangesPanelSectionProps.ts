@@ -1,3 +1,4 @@
+import { canGenerateSimpleText } from "@shared/ai/settings";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
 import { noraWorkspaceManagementClient } from "@/components/app/clients/noraWorkspaceManagementClient";
@@ -127,9 +128,7 @@ export const buildChangesPanelSectionProps = (
         d.setActiveWorkspaceContentTab("diff");
       },
       onCommitChanges: (message, paths) => d.safely(() => noraWorkspaceClient.commitChanges(message, paths)),
-      canGenerateAiCommitMessage:
-        d.appSettingsAi.simpleTaskProvider === "local" ||
-        Object.values(d.appSettingsAi.apiKeys).some((apiKey) => apiKey.trim().length > 0),
+      canGenerateAiCommitMessage: canGenerateSimpleText(d.appSettingsAi),
       onGenerateCommitMessage: async (paths) => {
         try {
           return await noraWorkspaceClient.generateCommitMessage({ paths });

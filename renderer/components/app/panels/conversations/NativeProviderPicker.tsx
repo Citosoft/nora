@@ -7,7 +7,7 @@ import type { ModelChoice } from "@/components/app/types/modelPicker.types";
 import { NativeModelOptions } from "./NativeModelOptions";
 import { NativeModelPopover } from "./NativeModelPopover";
 
-export function NativeProviderPicker({ state, workspace, client, locked, initial, onBinding }: NativeProviderPickerProps) {
+export function NativeProviderPicker({ state, workspace, client, locked, initial, onBinding, onCapabilities }: NativeProviderPickerProps) {
   const saved = locked ?? initial;
   const [choice, setChoice] = useState<ModelChoice>(() => ({ providerKey: saved ? nativeProviderKey(saved) : state.providers[0] ? nativeProviderKey(state.providers[0]) : "", modelId: saved?.model ?? null }));
   const [policy, setPolicy] = useState<string | null>(initial?.permissionPolicy ?? null);
@@ -32,6 +32,7 @@ export function NativeProviderPicker({ state, workspace, client, locked, initial
     if (!locked && policy === null && !needsPolicy && available?.policies[0]) setPolicy(available.policies[0].id);
   }, [locked, policy, needsPolicy, available]);
   useEffect(() => { onBinding(resolution.status === "ready" ? resolution.binding : null); }, [resolution, onBinding]);
+  useEffect(() => { onCapabilities?.(available?.capabilities ?? null); }, [available, onCapabilities]);
   return <div className="space-y-2">
     <div className="flex flex-wrap items-center gap-1">
       <NativeModelPopover providers={state.providers} store={store} selectedProvider={provider} selectedModel={model} selectedModelId={modelId} locked={!!locked}

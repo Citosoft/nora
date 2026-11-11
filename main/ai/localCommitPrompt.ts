@@ -1,12 +1,12 @@
 import type { ChangeEntry } from "@shared/appTypes";
-import type { LocalTextGenerationRequest } from "@main/types/localTextGeneration.types";
+import type { TextGenerationRequest } from "@main/types/ai/textGeneration.types";
 
 const MAX_LOCAL_TOP_FILES = 10;
 
 const LOCAL_COMMIT_SYSTEM_PROMPT =
   "You write git commit subject lines. Output ONLY the subject (max 72 chars). Use imperative mood. No quotes. Summarize the main feature or fix, not individual file names.";
 
-export function buildLocalCommitMessageRequest(changes: ChangeEntry[]): LocalTextGenerationRequest {
+export function buildLocalCommitMessageRequest(changes: ChangeEntry[]): TextGenerationRequest {
   return {
     system: LOCAL_COMMIT_SYSTEM_PROMPT,
     user: buildCompactLocalCommitUserPrompt(changes)

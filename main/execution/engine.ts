@@ -10,6 +10,8 @@ import { isActiveRun } from "./projection";
 import { providerUpdateSchema } from "./providerUpdateSchema";
 import { commandFingerprint } from "./commandIdentity";
 import { finalizeReview } from "./finalizeReview";
+import { finalizeSteering } from "./finalizeSteering";
+import type { SteeringResult } from "@main/types/execution/steering.types";
 import { recoverExecution } from "./recoverExecution";
 import { conversationReviewSchema } from "@shared/conversations/review";
 import type { ConversationReview } from "@shared/types/conversation/review.types";
@@ -68,6 +70,20 @@ export class ConversationEngine {
     return result;
   }
 
+  applyGeneratedTitle(conversationId: string, expectedTitle: string, title: string): void {
+    this.deps.assertOwnership();
+    const normalized = title.trim().slice(0, 60);
+    if (!normalized) return;
+    this.deps.store.transaction((transaction) => {
+      const conversation = transaction.state(conversationId)?.conversation;
+      if (!conversation || conversation.archivedAt || conversation.title !== expectedTitle || conversation.title === normalized) return;
+      const at = this.deps.now();
+      this.commitEvents(transaction, conversationId, at, [{ kind: "conversation",
+        conversation: { ...conversation, title: normalized, updatedAt: at } }]);
+    });
+    this.publish();
+  }
+
   accept(input: ProviderUpdate): void {
     this.deps.assertOwnership();
     const update = providerUpdateSchema.parse(input);
@@ -115,6 +131,10 @@ export class ConversationEngine {
         const snapshot = transaction.state(effect.conversationId, effect.runId);
         const run = snapshot?.runs.find((entry) => entry.id === effect.runId && entry.attemptId === effect.attemptId);
         const reviewable = run && !isActiveRun(run) && run.state !== "queued" && run.review === "pending";
+        if (effect.action.kind === "steer" && run) {
+          const claimed = { ...effect, status: "claimed" as const };
+          transaction.putEffect(claimed); return claimed;
+        }
         if (!run || (effect.action.kind === "review" ? !reviewable : !isActiveRun(run))) {
           transaction.putEffect({ ...effect, status: "done" }); continue;
         }
@@ -150,6 +170,16 @@ export class ConversationEngine {
       if (effect.action.kind === "review") throw new ExecutionCommandError("conflict", "Review evidence must be finalized before retiring its effect");
       transaction.putEffect({ ...effect, status: "done" });
     });
+  }
+
+  finishSteering(effectId: string, result: SteeringResult): void {
+    this.deps.assertOwnership();
+    this.deps.store.transaction((transaction) => {
+      const effect = transaction.effect(effectId);
+      if (!effect || effect.action.kind !== "steer") throw new ExecutionCommandError("conflict", "Effect is not steering delivery");
+      finalizeSteering(transaction, effect, result, this.deps.now(), this.deps.nextId);
+    });
+    this.publish();
   }
 
   finishReview(effectId: string, input: ConversationReview): void {

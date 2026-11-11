@@ -16,7 +16,7 @@ export function ThreadCheckoutPicker({ workspace, workspaces, disabled, onSelect
     <GitBranch className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" /><span className="truncate text-xs">{label}</span><ChevronDown className="size-3.5 shrink-0" aria-hidden="true" />
   </Button></PopoverTrigger><PopoverContent side="top" aria-label="Choose thread checkout" className="w-[min(22rem,calc(100vw-1.5rem))] bg-popover p-2">
     <h2 className="px-3 pb-2 pt-1 text-xs font-medium text-muted-foreground">Registered checkouts</h2><div className="max-h-64 space-y-1 overflow-y-auto">{choices.map((entry) => <button key={entry.id} type="button" aria-pressed={entry.id === workspace.id}
-      onClick={() => { onSelect(entry.id); setOpen(false); }} className={`flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm ${entry.id === workspace.id ? "bg-secondary" : "hover:bg-muted"}`}>
+      onClick={() => { onSelect(entry.id); setOpen(false); }} className={`flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm ${entry.id === workspace.id ? "bg-secondary" : "hover:bg-muted"}`}>
       <GitBranch className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" /><span className="min-w-0 flex-1 truncate">{entry.workspace.branch || "Detached HEAD"}</span>{entry.id === workspace.id && <Check className="size-4" aria-hidden="true" />}
     </button>)}</div>
   </PopoverContent></Popover>;

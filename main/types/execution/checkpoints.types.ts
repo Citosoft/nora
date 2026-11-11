@@ -5,6 +5,8 @@ import type { TurnReview } from "@shared/types/conversation/review.types";
 
 export type FileSnapshot = z.infer<typeof fileSnapshotSchema>;
 export type CheckpointFile = FileSnapshot["files"][number];
+export type CheckpointOmission = NonNullable<FileSnapshot["omitted"]>[number];
+export type CheckpointEntry = CheckpointFile | CheckpointOmission;
 export type CheckpointCapture = z.infer<typeof checkpointCaptureSchema>;
 export type StoredCheckpoint = z.infer<typeof storedCheckpointSchema>;
 export type ManifestCapture = z.infer<typeof manifestCaptureSchema>;

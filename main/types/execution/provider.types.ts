@@ -5,6 +5,7 @@ import type { ExecutionState } from "./store.types";
 import type { ProviderCapabilities } from "@shared/types/provider/capabilities.types";
 import type { ProviderCatalogResult } from "@shared/types/provider/catalog.types";
 import type { WorkspaceRef } from "@shared/types/conversation/contracts.types";
+import type { SteeringResult } from "./steering.types";
 
 export type ProviderUpdate = z.infer<typeof providerUpdateSchema>;
 export type EmitProviderUpdate = (update: ProviderUpdate) => void;
@@ -12,10 +13,14 @@ export interface ProviderExecution {
   snapshot: ExecutionState;
   run: ConversationRun;
 }
+import type { McpAction, McpResult } from "@shared/types/provider/mcp.types";
+
 export interface ExecutionProvider {
+  mcp?(workspace: WorkspaceRef, action: McpAction): Promise<McpResult>;
   readonly kind: ProviderBinding["kind"];
   readonly instanceId: string;
   readonly capabilities: ProviderCapabilities;
+  steer?(execution: ProviderExecution, instruction: string): Promise<SteeringResult>;
   catalog(workspace: WorkspaceRef): Promise<ProviderCatalogResult>;
   close(): Promise<void>;
   start(execution: ProviderExecution, emit: EmitProviderUpdate): Promise<void>;

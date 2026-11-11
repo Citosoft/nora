@@ -11,6 +11,8 @@ import { randomUUID } from "node:crypto";
 import { DEFAULT_APP_SETTINGS } from "@shared/appTypes";
 import { app, BrowserWindow, session, dialog, ipcMain, shell } from "electron";
 import { openNativeRuntime } from "./helpers/nativeRuntime";
+import { createWindowStartup } from "./helpers/windowStartup";
+import { createAppShutdown } from "./helpers/appShutdown";
 import { registerConversationIpc } from "./ipc/registerConversationIpc";
 import { registerPersonalizationIpc } from "./ipc/registerPersonalizationIpc";
 import type { NativeRuntime } from "./types/native-runtime/runtime.types";
@@ -76,6 +78,19 @@ let nativeRuntime: NativeRuntime;
 let loopRunner: LoopRunner;
 let stopRendererWatcher: (() => void) | null = null;
 let isClosingMainWindow = false;
+const windowStartup = createWindowStartup({
+  hasWindow: () => BrowserWindow.getAllWindows().length > 0,
+  createWindow
+});
+const appShutdown = createAppShutdown({
+  shutdown: async () => {
+    loopRunner?.dispose();
+    await nativeRuntime?.host.shutdown();
+    if (mainWindow) await shutdownMainWindow();
+  },
+  quit: () => app.quit(),
+  onFailure: (message) => console.error("Nora shutdown failed:", message)
+});
 const appSettingsStore = new AppSettingsStore(getAppSettingsPath());
 let appSettings: AppSettings = DEFAULT_APP_SETTINGS;
 const workspaceLoadingTimingByProject = new Map<string, { startedAt: number; lastStepAt: number }>();
@@ -374,8 +389,6 @@ function focusMainWindow(): void {
 }
 
 async function shutdownMainWindow(): Promise<void> {
-  loopRunner?.dispose();
-  await nativeRuntime?.host.shutdown();
   await shutdownMainWindowHelper({
     getMainWindow: () => mainWindow,
     getIsClosing: () => isClosingMainWindow,
@@ -558,7 +571,7 @@ async function bootstrap(): Promise<void> {
     openFolder: async (selectedPath) => { const error = await shell.openPath(selectedPath); if (error) throw new Error(error); }
   });
   registerIpc();
-  createWindow();
+  windowStartup.start();
   notifyStateChanged(initialSnapshot);
   setLastBroadcastSnapshot(initialSnapshot);
   notifyWindowStateChanged();
@@ -582,8 +595,8 @@ app.on("window-all-closed", () => {
   }
 });
 
+app.on("before-quit", (event) => appShutdown.beforeQuit(event));
+
 app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
+  if (!appShutdown.isQuitting()) windowStartup.activate();
 });

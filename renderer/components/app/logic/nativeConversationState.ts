@@ -16,13 +16,17 @@ export function applyNativeEvent(view: NativeConversationView, event: Conversati
     case "item": return { ...view, header, items: mergeTimeline(view.items, [payload.item]) };
     case "run": {
       const run = payload.run;
+      view = { ...view, runHistory: { ...view.runHistory, runs: [...view.runHistory.runs.filter((entry) => entry.id !== run.id), run] } };
       header.activeRuns = header.activeRuns.filter((entry) => entry.id !== run.id);
       header.queuedRuns = header.queuedRuns.filter((entry) => entry.id !== run.id);
       if (run.state === "queued") header.queuedRuns.push(run);
       else if (!["completed", "failed", "interrupted"].includes(run.state)) header.activeRuns.push(run);
       break;
     }
-    case "remove-run": header.queuedRuns = header.queuedRuns.filter((entry) => entry.id !== payload.runId); break;
+    case "remove-run":
+      header.queuedRuns = header.queuedRuns.filter((entry) => entry.id !== payload.runId);
+      view = { ...view, runHistory: { ...view.runHistory, runs: view.runHistory.runs.filter((entry) => entry.id !== payload.runId) } };
+      break;
     case "request":
       header.pendingRequests = header.pendingRequests.filter((entry) => entry.id !== payload.request.id);
       if (payload.request.status === "pending" || payload.request.status === "responding") header.pendingRequests.push(payload.request);

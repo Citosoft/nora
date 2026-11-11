@@ -23,7 +23,8 @@ export const workspaceRefSchema = z.object({
 export const failureSchema = z.object({
   code: z.enum(["authentication", "usage-limit", "provider", "host", "disconnected", "uncertain", "unsupported"]),
   message: z.string().min(1),
-  retryable: z.boolean()
+  retryable: z.boolean(),
+  resetsAt: z.string().datetime().optional()
 }).strict();
 export const usageSchema = z.object({
   inputTokens: z.number().int().nonnegative(),
@@ -53,19 +54,33 @@ export const runSchema = z.object({
   nativeTurnId: id.nullable(),
   createdAt: time,
   updatedAt: time,
+  // Older persisted turns can recover their start from the instruction timeline item.
+  startedAt: time.optional(),
+  steering: z.enum(["pending", "unconfirmed"]).optional(),
   failure: failureSchema.nullable(),
   usage: usageSchema.nullable(),
   review: z.enum(["pending", "ready", "unavailable"])
 }).strict();
 const itemBase = { id, runId: id, createdAt: time };
+export const toolStateSchema = z.enum(["running", "completed", "failed", "declined", "interrupted", "unconfirmed"]);
+export const toolDetailsSchema = z.object({
+  category: z.enum(["command", "integration", "search", "file", "image", "agent", "wait", "other"]),
+  input: z.string().optional(), detail: z.string().optional(), parentId: z.string().optional(), patch: z.string().optional(),
+  durationMs: z.number().nonnegative().optional(), exitCode: z.number().int().optional()
+}).strict();
+export const approvalDetailsSchema = z.object({
+  kind: z.enum(["command", "files", "network", "tool"]),
+  command: z.string().optional(), workingDirectory: z.string().optional(), reason: z.string().optional(),
+  paths: z.array(z.string()).optional(), target: z.string().optional(), input: z.string().optional()
+}).strict();
 export const timelineItemSchema = z.discriminatedUnion("kind", [
   z.object({ ...itemBase, kind: z.literal("message"), role: z.enum(["user", "assistant"]), text: z.string(), complete: z.boolean() }).strict(),
   z.object({ ...itemBase, kind: z.literal("reasoning"), text: z.string(), complete: z.boolean() }).strict(),
-  z.object({ ...itemBase, kind: z.literal("tool"), label: z.string(), output: z.string(), state: z.enum(["running", "completed", "failed"]) }).strict(),
+  z.object({ ...itemBase, kind: z.literal("tool"), label: z.string(), output: z.string(), state: toolStateSchema, details: toolDetailsSchema.optional() }).strict(),
   z.object({ ...itemBase, kind: z.literal("milestone"), text: z.string() }).strict(),
   z.object({ ...itemBase, kind: z.literal("plan"), steps: z.array(z.object({ text: z.string(), state: z.enum(["pending", "running", "completed"]) }).strict()) }).strict(),
   z.object({ ...itemBase, kind: z.literal("subagent"), label: z.string(), nativeId: id, state: z.enum(["running", "completed", "failed"]) }).strict(),
-  z.object({ ...itemBase, kind: z.literal("changes"), paths: z.array(z.string()), attribution: z.enum(["turn", "workspace"]) }).strict(),
+  z.object({ ...itemBase, kind: z.literal("changes"), paths: z.array(z.string()), patches: z.record(z.string(), z.string().nullable()).optional(), attribution: z.enum(["turn", "workspace"]) }).strict(),
   z.object({ ...itemBase, kind: z.literal("review"), result: conversationReviewSchema }).strict()
 ]);
 const requestBase = {
@@ -75,8 +90,10 @@ const requestBase = {
   title: z.string().min(1)
 };
 export const requestSchema = z.discriminatedUnion("kind", [
-  z.object({ ...requestBase, kind: z.literal("approval"), options: z.array(z.object({ id, label: z.string().min(1) }).strict()).min(1) }).strict(),
-  z.object({ ...requestBase, kind: z.literal("question"), questions: z.array(z.object({ id, text: z.string(), options: z.array(z.string()), multiple: z.boolean() }).strict()).min(1) }).strict()
+  z.object({ ...requestBase, kind: z.literal("approval"), details: approvalDetailsSchema.optional(),
+    options: z.array(z.object({ id, label: z.string().min(1), intent: z.enum(["allow", "deny", "cancel"]).optional(),
+      scope: z.enum(["once", "session", "persistent"]).optional(), description: z.string().optional() }).strict()).min(1) }).strict(),
+  z.object({ ...requestBase, kind: z.literal("question"), questions: z.array(z.object({ id, text: z.string(), options: z.array(z.string()), multiple: z.boolean(), allowOther: z.boolean().optional() }).strict()).min(1) }).strict()
 ]);
 export const requestResponseSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("approval"), optionId: id }).strict(),
@@ -99,6 +116,7 @@ export const conversationCommandSchema = z.discriminatedUnion("kind", [
   submitConversationCommandSchema,
   z.object({ ...commandBase, kind: z.literal("edit-queued"), runId: id, instruction: z.string().trim().min(1) }).strict(),
   z.object({ ...commandBase, kind: z.literal("remove-queued"), runId: id }).strict(),
+  z.object({ ...commandBase, kind: z.literal("steer-queued"), runId: id, targetRunId: id }).strict(),
   z.object({ ...commandBase, kind: z.literal("continue-queue") }).strict(),
   z.object({ ...commandBase, kind: z.literal("interrupt"), runId: id }).strict(),
   z.object({ ...commandBase, kind: z.literal("reconcile"), runId: id }).strict(),

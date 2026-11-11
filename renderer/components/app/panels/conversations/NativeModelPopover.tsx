@@ -34,7 +34,7 @@ export function NativeModelPopover({ providers, store, selectedProvider, selecte
             const sameKind = providers.filter((entry) => entry.kind === provider.kind).length > 1;
             return <Button key={key} ref={active ? providerFocus : undefined} type="button" size="icon" variant="ghost" aria-pressed={!!active}
               aria-label={`${provider.label} (${provider.instanceId})`} tooltip={`${provider.label} · ${provider.instanceId}`}
-              className={`relative size-11 shrink-0 rounded-lg border ${active ? "border-border bg-background shadow-sm" : "border-transparent"}`}
+              className={`relative size-11 shrink-0 rounded-md border ${active ? "border-border bg-background shadow-sm" : "border-transparent"}`}
               onClick={() => setBrowsingKey(key)}>
               <AiProviderLogo provider={nativeProviderBrands[provider.kind]} className="size-7 rounded-md" imgClassName="size-6" />
               {sameKind && <span className="absolute -bottom-1 max-w-14 truncate rounded bg-popover px-1 text-[11px] text-popover-foreground">{provider.instanceId}</span>}

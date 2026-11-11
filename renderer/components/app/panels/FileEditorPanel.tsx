@@ -4,11 +4,9 @@ import {
   useWorkspaceSessionPanelActions,
   useWorkspaceSessionPanelData
 } from "@/components/app/context/workspaceSessionPanelContext";
-import { noraAgentClient } from "@/components/app/clients/noraAgentClient";
 import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
 import { useFileEditorMonacoWorkspaceSupport } from "@/components/app/hooks/useFileEditorMonacoWorkspaceSupport";
 import { useSessionCenterPorts } from "@/components/app/hooks/useSessionCenterPorts";
-import { handoffPromptToAgent } from "@/components/app/logic/agentHandoff";
 import { joinWorkspacePath } from "@/components/app/logic/appUtils";
 import { normalizeBrowserUrl } from "@/components/app/logic/browserTabs";
 import { buildFileEditorBreadcrumbs, getFileEditorLeafName } from "@/components/app/logic/fileEditorPath";

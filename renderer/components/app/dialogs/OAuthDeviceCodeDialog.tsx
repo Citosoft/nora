@@ -1,6 +1,7 @@
 import type { OAuthDeviceCodeDialogProps } from "@/components/app/types/component.types";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader } from "@/components/ui/dialog";
+import { DialogBody, DialogContent, DialogFooter, DialogHeader } from "@/components/ui/dialog";
+import * as Dialog from "@radix-ui/react-dialog";
 import { Copy, ExternalLink, KeyRound } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -33,74 +34,80 @@ export function OAuthDeviceCodeDialog({
   }, [copyState, open]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        onClose={() => onOpenChange(false)}
-        headerTitle={(
-          <span className="flex items-center gap-2">
-            <KeyRound className="size-4 text-primary" />
-            {providerLabel} Device Login
-          </span>
-        )}
-      >
-        <DialogHeader>
-          <DialogDescription>
-            Enter this code on the provider verification page to finish sign-in.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogBody className="space-y-4">
-          <div className="rounded-[6px] border border-border/60 bg-card/50 px-3 py-3">
-            <div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Device code</div>
-            <div className="mt-1 font-mono text-lg font-semibold tracking-[0.08em] text-foreground">{userCode || "Unavailable"}</div>
-          </div>
-          <div className="rounded-[6px] border border-border/60 bg-card/50 px-3 py-3">
-            <div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Verification URL</div>
-            <div className="mt-1 break-all text-sm text-foreground">{verificationUri || "Unavailable"}</div>
-          </div>
-        </DialogBody>
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => {
-              if (!userCode || copyState === "copying") {
-                return;
-              }
-              setCopyState("copying");
-              void Promise.resolve()
-                .then(() => onCopyCode(userCode))
-                .then(() => {
-                  setCopyState("copied");
-                })
-                .catch(() => {
-                  setCopyState("failed");
-                });
-            }}
-            disabled={!userCode || copyState === "copying"}
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-[30000] bg-background/80 backdrop-blur-sm" />
+        {/* Join the modal stack so Settings releases pointer events and focus. */}
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-[30001] -translate-x-1/2 -translate-y-1/2 focus:outline-none">
+          <DialogContent
+            onClose={() => onOpenChange(false)}
+            headerTitle={(
+              <Dialog.Title className="flex items-center gap-2">
+                <KeyRound className="size-4 text-primary" />
+                {providerLabel} Device Login
+              </Dialog.Title>
+            )}
           >
-            <Copy className="size-4" />
-            {copyState === "copying"
-              ? "Copying..."
-              : copyState === "copied"
-                ? "Copied"
-                : copyState === "failed"
-                  ? "Copy Failed"
-                  : "Copy Code"}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              if (verificationUri) {
-                onOpenVerificationUrl(verificationUri);
-              }
-            }}
-            disabled={!verificationUri}
-          >
-            <ExternalLink className="size-4" />
-            Open Verification Page
-          </Button>
-          <Button onClick={() => onOpenChange(false)}>Done</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            <DialogHeader>
+              <Dialog.Description className="text-sm text-muted-foreground">
+                Enter this code on the provider verification page to finish sign-in.
+              </Dialog.Description>
+            </DialogHeader>
+            <DialogBody className="space-y-4">
+              <div className="rounded-[6px] border border-border/60 bg-card/50 px-3 py-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Device code</div>
+                <div className="mt-1 font-mono text-lg font-semibold tracking-[0.08em] text-foreground">{userCode || "Unavailable"}</div>
+              </div>
+              <div className="rounded-[6px] border border-border/60 bg-card/50 px-3 py-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Verification URL</div>
+                <div className="mt-1 break-all text-sm text-foreground">{verificationUri || "Unavailable"}</div>
+              </div>
+            </DialogBody>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (!userCode || copyState === "copying") {
+                    return;
+                  }
+                  setCopyState("copying");
+                  void Promise.resolve()
+                    .then(() => onCopyCode(userCode))
+                    .then(() => {
+                      setCopyState("copied");
+                    })
+                    .catch(() => {
+                      setCopyState("failed");
+                    });
+                }}
+                disabled={!userCode || copyState === "copying"}
+              >
+                <Copy className="size-4" />
+                {copyState === "copying"
+                  ? "Copying..."
+                  : copyState === "copied"
+                    ? "Copied"
+                    : copyState === "failed"
+                      ? "Copy Failed"
+                      : "Copy Code"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (verificationUri) {
+                    onOpenVerificationUrl(verificationUri);
+                  }
+                }}
+                disabled={!verificationUri}
+              >
+                <ExternalLink className="size-4" />
+                Open Verification Page
+              </Button>
+              <Button onClick={() => onOpenChange(false)}>Done</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

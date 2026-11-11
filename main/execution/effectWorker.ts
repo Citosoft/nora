@@ -56,6 +56,18 @@ export class EffectWorker {
       }
     }
     const emit = this.emit;
+    if (effect.action.kind === "steer") {
+      try {
+        const provider = this.providers.resolve(snapshot.conversation.provider.kind, snapshot.conversation.provider.instanceId);
+        const result = run.state !== "running" || !provider.steer || !provider.capabilities.steering
+          ? { status: "rejected" as const, message: "The turn is no longer available for steering. The message remains queued." }
+          : await provider.steer({ snapshot, run }, effect.action.instruction);
+        this.engine.finishSteering(effect.id, result);
+      } catch {
+        this.engine.finishSteering(effect.id, { status: "unconfirmed", message: "Steering delivery is unconfirmed. This message will not run automatically." });
+      }
+      return;
+    }
     try {
       const provider = this.providers.resolve(snapshot.conversation.provider.kind, snapshot.conversation.provider.instanceId);
       const execution = { snapshot, run };

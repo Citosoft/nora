@@ -22,6 +22,8 @@ export function createConversationBridge(transport: ConversationTransport = {
     return reply.data.value;
   };
   return {
+    async mcp(input) { const value = await request(conversationChannels.mcp, input);
+      if (value.kind !== "mcp") throw incompatible(); return value.result; },
     async execute(input) { const value = await request(conversationChannels.execute, input);
       if (value.kind !== "receipt" || value.receipt.commandId !== input.command.commandId
         || value.receipt.conversationId !== input.command.conversationId) throw incompatible(); return value.receipt; },

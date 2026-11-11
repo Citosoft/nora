@@ -1,10 +1,12 @@
-import type { AiSimpleTaskProvider, LocalLlmModelId } from "./localAi.types";
+import type { LocalLlmModelId } from "./localAi.types";
 
-export type { AiSimpleTaskProvider, LocalAiModelStatus, LocalAiRuntimeStatus, LocalLlmModelId } from "./localAi.types";
+export type { LocalAiModelStatus, LocalAiRuntimeStatus, LocalLlmModelId } from "./localAi.types";
+
+export type AiSimpleTaskProvider = "cloud" | "local" | "codex" | "claude";
 
 export type AiProvider = "openai" | "google" | "anthropic";
 
-export type AiCommitMessageSource = AiProvider | "local";
+export type AiGenerationSource = AiProvider | "local" | "codex" | "claude";
 
 export interface AiApiKeys {
   openai: string;
@@ -26,7 +28,7 @@ export interface GenerateCommitMessagePayload {
 
 export interface GenerateCommitMessageResult {
   message: string;
-  provider: AiCommitMessageSource;
+  provider: AiGenerationSource;
 }
 
 export interface ListAiModelsPayload {

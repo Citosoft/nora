@@ -2,6 +2,8 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
 import { ClaudeStreamNormalizer } from "./streamNormalizer";
+import { questionGuidance } from "@main/execution/questionGuidance";
+import { claudeApprovalDetails } from "./approvals";
 import type { ClaudeOpenInput, ClaudeSession, ClaudeRuntimeOptions } from "@main/types/execution/claude.types";
 
 const questionInputSchema = z.object({ questions: z.array(z.object({ question: z.string(), header: z.string(), options: z.array(z.object({ label: z.string() })), multiSelect: z.boolean().optional() })) });
@@ -21,7 +23,7 @@ function openClaudeSession(input: ClaudeOpenInput, runtime: ClaudeRuntimeOptions
   }
   const native = query({ prompt: prompt(), options: {
     cwd: input.cwd, model: input.model, permissionMode: input.permissionMode,
-    ...(input.guidance ? { systemPrompt: { type: "preset" as const, preset: "claude_code" as const, append: input.guidance } } : {}),
+    systemPrompt: { type: "preset", preset: "claude_code", append: questionGuidance("AskUserQuestion", input.guidance) },
     ...(input.effort ? { effort: input.effort } : {}),
     pathToClaudeCodeExecutable: runtime.executablePath,
     env: { ...process.env, ...runtime.environment },
@@ -38,7 +40,8 @@ function openClaudeSession(input: ClaudeOpenInput, runtime: ClaudeRuntimeOptions
           answers: Object.fromEntries(Object.entries(response.answers).map(([question, answers]) => [question, answers.join(", ")])) } };
       }
       const response = await input.onRequest({ kind: "approval", nativeId: options.toolUseID,
-        title: options.title ?? `Allow ${name}?`, signal: options.signal });
+        title: options.title ?? `Allow ${name}?`, signal: options.signal,
+        details: claudeApprovalDetails(name, z.json().parse(toolInput), input.cwd, options.decisionReason, options.blockedPath) });
       return response.kind === "approval" && response.optionId === "allow"
         ? { behavior: "allow", updatedInput: toolInput }
         : { behavior: "deny", message: "Declined in Nora" };

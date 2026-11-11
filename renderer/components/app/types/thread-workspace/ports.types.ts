@@ -1,17 +1,30 @@
+import type { ForgeBranchPullRequestStatus } from "@shared/appTypes";
 import type { ReactNode } from "react";
 import type { ConversationRun, ProviderBinding } from "@shared/types/conversation/contracts.types";
 import type { NativeWorkspace } from "@shared/types/personalization/workspaces.types";
 import type { ThreadDocument, ThreadWorkspaceStore, ThreadWorkspaceSnapshot } from "./state.types";
 
 export type ThreadNavigationFilter = "all" | "active" | "attention" | "archive";
+export type ThreadNavigationStatus = "Queued" | "Starting" | "Working" | "Needs approval" | "Needs input" | "Stopping"
+  | "Completed" | "Failed" | "Interrupted" | "Outcome unconfirmed" | "Delivery unconfirmed" | "Draft" | "Queue paused" | "Ready";
+export interface ThreadRowProps {
+  row: ThreadNavigationRow;
+  workspaceName: string | null;
+  request: ForgeBranchPullRequestStatus | null;
+  onOpen(row: ThreadNavigationRow): void;
+  onTogglePin(conversationId: string): void;
+}
+export interface ThreadStatusIconProps { row: ThreadNavigationRow; }
 export interface ThreadNavigationRow {
   target: { kind: "draft"; documentId: string } | { kind: "thread"; conversationId: string };
   id: string;
   title: string;
   workspaceId: string;
   providerKind: ProviderBinding["kind"] | null;
-  status: string;
+  status: ThreadNavigationStatus;
   active: boolean;
+  working: boolean;
+  unread: boolean;
   attention: boolean;
   pinned: boolean;
   selected: boolean;
@@ -26,6 +39,7 @@ export interface ThreadNavigationPorts {
   openRow(row: ThreadNavigationRow): void;
   togglePin(conversationId: string): void;
   refresh(): void;
+  setThreadVisible(visible: boolean): void;
 }
 export interface ThreadCenterPorts { state: ThreadWorkspaceSnapshot; store: ThreadWorkspaceStore; userDisplayName: string; }
 export interface ThreadTabsPorts {

@@ -1,3 +1,4 @@
+import { parseAiSimpleTaskProvider } from "@shared/ai/settings";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { useSettingsRuntime } from "@/components/app/hooks/useSettingsRuntime";
 import { formatAiModelReleasedLabel } from "@/components/app/logic/aiChatSelection";
@@ -9,7 +10,6 @@ import { Select } from "@/components/ui/select";
 import type {
   AiModelCatalogEntry,
   AiProvider,
-  AiSimpleTaskProvider,
   LocalAiModelStatus,
   LocalAiRuntimeStatus,
   LocalLlmModelId
@@ -37,10 +37,6 @@ function parseAiProvider(value: string): AiProvider {
     return value;
   }
   return "openai";
-}
-
-function parseAiSimpleTaskProvider(value: string): AiSimpleTaskProvider {
-  return value === "local" ? "local" : "cloud";
 }
 
 function parseLocalLlmModelId(value: string): LocalLlmModelId {
@@ -153,13 +149,13 @@ export function AiSettingsSection() {
     <div className="max-w-4xl">
       <SettingsSectionHeader
         title="AI"
-        description="Configure cloud providers or on-device models for lightweight tasks like commit message generation. Local models are not used for agents or coding."
+        description="Choose how Nora generates commit messages and thread names using signed-in runtimes, cloud API keys, or on-device models."
         icon={Bot}
       />
 
       <SettingRow
         title="Simple AI Tasks"
-        description="Choose whether commit messages and similar lightweight features run on-device or through your cloud API keys."
+        description="Choose the source for commit messages and automatic names for new threads."
         control={(
           <Select
             value={appSettings.ai.simpleTaskProvider}
@@ -170,13 +166,21 @@ export function AiSettingsSection() {
               })}
             aria-label="Simple AI task provider"
           >
+            <option value="codex">Codex runtime (existing sign-in)</option>
+            <option value="claude">Claude runtime (existing sign-in)</option>
             <option value="cloud">Cloud API (BYOK)</option>
             <option value="local">Local model</option>
           </Select>
         )}
       />
 
-      {usesLocalSimpleTasks ? (
+      {appSettings.ai.simpleTaskProvider === "codex" || appSettings.ai.simpleTaskProvider === "claude" ? (
+        <SettingRow
+          title="Provider Runtime"
+          control={null}
+          description="Uses the installed runtime and its existing authentication with the provider’s default model. Install and sign in to the selected runtime first. No API key is needed in Nora. Requests run separately from your coding threads."
+        />
+      ) : usesLocalSimpleTasks ? (
         <SettingRow
           title="Local Model"
           description="Install the llama.cpp runtime and a small GGUF model with one click. Generation stays on your machine."
@@ -250,8 +254,8 @@ export function AiSettingsSection() {
           />
 
           <SettingRow
-            title="Commit Message Model"
-            description="Detected from your selected provider API key. Choose which model Nora should use for commit message generation."
+            title="Generation Model"
+            description="Detected from your selected provider API key. Choose which model Nora should use for commit messages and thread names."
             control={(
               <div className="space-y-2">
                 <div className="flex flex-row items-center gap-2">

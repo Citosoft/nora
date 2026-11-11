@@ -33,7 +33,16 @@ export async function openWorkspaceCatalog(options: WorkspaceCatalogOptions): Pr
   const admit = async (path: string, name: string, personal: boolean): Promise<NativeWorkspace> => {
     const canonical = await realpath(path);
     const previous = workspaces.find((entry) => entry.workspace.path === canonical);
-    if (previous) { await options.authority.verify(previous.workspace); return structuredClone(previous); }
+    if (previous) {
+      // Catalog selections follow branch switches; conversation snapshots remain pinned.
+      const current = await options.prepare(previous.workspace);
+      const refreshed = { ...previous, workspace: { ...previous.workspace, branch: current.branch } };
+      await options.authority.verify(refreshed.workspace);
+      if (current.branch !== previous.workspace.branch) {
+        await persist(workspaces.map((entry) => entry.id === previous.id ? refreshed : entry));
+      }
+      return structuredClone(refreshed);
+    }
     const id = personal ? `personal:${options.environmentId}` : randomUUID();
     const workspace = await options.prepare({ projectId: id, environmentId: options.environmentId,
       checkoutId: `registration:${id}`, path: canonical, branch: "", access: "write" });

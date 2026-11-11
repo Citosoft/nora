@@ -1,5 +1,6 @@
 import { personalizationChannel, personalizationReplySchema, personalizationRequestSchema } from "@shared/personalization/gateway";
 import type { PersonalizationIpcDeps } from "@main/types/personalization/ipc.types";
+import { personalizationErrorMessage } from "@main/personalization/errorMessage";
 
 /** Paths are supplied by the native picker, never accepted in renderer requests. */
 export function registerPersonalizationIpc(deps: PersonalizationIpcDeps): () => void {
@@ -8,7 +9,10 @@ export function registerPersonalizationIpc(deps: PersonalizationIpcDeps): () => 
     const parsed = personalizationRequestSchema.safeParse(input);
     if (!parsed.success) return { ok: false, message: "Choose a valid role or workspace" };
     try { return personalizationReplySchema.parse({ ok: true, state: await deps.service.request(parsed.data) }); }
-    catch { return { ok: false, message: "Nora could not save this setup. Check workspace storage and try again; your selection is preserved." }; }
+    catch (error) {
+      console.error(`Personalization request failed (${parsed.data.kind})`, error);
+      return { ok: false, message: personalizationErrorMessage(error, parsed.data.kind) };
+    }
   });
   return () => deps.ipc.removeHandler(personalizationChannel);
 }

@@ -11,7 +11,7 @@ export function SettingsDialog({ open, initialGroup }: SettingsDialogProps) {
     <Dialog.Portal>
       <Dialog.Overlay className="fixed inset-0 z-[8999] bg-black/60 backdrop-blur-sm" />
       {/* Shared popovers and global error dialogs must remain above this modal. */}
-      <Dialog.Content className="fixed left-1/2 top-1/2 z-[9000] flex h-[min(84vh,850px)] w-[min(1100px,calc(100vw-3rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-card text-foreground shadow-panel focus:outline-none"
+      <Dialog.Content className="fixed left-1/2 top-1/2 z-[9000] flex h-[min(84vh,850px)] w-[min(1100px,calc(100vw-3rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border border-border bg-card text-foreground shadow-panel focus:outline-none"
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           document.querySelector<HTMLButtonElement>('[aria-label="Workspace utilities"] button[aria-label="Open app menu"]')?.focus();

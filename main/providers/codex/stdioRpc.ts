@@ -2,6 +2,7 @@ import { StringDecoder } from "node:string_decoder";
 import type { z } from "zod";
 import type { JsonValue, RpcOptions, RpcPending } from "@main/types/execution/rpc.types";
 import { rpcMessageSchema } from "./rpcSchemas";
+import { CodexRpcError } from "./rpcError";
 
 /** Newline-delimited App Server RPC. Framing and correlation never escape this boundary. */
 export class StdioRpc {
@@ -75,7 +76,7 @@ export class StdioRpc {
     if (!pending) return;
     this.pending.delete(message.id);
     clearTimeout(pending.timeout);
-    if (message.error) pending.reject(new Error(`Codex RPC failed (${message.error.code})`));
+    if (message.error) pending.reject(new CodexRpcError(message.error.code, message.error.message));
     else if (message.result !== undefined) pending.resolve(message.result);
     else pending.reject(new Error("Codex response has no result"));
   }

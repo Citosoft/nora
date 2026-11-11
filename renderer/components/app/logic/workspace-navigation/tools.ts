@@ -11,8 +11,8 @@ export function availableWorkspaceTools(git: boolean): WorkspaceToolId[] {
 }
 export function workspaceToolPins(role: RoleSelection | null, available: readonly WorkspaceToolId[], pins?: readonly WorkspaceToolId[]): WorkspaceToolId[] {
   const defaults = roleProfile(role ?? { id: "general" }).tools.map((tool) => toolMapping[tool]);
-  const selection = pins ?? [...new Set(defaults)].slice(0, 3);
-  return [...new Set(selection)].filter((tool) => available.includes(tool));
+  const selection = [...new Set(pins ?? defaults)].filter((tool) => available.includes(tool));
+  return pins ? selection : selection.slice(0, 3);
 }
 export function toggleWorkspaceToolPin(pins: readonly WorkspaceToolId[], tool: WorkspaceToolId): WorkspaceToolId[] {
   return pins.includes(tool) ? pins.filter((entry) => entry !== tool) : [...pins, tool];

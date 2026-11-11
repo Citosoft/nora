@@ -1,28 +1,51 @@
+import { CodexMcpDiscovery } from "./mcp";
+import type { McpAction, McpResult } from "@shared/types/provider/mcp.types";
 import { spawn } from "node:child_process";
 import { APP_VERSION } from "@shared/appMeta";
 import { z } from "zod";
 import type { ExecutionProvider, EmitProviderUpdate, ProviderExecution } from "@main/types/execution/provider.types";
-import type { CodexActive, CodexOptions, CodexPendingRequest } from "@main/types/execution/codex.types";
+import type { CodexActive, CodexRateLimits, CodexOptions, CodexPendingRequest } from "@main/types/execution/codex.types";
 import type { JsonValue } from "@main/types/execution/rpc.types";
 import type { ExecutionFailure, RequestResponse, RuntimeRequest, TimelineItem, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ProviderCatalogResult } from "@shared/types/provider/catalog.types";
 import { StdioRpc } from "./stdioRpc";
 import { readCodexModels } from "./catalog";
 import { nativeCapabilities } from "@main/execution/providerCapabilities";
+import { supportsCodexSteering, steerResultSchema } from "./steering";
+import { CodexRpcError } from "./rpcError";
+import type { SteeringResult } from "@main/types/execution/steering.types";
+import { questionGuidance } from "@main/execution/questionGuidance";
 import { initializedSchema, threadSchema, turnSchema } from "./rpcSchemas";
-import { accountSchema, approvalSchema, deltaSchema, itemEventSchema, questionSchema, readThreadSchema, reasoningEffortSchema, routingSchema, turnEventSchema, usageEventSchema } from "./nativeSchemas";
+import { normalizeCodexTool, codexToolState } from "./toolActivity";
+import { nativeItemEnvelopeSchema, terminalInteractionSchema, toolProgressSchema } from "./toolSchemas";
+import { normalizeCodexApproval } from "./approvals";
+import { codexUsageReset } from "./usageReset";
+import { accountSchema, rateLimitsEventSchema, deltaSchema, itemEventSchema, questionSchema, readThreadSchema, reasoningEffortSchema, routingSchema, turnEventSchema, usageEventSchema } from "./nativeSchemas";
 
 /** Structured protocol boundary; capabilities are discovered from the configured runtime. */
 export class CodexAdapter implements ExecutionProvider {
   readonly kind = "codex";
   readonly instanceId: string;
-  readonly capabilities = Object.freeze({ ...nativeCapabilities, turnChanges: true });
+  private rateLimits: CodexRateLimits | null = null;
+  private steeringSupported = false;
+  get capabilities() { return { ...nativeCapabilities, turnChanges: true, steering: this.steeringSupported }; }
   private connection: Promise<StdioRpc> | null = null;
+  private mcpDiscovery: CodexMcpDiscovery | null = null;
   private readonly byThread = new Map<string, CodexActive>();
   private readonly byAttempt = new Map<string, CodexActive>();
   private readonly requests = new Map<string, CodexPendingRequest>();
 
   constructor(private readonly options: CodexOptions) { this.instanceId = options.instanceId; }
+
+  async mcp(workspace: WorkspaceRef, action: McpAction): Promise<McpResult> {
+    try {
+      const rpc = await this.connect();
+      this.mcpDiscovery ??= new CodexMcpDiscovery(rpc);
+      return await this.mcpDiscovery.request(workspace.path, action);
+    } catch {
+      return { kind: "unavailable", message: "Codex MCP discovery is unavailable; check the configured runtime and refresh." };
+    }
+  }
 
   async catalog(_workspace: WorkspaceRef): Promise<ProviderCatalogResult> {
     try {
@@ -45,8 +68,12 @@ export class CodexAdapter implements ExecutionProvider {
         });
         const rpc = new StdioRpc({ process, onNotification: this.onNotification.bind(this), onRequest: this.onRequest.bind(this), onDisconnect: () => {
           this.connection = null;
+          this.mcpDiscovery = null;
+          this.rateLimits = null;
+          this.steeringSupported = false;
           for (const active of this.byAttempt.values()) {
             active.rejectReady(new Error("Codex disconnected"));
+            this.settleTools(active, "unconfirmed");
             this.emit(active, { kind: "disconnected", failure: { code: "disconnected", message: "Codex disconnected; turn outcome is unconfirmed", retryable: false } });
           }
           for (const request of this.requests.values()) request.reject(new Error("Native request expired"));
@@ -55,6 +82,7 @@ export class CodexAdapter implements ExecutionProvider {
         try {
           await rpc.request("initialize", { clientInfo: { name: "nora", title: "Nora", version: APP_VERSION }, capabilities: { experimentalApi: true } }, initializedSchema);
           rpc.notify("initialized", {});
+          this.steeringSupported = await supportsCodexSteering(rpc);
           return rpc;
         } catch (error) { rpc.close(); throw error; }
       })();
@@ -64,6 +92,24 @@ export class CodexAdapter implements ExecutionProvider {
 
   private emit(active: CodexActive, update: Omit<Extract<Parameters<EmitProviderUpdate>[0], { kind: "disconnected" }>, "eventId" | "conversationId" | "runId" | "attemptId">): void {
     active.emit({ ...update, eventId: "connection-lost", conversationId: active.snapshot.conversation.id, runId: active.run.id, attemptId: active.run.attemptId });
+  }
+
+  async steer(execution: ProviderExecution, instruction: string): Promise<SteeringResult> {
+    const active = this.byAttempt.get(execution.run.attemptId);
+    const threadId = execution.snapshot.conversation.nativeConversationId;
+    const turnId = execution.run.nativeTurnId;
+    if (!this.steeringSupported || !active || !threadId || !turnId || active.nativeTurnId !== turnId) {
+      return { status: "rejected", message: "The active runtime turn is no longer available for steering. The message remains queued." };
+    }
+    try {
+      const rpc = await this.connect();
+      const result = await rpc.request("turn/steer", { threadId, expectedTurnId: turnId, input: [{ type: "text", text: instruction }] }, steerResultSchema);
+      return result.turnId === turnId ? { status: "accepted" } : { status: "unconfirmed", message: "The runtime returned a different turn ID; steering delivery is unconfirmed." };
+    } catch (error) {
+      return error instanceof CodexRpcError && [-32600, -32601, -32602].includes(error.code)
+        ? { status: "rejected", message: "The runtime rejected steering. The message remains queued." }
+        : { status: "unconfirmed", message: "Steering delivery is unconfirmed. This message will not run automatically." };
+    }
   }
 
   async start(execution: ProviderExecution, emit: EmitProviderUpdate): Promise<void> {
@@ -110,7 +156,8 @@ export class CodexAdapter implements ExecutionProvider {
       return;
     }
     const params = { model: snapshot.conversation.provider.model, cwd: snapshot.conversation.workspace.path, ...policy,
-      ...(snapshot.conversation.role ? { developerInstructions: snapshot.conversation.role.guidance } : {}) };
+      config: { "features.default_mode_request_user_input": true },
+      developerInstructions: questionGuidance("request_user_input", snapshot.conversation.role?.guidance) };
     const binding = snapshot.conversation.nativeConversationId
       ? await rpc.request("thread/resume", { threadId: snapshot.conversation.nativeConversationId, ...params }, threadSchema)
       : await rpc.request("thread/start", params, threadSchema);
@@ -125,6 +172,11 @@ export class CodexAdapter implements ExecutionProvider {
   }
 
   private onNotification(method: string, params: JsonValue): void {
+    if (method === "account/rateLimits/updated") {
+      const parsed = rateLimitsEventSchema.safeParse(params);
+      if (parsed.success) this.rateLimits = { ...this.rateLimits, ...parsed.data.rateLimits };
+      return;
+    }
     const routing = routingSchema.safeParse(params);
     if (!routing.success) return;
     const active = this.byThread.get(routing.data.threadId);
@@ -153,6 +205,28 @@ export class CodexAdapter implements ExecutionProvider {
       return;
     }
     if (method === "thread/tokenUsage/updated") { active.usage = usageEventSchema.parse(params).tokenUsage.total; return; }
+    if (method === "item/mcpToolCall/progress") {
+      const progress = toolProgressSchema.parse(params);
+      if (progress.turnId !== active.nativeTurnId) return;
+      const id = JSON.stringify([active.run.id, progress.itemId]);
+      const previous = active.items.get(id);
+      if (previous && (previous.kind !== "tool" || previous.state !== "running")) return;
+      const output = previous?.output ? `${previous.output}\n${progress.message}` : progress.message;
+      this.item(active, { id, runId: active.run.id, createdAt: previous?.createdAt ?? this.options.now(), kind: "tool", label: "Integration tool",
+        state: "running", details: { category: "integration" }, ...previous, output }, `${method}:${progress.itemId}:${output.length}`);
+      return;
+    }
+    if (method === "item/commandExecution/terminalInteraction") {
+      const interaction = terminalInteractionSchema.parse(params);
+      if (interaction.turnId !== active.nativeTurnId) return;
+      const id = JSON.stringify([active.run.id, interaction.itemId]);
+      const previous = active.items.get(id);
+      if (previous?.kind !== "tool" || previous.state !== "running") return;
+      // Terminal input can contain credentials; show the interaction without echoing its contents.
+      const output = `${previous.output}${previous.output ? "\n" : ""}[Input sent to command]`;
+      this.item(active, { ...previous, output }, `${method}:${interaction.itemId}:${output.length}`);
+      return;
+    }
     if (method === "item/agentMessage/delta" || method === "item/commandExecution/outputDelta") {
       const delta = deltaSchema.parse(params);
       if (delta.turnId !== active.nativeTurnId) return;
@@ -161,14 +235,28 @@ export class CodexAdapter implements ExecutionProvider {
       const item: TimelineItem = method === "item/agentMessage/delta"
         ? { id, runId: active.run.id, createdAt: old?.createdAt ?? this.options.now(), kind: "message", role: "assistant", complete: false,
           text: (old?.kind === "message" ? old.text : "") + delta.delta }
-        : { id, runId: active.run.id, createdAt: old?.createdAt ?? this.options.now(), kind: "tool", label: old?.kind === "tool" ? old.label : "Command", state: "running",
+        : { ...(old?.kind === "tool" ? old : {}), id, runId: active.run.id, createdAt: old?.createdAt ?? this.options.now(), kind: "tool", label: old?.kind === "tool" ? old.label : "Run command", state: "running",
           output: (old?.kind === "tool" ? old.output : "") + delta.delta };
+      if (old?.kind === "tool" && old.state !== "running") return;
       this.item(active, item, `${method}:${delta.itemId}:${item.kind === "message" ? item.text.length : item.kind === "tool" ? item.output.length : 0}`);
       return;
     }
     if (method === "item/started" || method === "item/completed") {
+      const envelope = nativeItemEnvelopeSchema.safeParse(params);
+      if (!envelope.success || envelope.data.turnId !== active.nativeTurnId) return;
+      const identity = z.object({ id: z.string() }).safeParse(envelope.data.item);
+      if (!identity.success) return;
+      const toolId = JSON.stringify([active.run.id, identity.data.id]);
+      const previous = active.items.get(toolId) ?? active.snapshot.items.find((item) => item.id === toolId);
+      const normalized = normalizeCodexTool(envelope.data.item, { id: toolId, runId: active.run.id,
+        createdAt: previous?.createdAt ?? this.options.now() }, method === "item/completed", previous?.kind === "tool" ? previous : undefined);
+      if (normalized) {
+        if (previous?.kind === "tool" && previous.state !== "running" && normalized.state === "running") return;
+        this.item(active, normalized, `${method}:${identity.data.id}`);
+        return;
+      }
       const parsed = itemEventSchema.safeParse(params);
-      // Other native item kinds remain unsupported rather than leaking their payloads.
+      // Non-tool records keep their own typed timeline mapping.
       if (!parsed.success || parsed.data.turnId !== active.nativeTurnId) return;
       const native = parsed.data.item;
       const id = JSON.stringify([active.run.id, native.id]);
@@ -178,9 +266,15 @@ export class CodexAdapter implements ExecutionProvider {
       switch (native.type) {
         case "agentMessage": this.item(active, { ...common, kind: "message", role: "assistant", text: native.text, complete }, `${method}:${native.id}`); break;
         case "reasoning": this.item(active, { ...common, kind: "reasoning", text: [...native.summary, ...native.content].join("\n"), complete }, `${method}:${native.id}`); break;
-        case "commandExecution": this.item(active, { ...common, kind: "tool", label: native.command, output: native.aggregatedOutput ?? "",
-          state: native.status === "failed" ? "failed" : complete ? "completed" : "running" }, `${method}:${native.id}`); break;
-        case "fileChange": this.item(active, { ...common, kind: "changes", paths: native.changes.map((change) => change.path), attribution: "turn" }, `${method}:${native.id}`); break;
+        case "fileChange": {
+          this.item(active, { ...common, kind: "changes", paths: native.changes.map((change) => change.path),
+            patches: Object.fromEntries(native.changes.map((change) => [change.path, change.diff ?? null])), attribution: "turn" }, `${method}:${native.id}`);
+          const activityId = JSON.stringify([active.run.id, native.id, "activity"]);
+          this.item(active, { ...common, id: activityId, kind: "tool", label: "Edit files", output: "", state: codexToolState(native.status, complete),
+            details: { category: "file", input: native.changes.map((change) => change.path).join("\n"),
+              ...(native.changes.some((change) => change.diff) ? { patch: native.changes.map((change) => change.diff ?? "").join("\n") } : {}) } }, `${method}:${native.id}:activity`);
+          break;
+        }
       }
     }
   }
@@ -192,12 +286,22 @@ export class CodexAdapter implements ExecutionProvider {
 
   private finish(active: CodexActive, id: string, status: string, errorInfo?: JsonValue): void {
     if (!["completed", "failed", "interrupted"].includes(status)) throw new Error("Unsupported native turn outcome");
+    this.settleTools(active, status === "interrupted" ? "interrupted" : status === "failed" ? "failed" : "unconfirmed");
+    const resetsAt = codexUsageReset(this.rateLimits, this.options.now());
     const failure: ExecutionFailure | null = status !== "failed" ? null
       : errorInfo === "unauthorized" ? { code: "authentication", message: "Sign in to the configured Codex account", retryable: true }
-      : errorInfo === "usageLimitExceeded" ? { code: "usage-limit", message: "Codex usage limit reached", retryable: true }
+      : errorInfo === "usageLimitExceeded" ? { code: "usage-limit", message: "Codex usage limit reached", retryable: true, ...(resetsAt ? { resetsAt } : {}) }
       : { code: "provider", message: "Codex could not complete this turn", retryable: true };
     active.emit({ eventId: `finished:${id}`, conversationId: active.snapshot.conversation.id, runId: active.run.id, attemptId: active.run.attemptId,
       kind: "finished", status: status === "completed" ? "completed" : status === "failed" ? "failed" : "interrupted", failure, usage: active.usage });
+  }
+
+  private settleTools(active: CodexActive, state: "unconfirmed" | "failed" | "interrupted"): void {
+    for (const item of active.items.values()) {
+      if (item.kind === "tool" && item.state === "running") this.item(active, { ...item, state,
+        details: { ...item.details, category: item.details?.category ?? "other", detail: state === "unconfirmed"
+          ? "No final tool result was received." : "The task stopped before this tool finished." } }, `settled:${item.id}:${state}`);
+    }
   }
 
   private async onRequest(nativeId: string | number, method: string, params: JsonValue): Promise<JsonValue> {
@@ -208,20 +312,17 @@ export class CodexAdapter implements ExecutionProvider {
     const common = { id, nativeId: JSON.stringify(nativeId), runId: active.run.id, attemptId: active.run.attemptId, status: "pending" as const,
       createdAt: this.options.now(), expiresAt: new Date(Date.parse(this.options.now()) + (this.options.requestLifetimeMs ?? 30 * 60_000)).toISOString() };
     let request: RuntimeRequest;
+    let decisions: Readonly<Record<string, JsonValue>> = {};
     if (method === "item/tool/requestUserInput") {
       const native = questionSchema.parse(params);
       if (native.turnId !== active.nativeTurnId) throw new Error("Stale question");
       request = { ...common, kind: "question", title: "Codex needs input", questions: native.questions.map((question) => ({ id: question.id,
-        text: question.question, options: question.isOther ? [] : question.options?.map((option) => option.label) ?? [], multiple: false })) };
+        text: question.question, options: question.options?.map((option) => option.label) ?? [], multiple: false,
+        allowOther: question.isOther ?? false })) };
     } else if (method === "item/commandExecution/requestApproval" || method === "item/fileChange/requestApproval") {
-      const native = approvalSchema.parse(params);
-      if (native.turnId !== active.nativeTurnId) throw new Error("Stale approval");
-      const supported = z.enum(["accept", "acceptForSession", "decline", "cancel"]);
-      const choices = native.availableDecisions ?? ["accept", "decline", "cancel"];
-      const options = choices.flatMap((choice) => { const parsed = supported.safeParse(choice); return parsed.success ? [{ id: parsed.data,
-        label: parsed.data === "accept" ? "Allow once" : parsed.data === "acceptForSession" ? "Allow for session" : parsed.data === "decline" ? "Decline" : "Cancel turn" }] : []; });
-      if (!options.length) throw new Error("Unsupported native approval options");
-      request = { ...common, kind: "approval", title: native.command ?? native.reason ?? "Approve file changes", options };
+      const normalized = normalizeCodexApproval(method, params, active.nativeTurnId, active.items, active.run.id);
+      decisions = normalized.decisions;
+      request = { ...common, kind: "approval", ...normalized.request };
     } else throw new Error("Unsupported native request");
     return new Promise<JsonValue>((resolve, reject) => {
       const timeout = setTimeout(() => {
@@ -231,7 +332,7 @@ export class CodexAdapter implements ExecutionProvider {
         finally { reject(new Error("Native request expired")); }
       }, this.options.requestLifetimeMs ?? 30 * 60_000);
       timeout.unref();
-      this.requests.set(id, { attemptId: active.run.attemptId,
+      this.requests.set(id, { attemptId: active.run.attemptId, decisions,
         resolve: (response) => { clearTimeout(timeout); resolve(response); }, reject: (error) => { clearTimeout(timeout); reject(error); } });
       try { active.emit({ kind: "request", eventId: `request:${id}`, conversationId: active.snapshot.conversation.id, runId: active.run.id, attemptId: active.run.attemptId, request }); }
       catch (error) { this.requests.delete(id); clearTimeout(timeout); reject(error); }
@@ -241,7 +342,9 @@ export class CodexAdapter implements ExecutionProvider {
   async respond(execution: ProviderExecution, request: RuntimeRequest, response: RequestResponse, emit: EmitProviderUpdate): Promise<void> {
     const pending = this.requests.get(request.id);
     if (!pending || pending.attemptId !== execution.run.attemptId) throw new Error("Native request expired");
-    const result: JsonValue = response.kind === "approval" ? { decision: response.optionId }
+    const decision = response.kind === "approval" ? pending.decisions?.[response.optionId] : undefined;
+    if (response.kind === "approval" && decision === undefined) throw new Error("Unsupported approval decision");
+    const result: JsonValue = response.kind === "approval" ? { decision: decision ?? response.optionId }
       : { answers: Object.fromEntries(Object.entries(response.answers).map(([key, answers]) => [key, { answers }])) };
     pending.resolve(result); this.requests.delete(request.id);
     // Resolution is recorded only after serverRequest/resolved, not after writing to stdin.

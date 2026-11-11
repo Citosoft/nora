@@ -1,5 +1,6 @@
 import type { CommandReceipt, ConversationCommand, ProviderBinding, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ConversationEventPage, ConversationHeader, ConversationHistoryPage, ConversationSummary, HistoryQuery, HostShutdownResult } from "@shared/types/conversation/queries.types";
+import type { McpRequest, McpResult } from "@shared/types/provider/mcp.types";
 import type { ProviderCatalogResult } from "@shared/types/provider/catalog.types";
 import type { HostDependencies, HostLifecycle, WorkerGroup } from "@main/types/execution/host.types";
 import type { EventSubscription } from "@main/types/execution/engine.types";
@@ -8,6 +9,7 @@ import { EffectWorker } from "./effectWorker";
 import { ExecutionOwnership } from "./ownership";
 import { ExecutionCommandError } from "./errors";
 import { conversationCommandSchema } from "@shared/conversations/contracts";
+import { ConversationNaming } from "./conversationNaming";
 import { isActiveRun } from "./projection";
 
 /** The environment owner, independent of Electron windows, views and SSH connections. */
@@ -19,13 +21,14 @@ export class ExecutionHost {
     { kinds: ["start"], controls: false, operations: new Set() },
     { kinds: ["reconcile"], controls: false, operations: new Set() },
     { kinds: ["review"], controls: false, operations: new Set() },
-    { kinds: ["interrupt", "respond"], controls: true, operations: new Set() }
+    { kinds: ["interrupt", "respond", "steer"], controls: true, operations: new Set() }
   ];
   private lifecycle: HostLifecycle = "idle";
   private scheduled = false;
   private unsubscribe = (): void => {};
   private shutdownPromise: Promise<HostShutdownResult> | null = null;
   private readonly concurrency: number;
+  private readonly naming: ConversationNaming | null;
 
   constructor(private readonly deps: HostDependencies) {
     this.concurrency = deps.effectConcurrency ?? 8;
@@ -33,6 +36,8 @@ export class ExecutionHost {
     this.ownership = new ExecutionOwnership({ store: deps.store, owner: deps.owner, isProcessAlive: deps.isProcessAlive });
     this.engine = new ConversationEngine({ store: deps.store, now: deps.now, nextId: deps.nextId,
       assertOwnership: () => this.ownership.assertCurrent() });
+    this.naming = deps.generateThreadName ? new ConversationNaming({ generate: deps.generateThreadName,
+      apply: (id, expected, title) => { if (this.lifecycle === "running") this.engine.applyGeneratedTitle(id, expected, title); } }) : null;
     this.worker = new EffectWorker(this.engine, deps.providers, (update) => {
       if (this.lifecycle !== "running" && this.lifecycle !== "stopping") return;
       try { this.engine.accept(update); } catch { this.fault(); }
@@ -56,11 +61,27 @@ export class ExecutionHost {
     const command = conversationCommandSchema.parse(input);
     const previous = this.engine.receipt(command);
     if (previous) return previous;
+    if (command.kind === "steer-queued") {
+      const conversation = this.deps.store.header(command.conversationId)?.conversation;
+      if (!conversation) throw new ExecutionCommandError("missing", "Conversation does not exist");
+      const provider = this.deps.providers.resolve(conversation.provider.kind, conversation.provider.instanceId);
+      const catalog = await provider.catalog(conversation.workspace);
+      if (catalog.status !== "available" || !catalog.catalog.capabilities.steering || !provider.steer) {
+        throw new ExecutionCommandError("invalid", "The configured runtime does not support steering");
+      }
+    }
     const workspace = command.kind === "create" ? await this.deps.workspaces.prepare(command.workspace) : undefined;
     if (this.lifecycle !== "running") throw new ExecutionCommandError("conflict", "Execution host is not accepting instructions");
     if (command.kind === "create") this.deps.providers.resolve(command.provider.kind, command.provider.instanceId);
     const role = command.kind === "create" ? command.role ?? this.deps.roleForWorkspace?.(command.workspace.projectId) : undefined;
+    const previousRuns = command.kind === "submit" && this.naming
+      ? this.deps.store.history({ conversationId: command.conversationId, scope: "runs", limit: 1 }) : null;
+    const firstInstruction = previousRuns?.scope === "runs" && previousRuns.runs.length === 0;
     const receipt = this.engine.execute(command, workspace, role);
+    if (firstInstruction && command.kind === "submit") {
+      const conversation = this.deps.store.header(command.conversationId)?.conversation;
+      if (conversation) this.naming?.start(command.conversationId, conversation.title, command.instruction);
+    }
     this.schedule();
     return receipt;
   }
@@ -84,6 +105,16 @@ export class ExecutionHost {
       throw new ExecutionCommandError("environment", "Provider discovery must run on the owning execution host");
     }
     return this.deps.providers.resolve(kind, instanceId).catalog(workspace);
+  }
+
+  async mcp(request: McpRequest): Promise<McpResult> {
+    const workspace = await this.deps.workspaces.prepare(request.workspace);
+    if (this.lifecycle !== "running" || workspace.environmentId !== this.environmentId) {
+      throw new ExecutionCommandError("environment", "MCP discovery must run on the owning execution host");
+    }
+    const provider = this.deps.providers.resolve(request.providerKind, request.instanceId);
+    return provider.mcp ? provider.mcp(workspace, request.action)
+      : { kind: "unavailable", message: "This runtime does not expose MCP connections." };
   }
 
   private schedule(): void {
@@ -111,6 +142,7 @@ export class ExecutionHost {
   private fault(): void {
     if (this.lifecycle === "faulted" || this.lifecycle === "stopped") return;
     this.lifecycle = "faulted";
+    this.naming?.close();
     try { this.deps.onFailure({ code: "host", message: "Nora could not maintain durable execution state; execution has been stopped for recovery", retryable: false }); }
     catch { /* An observer cannot prevent provider shutdown. */ }
     void this.deps.providers.close().catch(() => {});
@@ -123,6 +155,7 @@ export class ExecutionHost {
   private async stop(): Promise<HostShutdownResult> {
     if (this.lifecycle === "idle") { this.lifecycle = "stopped"; this.deps.store.close(); return { unconfirmedRuns: [] }; }
     this.lifecycle = "stopping";
+    this.naming?.close();
     const waitController = new AbortController();
     let timeout: ReturnType<typeof setTimeout> | undefined;
     const deadline = new Promise<void>((resolve) => { timeout = setTimeout(resolve, this.deps.shutdownGraceMs ?? 10_000); });

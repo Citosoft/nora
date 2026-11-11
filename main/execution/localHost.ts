@@ -1,3 +1,4 @@
+import { createClaudeMcpReader } from "@main/providers/claude/mcp";
 import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { dirname, isAbsolute } from "node:path";
@@ -27,13 +28,13 @@ export async function openLocalHost(options: LocalHostOptions): Promise<Executio
       switch (instance.kind) {
         case "codex": providers.register(new CodexAdapter({ ...instance.options, now })); break;
         case "claude": providers.register(new ClaudeAdapter({ instanceId: instance.instanceId, policies: instance.policies,
-          open: createClaudeOpener(instance.runtime), discover: createClaudeDiscovery(instance.runtime), now, nextId: randomUUID })); break;
+          open: createClaudeOpener(instance.runtime), discover: createClaudeDiscovery(instance.runtime), readMcp: createClaudeMcpReader(instance.runtime), now, nextId: randomUUID })); break;
       }
     }
     const workspaces = new LocalWorkspaceAuthority({ environmentId: options.environmentId, registrations: options.registrations,
       inspectCheckout: createCheckoutInspector(options.gitExecutable) });
     const host = new ExecutionHost({ store, providers, workspaces, reviewer: createGitReviewer(options.gitExecutable, workspaces),
-      roleForWorkspace: options.roleForWorkspace,
+      roleForWorkspace: options.roleForWorkspace, generateThreadName: options.generateThreadName,
       checkpoints: createGitCheckpoints(options.gitExecutable, workspaces, now,
         [options.databasePath, `${options.databasePath}-wal`, `${options.databasePath}-shm`]),
       owner: { id: randomUUID(), processId: process.pid },

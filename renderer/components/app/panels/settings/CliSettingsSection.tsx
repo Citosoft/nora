@@ -1,3 +1,4 @@
+import { McpSettingsSection } from "./McpSettingsSection";
 import { useSettingsRuntime } from "@/components/app/hooks/useSettingsRuntime";
 import { createAgentSkillCatalogMap } from "@/components/app/logic/agentSkills";
 import { settingAnchorAttributes } from "@/components/app/logic/settingsSearch";
@@ -321,6 +322,8 @@ export function CliSettingsSection() {
           );
         })}
       </div>
+
+      <McpSettingsSection />
 
       <div className="mt-5 text-sm text-muted-foreground">
         {detectedTools.length

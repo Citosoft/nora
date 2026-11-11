@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -49,4 +50,17 @@ test("the aggregate patch budget retains every change while marking omitted text
   assert.equal(review.changes.length, 8);
   assert.ok(review.changes.some((change) => change.presentation === "too-large" && change.patch === null));
   assert.ok(review.changes.reduce((total, change) => total + Buffer.byteLength(change.patch ?? ""), 0) <= 512 * 1024);
+});
+
+
+test("the same bytes moving into or out of the retained budget do not become false changes", async () => {
+  const captured = snapshot({ "file.md": "Same\n" });
+  const fingerprinted = { ...snapshot({}), omitted: [{ path: "file.md", mode: "100644" as const,
+    hash: createHash("sha256").update("Same\n").digest("hex") }] };
+  assert.deepEqual((await compareSnapshots("git", captured, fingerprinted)).changes, []);
+  assert.deepEqual((await compareSnapshots("git", fingerprinted, captured)).changes, []);
+  const deleted = await compareSnapshots("git", fingerprinted, snapshot({}));
+  assert.equal(deleted.changes[0].kind, "deleted");
+  assert.equal(deleted.changes[0].presentation, "too-large");
+  assert.equal(deleted.changes[0].patch, null);
 });

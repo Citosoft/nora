@@ -12,10 +12,35 @@ import { ProviderRegistry } from "@main/execution/providerRegistry";
 import type { ClaudeFrame, ClaudeOpenInput } from "@main/types/execution/claude.types";
 import type { ConversationEngine } from "@main/execution/engine";
 import { fixture, provider } from "./fixture";
+import { questionGuidance } from "@main/execution/questionGuidance";
 
 const server = join(process.cwd(), "tests/unit/main/execution/fixtures/codexServer.cjs");
 const now = () => "2026-10-21T10:00:00.000Z";
 const discover = async () => ({ models: [], authentication: "unknown" as const });
+
+test("Codex discovers steering support from the runtime and sends input to the exact active turn", async (t) => {
+  const f = fixture(t); f.create(); f.submit();
+  const adapter = new CodexAdapter({ instanceId: "account-a", executable: process.execPath, arguments: [server], environment: { NORA_CODEX_FIXTURE_MODE: "hold" },
+    policies: { "native-default": { approvalPolicy: "on-request", sandbox: "workspace-write" } }, now });
+  const registry = new ProviderRegistry(); registry.register(adapter);
+  const worker = new EffectWorker(f.engine, registry);
+  try {
+    assert.equal(adapter.capabilities.steering, false);
+    await worker.runNext(["start"]);
+    assert.equal(adapter.capabilities.steering, true);
+    const snapshot = f.store.execution("conversation", "run"); assert.ok(snapshot);
+    assert.deepEqual(await adapter.steer({ snapshot, run: snapshot.runs[0] }, "Focus on tests"), { status: "accepted" });
+    assert.equal((await adapter.steer({ snapshot, run: { ...snapshot.runs[0], nativeTurnId: "other" } }, "Wrong turn")).status, "rejected");
+  } finally { await registry.close(); }
+});
+
+test("runtimes without turn/steer do not advertise steering", async () => {
+  const adapter = new CodexAdapter({ instanceId: "account-a", executable: process.execPath, arguments: [server], environment: { NORA_CODEX_FIXTURE_MODE: "no-steering" },
+    policies: { "native-default": { approvalPolicy: "on-request", sandbox: "workspace-write" } }, now });
+  try { const result = await adapter.catalog({ environmentId: "local", projectId: "p", checkoutId: "c", path: "/tmp", branch: "main", access: "read" });
+    assert.equal(result.status, "available"); if (result.status === "available") assert.equal(result.catalog.capabilities.steering, false);
+  } finally { await adapter.close(); }
+});
 function waitFor(engine: ConversationEngine, state: string): Promise<void> {
   return new Promise((resolve, reject) => {
     let unsubscribe = (): void => {};
@@ -35,7 +60,7 @@ test("Codex sends the saved role through structured thread instructions on start
   const guidance = f.snapshot().conversation.role?.guidance;
   assert.ok(guidance);
   const adapter = new CodexAdapter({ instanceId: "account-a", executable: process.execPath, arguments: [server],
-    environment: { NORA_CODEX_FIXTURE_MODE: "guidance", NORA_CODEX_EXPECT_GUIDANCE: guidance },
+    environment: { NORA_CODEX_FIXTURE_MODE: "guidance", NORA_CODEX_EXPECT_GUIDANCE: questionGuidance("request_user_input", guidance) },
     policies: { "native-default": { approvalPolicy: "on-request", sandbox: "workspace-write" } }, now });
   const registry = new ProviderRegistry(); registry.register(adapter);
   const worker = new EffectWorker(f.engine, registry);
@@ -93,6 +118,10 @@ for (const mode of ["approval", "question"]) {
       await worker.runNext(); await requestReady;
       const snapshot = f.snapshot();
       const request = snapshot.requests[0];
+      if (request.kind === "question") {
+        assert.deepEqual(request.questions[0].options, ["A", "B"]);
+        assert.equal(request.questions[0].allowOther, true);
+      }
       assert.equal(snapshot.items.filter((item) => item.kind === "message" && item.role === "assistant").length, 1);
       const completed = waitFor(f.engine, "completed");
       f.command({ kind: "respond", commandId: "answer", conversationId: "conversation", requestId: request.id,
@@ -107,6 +136,52 @@ for (const mode of ["approval", "question"]) {
     } finally { await adapter.close(); }
   });
 }
+
+test("Codex tool events persist activity, preserve streamed output and settle incomplete tools", async (t) => {
+  const f = fixture(t); f.create(); f.submit();
+  const adapter = new CodexAdapter({ instanceId: "account-a", executable: process.execPath, arguments: [server],
+    environment: { NORA_CODEX_FIXTURE_MODE: "tools" }, policies: { "native-default": { approvalPolicy: "on-request", sandbox: "workspace-write" } }, now });
+  const registry = new ProviderRegistry(); registry.register(adapter);
+  const worker = new EffectWorker(f.engine, registry);
+  try {
+    const done = waitFor(f.engine, "completed");
+    await worker.runNext(); await done;
+    const tools = f.snapshot().items.filter((item) => item.kind === "tool");
+    const integration = tools.find((item) => item.label === "search");
+    assert.equal(integration?.state, "completed");
+    assert.equal(integration?.output, "Found documentation");
+    assert.ok(integration?.details?.input?.includes("[redacted]"));
+    const command = tools.find((item) => item.label === "Run command");
+    assert.equal(command?.output, "Test failure"); assert.equal(command?.state, "failed");
+    assert.equal(tools.find((item) => item.label === "Edit files")?.state, "declined");
+    assert.equal(tools.find((item) => item.label === "Edit files")?.details?.patch, "@@ -1 +1,2 @@\n-old\n+new\n+added\n");
+    const changes = f.snapshot().items.find((item) => item.kind === "changes");
+    assert.equal(changes?.kind === "changes" && changes.patches?.["src/index.ts"], "@@ -1 +1,2 @@\n-old\n+new\n+added\n");
+    assert.equal(tools.find((item) => item.label === "futureTool")?.state, "unconfirmed");
+    assert.equal(tools.some((item) => item.state === "running"), false);
+    assert.ok(!JSON.stringify(tools).includes('"private"'));
+  } finally { await registry.close(); }
+});
+
+test("Codex approval context falls back to its tool and returns the exact scoped decision", async (t) => {
+  const f = fixture(t); f.create(); f.submit();
+  const adapter = new CodexAdapter({ instanceId: "account-a", executable: process.execPath, arguments: [server],
+    environment: { NORA_CODEX_FIXTURE_MODE: "scoped-approval" }, policies: { "native-default": { approvalPolicy: "on-request", sandbox: "workspace-write" } }, now });
+  const registry = new ProviderRegistry(); registry.register(adapter);
+  const worker = new EffectWorker(f.engine, registry);
+  try {
+    const ready = waitFor(f.engine, "awaiting-approval"); await worker.runNext(); await ready;
+    const request = f.snapshot().requests[0]; assert.equal(request.kind, "approval");
+    if (request.kind !== "approval") throw new Error("Expected approval");
+    assert.equal(request.details?.command, "npm test"); assert.equal(request.details?.workingDirectory, "/workspace");
+    assert.equal(request.options[1].scope, "persistent");
+    const done = waitFor(f.engine, "completed");
+    f.command({ kind: "respond", commandId: "answer", conversationId: "conversation", requestId: request.id,
+      response: { kind: "approval", optionId: request.options[1].id } });
+    await worker.runNext(); await done;
+    assert.equal(f.snapshot().requests[0].status, "resolved");
+  } finally { await registry.close(); }
+});
 
 test("Codex process loss remains recovering and exact native-turn recovery uses read rather than resubmit", async (t) => {
   const f = fixture(t); f.create(); f.submit();
@@ -141,6 +216,7 @@ for (const mode of ["auth", "usage", "hold"]) {
       await finished;
       assert.equal(f.snapshot().runs[1].state, "queued");
       assert.equal(f.snapshot().conversation.queuePaused, true);
+      if (mode === "usage") assert.equal(f.snapshot().runs[0].failure?.resetsAt, new Date(1792587600 * 1000).toISOString());
       if (mode !== "hold") assert.equal(f.snapshot().runs[0].failure?.code, mode === "auth" ? "authentication" : "usage-limit");
     } finally { await adapter.close(); }
   });

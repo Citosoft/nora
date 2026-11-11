@@ -1,12 +1,14 @@
-import type { ConversationRun, TimelineItem, RuntimeRequest, RequestResponse, ProviderBinding, ConversationCommand } from "@shared/types/conversation/contracts.types";
+import type { ConversationRun, TimelineItem, RuntimeRequest, RequestResponse, ProviderBinding, ConversationCommand, ExecutionFailure } from "@shared/types/conversation/contracts.types";
 import type { NativeBoot } from "@shared/ipc/types/personalizationGateway.types";
 import type { NativeWorkspace } from "@shared/types/personalization/workspaces.types";
 import type { ConversationClient } from "./conversationClient.types";
 import type { ConversationReview } from "@shared/types/conversation/review.types";
 import type { ThreadDocument, ThreadDocumentRuntime } from "./thread-workspace/state.types";
 import type { BranchRequestReader } from "./threadInsights.types";
+import type { ProviderCapabilities } from "@shared/types/provider/capabilities.types";
+import type { MarkdownRendererLinkClickHandler } from "./markdownRenderer.types";
 
-export interface NativeTimelineProps { items: readonly TimelineItem[]; }
+export interface NativeTimelineProps { items: readonly TimelineItem[]; runs?: readonly ConversationRun[]; onLinkClick?: MarkdownRendererLinkClickHandler; }
 export interface NativeReviewProps { result: ConversationReview; }
 export interface NativeRequestProps {
   request: RuntimeRequest;
@@ -22,6 +24,7 @@ export interface NativeConversationPorts {
   document: ThreadDocument;
   runtime: ThreadDocumentRuntime;
   storageError: string | null;
+  latestFailure: ExecutionFailure | null;
   setText(text: string): void;
   setBinding(binding: ProviderBinding | null): void;
   submit(): Promise<void>;
@@ -35,11 +38,17 @@ export interface NativeProviderPickerProps {
   locked: ProviderBinding | null;
   initial: ProviderBinding | null;
   onBinding(binding: ProviderBinding | null): void;
+  onCapabilities?(capabilities: ProviderCapabilities | null): void;
 }
 export interface NativeQueueProps {
   conversationId: string;
   runs: readonly ConversationRun[];
   paused: boolean;
   busy: boolean;
+  steerTarget?: string | null;
   execute(command: ConversationCommand): Promise<void>;
+}
+export interface QueuedInstructionRowProps extends Pick<NativeQueueProps, "conversationId" | "busy" | "execute" | "steerTarget"> {
+  run: ConversationRun;
+  position: number;
 }

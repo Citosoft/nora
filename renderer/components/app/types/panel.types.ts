@@ -497,7 +497,6 @@ export type WorkspaceSessionTabsProps = {
   onCreateTerminalFromDefaults: () => void;
   onCreateTerminal: () => void;
   onCreateBrowser: () => void;
-  onCreateAiChat: () => void;
 };
 
 export type WorkspaceSessionToolbarProps = {
@@ -517,6 +516,7 @@ export type WorkspaceSplitViewPanelProps = {
 };
 
 export type SpecCenterProps = {
+  projectId?: string;
   workspaceSpecs: WorkspaceSpecsState;
   isCreatingSpec: boolean;
   onOpenSpec: (projectId: string, path: string) => void;
@@ -527,6 +527,7 @@ export type SpecCenterProps = {
 };
 
 export type NoteCenterProps = {
+  projectId?: string;
   workspaceNotes: WorkspaceNotesState;
   isCreatingNote: boolean;
   onOpenNote: (projectId: string, path: string) => void;
@@ -536,6 +537,7 @@ export type NoteCenterProps = {
 };
 
 export type TaskCenterProps = {
+  projectId?: string;
   workspaceTasks: WorkspaceTasksState;
   workspaceSpecs: WorkspaceSpecsState;
   workspaceTaskBoards: WorkspaceTaskBoardsState;

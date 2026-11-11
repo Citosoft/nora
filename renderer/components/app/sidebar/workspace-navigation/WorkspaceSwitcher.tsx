@@ -1,3 +1,5 @@
+import { useWorkspaceWorkflowActivity } from "@/components/app/hooks/useWorkspaceWorkflowActivity";
+import { workspaceActivity } from "@/components/app/logic/workspace-navigation/activity";
 import { useMemo, useState } from "react";
 import { Check, ChevronDown, Folder, Pin, Plus, Search } from "lucide-react";
 import { useThreadNavigationPorts } from "@/components/app/hooks/useThreadNavigationPorts";
@@ -14,6 +16,7 @@ export function WorkspaceSwitcher({ workspaces, activeId, collapsed, recentWorks
   const { state } = useThreadNavigationPorts();
   const { preferences, setPreferences } = useWorkspaceNavigation();
   const rows = useMemo(() => buildThreadNavigation(state, null, "all"), [state]);
+  const workflowRuns = useWorkspaceWorkflowActivity(workspaces.map((entry) => entry.project.id));
   const active = workspaces.find((entry) => entry.project.id === activeId);
   const matches = (name: string, rootPath: string) => `${name} ${rootPath}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
   const visible = workspaces.filter((entry) => matches(entry.project.name, entry.project.rootPath))
@@ -30,12 +33,10 @@ export function WorkspaceSwitcher({ workspaces, activeId, collapsed, recentWorks
       <div className="max-h-[55vh] space-y-1 overflow-y-auto">
         {visible.map((entry) => {
           const nativeId = state.boot.workspaces.find((workspace) => workspace.shellProjectId === entry.project.id)?.id;
-          const threads = rows.filter((row) => row.workspaceId === nativeId);
-          const attention = threads.filter((row) => row.attention).length;
-          const running = threads.filter((row) => row.active).length + entry.terminals.filter((terminal) => terminal.status === "running").length;
+          const { attention, running } = workspaceActivity(entry.project.id, nativeId, rows, entry.terminals, workflowRuns);
           const pinned = preferences.pinnedWorkspaceIds.includes(entry.project.id);
-          return <div key={entry.project.id} className={`flex items-center rounded-lg ${entry.project.id === activeId ? "bg-secondary" : "hover:bg-muted"}`}>
-            <button type="button" onClick={() => choose(() => onSelect(entry.project.id))} aria-current={entry.project.id === activeId ? "page" : undefined} className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          return <div key={entry.project.id} className={`flex items-center rounded-md ${entry.project.id === activeId ? "bg-secondary" : "hover:bg-muted"}`}>
+            <button type="button" onClick={() => choose(() => onSelect(entry.project.id))} aria-current={entry.project.id === activeId ? "page" : undefined} className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <Folder className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" /><span className="min-w-0 flex-1"><span className="block truncate text-sm">{entry.project.name}</span><span className="block truncate text-[11px] text-muted-foreground">{attention ? `${attention} need attention` : running ? `${running} running` : entry.project.rootPath}</span></span>
               {entry.project.id === activeId && <Check className="size-3.5 shrink-0" aria-hidden="true" />}
             </button>
@@ -43,7 +44,7 @@ export function WorkspaceSwitcher({ workspaces, activeId, collapsed, recentWorks
           </div>;
         })}
         {!!recent.length && <p className="px-2 pb-1 pt-3 text-[11px] text-muted-foreground">Recent workspaces</p>}
-        {recent.map((entry) => <button type="button" key={entry.rootPath} onClick={() => choose(() => onOpenRecent(entry.rootPath, entry.name))} className="block w-full rounded-lg px-2 py-2 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span className="block truncate text-sm">{entry.name}</span><span className="block truncate text-[11px] text-muted-foreground">{entry.rootPath}</span></button>)}
+        {recent.map((entry) => <button type="button" key={entry.rootPath} onClick={() => choose(() => onOpenRecent(entry.rootPath, entry.name))} className="block w-full rounded-md px-2 py-2 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span className="block truncate text-sm">{entry.name}</span><span className="block truncate text-[11px] text-muted-foreground">{entry.rootPath}</span></button>)}
         {!visible.length && !recent.length && <p className="px-2 py-4 text-xs text-muted-foreground">No matching workspaces.</p>}
       </div>
       <Button variant="ghost" className="mt-2 h-9 w-full justify-start text-xs" onClick={() => choose(onAdd)}><Plus className="size-4" aria-hidden="true" />Add workspace</Button>

@@ -47,11 +47,15 @@ test("root turns serialize, queued instructions edit/remove, independent convers
   f.submit(); f.submit("second"); f.submit("third"); f.submit("parallel", "other");
   assert.deepEqual(f.snapshot().runs.map((run) => run.state), ["starting", "queued", "queued"]);
   assert.equal(f.snapshot("other").runs[0].state, "starting");
+  assert.equal(f.snapshot().runs[0].startedAt, "2026-10-21T10:00:00.000Z");
+  assert.equal(f.snapshot().runs[1].startedAt, undefined);
   f.command({ kind: "edit-queued", commandId: "edit", conversationId: "conversation", runId: "second", instruction: "edited" });
   f.command({ kind: "remove-queued", commandId: "remove", conversationId: "conversation", runId: "third" });
   assert.throws(() => f.command({ kind: "edit-queued", commandId: "bad-edit", conversationId: "conversation", runId: "run", instruction: "too late" }), /Only unsent/);
+  f.setTime("2026-10-21T10:01:00.000Z");
   f.update({ kind: "finished", eventId: "done", status: "completed", failure: null, usage: null });
   assert.equal(f.snapshot().runs[1].state, "starting");
+  assert.equal(f.snapshot().runs[1].startedAt, "2026-10-21T10:01:00.000Z");
   assert.equal(f.snapshot().items.at(-1)?.kind, "message");
   assert.equal(f.snapshot().runs[1].instruction, "edited");
 });

@@ -3,14 +3,8 @@ import { randomUUID } from "node:crypto";
 import test from "node:test";
 import type { SDKAssistantMessage, SDKPartialAssistantMessage } from "@anthropic-ai/claude-agent-sdk";
 import { ClaudeStreamNormalizer } from "@main/providers/claude/streamNormalizer";
+import { claudeMessage as message } from "./toolFixtures";
 
-function message(content: SDKAssistantMessage["message"]["content"]): SDKAssistantMessage["message"] {
-  return { id: "native-message", type: "message", role: "assistant", model: "fixture", content,
-    stop_reason: null, stop_sequence: null, stop_details: null, container: null, context_management: null, diagnostics: null,
-    usage: { input_tokens: 1, output_tokens: 1, cache_creation: null, cache_creation_input_tokens: null,
-      cache_read_input_tokens: null, fallback_credit: null, inference_geo: null, iterations: null,
-      output_tokens_details: null, server_tool_use: null, service_tier: null, speed: null } };
-}
 function partial(event: SDKPartialAssistantMessage["event"]): SDKPartialAssistantMessage {
   return { type: "stream_event", event, uuid: randomUUID(), parent_tool_use_id: null, session_id: "session" };
 }
@@ -45,4 +39,17 @@ test("Claude reasoning and prose reconcile independently within a message", () =
   stream.accept(partial({ type: "content_block_delta", index: 1, delta: { type: "text_delta", text: "Answer" } }));
   const frames = stream.accept(partial({ type: "message_stop" }));
   assert.deepEqual(frames.map((frame) => "text" in frame ? [frame.kind, frame.text, frame.complete] : []), [["text", "Answer", true], ["reasoning", "Reason", true]]);
+});
+
+test("Claude preserves a rejected limit reset in the normalized failure", () => {
+  const stream = new ClaudeStreamNormalizer();
+  const seconds = Date.parse("2026-11-10T12:00:00Z") / 1000;
+  stream.accept({ type: "rate_limit_event", uuid: randomUUID(), session_id: "session", rate_limit_info: { status: "rejected", resetsAt: seconds } });
+  const frames = stream.accept({ type: "result", subtype: "error_during_execution", uuid: randomUUID(), session_id: "session",
+    duration_ms: 0, duration_api_ms: 0, is_error: true, num_turns: 1, stop_reason: null, total_cost_usd: 0, modelUsage: {}, permission_denials: [], errors: ["Limit reached"],
+    usage: { input_tokens: 0, output_tokens: 0, cache_creation: { ephemeral_1h_input_tokens: 0, ephemeral_5m_input_tokens: 0 }, cache_creation_input_tokens: 0,
+      cache_read_input_tokens: 0, fallback_credit: null, inference_geo: "", iterations: [], output_tokens_details: { thinking_tokens: 0 }, server_tool_use: { web_fetch_requests: 0, web_search_requests: 0 }, service_tier: "standard", speed: "standard" } });
+  const frame = frames.find((entry) => entry.kind === "finished");
+  assert.equal(frame?.kind, "finished");
+  if (frame?.kind === "finished") assert.deepEqual(frame.failure, { code: "usage-limit", message: "Claude usage limit reached", retryable: true, resetsAt: "2026-11-10T12:00:00.000Z" });
 });

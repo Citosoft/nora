@@ -1,6 +1,7 @@
+import type { McpAction, McpResult } from "@shared/types/provider/mcp.types";
 import type { ExecutionProvider, EmitProviderUpdate, ProviderExecution } from "@main/types/execution/provider.types";
 import type { ClaudeActive, ClaudeOptions, ClaudePending, ClaudePrompt } from "@main/types/execution/claude.types";
-import type { RequestResponse, RuntimeRequest, WorkspaceRef } from "@shared/types/conversation/contracts.types";
+import type { RequestResponse, RuntimeRequest, ToolActivity, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ProviderCatalogResult } from "@shared/types/provider/catalog.types";
 import { nativeCapabilities } from "@main/execution/providerCapabilities";
 import { z } from "zod";
@@ -12,6 +13,12 @@ export class ClaudeAdapter implements ExecutionProvider {
   private readonly active = new Map<string, ClaudeActive>();
   private readonly requests = new Map<string, ClaudePending>();
   constructor(private readonly options: ClaudeOptions) { this.instanceId = options.instanceId; }
+
+  async mcp(workspace: WorkspaceRef, action: McpAction): Promise<McpResult> {
+    if (action.kind === "login") return { kind: "unavailable", message: "Sign in to this MCP server in an interactive Claude Code session on the same machine, then refresh in Nora." };
+    return this.options.readMcp ? this.options.readMcp(workspace.path)
+      : { kind: "unavailable", message: "This Claude runtime does not expose MCP discovery." };
+  }
 
   async catalog(workspace: WorkspaceRef): Promise<ProviderCatalogResult> {
     try {
@@ -49,6 +56,7 @@ export class ClaudeAdapter implements ExecutionProvider {
       onRequest: (prompt) => this.ask(execution, prompt, emit) });
     this.active.set(run.attemptId, { ...execution, emit, session });
     let completed = false;
+    const tools = new Map<string, ToolActivity>();
     const timestamps = new Map(snapshot.items.map((item) => [item.id, item.createdAt]));
     const itemTime = (nativeId: string, kind: string): string => {
       const id = JSON.stringify([run.id, nativeId, kind]);
@@ -69,9 +77,13 @@ export class ClaudeAdapter implements ExecutionProvider {
                 createdAt: itemTime(frame.nativeId, "text"), text: frame.text, complete: frame.complete }
               : { kind: "reasoning", id: JSON.stringify([run.id, frame.nativeId, "reasoning"]), runId: run.id,
                 createdAt: itemTime(frame.nativeId, "reasoning"), text: frame.text, complete: frame.complete } }); break;
-          case "tool":
-            emit({ ...base, eventId: frame.eventId, kind: "item", item: { kind: "tool", id: JSON.stringify([run.id, frame.nativeId, "tool"]), runId: run.id,
-              createdAt: itemTime(frame.nativeId, "tool"), label: frame.label, output: frame.output, state: frame.state } }); break;
+          case "tool": {
+            const item: ToolActivity = { kind: "tool", id: JSON.stringify([run.id, frame.nativeId, "tool"]), runId: run.id,
+              createdAt: itemTime(frame.nativeId, "tool"), label: frame.label, output: frame.output, state: frame.state,
+              ...(frame.details ? { details: frame.details } : {}) };
+            tools.set(item.id, item);
+            emit({ ...base, eventId: frame.eventId, kind: "item", item }); break;
+          }
           case "finished":
             completed = true;
             emit({ ...base, eventId: frame.eventId, kind: "finished", status: frame.status, failure: frame.failure, usage: frame.usage }); break;
@@ -79,6 +91,9 @@ export class ClaudeAdapter implements ExecutionProvider {
       }
       if (!completed) throw new Error("Claude stream ended without a result");
     } finally {
+      if (!completed) for (const item of tools.values()) {
+        if (item.state === "running") emit({ ...base, eventId: `unconfirmed:${item.id}`, kind: "item", item: { ...item, state: "unconfirmed" } });
+      }
       this.active.delete(run.attemptId);
       for (const [id, pending] of this.requests) {
         if (pending.attemptId === run.attemptId) { pending.reject(new Error("Claude request expired")); this.requests.delete(id); }
@@ -93,7 +108,9 @@ export class ClaudeAdapter implements ExecutionProvider {
     const common = { id, runId: run.id, attemptId: run.attemptId, nativeId: prompt.nativeId, title: prompt.title,
       status: "pending" as const, createdAt: this.options.now(), expiresAt: new Date(Date.parse(this.options.now()) + (this.options.requestLifetimeMs ?? 30 * 60_000)).toISOString() };
     const request: RuntimeRequest = prompt.kind === "question" ? { ...common, kind: "question", questions: prompt.questions }
-      : { ...common, kind: "approval", options: [{ id: "allow", label: "Allow once" }, { id: "deny", label: "Decline" }] };
+      : { ...common, kind: "approval", ...(prompt.details ? { details: prompt.details } : {}),
+        options: [{ id: "allow", label: "Allow once", intent: "allow", scope: "once", description: "Allow only this action." },
+          { id: "deny", label: "Decline", intent: "deny", description: "Decline this action; the agent may continue." }] };
     return new Promise<RequestResponse>((resolve, reject) => {
       const expire = (): void => {
         cleanup(); this.requests.delete(id);

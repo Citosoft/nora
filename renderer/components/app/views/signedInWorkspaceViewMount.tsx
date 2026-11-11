@@ -1,3 +1,4 @@
+import { useWorkspaceNavigation } from "@/components/app/hooks/useWorkspaceNavigation";
 import { COLLAPSED_SIDEBAR_WIDTH } from "@/components/app/constants/uiLayout";
 import { useAppShellLayoutSlice } from "@/components/app/context/appShellBuildContexts";
 import { AppSignedInWorkspaceViewProvider } from "@/components/app/context/appSignedInWorkspaceViewContext";
@@ -13,6 +14,8 @@ import { useMemo, type PointerEvent, type ReactElement } from "react";
  * center/sidebar/changes derived values — keeps that wiring out of the chrome tree.
  */
 export function useSignedInWorkspaceViewMount(): ReactElement | null {
+  const { route } = useWorkspaceNavigation();
+  const filesTool = route?.tool === "files" || route?.tool === "changes";
   const layout = useAppShellLayoutSlice();
   const sessionCenter = useSessionCenterPorts();
   const workspaceSidebarContextValue = useWorkspaceSidebarValue();
@@ -29,7 +32,7 @@ export function useSignedInWorkspaceViewMount(): ReactElement | null {
       : `${layout.workspaceSidebarWidth}px`;
     // A collapsed changes sidebar is fully hidden; the title bar toggle reopens it.
     const changesTrack =
-      layout.hasActiveWorkspace && !layout.isChangesSidebarCollapsed ? `${layout.changesSidebarWidth}px` : "0px";
+      layout.hasActiveWorkspace && !layout.isChangesSidebarCollapsed && !filesTool ? `${layout.changesSidebarWidth}px` : "0px";
     const gridTemplateColumns = layout.sidebarsSwapped
       ? `${changesTrack} minmax(0, 1fr) ${workspaceTrack}`
       : `${workspaceTrack} minmax(0, 1fr) ${changesTrack}`;
@@ -80,6 +83,7 @@ export function useSignedInWorkspaceViewMount(): ReactElement | null {
     sessionCenter.terminalThemeId,
     changesPanelSectionProps,
     layout.appClosingState,
+    filesTool,
     layout.changesSidebarWidth,
     layout.dismissWorkspaceLoading,
     layout.hasActiveWorkspace,

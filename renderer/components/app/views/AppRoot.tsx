@@ -3,7 +3,6 @@ import { AppRootShellStateProvider } from "@/components/app/context/appRootShell
 import { AppRootStateProvider } from "@/components/app/context/appRootStateContext";
 import {
   hasStoredUiLayout,
-  readStoredAiChatTabsState,
   readStoredBrowserTabsState,
   readStoredForgeViewerTabsState,
   readStoredWorkspaceContentState

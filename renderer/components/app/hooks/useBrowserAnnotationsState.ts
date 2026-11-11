@@ -1,8 +1,6 @@
 import { useNativeRuntimePorts } from "./useNativeRuntimePorts";
 import { useThreadWorkspaceSnapshot } from "./useThreadWorkspaceSnapshot";
 import { handoffThread } from "@/components/app/logic/thread-workspace/handoff";
-import { noraAgentClient } from "@/components/app/clients/noraAgentClient";
-import { handoffPromptToAgent, sendPromptToAgent } from "@/components/app/logic/agentHandoff";
 import {
   buildBrowserAnnotationKey,
   buildBrowserReviewPrompt,
@@ -13,14 +11,13 @@ import {
   readStoredBrowserAnnotationsForScope,
   writeStoredBrowserAnnotationsForScope
 } from "@/components/app/logic/browserAnnotationPersistence";
-import { launchAgent } from "@/components/app/logic/launchAgentWithInstruction";
 import type {
   BrowserAnnotationComposerTarget,
   UseBrowserAnnotationsStateArgs,
   UseBrowserAnnotationsStateResult
 } from "@/components/app/types/browserAnnotationContext.types";
 import { isAgentToolAvailable } from "@shared/agentToolState";
-import type { AgentContextReference, BrowserAnnotation, BrowserElementTarget, CreateAgentPayload } from "@shared/appTypes";
+import type { AgentContextReference, BrowserAnnotation, BrowserElementTarget } from "@shared/appTypes";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 export function useBrowserAnnotationsState({
@@ -29,9 +26,7 @@ export function useBrowserAnnotationsState({
   currentUrl,
   pageTitle,
   workspaceInstructionPath,
-  agents,
   tools,
-  onFocusAgent
 }: UseBrowserAnnotationsStateArgs): UseBrowserAnnotationsStateResult {
   const native = useNativeRuntimePorts();
   const threads = useThreadWorkspaceSnapshot(native.store);
@@ -47,7 +42,7 @@ export function useBrowserAnnotationsState({
   const availableTools = useMemo(() => tools.filter((tool) => isAgentToolAvailable(tool)), [tools]);
   const runningAgentTargets = useMemo(() => threads.summaries.filter((entry) => !entry.conversation.archivedAt
     && native.boot.workspaces.some((workspace) => workspace.shellProjectId === projectId && workspace.id === entry.conversation.workspace.projectId))
-    .map((entry) => ({ id: entry.conversation.id, name: entry.conversation.title, toolLabel: entry.conversation.provider.kind })), [threads.summaries, native.boot.workspaces, projectId]);
+    .map((entry) => ({ id: entry.conversation.id, label: entry.conversation.title, toolLabel: entry.conversation.provider.kind })), [threads.summaries, native.boot.workspaces, projectId]);
 
   const persistAnnotations = useCallback(
     (nextAnnotations: BrowserAnnotation[]) => {

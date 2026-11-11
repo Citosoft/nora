@@ -1,4 +1,4 @@
-import type { TimelineItem, ConversationCommand, ProviderBinding, ConversationSource } from "@shared/types/conversation/contracts.types";
+import type { TimelineItem, ConversationCommand, ConversationRun, ProviderBinding, ConversationSource } from "@shared/types/conversation/contracts.types";
 import type { ConversationHeader } from "@shared/types/conversation/queries.types";
 import type { ConversationClient } from "./conversationClient.types";
 import type { NativeWorkspace } from "@shared/types/personalization/workspaces.types";
@@ -8,7 +8,10 @@ export interface NativeConversationView {
   header: ConversationHeader;
   items: TimelineItem[];
   nextBefore: number | null;
+  runHistory: NativeRunHistory;
 }
+export interface NativeRunHistory { runs: ConversationRun[]; nextBefore: number | null; }
+export interface NativeTurnTimeProps { run: ConversationRun; startedAt: string; }
 export interface NativeConversationDeps {
   client: ConversationClient;
   conversationId: string | null;

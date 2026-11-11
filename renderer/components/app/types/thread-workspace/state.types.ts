@@ -11,6 +11,7 @@ export interface ThreadDocumentRuntime { busy: boolean; readyBinding: ProviderBi
 export interface ThreadWorkspaceSnapshot {
   boot: NativeBoot;
   focusRevision: number;
+  unreadThreadIds: readonly string[];
   layout: ThreadLayout;
   summaries: readonly ConversationSummary[];
   runtime: Readonly<Record<string, ThreadDocumentRuntime>>;
@@ -38,6 +39,8 @@ export interface ThreadWorkspaceStore {
   focusDocument(documentId: string): void;
   focusWorkspace(workspaceId: string): void;
   deactivate(): void;
+  setWindowFocused(focused: boolean): void;
+  setThreadVisible(visible: boolean): void;
   closeDocument(documentId: string): void;
   discardDraft(documentId: string): void;
   setText(documentId: string, text: string): void;

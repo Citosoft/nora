@@ -1,3 +1,4 @@
+import type { GenerateThreadName } from "./naming.types";
 import type { ExecutionFailure } from "@shared/types/conversation/contracts.types";
 import type { ExecutionStore, ExecutionEffect } from "./store.types";
 import type { OwnershipStore, ExecutionOwner } from "./ownership.types";
@@ -9,6 +10,7 @@ import type { RoleSelection } from "@shared/types/personalization/roles.types";
 
 export interface ProviderSupervisor extends ProviderResolver { close(): Promise<void> }
 export interface HostDependencies {
+  generateThreadName?: GenerateThreadName;
   roleForWorkspace?: (workspaceId: string) => RoleSelection | null;
   store: ExecutionStore & OwnershipStore;
   providers: ProviderSupervisor;

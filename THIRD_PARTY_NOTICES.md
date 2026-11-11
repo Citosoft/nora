@@ -2,7 +2,7 @@
 
 This product includes third-party open-source software.
 
-Generated: 2026-10-21T11:51:33.085Z
+Generated: 2026-11-11T00:01:47.523Z
 
 | Package | Version | License |
 | --- | --- | --- |
@@ -15,6 +15,7 @@ Generated: 2026-10-21T11:51:33.085Z
 | @monaco-editor/react | 4.7.0 | MIT |
 | @posthog/react | 1.9.1 | MIT |
 | @radix-ui/react-context-menu | 2.2.16 | MIT |
+| @radix-ui/react-dialog | 1.3.1 | MIT |
 | @radix-ui/react-popover | 1.1.15 | MIT |
 | @radix-ui/react-select | 2.2.6 | MIT |
 | @radix-ui/react-tabs | 1.1.13 | MIT |

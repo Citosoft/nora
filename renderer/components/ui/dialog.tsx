@@ -28,7 +28,7 @@ export function DialogContent({
   return (
     <div
       className={cn(
-        "flex max-h-[calc(100vh-3rem)] w-[min(720px,calc(100vw-2rem))] flex-col overflow-hidden rounded-[5px] border border-border bg-card shadow-panel",
+        "flex max-h-[calc(100vh-3rem)] w-[min(720px,calc(100vw-2rem))] flex-col overflow-hidden rounded-md border border-border bg-card shadow-panel",
         className
       )}
     >

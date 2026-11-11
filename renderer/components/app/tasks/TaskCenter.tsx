@@ -13,6 +13,7 @@ export function TaskCenter() {
   const snapshot = useCanonicalAppSnapshot();
   const { taskCenterProps } = useAppMainCenterContent();
   const {
+    projectId,
     workspaceTasks,
     workspaceSpecs,
     workspaceTaskBoards,
@@ -81,7 +82,7 @@ export function TaskCenter() {
         projectName: workspace.project.name,
         projectRootPath: workspace.project.rootPath
       }))
-  ].map((workspace) => ({
+  ].filter((workspace) => !projectId || workspace.projectId === projectId).map((workspace) => ({
     ...workspace,
     tasks: workspaceTasks[workspace.projectId]?.tasks ?? [],
     specs: workspaceSpecs[workspace.projectId]?.specs ?? [] as WorkspaceSpecSummary[],
@@ -132,7 +133,7 @@ export function TaskCenter() {
     <TaskBoardPanel
       workspaces={workspaceEntries}
       availableTools={detectedTools}
-      activeWorkspaceId={selectedWorkspaceId}
+      activeWorkspaceId={projectId ?? selectedWorkspaceId}
       viewMode={viewMode}
       selectedTaskKeys={selectedTaskKeys}
       selectedToolId={selectedToolId}

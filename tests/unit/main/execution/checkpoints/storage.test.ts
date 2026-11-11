@@ -66,3 +66,14 @@ test("failed final capture persistence rolls back new blobs and leaves native ou
   assert.equal(database.prepare("SELECT count(*) AS count FROM checkpoint_blobs").get()?.count, 1);
   assert.equal(f.snapshot().runs[0].state, "completed"); assert.equal(f.snapshot().runs[0].review, "pending");
 });
+
+
+test("fingerprinted files survive checkpoint persistence without requiring a content blob", (t) => {
+  const f = fixture(t); f.create(); f.submit();
+  const start = f.engine.claimEffect(["start"]); assert.ok(start);
+  const baseline = { status: "ready" as const, snapshot: { ...snapshot({ "note.md": "Before\n" }),
+    omitted: [{ path: "large.png", mode: "100644" as const, hash: "a".repeat(64) }] } };
+  f.engine.recordCheckpoint(start.id, "baseline", baseline);
+  f.restart();
+  assert.deepEqual(f.store.checkpoint("conversation", "run")?.baseline, baseline);
+});

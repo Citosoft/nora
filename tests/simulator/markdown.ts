@@ -1,0 +1,23 @@
+export const simulatedMarkdown = [
+  "# Markdown gallery",
+  "A streamed response for checking chat formatting. **Bold**, *italic*, ***bold italic***, ~~strikethrough~~, and `inline code` should all remain readable.",
+  "## Headings and paragraphs",
+  "This is a normal paragraph. It includes a [sample link](https://example.com), a bare URL https://example.com/docs, and escaped symbols: \\*literal asterisks\\*.",
+  "### Third-level heading",
+  "A second paragraph checks spacing, line wrapping, and punctuation — including Unicode: café, →, ✓.",
+  "#### Fourth-level heading",
+  "## Lists",
+  "- Inspect the project\n- Make a small change\n  - Keep the existing behavior\n  - Add regression coverage\n- Verify the result",
+  "1. Open the workspace\n2. Run validation\n3. Review the output",
+  "- [x] Read the requirements\n- [x] Prepare the example\n- [ ] Review the rendered Markdown",
+  "## Quotes",
+  "> A blockquote with **emphasis** and `code`.\n>\n> A second quoted paragraph.\n>> A nested quote.",
+  "## Code blocks",
+  '```typescript\ninterface Greeting {\n  name: string;\n}\n\nfunction greet({ name }: Greeting): string {\n  return `Hello, ${name}!`;\n}\n\nconsole.log(greet({ name: "Nora" }));\n```',
+  '```json\n{\n  "scenario": "markdown",\n  "streaming": true,\n  "tokensUsed": 0\n}\n```',
+  "```\nPlain text output\n  Indentation is preserved.\nA_long_line_for_testing_horizontal_scrolling_".concat("example_".repeat(18), "\n```"),
+  "## Tables",
+  "| Format | Example | Status |\n| :--- | :---: | ---: |\n| Emphasis | **Bold** | Ready |\n| Code | `npm test` | Ready |\n| Link | [Example](https://example.com) | Ready |",
+  "---",
+  "**End of gallery.** Try scrolling while the response streams, then review the completed formatting."
+].join("\n\n");

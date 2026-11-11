@@ -1,3 +1,4 @@
+import type { GenerateThreadName } from "./naming.types";
 import type { CodexOptions } from "./codex.types";
 import type { ClaudeOptions, ClaudeRuntimeOptions } from "./claude.types";
 import type { ExecutionFailure } from "@shared/types/conversation/contracts.types";
@@ -8,6 +9,7 @@ export type NativeInstance =
   | { kind: "codex"; options: Omit<CodexOptions, "now"> }
   | { kind: "claude"; instanceId: string; runtime: ClaudeRuntimeOptions; policies: ClaudeOptions["policies"] };
 export interface LocalHostOptions {
+  generateThreadName?: GenerateThreadName;
   roleForWorkspace?: (workspaceId: string) => RoleSelection | null;
   databasePath: string;
   environmentId: string;

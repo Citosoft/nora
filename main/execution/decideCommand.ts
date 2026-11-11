@@ -3,6 +3,7 @@ import type { Decision, DecisionContext } from "@main/types/execution/decisions.
 import { ExecutionCommandError } from "./errors";
 import { isActiveRun, projectState } from "./projection";
 import { snapshotRole } from "@shared/personalization/profiles";
+import { areQuestionAnswersComplete } from "@shared/conversations/questionAnswers";
 
 export function validateResponse(request: RuntimeRequest, response: RequestResponse): void {
   if (request.kind === "approval" && response.kind === "approval") {
@@ -10,11 +11,7 @@ export function validateResponse(request: RuntimeRequest, response: RequestRespo
   }
   if (request.kind === "question" && response.kind === "question") {
     const keys = Object.keys(response.answers);
-    if (keys.length === request.questions.length && request.questions.every((question) => {
-      const answers = response.answers[question.id];
-      return answers?.length && (question.multiple || answers.length === 1)
-        && (!question.options.length || answers.every((answer) => question.options.includes(answer)));
-    })) return;
+    if (keys.length === request.questions.length && areQuestionAnswersComplete(request.questions, response.answers)) return;
   }
   throw new ExecutionCommandError("invalid", "Response is not one of this request's supported choices");
 }
@@ -63,9 +60,23 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
     case "edit-queued":
     case "remove-queued": {
       if (!run || run.state !== "queued") throw new ExecutionCommandError("conflict", "Only unsent queued instructions can be edited or removed");
+      if (run.steering === "pending" || (run.steering && command.kind === "edit-queued")) throw new ExecutionCommandError("conflict", "Confirm steering delivery before editing this message");
       if (command.kind === "edit-queued") putRun({ ...run, instruction: command.instruction });
       else add({ kind: "remove-run", runId: run.id });
       break;
+    }
+    case "steer-queued": {
+      const target = initial.runs.find((entry) => entry.id === command.targetRunId);
+      if (!run || run.state !== "queued" || run.steering || !target || target.state !== "running" || !target.nativeTurnId
+        || initial.requests.some((request) => request.runId === target.id && ["pending", "responding"].includes(request.status))) {
+        throw new ExecutionCommandError("conflict", "Steering requires an unsent message and a confirmed running turn");
+      }
+      if (initial.runs.some((entry) => entry.steering === "pending")) throw new ExecutionCommandError("conflict", "Another steering message is still being delivered");
+      assertWriter();
+      putRun({ ...run, steering: "pending", failure: null });
+      decision.effects.push({ id: JSON.stringify([command.commandId, "steer"]), conversationId: command.conversationId, runId: target.id,
+        attemptId: target.attemptId, status: "pending", action: { kind: "steer", queuedRunId: run.id, instruction: run.instruction } });
+      return decision;
     }
     case "continue-queue":
       assertWriter();
@@ -124,11 +135,11 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
       return decision;
     }
   }
-  if (state && !state.conversation.queuePaused && !state.runs.some(isActiveRun)) {
+  if (state && !state.conversation.queuePaused && !state.runs.some(isActiveRun) && !state.runs.some((entry) => entry.steering)) {
     const next = state.runs.find((entry) => entry.state === "queued");
     if (next) {
       assertWriter();
-      putRun({ ...next, state: "starting" });
+      putRun({ ...next, state: "starting", startedAt: context.now });
       add({ kind: "item", item: { id: JSON.stringify([next.id, "instruction"]), runId: next.id,
         createdAt: context.now, kind: "message", role: "user", text: next.instruction, complete: true } });
       decision.effects.push({ id: JSON.stringify([next.attemptId, "start"]), conversationId: command.conversationId,

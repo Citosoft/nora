@@ -13,7 +13,7 @@ export function saveCheckpoint(database: DatabaseSync, input: StoredCheckpoint):
   const checkpoint = storedCheckpointSchema.parse(input);
   const insert = database.prepare("INSERT INTO checkpoint_blobs VALUES (?, ?) ON CONFLICT(hash) DO NOTHING");
   const encode = (capture: CheckpointCapture): ManifestCapture => capture.status === "unavailable" ? capture
-    : { status: "ready", snapshot: { capturedAt: capture.snapshot.capturedAt, files: capture.snapshot.files.map((file) => {
+    : { status: "ready", snapshot: { ...capture.snapshot, files: capture.snapshot.files.map((file) => {
       const content = Buffer.from(file.content, "base64"); const hash = hashBytes(content);
       insert.run(hash, content);
       return { path: file.path, mode: file.mode, hash };
@@ -31,7 +31,7 @@ export function loadCheckpoint(database: DatabaseSync, conversationId: string, r
   if (manifest.conversationId !== conversationId || manifest.runId !== runId) throw new Error("Checkpoint identity does not match its owner");
   const select = database.prepare("SELECT content FROM checkpoint_blobs WHERE hash = ?");
   const decode = (capture: ManifestCapture): CheckpointCapture => capture.status === "unavailable" ? capture
-    : { status: "ready", snapshot: { capturedAt: capture.snapshot.capturedAt, files: capture.snapshot.files.map((file) => {
+    : { status: "ready", snapshot: { ...capture.snapshot, files: capture.snapshot.files.map((file) => {
       const { content } = blobRowSchema.parse(select.get(file.hash));
       if (hashBytes(content) !== file.hash) throw new Error("Checkpoint content failed its integrity check");
       return { path: file.path, mode: file.mode, content: Buffer.from(content).toString("base64") };

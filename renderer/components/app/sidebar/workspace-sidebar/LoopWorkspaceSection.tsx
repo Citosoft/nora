@@ -13,7 +13,7 @@ import { useState } from "react";
 
 export function LoopWorkspaceSection({ workspace, agentCatalog, onCreateChangeRequest }: LoopWorkspaceSectionProps) {
   const loops = useWorkspaceLoops(workspace.project.id);
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
   const [designerOpen, setDesignerOpen] = useState(false);
   const [runDialogOpen, setRunDialogOpen] = useState(false);
   const [monitorOpen, setMonitorOpen] = useState(false);

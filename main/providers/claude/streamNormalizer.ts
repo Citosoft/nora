@@ -1,5 +1,7 @@
+import { usageResetTimestamp } from "@shared/conversations/usageReset";
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { ClaudeFrame } from "@main/types/execution/claude.types";
+import { ClaudeToolActivity } from "./toolActivity";
 
 /** Reconcile final SDK blocks into the same message identities as streamed chunks. */
 export class ClaudeStreamNormalizer {
@@ -8,9 +10,24 @@ export class ClaudeStreamNormalizer {
   private readonly indices = new Map<string, number>();
   private lastMessageId: string | null = null;
   private failure: "authentication" | "usage-limit" | "provider" = "provider";
-  private readonly toolNames = new Map<string, string>();
+  private resetsAt: string | undefined;
+  private readonly tools = new ClaudeToolActivity();
 
   accept(message: SDKMessage): ClaudeFrame[] {
+    if (message.type === "rate_limit_event") {
+      if (message.rate_limit_info.status === "rejected") {
+        this.failure = "usage-limit";
+        this.resetsAt = usageResetTimestamp(message.rate_limit_info.resetsAt);
+      } else {
+        this.resetsAt = undefined;
+      }
+      return [];
+    }
+    const toolFrames = this.tools.accept(message);
+    return [...toolFrames, ...this.acceptText(message)];
+  }
+
+  private acceptText(message: SDKMessage): ClaudeFrame[] {
     if (message.type === "system" && message.subtype === "init") return [{ kind: "init", sessionId: message.session_id, eventId: message.uuid }];
     if (message.type === "stream_event") {
       const key = message.parent_tool_use_id ?? "root";
@@ -58,31 +75,21 @@ export class ClaudeStreamNormalizer {
           if (kind === "text") this.lastMessageId = id;
           frames.push({ kind, nativeId: id, eventId: `${message.uuid}:${kind}:${index}`, text: this.text(id, kind),
             complete: message.message.stop_reason !== null && !message.aborted });
-        } else if (block.type === "tool_use") {
-          this.toolNames.set(block.id, block.name);
-          frames.push({ kind: "tool", eventId: `${message.uuid}:${block.id}`, nativeId: block.id, label: block.name, output: "", state: "running" });
         }
       }
       return frames;
-    }
-    if (message.type === "user" && Array.isArray(message.message.content)) {
-      return message.message.content.flatMap((block): ClaudeFrame[] => {
-        if (block.type !== "tool_result") return [];
-        const output = typeof block.content === "string" ? block.content : block.content?.flatMap((content) => content.type === "text" ? [content.text] : []).join("\n") ?? "";
-        return [{ kind: "tool", eventId: `${message.uuid}:${block.tool_use_id}`, nativeId: block.tool_use_id,
-          label: this.toolNames.get(block.tool_use_id) ?? "Tool result", output, state: block.is_error ? "failed" : "completed" }];
-      });
     }
     if (message.type === "result") {
       const interrupted = message.terminal_reason === "aborted_streaming" || message.terminal_reason === "aborted_tools";
       const success = message.subtype === "success" && !message.is_error;
       const frames: ClaudeFrame[] = [];
+      frames.push(...this.tools.finish(interrupted ? "interrupted" : success ? "unconfirmed" : "failed", message.uuid));
       if (message.subtype === "success" && !message.is_error && message.result) {
         frames.push({ kind: "text", nativeId: this.lastMessageId ?? message.uuid, eventId: `${message.uuid}:final`, text: message.result, complete: true });
       }
       frames.push({ kind: "finished", eventId: message.uuid, status: interrupted ? "interrupted" : success ? "completed" : "failed",
         failure: success || interrupted ? null : { code: this.failure, message: this.failure === "authentication" ? "Sign in to the configured Claude account"
-          : this.failure === "usage-limit" ? "Claude usage limit reached" : "Claude could not complete this turn", retryable: true },
+          : this.failure === "usage-limit" ? "Claude usage limit reached" : "Claude could not complete this turn", retryable: true, ...(this.failure === "usage-limit" && this.resetsAt ? { resetsAt: this.resetsAt } : {}) },
         usage: { inputTokens: message.usage.input_tokens, outputTokens: message.usage.output_tokens } });
       return frames;
     }

@@ -2,10 +2,12 @@ import { conversationChannels, executeRequestSchema, readRequestSchema, unwatchR
 import type { ConversationGatewayReply } from "@shared/ipc/types/conversationGateway.types";
 import type { ConversationInvocation, RegisterConversationDeps } from "@main/types/execution/gateway.types";
 import { ConversationGateway, conversationReply } from "@main/execution/gateway";
+import { registerProviderIpc } from "./registerProviderIpc";
 import { ViewSubscriptions } from "@main/execution/viewSubscriptions";
 
 /** Sole channel owner. Bootstrap installs it only with the complete v3 cutover. */
 export function registerConversationIpc(deps: RegisterConversationDeps): () => void {
+  const unregisterProvider = registerProviderIpc(deps);
   const gateway = new ConversationGateway(deps);
   const subscriptions = new ViewSubscriptions(gateway);
   const allowed = (event: ConversationInvocation): boolean => !event.sender.isDestroyed() && deps.isAllowedSender(event);
@@ -23,6 +25,7 @@ export function registerConversationIpc(deps: RegisterConversationDeps): () => v
       subscriptions.unwatch(event.sender.id, request); return { kind: "unwatched" };
     }) : forbidden());
   return () => {
+    unregisterProvider();
     subscriptions.dispose();
     for (const channel of [conversationChannels.execute, conversationChannels.read, conversationChannels.watch, conversationChannels.unwatch]) deps.ipc.removeHandler(channel);
   };

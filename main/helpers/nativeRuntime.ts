@@ -1,3 +1,4 @@
+import { generateThreadName } from "@main/ai/threadNameGenerator";
 import { join } from "node:path";
 import { openLocalHost } from "@main/execution/localHost";
 import { LocalWorkspaceAuthority } from "@main/execution/localWorkspace";
@@ -7,6 +8,7 @@ import { PersonalizationService } from "@main/personalization/service";
 import { findExecutableOnPath } from "@main/processLookup";
 import { buildProcessEnv } from "@main/processEnv";
 import { effectiveRole } from "@shared/personalization/profiles";
+import { restoreWorkspaceSelection } from "@main/helpers/restoreWorkspaceSelection";
 import type { NativeRuntimeOptions, NativeRuntime } from "@main/types/native-runtime/runtime.types";
 import type { WorkspaceCatalog } from "@main/types/personalization/services.types";
 import type { NativeInstance } from "@main/types/execution/localHost.types";
@@ -23,15 +25,23 @@ export async function openNativeRuntime(options: NativeRuntimeOptions): Promise<
     prepare: (selection) => new LocalWorkspaceAuthority({ environmentId, inspectCheckout,
       registrations: () => [{ projectId: selection.projectId, checkoutId: selection.checkoutId, path: selection.path }] }).prepare(selection) });
   // Admission is explicit and host-owned. SSH projects never get rebound to a local process.
-  for (const project of options.projects()) if (project.location?.kind !== "ssh") await catalog.bindProject(project.id, project.rootPath, project.name);
+  for (const project of options.projects()) {
+    if (project.location?.kind !== "ssh") {
+      await restoreWorkspaceSelection(async () => {
+        await catalog.bindProject(project.id, project.rootPath, project.name);
+      });
+    }
+  }
   const activateWorkspace = async (selectedPath: string): Promise<void> => {
     await options.activateWorkspace(selectedPath);
     const project = options.projects().find((entry) => entry.rootPath === selectedPath && entry.location?.kind !== "ssh");
     if (project) await catalog.bindProject(project.id, project.rootPath, project.name);
   };
   if (options.readSettings().personalization.defaultRole) {
-    const personal = await catalog.ensurePersonal();
-    if (!options.projects().length) await activateWorkspace(personal.workspace.path);
+    await restoreWorkspaceSelection(async () => {
+      const personal = await catalog.ensurePersonal();
+      if (!options.projects().length) await activateWorkspace(personal.workspace.path);
+    });
   }
   const [codex, claude] = await Promise.all([
     findExecutableOnPath(process.platform === "win32" ? ["codex.exe", "codex.cmd", "codex"] : ["codex"], process.platform === "win32"),
@@ -50,6 +60,7 @@ export async function openNativeRuntime(options: NativeRuntimeOptions): Promise<
     providers.push({ kind: "claude", instanceId: "local", label: "Claude" });
   }
   const host = await openLocalHost({ environmentId, databasePath: join(options.stateDirectory, "execution.sqlite"), gitExecutable: "git", instances,
+    generateThreadName: (instruction, signal) => generateThreadName(options.readSettings().ai, instruction, signal),
     registrations: () => catalog.registrations(), roleForWorkspace: (id) => effectiveRole(options.readSettings().personalization, id),
     onFailure: (failure) => console.error(`Native execution: ${failure.message}`) });
   const personalization = new PersonalizationService({ read: options.readSettings,

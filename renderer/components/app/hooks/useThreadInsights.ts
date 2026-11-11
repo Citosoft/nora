@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { threadRequestTarget } from "@/components/app/logic/thread-workspace/requests";
 import { summarizeThreadChanges } from "@/components/app/logic/thread-workspace/insights";
 import type { ThreadInsightsInput, ThreadRequestState } from "@/components/app/types/threadInsights.types";
 
@@ -6,14 +7,12 @@ export function useThreadInsights({ header, items, workspace, hasOlderHistory, r
   const changes = useMemo(() => summarizeThreadChanges(items, hasOlderHistory), [items, hasOlderHistory]);
   const [request, setRequest] = useState<ThreadRequestState>({ status: "unavailable" });
   const [revision, setRevision] = useState(0);
-  const target = header?.conversation.workspace;
-  const projectId = workspace.shellProjectId;
+  const target = threadRequestTarget(header?.conversation.workspace, workspace);
+  const projectId = target?.projectId;
   const branch = target?.branch;
-  const matchesWorkspace = target?.environmentId === workspace.workspace.environmentId
-    && target?.projectId === workspace.workspace.projectId && target?.path === workspace.workspace.path;
   const reviewKey = items.filter((item) => item.kind === "review").map((item) => item.id).join("\n");
   useEffect(() => {
-    if (!projectId || !branch || !matchesWorkspace || !readBranchRequest || target?.versionControl === "none") {
+    if (!projectId || !branch || !readBranchRequest) {
       setRequest({ status: "unavailable" });
       return;
     }
@@ -25,6 +24,6 @@ export function useThreadInsights({ header, items, workspace, hasOlderHistory, r
       if (!cancelled) setRequest({ status: "failed", message: cause instanceof Error ? cause.message : "Change request could not be loaded." });
     });
     return () => { cancelled = true; };
-  }, [projectId, branch, matchesWorkspace, readBranchRequest, target?.versionControl, reviewKey, revision]);
+  }, [projectId, branch, readBranchRequest, reviewKey, revision]);
   return { changes, request, refresh: () => setRevision((current) => current + 1) };
 }

@@ -1,3 +1,4 @@
+import { parseAiSimpleTaskProvider } from "@shared/ai/settings";
 import {
   DEFAULT_APP_SETTINGS,
   type AiSettings,
@@ -160,10 +161,7 @@ function parseAiSettings(candidate: AppSettings["ai"] | undefined): AiSettings {
       }
     : DEFAULT_APP_SETTINGS.ai.modelByProvider;
 
-  const simpleTaskProvider =
-    parsedSettings.simpleTaskProvider === "cloud" || parsedSettings.simpleTaskProvider === "local"
-      ? parsedSettings.simpleTaskProvider
-      : DEFAULT_APP_SETTINGS.ai.simpleTaskProvider;
+  const simpleTaskProvider = parseAiSimpleTaskProvider(parsedSettings.simpleTaskProvider);
   const localLlmModelId =
     parsedSettings.localLlmModelId === "qwen2.5-0.5b-instruct" || parsedSettings.localLlmModelId === "smollm2-360m-instruct"
       ? parsedSettings.localLlmModelId

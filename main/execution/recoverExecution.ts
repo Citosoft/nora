@@ -2,9 +2,15 @@ import type { StoreTransaction } from "@main/types/execution/store.types";
 import type { EventPayload } from "@shared/types/conversation/contracts.types";
 import { finalizeReview } from "./finalizeReview";
 import { isActiveRun } from "./projection";
+import { finalizeSteering } from "./finalizeSteering";
 
 /** Recover durable intent only after acquiring sole environment ownership. */
 export function recoverExecution(transaction: StoreTransaction, now: string, nextId: () => string): void {
+  for (const effect of transaction.unfinishedEffects().filter((entry) => entry.action.kind === "steer")) {
+    finalizeSteering(transaction, effect, { status: effect.status === "claimed" ? "unconfirmed" : "rejected",
+      message: effect.status === "claimed" ? "Steering delivery was interrupted and is unconfirmed. This message will not run automatically."
+        : "Steering was not sent before restart. The message remains queued." }, now, nextId);
+  }
   // A later workspace observation cannot reconstruct evidence lost across host restart.
   for (const effect of transaction.unfinishedEffects().filter((entry) => entry.action.kind === "review")) {
     const checkpoint = transaction.checkpoint(effect.conversationId, effect.runId);

@@ -1,15 +1,9 @@
 import { useNativeRuntimePorts } from "./useNativeRuntimePorts";
-import { noraAgentClient } from "@/components/app/clients/noraAgentClient";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
-import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
 import { formatForgeIssueInstruction } from "@/components/app/logic/appUtils";
 import {
-  buildForgeReviewFileInstruction,
   buildForgeReviewInstruction,
-  createForgeReviewHandoffRelativePath,
-  resolveForgeReviewHandoffDisplayPath
 } from "@/components/app/logic/forgeReviewHandoff";
-import { launchAgentWithInstruction } from "@/components/app/logic/launchAgentWithInstruction";
 import type { StatusBarContextValue } from "@/components/app/logic/statusBarContext";
 import type {
   ForgeReviewAgentTargetMode,
@@ -22,12 +16,8 @@ import { useCallback } from "react";
 export function useForgeActionHandlers({
   forgeWorkItemDetail,
   canOpenProjectInIde,
-  runWithStatus,
   statusBar,
-  updateSnapshotState,
-  safelyAndRefresh,
   captureError,
-  trackForgeIssueAgentCreation
 }: {
   forgeWorkItemDetail: ForgeWorkItemDetail | null;
   canOpenProjectInIde: boolean;

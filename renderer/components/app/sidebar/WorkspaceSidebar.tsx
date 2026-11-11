@@ -42,7 +42,7 @@ export function WorkspaceSidebar() {
     </div>
     <div className={`w-full shrink-0 ${collapsed ? "flex flex-col items-center gap-1 pb-1" : "space-y-2 px-3 pb-3 pt-2"}`}>
       <Button variant="ghost" size={collapsed ? "icon" : "default"} className={collapsed ? "size-8" : "h-9 w-full justify-start px-2 text-sm font-normal"} onClick={newThread} aria-label="New thread" tooltip={collapsed ? "New thread" : undefined}><Plus className="size-4 text-muted-foreground" aria-hidden="true" />{!collapsed && "New thread"}</Button>
-      {!collapsed && <div className="relative"><Search className="pointer-events-none absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" aria-hidden="true" /><Input type="search" className="h-8 rounded-lg border-transparent bg-transparent pl-8 text-xs shadow-none hover:bg-muted/40 focus-visible:border-border" placeholder="Search threads…" aria-label="Search threads" value={query} onChange={(event) => setQuery(event.target.value)} /></div>}
+      {!collapsed && <div className="relative"><Search className="pointer-events-none absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" aria-hidden="true" /><Input type="search" className="h-8 rounded-md border-transparent bg-transparent pl-8 text-xs shadow-none hover:bg-muted/40 focus-visible:border-border" placeholder="Search threads…" aria-label="Search threads" value={query} onChange={(event) => setQuery(event.target.value)} /></div>}
     </div>
     {workspace && <WorkspaceShortcuts workspace={workspace} role={role} collapsed={collapsed} />}
     {!collapsed && (error || navigation.preferenceError) && <p role="alert" className="px-4 pb-3 text-xs text-destructive">{error ?? navigation.preferenceError}</p>}

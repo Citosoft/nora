@@ -40,3 +40,38 @@ test("Personal refuses symlink redirection and registry corruption instead of re
   await assert.rejects(catalog.ensurePersonal(), /regular directory/);
   assert.equal(catalog.list().length, 0);
 });
+
+test("rebinding a workspace after a branch switch refreshes the catalog but preserves conversation checks", async (t) => {
+  const temp = await mkdtemp(join(tmpdir(), "nora-workspace-branch-"));
+  t.after(() => rm(temp, { recursive: true, force: true }));
+  const projectPath = join(temp, "project");
+  await mkdir(projectPath);
+  let branch = "main";
+  const inspectCheckout = async (path: string) => ({ rootPath: path, branch, versionControl: "git" as const });
+  let catalog: WorkspaceCatalog | undefined;
+  const authority = new LocalWorkspaceAuthority({ environmentId: "local", registrations: () => catalog?.registrations() ?? [], inspectCheckout });
+  const options = {
+    indexPath: join(temp, "index.json"), personalPath: join(temp, "personal"), environmentId: "local", authority,
+    prepare: (selection: WorkspaceRef) => new LocalWorkspaceAuthority({ environmentId: "local", inspectCheckout,
+      registrations: () => [{ projectId: selection.projectId, checkoutId: selection.checkoutId, path: selection.path }] }).prepare(selection)
+  };
+  catalog = await openWorkspaceCatalog(options);
+  const original = await catalog.bindProject("shell-project", projectPath, "Project");
+  branch = "feature";
+
+  catalog = await openWorkspaceCatalog(options);
+  const refreshed = await catalog.bindProject("shell-project", projectPath, "Project");
+  assert.equal(refreshed.id, original.id);
+  assert.equal(refreshed.workspace.checkoutId, original.workspace.checkoutId);
+  assert.equal(refreshed.workspace.branch, "feature");
+  assert.equal(refreshed.shellProjectId, "shell-project");
+  assert.deepEqual((await openWorkspaceCatalog(options)).list(), [refreshed]);
+  await assert.rejects(authority.verify(original.workspace), /identity or branch changed/);
+  await authority.verify(refreshed.workspace);
+
+  // Refreshing a branch must never admit a directory replacement at the same path.
+  await rename(projectPath, `${projectPath}-old`);
+  await mkdir(projectPath);
+  await assert.rejects(catalog.bindProject("shell-project", projectPath, "Project"), /identity or branch changed/);
+  assert.deepEqual(catalog.list(), [refreshed]);
+});

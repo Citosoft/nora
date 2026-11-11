@@ -10,6 +10,18 @@ export function ThreadWorkspaceComposition({ store, children }: ThreadWorkspaceC
   const state = useThreadWorkspaceSnapshot(store);
   const userDisplayName = useUserDisplayName();
   useEffect(() => store.start(), [store]);
+  useEffect(() => {
+    const updateFocus = () => store.setWindowFocused(document.hasFocus() && document.visibilityState === "visible");
+    updateFocus();
+    window.addEventListener("focus", updateFocus);
+    window.addEventListener("blur", updateFocus);
+    document.addEventListener("visibilitychange", updateFocus);
+    return () => {
+      window.removeEventListener("focus", updateFocus);
+      window.removeEventListener("blur", updateFocus);
+      document.removeEventListener("visibilitychange", updateFocus);
+    };
+  }, [store]);
   const actions = useMemo(() => ({
     focusWorkspace: store.focusWorkspace,
     openDraft: (workspaceId: string) => { store.openDraft({ workspaceId }); },
@@ -17,6 +29,7 @@ export function ThreadWorkspaceComposition({ store, children }: ThreadWorkspaceC
       if (row.target.kind === "draft") store.focusDocument(row.target.documentId);
       else store.openThread(row.target.conversationId);
     },
+    setThreadVisible: store.setThreadVisible,
     togglePin: store.togglePin, refresh: () => { void store.refresh(); }
   }), [store]);
   const navigation = useMemo<ThreadNavigationPorts>(() => ({ state, ...actions }), [state, actions]);

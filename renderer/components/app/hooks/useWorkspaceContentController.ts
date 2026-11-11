@@ -1,8 +1,6 @@
 import { useNativeRuntimePorts } from "./useNativeRuntimePorts";
-import { noraAgentClient } from "@/components/app/clients/noraAgentClient";
 import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
 import { formatTaskFileInstruction } from "@/components/app/logic/appUtils";
-import { launchAgent, launchAgentWithInstruction } from "@/components/app/logic/launchAgentWithInstruction";
 import { createNoteDraft } from "@/components/app/logic/noteUtils";
 import { createSpecDraft } from "@/components/app/logic/specUtils";
 import { getTaskAssignments, getTaskBoardSectionTitle } from "@/components/app/logic/taskBoardUtils";
@@ -19,7 +17,6 @@ export function useWorkspaceContentController({
   workspaceSpecs,
   workspaceNotes,
   workspaceTaskBoards,
-  updateWorkspaceTaskBoard,
   setWorkspaceTasks,
   setWorkspaceSpecs,
   setWorkspaceNotes,
@@ -29,14 +26,11 @@ export function useWorkspaceContentController({
   setFileEditorState,
   fileEditorState,
   openFileEditor,
-  safelyAndRefresh,
   updateSnapshotState,
   captureError,
   focusWorkspaceWithRecovery,
-  runWithStatus,
   statusBar,
   setIsCenterDiffExpanded,
-  trackAgentCreation
 }: UseWorkspaceContentControllerArgs): UseWorkspaceContentControllerResult {
   const snapshot = useCanonicalAppSnapshot();
   const native = useNativeRuntimePorts();
@@ -87,34 +81,6 @@ export function useWorkspaceContentController({
     }
 
     return snapshot.workspaces.find((workspace) => workspace.project.id === projectId)?.project.name ?? "Project";
-  };
-
-  const resolveProjectSummary = (projectId: string) => {
-    if (!snapshot) {
-      return null;
-    }
-    if (snapshot.project?.id === projectId) {
-      return snapshot.project;
-    }
-
-    return snapshot.workspaces.find((workspace) => workspace.project.id === projectId)?.project ?? null;
-  };
-
-  const buildWorkspaceInstructionPromptDetails = (projectId: string) => {
-    const instructionFile = resolveProjectSummary(projectId)?.workspaceInstructionFile;
-    if (!instructionFile) {
-      return {
-        workspacePaths: [],
-        references: [],
-        reminderText: ""
-      };
-    }
-
-    return {
-      workspacePaths: [{ path: instructionFile.absolutePath, kind: "file" as const }],
-      references: [{ kind: "workspace-path" as const, label: "Project instructions", value: instructionFile.absolutePath }],
-      reminderText: `Project instructions live at ${instructionFile.absolutePath}.`
-    };
   };
 
   const resolveWorkspaceStatePath = async (projectId: string, relativePath: string): Promise<string> =>

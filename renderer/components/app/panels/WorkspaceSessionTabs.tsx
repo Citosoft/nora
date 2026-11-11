@@ -9,8 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { isAgentToolAvailable } from "@shared/agentToolState";
-import { Bot, Expand, FileText, GitPullRequest, Globe, LayoutPanelTop, MessageSquare, Plus, TerminalSquare, X } from "lucide-react";
+import { Expand, FileText, GitPullRequest, Globe, LayoutPanelTop, MessageSquare, Plus, TerminalSquare, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 function runCloseAction(targets: WorkspaceSessionTab[], onCloseMany: (tabs: WorkspaceSessionTab[]) => void) {
@@ -24,7 +23,6 @@ export function WorkspaceSessionTabs({
   tabs,
   activeTabId,
   platform,
-  tools,
   onSelect,
   onClose,
   onCloseMany,
@@ -33,7 +31,6 @@ export function WorkspaceSessionTabs({
   onCreateTerminal,
   onCreateBrowser,
 }: WorkspaceSessionTabsProps) {
-  const availableTools = tools.filter((tool) => isAgentToolAvailable(tool));
   const [now, setNow] = useState(() => Date.now());
   const newAgentShortcut = formatShortcutKeys(
     SHORTCUT_DEFINITIONS.find((definition) => definition.id === "open-create-agent")?.keys ?? [],
@@ -81,7 +78,7 @@ export function WorkspaceSessionTabs({
                     className={cn(
                       "h-[42px] shrink-0 gap-2 rounded-none border-b-0 border-l-0 border-t-2 px-3 text-sm",
                       isActive
-                        ? "border-r border-border border-t-primary bg-accent/70 text-foreground"
+                        ? "border-r border-border border-t-primary bg-accent/70 text-foreground dark:bg-background dark:hover:bg-background"
                         : "border-r border-border/60 border-t-transparent bg-transparent text-muted-foreground hover:bg-accent/40 hover:text-foreground"
                     )}
                     onClick={() => onSelect(tab)}

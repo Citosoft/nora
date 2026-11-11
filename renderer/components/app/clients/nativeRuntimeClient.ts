@@ -2,6 +2,7 @@ import type { ConversationBridge } from "@shared/ipc/types/conversationGateway.t
 import type { PersonalizationBridge } from "@shared/ipc/types/personalizationGateway.types";
 
 export const nativeConversationBridge: ConversationBridge = {
+  mcp: (input) => window.nora.conversations.mcp(input),
   execute: (input) => window.nora.conversations.execute(input),
   read: (input) => window.nora.conversations.read(input),
   watch: (input) => window.nora.conversations.watch(input),

@@ -1,3 +1,4 @@
+import { unreadCompletions } from "./unread";
 import { effectiveRole } from "@shared/personalization/profiles";
 import { threadLayoutSchema } from "./schema";
 import { emptyThreadLayout } from "./persistence";
@@ -20,12 +21,15 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
     }
   }
   catch { corrupt = true; storageError = "Saved thread views could not be read. Their source has been preserved; fix or recover it before sending."; }
-  let state: ThreadWorkspaceSnapshot = { boot: deps.boot, focusRevision: 0, layout, summaries: [], runtime: {}, loading: true, error: null, storageError };
+  let state: ThreadWorkspaceSnapshot = { boot: deps.boot, focusRevision: 0, unreadThreadIds: [], layout, summaries: [], runtime: {}, loading: true, error: null, storageError };
+  let windowFocused = true, threadVisible = true;
   const listeners = new Set<() => void>();
   let users = 0, epoch = 0, sequence = 0, scheduled = false;
   let stop = (): void => {};
   const publish = (next: ThreadWorkspaceSnapshot): void => {
-    state = next;
+    const active = next.layout.documents.find((entry) => entry.id === next.layout.activeId);
+    const viewedId = windowFocused && threadVisible && active?.target.kind === "thread" ? active.target.conversationId : null;
+    state = { ...next, unreadThreadIds: next.unreadThreadIds.filter((id) => id !== viewedId) };
     for (const listener of [...listeners]) { try { listener(); } catch { /* A view cannot change accepted execution. */ } }
   };
   const runtime = (id: string): ThreadDocumentRuntime => Object.hasOwn(state.runtime, id) ? state.runtime[id] : { busy: false, readyBinding: null, error: null };
@@ -41,7 +45,7 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
     const current = ++sequence, generation = epoch;
     try {
       const summaries = await deps.client.summaries();
-      if (current === sequence && generation === epoch) publish({ ...state, summaries, loading: false, error: null });
+      if (current === sequence && generation === epoch) publish({ ...state, summaries, unreadThreadIds: unreadCompletions(state, summaries), loading: false, error: null });
     } catch (cause) {
       if (current === sequence && generation === epoch) publish({ ...state, loading: false, error: cause instanceof Error ? cause.message : "Threads could not be loaded from their execution host." });
     }
@@ -104,6 +108,8 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
       const activeId = state.layout.openIds.filter((key) => state.layout.documents.find((entry) => entry.id === key)?.workspaceId === id).at(-1) ?? null;
       save({ ...state.layout, focusedWorkspaceId: id, activeId });
     },
+    setWindowFocused(focused) { windowFocused = focused; publish(state); },
+    setThreadVisible(visible) { threadVisible = visible; publish(state); },
     deactivate() { save({ ...state.layout, activeId: null }); },
     closeDocument(id) { save(closeThreadDocument(state.layout, id)); },
     discardDraft(id) {

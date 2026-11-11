@@ -13,7 +13,10 @@ export type ConversationWatchReceipt = z.infer<typeof watchReceiptSchema>;
 export type ConversationGatewayError = z.infer<typeof gatewayErrorSchema>;
 export type ConversationGatewayReply = z.infer<typeof gatewayReplySchema>;
 
+import type { McpRequest, McpResult } from "@shared/types/provider/mcp.types";
+
 export interface ConversationBridge {
+  mcp(request: McpRequest): Promise<McpResult>;
   execute(request: ExecuteConversationRequest): Promise<CommandReceipt>;
   read(request: ReadConversationRequest): Promise<ReadConversationResult>;
   watch(request: WatchConversationRequest): Promise<ConversationWatchReceipt>;

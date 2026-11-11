@@ -1,6 +1,5 @@
 import { useNativeRuntimePorts } from "./useNativeRuntimePorts";
-import { createAiChatTab } from "@/components/app/logic/aiChatTabs";
-import { writeStoredAiChatTabsState, writeStoredForgeViewerTabsState } from "@/components/app/logic/appPersistence";
+import { writeStoredForgeViewerTabsState } from "@/components/app/logic/appPersistence";
 import { createForgeViewerTab } from "@/components/app/logic/forgeViewerTabs";
 import type { AiChatMessage, AiChatReasoningLevel } from "@/components/app/types";
 import type {
@@ -12,8 +11,6 @@ import type { ForgeWorkItemSummary } from "@shared/appTypes";
 import { useCallback, useEffect } from "react";
 
 export function useAppCenterTabs({
-  aiChatTabs,
-  focusedAiChatTabId,
   forgeViewerTabs,
   focusedForgeViewerTabId,
   setUiState,

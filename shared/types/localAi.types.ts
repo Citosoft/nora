@@ -1,7 +1,5 @@
 export type LocalLlmModelId = "qwen2.5-0.5b-instruct" | "smollm2-360m-instruct";
 
-export type AiSimpleTaskProvider = "cloud" | "local";
-
 export type LocalAiModelInstallState = "not-installed" | "installed";
 
 export interface LocalAiModelStatus {

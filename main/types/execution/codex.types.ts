@@ -1,9 +1,10 @@
 import type { EmitProviderUpdate, ProviderExecution } from "./provider.types";
 import type { JsonValue } from "./rpc.types";
-import type { ExecutionUsage, TimelineItem } from "@shared/types/conversation/contracts.types";
+import type { ApprovalRequest, ExecutionUsage, TimelineItem } from "@shared/types/conversation/contracts.types";
 import type { z } from "zod";
-import type { modelListSchema } from "@main/providers/codex/nativeSchemas";
+import type { modelListSchema, rateLimitsEventSchema } from "@main/providers/codex/nativeSchemas";
 
+export type CodexRateLimits = z.infer<typeof rateLimitsEventSchema>["rateLimits"];
 export type CodexModelPage = z.infer<typeof modelListSchema>;
 
 export interface CodexPolicy {
@@ -30,6 +31,12 @@ export interface CodexActive extends ProviderExecution {
 }
 export interface CodexPendingRequest {
   attemptId: string;
+  decisions?: Readonly<Record<string, JsonValue>>;
   resolve: (response: JsonValue) => void;
   reject: (error: Error) => void;
+}
+
+export interface CodexApproval {
+  request: Pick<ApprovalRequest, "title" | "details" | "options">;
+  decisions: Readonly<Record<string, JsonValue>>;
 }

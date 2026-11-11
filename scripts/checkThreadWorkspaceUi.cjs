@@ -33,6 +33,48 @@ let host;
     await fs.mkdir(process.env.NORA_UI_EVIDENCE_DIR, { recursive: true });
     await fs.writeFile(join(process.env.NORA_UI_EVIDENCE_DIR, 'new-thread.png'), (await window.webContents.capturePage()).toPNG());
   }
+  await click('#focus-window'); // Offscreen hosts have no OS window focus.
+  await click('#run-background');
+  await wait(`!!document.querySelector('section[aria-label="Threads"] [aria-label="Working"]')`);
+  const activityPosition = await evaluate(`(()=>{const icon=document.querySelector('section[aria-label="Threads"] [aria-label="Working"]');const row=icon.closest('button');const title=row.querySelector('span');return {x:icon.parentElement.getBoundingClientRect().x,rightOfTitle:icon.getBoundingClientRect().left>=title.getBoundingClientRect().right}})()`);
+  assert.equal(activityPosition.rightOfTitle, true, 'Activity appears to the right of the title');
+  await click('#request-input');
+  await wait(`!!document.querySelector('section[aria-label="Threads"] svg[aria-label="Needs input"]')`);
+  assert.equal(await evaluate(`document.querySelector('section[aria-label="Threads"] svg[aria-label="Needs input"]').closest('button').textContent.includes('Needs input')`), false, 'Needs input uses an icon without visible status text');
+  const inputIcon = await evaluate(`(()=>{const r=document.querySelector('section[aria-label="Threads"] svg[aria-label="Needs input"]').getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()`);
+  window.webContents.sendInputEvent({ type: 'mouseMove', ...inputIcon });
+  await wait(`!![...document.querySelectorAll('.pointer-events-none.fixed')].find(e=>e.textContent==='Needs input')`);
+  const attentionStates = [
+    ['awaiting-approval', 'Needs approval', 'lucide-shield-question'],
+    ['failed', 'Failed', 'lucide-circle-alert'],
+    ['recovering', 'Outcome unconfirmed', 'lucide-triangle-alert'],
+    ['interrupted', 'Interrupted', 'lucide-circle-stop']
+  ];
+  for (const [stateValue, label, iconClass] of attentionStates) {
+    await evaluate(`(()=>{const select=document.querySelector('#fixture-status');select.value=${JSON.stringify(stateValue)};select.dispatchEvent(new Event('change',{bubbles:true}))})()`);
+    const selector = `section[aria-label="Threads"] svg[aria-label="${label}"]`;
+    await wait(`!!document.querySelector(${JSON.stringify(selector)})`);
+    assert.equal(await evaluate(`document.querySelector(${JSON.stringify(selector)}).classList.contains(${JSON.stringify(iconClass)})`), true);
+    assert.equal(await evaluate(`document.querySelector(${JSON.stringify(selector)}).parentElement.getBoundingClientRect().x`), activityPosition.x);
+    const point = await evaluate(`(()=>{const r=document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()`);
+    window.webContents.sendInputEvent({ type: 'mouseMove', ...point });
+    await wait(`!![...document.querySelectorAll('.pointer-events-none.fixed')].find(e=>e.textContent===${JSON.stringify(label)})`);
+  }
+  await click('#pause-queue');
+  await wait(`!!document.querySelector('section[aria-label="Threads"] svg[aria-label="Queue paused"]')`);
+  await evaluate(`(()=>{const select=document.querySelector('#fixture-status');select.value='completed';select.dispatchEvent(new Event('change',{bubbles:true}))})()`);
+  await click('#finish-background');
+  const completedRow = 'button[aria-label="Open A long background thread title that must stay on one row, unread completion"]';
+  await wait(`!!document.querySelector(${JSON.stringify(completedRow)})`);
+  assert.equal(await evaluate(`!!document.querySelector(${JSON.stringify(completedRow)}).querySelector('[aria-label="Unread completion"]')`), true);
+  const rowGeometry = await evaluate(`(()=>{const row=document.querySelector(${JSON.stringify(completedRow)});const title=row.querySelector('span');return {height:row.getBoundingClientRect().height,truncated:title.scrollWidth>title.clientWidth}})()`);
+  assert.equal(await evaluate(`document.querySelector('[aria-label="Unread completion"]').parentElement.getBoundingClientRect().x`), activityPosition.x, 'Activity and unread use the same slot');
+  assert.ok(rowGeometry.height <= 40, 'Thread rows must remain a single compact line');
+  assert.equal(rowGeometry.truncated, true, 'Long titles truncate');
+  await click(completedRow);
+  await wait(`!document.querySelector('[aria-label="Unread completion"]')`);
+  await click('button[aria-label="Close A long background thread title that must stay on one row view"]');
+  await click('#return-draft');
   const initialId = (await state()).layout.activeId;
   await type(visibleComposer, 'A draft to keep');
   await click('button[aria-label="New thread"]');
@@ -63,6 +105,24 @@ let host;
   await click('button[aria-label="Open Draft something"]');
   await wait(`document.querySelector('section[aria-label="Thread"] textarea')?.value==='Follow-up draft'`);
   await wait(`!document.querySelector('section[aria-label="Thread"] button[aria-label="Send instruction"]')?.disabled`);
+  await wait(`!!document.querySelector('.thread-insights')`);
+  for (const width of [1280, 900]) {
+    window.setSize(width, 900);
+    await pause(100);
+    for (const expanded of [true, false]) {
+      if (!expanded) await click('.thread-insights > button');
+      const spacing = await evaluate(`(()=>{const s=getComputedStyle(document.querySelector('.thread-insights').parentElement.querySelector('.thread-transcript'));return [s.paddingTop,s.paddingRight]})()`);
+      await evaluate(`document.querySelector('main').dataset.changesSidebarOpen='true'`);
+      assert.equal(await evaluate(`getComputedStyle(document.querySelector('.thread-insights')).display`), 'none', 'Open sidebar hides chat details at every width');
+      assert.deepEqual(await evaluate(`(()=>{const s=getComputedStyle(document.querySelector('.thread-insights').parentElement.querySelector('.thread-transcript'));return [s.paddingTop,s.paddingRight]})()`), ['28px', '20px'], 'Hidden details reserve no transcript space');
+      await evaluate(`document.querySelector('main').dataset.changesSidebarOpen='false'`);
+      assert.notEqual(await evaluate(`getComputedStyle(document.querySelector('.thread-insights')).display`), 'none');
+      assert.equal(await evaluate(`document.querySelector('.thread-insights > button').getAttribute('aria-expanded')`), String(expanded), 'Closing sidebar preserves detail expansion');
+      assert.deepEqual(await evaluate(`(()=>{const s=getComputedStyle(document.querySelector('.thread-insights').parentElement.querySelector('.thread-transcript'));return [s.paddingTop,s.paddingRight]})()`), spacing);
+    }
+    await click('.thread-insights > button');
+  }
+  window.setSize(1024, 900);
   assert.equal((await state()).commands.length, 4, 'Closing a view must not interrupt or send');
   assert.equal(await evaluate(`document.querySelector('section[aria-label="Thread"] button[aria-label="Choose thread workspace"]').disabled`), true);
   if (process.env.NORA_UI_EVIDENCE_DIR) {

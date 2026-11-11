@@ -5,6 +5,7 @@ import { createThreadLayoutPersistence } from "@/components/app/logic/thread-wor
 import { threadLayoutSchema } from "@/components/app/logic/thread-workspace/schema";
 import { buildThreadNavigation } from "@/components/app/logic/thread-workspace/navigation";
 import { threadBinding, threadWorkspaceFixture } from "./threadWorkspaceFixtures";
+import type { ThreadRunState } from "@/components/app/types/thread-workspace/ports.types";
 
 function openDraft(f: ReturnType<typeof threadWorkspaceFixture>, text = "Write a brief") {
   const store = createThreadWorkspaceStore(f.deps);
@@ -125,6 +126,29 @@ test("navigation filters native attention/queue/archive state and pins by meanin
   assert.equal(buildThreadNavigation(store.snapshot(), "personal", "archive")[0].id, "archived");
 });
 
+test("navigation shows work only for executing runs, including closed threads", async () => {
+  const f = threadWorkspaceFixture(); const store = createThreadWorkspaceStore(f.deps);
+  const draftId = store.openDraft({ workspaceId: "personal", text: "Unsent draft" });
+  const states: readonly ThreadRunState[] = ["queued", "starting", "running", "awaiting-approval", "awaiting-input", "stopping", "completed", "failed", "interrupted", "recovering"];
+  for (const state of states) {
+    f.summaries[0].latestRun = { id: "run", state, createdAt: "2026-11-09T10:00:00.000Z", updatedAt: "2026-11-09T10:00:00.000Z", failure: null };
+    await store.refresh();
+    const rows = buildThreadNavigation(store.snapshot(), "personal", "all");
+    assert.equal(rows.find((row) => row.id === "existing")?.working, ["starting", "running", "stopping"].includes(state), state);
+    assert.equal(rows.find((row) => row.id === draftId)?.working, false);
+  }
+  assert.ok(f.summaries[0].latestRun);
+  f.summaries[0].latestRun.state = "running";
+  f.summaries[0].pendingRequestCount = 1;
+  await store.refresh();
+  assert.equal(buildThreadNavigation(store.snapshot(), "personal", "all").find((row) => row.id === "existing")?.working, false);
+  f.summaries[0].latestRun = null;
+  f.summaries[0].pendingRequestCount = 0;
+  f.summaries[0].queuedCount = 2;
+  await store.refresh();
+  assert.equal(buildThreadNavigation(store.snapshot(), "personal", "all").find((row) => row.id === "existing")?.working, false);
+});
+
 test("summary refreshes reject stale replies and token events do not reorder thread navigation", async () => {
   const f = threadWorkspaceFixture();
   const store = createThreadWorkspaceStore(f.deps);
@@ -149,4 +173,42 @@ test("summary refreshes reject stale replies and token events do not reorder thr
   const first = ordered.refresh(); await ordered.refresh();
   release(f.summaries); await first;
   assert.deepEqual(ordered.snapshot().summaries, []);
+});
+
+test("unread completions track background outcomes and clear only when viewed", async () => {
+  const f = threadWorkspaceFixture();
+  const store = createThreadWorkspaceStore(f.deps);
+  const update = async (state: ThreadRunState, id = "run") => {
+    f.summaries[0].latestRun = { id, state, createdAt: "2026-11-09T10:00:00.000Z", updatedAt: "2026-11-09T11:00:00.000Z", failure: null };
+    await store.refresh();
+  };
+  await update("completed", "old");
+  assert.deepEqual(store.snapshot().unreadThreadIds, [], "restored history is read");
+  await update("running");
+  await update("completed");
+  assert.equal(buildThreadNavigation(store.snapshot(), "personal", "attention")[0].unread, true);
+  await store.refresh();
+  assert.deepEqual(store.snapshot().unreadThreadIds, ["existing"], "refresh retains unread state");
+  const id = store.openThread("existing"); assert.ok(id);
+  assert.deepEqual(store.snapshot().unreadThreadIds, []);
+  await update("running", "second");
+  await update("completed", "second");
+  assert.deepEqual(store.snapshot().unreadThreadIds, [], "visible completion is read");
+  store.setWindowFocused(false);
+  await update("failed", "third");
+  assert.deepEqual(store.snapshot().unreadThreadIds, ["existing"], "unfocused window retains unread outcome");
+  store.setWindowFocused(true);
+  assert.deepEqual(store.snapshot().unreadThreadIds, []);
+  store.setThreadVisible(false);
+  await update("interrupted", "fourth");
+  assert.deepEqual(store.snapshot().unreadThreadIds, ["existing"], "workspace tools hide the selected thread");
+  store.setThreadVisible(true);
+  assert.deepEqual(store.snapshot().unreadThreadIds, []);
+  store.closeDocument(id);
+  await update("completed", "fifth");
+  assert.deepEqual(store.snapshot().unreadThreadIds, ["existing"], "closed threads still notify");
+  store.focusDocument(id);
+  assert.deepEqual(store.snapshot().unreadThreadIds, []);
+  await store.refresh();
+  assert.deepEqual(store.snapshot().unreadThreadIds, [], "read outcomes do not reappear");
 });
