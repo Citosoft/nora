@@ -15,7 +15,6 @@ export const orchestratorTestModules = [
   "tests/unit/main/orchestrator/terminalLineExtraction.test.ts",
   "tests/unit/main/orchestrator/claudeHarnessContext.test.ts",
   "tests/unit/main/orchestrator/codexHarnessContext.test.ts",
-  "tests/unit/main/orchestrator/geminiHarnessContext.test.ts",
   "tests/unit/main/orchestrator/cursorHarnessContext.test.ts"
 ] as const;
 

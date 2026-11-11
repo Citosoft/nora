@@ -6,6 +6,8 @@ import { nativeWorkspaceSchema } from "./workspaces";
 export const nativeProviderSchema = z.object({ kind: providerKindSchema, instanceId: z.string().min(1), label: z.string().min(1) }).strict();
 export const personalizationRequestSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("boot") }).strict(),
+  /** Re-detects installed runtimes so agents installed while Nora runs become usable without a restart. */
+  z.object({ kind: z.literal("refresh-providers") }).strict(),
   z.object({ kind: z.literal("onboard"), role: roleSelectionSchema }).strict(),
   z.object({ kind: z.literal("set-role"), workspaceId: z.string().min(1).nullable(), role: roleSelectionSchema.nullable() }).strict(),
   z.object({ kind: z.literal("add-workspace") }).strict(),

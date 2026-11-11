@@ -1,27 +1,9 @@
-import {
-  canPresetAgentWorkspaceTrust,
-  resolveManagedAgentLaunchOptions
-} from "@shared/agentStartupCapabilities";
+import { resolveManagedAgentLaunchOptions } from "@shared/agentStartupCapabilities";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-test("resolveManagedAgentLaunchOptions presets launch prompt and trust for supported agents", () => {
-  assert.deepEqual(resolveManagedAgentLaunchOptions("gemini"), {
-    initialPromptDelivery: "launch-command",
-    startupTrustMode: "trusted-workspace"
-  });
-  assert.deepEqual(resolveManagedAgentLaunchOptions("cursor"), {
-    initialPromptDelivery: "terminal",
-    startupTrustMode: "default"
-  });
-  assert.deepEqual(resolveManagedAgentLaunchOptions("goose"), {
-    initialPromptDelivery: "terminal",
-    startupTrustMode: "default"
-  });
-});
-
-test("canPresetAgentWorkspaceTrust is limited to agents with interactive trust flags", () => {
-  assert.equal(canPresetAgentWorkspaceTrust("gemini"), true);
-  assert.equal(canPresetAgentWorkspaceTrust("cursor"), false);
-  assert.equal(canPresetAgentWorkspaceTrust("claude"), false);
+test("resolveManagedAgentLaunchOptions presets the launch prompt only for agents that accept one", () => {
+  assert.deepEqual(resolveManagedAgentLaunchOptions("claude"), { initialPromptDelivery: "launch-command" });
+  assert.deepEqual(resolveManagedAgentLaunchOptions("codex"), { initialPromptDelivery: "launch-command" });
+  assert.deepEqual(resolveManagedAgentLaunchOptions("cursor"), { initialPromptDelivery: "terminal" });
 });

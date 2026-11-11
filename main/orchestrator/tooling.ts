@@ -26,7 +26,6 @@ export function createToolingHelpers(deps: ToolingHelperDeps): ToolingHelpers {
         waitForExit: false
       })
     },
-    gemini: null,
     cursor: {
       buildExecution: (toolCommand, getShellExecution) => ({
         ...getShellExecution(`${escapeToolCommand(toolCommand)} logout && ${escapeToolCommand(toolCommand)} login`),

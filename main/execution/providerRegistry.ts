@@ -8,6 +8,11 @@ export class ProviderRegistry implements ProviderResolver {
     if (this.providers.has(key)) throw new ExecutionCommandError("conflict", "Provider instance is already registered");
     this.providers.set(key, provider);
   }
+  adopt(provider: ExecutionProvider): boolean {
+    if (this.providers.has(JSON.stringify([provider.kind, provider.instanceId]))) return false;
+    this.register(provider);
+    return true;
+  }
   resolve(kind: ExecutionProvider["kind"], instanceId: string): ExecutionProvider {
     const provider = this.providers.get(JSON.stringify([kind, instanceId]));
     if (!provider) throw new ExecutionCommandError("missing", "Provider instance is not configured on this execution host");

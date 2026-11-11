@@ -1,7 +1,6 @@
 export type LoopHeadlessPromptStyle =
   | "codex-exec"
   | "claude-print"
-  | "gemini-prompt"
   | "cursor-print-trust"
   | "print-flag"
   | "execute-flag"

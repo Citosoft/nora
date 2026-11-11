@@ -4,6 +4,7 @@ import type { McpRequest, McpResult } from "@shared/types/provider/mcp.types";
 import type { ProviderAccountRequest, ProviderAccountResult } from "@shared/types/provider/account.types";
 import type { ProviderCatalogResult } from "@shared/types/provider/catalog.types";
 import type { HostDependencies, HostLifecycle, WorkerGroup } from "@main/types/execution/host.types";
+import type { ExecutionProvider } from "@main/types/execution/provider.types";
 import type { EventSubscription } from "@main/types/execution/engine.types";
 import { ConversationEngine } from "./engine";
 import { EffectWorker } from "./effectWorker";
@@ -119,6 +120,12 @@ export class ExecutionHost {
     // Without a workspace, runtimes resolve from a neutral directory; never present its project config as global.
     return workspace || result.kind !== "servers" ? result
       : { ...result, servers: result.servers.filter((server) => server.scope !== "workspace") };
+  }
+
+  /** Adds a runtime installed after startup; existing conversations keep the provider they were bound to. */
+  adoptProvider(provider: ExecutionProvider): boolean {
+    if (this.lifecycle !== "running") return false;
+    return this.deps.providers.adopt(provider);
   }
 
   async account(request: ProviderAccountRequest): Promise<ProviderAccountResult> {

@@ -1,6 +1,7 @@
 import { generateThreadName } from "@main/ai/threadNameGenerator";
 import { join } from "node:path";
 import { openLocalHost } from "@main/execution/localHost";
+import { createExecutionProvider } from "@main/execution/providerFactory";
 import { LocalWorkspaceAuthority } from "@main/execution/localWorkspace";
 import { createCheckoutInspector } from "@main/execution/workspaceGit";
 import { openWorkspaceCatalog } from "@main/personalization/workspaceCatalog";
@@ -42,6 +43,7 @@ export async function openNativeRuntime(options: NativeRuntimeOptions): Promise<
     });
   }
   const discovered = await discoverNativeProviders(buildProcessEnv(process.env));
+  const now = (): string => new Date().toISOString();
   const instances = discovered.map((entry) => entry.instance);
   const providers = discovered.map((entry) => entry.provider);
   const host = await openLocalHost({ environmentId, databasePath: join(options.stateDirectory, "execution.sqlite"), gitExecutable: "git", instances,
@@ -50,6 +52,11 @@ export async function openNativeRuntime(options: NativeRuntimeOptions): Promise<
     onFailure: (failure) => console.error(`Native execution: ${failure.message}`) });
   const personalization = new PersonalizationService({ read: options.readSettings,
     update: (change) => options.saveSettings(change(options.readSettings())) }, catalog, { environmentId, providers, cursor: () => host.eventCursor(),
+    refreshProviders: async () => {
+      const found = await discoverNativeProviders(buildProcessEnv(process.env));
+      for (const entry of found) host.adoptProvider(createExecutionProvider(entry.instance, now));
+      return found.map((entry) => entry.provider);
+    },
     chooseFolder: options.chooseFolder, openFolder: options.openFolder, activateWorkspace,
     resolveProject: (id) => {
       const project = options.projects().find((entry) => entry.id === id && entry.location?.kind !== "ssh");

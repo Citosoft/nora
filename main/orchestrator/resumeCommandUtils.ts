@@ -53,10 +53,6 @@ export const buildResumeCommand = (
     return normalizeAgentLaunchCommand(agent.toolId, `agent --resume=${resumeSessionId}`);
   }
 
-  if (agent.toolId === "gemini") {
-    return normalizeAgentLaunchCommand(agent.toolId, `${executable} --resume ${resumeSessionId}`);
-  }
-
   return null;
 };
 

@@ -15,3 +15,7 @@ test("workspace validation remains actionable and setup failures preserve the re
   assert.equal(personalizationErrorMessage(error, "register-workspace"), error.message);
   assert.match(personalizationErrorMessage(new Error("Storage failed"), "onboard"), /your selection is preserved/);
 });
+
+test("provider refresh failures suggest retrying rather than storage problems", () => {
+  assert.match(personalizationErrorMessage(new Error("boom"), "refresh-providers"), /newly installed coding agents/);
+});

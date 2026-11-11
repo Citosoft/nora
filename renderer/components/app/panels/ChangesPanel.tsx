@@ -1411,7 +1411,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                             Local CLI transcripts
                           </h3>
                           <p className="px-0.5 text-[11px] leading-relaxed text-muted-foreground">
-                            Codex, Claude, Gemini, and Cursor logs on this machine whose working directory matches this worktree.
+                            Codex, Claude, and Cursor logs on this machine whose working directory matches this worktree.
                             Remote-only checkouts are skipped.
                           </p>
                           {!snapshot.changesRoot ? (

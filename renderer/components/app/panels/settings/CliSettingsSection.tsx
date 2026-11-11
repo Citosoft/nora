@@ -1,342 +1,75 @@
-import { useProviderAccounts } from "@/components/app/hooks/useProviderAccounts";
-import { useSettingsRuntime } from "@/components/app/hooks/useSettingsRuntime";
-import { ProviderAccountStatus } from "@/components/app/panels/settings/ProviderAccountStatus";
-import { createAgentSkillCatalogMap } from "@/components/app/logic/agentSkills";
-import { settingAnchorAttributes } from "@/components/app/logic/settingsSearch";
-import { formatInstallLogText } from "@/components/app/logic/terminalLogText";
-import { settingRevealHighlightClassName } from "@/components/app/panels/settings/settingsUi";
-import { AgentToolIcon } from "@/components/app/shared/Tooling";
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { isAgentToolAvailable } from "@shared/agentToolState";
-import { Bot, ChevronDown, LoaderCircle, Wrench } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Bot } from "lucide-react";
+import { useProviderAccounts } from "@/components/app/hooks/useProviderAccounts";
+import { useRuntimeProviderSync } from "@/components/app/hooks/useRuntimeProviderSync";
+import { useSettingsRuntime } from "@/components/app/hooks/useSettingsRuntime";
+import { settingAnchorAttributes } from "@/components/app/logic/settingsSearch";
+import { ProviderInstallRow } from "@/components/app/panels/settings/ProviderInstallRow";
+import { ProviderListRow } from "@/components/app/panels/settings/ProviderListRow";
+import { SettingsSectionHeader } from "@/components/app/panels/settings/settingsUi";
+import type { ProvidersTab } from "@/components/app/types/providerList.types";
+import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { isAgentToolAvailable } from "@shared/agentToolState";
 
+/** Installed providers with sign-in status and enablement, plus supported providers that can be installed. */
 export function CliSettingsSection() {
-  const {
-    agentCatalog,
-    agentSkillCatalogs,
-    appSettings,
-    updatePreferredAgentToolId,
-    installTool,
-    toggleToolEnabled,
-    refreshAgentCatalog,
-    removeToolSkill
-  } = useSettingsRuntime();
+  const { agentCatalog, appSettings, updatePreferredAgentToolId, toggleToolEnabled, refreshAgentCatalog, installTool } = useSettingsRuntime();
   const providerAccounts = useProviderAccounts();
-  const detectedTools = agentCatalog.filter((tool) => tool.detected);
-  const availableDetectedTools = useMemo(
-    () => detectedTools.filter((tool) => isAgentToolAvailable(tool)),
-    [detectedTools]
-  );
-  const selectedPreferredAgentToolId = useMemo(
-    () =>
-      appSettings.preferredAgentToolId && availableDetectedTools.some((tool) => tool.id === appSettings.preferredAgentToolId)
-        ? appSettings.preferredAgentToolId
-        : "",
-    [appSettings.preferredAgentToolId, availableDetectedTools]
-  );
-  const [expandedToolIds, setExpandedToolIds] = useState<Set<string>>(new Set());
-  const skillCatalogByToolId = useMemo(
-    () => createAgentSkillCatalogMap(agentSkillCatalogs),
-    [agentSkillCatalogs]
-  );
-  const toggleExpanded = (toolId: string): void => {
-    setExpandedToolIds((current) => {
-      const next = new Set(current);
-      if (next.has(toolId)) {
-        next.delete(toolId);
-      } else {
-        next.add(toolId);
-      }
-      return next;
-    });
-  };
+  const [tab, setTab] = useState<ProvidersTab>("installed");
+  const installed = agentCatalog.filter((tool) => tool.detected);
+  const installedIds = useMemo(() => installed.map((tool) => tool.id), [installed]);
+  const runtimes = useRuntimeProviderSync(installedIds);
+  const installable = agentCatalog.filter((tool) => !tool.detected && tool.installTemplate.trim().length > 0);
+  const available = installed.filter((tool) => isAgentToolAvailable(tool));
+  const preferred = available.some((tool) => tool.id === appSettings.preferredAgentToolId) ? appSettings.preferredAgentToolId ?? "" : "";
 
   return (
     <div className="max-w-4xl">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-foreground">
-            <Bot className="size-5" aria-hidden="true" />
-            <div className="text-xl font-semibold">Providers</div>
-          </div>
-          <div className="mt-1 text-sm text-muted-foreground">
-            Enable and configure your coding providers, choose a default, and manage provider skills.
-          </div>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => { refreshAgentCatalog(); providerAccounts.refresh(); }}>
-          Refresh detection
+        <SettingsSectionHeader title="Providers" icon={Bot} description="Coding agents Nora can run: their sign-in status, whether they're enabled, and others you can install." />
+        <Button variant="outline" size="sm" className="shrink-0" disabled={runtimes.refreshing} onClick={() => { refreshAgentCatalog(); void runtimes.refresh(); }}>
+          Refresh
         </Button>
       </div>
-
-      <div className="mt-6 space-y-3">
-        <div
-          {...settingAnchorAttributes("Preferred Provider")}
-          className={`rounded-[6px] border border-border/60 bg-card/40 px-4 py-4 ${settingRevealHighlightClassName}`}
-        >
-          <div className="mb-2 text-sm font-medium text-foreground">Preferred Provider</div>
-          <div className="mb-3 text-sm text-muted-foreground">
-            Choose which enabled provider Nora should select by default for new threads.
-          </div>
-          <DropdownMenu
-            align="start"
-            widthClassName="w-[280px]"
-            trigger={(
-              <button
-                type="button"
-                className="form-control-surface flex h-10 w-full items-center justify-between rounded-[5px] border px-3 py-2 text-sm ring-offset-background transition"
-                aria-label="Choose preferred provider"
-              >
-                <span className="flex min-w-0 items-center gap-2">
-                  {selectedPreferredAgentToolId ? (
-                    <AgentToolIcon
-                      toolId={selectedPreferredAgentToolId}
-                      label={availableDetectedTools.find((tool) => tool.id === selectedPreferredAgentToolId)?.label || "Preferred provider"}
-                      className="size-4 shrink-0 rounded-sm"
-                      imageClassName="size-3 rounded-sm"
-                    />
-                  ) : (
-                    <Bot className="size-4 text-primary" />
-                  )}
-                  <span className="truncate">
-                    {selectedPreferredAgentToolId
-                      ? (availableDetectedTools.find((tool) => tool.id === selectedPreferredAgentToolId)?.label || "Preferred provider")
-                      : "Automatic (first detected)"}
-                  </span>
-                </span>
-                <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-              </button>
-            )}
-          >
-            <DropdownMenuItem onSelect={() => updatePreferredAgentToolId(null)}>
-              <Bot className="size-4 text-primary" />
-              <span className="truncate">Automatic (first detected)</span>
-              {!selectedPreferredAgentToolId ? (
-                <span className="ml-auto rounded-[4px] bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-primary">
-                  Current
-                </span>
-              ) : null}
-            </DropdownMenuItem>
-            {availableDetectedTools.map((tool) => (
-              <DropdownMenuItem key={tool.id} onSelect={() => updatePreferredAgentToolId(tool.id)}>
-                <AgentToolIcon
-                  toolId={tool.id}
-                  label={tool.label}
-                  className="size-4 shrink-0 rounded-sm"
-                  imageClassName="size-3 rounded-sm"
-                />
-                <span className="truncate">{tool.label}</span>
-                {selectedPreferredAgentToolId === tool.id ? (
-                  <span className="ml-auto rounded-[4px] bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-primary">
-                    Current
-                  </span>
-                ) : null}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenu>
-        </div>
-        {agentCatalog.map((tool) => {
-          const skillCatalog = skillCatalogByToolId.get(tool.id) || null;
-          const hasInstallCommand = tool.installTemplate.trim().length > 0;
-          const statusLabel = !tool.detected
-            ? (tool.installStatus === "running" ? "Installing" : "Not detected")
-            : tool.enabled
-              ? "Enabled"
-              : "Disabled";
-          const isExpanded = expandedToolIds.has(tool.id);
-          const shouldShowInstallProgress = tool.installStatus === "running" || (isExpanded && tool.installLog.length > 0);
-          const accountView = tool.detected ? providerAccounts.views.get(tool.id) : undefined;
-
-          return (
-            <div
-              key={tool.id}
-              className="rounded-[6px] border border-border/60 bg-card/50 px-4 py-4"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <button
-                  type="button"
-                  onClick={() => toggleExpanded(tool.id)}
-                  className="flex min-w-0 items-center gap-3 text-left"
-                  aria-expanded={isExpanded}
-                  aria-label={`${isExpanded ? "Collapse" : "Expand"} ${tool.label} details`}
-                >
-                  <AgentToolIcon
-                    toolId={tool.id}
-                    label={tool.label}
-                    className="size-10 shrink-0"
-                    imageClassName="size-6 rounded-[4px]"
-                  />
-                  <div className="min-w-0 font-medium text-foreground">{tool.label}</div>
-                  <ChevronDown
-                    className={["size-4 shrink-0 text-muted-foreground transition-transform", isExpanded ? "rotate-180" : ""].join(" ")}
-                    aria-hidden="true"
-                  />
-                </button>
-                <div className="flex shrink-0 items-center gap-2">
-                  {!tool.detected && hasInstallCommand ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setExpandedToolIds((current) => {
-                          const next = new Set(current);
-                          next.add(tool.id);
-                          return next;
-                        });
-                        installTool(tool.id);
-                      }}
-                      disabled={tool.installStatus === "running"}
-                    >
-                      {tool.installStatus === "running" ? (
-                        <LoaderCircle className="size-4 animate-spin" />
-                      ) : (
-                        <Wrench className="size-4" />
-                      )}
-                      {tool.installStatus === "running" ? "Installing" : "Install"}
-                    </Button>
-                  ) : null}
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={tool.enabled}
-                    disabled={!tool.detected}
-                    onClick={() => toggleToolEnabled(tool.id, !tool.enabled)}
-                    className={[
-                      "flex w-[124px] shrink-0 items-center justify-between rounded-[4px] border px-3 py-2 text-left transition",
-                      tool.detected
-                        ? tool.enabled
-                          ? "border-primary/40 bg-primary/10 text-foreground"
-                          : "border-border/70 bg-background/50 text-muted-foreground hover:border-primary/25 hover:text-foreground"
-                        : "cursor-not-allowed border-border/50 bg-muted/30 text-muted-foreground/70"
-                    ].join(" ")}
-                  >
-                    <span
-                      className="text-sm">{tool.enabled ? "Enabled" : "Disabled"}</span>
-                    <span
-                      className={[
-                        "relative inline-flex h-5 w-9 shrink-0 rounded-full transition",
-                        tool.detected ? (tool.enabled ? "bg-primary" : "bg-muted") : "bg-muted/60"
-                      ].join(" ")}
-                    >
-                      <span
-                        className={[
-                          "absolute top-0.5 size-4 rounded-full bg-white transition",
-                          tool.enabled ? "left-[18px]" : "left-0.5"
-                        ].join(" ")}
-                      />
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              {accountView ? (
-                <div className="mt-3 border-t border-border/50 pt-3">
-                  <ProviderAccountStatus providerLabel={tool.label} view={accountView} onSignIn={() => void providerAccounts.signIn(tool.id)} />
-                </div>
-              ) : null}
-
-              {isExpanded ? (
-                <div className="mt-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={[
-                        "rounded-full border px-2 py-0.5 text-[11px] uppercase tracking-[0.12em]",
-                        !tool.detected
-                          ? "border-slate-500/40 bg-slate-500/10 text-slate-500 dark:text-slate-300"
-                          : tool.enabled
-                            ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                            : "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                      ].join(" ")}
-                    >
-                      {statusLabel}
-                    </span>
-                    <span className="text-xs text-muted-foreground">{tool.detectedPath || `Aliases: ${tool.aliases.join(", ")}`}</span>
-                  </div>
-                  <div className="mt-2 text-sm text-muted-foreground">{tool.description}</div>
-
-                  {skillCatalog?.supported ? (
-                    <div className="mt-4 rounded-[4px] border border-border/60 bg-background/35 px-4 py-3">
-                      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                        {skillCatalog.sourceLabel || "Global skills"}
-                      </div>
-                      <div className="mt-1 break-all text-sm text-foreground">
-                        {skillCatalog.rootPath || "No skill root configured"}
-                      </div>
-                      {skillCatalog.installHint ? (
-                        <div className="mt-1 text-xs text-muted-foreground">{skillCatalog.installHint}</div>
-                      ) : null}
-                      {skillCatalog.errorMessage ? (
-                        <div className="mt-2 text-xs text-destructive">{skillCatalog.errorMessage}</div>
-                      ) : null}
-
-                      <div className="mt-4">
-                        {skillCatalog.skills.length ? (
-                          <div className="space-y-2">
-                            {skillCatalog.skills.map((skill) => (
-                              <div
-                                key={skill.id}
-                                className="flex items-start justify-between gap-3 rounded-[4px] border border-border/50 bg-card/40 px-3 py-3"
-                              >
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <div className="font-medium text-foreground">{skill.name}</div>
-                                    <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-700 dark:text-emerald-300">
-                                      Enabled
-                                    </span>
-                                  </div>
-                                  {skill.description ? (
-                                    <div className="mt-1 text-sm text-muted-foreground">{skill.description}</div>
-                                  ) : null}
-                                  <div className="mt-2 break-all text-xs text-muted-foreground">{skill.path}</div>
-                                </div>
-                                <Button variant="outline" size="sm" onClick={() => removeToolSkill(tool.id, skill.id)}>
-                                  Remove
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-sm text-muted-foreground">
-                            No visible global skills are installed for this provider.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {shouldShowInstallProgress ? (
-                <div className="mt-4 rounded-[4px] border border-border/60 bg-background/35 px-3 py-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                      Install progress
-                    </div>
-                    {tool.installStatus === "running" ? (
-                      <LoaderCircle className="size-3.5 animate-spin text-primary" />
-                    ) : null}
-                  </div>
-                  {tool.installLog.length ? (
-                    <pre className="terminal-text mt-3 max-h-44 overflow-auto rounded-[4px] border border-border/60 bg-black/30 p-3 text-xs leading-6 text-muted-foreground">
-                      {formatInstallLogText(tool.installLog)}
-                    </pre>
-                  ) : (
-                    <div className="mt-2 text-sm text-muted-foreground">Waiting for install output...</div>
-                  )}
-                </div>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="mt-5 text-sm text-muted-foreground">
-        {detectedTools.length
-          ? `${detectedTools.filter((tool) => isAgentToolAvailable(tool)).length} of ${detectedTools.length} detected providers enabled`
-          : "No supported providers are currently detected on this machine."}
-      </div>
+      <Tabs value={tab} onValueChange={(value) => setTab(value === "available" ? "available" : "installed")} className="mt-6">
+        <TabsList aria-label="Provider lists">
+          <TabsTrigger value="installed">Installed ({installed.length})</TabsTrigger>
+          <TabsTrigger value="available">Available to install ({installable.length})</TabsTrigger>
+        </TabsList>
+        <TabsContent value="installed">
+          {available.length ? (
+            <label {...settingAnchorAttributes("Default Provider")} className="mt-4 flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-4 text-sm">
+              <span><span className="font-medium text-foreground">Default provider</span>
+                <span className="block text-muted-foreground">Selected first for new agents and workspaces.</span></span>
+              <Select aria-label="Default provider" className="w-56" value={preferred} onChange={(event) => updatePreferredAgentToolId(event.target.value || null)}>
+                <option value="">Automatic (first enabled)</option>
+                {available.map((tool) => <option key={tool.id} value={tool.id}>{tool.label}</option>)}
+              </Select>
+            </label>
+          ) : null}
+          {installed.length ? (
+            <ul {...settingAnchorAttributes("Providers")} aria-label="Installed providers" className="mt-2">
+              {installed.map((tool) => (
+                <ProviderListRow key={tool.id} tool={tool} accountView={providerAccounts.views.get(tool.id)} connecting={runtimes.refreshing}
+                  onToggle={(enabled) => toggleToolEnabled(tool.id, enabled)} onSignIn={() => void providerAccounts.signIn(tool.id)} />
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-4 text-sm text-muted-foreground">No supported providers are installed yet. Install one from Available to install, then refresh.</p>
+          )}
+        </TabsContent>
+        <TabsContent value="available">
+          {installable.length ? (
+            <ul aria-label="Providers available to install" className="mt-2">
+              {installable.map((tool) => <ProviderInstallRow key={tool.id} tool={tool} onInstall={() => installTool(tool.id)} />)}
+            </ul>
+          ) : (
+            <p className="mt-4 text-sm text-muted-foreground">Every supported provider is already installed.</p>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

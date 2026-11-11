@@ -38,7 +38,7 @@ test("getEnabledUsageTools returns only detected and enabled agent tools", () =>
     createTool({ id: "codex", detected: true, enabled: true }),
     createTool({ id: "claude", detected: true, enabled: false }),
     createTool({ id: "grok", detected: false, enabled: true }),
-    createTool({ id: "gemini", detected: false, enabled: false })
+    createTool({ id: "kimi", detected: false, enabled: false })
   ];
 
   assert.deepEqual(getEnabledUsageTools(tools).map((tool) => tool.id), ["codex"]);

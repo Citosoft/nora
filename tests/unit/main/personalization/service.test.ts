@@ -34,3 +34,18 @@ test("onboarding retries provision before settings, preserves explicit preferenc
   await assert.rejects(service.request({ kind: "set-role", workspaceId: "missing", role: { id: "general" } }), /existing workspace/);
   await assert.rejects(service.request({ kind: "set-role", workspaceId: null, role: null }), /app default/);
 });
+
+test("refresh-providers replaces the offered providers with a fresh discovery", async () => {
+  const settings = structuredClone(DEFAULT_APP_SETTINGS);
+  const catalog: WorkspaceCatalog = { list: () => [], registrations: () => [], async bindProject() { throw new Error("unused"); },
+    async ensurePersonal() { throw new Error("unused"); }, async addFolder() { throw new Error("unused"); } };
+  let discoveries = 0;
+  const service = new PersonalizationService({ read: () => settings, async update(change) { return change(settings); } }, catalog, {
+    environmentId: "local", cursor: () => 0, providers: [{ kind: "claude", instanceId: "local", label: "Claude" }],
+    async refreshProviders() { discoveries++; return [{ kind: "claude", instanceId: "local", label: "Claude" }, { kind: "grok", instanceId: "local", label: "Grok Build" }]; },
+    async chooseFolder() { return null; }, async openFolder() {} });
+  assert.deepEqual(service.state().providers.map((provider) => provider.kind), ["claude"]);
+  assert.deepEqual((await service.request({ kind: "refresh-providers" })).providers.map((provider) => provider.kind), ["claude", "grok"]);
+  assert.deepEqual((await service.request({ kind: "boot" })).providers.map((provider) => provider.kind), ["claude", "grok"], "boot keeps the refreshed list");
+  assert.equal(discoveries, 1);
+});

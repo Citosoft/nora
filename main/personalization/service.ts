@@ -5,12 +5,13 @@ import type { PersonalizationServiceOptions } from "@main/types/personalization/
 
 export class PersonalizationService {
   private pending = Promise.resolve();
+  private providers: readonly NativeProvider[];
   constructor(private readonly settings: PersonalizationSettings, private readonly catalog: WorkspaceCatalog,
-    private readonly options: PersonalizationServiceOptions) {}
+    private readonly options: PersonalizationServiceOptions) { this.providers = options.providers; }
 
   state(): NativeBoot {
     return { environmentId: this.options.environmentId, cursor: this.options.cursor(), personalization: structuredClone(this.settings.read().personalization),
-      workspaces: this.catalog.list(), providers: this.options.providers.map((provider: NativeProvider) => ({ ...provider })) };
+      workspaces: this.catalog.list(), providers: this.providers.map((provider: NativeProvider) => ({ ...provider })) };
   }
 
   request(input: PersonalizationRequest): Promise<NativeBoot> {
@@ -22,6 +23,9 @@ export class PersonalizationService {
   private async apply(input: PersonalizationRequest): Promise<NativeBoot> {
     switch (input.kind) {
       case "boot": break;
+      case "refresh-providers":
+        if (this.options.refreshProviders) this.providers = await this.options.refreshProviders();
+        break;
       case "onboard": {
         const role = roleSelectionSchema.parse(input.role);
         // Durable workspace first: failure must leave first-run selection retryable.

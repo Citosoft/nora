@@ -1,6 +1,6 @@
 import type { AgentCatalogEntry, CreateAgentPayload, ExternalHarnessSessionSummary } from "@shared/appTypes";
 
-const RESUMABLE_THREAD_TOOL_IDS = new Set(["codex", "claude", "cursor", "gemini"]);
+const RESUMABLE_THREAD_TOOL_IDS = new Set(["codex", "claude", "cursor"]);
 
 const normalizeResumeSessionId = (value: string): string => value.trim().match(/[A-Za-z0-9._:-]+/)?.[0] || "";
 
@@ -54,7 +54,7 @@ export const buildExternalHarnessThreadResumeCommand = (
     return `${executable} resume ${resumeSessionId}`;
   }
 
-  if (thread.toolId === "claude" || thread.toolId === "gemini") {
+  if (thread.toolId === "claude") {
     return `${executable} --resume ${resumeSessionId}`;
   }
 

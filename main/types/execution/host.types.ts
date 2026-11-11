@@ -2,13 +2,17 @@ import type { GenerateThreadName } from "./naming.types";
 import type { ExecutionFailure } from "@shared/types/conversation/contracts.types";
 import type { ExecutionStore, ExecutionEffect } from "./store.types";
 import type { OwnershipStore, ExecutionOwner } from "./ownership.types";
-import type { ProviderResolver } from "./provider.types";
+import type { ExecutionProvider, ProviderResolver } from "./provider.types";
 import type { WorkspaceAuthority } from "./workspace.types";
 import type { WorkspaceReviewer } from "./review.types";
 import type { TurnCheckpoints } from "./checkpoints.types";
 import type { RoleSelection } from "@shared/types/personalization/roles.types";
 
-export interface ProviderSupervisor extends ProviderResolver { close(): Promise<void> }
+export interface ProviderSupervisor extends ProviderResolver {
+  /** Registers a provider found after startup; returns false when that kind and instance is already registered. */
+  adopt(provider: ExecutionProvider): boolean;
+  close(): Promise<void>;
+}
 export interface HostDependencies {
   generateThreadName?: GenerateThreadName;
   roleForWorkspace?: (workspaceId: string) => RoleSelection | null;

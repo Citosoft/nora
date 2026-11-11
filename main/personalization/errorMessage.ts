@@ -10,5 +10,8 @@ export function personalizationErrorMessage(error: unknown, kind: Personalizatio
   if (kind === "boot") {
     return "Nora could not connect to its local execution host. Quit Nora and open it again.";
   }
+  if (kind === "refresh-providers") {
+    return "Nora could not check for newly installed coding agents. Try again, or restart Nora.";
+  }
   return "Nora could not save this setup. Check workspace storage and try again; your selection is preserved.";
 }

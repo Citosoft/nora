@@ -84,9 +84,6 @@ async function waitForAgentConversationReady(
   let acceptedContinuePrompt = false;
   let promptReadyAt: number | null = null;
   let codexRunningSinceMs: number | null = null;
-  let geminiRunningSinceMs: number | null = null;
-  let geminiLastNormalizedOutput = "";
-  let geminiStableIterations = 0;
   let genericRunningSinceMs: number | null = null;
   let genericLastNormalizedOutput = "";
   let genericStableIterations = 0;
@@ -172,41 +169,6 @@ async function waitForAgentConversationReady(
 
       if (codexCanAcceptHandoff) {
         return;
-      }
-    } else if (agent.toolId === "gemini") {
-      const GEMINI_MIN_MS_AFTER_RUNNING = 1_600;
-      const GEMINI_STABLE_ITERATIONS = 3;
-      const GEMINI_MIN_BUFFER_CHARS = 32;
-      const GEMINI_FALLBACK_MAX_MS = 8_000;
-      const GEMINI_POST_IDLE_MS = 300;
-
-      if (agent.status !== "running") {
-        geminiRunningSinceMs = null;
-        geminiLastNormalizedOutput = "";
-        geminiStableIterations = 0;
-      } else {
-        if (geminiRunningSinceMs === null) {
-          geminiRunningSinceMs = Date.now();
-        }
-
-        const elapsed = Date.now() - geminiRunningSinceMs;
-
-        if (plainOutput !== geminiLastNormalizedOutput) {
-          geminiLastNormalizedOutput = plainOutput;
-          geminiStableIterations = 0;
-        } else if (plainOutput.length >= GEMINI_MIN_BUFFER_CHARS) {
-          geminiStableIterations += 1;
-        }
-
-        const outputSettled =
-          elapsed >= GEMINI_MIN_MS_AFTER_RUNNING &&
-          geminiStableIterations >= GEMINI_STABLE_ITERATIONS;
-        const giveUpAndProceed = elapsed >= GEMINI_FALLBACK_MAX_MS;
-
-        if (outputSettled || giveUpAndProceed) {
-          await new Promise((resolve) => globalThis.setTimeout(resolve, GEMINI_POST_IDLE_MS));
-          return;
-        }
       }
     } else {
       const GENERIC_MIN_MS_AFTER_RUNNING = 2_500;

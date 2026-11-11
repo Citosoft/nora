@@ -695,8 +695,7 @@ export class Orchestrator implements OrchestratorFacade {
         const buildLaunchCommand = (command: string): string =>
           buildAgentLaunchCommand(tool.id, command, {
             initialPrompt: payload.initialPrompt,
-            initialPromptDelivery: payload.initialPromptDelivery,
-            startupTrustMode: payload.startupTrustMode
+            initialPromptDelivery: payload.initialPromptDelivery
           });
         const commandOverride = payload.commandOverride.trim();
         if (commandOverride) {

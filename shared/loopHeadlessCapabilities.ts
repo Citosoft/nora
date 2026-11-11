@@ -3,7 +3,6 @@ import type { LoopHeadlessToolCapability } from "./types/loopHeadlessCapabilitie
 export const LOOP_HEADLESS_TOOL_CAPABILITIES: readonly LoopHeadlessToolCapability[] = [
   { toolId: "codex", promptStyle: "codex-exec" },
   { toolId: "claude", promptStyle: "claude-print" },
-  { toolId: "gemini", promptStyle: "gemini-prompt" },
   { toolId: "pi", promptStyle: "print-flag" },
   { toolId: "cursor", promptStyle: "cursor-print-trust" },
   { toolId: "goose", promptStyle: "goose-run" },

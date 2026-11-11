@@ -6,13 +6,13 @@ import type { AcpProviderKind } from "@shared/types/provider/providerKind.types"
  * (cdn.agentclientprotocol.com/registry). Nora launches only what is installed locally; it never downloads agents.
  */
 export const ACP_AGENT_LAUNCH: Readonly<Record<AcpProviderKind, AcpLaunchSpec>> = {
-  gemini: { args: ["--acp"] },
   pi: { executables: ["pi-acp"], args: [] },
   cursor: { args: ["acp"] },
   goose: { args: ["acp"] },
   qwen: { args: ["--acp", "--experimental-skills"] },
   opencode: { args: ["acp"] },
-  antigravity: { executables: ["agy_acp_server", "agy-acp-server"], args: [] },
+  // Antigravity CLI 1.5+ serves ACP itself; the older standalone agy_acp_server download is not needed.
+  antigravity: { args: ["acp"] },
   grok: { args: ["agent", "stdio"] },
   copilot: { args: ["--acp"] },
   cline: { args: ["--acp"] },

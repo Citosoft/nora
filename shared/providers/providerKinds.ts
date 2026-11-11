@@ -8,7 +8,7 @@ export const NATIVE_PROVIDER_KINDS = ["claude", "codex"] as const;
  * detection come from the catalog; launch specs live with the ACP adapter.
  */
 export const ACP_PROVIDER_KINDS = [
-  "gemini", "pi", "cursor", "goose", "qwen", "opencode", "antigravity", "grok", "copilot",
+  "pi", "cursor", "goose", "qwen", "opencode", "antigravity", "grok", "copilot",
   "cline", "amp", "kilo", "kiro", "aug", "autohand", "droid", "kimi", "mistral-vibe"
 ] as const;
 
@@ -19,4 +19,9 @@ export const providerKindSchema = z.enum(PROVIDER_KINDS);
 const acpKinds: ReadonlySet<string> = new Set(ACP_PROVIDER_KINDS);
 export function isAcpProviderKind(kind: string): kind is (typeof ACP_PROVIDER_KINDS)[number] {
   return acpKinds.has(kind);
+}
+
+const providerKinds: ReadonlySet<string> = new Set(PROVIDER_KINDS);
+export function isProviderKind(kind: string): kind is (typeof PROVIDER_KINDS)[number] {
+  return providerKinds.has(kind);
 }

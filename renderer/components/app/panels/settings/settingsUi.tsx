@@ -109,17 +109,21 @@ export function IntegrationTitle({
 export function ToggleButton({
   checked,
   onChange,
-  label
+  label,
+  accessibleName
 }: {
   checked: boolean;
   onChange: (checked: boolean) => void;
   label: string;
+  /** Names what the switch controls when several identical switches share a page. */
+  accessibleName?: string;
 }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-label={accessibleName}
       onClick={() => onChange(!checked)}
       className={[
         "flex w-full items-center justify-between rounded-[4px] border px-3 py-2 text-left transition",

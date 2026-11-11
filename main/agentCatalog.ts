@@ -148,19 +148,6 @@ export const AGENT_DEFINITIONS: AgentDefinition[] = [
     }
   }),
   npmAgent({
-    id: "gemini",
-    label: "Gemini CLI",
-    aliases: ["gemini"],
-    launchCommand: "gemini",
-    packageName: "@google/gemini-cli",
-    description: "Google Gemini terminal agent",
-    usageDashboardUrl: "https://aistudio.google.com/usage",
-    usageNotes: [
-      "Runs Gemini CLI inside the active repository workspace.",
-      "Set a Google AI key if Gemini CLI is not authenticated already."
-    ]
-  }),
-  npmAgent({
     id: "pi",
     label: "Pi",
     aliases: ["pi"],

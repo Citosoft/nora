@@ -62,22 +62,6 @@ test("buildLoopHeadlessShellCommand presets claude plan mode for reviewers", () 
   );
 });
 
-test("buildLoopHeadlessShellCommand presets gemini stream-json for writers", () => {
-  const command = buildLoopHeadlessShellCommand({
-    toolId: "gemini",
-    roleKind: "writer",
-    detectedCommand: "gemini",
-    prompt: "Implement the loop task",
-    workspacePath: "/tmp/worktree",
-    isWindowsPlatform: false
-  });
-
-  assert.equal(
-    command,
-    "gemini --skip-trust --output-format stream-json --prompt 'Implement the loop task' --approval-mode yolo"
-  );
-});
-
 test("buildLoopHeadlessShellCommand builds goose run headless turns", () => {
   const command = buildLoopHeadlessShellCommand({
     toolId: "goose",
