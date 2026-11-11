@@ -59,12 +59,8 @@ function resolveHeadlessCommandBase(toolId: string, detectedCommand: string): st
   switch (toolId) {
     case "goose":
       return `${executable} run`;
-    case "crush":
-      return `${executable} run`;
     case "kilo":
       return `${executable} run`;
-    case "rovo":
-      return trimmed.includes("rovodev") ? trimmed : `${executable} rovodev run`;
     default:
       return trimmed;
   }
@@ -109,8 +105,6 @@ export function buildLoopHeadlessShellCommand(input: LoopHeadlessLaunchInput): s
         return `${base} --no-auto-update -p ${prompt} --output-format text${autoApprove}`;
       }
       return `${base} -p ${prompt}`;
-    case "message-flag":
-      return `${base} --message ${prompt} --yes-always --no-show-release-notes`;
     case "execute-flag":
       return `${base} -x ${prompt}`;
     case "goose-run":
@@ -125,16 +119,8 @@ export function buildLoopHeadlessShellCommand(input: LoopHeadlessLaunchInput): s
       const modeFlag = isReviewer ? " -p" : "";
       return `${base} -y${modeFlag} ${prompt}`;
     }
-    case "continue-print": {
-      const allowFlags = isReviewer ? "" : " --allow Write --allow Edit --allow Bash";
-      return `${base} -p ${prompt} --silent${allowFlags}`;
-    }
     case "kilo-run":
       return `${base} --auto ${prompt}`;
-    case "crush-run":
-      return `${base} --yolo --quiet ${prompt}`;
-    case "rovo-run":
-      return `${base} --yolo ${prompt}`;
     case "qwen-print": {
       const approvalFlag = isReviewer ? " --approval-mode plan" : " --approval-mode yolo";
       return `${base} -p ${prompt}${approvalFlag}`;

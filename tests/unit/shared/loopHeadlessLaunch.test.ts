@@ -9,9 +9,9 @@ import test from "node:test";
 test("canRunLoopHeadless covers headless-capable loop agents", () => {
   assert.equal(canRunLoopHeadless("codex"), true);
   assert.equal(canRunLoopHeadless("cursor"), true);
-  assert.equal(canRunLoopHeadless("aider"), true);
-  assert.equal(canRunLoopHeadless("openclaw"), false);
-  assert.match(describeLoopHeadlessUnsupportedTool("openclaw"), /headless or upfront prompt/i);
+  assert.equal(canRunLoopHeadless("goose"), true);
+  assert.equal(canRunLoopHeadless("kimi"), false);
+  assert.match(describeLoopHeadlessUnsupportedTool("kimi"), /headless or upfront prompt/i);
 });
 
 test("buildLoopHeadlessShellCommand presets cursor headless trust and force", () => {
@@ -78,22 +78,6 @@ test("buildLoopHeadlessShellCommand presets gemini stream-json for writers", () 
   );
 });
 
-test("buildLoopHeadlessShellCommand builds aider message mode", () => {
-  const command = buildLoopHeadlessShellCommand({
-    toolId: "aider",
-    roleKind: "writer",
-    detectedCommand: "aider",
-    prompt: "Implement the loop task",
-    workspacePath: "/tmp/worktree",
-    isWindowsPlatform: false
-  });
-
-  assert.equal(
-    command,
-    "aider --message 'Implement the loop task' --yes-always --no-show-release-notes"
-  );
-});
-
 test("buildLoopHeadlessShellCommand builds goose run headless turns", () => {
   const command = buildLoopHeadlessShellCommand({
     toolId: "goose",
@@ -136,25 +120,12 @@ test("buildLoopHeadlessShellCommand builds cline reviewer plan mode", () => {
   assert.equal(command, "cline -y -p 'Review the implementation'");
 });
 
-test("buildLoopHeadlessShellCommand builds rovo yolo run turns", () => {
-  const command = buildLoopHeadlessShellCommand({
-    toolId: "rovo",
-    roleKind: "writer",
-    detectedCommand: "acli rovodev run",
-    prompt: "Implement the loop task",
-    workspacePath: "/tmp/worktree",
-    isWindowsPlatform: false
-  });
-
-  assert.equal(command, "acli rovodev run --yolo 'Implement the loop task'");
-});
-
 test("buildLoopHeadlessShellCommand rejects unsupported loop agents", () => {
   assert.throws(
     () => buildLoopHeadlessShellCommand({
-      toolId: "openclaw",
+      toolId: "kimi",
       roleKind: "writer",
-      detectedCommand: "openclaw",
+      detectedCommand: "kimi",
       prompt: "Implement the loop task",
       workspacePath: "/tmp/worktree",
       isWindowsPlatform: false

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { providerKindSchema } from "@shared/providers/providerKinds";
 import { commandReceiptSchema, conversationCommandSchema, conversationEventSchema, conversationSchema,
   requestSchema, runSchema, timelineItemSchema, workspaceRefSchema } from "./contracts";
 import { mcpResultSchema } from "@shared/providers/mcp";
@@ -16,7 +17,7 @@ export const readRequestSchema = z.discriminatedUnion("kind", [
   z.object({ ...routed, kind: z.literal("history"), conversationId: id, scope: z.enum(["timeline", "runs"]),
     before: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(), limit: pageLimit }).strict(),
   z.object({ ...routed, kind: z.literal("events"), conversationId: id.optional(), after: cursor, limit: pageLimit }).strict(),
-  z.object({ ...routed, kind: z.literal("catalog"), providerKind: z.enum(["claude", "codex"]), instanceId: id, workspace: workspaceRefSchema }).strict()
+  z.object({ ...routed, kind: z.literal("catalog"), providerKind: providerKindSchema, instanceId: id, workspace: workspaceRefSchema }).strict()
 ]);
 export const watchRequestSchema = z.object({ ...routed, watchId: id, conversationId: id.optional() }).strict();
 export const unwatchRequestSchema = z.object({ ...routed, watchId: id }).strict();

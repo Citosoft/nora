@@ -146,8 +146,7 @@ export function CliSettingsSection() {
               : "Disabled";
           const isExpanded = expandedToolIds.has(tool.id);
           const shouldShowInstallProgress = tool.installStatus === "running" || (isExpanded && tool.installLog.length > 0);
-          const accountKind = tool.id === "claude" || tool.id === "codex" ? tool.id : null;
-          const accountView = tool.detected && accountKind ? providerAccounts.views.get(accountKind) : undefined;
+          const accountView = tool.detected ? providerAccounts.views.get(tool.id) : undefined;
 
           return (
             <div
@@ -232,9 +231,9 @@ export function CliSettingsSection() {
                 </div>
               </div>
 
-              {accountKind && accountView ? (
+              {accountView ? (
                 <div className="mt-3 border-t border-border/50 pt-3">
-                  <ProviderAccountStatus providerLabel={tool.label} view={accountView} onSignIn={() => void providerAccounts.signIn(accountKind)} />
+                  <ProviderAccountStatus providerLabel={tool.label} view={accountView} onSignIn={() => void providerAccounts.signIn(tool.id)} />
                 </div>
               ) : null}
 

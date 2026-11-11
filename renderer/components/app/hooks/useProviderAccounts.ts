@@ -15,7 +15,8 @@ const wait = (ms: number) => new Promise<void>((resolve) => { setTimeout(resolve
 /** Reads each native provider's account through its runtime, and drives browser sign-in until the account changes. */
 export function useProviderAccounts() {
   const { boot } = useNativeRuntimePorts();
-  const [views, setViews] = useState<ReadonlyMap<NativeProvider["kind"], ProviderAccountView>>(() => new Map());
+  // Keyed by provider kind, which is also the agent catalog id, so settings can look providers up by tool id.
+  const [views, setViews] = useState<ReadonlyMap<string, ProviderAccountView>>(() => new Map());
   const generation = useRef(0);
   const record = useCallback((kind: NativeProvider["kind"], view: ProviderAccountView) =>
     setViews((previous) => new Map(previous).set(kind, view)), []);
@@ -35,21 +36,21 @@ export function useProviderAccounts() {
   }, [boot.providers, read, record]);
   useEffect(() => { refresh(); return () => { generation.current++; }; }, [refresh]);
 
-  const signIn = useCallback(async (kind: NativeProvider["kind"]): Promise<void> => {
+  const signIn = useCallback(async (kind: string): Promise<void> => {
     const provider = boot.providers.find((entry) => entry.kind === kind);
     if (!provider) return;
     const current = generation.current;
     const isCurrent = () => generation.current === current;
-    record(kind, { status: "signing-in" });
+    record(provider.kind, { status: "signing-in" });
     try {
       const started = await call(provider, { kind: "login" });
       if (started.kind === "unavailable" || started.kind === "account") {
-        if (isCurrent()) record(kind, started.kind === "account" ? { status: "ready", account: started.account } : { status: "error", message: started.message });
+        if (isCurrent()) record(provider.kind, started.kind === "account" ? { status: "ready", account: started.account } : { status: "error", message: started.message });
         return;
       }
       if (started.kind === "login") await noraSystemClient.openExternalUrl(started.authorizationUrl);
     } catch {
-      if (isCurrent()) record(kind, { status: "error", message: "Sign-in could not be started. Check the provider runtime and try again." });
+      if (isCurrent()) record(provider.kind, { status: "error", message: "Sign-in could not be started. Check the provider runtime and try again." });
       return;
     }
     // Browser sign-in completes outside Nora, so poll the runtime until it reports an account or the attempt times out.
@@ -60,7 +61,7 @@ export function useProviderAccounts() {
       latest = await read(provider);
       if (latest.status === "ready" && latest.account.state === "signed-in") break;
     }
-    if (isCurrent()) record(kind, latest);
+    if (isCurrent()) record(provider.kind, latest);
   }, [boot.providers, call, read, record]);
 
   return { views, refresh, signIn };

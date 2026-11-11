@@ -9,7 +9,7 @@ test("hasLocalToolIcon reports packaged logos for supported tools", () => {
 });
 
 test("hasLocalToolIcon leaves unsupported tools on favicon fallback", () => {
-  for (const toolId of ["aider", "goose", "qwen", "opencode", "continue", "crush", "chatgpt"]) {
+  for (const toolId of ["goose", "qwen", "opencode", "kimi", "chatgpt"]) {
     assert.equal(hasLocalToolIcon(toolId), false, `${toolId} falls back to favicon loading`);
   }
 });
@@ -33,13 +33,9 @@ test("toolLogoUrl uses official domains for catalog additions", () => {
     aug: "augmentcode.com",
     autohand: "autohand.ai",
     cline: "cline.bot",
-    codebuff: "codebuff.com",
     droid: "docs.factory.ai",
     kimi: "kimi.com",
-    "mistral-vibe": "mistral.ai",
-    rovo: "atlassian.com",
-    hermes: "nousresearch.com",
-    openclaw: "openclaw.ai"
+    "mistral-vibe": "mistral.ai"
   };
 
   for (const [toolId, domain] of Object.entries(expectedDomains)) {

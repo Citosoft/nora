@@ -30,14 +30,11 @@ export function toolLogoUrl(toolId: string): string {
     claude: "anthropic.com",
     gemini: "gemini.google.com",
     cursor: "cursor.com",
-    aider: "aider.chat",
     goose: "goose-docs.ai",
     qwen: "qwenlm.github.io",
     opencode: "opencode.ai",
     copilot: "github.com",
-    continue: "continue.dev",
     amp: "ampcode.com",
-    crush: "charm.land",
     chatgpt: "chatgpt.com",
     perplexity: "perplexity.ai",
     grok: "grok.com",
@@ -48,13 +45,9 @@ export function toolLogoUrl(toolId: string): string {
     aug: "augmentcode.com",
     autohand: "autohand.ai",
     cline: "cline.bot",
-    codebuff: "codebuff.com",
     droid: "docs.factory.ai",
     kimi: "kimi.com",
-    "mistral-vibe": "mistral.ai",
-    rovo: "atlassian.com",
-    hermes: "nousresearch.com",
-    openclaw: "openclaw.ai"
+    "mistral-vibe": "mistral.ai"
   };
 
   const domain = domainByTool[toolId] ?? "example.com";
@@ -133,7 +126,7 @@ export function AgentToolIcon({
           aria-hidden="true"
         />
       )}
-      <span className="sr-only">{label}</span>
+      {label ? <span className="sr-only">{label}</span> : null}
     </div>
   );
 }

@@ -93,11 +93,11 @@ test("buildAgentLaunchCommand presets claude interactive prompt", () => {
 });
 
 test("buildAgentLaunchCommand leaves unsupported launch prompt tools unchanged", () => {
-  const command = buildAgentLaunchCommand("aider", "aider", {
+  const command = buildAgentLaunchCommand("goose", "goose", {
     initialPrompt: "Scaffold a Django app",
     initialPromptDelivery: "launch-command",
     isWindowsPlatform: false
   });
 
-  assert.equal(command, "aider");
+  assert.equal(command, "goose");
 });

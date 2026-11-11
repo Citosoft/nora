@@ -1,11 +1,12 @@
 import { z } from "zod";
+import { providerKindSchema } from "@shared/providers/providerKinds";
 import { conversationReviewSchema } from "./review";
 import { roleSelectionSchema, roleSnapshotSchema } from "@shared/personalization/contracts";
 
 const id = z.string().min(1).max(512);
 const time = z.string().datetime();
 export const providerBindingSchema = z.object({
-  kind: z.enum(["claude", "codex"]),
+  kind: providerKindSchema,
   instanceId: id,
   model: id,
   reasoning: z.string().nullable(),

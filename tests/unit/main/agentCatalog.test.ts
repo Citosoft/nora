@@ -8,7 +8,6 @@ const expectedAgentIds = [
   "gemini",
   "pi",
   "cursor",
-  "aider",
   "goose",
   "qwen",
   "opencode",
@@ -16,20 +15,14 @@ const expectedAgentIds = [
   "grok",
   "copilot",
   "cline",
-  "continue",
-  "codebuff",
   "amp",
   "kilo",
   "kiro",
-  "crush",
   "aug",
   "autohand",
   "droid",
   "kimi",
-  "mistral-vibe",
-  "rovo",
-  "hermes",
-  "openclaw"
+  "mistral-vibe"
 ];
 
 test("agent catalog includes common CLI coding agents", () => {

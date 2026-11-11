@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { McpAction, McpResult, McpServer } from "@shared/types/provider/mcp.types";
 import type { CodexMcpOrigins } from "@main/types/execution/codex.types";
 import { mcpResultSchema } from "@shared/providers/mcp";
+import { resolveMcpServerLogo } from "@main/providers/mcpLogo";
 import { threadSchema } from "./rpcSchemas";
 import { CodexRpcError } from "./rpcError";
 import type { StdioRpc } from "./stdioRpc";
@@ -10,6 +11,8 @@ const serverSchema = z.object({ name: z.string(),
   authStatus: z.enum(["unknown", "unsupported", "notLoggedIn", "bearerToken", "oAuth"]).catch("unknown"),
   runtimeStatus: z.enum(["notStarted", "starting", "connected", "authenticationRequired", "failed", "cancelled", "disabled"]).nullish(),
   pluginId: z.string().nullish(),
+  httpOrigin: z.string().nullish(),
+  serverInfo: z.unknown().optional(),
   tools: z.record(z.string(), z.object({ name: z.string(), description: z.string().optional() })),
   toolsError: z.string().nullish() });
 const pageSchema = z.object({ data: z.array(serverSchema), nextCursor: z.string().nullish() });
@@ -29,6 +32,7 @@ export function codexMcpScope(name: string, pluginId: string | null | undefined,
 
 export function normalizeCodexMcp(input: unknown, origins: CodexMcpOrigins | null): McpServer {
   const server = serverSchema.parse(input);
+  const logo = resolveMcpServerLogo({ serverInfo: server.serverInfo, endpointUrl: server.httpOrigin });
   const status: McpServer["status"] = server.runtimeStatus === "authenticationRequired" ? "needs-auth"
     : server.runtimeStatus === "notStarted" || server.runtimeStatus === "starting" ? "pending"
     : server.runtimeStatus === "cancelled" ? "failed"
@@ -37,7 +41,7 @@ export function normalizeCodexMcp(input: unknown, origins: CodexMcpOrigins | nul
     authStatus: server.authStatus === "notLoggedIn" ? "needs-auth"
       : server.authStatus === "bearerToken" || server.authStatus === "oAuth" ? "authenticated" : server.authStatus,
     canLogin: server.authStatus === "notLoggedIn", scope: codexMcpScope(server.name, server.pluginId, origins),
-    tools: Object.values(server.tools),
+    tools: Object.values(server.tools), ...(logo ? { logo } : {}),
     ...(server.toolsError || status === "failed" ? { message: "The runtime could not discover this server's tools. Check its configuration and authentication, then refresh." } : {}) };
 }
 

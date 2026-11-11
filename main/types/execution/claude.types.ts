@@ -61,3 +61,9 @@ export interface ClaudeDiscovery {
 }
 
 export type ClaudeToolFrame = Extract<ClaudeFrame, { kind: "tool" }>;
+
+/** The credential Claude Code authenticates with, as derived from the SDK account report. */
+export type ClaudeLogin = "claude.ai" | "api-key" | "token" | "third-party" | "none" | "unknown";
+
+/** Timing for re-reading Claude MCP status until background connections settle; injectable for tests. */
+export interface McpSettleOptions { budgetMs?: number; intervalMs?: number; sleep?: (ms: number) => Promise<void>; now?: () => number; }

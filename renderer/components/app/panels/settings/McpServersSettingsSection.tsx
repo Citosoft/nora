@@ -2,7 +2,7 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 import { Server } from "lucide-react";
 import { useNativeRuntimePorts } from "@/components/app/hooks/useNativeRuntimePorts";
 import { useRuntimeMcpCatalog } from "@/components/app/hooks/useRuntimeMcpCatalog";
-import { listMcpServerRows } from "@/components/app/logic/mcpServerTable";
+import { buildMcpServerTable } from "@/components/app/logic/mcpServerTable";
 import { settingAnchorAttributes } from "@/components/app/logic/settingsSearch";
 import { McpProviderNotice } from "@/components/app/panels/settings/McpProviderNotice";
 import { McpServerTable } from "@/components/app/panels/settings/McpServerTable";
@@ -24,7 +24,7 @@ export function McpServersSettingsSection() {
       ...(workspace ? { workspace: workspace.workspace } : {}) }
   })), [boot.environmentId, boot.providers, workspace]);
   const { entries, refresh, login } = useRuntimeMcpCatalog(sources);
-  const rows = useMemo(() => listMcpServerRows(entries), [entries]);
+  const { rows, availableAccountConnectors } = useMemo(() => buildMcpServerTable(entries), [entries]);
   const isLoading = entries.some((entry) => entry.state.status === "loading");
 
   return <div className="max-w-5xl">
@@ -43,6 +43,9 @@ export function McpServersSettingsSection() {
         <div className="space-y-2 empty:hidden">{entries.map((entry) => <McpProviderNotice key={entry.source.key} entry={entry} />)}</div>
         {rows.length ? <McpServerTable rows={rows} onLogin={login} />
           : !isLoading ? <p className="text-sm text-muted-foreground">No MCP servers were discovered.</p> : null}
+        {availableAccountConnectors ? <p className="text-xs text-muted-foreground">
+          {availableAccountConnectors === 1 ? "1 more connector is" : `${availableAccountConnectors} more connectors are`} available to your account but not connected. Connect them in Claude on the web, desktop or mobile to use them here.
+        </p> : null}
       </div>
       {sources.some((source) => source.kind === "claude") ? <p className="mt-4 text-xs text-muted-foreground">For Claude servers that need authentication, open Claude Code and use /mcp to sign in on the same machine, then refresh here.</p> : null}
     </>}

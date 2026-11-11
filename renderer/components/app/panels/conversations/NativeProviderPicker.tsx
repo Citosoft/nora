@@ -47,7 +47,7 @@ export function NativeProviderPicker({ state, workspace, client, locked, initial
       <NativeModelOptions catalog={available} model={model} policyId={policyId} reasoning={effort} locked={!!locked}
         onPolicy={(value) => { setPolicy(value); setNeedsPolicy(false); }} onReasoning={setReasoning} />
     </div>
-    {!state.providers.length ? <p className="text-xs text-muted-foreground">Install Codex or Claude Code, sign in using its CLI, and restart Nora. Your draft stays here.</p>
+    {!state.providers.length ? <p className="text-xs text-muted-foreground">Install a supported coding agent such as Claude Code, Codex or another ACP agent, sign in, and restart Nora. Your draft stays here.</p>
       : resolution.status === "blocked" && resolution.message ? <p role="status" className="text-xs text-muted-foreground">{resolution.message}</p> : null}
   </div>;
 }

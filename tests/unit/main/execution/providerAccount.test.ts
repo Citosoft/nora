@@ -6,11 +6,14 @@ import { normalizeCodexAccount } from "@main/providers/codex/account";
 test("Claude SDK account reports map to sign-in state", () => {
   assert.deepEqual(normalizeClaudeAccount({ apiProvider: "firstParty", tokenSource: "claude.ai", subscriptionType: "max", email: "me@example.test" }),
     { state: "signed-in", method: "Claude Max", label: "me@example.test" });
-  assert.deepEqual(normalizeClaudeAccount({ apiProvider: "firstParty", tokenSource: "none", apiKeySource: "ANTHROPIC_API_KEY" }),
+  assert.deepEqual(normalizeClaudeAccount({ apiProvider: "firstParty", subscriptionType: "Claude Team", email: "me@example.test", organization: "Org" }),
+    { state: "signed-in", method: "Claude Team", label: "me@example.test" }, "current runtimes omit tokenSource for a claude.ai login");
+  assert.deepEqual(normalizeClaudeAccount({ apiProvider: "firstParty", tokenSource: "claude.ai", apiKeySource: "ANTHROPIC_API_KEY" }),
     { state: "signed-in", method: "API key", label: null });
   assert.deepEqual(normalizeClaudeAccount({ apiProvider: "firstParty", tokenSource: "CLAUDE_CODE_OAUTH_TOKEN", apiKeySource: "none" }),
     { state: "signed-in", method: "Long-lived token", label: null });
   assert.deepEqual(normalizeClaudeAccount({ apiProvider: "firstParty", tokenSource: "none", apiKeySource: "none" }), { state: "signed-out" });
+  assert.deepEqual(normalizeClaudeAccount({ apiProvider: "firstParty" }), { state: "signed-out" });
   assert.deepEqual(normalizeClaudeAccount({ apiProvider: "bedrock" }), { state: "unknown" });
 });
 

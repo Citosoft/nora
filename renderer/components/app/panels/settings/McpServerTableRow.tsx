@@ -1,8 +1,8 @@
 import { useId, useState } from "react";
 import { ChevronRight } from "lucide-react";
-import { nativeProviderBrands } from "@/components/app/constants/nativeProviderBrands";
 import type { McpServerTableRowProps } from "@/components/app/types/runtimeMcp.types";
-import { AiProviderLogo } from "@/components/app/views/AiProviderLogo";
+import { McpServerLogo } from "@/components/app/panels/settings/McpServerLogo";
+import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { McpServer } from "@shared/types/provider/mcp.types";
@@ -24,11 +24,13 @@ export function McpServerTableRow({ server, source, onLogin }: McpServerTableRow
     <tr className="border-b border-border/40 last:border-0">
       <td className={CELL_CLASS_NAME}>
         <div className="flex min-w-0 items-center gap-2">
-          <AiProviderLogo provider={nativeProviderBrands[source.kind]} />
+          <McpServerLogo logo={server.logo} />
           <span className="break-words font-medium">{server.name}</span>
         </div>
       </td>
-      <td className={`${CELL_CLASS_NAME} text-muted-foreground`}>{source.label}</td>
+      <td className={`${CELL_CLASS_NAME} text-muted-foreground`}>
+        <div className="flex items-center gap-2"><AgentToolIcon toolId={source.kind} label="" className="size-4 shrink-0" imageClassName="size-3.5" />{source.label}</div>
+      </td>
       <td className={`${CELL_CLASS_NAME} text-muted-foreground`}>{SCOPE_LABELS[server.scope]}</td>
       <td className={CELL_CLASS_NAME}><Badge variant={status.variant} className="whitespace-nowrap">{status.label}</Badge></td>
       <td className={CELL_CLASS_NAME}>

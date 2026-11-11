@@ -7,18 +7,10 @@ const CURSOR_INSTALL_TEMPLATE =
     ? "powershell -NoProfile -ExecutionPolicy Bypass -Command \"irm 'https://cursor.com/install?win32=true' | iex\""
     : "curl https://cursor.com/install -fsS | bash";
 const CURSOR_WINDOWS_ROOT = "%LOCALAPPDATA%\\cursor-agent";
-const AIDER_INSTALL_TEMPLATE =
-  process.platform === "win32"
-    ? "powershell -ExecutionPolicy ByPass -c \"irm https://aider.chat/install.ps1 | iex\""
-    : `${INSTALL_SCRIPT_SHELL} https://aider.chat/install.sh | sh`;
 const AMP_INSTALL_TEMPLATE =
   process.platform === "win32"
     ? "powershell -c \"irm https://ampcode.com/install.ps1 | iex\""
     : `${INSTALL_SCRIPT_SHELL} https://ampcode.com/install.sh | bash`;
-const CONTINUE_INSTALL_TEMPLATE =
-  process.platform === "win32"
-    ? "powershell -NoProfile -ExecutionPolicy Bypass -Command \"irm https://raw.githubusercontent.com/continuedev/continue/main/extensions/cli/scripts/install.ps1 | iex\""
-    : `${INSTALL_SCRIPT_SHELL} https://raw.githubusercontent.com/continuedev/continue/main/extensions/cli/scripts/install.sh | bash`;
 const GOOSE_INSTALL_TEMPLATE =
   process.platform === "win32"
     ? "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/aaif-goose/goose/main/download_cli.ps1' -OutFile 'download_cli.ps1'; .\\download_cli.ps1\""
@@ -92,10 +84,6 @@ const ANTIGRAVITY_INSTALL_TEMPLATE =
     ? "powershell -c \"irm https://antigravity.google/cli/install.ps1 | iex\""
     : "curl -fsSL https://antigravity.google/cli/install.sh | bash";
 const DROID_INSTALL_TEMPLATE = "curl -fsSL https://app.factory.ai/cli | sh";
-const HERMES_INSTALL_TEMPLATE =
-  process.platform === "win32"
-    ? "powershell -c \"irm https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.ps1 | iex\""
-    : "curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash";
 const KIMI_INSTALL_TEMPLATE =
   process.platform === "win32"
     ? "powershell -c \"irm https://code.kimi.com/kimi-code/install.ps1 | iex\""
@@ -108,16 +96,6 @@ const MISTRAL_VIBE_INSTALL_TEMPLATE =
   process.platform === "win32"
     ? "uv tool install mistral-vibe"
     : "curl -LsSf https://mistral.ai/vibe/install.sh | bash";
-const OPENCLAW_INSTALL_TEMPLATE =
-  process.platform === "win32"
-    ? "powershell -c \"irm https://openclaw.ai/install.ps1 | iex\""
-    : "curl -fsSL https://openclaw.ai/install.sh | bash";
-const ROVO_INSTALL_TEMPLATE =
-  process.platform === "win32"
-    ? "powershell -Command \"Invoke-WebRequest -Uri https://acli.atlassian.com/windows/latest/acli_windows_amd64/acli.exe -OutFile acli.exe\""
-    : process.platform === "darwin"
-      ? "brew tap atlassian/homebrew-acli && brew install acli"
-      : `bash -lc 'ARCH="$(uname -m)"; if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then URL="https://acli.atlassian.com/linux/latest/acli_linux_arm64/acli"; else URL="https://acli.atlassian.com/linux/latest/acli_linux_amd64/acli"; fi; curl -LO "$URL" && chmod +x ./acli && sudo install -o root -g root -m 0755 acli /usr/local/bin/acli'`;
 
 const SHARED_AGENT_SKILLS_CONFIG: AgentSkillCatalogConfig = {
   rootDir: "~/.agents/skills",
@@ -216,21 +194,6 @@ export const AGENT_DEFINITIONS: AgentDefinition[] = [
     windowsLaunchCommand: `"${CURSOR_WINDOWS_ROOT}\\cursor-agent.cmd"`
   }),
   agent({
-    id: "aider",
-    label: "Aider",
-    aliases: ["aider"],
-    launchCommand: "aider",
-    installTemplate: AIDER_INSTALL_TEMPLATE,
-    description: "AI pair programming CLI for terminal-based code edits",
-    usageNotes: [
-      "Runs Aider in the selected worktree for conversational code changes.",
-      "Configure provider API keys through Aider or the relevant environment variables."
-    ],
-    executablePathCandidates: [
-      { path: "~/.local/bin/aider", platforms: ["darwin", "linux"] }
-    ]
-  }),
-  agent({
     id: "goose",
     label: "Goose",
     aliases: ["goose"],
@@ -318,30 +281,6 @@ export const AGENT_DEFINITIONS: AgentDefinition[] = [
     ]
   }),
   agent({
-    id: "continue",
-    label: "Continue CLI",
-    aliases: ["cn"],
-    launchCommand: "cn",
-    installTemplate: CONTINUE_INSTALL_TEMPLATE,
-    description: "Continue terminal coding agent",
-    usageNotes: [
-      "Starts Continue CLI in the selected worktree.",
-      "Log in with Continue or configure an API key during first launch."
-    ]
-  }),
-  npmAgent({
-    id: "codebuff",
-    label: "Codebuff",
-    aliases: ["codebuff"],
-    launchCommand: "codebuff",
-    packageName: "codebuff",
-    description: "Codebuff terminal coding agent",
-    usageNotes: [
-      "Runs Codebuff in the selected worktree.",
-      "Install Codebuff separately and make sure the `codebuff` command is on PATH."
-    ]
-  }),
-  agent({
     id: "amp",
     label: "Amp",
     aliases: ["amp"],
@@ -375,21 +314,6 @@ export const AGENT_DEFINITIONS: AgentDefinition[] = [
     usageNotes: [
       "Runs Kiro in the selected worktree.",
       "Install Kiro separately and make sure the `kiro-cli` command is on PATH."
-    ]
-  }),
-  agent({
-    id: "crush",
-    label: "Crush",
-    aliases: ["crush"],
-    launchCommand: "crush",
-    installTemplate: "go install github.com/charmbracelet/crush@latest",
-    description: "Charm terminal coding agent",
-    usageNotes: [
-      "Runs Crush in the selected worktree.",
-      "Configure a supported provider API key when Crush prompts for one."
-    ],
-    executablePathCandidates: [
-      { path: "~/go/bin/crush", platforms: ["darwin", "linux"] }
     ]
   }),
   npmAgent({
@@ -450,42 +374,6 @@ export const AGENT_DEFINITIONS: AgentDefinition[] = [
     usageNotes: [
       "Runs Mistral Vibe in the selected worktree.",
       "Install Mistral Vibe separately and make sure the `vibe` command is on PATH."
-    ]
-  }),
-  agent({
-    id: "rovo",
-    label: "Rovo Dev",
-    aliases: ["acli", "rovodev", "rovo"],
-    launchCommand: "acli rovodev run",
-    installTemplate: ROVO_INSTALL_TEMPLATE,
-    description: "Rovo Dev CLI coding agent",
-    usageNotes: [
-      "Runs Rovo Dev in the selected worktree.",
-      "Install Atlassian CLI first, then make sure `acli` is on PATH."
-    ]
-  }),
-  agent({
-    id: "hermes",
-    label: "Hermes",
-    aliases: ["hermes"],
-    launchCommand: "hermes",
-    installTemplate: HERMES_INSTALL_TEMPLATE,
-    description: "Hermes CLI coding agent",
-    usageNotes: [
-      "Runs Hermes in the selected worktree.",
-      "Install Hermes separately and make sure the `hermes` command is on PATH."
-    ]
-  }),
-  agent({
-    id: "openclaw",
-    label: "OpenClaw",
-    aliases: ["openclaw"],
-    launchCommand: "openclaw",
-    installTemplate: OPENCLAW_INSTALL_TEMPLATE,
-    description: "OpenClaw CLI coding agent",
-    usageNotes: [
-      "Runs OpenClaw in the selected worktree.",
-      "Install OpenClaw separately and make sure the `openclaw` command is on PATH."
     ]
   })
 ];

@@ -2,8 +2,7 @@ import { useId, useRef, useState } from "react";
 import { ChevronDown, RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { AiProviderLogo } from "@/components/app/views/AiProviderLogo";
-import { nativeProviderBrands } from "@/components/app/constants/nativeProviderBrands";
+import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { useNativeModelCatalog } from "@/components/app/hooks/useNativeModelCatalog";
 import { nativeProviderKey } from "@/components/app/logic/modelCatalogStore";
 import type { ModelPopoverProps } from "@/components/app/types/modelPicker.types";
@@ -19,7 +18,7 @@ export function NativeModelPopover({ providers, store, selectedProvider, selecte
   const headingId = useId();
   return <Popover open={open} onOpenChange={(value) => { if (value) setBrowsingKey(selectedKey); setOpen(value); }}>
     <PopoverTrigger asChild><Button type="button" size="sm" variant="ghost" aria-label={`Choose provider and model: ${selectedModel?.name || selectedModelId || "Choose model"}`} className="max-w-full gap-2 px-2 font-normal">
-      {selectedProvider && <AiProviderLogo provider={nativeProviderBrands[selectedProvider.kind]} />}
+      {selectedProvider && <AgentToolIcon toolId={selectedProvider.kind} label="" className="size-4 shrink-0" imageClassName="size-3.5" />}
       <span className="min-w-0 truncate">{selectedModel?.name || selectedModelId || "Choose model"}</span><ChevronDown className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
     </Button></PopoverTrigger>
     <PopoverContent side="top" align="start" aria-labelledby={headingId} className="flex max-h-[var(--radix-popover-content-available-height)] w-[min(28rem,calc(100vw-1.5rem))] flex-col overflow-hidden bg-popover p-0"
@@ -36,7 +35,7 @@ export function NativeModelPopover({ providers, store, selectedProvider, selecte
               aria-label={`${provider.label} (${provider.instanceId})`} tooltip={`${provider.label} · ${provider.instanceId}`}
               className={`relative size-11 shrink-0 rounded-md border ${active ? "border-border bg-background shadow-sm" : "border-transparent"}`}
               onClick={() => setBrowsingKey(key)}>
-              <AiProviderLogo provider={nativeProviderBrands[provider.kind]} className="size-7 rounded-md" imgClassName="size-6" />
+              <AgentToolIcon toolId={provider.kind} label="" className="size-7 rounded-md" imageClassName="size-6" />
               {sameKind && <span className="absolute -bottom-1 max-w-14 truncate rounded bg-popover px-1 text-[11px] text-popover-foreground">{provider.instanceId}</span>}
             </Button>;
           })}

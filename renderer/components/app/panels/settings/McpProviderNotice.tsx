@@ -1,6 +1,5 @@
-import { nativeProviderBrands } from "@/components/app/constants/nativeProviderBrands";
 import type { McpProviderNoticeProps, RuntimeMcpEntry } from "@/components/app/types/runtimeMcp.types";
-import { AiProviderLogo } from "@/components/app/views/AiProviderLogo";
+import { AgentToolIcon } from "@/components/app/shared/Tooling";
 
 type Notice = { text: string; tone: "status" | "warning" | "error" };
 
@@ -23,7 +22,7 @@ export function McpProviderNotice({ entry }: McpProviderNoticeProps) {
   const notice = noticeFor(entry);
   if (!notice) return null;
   return <p role={notice.tone === "status" ? "status" : "alert"} className={`flex items-start gap-2 text-sm ${TONE_CLASS_NAMES[notice.tone]}`}>
-    <AiProviderLogo provider={nativeProviderBrands[entry.source.kind]} className="mt-0.5" />
+    <AgentToolIcon toolId={entry.source.kind} label="" className="mt-0.5 size-4 shrink-0" imageClassName="size-3.5" />
     <span><span className="font-medium">{entry.source.label}:</span> {notice.text}</span>
   </p>;
 }

@@ -14,7 +14,7 @@ test("resolveManagedAgentLaunchOptions presets launch prompt and trust for suppo
     initialPromptDelivery: "terminal",
     startupTrustMode: "default"
   });
-  assert.deepEqual(resolveManagedAgentLaunchOptions("aider"), {
+  assert.deepEqual(resolveManagedAgentLaunchOptions("goose"), {
     initialPromptDelivery: "terminal",
     startupTrustMode: "default"
   });

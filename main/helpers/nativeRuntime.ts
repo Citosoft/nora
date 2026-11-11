@@ -5,14 +5,12 @@ import { LocalWorkspaceAuthority } from "@main/execution/localWorkspace";
 import { createCheckoutInspector } from "@main/execution/workspaceGit";
 import { openWorkspaceCatalog } from "@main/personalization/workspaceCatalog";
 import { PersonalizationService } from "@main/personalization/service";
-import { findExecutableOnPath } from "@main/processLookup";
+import { discoverNativeProviders } from "@main/helpers/nativeProviderDiscovery";
 import { buildProcessEnv } from "@main/processEnv";
 import { effectiveRole } from "@shared/personalization/profiles";
 import { restoreWorkspaceSelection } from "@main/helpers/restoreWorkspaceSelection";
 import type { NativeRuntimeOptions, NativeRuntime } from "@main/types/native-runtime/runtime.types";
 import type { WorkspaceCatalog } from "@main/types/personalization/services.types";
-import type { NativeInstance } from "@main/types/execution/localHost.types";
-import type { NativeProvider } from "@shared/ipc/types/personalizationGateway.types";
 
 /** One native execution owner; the workspace service continues to own files, Git and manual shells. */
 export async function openNativeRuntime(options: NativeRuntimeOptions): Promise<NativeRuntime> {
@@ -43,22 +41,9 @@ export async function openNativeRuntime(options: NativeRuntimeOptions): Promise<
       if (!options.projects().length) await activateWorkspace(personal.workspace.path);
     });
   }
-  const [codex, claude] = await Promise.all([
-    findExecutableOnPath(process.platform === "win32" ? ["codex.exe", "codex.cmd", "codex"] : ["codex"], process.platform === "win32"),
-    findExecutableOnPath(process.platform === "win32" ? ["claude.exe", "claude.cmd", "claude"] : ["claude"], process.platform === "win32")
-  ]);
-  const instances: NativeInstance[] = [];
-  const providers: NativeProvider[] = [];
-  const environment = buildProcessEnv(process.env);
-  if (codex) {
-    instances.push({ kind: "codex", options: { instanceId: "local", executable: codex, arguments: ["app-server", "--listen", "stdio://"], environment,
-      policies: { "read-only": { approvalPolicy: "on-request", sandbox: "read-only" }, "workspace-write": { approvalPolicy: "on-request", sandbox: "workspace-write" } } } });
-    providers.push({ kind: "codex", instanceId: "local", label: "Codex" });
-  }
-  if (claude) {
-    instances.push({ kind: "claude", instanceId: "local", runtime: { executablePath: claude, environment }, policies: { default: "default", plan: "plan", "accept-edits": "acceptEdits" } });
-    providers.push({ kind: "claude", instanceId: "local", label: "Claude" });
-  }
+  const discovered = await discoverNativeProviders(buildProcessEnv(process.env));
+  const instances = discovered.map((entry) => entry.instance);
+  const providers = discovered.map((entry) => entry.provider);
   const host = await openLocalHost({ environmentId, databasePath: join(options.stateDirectory, "execution.sqlite"), gitExecutable: "git", instances,
     generateThreadName: (instruction, signal) => generateThreadName(options.readSettings().ai, instruction, signal),
     registrations: () => catalog.registrations(), roleForWorkspace: (id) => effectiveRole(options.readSettings().personalization, id),

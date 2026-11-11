@@ -6,31 +6,24 @@ export const LOOP_HEADLESS_TOOL_CAPABILITIES: readonly LoopHeadlessToolCapabilit
   { toolId: "gemini", promptStyle: "gemini-prompt" },
   { toolId: "pi", promptStyle: "print-flag" },
   { toolId: "cursor", promptStyle: "cursor-print-trust" },
-  { toolId: "aider", promptStyle: "message-flag" },
   { toolId: "goose", promptStyle: "goose-run" },
   { toolId: "qwen", promptStyle: "qwen-print" },
   { toolId: "opencode", promptStyle: "opencode-print" },
   { toolId: "grok", promptStyle: "print-flag" },
   { toolId: "copilot", promptStyle: "copilot-print" },
   { toolId: "cline", promptStyle: "cline-yolo" },
-  { toolId: "continue", promptStyle: "continue-print" },
   { toolId: "amp", promptStyle: "execute-flag" },
-  { toolId: "kilo", promptStyle: "kilo-run" },
-  { toolId: "crush", promptStyle: "crush-run" },
-  { toolId: "rovo", promptStyle: "rovo-run" }
+  { toolId: "kilo", promptStyle: "kilo-run" }
 ] as const;
 
 export const LOOP_HEADLESS_UNSUPPORTED_TOOL_IDS = [
   "antigravity",
-  "codebuff",
   "kiro",
   "aug",
   "autohand",
   "droid",
   "kimi",
-  "mistral-vibe",
-  "hermes",
-  "openclaw"
+  "mistral-vibe"
 ] as const;
 
 const capabilityByToolId = new Map(LOOP_HEADLESS_TOOL_CAPABILITIES.map((entry) => [entry.toolId, entry]));

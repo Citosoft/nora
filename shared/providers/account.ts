@@ -1,11 +1,12 @@
 import { z } from "zod";
+import { providerKindSchema } from "./providerKinds";
 
 export const providerAccountActionSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("read") }).strict(),
   z.object({ kind: z.literal("login") }).strict()
 ]);
 export const providerAccountRequestSchema = z.object({ schemaVersion: z.literal(1), environmentId: z.string().min(1).max(512),
-  providerKind: z.enum(["claude", "codex"]), instanceId: z.string().min(1).max(512), action: providerAccountActionSchema }).strict();
+  providerKind: providerKindSchema, instanceId: z.string().min(1).max(512), action: providerAccountActionSchema }).strict();
 export const providerAccountSchema = z.discriminatedUnion("state", [
   /** `method` names how the runtime authenticates (e.g. "ChatGPT Pro", "API key"); `label` identifies the account when known. */
   z.object({ state: z.literal("signed-in"), method: z.string().min(1), label: z.string().nullable() }).strict(),
