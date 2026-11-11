@@ -1,4 +1,6 @@
+import { useProviderAccounts } from "@/components/app/hooks/useProviderAccounts";
 import { useSettingsRuntime } from "@/components/app/hooks/useSettingsRuntime";
+import { ProviderAccountStatus } from "@/components/app/panels/settings/ProviderAccountStatus";
 import { createAgentSkillCatalogMap } from "@/components/app/logic/agentSkills";
 import { settingAnchorAttributes } from "@/components/app/logic/settingsSearch";
 import { formatInstallLogText } from "@/components/app/logic/terminalLogText";
@@ -21,6 +23,7 @@ export function CliSettingsSection() {
     refreshAgentCatalog,
     removeToolSkill
   } = useSettingsRuntime();
+  const providerAccounts = useProviderAccounts();
   const detectedTools = agentCatalog.filter((tool) => tool.detected);
   const availableDetectedTools = useMemo(
     () => detectedTools.filter((tool) => isAgentToolAvailable(tool)),
@@ -62,7 +65,7 @@ export function CliSettingsSection() {
             Enable and configure your coding providers, choose a default, and manage provider skills.
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={refreshAgentCatalog}>
+        <Button variant="outline" size="sm" onClick={() => { refreshAgentCatalog(); providerAccounts.refresh(); }}>
           Refresh detection
         </Button>
       </div>
@@ -143,6 +146,8 @@ export function CliSettingsSection() {
               : "Disabled";
           const isExpanded = expandedToolIds.has(tool.id);
           const shouldShowInstallProgress = tool.installStatus === "running" || (isExpanded && tool.installLog.length > 0);
+          const accountKind = tool.id === "claude" || tool.id === "codex" ? tool.id : null;
+          const accountView = tool.detected && accountKind ? providerAccounts.views.get(accountKind) : undefined;
 
           return (
             <div
@@ -226,6 +231,12 @@ export function CliSettingsSection() {
                   </button>
                 </div>
               </div>
+
+              {accountKind && accountView ? (
+                <div className="mt-3 border-t border-border/50 pt-3">
+                  <ProviderAccountStatus providerLabel={tool.label} view={accountView} onSignIn={() => void providerAccounts.signIn(accountKind)} />
+                </div>
+              ) : null}
 
               {isExpanded ? (
                 <div className="mt-4">
