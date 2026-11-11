@@ -19,6 +19,63 @@ async function waitForSimulator(host: ExecutionHost, conversationId: string, pre
   throw new Error("Simulator did not reach the expected state");
 }
 
+test("the suggestion scenario publishes an optional follow-up after completion without submitting it", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "nora-simulator-suggestion-"));
+  const { host, boot } = createSimulatorHost(directory, 0);
+  try {
+    await host.execute({ kind: "create", commandId: randomUUID(), conversationId: "suggestion", title: "Follow-up", parentId: null,
+      workspace: boot.workspaces[0].workspace, provider: { kind: "codex", instanceId: "simulator", model: "simulated", permissionPolicy: "simulated", reasoning: null } });
+    await host.execute({ kind: "submit", commandId: randomUUID(), conversationId: "suggestion", runId: "run", instruction: "/suggestions" });
+    await waitForSimulator(host, "suggestion", (header) => header?.activeRuns.length === 0);
+    const turns = host.conversationHistory({ conversationId: "suggestion", scope: "runs", limit: 100 });
+    assert.ok(turns.scope === "runs");
+    const latest = turns.runs[0];
+    assert.equal(latest?.state, "completed");
+    assert.equal(latest?.promptSuggestion, "Run the test suite and summarize any failures.");
+    assert.equal(host.header("suggestion")?.queuedRuns.length, 0);
+    const history = host.conversationHistory({ conversationId: "suggestion", scope: "timeline", limit: 100 });
+    assert.equal(history.scope, "timeline");
+    if (history.scope === "timeline") assert.equal(history.items.filter((item) => item.kind === "message" && item.role === "user").length, 1);
+    const catalog = await host.catalog("codex", "simulator", boot.workspaces[0].workspace);
+    assert.equal(catalog.status, "available");
+    if (catalog.status === "available") assert.equal(catalog.catalog.capabilities.promptSuggestions, true);
+  } finally { await host.shutdown(); rmSync(directory, { recursive: true, force: true }); }
+});
+
+for (const action of ["complete", "cancel", "interrupt"] as const) {
+  test(`stacked approvals raise three requests together and ${action} settles the turn`, async () => {
+    const directory = mkdtempSync(join(tmpdir(), "nora-simulator-stack-"));
+    const { host, boot } = createSimulatorHost(directory, 0);
+    try {
+      await host.execute({ kind: "create", commandId: randomUUID(), conversationId: "stack", title: "Stacked approvals", parentId: null,
+        workspace: boot.workspaces[0].workspace, provider: { kind: "codex", instanceId: "simulator", model: "simulated", permissionPolicy: "simulated", reasoning: null } });
+      await host.execute({ kind: "submit", commandId: randomUUID(), conversationId: "stack", runId: "run", instruction: "/approval-stack" });
+      await waitForSimulator(host, "stack", (header) => header?.pendingRequests.length === 3);
+      const requests = host.header("stack")?.pendingRequests; assert.ok(requests);
+      assert.equal(new Set(requests.map((request) => request.id)).size, 3);
+      assert.deepEqual(requests.map((request) => request.kind === "approval" ? request.details?.kind : request.kind), ["command", "files", "network"]);
+      if (action === "complete") {
+        const choices = ["allow", "deny", "always"];
+        for (const [index, request] of requests.entries()) {
+          await host.execute({ kind: "respond", commandId: randomUUID(), conversationId: "stack", requestId: request.id,
+            response: { kind: "approval", optionId: choices[index] } });
+          await waitForSimulator(host, "stack", (header) => header?.pendingRequests.length === 2 - index);
+          assert.deepEqual(host.header("stack")?.pendingRequests.map((pending) => pending.id), requests.slice(index + 1).map((pending) => pending.id));
+          if (index < 2) assert.equal(host.header("stack")?.activeRuns[0]?.state, "awaiting-approval");
+        }
+      } else if (action === "cancel") {
+        await host.execute({ kind: "respond", commandId: randomUUID(), conversationId: "stack", requestId: requests[0].id,
+          response: { kind: "approval", optionId: "cancel" } });
+      } else {
+        await host.execute({ kind: "interrupt", commandId: randomUUID(), conversationId: "stack", runId: "run" });
+      }
+      await waitForSimulator(host, "stack", (header) => header?.activeRuns.length === 0);
+      assert.deepEqual(host.header("stack")?.pendingRequests, []);
+      assert.equal(host.summaries()[0].latestRun?.state, action === "complete" ? "completed" : "interrupted");
+    } finally { await host.shutdown(); rmSync(directory, { recursive: true, force: true }); }
+  });
+}
+
 test("simulator uses the real host, waits for answers and finishes with zero token usage", async () => {
   const directory = mkdtempSync(join(tmpdir(), "nora-simulator-test-"));
   const { host, boot } = createSimulatorHost(directory, 0);
@@ -66,15 +123,16 @@ test("unfinished questions, approvals and recovery do not block other simulator 
   const { host, boot } = createSimulatorHost(directory, 0);
   try {
     assert.equal(boot.workspaces[0].workspace.access, "read");
-    for (const scenario of ["questions", "approvals", "recovery", "tools"]) {
+    for (const scenario of ["questions", "approvals", "approval-stack", "recovery", "tools"]) {
       await host.execute({ kind: "create", commandId: randomUUID(), conversationId: scenario, title: scenario, parentId: null,
         workspace: boot.workspaces[0].workspace, provider: { kind: "codex", instanceId: "simulator", model: "simulated", permissionPolicy: "simulated", reasoning: null } });
       await host.execute({ kind: "submit", commandId: randomUUID(), conversationId: scenario, runId: scenario, instruction: `/${scenario}` });
       await waitForSimulator(host, scenario, (header) => scenario === "tools" ? header?.activeRuns.length === 0
-        : header?.activeRuns[0]?.state === (scenario === "questions" ? "awaiting-input" : scenario === "approvals" ? "awaiting-approval" : "recovering"));
+        : header?.activeRuns[0]?.state === (scenario === "questions" ? "awaiting-input" : scenario === "recovery" ? "recovering" : "awaiting-approval"));
     }
     assert.equal(host.header("questions")?.pendingRequests[0]?.kind, "question");
     assert.equal(host.header("approvals")?.pendingRequests[0]?.kind, "approval");
+    assert.equal(host.header("approval-stack")?.pendingRequests.length, 3);
     assert.equal(host.header("recovery")?.activeRuns[0]?.state, "recovering");
     assert.equal(host.summaries().find((entry) => entry.conversation.id === "tools")?.latestRun?.state, "completed");
   } finally { await host.shutdown(); rmSync(directory, { recursive: true, force: true }); }

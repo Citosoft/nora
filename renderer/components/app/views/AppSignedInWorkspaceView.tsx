@@ -57,9 +57,7 @@ export function AppSignedInWorkspaceView() {
   const centerColumnCell = (
     <div data-changes-sidebar-open={hasActiveWorkspace && !isChangesSidebarCollapsed && !filesTool} inert={!!filesTool} aria-hidden={!!filesTool} style={{ gridColumn: 2, gridRow: 1 }} className="center-column-host relative flex min-h-0 min-w-0 flex-col overflow-hidden border-x border-border/70 bg-background">
       <div className="min-h-0 flex-1 overflow-hidden">
-        <AppMainCenterContentProvider value={appMainCenterContentValue}>
-          <AppMainCenterContent />
-        </AppMainCenterContentProvider>
+        <AppMainCenterContent />
       </div>
       <LocalTerminalDockProvider value={localTerminalDockProps}>
         <AppLocalTerminalDock />
@@ -71,6 +69,7 @@ export function AppSignedInWorkspaceView() {
   return (
     <WorkspaceSidebarProvider value={workspaceSidebarContextValue}>
     <WorkspaceRuntimeProvider value={workspaceRuntimeValue}>
+    <AppMainCenterContentProvider value={appMainCenterContentValue}>
       <div
         className="grid h-full min-h-0"
         style={{
@@ -81,6 +80,7 @@ export function AppSignedInWorkspaceView() {
         {centerColumnCell}
         {changesSidebarCell}
       </div>
+    </AppMainCenterContentProvider>
     </WorkspaceRuntimeProvider>
     </WorkspaceSidebarProvider>
   );

@@ -23,11 +23,11 @@ export function acpControlPlan(setup: AcpSessionSetup, label: string): AcpContro
   const defaultReasoningEffort = thought?.currentValue ?? null;
   const models = model
     ? choices(model).map((choice) => ({ id: choice.value, name: choice.name, description: choice.description ?? "", reasoningEfforts, defaultReasoningEffort }))
-    : [{ id: ACP_AGENT_DEFAULT, name: `${label} default`, description: `The model configured in ${label}`, reasoningEfforts, defaultReasoningEffort }];
+    : [{ id: ACP_AGENT_DEFAULT, name: `${label} configured model`, description: `The model configured in ${label}`, reasoningEfforts, defaultReasoningEffort }];
   const modeOption = selectOption(setup, "mode");
-  const policies = setup.modes?.availableModes.length ? setup.modes.availableModes.map((mode) => ({ id: mode.id, label: mode.name }))
-    : modeOption ? choices(modeOption).map((choice) => ({ id: choice.value, label: choice.name }))
-    : [{ id: ACP_AGENT_DEFAULT, label: "Agent default" }];
+  const policies = setup.modes?.availableModes.length ? setup.modes.availableModes.map((mode) => ({ id: mode.id, label: mode.name, ...(mode.description ? { description: mode.description } : {}) }))
+    : modeOption ? choices(modeOption).map((choice) => ({ id: choice.value, label: choice.name, ...(choice.description ? { description: choice.description } : {}) }))
+    : [{ id: ACP_AGENT_DEFAULT, label: "Use agent settings", description: "Use the agent's configured permission mode without overriding it." }];
   return { models, policies };
 }
 

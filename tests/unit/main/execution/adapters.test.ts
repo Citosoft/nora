@@ -235,6 +235,7 @@ test("Claude SDK lifecycle preserves native continuation and serves approval thr
         assert.deepEqual(answer, { kind: "approval", optionId: "allow" });
         yield { kind: "text", nativeId: "message", text: "Final", complete: true, eventId: "final" };
         yield { kind: "finished", eventId: "result", status: "completed", failure: null, usage: { inputTokens: 10, outputTokens: 2 } };
+        yield { kind: "prompt-suggestion", eventId: "suggestion", suggestion: "Review the test coverage." };
       } };
     } });
   const registry = new ProviderRegistry(); registry.register(adapter);
@@ -249,6 +250,8 @@ test("Claude SDK lifecycle preserves native continuation and serves approval thr
   const messages = f.snapshot().items.filter((item) => item.kind === "message" && item.role === "assistant");
   assert.equal(messages.length, 1);
   assert.equal(f.snapshot().runs[0].state, "completed");
+  assert.equal(f.snapshot().runs[0].promptSuggestion, "Review the test coverage.");
+  assert.equal(adapter.capabilities.promptSuggestions, true);
   assert.equal(opened[0].resume, false);
   f.submit("second");
   const nextAwaiting = waitFor(f.engine, "awaiting-approval");
@@ -276,6 +279,39 @@ test("Claude stream loss does not fabricate completion or resubmit during reconc
   f.engine.recover(); await worker.runNext();
   assert.equal(f.snapshot().runs[0].state, "recovering");
   assert.equal(opened, 1);
+});
+
+test("a new Claude instruction closes a completed turn's pending prediction before resuming its session", async (t) => {
+  const f = fixture(t); f.create("conversation", "checkout", { ...provider, kind: "claude" }); f.submit("first");
+  let releaseTail = (): void => {};
+  const tail = new Promise<void>((resolve) => { releaseTail = resolve; });
+  let opened = 0;
+  let firstClosed = false;
+  const adapter = new ClaudeAdapter({ instanceId: "account-a", policies: { "native-default": "default" }, now, nextId: randomUUID, discover,
+    open(input) {
+      const first = opened++ === 0;
+      if (!first) assert.equal(firstClosed, true);
+      return { async interrupt() {}, close() { if (first) { firstClosed = true; releaseTail(); } },
+        async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
+          yield { kind: "init", sessionId: input.sessionId, eventId: "init" };
+          yield { kind: "finished", eventId: "result", status: "completed", failure: null, usage: { inputTokens: 0, outputTokens: 0 } };
+          if (first) await tail;
+          yield { kind: "prompt-suggestion", eventId: "suggestion", suggestion: first ? "Old suggestion" : "New suggestion" };
+        } };
+    } });
+  const registry = new ProviderRegistry(); registry.register(adapter);
+  const worker = new EffectWorker(f.engine, registry);
+  try {
+    const completed = waitFor(f.engine, "completed");
+    const first = worker.runNext(["start"]);
+    await completed;
+    assert.equal(firstClosed, false, "Completion does not wait for the optional suggestion");
+    await worker.runNext(["review"]);
+    f.submit("second");
+    await worker.runNext(["start"]); await first;
+    assert.equal(opened, 2);
+    assert.equal(f.snapshot().runs[1].promptSuggestion, "New suggestion");
+  } finally { await adapter.close(); }
 });
 
 test("Claude interruption expires the native question, preserves the queue and waits for a result", async (t) => {

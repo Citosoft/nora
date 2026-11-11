@@ -1,18 +1,12 @@
-import { createContext, useCallback, useEffect, useMemo, useState } from "react";
-import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
-import { resolveWorkspaceToolRoute } from "@/components/app/logic/workspace-navigation/routes";
-import { useThreadTabsPorts } from "@/components/app/hooks/useThreadTabsPorts";
+import { createContext, useEffect, useMemo, useState } from "react";
+import { useWorkspaceToolNavigation } from "@/components/app/hooks/useWorkspaceToolNavigation";
 import { useThreadNavigationPorts } from "@/components/app/hooks/useThreadNavigationPorts";
 import { parseSidebarPreferences, SIDEBAR_PREFERENCES_KEY } from "@/components/app/logic/workspace-navigation/preferences";
-import type { WorkspaceNavigationProviderProps, WorkspaceNavigationValue, WorkspaceToolRoute } from "@/components/app/types/workspaceNavigation.types";
+import type { WorkspaceNavigationProviderProps, WorkspaceNavigationValue } from "@/components/app/types/workspaceNavigation.types";
 
 export const WorkspaceNavigationContext = createContext<WorkspaceNavigationValue | null>(null);
 export function WorkspaceNavigationProvider({ children }: WorkspaceNavigationProviderProps) {
-  const snapshot = useCanonicalAppSnapshot();
-  const projectId = snapshot?.project?.id ?? null;
-  const { state, setThreadVisible } = useThreadNavigationPorts();
-  const tabs = useThreadTabsPorts();
-  const [route, setRoute] = useState<WorkspaceToolRoute | null>(null);
+  const { setThreadVisible } = useThreadNavigationPorts();
   const [preferences, updatePreferences] = useState(() => {
     try { return parseSidebarPreferences(localStorage.getItem(SIDEBAR_PREFERENCES_KEY)); }
     catch { return parseSidebarPreferences(null); }
@@ -27,24 +21,10 @@ export function WorkspaceNavigationProvider({ children }: WorkspaceNavigationPro
     }
   }, [preferences]);
   const setPreferences = updatePreferences;
-  const openTool = useCallback<WorkspaceNavigationValue["openTool"]>((projectId, tool) => {
-    if (projectId === snapshot?.project?.id) {
-      setRoute({ projectId, tool, focusRevision: state.focusRevision });
-    }
-  }, [state.focusRevision, snapshot?.project?.id]);
-  const closeTool = useCallback(() => setRoute(null), []);
-  const returnToThread = useCallback(() => {
-    setRoute(null);
-    if (tabs.activeId) tabs.focus(tabs.activeId);
-  }, [tabs.activeId, tabs.focus]);
-  // Selecting a thread through any entry point returns to it, including keyboard shortcuts.
-  const visibleRoute = resolveWorkspaceToolRoute(route, projectId, state.focusRevision, snapshot?.project);
-  useEffect(() => {
-    if (route && !visibleRoute) setRoute(null);
-  }, [route, visibleRoute]);
-  const threadVisible = !visibleRoute;
+  const { route, openedTools, openTool, closeTool, returnToThread } = useWorkspaceToolNavigation({ preferences, setPreferences });
+  const threadVisible = !route;
   useEffect(() => { setThreadVisible(threadVisible); }, [setThreadVisible, threadVisible]);
-  const value = useMemo<WorkspaceNavigationValue>(() => ({ route: visibleRoute, openTool, closeTool, returnToThread, preferences, setPreferences, preferenceError }),
-    [visibleRoute, openTool, closeTool, returnToThread, preferences, setPreferences, preferenceError]);
+  const value = useMemo<WorkspaceNavigationValue>(() => ({ route, openedTools, openTool, closeTool, returnToThread, preferences, setPreferences, preferenceError }),
+    [route, openedTools, openTool, closeTool, returnToThread, preferences, setPreferences, preferenceError]);
   return <WorkspaceNavigationContext.Provider value={value}>{children}</WorkspaceNavigationContext.Provider>;
 }

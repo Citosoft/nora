@@ -1,14 +1,11 @@
 import { ChevronDown, ChevronUp, ExternalLink, FileCode2, GitBranch, GitPullRequest, LoaderCircle, RefreshCcw } from "lucide-react";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
-import { useNativeRuntimePorts } from "@/components/app/hooks/useNativeRuntimePorts";
-import { nativeProviderLabel } from "@/components/app/logic/nativeProviderLabel";
 import type { ThreadInsightsPanelProps } from "@/components/app/types/threadInsights.types";
 import { Button } from "@/components/ui/button";
 import { useId } from "react";
 import { DiffCounts } from "./DiffCounts";
 
-export function ThreadInsightsPanel({ header, changes, request, expanded, busy, canArchive, hasOlderHistory, onToggle, onRefresh, onLoadHistory, onArchive }: ThreadInsightsPanelProps) {
-  const { boot } = useNativeRuntimePorts();
+export function ThreadInsightsPanel({ header, providerLabel, changes, request, expanded, busy, canArchive, hasOlderHistory, onToggle, onRefresh, onLoadHistory, onArchive }: ThreadInsightsPanelProps) {
   const detailsId = useId();
   const conversation = header.conversation;
   const changeRequest = request.status === "ready" ? request.request : null;
@@ -44,7 +41,7 @@ export function ThreadInsightsPanel({ header, changes, request, expanded, busy, 
           : changeRequest?.pullRequestNumber ? <Button variant="ghost" className="h-8 w-full justify-start px-0 text-xs" disabled={!changeRequest.webUrl} onClick={() => { if (changeRequest.webUrl) void noraSystemClient.openExternalUrl(changeRequest.webUrl); }}>#{changeRequest.pullRequestNumber}<span className="ml-auto text-muted-foreground">{changeRequest.label}</span><ExternalLink className="size-3" aria-hidden="true" /></Button>
           : <p className="text-muted-foreground">No pull or merge request found.</p>}
       </div>
-      <div className="flex items-center justify-between gap-2 border-t border-border/50 pt-3 text-[10px] text-muted-foreground"><span className="truncate">{nativeProviderLabel(boot.providers, conversation.provider)} · {conversation.provider.permissionPolicy}</span><Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" disabled={busy || !canArchive} onClick={onArchive}>{conversation.archivedAt ? "Archived" : "Archive"}</Button></div>
+      <div className="flex items-center justify-between gap-2 border-t border-border/50 pt-3 text-[10px] text-muted-foreground"><span className="truncate">{providerLabel} · {conversation.provider.permissionPolicy}</span><Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" disabled={busy || !canArchive} onClick={onArchive}>{conversation.archivedAt ? "Archived" : "Archive"}</Button></div>
     </div>}
   </aside>;
 }

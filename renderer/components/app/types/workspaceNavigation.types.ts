@@ -4,13 +4,24 @@ import type { WorkspaceSummary, RecentProject, TerminalSession, WorktreeRecord, 
 import type { ChangesPanelSectionProps } from "@/components/app/types/changesPanel.types";
 import type { WorkspaceWorkspaceActionsMenuItemsProps } from "@/components/app/types/workspaceSidebarActionsMenu.types";
 import type { RoleSelection } from "@shared/types/personalization/roles.types";
+import type { ThreadGrouping } from "@/components/app/types/thread-workspace/navigation.types";
+import type { WorkspaceAvatarColor } from "@/components/app/types/workspaceAvatar.types";
+import type { WorkspaceViewPreferences } from "./workspaceView.types";
 
-export type WorkspaceToolId = "files" | "changes" | "documents" | "tasks" | "development" | "workflows" | "terminals" | "browser";
+export type WorkspaceToolId = "files" | "changes" | "documents" | "tasks" | "workflows" | "terminals" | "browser";
 export interface WorkspaceToolItem { id: WorkspaceToolId; label: string; icon: LucideIcon; }
-export interface SidebarPreferences { pinnedWorkspaceIds: string[]; toolPins: Record<string, WorkspaceToolId[]>; }
-export interface WorkspaceToolRoute { projectId: string; tool: WorkspaceToolId; focusRevision: number; }
+export interface SidebarPreferences {
+  pinnedWorkspaceIds: string[];
+  toolPins: Record<string, WorkspaceToolId[]>;
+  threadGrouping: ThreadGrouping;
+  workspaceAvatarColors: Record<string, WorkspaceAvatarColor>;
+  workspaceViews: Record<string, WorkspaceViewPreferences>;
+}
+export interface WorkspaceToolRoute { projectId: string; tool: WorkspaceToolId; }
+export interface WorkspaceToolRequest extends WorkspaceToolRoute { revision: number; }
 export interface WorkspaceNavigationValue {
   route: WorkspaceToolRoute | null;
+  openedTools: readonly WorkspaceToolRoute[];
   openTool(projectId: string, tool: WorkspaceToolId): void;
   closeTool(): void;
   returnToThread(): void;
@@ -32,11 +43,11 @@ export interface WorkspaceSwitcherProps {
 }
 
 export interface WorkspaceToolHeaderProps { title: string; workspaceName: string; }
-export interface WorkspaceToolContentProps extends WorkspaceToolProps { tool: WorkspaceToolId; }
+export interface WorkspaceToolContentProps extends WorkspaceToolProps { tool: WorkspaceToolId; active: boolean; }
 
 export type TerminalLaunchMenuProps = Pick<WorkspaceWorkspaceActionsMenuItemsProps,
   "workspace" | "focusedProjectId" | "terminalShells" | "preferredShellId" | "terminalQuickLaunchDefaults" | "runnableGlobalTerminalPresets" | "onItemSelected" | "onFocusWorkspace" | "onLaunchWorkspaceTerminal" | "onOpenCreateTerminal" | "onOpenWorkspaceTerminalPresets">;
-export interface WorkspaceTerminalRowProps { terminal: TerminalSession; onSelect(terminalId: string): void; }
+export interface WorkspaceTerminalTabProps { terminal: TerminalSession; selected: boolean; }
 
 export interface WorkspaceChangesSurfaceProps {
   panel: ChangesPanelSectionProps;

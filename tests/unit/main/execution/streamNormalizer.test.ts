@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import test from "node:test";
 import type { SDKAssistantMessage, SDKPartialAssistantMessage } from "@anthropic-ai/claude-agent-sdk";
 import { ClaudeStreamNormalizer } from "@main/providers/claude/streamNormalizer";
-import { claudeMessage as message } from "./toolFixtures";
+import { claudeMessage as message, claudeUsage } from "./toolFixtures";
 
 function partial(event: SDKPartialAssistantMessage["event"]): SDKPartialAssistantMessage {
   return { type: "stream_event", event, uuid: randomUUID(), parent_tool_use_id: null, session_id: "session" };
@@ -47,9 +47,16 @@ test("Claude preserves a rejected limit reset in the normalized failure", () => 
   stream.accept({ type: "rate_limit_event", uuid: randomUUID(), session_id: "session", rate_limit_info: { status: "rejected", resetsAt: seconds } });
   const frames = stream.accept({ type: "result", subtype: "error_during_execution", uuid: randomUUID(), session_id: "session",
     duration_ms: 0, duration_api_ms: 0, is_error: true, num_turns: 1, stop_reason: null, total_cost_usd: 0, modelUsage: {}, permission_denials: [], errors: ["Limit reached"],
-    usage: { input_tokens: 0, output_tokens: 0, cache_creation: { ephemeral_1h_input_tokens: 0, ephemeral_5m_input_tokens: 0 }, cache_creation_input_tokens: 0,
-      cache_read_input_tokens: 0, fallback_credit: null, inference_geo: "", iterations: [], output_tokens_details: { thinking_tokens: 0 }, server_tool_use: { web_fetch_requests: 0, web_search_requests: 0 }, service_tier: "standard", speed: "standard" } });
+    usage: claudeUsage() });
   const frame = frames.find((entry) => entry.kind === "finished");
   assert.equal(frame?.kind, "finished");
   if (frame?.kind === "finished") assert.deepEqual(frame.failure, { code: "usage-limit", message: "Claude usage limit reached", retryable: true, resetsAt: "2026-11-10T12:00:00.000Z" });
+});
+
+test("Claude prompt suggestions normalize separately from assistant output and discard invalid values", () => {
+  const stream = new ClaudeStreamNormalizer();
+  const suggestion = { type: "prompt_suggestion" as const, uuid: randomUUID(), session_id: "session", suggestion: "  Run the tests.  " };
+  assert.deepEqual(stream.accept(suggestion), [{ kind: "prompt-suggestion", eventId: suggestion.uuid, suggestion: "Run the tests." }]);
+  assert.deepEqual(stream.accept({ ...suggestion, suggestion: " \n " }), []);
+  assert.deepEqual(stream.accept({ ...suggestion, suggestion: "x".repeat(4001) }), []);
 });

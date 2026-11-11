@@ -19,7 +19,6 @@ import {
 getAgentRenderSignature,
 getBrowserTabsSignature,
 getProjectScriptsSignature,
-getTerminalRenderSignature,
 getTerminalShellsSignature,
 getToolsSignature,
 getWorkspaceContextSignature
@@ -69,7 +68,6 @@ export function WorkspaceSessionPanel() {
     project,
     workspace,
     agent,
-    terminal,
     browserTab,
     browserTabs,
     aiChatTab,
@@ -157,11 +155,6 @@ export function WorkspaceSessionPanel() {
   const stableProjectScripts = useMemo(() => projectScripts, [getProjectScriptsSignature(projectScripts)]);
   const stableTools = useMemo(() => tools, [getToolsSignature(tools)]);
   const stableBrowserTabs = useMemo(() => browserTabs, [getBrowserTabsSignature(browserTabs)]);
-  const projectScopedBrowserTabs = useMemo(
-    () =>
-      !project?.id ? stableBrowserTabs : stableBrowserTabs.filter((t) => t.projectId === project.id),
-    [project?.id, stableBrowserTabs]
-  );
   const projectScopedAiChatTabs = useMemo(
     () => (!project?.id ? aiChatTabs : aiChatTabs.filter((t) => t.projectId === project.id)),
     [aiChatTabs, project?.id]
@@ -266,7 +259,6 @@ export function WorkspaceSessionPanel() {
   const activeSpecEditorTab =
     activeFileEditorTab && isWorkspaceSpecMarkdownPath(activeFileEditorTab.path) ? activeFileEditorTab : null;
   const stableAgent = useMemo(() => agent, [getAgentRenderSignature(agent)]);
-  const stableTerminal = useMemo(() => terminal, [getTerminalRenderSignature(terminal)]);
   const expandedDiffPath = isDiffExpanded
     ? (isFullDiffExpanded ? "__all_changes__" : (selectedDiffChange ? selectedDiffChange.path : null))
     : null;
@@ -283,7 +275,7 @@ export function WorkspaceSessionPanel() {
   const nativeWorkspaceId = threadState.boot.workspaces.find((entry) => entry.shellProjectId === workspace?.project.id)?.id;
   const openDocuments = threadState.layout.documents.filter((entry) => entry.workspaceId === nativeWorkspaceId && threadState.layout.openIds.includes(entry.id));
   const sessionTabs: WorkspaceSessionTab[] = [...openDocuments.map((entry): WorkspaceSessionTab => ({ kind: "thread", id: entry.id,
-    name: threadDocumentTitle(entry, threadState.summaries), status: threadState.runtime[entry.id]?.error ? "error" : "idle" })), ...toolTabs.filter((entry) => entry.kind !== "agent" && entry.kind !== "ai-chat")];
+    name: threadDocumentTitle(entry, threadState.summaries), status: threadState.runtime[entry.id]?.error ? "error" : "idle" })), ...toolTabs.filter((entry) => entry.kind !== "agent" && entry.kind !== "ai-chat" && entry.kind !== "browser" && entry.kind !== "terminal")];
   const [closingTerminalTabIds, setClosingTerminalTabIds] = useState<string[]>([]);
   const sessionTabOrderRef = useRef<string[]>([]);
   useEffect(() => {
@@ -338,11 +330,11 @@ export function WorkspaceSessionPanel() {
     expandedDiffPath,
     activeForgeViewerTabId: forgeViewerTab?.id ?? null,
     activeAiChatTabId: aiChatTab?.id ?? null,
-    activeBrowserTabId: browserTab?.id ?? null,
+    activeBrowserTabId: null,
     activeAgentId: agent?.id ?? null,
-    activeTerminalId: terminal?.id ?? null
+    activeTerminalId: null
   });
-  const showNativeThread = !!threadState.layout.activeId && !activeWorkspaceContentTab && !browserTab && !forgeViewerTab && !activeView;
+  const showNativeThread = !!threadState.layout.activeId && !activeWorkspaceContentTab && !forgeViewerTab && !activeView;
   const activeTabId = showNativeThread ? threadState.layout.activeId : activeToolTabId;
   const fileEditorAgentSendTargets = useMemo<FileEditorAgentSendTarget[]>(() => threadState.summaries
     .filter((entry) => !entry.conversation.archivedAt && entry.conversation.workspace.projectId === nativeWorkspaceId)
@@ -405,8 +397,7 @@ export function WorkspaceSessionPanel() {
         selectedDiffChange,
         fileEditorTabCount: fileEditorState?.tabs.length ?? 0,
         forgeViewerTabCount: forgeViewerTabs.length,
-        projectScopedAiChatTabs,
-        projectScopedBrowserTabs
+        projectScopedAiChatTabs
       }),
     [
       activeWorkspaceContentTab,
@@ -415,7 +406,6 @@ export function WorkspaceSessionPanel() {
       isDiffExpanded,
       isFullDiffExpanded,
       projectScopedAiChatTabs,
-      projectScopedBrowserTabs,
       selectedDiffChange
     ]
   );
@@ -430,7 +420,6 @@ export function WorkspaceSessionPanel() {
         activeFileEditorTab,
         forgeViewerTab,
         aiChatTab,
-        browserTab
       }),
     [
       activeFileEditorTab,
@@ -664,7 +653,6 @@ export function WorkspaceSessionPanel() {
             onUpdateAiChatTabTitle={onUpdateAiChatTabTitle}
             onUpdateAiChatTabMessages={onUpdateAiChatTabMessages}
             stableAgent={stableAgent}
-            stableTerminal={stableTerminal}
           />
         </SessionTabPane>
       ))}

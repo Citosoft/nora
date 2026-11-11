@@ -1,7 +1,7 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
-import { ClaudeStreamNormalizer } from "./streamNormalizer";
+import { readClaudeStream } from "./readStream";
 import { questionGuidance } from "@main/execution/questionGuidance";
 import { claudeApprovalDetails } from "./approvals";
 import type { ClaudeOpenInput, ClaudeSession, ClaudeRuntimeOptions } from "@main/types/execution/claude.types";
@@ -29,6 +29,7 @@ function openClaudeSession(input: ClaudeOpenInput, runtime: ClaudeRuntimeOptions
     env: { ...process.env, ...runtime.environment },
     ...(input.resume ? { resume: input.sessionId } : { sessionId: input.sessionId }),
     includePartialMessages: true,
+    promptSuggestions: true,
     canUseTool: async (name, toolInput, options) => {
       if (name === "AskUserQuestion") {
         const parsed = questionInputSchema.parse(toolInput);
@@ -55,11 +56,7 @@ function openClaudeSession(input: ClaudeOpenInput, runtime: ClaudeRuntimeOptions
       return closing;
     },
     async *[Symbol.asyncIterator]() {
-      const normalize = new ClaudeStreamNormalizer();
-      for await (const message of native) {
-        for (const frame of normalize.accept(message)) yield frame;
-        if (message.type === "result") { releaseInput(); break; }
-      }
+      yield* readClaudeStream(native, releaseInput);
     }
   };
 }

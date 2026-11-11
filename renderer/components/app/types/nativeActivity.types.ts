@@ -11,3 +11,12 @@ export interface NativeApprovalProps {
   disabled: boolean;
   onRespond(response: RequestResponse): Promise<void>;
 }
+export interface ApprovalAction {
+  option: ApprovalRequest["options"][number];
+  intent: "allow" | "deny" | "cancel" | "other";
+}
+export interface ApprovalActionGroups {
+  primary: ApprovalAction | null;
+  secondary: ApprovalAction[];
+  negative: ApprovalAction[];
+}

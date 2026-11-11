@@ -3,13 +3,15 @@ import type { ReactNode } from "react";
 import type { ConversationRun, ProviderBinding } from "@shared/types/conversation/contracts.types";
 import type { NativeWorkspace } from "@shared/types/personalization/workspaces.types";
 import type { ThreadDocument, ThreadWorkspaceStore, ThreadWorkspaceSnapshot } from "./state.types";
+import type { ThreadGrouping } from "./navigation.types";
+import type { WorkspaceAvatarIdentity } from "@/components/app/types/workspaceAvatar.types";
 
 export type ThreadNavigationFilter = "all" | "active" | "attention" | "archive";
 export type ThreadNavigationStatus = "Queued" | "Starting" | "Working" | "Needs approval" | "Needs input" | "Stopping"
   | "Completed" | "Failed" | "Interrupted" | "Outcome unconfirmed" | "Delivery unconfirmed" | "Draft" | "Queue paused" | "Ready";
 export interface ThreadRowProps {
   row: ThreadNavigationRow;
-  workspaceName: string | null;
+  workspace: WorkspaceAvatarIdentity | null;
   request: ForgeBranchPullRequestStatus | null;
   onOpen(row: ThreadNavigationRow): void;
   onTogglePin(conversationId: string): void;
@@ -59,4 +61,12 @@ export interface ThreadWorkspacePickerProps {
 }
 export type ThreadRunState = ConversationRun["state"];
 
-export interface ThreadNavigationProps { workspaceId?: string | null; onNew?(): void; query?: string; unified?: boolean; onNavigate?(): void; }
+export interface ThreadNavigationProps {
+  workspaceId?: string | null;
+  onNew?(): void;
+  query?: string;
+  unified?: boolean;
+  onNavigate?(): void;
+  grouping?: ThreadGrouping;
+  onGroupingChange?(grouping: ThreadGrouping): void;
+}

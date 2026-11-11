@@ -9,4 +9,6 @@ export type WorkspaceSidebarPorts = {
   readBranchRequest: BranchRequestReader;
   recentWorkspaces: import("@shared/appTypes").RecentProject[];
   onOpenRecentWorkspace(rootPath: string, name: string): void;
+  onOpenConnectionsSettings(): void;
+  onAddRemoteWorkspace(): void;
 };

@@ -47,8 +47,13 @@ export function useWorkspaceLoops(projectId: string): UseWorkspaceLoopsResult {
     refresh,
     upsertDefinition: (definition) => setDefinitions((current) => upsertById(current, definition)),
     removeDefinition: async (definitionId) => {
-      await noraLoopClient.deleteLoopDefinition(projectId, definitionId);
-      setDefinitions((current) => current.filter((definition) => definition.id !== definitionId));
+      try {
+        await noraLoopClient.deleteLoopDefinition(projectId, definitionId);
+        setDefinitions((current) => current.filter((definition) => definition.id !== definitionId));
+        setErrorMessage(null);
+      } catch (error) {
+        setErrorMessage(error instanceof Error ? error.message : "Unable to delete the workflow definition.");
+      }
     },
     upsertRun: (run) => setRuns((current) => upsertById(current, run)),
     removeRun: async (runId) => {

@@ -30,18 +30,27 @@ test("saved pins override role changes, preserve explicit empty choices and keep
 
 test("malformed preferences recover to defaults", () => {
   for (const raw of [null, "{", "null", '{"toolPins": {"a": ["invalid"]}, "pinnedWorkspaceIds": []}']) {
-    assert.deepEqual(parseSidebarPreferences(raw), { pinnedWorkspaceIds: [], toolPins: {} });
+    assert.deepEqual(parseSidebarPreferences(raw), { pinnedWorkspaceIds: [], toolPins: {}, threadGrouping: "none", workspaceAvatarColors: {}, workspaceViews: {} });
   }
 });
 
-test("tool navigation is scoped to workspace, capability and thread focus revision", () => {
-  const route = { projectId: "a", tool: "changes", focusRevision: 2 } as const;
-  assert.equal(resolveWorkspaceToolRoute(route, "a", 2, project), route);
-  assert.equal(resolveWorkspaceToolRoute(route, "b", 2, project), null);
-  assert.equal(resolveWorkspaceToolRoute(route, "a", 3, project), null);
-  assert.equal(resolveWorkspaceToolRoute(route, null, 2, null), null);
-  assert.equal(resolveWorkspaceToolRoute(route, "a", 2, { ...project, versionControl: "none" }), null);
-  assert.equal(resolveWorkspaceToolRoute(null, "a", 2, project), null);
+test("thread grouping migrates existing preferences, persists choices and preserves pins on invalid grouping", () => {
+  const legacy = { pinnedWorkspaceIds: ["a"], toolPins: { a: ["files"] } };
+  assert.deepEqual(parseSidebarPreferences(JSON.stringify(legacy)), { ...legacy, threadGrouping: "none", workspaceAvatarColors: {}, workspaceViews: {} });
+  for (const threadGrouping of ["none", "workspace", "activity"]) {
+    const saved = { ...legacy, threadGrouping, workspaceAvatarColors: {}, workspaceViews: {} };
+    assert.deepEqual(parseSidebarPreferences(JSON.stringify(saved)), saved);
+  }
+  assert.deepEqual(parseSidebarPreferences(JSON.stringify({ ...legacy, threadGrouping: "invalid" })), { ...legacy, threadGrouping: "none", workspaceAvatarColors: {}, workspaceViews: {} });
+});
+
+test("tool navigation is scoped to workspace and capability", () => {
+  const route = { projectId: "a", tool: "changes" } as const;
+  assert.equal(resolveWorkspaceToolRoute(route, "a", project), route);
+  assert.equal(resolveWorkspaceToolRoute(route, "b", project), null);
+  assert.equal(resolveWorkspaceToolRoute(route, null, null), null);
+  assert.equal(resolveWorkspaceToolRoute(route, "a", { ...project, versionControl: "none" }), null);
+  assert.equal(resolveWorkspaceToolRoute(null, "a", project), null);
 });
 
 test("workspace activity includes workflow runs without leaking unmapped or other-workspace threads", () => {

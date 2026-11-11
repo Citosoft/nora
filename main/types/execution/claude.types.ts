@@ -1,12 +1,13 @@
 import type { ProviderAccountAction, ProviderAccountResult } from "@shared/types/provider/account.types";
 import type { McpResult } from "@shared/types/provider/mcp.types";
-import type { EffortLevel, PermissionMode } from "@anthropic-ai/claude-agent-sdk";
+import type { EffortLevel, PermissionMode, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { randomUUID } from "node:crypto";
 import type { ApprovalDetails, ExecutionFailure, ExecutionUsage, RequestResponse, RuntimeRequest, ToolDetails, ToolState } from "@shared/types/conversation/contracts.types";
 import type { EmitProviderUpdate, ProviderExecution } from "./provider.types";
 import type { ProviderModel, ProviderCatalog } from "@shared/types/provider/catalog.types";
 
 export type ClaudeFrame =
+  | { kind: "prompt-suggestion"; eventId: string; suggestion: string }
   | { kind: "init"; eventId: string; sessionId: string }
   | { kind: "text" | "reasoning"; eventId: string; nativeId: string; text: string; complete: boolean }
   | { kind: "tool"; eventId: string; nativeId: string; label: string; output: string; state: ToolState; details?: ToolDetails }
@@ -18,6 +19,7 @@ export interface ClaudeSession extends AsyncIterable<ClaudeFrame> {
   interrupt(): Promise<void>;
   close(): void | Promise<void>;
 }
+export interface ClaudeMessageStream extends AsyncIterable<SDKMessage> { close(): void; }
 export interface ClaudeOpenInput {
   sessionId: string;
   resume: boolean;
@@ -44,6 +46,7 @@ export interface ClaudeOptions {
 export interface ClaudeActive extends ProviderExecution {
   session: ClaudeSession;
   emit: EmitProviderUpdate;
+  settled: boolean;
 }
 export interface ClaudePending {
   attemptId: string;

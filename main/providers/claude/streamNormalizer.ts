@@ -2,6 +2,7 @@ import { usageResetTimestamp } from "@shared/conversations/usageReset";
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { ClaudeFrame } from "@main/types/execution/claude.types";
 import { ClaudeToolActivity } from "./toolActivity";
+import { promptSuggestionSchema } from "@shared/conversations/contracts";
 
 /** Reconcile final SDK blocks into the same message identities as streamed chunks. */
 export class ClaudeStreamNormalizer {
@@ -14,6 +15,10 @@ export class ClaudeStreamNormalizer {
   private readonly tools = new ClaudeToolActivity();
 
   accept(message: SDKMessage): ClaudeFrame[] {
+    if (message.type === "prompt_suggestion") {
+      const suggestion = promptSuggestionSchema.safeParse(message.suggestion);
+      return suggestion.success ? [{ kind: "prompt-suggestion", eventId: message.uuid, suggestion: suggestion.data }] : [];
+    }
     if (message.type === "rate_limit_event") {
       if (message.rate_limit_info.status === "rejected") {
         this.failure = "usage-limit";

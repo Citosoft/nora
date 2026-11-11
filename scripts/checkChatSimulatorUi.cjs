@@ -8,13 +8,14 @@ let host;
   host = await createChatSimulator({ speed: 0.08 });
   const { evaluate, wait, click, window, pause } = host;
   const panel = '[role="tabpanel"]:not([inert])';
-  const currentText = `document.querySelector('${panel}').textContent`;
+  const currentText = `(document.querySelector('${panel}').textContent + (document.querySelector('[role="dialog"]')?.textContent ?? ''))`;
   const send = `${panel} section button[aria-label="Send instruction"]`;
   const action = async label => {
-    await evaluate(`(()=>{const button=[...document.querySelector('${panel}').querySelectorAll('section[aria-label="Agent request"] button')].find(button=>button.textContent.trim().startsWith(${JSON.stringify(label)}));if(!button)throw Error('Missing action');button.dataset.simulatorAction='yes'})()`);
+    await evaluate(`(()=>{const scope=document.querySelector('[role="dialog"]')??document.querySelector('${panel}');const button=[...scope.querySelectorAll('section[aria-label="Agent request"] button')].find(button=>button.textContent.trim().startsWith(${JSON.stringify(label)}));if(!button)throw Error('Missing action');button.dataset.simulatorAction='yes'})()`);
     await click('[data-simulator-action="yes"]');
   };
   const start = async scenario => {
+    if (await evaluate(`!!document.querySelector('[aria-label="Review approval later"]')`)) await click('[aria-label="Review approval later"]');
     await click(`[data-scenario="${scenario}"]`);
     await wait(`!!document.querySelector('${send}:not(:disabled)')`);
     await click(send);

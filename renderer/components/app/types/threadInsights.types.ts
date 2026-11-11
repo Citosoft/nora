@@ -20,6 +20,7 @@ export interface ThreadInsightsInput {
 }
 export interface ThreadInsightsPanelProps {
   header: ConversationHeader;
+  providerLabel: string;
   changes: ThreadChangeSummary;
   request: ThreadRequestState;
   expanded: boolean;

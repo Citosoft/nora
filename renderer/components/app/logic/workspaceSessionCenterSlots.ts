@@ -46,10 +46,6 @@ export function buildWorkspaceSessionCenterSlots(
     slots.push({ id: tab.id, kind: "ai-chat", payload: { tab } });
   }
 
-  for (const tab of input.projectScopedBrowserTabs) {
-    slots.push({ id: tab.id, kind: "browser", payload: { tab } });
-  }
-
   slots.push({ id: "center:agent-terminal", kind: "agent-terminal", payload: null });
 
   return slots;
@@ -83,10 +79,6 @@ export function resolveActiveWorkspaceSessionCenterSlotId(
 
   if (input.aiChatTab) {
     return input.aiChatTab.id;
-  }
-
-  if (input.browserTab) {
-    return input.browserTab.id;
   }
 
   return "center:agent-terminal";

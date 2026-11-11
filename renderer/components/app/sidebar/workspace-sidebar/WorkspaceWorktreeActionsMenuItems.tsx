@@ -36,7 +36,7 @@ export const WorkspaceWorktreeActionsMenuItems = ({
         onSelect={() => onSelectWithClose(onFocusWorktree)}
       >
         <GitBranch className="size-4" />
-        Focus worktree
+        Review worktree changes
       </DropdownMenuItem>
       <DropdownMenuItem
         disabled={!isActionable}
@@ -45,7 +45,7 @@ export const WorkspaceWorktreeActionsMenuItems = ({
         }
       >
         <Bot className="size-4" />
-        New agent
+        New thread
       </DropdownMenuItem>
       <DropdownMenuItem
         disabled={!isActionable || !preferredShellId}

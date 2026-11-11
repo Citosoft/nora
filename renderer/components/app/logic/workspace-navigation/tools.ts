@@ -6,8 +6,9 @@ const toolMapping: Readonly<Record<RoleTool, WorkspaceToolId>> = {
   files: "files", changes: "changes", terminal: "terminals", browser: "browser", notes: "documents",
   tasks: "tasks", workflows: "workflows", editor: "files", previews: "browser"
 };
+export const MAX_WORKSPACE_TOOL_PINS = 4;
 export function availableWorkspaceTools(git: boolean): WorkspaceToolId[] {
-  return ["files", ...(git ? ["changes", "development"] as const : []), "documents", "tasks", "workflows", "terminals", "browser"];
+  return ["files", ...(git ? ["changes"] as const : []), "documents", "tasks", "terminals", "browser", "workflows"];
 }
 export function workspaceToolPins(role: RoleSelection | null, available: readonly WorkspaceToolId[], pins?: readonly WorkspaceToolId[]): WorkspaceToolId[] {
   const defaults = roleProfile(role ?? { id: "general" }).tools.map((tool) => toolMapping[tool]);
@@ -15,5 +16,5 @@ export function workspaceToolPins(role: RoleSelection | null, available: readonl
   return pins ? selection : selection.slice(0, 3);
 }
 export function toggleWorkspaceToolPin(pins: readonly WorkspaceToolId[], tool: WorkspaceToolId): WorkspaceToolId[] {
-  return pins.includes(tool) ? pins.filter((entry) => entry !== tool) : [...pins, tool];
+  return pins.includes(tool) ? pins.filter((entry) => entry !== tool) : pins.length < MAX_WORKSPACE_TOOL_PINS ? [...pins, tool] : [...pins];
 }

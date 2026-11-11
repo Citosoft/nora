@@ -215,6 +215,7 @@ export type StoredUiLayout = {
 };
 
 export type UiState = {
+  workspaceToolRequest: import("@/components/app/types/workspaceNavigation.types").WorkspaceToolRequest | null;
   snapshot: AppState | null;
   activeErrorMessage: string | null;
   showAddWorkspaceModal: boolean;

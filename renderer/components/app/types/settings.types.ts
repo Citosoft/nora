@@ -134,6 +134,7 @@ export type SettingsGroup =
   | "agentUsage"
   | "skills"
   | "integrations"
+  | "connections"
   | "ai"
   | "voice"
   | "privacy"

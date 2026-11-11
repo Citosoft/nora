@@ -5,99 +5,68 @@ import type {
   LocalTerminalState,
   VercelRuntimeLogStreamEvent
 } from "@shared/appTypes";
-import type { BrowserWindow } from "electron";
-
-interface MainWindowNotificationsDeps {
-  getMainWindow: () => BrowserWindow | null;
-  getWindowState: () => { isMaximized: boolean; platform: NodeJS.Platform };
-  workspaceLoadingTimingByProject: Map<string, { startedAt: number; lastStepAt: number }>;
-}
-
-export interface MainWindowNotifications {
-  notifyWindowStateChanged: () => void;
-  notifyAppClosingProgress: (payload: { detail: string; command: string | null }) => void;
-  notifyTerminalData: (sessionId: string, data: string) => void;
-  notifyLocalTerminalChanged: (state: LocalTerminalState | null) => void;
-  notifyRemoteMountOutput: (line: string) => void;
-  notifyToolSkillInstallOutput: (payload: AgentSkillInstallOutputEvent) => void;
-  notifyWorkspaceLoadingProgress: (payload: { projectId: string; detail: string; command: string | null }) => void;
-  notifyVercelRuntimeLogEvent: (payload: VercelRuntimeLogStreamEvent) => void;
-  notifyAutoUpdateStatus: (payload: AutoUpdateStatus) => void;
-  notifyForgeOAuthDevicePrompt: (payload: ForgeOAuthDevicePrompt) => void;
-}
+import type {
+  MainWindowNotifications,
+  MainWindowNotificationsDeps
+} from "@main/types/mainWindowNotifications.types";
 
 export function createMainWindowNotifications({
   getMainWindow,
   getWindowState,
   workspaceLoadingTimingByProject
 }: MainWindowNotificationsDeps): MainWindowNotifications {
-  const notifyWindowStateChanged = (): void => {
-    const mainWindow = getMainWindow();
-    if (!mainWindow || mainWindow.isDestroyed()) {
-      return;
-    }
-
-    const { webContents } = mainWindow;
-    if (webContents.isDestroyed()) {
-      return;
-    }
-
+  const sendNotification = <Payload>(channel: string, getPayload: () => Payload): void => {
     try {
-      webContents.send("window:state-changed", getWindowState());
+      const mainWindow = getMainWindow();
+      if (!mainWindow || mainWindow.isDestroyed()) {
+        return;
+      }
+
+      const { webContents } = mainWindow;
+      if (webContents.isDestroyed()) {
+        return;
+      }
+
+      // Electron logs disposed-frame send failures internally, so catching send alone is insufficient.
+      const frame = webContents.mainFrame;
+      if (frame.isDestroyed() || frame.detached) {
+        return;
+      }
+      frame.send(channel, getPayload());
     } catch (error) {
       if (
         error instanceof Error &&
-        error.message.includes("Render frame was disposed before WebFrameMain could be accessed")
+        (error.message.includes("Render frame was disposed before WebFrameMain could be accessed") ||
+          error.message.includes("Object has been destroyed"))
       ) {
         return;
       }
-      console.error("Failed to notify renderer about window state change.", error);
+      console.error(`Failed to notify renderer on ${channel}.`, error);
     }
+  };
+
+  const notifyWindowStateChanged = (): void => {
+    sendNotification("window:state-changed", getWindowState);
   };
 
   const notifyAppClosingProgress = (payload: { detail: string; command: string | null }): void => {
-    const mainWindow = getMainWindow();
-    if (!mainWindow || mainWindow.isDestroyed()) {
-      return;
-    }
-
-    mainWindow.webContents.send("app:closing-progress", payload);
+    sendNotification("app:closing-progress", () => payload);
   };
 
   const notifyTerminalData = (sessionId: string, data: string): void => {
-    const mainWindow = getMainWindow();
-    if (!mainWindow || mainWindow.isDestroyed()) {
-      return;
-    }
-
-    mainWindow.webContents.send("terminal:data", { sessionId, data });
+    sendNotification("terminal:data", () => ({ sessionId, data }));
   };
 
   const notifyLocalTerminalChanged = (state: LocalTerminalState | null): void => {
-    const mainWindow = getMainWindow();
-    if (!mainWindow || mainWindow.isDestroyed()) {
-      return;
-    }
-
-    mainWindow.webContents.send("local-terminal:changed", state);
+    sendNotification("local-terminal:changed", () => state);
   };
 
   const notifyRemoteMountOutput = (line: string): void => {
-    const mainWindow = getMainWindow();
-    if (!mainWindow || mainWindow.isDestroyed()) {
-      return;
-    }
-
-    mainWindow.webContents.send("remote-mount:output", { line });
+    sendNotification("remote-mount:output", () => ({ line }));
   };
 
   const notifyToolSkillInstallOutput = (payload: AgentSkillInstallOutputEvent): void => {
-    const mainWindow = getMainWindow();
-    if (!mainWindow || mainWindow.isDestroyed()) {
-      return;
-    }
-
-    mainWindow.webContents.send("tool-skill-install:output", payload);
+    sendNotification("tool-skill-install:output", () => payload);
   };
 
   const notifyWorkspaceLoadingProgress = (payload: { projectId: string; detail: string; command: string | null }): void => {
@@ -113,39 +82,19 @@ export function createMainWindowNotifications({
     console.log(
       `[workspace-loading] ${payload.projectId} | +${stepElapsedMs}ms | total=${totalElapsedMs}ms | ${payload.detail}${payload.command ? ` | ${payload.command}` : ""}`
     );
-    const mainWindow = getMainWindow();
-    if (!mainWindow || mainWindow.isDestroyed()) {
-      return;
-    }
-
-    mainWindow.webContents.send("workspace:loading-progress", payload);
+    sendNotification("workspace:loading-progress", () => payload);
   };
 
   const notifyVercelRuntimeLogEvent = (payload: VercelRuntimeLogStreamEvent): void => {
-    const mainWindow = getMainWindow();
-    if (!mainWindow || mainWindow.isDestroyed()) {
-      return;
-    }
-
-    mainWindow.webContents.send("vercel-runtime-log:event", payload);
+    sendNotification("vercel-runtime-log:event", () => payload);
   };
 
   const notifyAutoUpdateStatus = (payload: AutoUpdateStatus): void => {
-    const mainWindow = getMainWindow();
-    if (!mainWindow || mainWindow.isDestroyed()) {
-      return;
-    }
-
-    mainWindow.webContents.send("auto-update:status", payload);
+    sendNotification("auto-update:status", () => payload);
   };
 
   const notifyForgeOAuthDevicePrompt = (payload: ForgeOAuthDevicePrompt): void => {
-    const mainWindow = getMainWindow();
-    if (!mainWindow || mainWindow.isDestroyed()) {
-      return;
-    }
-
-    mainWindow.webContents.send("forge-oauth:device-prompt", payload);
+    sendNotification("forge-oauth:device-prompt", () => payload);
   };
 
   return {

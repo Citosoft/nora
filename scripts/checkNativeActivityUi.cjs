@@ -59,11 +59,11 @@ let host;
     }
   }
   await click('#fail');
-  await byText('Allow onceAllow only this action.');
+  await byText('Allow once');
   await wait('!!document.querySelector("[role=alert]")');
   assert.equal(await evaluate('document.getElementById("responses").textContent'), '[]');
   await click('#fail');
-  await byText('Allow onceAllow only this action.');
+  await byText('Allow once');
   assert.equal(await evaluate('[...document.querySelectorAll(\'section[aria-label="Agent request"] button\')].every(button=>button.disabled)'), true);
   await wait('document.body.textContent.includes("Delivering response")');
   assert.deepEqual(JSON.parse(await evaluate('document.getElementById("responses").textContent')), [{ kind: 'approval', optionId: 'accept' }]);

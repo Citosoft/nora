@@ -14,7 +14,7 @@ export function SettingsDialog({ open, initialGroup }: SettingsDialogProps) {
       <Dialog.Content className="fixed left-1/2 top-1/2 z-[9000] flex h-[min(84vh,850px)] w-[min(1100px,calc(100vw-3rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border border-border bg-card text-foreground shadow-panel focus:outline-none"
         onCloseAutoFocus={(event) => {
           event.preventDefault();
-          document.querySelector<HTMLButtonElement>('[aria-label="Workspace utilities"] button[aria-label="Open app menu"]')?.focus();
+          document.querySelector<HTMLButtonElement>('[aria-label="App utilities"] button[aria-label="Open app menu"]')?.focus();
         }}>
         <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-5 py-3">
           <Dialog.Title className="text-base font-medium">Settings</Dialog.Title>

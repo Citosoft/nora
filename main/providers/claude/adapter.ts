@@ -6,11 +6,12 @@ import type { RequestResponse, RuntimeRequest, ToolActivity, WorkspaceRef } from
 import type { ProviderCatalogResult } from "@shared/types/provider/catalog.types";
 import { nativeCapabilities } from "@main/execution/providerCapabilities";
 import { z } from "zod";
+import { claudePermissionPolicy } from "./permissionPolicies";
 
 export class ClaudeAdapter implements ExecutionProvider {
   readonly kind = "claude";
   readonly instanceId: string;
-  readonly capabilities = nativeCapabilities;
+  readonly capabilities = { ...nativeCapabilities, promptSuggestions: true };
   private readonly active = new Map<string, ClaudeActive>();
   private readonly requests = new Map<string, ClaudePending>();
   constructor(private readonly options: ClaudeOptions) { this.instanceId = options.instanceId; }
@@ -31,7 +32,7 @@ export class ClaudeAdapter implements ExecutionProvider {
       const discovery = await this.options.discover(workspace.path);
       return { status: "available", catalog: { kind: this.kind, instanceId: this.instanceId,
         capabilities: this.capabilities, ...discovery,
-        policies: Object.entries(this.options.policies).filter(([, mode]) => mode !== "bypassPermissions").map(([id, mode]) => ({ id, label: mode })) } };
+        policies: Object.entries(this.options.policies).filter(([, mode]) => mode !== "bypassPermissions").map(([id, mode]) => claudePermissionPolicy(id, mode)) } };
     } catch {
       return { status: "unavailable", failure: { code: "provider", message: "Claude model discovery is unavailable; check the configured runtime and authentication", retryable: true } };
     }
@@ -39,6 +40,10 @@ export class ClaudeAdapter implements ExecutionProvider {
 
   async start(execution: ProviderExecution, emit: EmitProviderUpdate): Promise<void> {
     const { snapshot, run } = execution;
+    // A new instruction supersedes a previous turn's optional prediction work.
+    for (const previous of this.active.values()) {
+      if (previous.settled && previous.snapshot.conversation.id === snapshot.conversation.id) await previous.session.close();
+    }
     const base = { conversationId: snapshot.conversation.id, runId: run.id, attemptId: run.attemptId };
     const mode = this.options.policies[snapshot.conversation.provider.permissionPolicy];
     if (!mode || mode === "bypassPermissions") {
@@ -60,8 +65,8 @@ export class ClaudeAdapter implements ExecutionProvider {
       model: snapshot.conversation.provider.model, permissionMode: mode,
       effort: effort.data,
       onRequest: (prompt) => this.ask(execution, prompt, emit) });
-    this.active.set(run.attemptId, { ...execution, emit, session });
-    let completed = false;
+    const active: ClaudeActive = { ...execution, emit, session, settled: false };
+    this.active.set(run.attemptId, active);
     const tools = new Map<string, ToolActivity>();
     const timestamps = new Map(snapshot.items.map((item) => [item.id, item.createdAt]));
     const itemTime = (nativeId: string, kind: string): string => {
@@ -73,6 +78,9 @@ export class ClaudeAdapter implements ExecutionProvider {
     try {
       for await (const frame of session) {
         switch (frame.kind) {
+          case "prompt-suggestion":
+            if (active.settled) emit({ ...base, eventId: frame.eventId, kind: "prompt-suggestion", suggestion: frame.suggestion });
+            break;
           case "init":
             if (frame.sessionId !== sessionId) throw new Error("Claude session identity changed");
             emit({ ...base, eventId: frame.eventId, kind: "started", nativeConversationId: sessionId, nativeTurnId }); break;
@@ -91,13 +99,13 @@ export class ClaudeAdapter implements ExecutionProvider {
             emit({ ...base, eventId: frame.eventId, kind: "item", item }); break;
           }
           case "finished":
-            completed = true;
+            active.settled = true;
             emit({ ...base, eventId: frame.eventId, kind: "finished", status: frame.status, failure: frame.failure, usage: frame.usage }); break;
         }
       }
-      if (!completed) throw new Error("Claude stream ended without a result");
+      if (!active.settled) throw new Error("Claude stream ended without a result");
     } finally {
-      if (!completed) for (const item of tools.values()) {
+      if (!active.settled) for (const item of tools.values()) {
         if (item.state === "running") emit({ ...base, eventId: `unconfirmed:${item.id}`, kind: "item", item: { ...item, state: "unconfirmed" } });
       }
       this.active.delete(run.attemptId);

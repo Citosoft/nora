@@ -9,7 +9,15 @@ import { decideCommand } from "./decideCommand";
 export function decideUpdate(snapshot: ConversationState, update: ProviderUpdate, context: DecisionContext): Decision {
   const decision: Decision = { events: [], effects: [] };
   const run = snapshot.runs.find((entry) => entry.id === update.runId);
-  if (!run || run.attemptId !== update.attemptId || !isActiveRun(run)) return decision;
+  if (!run || run.attemptId !== update.attemptId) return decision;
+  // Suggestions are optional post-turn metadata, never a reason to reopen execution.
+  if (update.kind === "prompt-suggestion") {
+    if (run.state === "completed" && !run.promptSuggestion && !snapshot.conversation.archivedAt) {
+      decision.events.push({ kind: "run", run: { ...run, promptSuggestion: update.suggestion } });
+    }
+    return decision;
+  }
+  if (!isActiveRun(run)) return decision;
   const add = (payload: EventPayload): void => { decision.events.push(payload); };
   const expireRequests = (): void => {
     for (const request of snapshot.requests.filter((entry) => entry.runId === run.id && ["pending", "responding"].includes(entry.status))) {

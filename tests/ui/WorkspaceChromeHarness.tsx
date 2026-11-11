@@ -54,7 +54,7 @@ export function WorkspaceChromeHarness() {
     resolvedTheme: theme, settingsActive: settings,
     onToggleTheme: () => { const next = theme === "dark" ? "light" : "dark"; setTheme(next); document.documentElement.dataset.theme = next; document.documentElement.classList.toggle("dark", next === "dark"); },
     onOpenSettings: () => setSettings((current) => !current), onOpenKeyboardShortcuts: () => record("shortcuts"), onOpenAbout: () => record("about"),
-    onSubmitIssue: () => record("issue"), onOpenStartupDependencies: () => record("dependencies"), onOpenResourceMonitor: () => record("resources"), onOpenOnboarding: () => record("onboarding")
+    onSubmitIssue: () => record("issue"), onOpenStartupDependencies: () => record("dependencies"), onOpenResourceMonitor: () => record("resources"), onOpenOnboarding: () => record("onboarding"), onOpenHomeTerminal: () => record("home-terminal"), onOpenConnectionsSettings: () => record("connections")
   };
   const title: TitleBarProps = { ...appTools, settingsActive: settings, themeMode: "system", windowUiState: { platform: "linux", isMaximized: false }, useMacTitleBarChrome: false,
     canOpenProjectInIde: false, installedIdes: [], isLoadingInstalledIdes: false, preferredIde: null, defaultIdeId: null, onOpenProjectInIde: () => {},
@@ -62,18 +62,18 @@ export function WorkspaceChromeHarness() {
     onCloseWorkspace: () => {}, onRefreshWorkspace: () => {}, onCreateTerminal: () => {}, onCreateAgent: () => {}, onCreateBrowser: () => {}, recentWorkspaces: [], onOpenRecentWorkspace: () => {},
     hasActiveWorkspace: true, isChangesSidebarCollapsed: true, onToggleChangesSidebar: () => {}, onToggleLocalTerminalDock: () => {}, onFocusLocalTerminalDock: () => {}, onFocusPreviousSessionTab: () => {}, onFocusNextSessionTab: () => {}
   };
-  const status = useMemo(() => ({ entries: [{ id: 1, message: "Checking workspace", loading: true }], tools: [tool], agentSkillCatalogs: [], activeWorkspaceBranch: "feat/workspace-chrome", activeWorkspaceWorktreeName: "nora",
-    onInstallTool: async () => { record("install"); }, onSwitchToolAccount: async () => { record("account"); }, onOpenSkillsSettings: () => { setSettings(true); record("skills"); } }), [record]);
+  const status = useMemo(() => ({ entries: [{ id: 1, message: "Checking workspace", loading: true }], tools: [tool], activeWorkspaceBranch: "feat/workspace-chrome", activeWorkspaceWorktreeName: "nora",
+    onInstallTool: async () => { record("install"); }, onSwitchToolAccount: async () => { record("account"); } }), [record]);
   return <AppRootStateProvider initialUiState={appRootInitialUiState}>
     <AppMainChromeShell titleBar={<TitleBar {...title} />} topBanners={null} mainScrollChildren={<div className="flex h-full min-h-0">
       <aside aria-label="Projects sidebar" style={{ width: collapsed ? 64 : 240 }} className="flex min-h-0 shrink-0 flex-col border-r bg-card">
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-5 text-xs text-muted-foreground">{!collapsed && "Projects and threads"}</div>
-        <WorkspaceUtilitiesView collapsed={collapsed} status={status} appTools={appTools} terminal={{ isOpen: false, onToggle: () => record("terminal") }} />
+        <WorkspaceUtilitiesView collapsed={collapsed} status={status} appTools={appTools} />
       </aside>
       <main className="thread-conversation flex min-h-0 min-w-0 flex-1 flex-col bg-background">
         <>
           <div className="relative flex min-h-0 flex-1 flex-col" data-thread-insights={expanded ? "expanded" : "collapsed"}>
-            <ThreadInsightsPanel header={{ ...header, conversation: { ...header.conversation, archivedAt: archived ? "2026-11-10T10:00:00.000Z" : null } }} changes={insights.changes} request={insights.request} expanded={expanded} busy={false} canArchive={!archived} hasOlderHistory={false}
+            <ThreadInsightsPanel header={{ ...header, conversation: { ...header.conversation, archivedAt: archived ? "2026-11-10T10:00:00.000Z" : null } }} providerLabel="Codex" changes={insights.changes} request={insights.request} expanded={expanded} busy={false} canArchive={!archived} hasOlderHistory={false}
               onToggle={() => setExpanded((current) => !current)} onRefresh={insights.refresh} onLoadHistory={() => {}} onArchive={() => { setArchived(true); record("archive"); }} />
             <div className="thread-transcript min-h-0 flex-1 overflow-auto px-5 py-7"><p>Workspace controls are grouped in the sidebar. This conversation keeps its own change summary and branch request.</p></div>
           </div>

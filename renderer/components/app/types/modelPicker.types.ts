@@ -23,6 +23,13 @@ export interface ModelBindingInput {
   locked: ProviderBinding | null;
 }
 export type ModelBindingResolution = { status: "ready"; binding: ProviderBinding } | { status: "blocked"; message: string | null };
+export interface ModelSettingsInput {
+  catalog: ProviderCatalog | null;
+  policyId: string;
+  reasoning: string | null;
+  onPolicy(value: string): void;
+  onReasoning(value: string | null): void;
+}
 export interface ModelPopoverProps {
   providers: readonly NativeProvider[];
   store: ModelCatalogStore;
@@ -30,6 +37,7 @@ export interface ModelPopoverProps {
   selectedModel: ProviderModel | null;
   selectedModelId: string | null;
   locked: boolean;
+  settings: ModelSettingsInput;
   onSelect(provider: NativeProvider, model: ProviderModel): void;
 }
 export interface ModelListProps {
@@ -40,12 +48,7 @@ export interface ModelListProps {
   locked: boolean;
   onSelect(model: ProviderModel): void;
 }
-export interface ModelOptionsProps {
-  catalog: ProviderCatalog | null;
-  policyId: string;
-  reasoning: string | null;
+export interface ModelOptionsProps extends ModelSettingsInput {
   model: ProviderModel | null;
   locked: boolean;
-  onPolicy(value: string): void;
-  onReasoning(value: string | null): void;
 }

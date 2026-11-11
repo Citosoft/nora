@@ -4,7 +4,6 @@ import { resolveModelBinding, selectedNativeModel } from "@/components/app/logic
 import { useNativeModelCatalog } from "@/components/app/hooks/useNativeModelCatalog";
 import type { NativeProviderPickerProps } from "@/components/app/types/nativePanels.types";
 import type { ModelChoice } from "@/components/app/types/modelPicker.types";
-import { NativeModelOptions } from "./NativeModelOptions";
 import { NativeModelPopover } from "./NativeModelPopover";
 
 export function NativeProviderPicker({ state, workspace, client, locked, initial, onBinding, onCapabilities }: NativeProviderPickerProps) {
@@ -34,8 +33,8 @@ export function NativeProviderPicker({ state, workspace, client, locked, initial
   useEffect(() => { onBinding(resolution.status === "ready" ? resolution.binding : null); }, [resolution, onBinding]);
   useEffect(() => { onCapabilities?.(available?.capabilities ?? null); }, [available, onCapabilities]);
   return <div className="space-y-2">
-    <div className="flex flex-wrap items-center gap-1">
       <NativeModelPopover providers={state.providers} store={store} selectedProvider={provider} selectedModel={model} selectedModelId={modelId} locked={!!locked}
+        settings={{ catalog: available, policyId, reasoning: effort, onPolicy: (value) => { setPolicy(value); setNeedsPolicy(false); }, onReasoning: setReasoning }}
         onSelect={(nextProvider, nextModel) => {
           if (locked) return;
           const key = nativeProviderKey(nextProvider);
@@ -44,9 +43,6 @@ export function NativeProviderPicker({ state, workspace, client, locked, initial
           if (changedProvider || model?.id !== nextModel.id) setReasoning(null);
           setChoice({ providerKey: key, modelId: nextModel.id });
         }} />
-      <NativeModelOptions catalog={available} model={model} policyId={policyId} reasoning={effort} locked={!!locked}
-        onPolicy={(value) => { setPolicy(value); setNeedsPolicy(false); }} onReasoning={setReasoning} />
-    </div>
     {!state.providers.length ? <p className="text-xs text-muted-foreground">Install a supported coding agent such as Claude Code, Codex or another ACP agent, sign in, and restart Nora. Your draft stays here.</p>
       : resolution.status === "blocked" && resolution.message ? <p role="status" className="text-xs text-muted-foreground">{resolution.message}</p> : null}
   </div>;

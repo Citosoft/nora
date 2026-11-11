@@ -27,7 +27,7 @@ let host;
   await click('#workspace');
   await wait(`!document.querySelector('button[aria-label="Close documents"]')`);
   await click('#workspace');
-  assert.equal((await state()).route, null, 'Returning to workspace must not revive an old route');
+  assert.equal((await state()).route?.tool, 'documents', 'Returning to a workspace resumes its last tool');
   await click('#pin');
   await wait(`JSON.parse(localStorage.getItem('nora-sidebar-navigation')).pinnedWorkspaceIds.includes('shell')`);
   assert.deepEqual((await state()).preferences.pinnedWorkspaceIds, ['shell'], 'StrictMode must not duplicate updater side effects');

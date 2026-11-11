@@ -15,6 +15,7 @@ import { AgentUsageStatsSection } from "@/components/app/panels/settings/AgentUs
 import { VoiceSettingsSection } from "@/components/app/panels/settings/VoiceSettingsSection";
 import { WorkbenchSettingsSection } from "@/components/app/panels/settings/WorkbenchSettingsSection";
 import { SettingsSidebar } from "@/components/app/panels/settings/SettingsSidebar";
+import { ConnectionsSettingsSection } from "@/components/app/panels/settings/ConnectionsSettingsSection";
 import type { SettingsGroup, SettingsPageProps } from "@/components/app/types/component.types";
 import type { SettingRowRevealTarget, SettingsSearchEntry } from "@/components/app/types/settingsSearch.types";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -88,6 +89,9 @@ export function SettingsPage({ initialGroup }: SettingsPageProps) {
 
           <TabsContent value="integrations" className="mt-0">
             <IntegrationsSettingsSection />
+          </TabsContent>
+          <TabsContent value="connections" className="mt-0">
+            <ConnectionsSettingsSection />
           </TabsContent>
 
           <TabsContent value="ai" className="mt-0">

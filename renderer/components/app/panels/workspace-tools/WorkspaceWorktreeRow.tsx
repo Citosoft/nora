@@ -1,5 +1,6 @@
 import { Ellipsis, GitBranch, Trash2 } from "lucide-react";
 import { useWorkspaceSidebarActions } from "@/components/app/context/workspaceSidebarContext";
+import { useWorkspaceView } from "@/components/app/hooks/useWorkspaceView";
 import { useWorkspaceNavigation } from "@/components/app/hooks/useWorkspaceNavigation";
 import { useStatusBar } from "@/components/app/logic/statusBarContext";
 import { formatWorkspaceSidebarWorktreeLocationLabel, getWorkspaceSidebarPullRequestDotClass, workspaceSidebarHasPullRequestState } from "@/components/app/logic/workspaceSidebarPresentation";
@@ -14,12 +15,13 @@ import { cn } from "@/lib/utils";
 
 export function WorkspaceWorktreeRow({ workspace, worktree, focused, removing, preferredShellId, pullRequestStatus }: WorkspaceWorktreeRowProps) {
   const actions = useWorkspaceSidebarActions();
-  const { closeTool } = useWorkspaceNavigation();
+  const { openTool } = useWorkspaceNavigation();
+  const { updateView } = useWorkspaceView(workspace.project.id);
   const statusBar = useStatusBar();
   const root = worktree.path === workspace.project.rootPath || worktree.createdFromRef === "ROOT";
   const canRemove = canRemoveWorkspaceWorktree(workspace, worktree, root);
   const actionable = worktree.status === "ready" || worktree.status === "creating";
-  const focus = () => { closeTool(); actions.onFocusWorkspaceView(worktree.id); };
+  const focus = () => { actions.onFocusWorkspaceView(worktree.id); updateView({ changesTab: "changes" }); openTool(workspace.project.id, "changes"); };
   const checkout = async () => {
     const statusId = statusBar.beginStatus(`Checking out ${worktree.branch}`, true);
     try { await actions.onCheckoutWorkspaceBranch(workspace.project.id, worktree.branch); }
@@ -38,8 +40,8 @@ export function WorkspaceWorktreeRow({ workspace, worktree, focused, removing, p
     {!root && <Button variant="ghost" size="icon" className="size-7 text-muted-foreground hover:text-destructive" disabled={removing || !canRemove} onClick={() => actions.onRemoveWorktree(workspace.project.id, worktree.id, worktree.branch)} aria-label={`Delete worktree ${worktree.branch}`} title={canRemove ? "Delete worktree" : "Remove attached agents and terminals first"}><Trash2 className="size-3.5" /></Button>}
     <DropdownMenu align="end" trigger={<Button variant="ghost" size="icon" className="size-7" disabled={removing} aria-label={`Worktree actions for ${worktree.branch}`}><Ellipsis className="size-4" /></Button>}>
       <WorkspaceWorktreeActionsMenuItems workspace={workspace} worktree={worktree} preferredShellId={preferredShellId} pullRequestStatus={pullRequestStatus} isRootWorktree={root}
-        onItemSelected={closeTool} onFocusWorktree={focus} onOpenCreateAgentOnWorktree={actions.onOpenCreateAgentOnWorktree} onOpenCreateTerminalOnWorktree={actions.onOpenCreateTerminalOnWorktree}
-        onLaunchQuickTerminalOnWorktree={actions.onLaunchQuickTerminalOnWorktree} onLaunchWorktreeScript={actions.onLaunchWorktreeScript} onRemoveWorktree={actions.onRemoveWorktree} onOpenPullRequest={actions.onOpenWorkspaceBrowser} />
+        onFocusWorktree={focus} onOpenCreateAgentOnWorktree={actions.onOpenCreateAgentOnWorktree} onOpenCreateTerminalOnWorktree={actions.onOpenCreateTerminalOnWorktree}
+        onLaunchQuickTerminalOnWorktree={(id, worktreeId) => { actions.onLaunchQuickTerminalOnWorktree(id, worktreeId); openTool(id, "terminals"); }} onLaunchWorktreeScript={(id, payload) => { actions.onLaunchWorktreeScript(id, payload); openTool(id, "terminals"); }} onRemoveWorktree={actions.onRemoveWorktree} onOpenPullRequest={(id, url) => { actions.onOpenWorkspaceBrowser(id, url); openTool(id, "browser"); }} />
     </DropdownMenu>
   </div>;
 }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { NativeConversationDeps, NativeConversationView } from "@/components/app/types/nativeConversation.types";
 import { applyNativeEvent, mergeTimeline } from "@/components/app/logic/nativeConversationState";
-import { loadNativeRunHistory } from "@/components/app/logic/nativeRunHistory";
+import { loadNativeRunHistory, mergeRunHistory } from "@/components/app/logic/nativeRunHistory";
 
 export function useNativeConversation({ client, conversationId }: NativeConversationDeps) {
   const [view, setView] = useState<NativeConversationView | null>(null);
@@ -32,7 +32,7 @@ export function useNativeConversation({ client, conversationId }: NativeConversa
       const runHistory = await loadNativeRunHistory(client, conversationId, page.items, view.runHistory);
       setView((current) => current?.header.conversation.id === conversationId
         ? { ...current, items: mergeTimeline(page.items, current.items), nextBefore: page.nextBefore,
-          runHistory: { ...runHistory, runs: [...new Map([...runHistory.runs, ...current.runHistory.runs].map((run) => [run.id, run])).values()] } } : current);
+          runHistory: { ...runHistory, runs: mergeRunHistory(runHistory.runs, current.runHistory.runs) } } : current);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Older messages could not be loaded"); }
   }, [view?.nextBefore, view?.runHistory, conversationId, client]);
   return { view: view?.header.conversation.id === conversationId ? view : null, error, older, reload: () => setRevision((value) => value + 1) };

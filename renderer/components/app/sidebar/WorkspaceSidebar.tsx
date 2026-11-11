@@ -11,6 +11,7 @@ import { WorkspaceUtilities } from "@/components/app/sidebar/WorkspaceUtilities"
 import { WorkspaceActions } from "@/components/app/sidebar/workspace-navigation/WorkspaceActions";
 import { WorkspaceShortcuts } from "@/components/app/sidebar/workspace-navigation/WorkspaceShortcuts";
 import { WorkspaceSwitcher } from "@/components/app/sidebar/workspace-navigation/WorkspaceSwitcher";
+import { WorkspaceStatusIndicator } from "@/components/app/sidebar/workspace-navigation/WorkspaceStatusIndicator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { effectiveRole } from "@shared/personalization/profiles";
@@ -39,6 +40,7 @@ export function WorkspaceSidebar() {
       <WorkspaceSwitcher workspaces={workspaces} activeId={snapshot?.project?.id ?? null} collapsed={collapsed} recentWorkspaces={recentWorkspaces}
         onSelect={chooseWorkspace} onOpenRecent={(rootPath, name) => { navigation.closeTool(); onOpenRecentWorkspace(rootPath, name); }} onAdd={actions.onChooseProject} />
       {!collapsed && workspace && <WorkspaceActions workspace={workspace} />}
+      {!collapsed && workspace && <WorkspaceStatusIndicator workspace={workspace} />}
     </div>
     <div className={`w-full shrink-0 ${collapsed ? "flex flex-col items-center gap-1 pb-1" : "space-y-2 px-3 pb-3 pt-2"}`}>
       <Button variant="ghost" size={collapsed ? "icon" : "default"} className={collapsed ? "size-8" : "h-9 w-full justify-start px-2 text-sm font-normal"} onClick={newThread} aria-label="New thread" tooltip={collapsed ? "New thread" : undefined}><Plus className="size-4 text-muted-foreground" aria-hidden="true" />{!collapsed && "New thread"}</Button>
@@ -46,7 +48,8 @@ export function WorkspaceSidebar() {
     </div>
     {workspace && <WorkspaceShortcuts workspace={workspace} role={role} collapsed={collapsed} />}
     {!collapsed && (error || navigation.preferenceError) && <p role="alert" className="px-4 pb-3 text-xs text-destructive">{error ?? navigation.preferenceError}</p>}
-    {collapsed ? <div className="min-h-0 flex-1" /> : <ThreadNavigation workspaceId={nativeWorkspace?.id ?? (workspace ? `unregistered:${workspace.project.id}` : null)} query={query} unified onNavigate={navigation.closeTool} />}
+    {collapsed ? <div className="min-h-0 flex-1" /> : <ThreadNavigation workspaceId={nativeWorkspace?.id ?? (workspace ? `unregistered:${workspace.project.id}` : null)} query={query} unified onNavigate={navigation.closeTool}
+      grouping={navigation.preferences.threadGrouping} onGroupingChange={(threadGrouping) => navigation.setPreferences((current) => ({ ...current, threadGrouping }))} />}
     <div className="w-full shrink-0"><WorkspaceUtilities collapsed={collapsed} /></div>
   </aside>;
 }

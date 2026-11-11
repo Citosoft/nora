@@ -43,23 +43,23 @@ export const buildModalClusterPorts = (modalDialogs: AppModalDialogsBuildDeps): 
   modalDialogs
 });
 
-export const buildWorkspaceSidebarPortsFromAssembly = (a: AppShellSignedInAssemblySources, chrome: AppChromeShellComposeSlice, readBranchRequest: BranchRequestReader): WorkspaceSidebarPorts => ({
-  sidebarBuild: assembleSignedInWorkspaceSidebarBuild(a),
-  utilities: {
-    status: chrome.workspaceStatus,
-    appTools: buildAppToolsProps(buildTitleBarProps(chrome.titleBar)),
-    terminal: {
-      isOpen: !a.chromeShell.isLocalTerminalDockCollapsed,
-      onToggle: () => {
-        if (a.chromeShell.isLocalTerminalDockCollapsed) void a.chromeShell.focusLocalTerminalDock();
-        else a.chromeShell.setIsLocalTerminalDockCollapsed(true);
+export const buildWorkspaceSidebarPortsFromAssembly = (a: AppShellSignedInAssemblySources, chrome: AppChromeShellComposeSlice, readBranchRequest: BranchRequestReader): WorkspaceSidebarPorts => {
+  const onOpenConnectionsSettings = () => a.core.openSettingsPage("connections");
+  return {
+    sidebarBuild: assembleSignedInWorkspaceSidebarBuild(a),
+    utilities: {
+      status: chrome.workspaceStatus,
+      appTools: { ...buildAppToolsProps(buildTitleBarProps(chrome.titleBar)), onOpenConnectionsSettings,
+        onOpenHomeTerminal: () => { void a.chromeShell.focusLocalTerminalDock(); }
       }
-    }
-  },
-  readBranchRequest,
-  recentWorkspaces: chrome.titleBar.recentWorkspaces,
-  onOpenRecentWorkspace: chrome.titleBar.handleOpenRecentWorkspace
-});
+    },
+    readBranchRequest,
+    recentWorkspaces: chrome.titleBar.recentWorkspaces,
+    onOpenRecentWorkspace: chrome.titleBar.handleOpenRecentWorkspace,
+    onOpenConnectionsSettings,
+    onAddRemoteWorkspace: a.core.openAddRemoteWorkspaceModal
+  };
+};
 
 export const buildChromeShellPorts = (
   compose: AppChromeShellComposeSlice,

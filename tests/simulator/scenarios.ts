@@ -1,4 +1,4 @@
-import type { SimulatorScenario, SimulatorStep } from "./types/scenarios.types";
+import type { SimulatorApprovalStep, SimulatorScenario, SimulatorStep } from "./types/scenarios.types";
 import { simulatedFileChanges, simulatedPatches } from "./fileChanges";
 import { simulatedMarkdown } from "./markdown";
 
@@ -8,6 +8,8 @@ export const simulatorScenarios: readonly SimulatorScenario[] = [
   { id: "markdown", label: "Markdown gallery", description: "Stream headings, emphasis, lists, tables, quotes and code blocks." },
   { id: "questions", label: "Questions", description: "Single choice, multiple choices and a free-text answer." },
   { id: "approvals", label: "Action approvals", description: "Command, file and network approvals with different scopes." },
+  { id: "approval-stack", label: "Stacked approvals", description: "Three approvals arrive together; respond one at a time." },
+  { id: "suggestions", label: "Follow-up suggestion", description: "Ghost text after completion; Tab accepts it without sending." },
   { id: "usage-limit", label: "Provider usage limit", description: "The provider has no usage remaining and rejects the turn." },
   { id: "failure", label: "Provider failure", description: "A failed tool followed by a failed task." },
   { id: "recovery", label: "Lost connection", description: "Unconfirmed work, then Check native status to recover." },
@@ -27,8 +29,12 @@ const questions: Extract<SimulatorStep, { kind: "questions" }> = { kind: "questi
   { id: "activities", text: "Which activities should we include?", options: ["Walking", "Reading", "Cooking"], multiple: true },
   { id: "notes", text: "Any other preferences?", options: [], multiple: false }
 ] };
-const commandApproval: SimulatorStep = { kind: "approval", title: "Allow this command?", options,
+const commandApproval: SimulatorApprovalStep = { kind: "approval", title: "Allow this command?", options,
   details: { kind: "command", command: "npm test", workingDirectory: "/simulated/workspace", reason: "Run the project tests. This command will only be simulated." } };
+const approvals: SimulatorApprovalStep[] = [commandApproval,
+  { kind: "approval", title: "Allow file changes?", options, details: { kind: "files", reason: "Apply an example fix.", paths: ["src/main.ts", "src/app.tsx"] } },
+  { kind: "approval", title: "Allow network access?", options: [...options, { id: "always", label: "Always allow this host", intent: "allow", scope: "persistent", description: "Save a simulated rule for api.example.com." }],
+    details: { kind: "network", target: "https://api.example.com", reason: "Fetch reference documentation. No request will be sent." } }];
 const failedTool: SimulatorStep = { kind: "tool", native: { id: "failed", type: "commandExecution", command: "npm run missing-script", status: "failed", exitCode: 1, aggregatedOutput: "Missing script: missing-script" }, complete: true };
 const tools: SimulatorStep[] = [
   { kind: "tool", native: { id: "command", type: "commandExecution", command: "npm test", cwd: "/simulated/workspace", status: "inProgress" }, complete: false },
@@ -63,10 +69,10 @@ export function stepsForScenario(instruction: string): SimulatorStep[] {
     case "tools": return tools;
     case "markdown": return [{ kind: "text", text: simulatedMarkdown }];
     case "questions": return [questions];
-    case "approvals": return [commandApproval,
-      { kind: "approval", title: "Allow file changes?", options, details: { kind: "files", reason: "Apply an example fix.", paths: ["src/main.ts", "src/app.tsx"] } },
-      { kind: "approval", title: "Allow network access?", options: [...options, { id: "always", label: "Always allow this host", intent: "allow", scope: "persistent", description: "Save a simulated rule for api.example.com." }],
-        details: { kind: "network", target: "https://api.example.com", reason: "Fetch reference documentation. No request will be sent." } }];
+    case "approvals": return approvals;
+    case "approval-stack": return [{ kind: "approval-batch", approvals }];
+    case "suggestions": return [{ kind: "text", text: "The example changes are ready. A suggested follow-up will appear in the empty composer when this turn finishes." },
+      { kind: "suggestion", text: "Run the test suite and summarize any failures." }];
     case "usage-limit": return [{ kind: "failure", failure: { code: "usage-limit", message: "Codex usage limit reached", retryable: true } }];
     case "failure": return [failedTool, { kind: "failure" }];
     case "recovery": return [{ kind: "recovery" }];

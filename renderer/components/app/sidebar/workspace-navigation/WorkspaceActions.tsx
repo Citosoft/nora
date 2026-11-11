@@ -1,4 +1,5 @@
-import { Ellipsis, Plus, RefreshCcw, StickyNote, Trash2, X } from "lucide-react";
+import { Ellipsis, Plus, RefreshCcw, StickyNote, Trash2, Unplug, X } from "lucide-react";
+import { useWorkspaceSidebarPorts } from "@/components/app/hooks/useWorkspaceSidebarPorts";
 import { useWorkspaceSidebarActions, useWorkspaceSidebarRuntime } from "@/components/app/context/workspaceSidebarContext";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
 import { useWorkspaceNavigation } from "@/components/app/hooks/useWorkspaceNavigation";
@@ -14,6 +15,7 @@ export function WorkspaceActions({ workspace }: WorkspaceToolProps) {
   const actions = useWorkspaceSidebarActions();
   const { terminalPresets, terminalQuickLaunchDefaults } = useWorkspaceSidebarRuntime();
   const { closeTool } = useWorkspaceNavigation();
+  const { onOpenConnectionsSettings } = useWorkspaceSidebarPorts();
   return <DropdownMenu trigger={<Button variant="ghost" size="icon" className="size-8 shrink-0 text-muted-foreground" aria-label="Workspace actions"><Ellipsis className="size-4" aria-hidden="true" /></Button>}>
     <WorkspaceWorkspaceActionsMenuItems workspace={workspace} focusedProjectId={snapshot?.project?.id ?? null} terminalShells={snapshot?.terminalShells ?? []}
       preferredShellId={resolvePreferredTerminalShellId(snapshot?.terminalShells ?? [])} terminalQuickLaunchDefaults={terminalQuickLaunchDefaults}
@@ -24,6 +26,7 @@ export function WorkspaceActions({ workspace }: WorkspaceToolProps) {
     <DropdownMenuItem onSelect={() => { closeTool(); actions.onCreateNote(workspace.project.id); }}><StickyNote className="size-4" />New note</DropdownMenuItem>
     <DropdownMenuItem onSelect={actions.onChooseProject}><Plus className="size-4" />Add workspace</DropdownMenuItem>
     <DropdownMenuItem onSelect={actions.onRefresh}><RefreshCcw className="size-4" />Refresh workspace</DropdownMenuItem>
+    <DropdownMenuItem onSelect={onOpenConnectionsSettings}><Unplug className="size-4" />Connection settings</DropdownMenuItem>
     <DropdownMenuItem onSelect={() => { closeTool(); actions.onCloseProject(); }}><X className="size-4" />Close workspace</DropdownMenuItem>
     <DropdownMenuItem destructive onSelect={actions.onResetWorkspaces}><Trash2 className="size-4" />Reset workspaces…</DropdownMenuItem>
   </DropdownMenu>;

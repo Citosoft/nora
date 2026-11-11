@@ -50,7 +50,7 @@ export async function discoverNativeProviders(environment: NodeJS.ProcessEnv): P
   }
   if (claude) {
     const instance: NativeInstance = { kind: "claude", instanceId: "local", runtime: { executablePath: claude, environment },
-      policies: { default: "default", plan: "plan", "accept-edits": "acceptEdits" } };
+      policies: { default: "default", auto: "auto", "accept-edits": "acceptEdits", plan: "plan" } };
     discovered.push({ instance, provider: { kind: "claude", instanceId: "local", label: "Claude" } });
   }
   return [...discovered, ...acp.filter((entry): entry is NativeProviderDiscovery => entry !== null)];

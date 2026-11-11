@@ -5,6 +5,7 @@ import { roleSelectionSchema, roleSnapshotSchema } from "@shared/personalization
 
 const id = z.string().min(1).max(512);
 const time = z.string().datetime();
+export const promptSuggestionSchema = z.string().trim().min(1).max(4000);
 export const providerBindingSchema = z.object({
   kind: providerKindSchema,
   instanceId: id,
@@ -58,6 +59,7 @@ export const runSchema = z.object({
   // Older persisted turns can recover their start from the instruction timeline item.
   startedAt: time.optional(),
   steering: z.enum(["pending", "unconfirmed"]).optional(),
+  promptSuggestion: promptSuggestionSchema.optional(),
   failure: failureSchema.nullable(),
   usage: usageSchema.nullable(),
   review: z.enum(["pending", "ready", "unavailable"])

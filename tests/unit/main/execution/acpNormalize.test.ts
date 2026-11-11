@@ -34,7 +34,7 @@ test("ACP stop reasons map to finished outcomes", () => {
 test("ACP controls fall back to agent defaults and reject selections the agent does not offer", () => {
   const plan = acpControlPlan({}, "Agent");
   assert.deepEqual(plan.models.map((model) => model.id), [ACP_AGENT_DEFAULT]);
-  assert.deepEqual(plan.policies, [{ id: ACP_AGENT_DEFAULT, label: "Agent default" }]);
+  assert.deepEqual(plan.policies, [{ id: ACP_AGENT_DEFAULT, label: "Use agent settings", description: "Use the agent's configured permission mode without overriding it." }]);
   assert.deepEqual(acpControlChanges({}, { model: ACP_AGENT_DEFAULT, reasoning: null, permissionPolicy: ACP_AGENT_DEFAULT }), { ok: true, changes: [] });
   const setup = { configOptions: [{ id: "mode", name: "Mode", category: "mode", type: "select" as const, currentValue: "safe",
     options: [{ group: "g", name: "Modes", options: [{ value: "safe", name: "Safe" }, { value: "yolo", name: "Auto" }] }] }] };

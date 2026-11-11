@@ -1,6 +1,7 @@
 import type { SettingsSearchEntry } from "@/components/app/types/settingsSearch.types";
 
 export const SETTINGS_SEARCH_INDEX: readonly SettingsSearchEntry[] = [
+  { group: "connections", title: "Remote connections", keywords: ["ssh", "mounts", "remote", "unmount", "workspace", "connect"] },
   { group: "appearance", title: "Sidebar layout", keywords: ["swap", "left", "right", "projects", "changes"] },
   { group: "appearance", title: "Color Theme", keywords: ["dark", "light", "system", "mode"] },
   { group: "appearance", title: "Accent Color", keywords: ["highlight", "colour", "primary"] },

@@ -1,4 +1,8 @@
 const { app } = require('electron');
+if (process.argv.includes('--disable-gpu') || process.env.NORA_DISABLE_HARDWARE_ACCELERATION === '1') {
+  app.disableHardwareAcceleration();
+  console.log('Chat simulator hardware acceleration disabled.');
+}
 const { createChatSimulator } = require('./ui/chatSimulatorHost.cjs');
 let simulator;
 let quitting = false;

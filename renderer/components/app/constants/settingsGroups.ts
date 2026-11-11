@@ -27,6 +27,7 @@ export const SETTINGS_GROUP_ITEMS: readonly SettingsGroupItem[] = [
   { value: "agentUsage", label: "Agent usage", icon: BarChart3 },
   { value: "skills", label: "Skills", icon: Sparkles },
   { value: "integrations", label: "Integrations", icon: Plug },
+  { value: "connections", label: "Connections", icon: Server },
   { value: "ai", label: "AI", icon: Bot },
   { value: "voice", label: "Voice", icon: Mic2 },
   { value: "privacy", label: "Privacy", icon: Shield },

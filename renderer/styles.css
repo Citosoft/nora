@@ -273,6 +273,19 @@
 }
 
 @layer utilities {
+  @keyframes threadTitleScroll {
+    0%, 10% { transform: translateX(0); }
+    90%, 100% { transform: translateX(var(--thread-title-distance)); }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .thread-row-open:is(:hover, :focus-visible) .thread-title[data-overflow="true"] .thread-title-text {
+      overflow: visible;
+      text-overflow: clip;
+      animation: threadTitleScroll var(--thread-title-duration) linear 450ms infinite alternate;
+    }
+  }
+
   .button-default-surface {
     background-color: hsl(var(--button-default-bg));
     border-color: hsl(var(--button-default-border));
@@ -343,6 +356,14 @@
 
   .app-no-drag {
     -webkit-app-region: no-drag;
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 
   .thin-scrollbar {

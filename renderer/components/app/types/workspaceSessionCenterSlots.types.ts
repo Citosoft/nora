@@ -1,4 +1,4 @@
-import type { AiChatTabState, BrowserTabState, FileEditorTab, ForgeViewerTabState } from "@/components/app/types";
+import type { AiChatTabState, FileEditorTab, ForgeViewerTabState } from "@/components/app/types";
 import type { ChangeEntry } from "@shared/appTypes";
 
 /**
@@ -12,7 +12,6 @@ export type WorkspaceSessionCenterSlot =
   | { id: "center:file-editor"; kind: "file-editor"; payload: null }
   | { id: "center:forge"; kind: "forge"; payload: null }
   | { id: string; kind: "ai-chat"; payload: { tab: AiChatTabState } }
-  | { id: string; kind: "browser"; payload: { tab: BrowserTabState } }
   | { id: "center:agent-terminal"; kind: "agent-terminal"; payload: null };
 
 export type BuildWorkspaceSessionCenterSlotsInput = {
@@ -23,7 +22,6 @@ export type BuildWorkspaceSessionCenterSlotsInput = {
   fileEditorTabCount: number;
   forgeViewerTabCount: number;
   projectScopedAiChatTabs: AiChatTabState[];
-  projectScopedBrowserTabs: BrowserTabState[];
 };
 
 export type ResolveActiveWorkspaceSessionCenterSlotIdInput = {
@@ -34,5 +32,4 @@ export type ResolveActiveWorkspaceSessionCenterSlotIdInput = {
   activeFileEditorTab: FileEditorTab | null;
   forgeViewerTab: ForgeViewerTabState | null;
   aiChatTab: AiChatTabState | null;
-  browserTab: BrowserTabState | null;
 };

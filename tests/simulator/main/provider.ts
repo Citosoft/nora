@@ -13,7 +13,7 @@ import type { SteeringResult } from "@main/types/execution/steering.types";
 export class SimulatorProvider implements ExecutionProvider {
   readonly kind = "codex";
   readonly instanceId = "simulator";
-  readonly capabilities = { ...nativeCapabilities, steering: true };
+  readonly capabilities = { ...nativeCapabilities, steering: true, promptSuggestions: true };
   private readonly active = new Map<string, SimulatorExecution>();
   private sequence = 0;
   constructor(private readonly speed = 1) {}
@@ -25,7 +25,7 @@ export class SimulatorProvider implements ExecutionProvider {
   }
 
   async start(execution: ProviderExecution, emit: EmitProviderUpdate): Promise<void> {
-    const active: SimulatorExecution = { ...execution, emit, controller: new AbortController(), done: false, tools: new Map() };
+    const active: SimulatorExecution = { ...execution, emit, controller: new AbortController(), done: false, tools: new Map(), responses: new Map() };
     this.active.set(execution.run.attemptId, active);
     const base = this.base(active);
     emit({ ...base, kind: "started", nativeConversationId: `simulated-${execution.snapshot.conversation.id}`, nativeTurnId: `turn-${execution.run.id}` });
@@ -38,6 +38,7 @@ export class SimulatorProvider implements ExecutionProvider {
         switch (step.kind) {
           case "pause": await this.pause(active, step.milliseconds); break;
           case "text": await this.text(active, step.text); break;
+          case "suggestion": active.promptSuggestion = step.text; break;
           case "display": this.item(active, { ...step.item, id: `${active.run.id}:${step.id}`, runId: active.run.id, createdAt: new Date().toISOString() }); break;
           case "tool": {
             const native = step.native;
@@ -59,6 +60,7 @@ export class SimulatorProvider implements ExecutionProvider {
           }
           case "questions":
           case "approval": await this.ask(active, step); break;
+          case "approval-batch": await Promise.all(step.approvals.map((approval) => this.ask(active, approval))); break;
           case "failure": this.finish(active, "failed", step.failure?.code === "usage-limit"
             ? { ...step.failure, resetsAt: new Date(Date.now() + 2 * 60 * 60_000).toISOString() } : step.failure); break;
           case "recovery":
@@ -79,11 +81,11 @@ export class SimulatorProvider implements ExecutionProvider {
       createdAt: new Date().toISOString(), expiresAt: new Date(Date.now() + (expires ? simulatorPacing.requestExpiryMs : 30 * 60_000)).toISOString() };
     const request: RuntimeRequest = step.kind === "questions" ? { ...common, kind: "question", title: "Choose your preferences", questions: step.questions }
       : { ...common, kind: "approval", title: step.title, details: step.details, options: step.options };
-    const answer = new Promise<RequestResponse | null>((resolve) => { active.response = resolve; });
+    const answer = new Promise<RequestResponse | null>((resolve) => { active.responses.set(id, resolve); });
     active.emit({ ...this.base(active), kind: "request", request });
     if (expires) {
       await delay(simulatorPacing.requestExpiryMs + 100, undefined, { signal: active.controller.signal }).catch(() => {});
-      if (!active.done && active.response) {
+      if (!active.done && active.responses.has(id)) {
         active.emit({ ...this.base(active), kind: "request-expired", requestId: id });
         await this.waitForStop(active);
       }
@@ -98,9 +100,10 @@ export class SimulatorProvider implements ExecutionProvider {
 
   async respond(execution: ProviderExecution, request: RuntimeRequest, response: RequestResponse): Promise<void> {
     const active = this.active.get(execution.run.attemptId);
-    if (!active?.response) throw new Error("No simulated request is pending");
+    const resolve = active?.responses.get(request.id);
+    if (!active || !resolve) throw new Error("No simulated request is pending");
     active.emit({ ...this.base(active), kind: "request-resolved", requestId: request.id });
-    const resolve = active.response; active.response = undefined; resolve(response);
+    active.responses.delete(request.id); resolve(response);
   }
   async steer(execution: ProviderExecution, _instruction: string): Promise<SteeringResult> {
     const active = this.active.get(execution.run.attemptId);
@@ -117,7 +120,9 @@ export class SimulatorProvider implements ExecutionProvider {
     active.done = true;
     active.emit({ ...this.base(active), kind: "finished", status, usage: { inputTokens: 0, outputTokens: 0 },
       failure: status === "failed" ? failure ?? { code: "provider", message: "Simulated provider failure. No real provider was contacted.", retryable: true } : null });
-    active.response?.(null); active.response = undefined; active.controller.abort();
+    if (status === "completed" && active.promptSuggestion) active.emit({ ...this.base(active), kind: "prompt-suggestion", suggestion: active.promptSuggestion });
+    for (const resolve of active.responses.values()) resolve(null);
+    active.responses.clear(); active.controller.abort();
   }
   private base(active: SimulatorExecution) { return { conversationId: active.snapshot.conversation.id, runId: active.run.id, attemptId: active.run.attemptId, eventId: `simulator:${++this.sequence}` }; }
   private item(active: SimulatorExecution, item: TimelineItem): void { active.emit({ ...this.base(active), kind: "item", item }); }

@@ -13,9 +13,17 @@ export interface NativeReviewProps { result: ConversationReview; }
 export interface NativeRequestProps {
   request: RuntimeRequest;
   busy: boolean;
+  presentation?: "panel" | "dialog";
   onRespond(response: RequestResponse): Promise<void>;
 }
+export interface NativeRequestStackProps {
+  requests: readonly RuntimeRequest[];
+  busy: boolean;
+  visible: boolean;
+  onRespond(requestId: string, response: RequestResponse): Promise<void>;
+}
 export interface NativeConversationPorts {
+  visible: boolean;
   userDisplayName: string;
   readBranchRequest: BranchRequestReader | null;
   client: ConversationClient;
