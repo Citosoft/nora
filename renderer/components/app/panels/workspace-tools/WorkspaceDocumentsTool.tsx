@@ -33,6 +33,6 @@ export function WorkspaceDocumentsTool({ workspace, active }: WorkspaceSurfacePr
         {!visible.length && <p className="px-2 py-3 text-xs text-muted-foreground">{state?.isLoading ? "Loading documents…" : query ? "No matching documents." : `No ${view.documentKind} yet.`}</p>}
       </div>
     </aside>
-    <div className="flex min-h-0 min-w-0 flex-col"><WorkspaceEditor projectId={projectId} kind="documents" active={active} /></div>
+    <div className="flex min-h-0 min-w-0 flex-col"><WorkspaceEditor projectId={projectId} active={active} /></div>
   </div>;
 }

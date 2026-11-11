@@ -1,7 +1,6 @@
 import { TitleBarControls } from "@/components/app/chrome/TitleBarControls";
 import { TitleBarWorkspaceQuickSearch } from "@/components/app/chrome/TitleBarWorkspaceQuickSearch";
 import { AppMark } from "@/components/app/shared/AppMark";
-import { IdeBadge } from "@/components/app/shared/IdeBadge";
 import type { TitleBarProps } from "@/components/app/types/component.types";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
@@ -15,10 +14,7 @@ export function TitleBar({
   useMacTitleBarChrome,
   resolvedTheme,
   canOpenProjectInIde,
-  installedIdes,
-  isLoadingInstalledIdes,
   preferredIde,
-  defaultIdeId,
   onOpenProjectInIde,
   isWorkspaceSidebarCollapsed,
   sidebarsSwapped,
@@ -84,9 +80,6 @@ export function TitleBar({
   const shouldHideSplitViewCreateButton = isCompactTitleBar;
   const showCustomTitleMenus = !useMacTitleBarChrome;
 
-  const sortedIdes = preferredIde
-    ? [preferredIde, ...installedIdes.filter((ide) => ide.id !== preferredIde.id)]
-    : installedIdes;
   const dedupedRecentWorkspaces = useMemo(() => {
     const seenRootPaths = new Set<string>();
     return recentWorkspaces.filter((project) => {
@@ -338,67 +331,6 @@ export function TitleBar({
                   New view
                 </Button>
               ) : null}
-            </div>
-          ) : null}
-          {canOpenProjectInIde && isLoadingInstalledIdes ? (
-            <button
-              type="button"
-              className={`flex h-8 items-center gap-2 rounded-[4px] border px-3 text-xs text-foreground opacity-60 ${titleBarSelectorSurfaceClass}`}
-              aria-label="Detecting installed IDEs"
-              disabled
-            >
-              <Code2 className="size-3.5 text-primary" />
-              <span>Finding IDEs</span>
-              <ChevronDown className={`size-3.5 ${titleBarIconToneClass}`} />
-            </button>
-          ) : null}
-          {canOpenProjectInIde && !isLoadingInstalledIdes && installedIdes.length > 0 ? (
-            <div className="flex items-center">
-              <button
-                type="button"
-                className={cn(
-                  "flex h-8 items-center gap-2 rounded-l-[4px] border border-r-0 px-3 text-xs text-foreground transition hover:bg-accent/60",
-                  isCompactTitleBar ? "max-w-[160px]" : "max-w-[220px]",
-                  titleBarSelectorSurfaceClass
-                )}
-                aria-label={preferredIde ? `Open current project in ${preferredIde.name}` : "Open current project in an IDE"}
-                onClick={() => {
-                  if (preferredIde) {
-                    onOpenProjectInIde(preferredIde.id);
-                  }
-                }}
-              >
-                {preferredIde ? <IdeBadge ide={preferredIde} /> : <Code2 className="size-3.5 text-primary" />}
-                <span className="truncate">{preferredIde ? preferredIde.name : "Open in IDE"}</span>
-              </button>
-              <DropdownMenu
-                align="end"
-                widthClassName="w-64 titlebar-dropdown-menu"
-                trigger={(
-                  <button
-                    type="button"
-                    className={`flex h-8 items-center rounded-r-[4px] border px-2 text-xs text-foreground transition hover:bg-accent/60 ${titleBarSelectorSurfaceClass}`}
-                    aria-label="Choose IDE"
-                  >
-                    <ChevronDown className={`size-3.5 ${titleBarIconToneClass}`} />
-                  </button>
-                )}
-              >
-                {sortedIdes.map((ide) => (
-                  <DropdownMenuItem
-                    key={ide.id}
-                    onSelect={() => onOpenProjectInIde(ide.id)}
-                  >
-                    <IdeBadge ide={ide} />
-                    <span className="truncate">{ide.name}</span>
-                    {defaultIdeId === ide.id ? (
-                      <span className="ml-auto rounded-[4px] bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-primary">
-                        Default
-                      </span>
-                    ) : null}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenu>
             </div>
           ) : null}
         </div>

@@ -1,3 +1,4 @@
+import { createCodexExternalSessions } from "./externalSessions";
 import { CodexMcpDiscovery } from "./mcp";
 import { codexAccount } from "./account";
 import type { McpAction, McpResult } from "@shared/types/provider/mcp.types";
@@ -27,6 +28,7 @@ import { accountSchema, rateLimitsEventSchema, deltaSchema, itemEventSchema, que
 /** Structured protocol boundary; capabilities are discovered from the configured runtime. */
 export class CodexAdapter implements ExecutionProvider {
   readonly kind = "codex";
+  readonly externalSessions;
   readonly instanceId: string;
   private rateLimits: CodexRateLimits | null = null;
   private steeringSupported = false;
@@ -37,7 +39,10 @@ export class CodexAdapter implements ExecutionProvider {
   private readonly byAttempt = new Map<string, CodexActive>();
   private readonly requests = new Map<string, CodexPendingRequest>();
 
-  constructor(private readonly options: CodexOptions) { this.instanceId = options.instanceId; }
+  constructor(private readonly options: CodexOptions) {
+    this.instanceId = options.instanceId;
+    this.externalSessions = createCodexExternalSessions(this.instanceId, () => this.connect());
+  }
 
   async mcp(workspace: WorkspaceRef | null, action: McpAction): Promise<McpResult> {
     try {

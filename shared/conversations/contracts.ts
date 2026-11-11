@@ -1,3 +1,4 @@
+import { externalSessionOriginSchema } from "./externalSessions";
 import { z } from "zod";
 import { providerKindSchema } from "@shared/providers/providerKinds";
 import { conversationReviewSchema } from "./review";
@@ -35,6 +36,7 @@ export const usageSchema = z.object({
 export const conversationSourceSchema = z.object({ kind: z.literal("task"), projectId: id, path: z.string().min(1) }).strict();
 export const conversationSchema = z.object({
   id,
+  origin: externalSessionOriginSchema.optional(),
   source: conversationSourceSchema.optional(),
   role: roleSnapshotSchema.nullable().optional(),
   title: z.string().min(1),
@@ -42,6 +44,7 @@ export const conversationSchema = z.object({
   provider: providerBindingSchema,
   parentId: id.nullable(),
   nativeConversationId: id.nullable(),
+  // Settled threads retain the existing persisted archive field so their saved history needs no migration.
   archivedAt: time.nullable(),
   createdAt: time,
   updatedAt: time,
@@ -112,7 +115,7 @@ export const snapshotSchema = z.object({
 }).strict();
 
 const commandBase = { commandId: id, conversationId: id };
-export const createConversationCommandSchema = z.object({ ...commandBase, kind: z.literal("create"), title: z.string().trim().min(1), workspace: workspaceRefSchema, provider: providerBindingSchema, parentId: id.nullable(), role: roleSelectionSchema.optional(), source: conversationSourceSchema.optional() }).strict();
+export const createConversationCommandSchema = z.object({ ...commandBase, kind: z.literal("create"), title: z.string().trim().min(1), workspace: workspaceRefSchema, provider: providerBindingSchema, parentId: id.nullable(), role: roleSelectionSchema.optional(), source: conversationSourceSchema.optional(), externalSessionId: id.optional() }).strict();
 export const submitConversationCommandSchema = z.object({ ...commandBase, kind: z.literal("submit"), runId: id, instruction: z.string().trim().min(1) }).strict();
 export const conversationCommandSchema = z.discriminatedUnion("kind", [
   createConversationCommandSchema,
@@ -124,7 +127,8 @@ export const conversationCommandSchema = z.discriminatedUnion("kind", [
   z.object({ ...commandBase, kind: z.literal("interrupt"), runId: id }).strict(),
   z.object({ ...commandBase, kind: z.literal("reconcile"), runId: id }).strict(),
   z.object({ ...commandBase, kind: z.literal("respond"), requestId: id, response: requestResponseSchema }).strict(),
-  z.object({ ...commandBase, kind: z.literal("archive") }).strict()
+  z.object({ ...commandBase, kind: z.literal("archive") }).strict(),
+  z.object({ ...commandBase, kind: z.literal("unarchive") }).strict()
 ]);
 export const commandReceiptSchema = z.object({
   commandId: id,

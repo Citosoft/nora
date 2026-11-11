@@ -38,7 +38,14 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
     return decision;
   }
   if (!state) throw new ExecutionCommandError("missing", "Conversation does not exist");
-  if (state.conversation.archivedAt) throw new ExecutionCommandError("conflict", "Conversation is archived");
+  if (command.kind === "unarchive") {
+    if (state.conversation.archivedAt) add({ kind: "conversation", conversation: { ...state.conversation, archivedAt: null } });
+    return decision;
+  }
+  if (state.conversation.archivedAt) {
+    if (command.kind === "archive") return decision;
+    throw new ExecutionCommandError("conflict", "This thread is settled. Reopen it before continuing");
+  }
   const initial = state;
   const run = "runId" in command ? initial.runs.find((entry) => entry.id === command.runId) : undefined;
   const assertWriter = (): void => {
@@ -93,9 +100,9 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
       return decision;
     case "archive":
       if (initial.runs.some((entry) => isActiveRun(entry) || entry.state === "queued")) {
-        throw new ExecutionCommandError("conflict", "Stop active work and remove queued instructions before archiving");
+        throw new ExecutionCommandError("conflict", "Stop active work and remove queued instructions before settling this thread");
       }
-      add({ kind: "conversation", conversation: { ...initial.conversation, archivedAt: context.now, updatedAt: context.now } });
+      add({ kind: "conversation", conversation: { ...initial.conversation, archivedAt: context.now } });
       return decision;
     case "interrupt":
       if (!run || !isActiveRun(run) || run.state === "recovering") {

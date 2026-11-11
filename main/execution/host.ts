@@ -1,3 +1,5 @@
+import type { ExternalSessionsResult } from "@shared/types/conversation/externalSessions.types";
+import { discoverExternalSessions, readExternalTranscript } from "./externalSessions";
 import type { CommandReceipt, ConversationCommand, ProviderBinding, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ConversationEventPage, ConversationHeader, ConversationHistoryPage, ConversationSummary, HistoryQuery, HostShutdownResult } from "@shared/types/conversation/queries.types";
 import type { McpRequest, McpResult } from "@shared/types/provider/mcp.types";
@@ -79,7 +81,10 @@ export class ExecutionHost {
     const previousRuns = command.kind === "submit" && this.naming
       ? this.deps.store.history({ conversationId: command.conversationId, scope: "runs", limit: 1 }) : null;
     const firstInstruction = previousRuns?.scope === "runs" && previousRuns.runs.length === 0;
-    const receipt = this.engine.execute(command, workspace, role);
+    const externalTranscript = command.kind === "create" && command.externalSessionId && workspace
+      ? await readExternalTranscript(this.deps.providers.resolve(command.provider.kind, command.provider.instanceId), workspace, command.externalSessionId) : undefined;
+    if (this.lifecycle !== "running") throw new ExecutionCommandError("conflict", "Execution host is not accepting instructions");
+    const receipt = this.engine.execute(command, workspace, role, externalTranscript);
     if (firstInstruction && command.kind === "submit") {
       const conversation = this.deps.store.header(command.conversationId)?.conversation;
       if (conversation) this.naming?.start(command.conversationId, conversation.title, command.instruction);
@@ -107,6 +112,13 @@ export class ExecutionHost {
       throw new ExecutionCommandError("environment", "Provider discovery must run on the owning execution host");
     }
     return this.deps.providers.resolve(kind, instanceId).catalog(workspace);
+  }
+
+  async externalSessions(kind: ProviderBinding["kind"], instanceId: string, selection: WorkspaceRef): Promise<ExternalSessionsResult> {
+    const workspace = await this.deps.workspaces.prepare(selection);
+    if (this.lifecycle !== "running") throw new ExecutionCommandError("conflict", "Execution host is not running");
+    const provider = this.deps.providers.resolve(kind, instanceId);
+    return discoverExternalSessions(provider, workspace, () => this.deps.store.summaries());
   }
 
   async mcp(request: McpRequest): Promise<McpResult> {

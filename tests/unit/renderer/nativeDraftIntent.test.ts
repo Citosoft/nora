@@ -13,6 +13,7 @@ test("lost instruction replies retry original create/submit identities instead o
   const commands: ConversationCommand[] = [];
   let loseReply = true;
   const client: ConversationClient = {
+    async externalSessions() { return { status: "available", sessions: [] }; },
     async execute(command) { commands.push(command); if (command.kind === "submit" && loseReply) { loseReply = false; throw new Error("Reply lost"); }
       return { commandId: command.commandId, conversationId: command.conversationId, acceptedAt: "2026-11-09T10:00:00.000Z", cursor: 1 }; },
     async header() { return null; }, async summaries() { return []; }, async history() { throw new Error("unused"); },

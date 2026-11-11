@@ -135,6 +135,7 @@ These rules apply to **first-party** source under `main/`, `renderer/`, `shared/
 - Run the full unit suite only when asked, before a commit, PR or release, or when a change reaches widely across shared contracts or cross-cutting infrastructure. Some integration-style tests are timing-sensitive under full-suite load; if one fails, rerun it on its own before treating it as a regression.
 - Write tests for business logic and behavioral flows when practical, then implement or adjust feature code against those tests.
 - Do not require unit tests for React component rendering details; prioritize coverage for domain logic, state transitions, parsing, and user-visible behaviors.
+- Do not add or run renderer component, rendering, snapshot, browser, or end-to-end tests unless explicitly requested. For UI changes, default to typechecking and relevant existing unit tests for underlying logic.
 - Add regression coverage for bugs where practical, especially when the failure mode is well understood and likely to recur.
 - If you touch an area that is already messy, improve it while you are there. Do not layer new complexity onto a weak structure without attempting to simplify it.
 - Prefer deleting obsolete code over leaving dead paths, duplicate logic, or outdated branches behind.

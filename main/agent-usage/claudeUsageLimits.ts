@@ -47,6 +47,7 @@ export const buildClaudeUsageWindows = (limits: ClaudeUsageLimit[], now: Date): 
     .sort((left, right) => limitRank(left) - limitRank(right))
     .map((limit) => ({
       id: limit.scopeLabel ? `${limit.kind}:${limit.scopeLabel}` : limit.kind,
+      period: limit.kind,
       label: formatClaudeLimitName(limit),
       shortLabel: limit.kind === "session" ? "S" : "W",
       percentLeft: clampPercent(100 - limit.percentUsed),

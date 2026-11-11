@@ -3,9 +3,10 @@ import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import type { ThreadInsightsPanelProps } from "@/components/app/types/threadInsights.types";
 import { Button } from "@/components/ui/button";
 import { useId } from "react";
+import { ThreadIdePicker } from "./ThreadIdePicker";
 import { DiffCounts } from "./DiffCounts";
 
-export function ThreadInsightsPanel({ header, providerLabel, changes, request, expanded, busy, canArchive, hasOlderHistory, onToggle, onRefresh, onLoadHistory, onArchive }: ThreadInsightsPanelProps) {
+export function ThreadInsightsPanel({ header, providerLabel, changes, request, expanded, busy, canSettle, hasOlderHistory, onToggle, onRefresh, onLoadHistory, onSettleChange }: ThreadInsightsPanelProps) {
   const detailsId = useId();
   const conversation = header.conversation;
   const changeRequest = request.status === "ready" ? request.request : null;
@@ -22,9 +23,10 @@ export function ThreadInsightsPanel({ header, providerLabel, changes, request, e
     {expanded && <div id={detailsId} className="max-h-[38vh] space-y-3 overflow-y-auto border-t border-border/50 px-3.5 pb-3.5 pt-3 text-xs">
       <div className="space-y-1">
         <p className="truncate font-medium" title={conversation.title}>{conversation.title}</p>
-        <p className="text-muted-foreground">{conversation.archivedAt ? "Archived" : active ? active.state.replaceAll("-", " ") : "Ready"} · {conversation.provider.model}</p>
+        <p className="text-muted-foreground">{conversation.archivedAt ? "Settled" : active ? active.state.replaceAll("-", " ") : "Ready"} · {conversation.provider.model}</p>
         {conversation.workspace.branch && <p className="flex min-w-0 items-center gap-1.5 text-muted-foreground"><GitBranch className="size-3 shrink-0" aria-hidden="true" /><span className="truncate" title={conversation.workspace.branch}>{conversation.workspace.branch}</span></p>}
       </div>
+      <ThreadIdePicker key={conversation.id} workspace={conversation.workspace} />
       <div className="space-y-2 border-t border-border/50 pt-3">
         <p className="font-medium">Reviewed changes</p>
         {changes.status === "ready" ? <>
@@ -41,7 +43,7 @@ export function ThreadInsightsPanel({ header, providerLabel, changes, request, e
           : changeRequest?.pullRequestNumber ? <Button variant="ghost" className="h-8 w-full justify-start px-0 text-xs" disabled={!changeRequest.webUrl} onClick={() => { if (changeRequest.webUrl) void noraSystemClient.openExternalUrl(changeRequest.webUrl); }}>#{changeRequest.pullRequestNumber}<span className="ml-auto text-muted-foreground">{changeRequest.label}</span><ExternalLink className="size-3" aria-hidden="true" /></Button>
           : <p className="text-muted-foreground">No pull or merge request found.</p>}
       </div>
-      <div className="flex items-center justify-between gap-2 border-t border-border/50 pt-3 text-[10px] text-muted-foreground"><span className="truncate">{providerLabel} · {conversation.provider.permissionPolicy}</span><Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" disabled={busy || !canArchive} onClick={onArchive}>{conversation.archivedAt ? "Archived" : "Archive"}</Button></div>
+      <div className="flex items-center justify-between gap-2 border-t border-border/50 pt-3 text-[10px] text-muted-foreground"><span className="truncate">{providerLabel} · {conversation.provider.permissionPolicy}</span><Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" disabled={busy || !canSettle} onClick={onSettleChange}>{conversation.archivedAt ? "Reopen" : "Settle"}</Button></div>
     </div>}
   </aside>;
 }

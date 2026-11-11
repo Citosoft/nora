@@ -49,6 +49,8 @@ export function WorkspaceSidebar() {
     {workspace && <WorkspaceShortcuts workspace={workspace} role={role} collapsed={collapsed} />}
     {!collapsed && (error || navigation.preferenceError) && <p role="alert" className="px-4 pb-3 text-xs text-destructive">{error ?? navigation.preferenceError}</p>}
     {collapsed ? <div className="min-h-0 flex-1" /> : <ThreadNavigation workspaceId={nativeWorkspace?.id ?? (workspace ? `unregistered:${workspace.project.id}` : null)} query={query} unified onNavigate={navigation.closeTool}
+      sort={navigation.preferences.threadSort} onSortChange={(threadSort) => navigation.setPreferences((current) => ({ ...current, threadSort }))}
+      sourceFilter={navigation.preferences.threadSourceFilter} onSourceFilterChange={(threadSourceFilter) => navigation.setPreferences((current) => ({ ...current, threadSourceFilter }))}
       grouping={navigation.preferences.threadGrouping} onGroupingChange={(threadGrouping) => navigation.setPreferences((current) => ({ ...current, threadGrouping }))} />}
     <div className="w-full shrink-0"><WorkspaceUtilities collapsed={collapsed} /></div>
   </aside>;

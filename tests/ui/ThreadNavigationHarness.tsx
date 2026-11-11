@@ -15,6 +15,7 @@ import { ThreadWorkspaceComposition } from "@/components/app/views/ThreadWorkspa
 import { Input } from "@/components/ui/input";
 import type { ProjectSummary, WorkspaceSummary } from "@shared/appTypes";
 import type { ThreadRunState } from "@/components/app/types/thread-workspace/ports.types";
+import { pickerCatalog } from "../unit/renderer/modelPickerFixtures";
 import { threadSummary, threadWorkspaceFixture } from "../unit/renderer/threadWorkspaceFixtures";
 
 const fixture = threadWorkspaceFixture();
@@ -37,6 +38,22 @@ addThread("nora-old", "Review the release notes", "project", "completed");
 addThread("website", "Update the homepage", "website", "awaiting-approval");
 addThread("website-old", "Improve the pricing page", "website", "completed");
 addThread("personal", "Collect design references", "personal");
+let showExternal = false;
+const externalSessions = [
+  { origin: "cli" as const, id: "codex-cli", title: "Fix the terminal regression", providerKind: "codex" as const, instanceId: "account", cwd: "/project", createdAt: fixture.deps.now(), updatedAt: fixture.deps.now() },
+  { origin: "cli" as const, id: "claude-cli", title: "Continue the Claude investigation", providerKind: "claude" as const, instanceId: "account", cwd: "/project", createdAt: fixture.deps.now(), updatedAt: fixture.deps.now() }
+];
+fixture.deps.client.externalSessions = async (kind, _instance, workspace) => ({ status: "available", sessions: showExternal && workspace.projectId === "project" ? externalSessions.filter((session) => session.providerKind === kind) : [] });
+const originalExecute = fixture.deps.client.execute;
+fixture.deps.client.execute = async (command) => {
+  const receipt = await originalExecute(command);
+  if (command.kind === "create" && command.externalSessionId) {
+    const summary = fixture.summaries.find((entry) => entry.conversation.id === receipt.conversationId);
+    if (summary) summary.conversation = { ...summary.conversation, nativeConversationId: command.externalSessionId, origin: "cli" };
+  }
+  return receipt;
+};
+fixture.deps.client.catalog = async (kind, instanceId) => pickerCatalog({ kind, instanceId, label: kind });
 const store = createThreadWorkspaceStore(fixture.deps);
 store.focusWorkspace("project");
 store.togglePin("pinned");
@@ -58,10 +75,12 @@ function SidebarPreview() {
       <div className="flex px-3 pt-3"><WorkspaceSwitcher workspaces={workspaces} activeId={activeId} collapsed={false} recentWorkspaces={[]}
         onSelect={(id) => { setActiveId(id); store.focusWorkspace(id === "shell" ? "project" : "website"); }} onOpenRecent={() => {}} onAdd={() => {}} /></div>
       <div className="px-4 py-3"><Input aria-label="Search threads" placeholder="Search threads…" value={query} onChange={(event) => setQuery(event.target.value)} /></div>
-      <ThreadNavigation unified query={query} grouping={navigation.preferences.threadGrouping}
+      <ThreadNavigation unified query={query} sort={navigation.preferences.threadSort}
+        onSortChange={(threadSort) => navigation.setPreferences((current) => ({ ...current, threadSort }))} sourceFilter={navigation.preferences.threadSourceFilter}
+        onSourceFilterChange={(threadSourceFilter) => navigation.setPreferences((current) => ({ ...current, threadSourceFilter }))} grouping={navigation.preferences.threadGrouping}
         onGroupingChange={(threadGrouping) => navigation.setPreferences((current) => ({ ...current, threadGrouping }))} />
     </aside>
-    <div className="flex-1 p-10"><h1 className="text-xl font-semibold">Workspace threads</h1><p className="mt-2 text-sm text-muted-foreground">Find a thread across your workspaces.</p><output id="navigation-state" className="sr-only">{JSON.stringify({ grouping: navigation.preferences.threadGrouping, activeId: state.layout.activeId })}</output></div>
+    <div className="flex-1 p-10"><h1 className="text-xl font-semibold">Workspace threads</h1><p className="mt-2 text-sm text-muted-foreground">Find a thread across your workspaces.</p><button id="load-external" onClick={() => { showExternal = true; store.updateBoot({ ...store.snapshot().boot, providers: [...fixture.deps.boot.providers, { kind: "claude", instanceId: "account", label: "Claude" }] }); }}>Load external conversations</button><output id="navigation-state" className="sr-only">{JSON.stringify({ grouping: navigation.preferences.threadGrouping, activeId: state.layout.activeId, commands: fixture.commands.map((command) => command.kind) })}</output></div>
   </main>;
 }
 const root = document.getElementById("app");

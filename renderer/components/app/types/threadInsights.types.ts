@@ -1,5 +1,5 @@
 import type { ConversationHeader } from "@shared/types/conversation/queries.types";
-import type { TimelineItem } from "@shared/types/conversation/contracts.types";
+import type { TimelineItem, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ForgeBranchPullRequestStatus } from "@shared/appTypes";
 import type { NativeWorkspace } from "@shared/types/personalization/workspaces.types";
 
@@ -25,10 +25,14 @@ export interface ThreadInsightsPanelProps {
   request: ThreadRequestState;
   expanded: boolean;
   busy: boolean;
-  canArchive: boolean;
+  canSettle: boolean;
   hasOlderHistory: boolean;
   onToggle(): void;
   onRefresh(): void;
   onLoadHistory(): void;
-  onArchive(): void;
+  onSettleChange(): void;
+}
+
+export interface ThreadIdePickerProps {
+  workspace: WorkspaceRef;
 }

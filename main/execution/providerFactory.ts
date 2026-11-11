@@ -1,3 +1,4 @@
+import { createClaudeExternalSessions } from "@main/providers/claude/externalSessions";
 import { randomUUID } from "node:crypto";
 import { AcpAdapter } from "@main/providers/acp/adapter";
 import { createClaudeAccount } from "@main/providers/claude/account";
@@ -14,7 +15,7 @@ export function createExecutionProvider(instance: NativeInstance, now: () => str
   switch (instance.kind) {
     case "codex": return new CodexAdapter({ ...instance.options, now });
     case "claude": return new ClaudeAdapter({ instanceId: instance.instanceId, policies: instance.policies,
-      open: createClaudeOpener(instance.runtime), discover: createClaudeDiscovery(instance.runtime), readMcp: createClaudeMcpReader(instance.runtime),
+      externalSessions: createClaudeExternalSessions(instance.instanceId), open: createClaudeOpener(instance.runtime), discover: createClaudeDiscovery(instance.runtime), readMcp: createClaudeMcpReader(instance.runtime),
       account: createClaudeAccount(instance.runtime), now, nextId: randomUUID });
     case "acp": return new AcpAdapter({ ...instance.options, now });
   }

@@ -1,3 +1,4 @@
+import type { ThreadListRow, ThreadSourceFilter, ThreadSort } from "./list.types";
 import type { ForgeBranchPullRequestStatus } from "@shared/appTypes";
 import type { ReactNode } from "react";
 import type { ConversationRun, ProviderBinding } from "@shared/types/conversation/contracts.types";
@@ -6,23 +7,26 @@ import type { ThreadDocument, ThreadWorkspaceStore, ThreadWorkspaceSnapshot } fr
 import type { ThreadGrouping } from "./navigation.types";
 import type { WorkspaceAvatarIdentity } from "@/components/app/types/workspaceAvatar.types";
 
-export type ThreadNavigationFilter = "all" | "active" | "attention" | "archive";
+export type ThreadNavigationFilter = "all" | "active" | "attention" | "settled";
 export type ThreadNavigationStatus = "Queued" | "Starting" | "Working" | "Needs approval" | "Needs input" | "Stopping"
-  | "Completed" | "Failed" | "Interrupted" | "Outcome unconfirmed" | "Delivery unconfirmed" | "Draft" | "Queue paused" | "Ready";
+  | "Completed" | "Failed" | "Interrupted" | "Outcome unconfirmed" | "Delivery unconfirmed" | "Draft" | "Queue paused" | "Ready" | "Settled";
 export interface ThreadRowProps {
-  row: ThreadNavigationRow;
+  row: ThreadListRow;
+  now?: number;
   workspace: WorkspaceAvatarIdentity | null;
   request: ForgeBranchPullRequestStatus | null;
-  onOpen(row: ThreadNavigationRow): void;
+  onOpen(row: ThreadListRow): void;
   onTogglePin(conversationId: string): void;
+  onSetSettled?(row: ThreadListRow, settled: boolean): void;
 }
-export interface ThreadStatusIconProps { row: ThreadNavigationRow; }
+export interface ThreadStatusIconProps { row: Pick<ThreadNavigationRow, "status" | "working" | "unread">; }
 export interface ThreadNavigationRow {
   target: { kind: "draft"; documentId: string } | { kind: "thread"; conversationId: string };
   id: string;
   title: string;
   workspaceId: string;
   providerKind: ProviderBinding["kind"] | null;
+  origin?: "cli" | "desktop";
   status: ThreadNavigationStatus;
   active: boolean;
   working: boolean;
@@ -32,9 +36,13 @@ export interface ThreadNavigationRow {
   selected: boolean;
   hasDraft: boolean;
   queuedCount: number;
+  settled?: boolean;
   updatedAt: string;
 }
 export interface ThreadNavigationPorts {
+  client: ThreadWorkspaceStore["client"];
+  resumeExternal: ThreadWorkspaceStore["resumeExternal"];
+  setSettled: ThreadWorkspaceStore["setSettled"];
   state: ThreadWorkspaceSnapshot;
   focusWorkspace(workspaceId: string): void;
   openDraft(workspaceId: string): void;
@@ -67,6 +75,10 @@ export interface ThreadNavigationProps {
   query?: string;
   unified?: boolean;
   onNavigate?(): void;
+  sort?: ThreadSort;
+  onSortChange?(sort: ThreadSort): void;
+  sourceFilter?: ThreadSourceFilter;
+  onSourceFilterChange?(source: ThreadSourceFilter): void;
   grouping?: ThreadGrouping;
   onGroupingChange?(grouping: ThreadGrouping): void;
 }

@@ -1,4 +1,4 @@
-import { noraToolingClient } from "@/components/app/clients/noraToolingClient";
+import { useToolUsage } from "@/components/app/hooks/useToolUsage";
 import { productFaviconUrl } from "@/components/app/logic/productIcon";
 import { formatInstallLogText, stripTerminalControlSequences } from "@/components/app/logic/terminalLogText";
 import { formatTimestamp, statusVariant } from "@/components/app/logic/utils";
@@ -331,36 +331,10 @@ export const ToolPopover = forwardRef<HTMLDivElement, {
   allowRemoval = true,
   centered = false
 }, ref) {
-  const [usageInfo, setUsageInfo] = useState<ToolUsageInfo | null>(null);
-  const [usageStatus, setUsageStatus] = useState<"idle" | "loading">("idle");
-
-  useEffect(() => {
-    let cancelled = false;
-    setUsageStatus("loading");
-
-    noraToolingClient.getToolUsage(tool.id).then((nextUsage) => {
-      if (!cancelled) {
-        setUsageInfo(nextUsage);
-        setUsageStatus("idle");
-      }
-    }).catch((error: unknown) => {
-      if (!cancelled) {
-        setUsageInfo({
-          status: "error",
-          title: "Usage Lookup Failed",
-          windows: [],
-          account: null,
-          lines: [error instanceof Error ? error.message : "Unknown error"],
-          fetchedAt: new Date().toISOString()
-        });
-        setUsageStatus("idle");
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [tool]);
+  const { entry: usage } = useToolUsage(tool.id);
+  const usageInfo: ToolUsageInfo | null = usage?.error
+    ? { status: "error", title: "Usage Lookup Failed", windows: [], account: null, lines: [usage.error], fetchedAt: new Date(usage.loadedAt ?? Date.now()).toISOString() }
+    : usage?.info ?? null;
 
   return (
     <div
@@ -418,7 +392,7 @@ export const ToolPopover = forwardRef<HTMLDivElement, {
       <div className="mt-4 space-y-2">
         <div className="flex items-center justify-between">
           <div className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Usage</div>
-          {usageStatus === "loading" ? (
+          {usage?.loading ? (
             <div className="text-xs text-muted-foreground">Loading...</div>
           ) : null}
         </div>

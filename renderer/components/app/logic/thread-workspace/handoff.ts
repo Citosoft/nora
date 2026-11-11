@@ -14,7 +14,7 @@ export async function handoffThread(store: ThreadWorkspaceStore, conversationId:
   }
   store.setText(id, text);
   const header = await store.client.header(conversationId);
-  if (!header || header.conversation.archivedAt) throw new Error("This thread is unavailable or archived. The context is retained as a draft.");
+  if (!header || header.conversation.archivedAt) throw new Error("This thread is unavailable or settled. The context is retained as a draft.");
   const provider = header.conversation.provider;
   const catalog = await store.client.catalog(provider.kind, provider.instanceId, header.conversation.workspace);
   const resolution = resolveModelBinding({ provider: { ...provider, label: provider.kind }, catalog, locked: provider,

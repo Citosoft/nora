@@ -17,9 +17,9 @@ const isHourlyLine = (line: string): boolean =>
 const isWeeklyLine = (line: string): boolean =>
   /week|weekly|7d/i.test(line) && /(limit|remaining|used|usage|quota)/i.test(line);
 
-const CLI_WINDOW_MATCHERS: ReadonlyArray<{ id: string; label: string; shortLabel: string; matches: (line: string) => boolean }> = [
-  { id: "hourly", label: "Hourly", shortLabel: "H", matches: isHourlyLine },
-  { id: "weekly", label: "Weekly", shortLabel: "W", matches: isWeeklyLine }
+const CLI_WINDOW_MATCHERS: ReadonlyArray<Pick<ToolUsageWindow, "id" | "period" | "label" | "shortLabel"> & { matches: (line: string) => boolean }> = [
+  { id: "hourly", period: "session", label: "5-hour", shortLabel: "H", matches: isHourlyLine },
+  { id: "weekly", period: "weekly", label: "Weekly", shortLabel: "W", matches: isWeeklyLine }
 ];
 
 /** Parses CLI status text (Codex `/status`, auth hints) into usage windows and the signed-in account. */
@@ -28,7 +28,7 @@ export const parseCliUsageLines = (lines: string[]): { windows: ToolUsageWindow[
     const line = lines.find(matcher.matches);
     const percentLeft = line ? readPercentLeft(line) : null;
     return line && percentLeft !== null
-      ? [{ id: matcher.id, label: matcher.label, shortLabel: matcher.shortLabel, percentLeft, resetsLabel: readResetsLabel(line) }]
+      ? [{ id: matcher.id, period: matcher.period, label: matcher.label, shortLabel: matcher.shortLabel, percentLeft, resetsLabel: readResetsLabel(line) }]
       : [];
   });
   const accountLine = lines.find((line) => EMAIL_PATTERN.test(line))

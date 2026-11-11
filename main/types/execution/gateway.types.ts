@@ -1,7 +1,7 @@
 import type { ConversationCursorHint, ConversationGatewayReply, ConversationWatchReceipt } from "@shared/ipc/types/conversationGateway.types";
 import type { ExecutionHost } from "@main/execution/host";
 
-export type ConversationHost = Pick<ExecutionHost, "environmentId" | "execute" | "header" | "summaries" | "conversationHistory" | "history" | "catalog" | "mcp" | "account" | "subscribe" | "eventCursor">;
+export type ConversationHost = Pick<ExecutionHost, "externalSessions" | "environmentId" | "execute" | "header" | "summaries" | "conversationHistory" | "history" | "catalog" | "mcp" | "account" | "subscribe" | "eventCursor">;
 export type ConversationReplyValue = Extract<ConversationGatewayReply, { ok: true }>["value"];
 export interface GatewayDependencies { resolveHost: (environmentId: string) => ConversationHost | null }
 export interface WatchHandle { receipt: ConversationWatchReceipt; cancel: () => void }

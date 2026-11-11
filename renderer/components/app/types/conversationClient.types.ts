@@ -1,3 +1,4 @@
+import type { ExternalSessionsResult } from "@shared/types/conversation/externalSessions.types";
 import type { CommandReceipt, ConversationCommand, ConversationEvent, ProviderBinding, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ConversationHeader, ConversationHistoryPage, ConversationSummary, HistoryQuery } from "@shared/types/conversation/queries.types";
 import type { ProviderCatalogResult } from "@shared/types/provider/catalog.types";
@@ -9,6 +10,7 @@ export interface ConversationListener {
   onError: (error: Error) => void;
 }
 export interface ConversationClient {
+  externalSessions(kind: ProviderBinding["kind"], instanceId: string, workspace: WorkspaceRef): Promise<ExternalSessionsResult>;
   execute(command: ConversationCommand): Promise<CommandReceipt>;
   header(conversationId: string): Promise<ConversationHeader | null>;
   summaries(projectId?: string): Promise<ConversationSummary[]>;

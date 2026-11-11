@@ -1,12 +1,10 @@
+import { claudeToolCallSchema, claudeToolResultSchema } from "./toolSchemas";
 import { z } from "zod";
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { ClaudeToolFrame } from "@main/types/execution/claude.types";
 import type { ToolState } from "@shared/types/conversation/contracts.types";
 import { formatToolContent, formatToolInput } from "../toolPresentation";
 
-const callSchema = z.object({ type: z.enum(["tool_use", "server_tool_use"]), id: z.string(), name: z.string(), input: z.json() });
-const resultSchema = z.object({ type: z.string().refine((type) => type.endsWith("tool_result")), tool_use_id: z.string(),
-  content: z.json().optional(), is_error: z.boolean().optional() });
 const errorContentSchema = z.object({ type: z.string().refine((type) => type.endsWith("_error")) });
 const detachedResultSchema = z.object({ detachedToolCall: z.literal(true) });
 
@@ -75,7 +73,7 @@ export class ClaudeToolActivity {
       : message.type === "user" && Array.isArray(message.message.content) ? message.message.content
       : message.type === "stream_event" && message.event.type === "content_block_start" ? [message.event.content_block] : [];
     return blocks.flatMap((block) => {
-      const call = callSchema.safeParse(block);
+      const call = claudeToolCallSchema.safeParse(block);
       if (call.success) {
         const native = call.data;
         const category = native.name === "Bash" ? "command" : /^(Read|Write|Edit|Glob|Grep|MultiEdit)$/.test(native.name) ? "file"
@@ -84,7 +82,7 @@ export class ClaudeToolActivity {
           details: { category, input: formatToolInput(native.input),
             ...("parent_tool_use_id" in message && message.parent_tool_use_id ? { parentId: message.parent_tool_use_id } : {}) } });
       }
-      const result = resultSchema.safeParse(block);
+      const result = claudeToolResultSchema.safeParse(block);
       if (!result.success) return [];
       if (message.type === "user" && detachedResultSchema.safeParse(message.tool_use_result).success) return [];
       const native = result.data;

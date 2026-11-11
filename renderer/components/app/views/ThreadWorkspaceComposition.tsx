@@ -23,6 +23,7 @@ export function ThreadWorkspaceComposition({ store, children }: ThreadWorkspaceC
     };
   }, [store]);
   const actions = useMemo(() => ({
+    client: store.client, resumeExternal: store.resumeExternal, setSettled: store.setSettled,
     focusWorkspace: store.focusWorkspace,
     openDraft: (workspaceId: string) => { store.openDraft({ workspaceId }); },
     openRow: (row: Parameters<ThreadNavigationPorts["openRow"]>[0]) => {

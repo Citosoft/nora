@@ -1,5 +1,5 @@
 export class ExecutionCommandError extends Error {
-  constructor(readonly code: "missing" | "conflict" | "expired" | "invalid" | "cursor" | "environment", message: string) {
+  constructor(readonly code: "missing" | "conflict" | "expired" | "invalid" | "cursor" | "environment" | "unavailable", message: string) {
     super(message);
     this.name = "ExecutionCommandError";
   }

@@ -62,7 +62,7 @@
 
   :root[data-theme="dark"] {
     --background: 0 0% 10%;
-    --shell-background: 0 0% 12.5%;
+    --shell-background: 0 0% 11.5%;
     --foreground: 210 20% 94%;
     --card: 0 0% 14%;
     --card-foreground: 210 20% 94%;

@@ -1,28 +1,9 @@
-import { Fragment } from "react";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { Button } from "@/components/ui/button";
-import type { UsageDetailsProps, UsageWindowRowProps } from "@/components/app/types/workspaceUtilities.types";
+import type { UsageDetailsProps } from "@/components/app/types/workspaceUtilities.types";
+import { UsageSummaryGrid } from "@/components/app/shared/UsageSummaryGrid";
 import { ExternalLink, LoaderCircle, RefreshCcw, UserRound, Wrench } from "lucide-react";
-
-function UsageWindowRow({ window }: UsageWindowRowProps) {
-  return (
-    <>
-      <div className="text-[11px] text-muted-foreground">{window.label}</div>
-      <div className="min-w-0 space-y-1">
-        <div className="flex items-center gap-2">
-          <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
-            <div className="h-full rounded-full bg-primary/80" style={{ width: `${window.percentLeft}%` }} />
-          </div>
-          <div className="w-16 shrink-0 text-right text-xs tabular-nums text-foreground">{window.percentLeft}% left</div>
-        </div>
-        <div className="truncate text-xs text-muted-foreground" title={window.resetsLabel ?? "Reset time not reported"}>
-          {window.resetsLabel ? `Resets ${window.resetsLabel}` : "Reset time not reported"}
-        </div>
-      </div>
-    </>
-  );
-}
 
 export function UsageDetails({ tool, usageInfo, isUsageLoading, isActionLoading, error, onInstall, onSwitchAccount, onRefresh }: UsageDetailsProps) {
   const usageDashboardUrl = tool.usageDashboardUrl;
@@ -80,21 +61,7 @@ export function UsageDetails({ tool, usageInfo, isUsageLoading, isActionLoading,
         </div>
       ) : tool.supportsUsageStatus ? (
         <>
-          <div className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 text-sm">
-            {usageInfo?.windows.map((window) => <UsageWindowRow key={window.id} window={window} />)}
-            {usageInfo?.account ? (
-              <>
-                <div className="text-[11px] text-muted-foreground">User</div>
-                <div className="min-w-0 truncate text-foreground" title={usageInfo.account}>{usageInfo.account}</div>
-              </>
-            ) : null}
-            {usageInfo?.details?.map((detail) => (
-              <Fragment key={detail.label}>
-                <div className="text-[11px] text-muted-foreground">{detail.label}</div>
-                <div className="min-w-0 truncate text-foreground" title={detail.value}>{detail.value}</div>
-              </Fragment>
-            ))}
-          </div>
+          {usageInfo ? <UsageSummaryGrid info={usageInfo} /> : null}
           {usageInfo?.notice ? (
             <div role="status" className="text-xs text-muted-foreground">{usageInfo.notice}</div>
           ) : null}

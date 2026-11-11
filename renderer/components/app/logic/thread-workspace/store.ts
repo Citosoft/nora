@@ -1,3 +1,5 @@
+import { setThreadSettlement } from "./settlement";
+import { importExternalSession } from "./externalSessions";
 import { unreadCompletions } from "./unread";
 import { effectiveRole } from "@shared/personalization/profiles";
 import { threadLayoutSchema } from "./schema";
@@ -57,8 +59,10 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
   };
   const internal: ThreadWorkspaceInternals = { deps, snapshot: () => state, runtime, setRuntime, save, refresh: scheduleRefresh };
   const submission = createThreadSubmission(internal);
-  return {
+  const store: ThreadWorkspaceStore = {
     client: deps.client,
+    async setSettled(target, settled) { await setThreadSettlement(internal, target, settled); await refresh(); },
+    resumeExternal: (workspaceId, session) => importExternalSession(deps, store, workspaceId, session),
     snapshot: () => state,
     subscribe(listener) { listeners.add(listener); return () => { listeners.delete(listener); }; },
     start() {
@@ -147,4 +151,5 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
     },
     ...submission
   };
+  return store;
 }

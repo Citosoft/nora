@@ -1,3 +1,5 @@
+import type { ExternalTranscript } from "@main/types/execution/externalSessions.types";
+import { externalImportEvents } from "./externalImport";
 import { conversationCommandSchema, workspaceRefSchema } from "@shared/conversations/contracts";
 import type { CommandReceipt, ConversationCommand, ConversationSnapshot, EventPayload, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ActiveSubscription, EngineDependencies, EventSubscription } from "@main/types/execution/engine.types";
@@ -42,7 +44,7 @@ export class ConversationEngine {
     return previous.receipt;
   }
 
-  execute(input: ConversationCommand, preparedWorkspace?: WorkspaceRef, preparedRole?: RoleSelection | null): CommandReceipt {
+  execute(input: ConversationCommand, preparedWorkspace?: WorkspaceRef, preparedRole?: RoleSelection | null, externalTranscript?: ExternalTranscript): CommandReceipt {
     this.deps.assertOwnership();
     const command = conversationCommandSchema.parse(input);
     const decisionCommand = command.kind === "create"
@@ -57,10 +59,24 @@ export class ConversationEngine {
         return previous.receipt;
       }
       const now = this.deps.now();
+      if (command.kind === "create" && command.externalSessionId) {
+        if (!externalTranscript || externalTranscript.session.id !== command.externalSessionId) throw new ExecutionCommandError("invalid", "External history must be verified by its provider before importing");
+        const existing = transaction.summaries().find(({ conversation }) => conversation.nativeConversationId === command.externalSessionId
+          && conversation.provider.kind === command.provider.kind && conversation.provider.instanceId === command.provider.instanceId);
+        if (existing) {
+          if (existing.conversation.archivedAt) throw new ExecutionCommandError("conflict", "This conversation is settled in Nora. Reopen it from the Settled view");
+          const receipt = { commandId: command.commandId, conversationId: existing.conversation.id, cursor: transaction.cursor(), acceptedAt: now };
+          transaction.putReceipt({ key, fingerprint, receipt });
+          return receipt;
+        }
+      }
       const state = transaction.state(command.conversationId, "runId" in command ? command.runId : undefined);
       const decision = decideCommand(decisionCommand, { now, environmentId: this.deps.store.environmentId, state,
         writers: state ? transaction.writers(state.conversation.workspace) : [], effects: transaction.unfinishedEffects() });
-      const cursor = this.commitEvents(transaction, command.conversationId, now, decision.events);
+      const created = decision.events.find((event) => event.kind === "conversation");
+      const events = command.kind === "create" && externalTranscript && created?.kind === "conversation"
+        ? externalImportEvents(created.conversation, externalTranscript) : decision.events;
+      const cursor = this.commitEvents(transaction, command.conversationId, now, events);
       for (const effect of decision.effects) transaction.putEffect(effect);
       const receipt = { commandId: command.commandId, conversationId: command.conversationId, cursor, acceptedAt: now };
       transaction.putReceipt({ key, fingerprint, receipt });

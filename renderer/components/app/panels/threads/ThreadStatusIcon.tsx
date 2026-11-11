@@ -1,8 +1,9 @@
-import { CircleAlert, CircleHelp, CircleStop, LoaderCircle, PauseCircle, ShieldQuestion, TriangleAlert } from "lucide-react";
+import { CircleCheck, CircleAlert, CircleHelp, CircleStop, LoaderCircle, PauseCircle, ShieldQuestion, TriangleAlert } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ThreadNavigationStatus, ThreadStatusIconProps } from "@/components/app/types/thread-workspace/ports.types";
 
 const statusIcons: Partial<Record<ThreadNavigationStatus, LucideIcon>> = {
+  Settled: CircleCheck,
   "Needs input": CircleHelp,
   "Needs approval": ShieldQuestion,
   Failed: CircleAlert,
@@ -17,6 +18,7 @@ export function ThreadStatusIcon({ row }: ThreadStatusIconProps) {
   const Icon = StatusIcon ?? (row.working ? LoaderCircle : null);
   const label = StatusIcon ? row.status : "Working";
   const color = row.status === "Failed" ? "text-destructive"
+    : row.status === "Settled" ? "text-green-700 dark:text-green-400"
     : ["Needs input", "Needs approval", "Outcome unconfirmed", "Delivery unconfirmed"].includes(row.status)
       ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground";
   if (!Icon && !row.unread) return null;

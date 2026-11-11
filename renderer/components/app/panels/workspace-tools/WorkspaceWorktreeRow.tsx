@@ -1,6 +1,5 @@
 import { Ellipsis, GitBranch, Trash2 } from "lucide-react";
 import { useWorkspaceSidebarActions } from "@/components/app/context/workspaceSidebarContext";
-import { useWorkspaceView } from "@/components/app/hooks/useWorkspaceView";
 import { useWorkspaceNavigation } from "@/components/app/hooks/useWorkspaceNavigation";
 import { useStatusBar } from "@/components/app/logic/statusBarContext";
 import { formatWorkspaceSidebarWorktreeLocationLabel, getWorkspaceSidebarPullRequestDotClass, workspaceSidebarHasPullRequestState } from "@/components/app/logic/workspaceSidebarPresentation";
@@ -16,12 +15,11 @@ import { cn } from "@/lib/utils";
 export function WorkspaceWorktreeRow({ workspace, worktree, focused, removing, preferredShellId, pullRequestStatus }: WorkspaceWorktreeRowProps) {
   const actions = useWorkspaceSidebarActions();
   const { openTool } = useWorkspaceNavigation();
-  const { updateView } = useWorkspaceView(workspace.project.id);
   const statusBar = useStatusBar();
   const root = worktree.path === workspace.project.rootPath || worktree.createdFromRef === "ROOT";
   const canRemove = canRemoveWorkspaceWorktree(workspace, worktree, root);
   const actionable = worktree.status === "ready" || worktree.status === "creating";
-  const focus = () => { actions.onFocusWorkspaceView(worktree.id); updateView({ changesTab: "changes" }); openTool(workspace.project.id, "changes"); };
+  const focus = () => { actions.onFocusWorkspaceView(worktree.id); };
   const checkout = async () => {
     const statusId = statusBar.beginStatus(`Checking out ${worktree.branch}`, true);
     try { await actions.onCheckoutWorkspaceBranch(workspace.project.id, worktree.branch); }

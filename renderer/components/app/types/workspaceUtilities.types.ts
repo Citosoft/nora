@@ -1,6 +1,6 @@
 import type { StatusBarEntry } from "@/components/app/types";
 import type { TitleBarProps } from "@/components/app/types/chromeDialog.types";
-import type { AgentCatalogEntry, ToolUsageInfo, ToolUsageWindow } from "@shared/appTypes";
+import type { AgentCatalogEntry, ToolUsageInfo } from "@shared/appTypes";
 
 export type AppToolsProps = Pick<TitleBarProps,
   "resolvedTheme" | "onToggleTheme" | "onOpenSettings" | "onOpenKeyboardShortcuts" | "onOpenAbout" |
@@ -35,5 +35,4 @@ export interface UsageDetailsProps {
   onSwitchAccount(refreshUsage: boolean): void;
   onRefresh(): void;
 }
-export interface UsageWindowRowProps { window: ToolUsageWindow; }
 export interface ActivityNoticeProps { entries: StatusBarEntry[]; }

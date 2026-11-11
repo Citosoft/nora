@@ -6,7 +6,7 @@ import type { NativeWorkspace } from "@shared/types/personalization/workspaces.t
 import type { WorkspaceCatalogOptions, WorkspaceCatalog } from "@main/types/personalization/services.types";
 import { isNodeError } from "@main/nodeErrors";
 
-/** Only the filesystem owner supplies paths. Persist identity so replacement never silently rebinds history. */
+/** Catalog selections follow current checkouts; execution history retains its own pinned identity. */
 export async function openWorkspaceCatalog(options: WorkspaceCatalogOptions): Promise<WorkspaceCatalog> {
   if (!isAbsolute(options.indexPath) || !isAbsolute(options.personalPath)) throw new Error("Workspace storage must use absolute host-owned paths");
   let workspaces: NativeWorkspace[] = [];
@@ -34,11 +34,15 @@ export async function openWorkspaceCatalog(options: WorkspaceCatalogOptions): Pr
     const canonical = await realpath(path);
     const previous = workspaces.find((entry) => entry.workspace.path === canonical);
     if (previous) {
-      // Catalog selections follow branch switches; conversation snapshots remain pinned.
+      // Refresh only the selection, never the immutable workspace on an existing conversation.
       const current = await options.prepare(previous.workspace);
-      const refreshed = { ...previous, workspace: { ...previous.workspace, branch: current.branch } };
+      const isPersonal = previous.kind === "personal";
+      if (current.path !== canonical) throw new Error("Workspace storage must remain at its registered root");
+      if (isPersonal && current.versionControl === "git") throw new Error("Personal storage must be outside a repository");
+      const refreshed: NativeWorkspace = { ...previous, workspace: current,
+        kind: isPersonal ? "personal" : current.versionControl === "git" ? "repository" : "folder" };
       await options.authority.verify(refreshed.workspace);
-      if (current.branch !== previous.workspace.branch) {
+      if (JSON.stringify(refreshed) !== JSON.stringify(previous)) {
         await persist(workspaces.map((entry) => entry.id === previous.id ? refreshed : entry));
       }
       return structuredClone(refreshed);
@@ -57,7 +61,11 @@ export async function openWorkspaceCatalog(options: WorkspaceCatalogOptions): Pr
     registrations: () => workspaces.map(({ workspace }) => ({ projectId: workspace.projectId, checkoutId: workspace.checkoutId, path: workspace.path })),
     ensurePersonal: () => serialize(async () => {
       const existing = workspaces.find((entry) => entry.kind === "personal");
-      if (existing) { await options.authority.verify(existing.workspace); return structuredClone(existing); }
+      if (existing) {
+        const info = await lstat(existing.workspace.path);
+        if (!info.isDirectory() || info.isSymbolicLink()) throw new Error("Personal storage is not a regular directory");
+        return admit(existing.workspace.path, existing.name, true);
+      }
       await mkdir(dirname(options.personalPath), { recursive: true, mode: 0o700 });
       try { await mkdir(options.personalPath, { mode: 0o700 }); }
       catch (error) { if (!isNodeError(error) || error.code !== "EEXIST") throw error; }

@@ -1,10 +1,9 @@
-import { createHash } from "node:crypto";
 import { realpath, stat } from "node:fs/promises";
 import { isAbsolute } from "node:path";
-import { normalizeComparablePath } from "@shared/pathComparison";
 import type { WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { LocalWorkspaceOptions, WorkspaceAuthority } from "@main/types/execution/workspace.types";
 import { ExecutionCommandError } from "./errors";
+import { checkoutIdentity } from "./checkoutIdentity";
 
 /** Runs on the filesystem owner. Remote selections must be routed to their remote authority. */
 export class LocalWorkspaceAuthority implements WorkspaceAuthority {
@@ -38,10 +37,8 @@ export class LocalWorkspaceAuthority implements WorkspaceAuthority {
       const root = await realpath(inspection.rootPath);
       const info = await stat(root, { bigint: true });
       if (!info.isDirectory()) throw new Error("Checkout is not a directory");
-      const comparable = normalizeComparablePath(root, { windows: process.platform === "win32" });
       // File identity detects replacement at the same path; realpath merges symlink aliases.
-      const identity = JSON.stringify([workspace.environmentId, comparable, String(info.dev), String(info.ino)]);
-      const checkoutId = `checkout:${createHash("sha256").update(identity).digest("hex")}`;
+      const checkoutId = checkoutIdentity(workspace.environmentId, root, info);
       return { ...workspace, path: root, branch: inspection.branch, checkoutId,
         ...(inspection.versionControl ? { versionControl: inspection.versionControl } : {}) };
     } catch (error) {

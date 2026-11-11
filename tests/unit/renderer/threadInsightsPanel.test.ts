@@ -10,8 +10,8 @@ test("thread details mount in the standalone simulator without the signed-in she
     header: { schemaVersion: 1, cursor: 0, conversation: threadSummary().conversation,
       activeRuns: [], queuedRuns: [], pendingRequests: [] },
     providerLabel: "Simulator · no LLM", changes: { status: "pending" }, request: { status: "unavailable" }, expanded: true,
-    busy: false, canArchive: true, hasOlderHistory: false,
-    onToggle() {}, onRefresh() {}, onLoadHistory() {}, onArchive() {}
+    busy: false, canSettle: true, hasOlderHistory: false,
+    onToggle() {}, onRefresh() {}, onLoadHistory() {}, onSettleChange() {}
   }));
   assert.ok(rendered.includes("Simulator · no LLM"));
 });

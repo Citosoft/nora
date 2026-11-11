@@ -1,19 +1,21 @@
-import type { Dispatch, ReactNode, SetStateAction, PointerEventHandler } from "react";
+import type { ThreadSourceFilter, ThreadSort } from "./thread-workspace/list.types";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 import type { LucideIcon } from "lucide-react";
 import type { WorkspaceSummary, RecentProject, TerminalSession, WorktreeRecord, ForgeBranchPullRequestStatus } from "@shared/appTypes";
-import type { ChangesPanelSectionProps } from "@/components/app/types/changesPanel.types";
 import type { WorkspaceWorkspaceActionsMenuItemsProps } from "@/components/app/types/workspaceSidebarActionsMenu.types";
 import type { RoleSelection } from "@shared/types/personalization/roles.types";
 import type { ThreadGrouping } from "@/components/app/types/thread-workspace/navigation.types";
 import type { WorkspaceAvatarColor } from "@/components/app/types/workspaceAvatar.types";
 import type { WorkspaceViewPreferences } from "./workspaceView.types";
 
-export type WorkspaceToolId = "files" | "changes" | "documents" | "tasks" | "workflows" | "terminals" | "browser";
+export type WorkspaceToolId = "worktrees" | "documents" | "tasks" | "workflows" | "terminals" | "browser";
 export interface WorkspaceToolItem { id: WorkspaceToolId; label: string; icon: LucideIcon; }
 export interface SidebarPreferences {
   pinnedWorkspaceIds: string[];
   toolPins: Record<string, WorkspaceToolId[]>;
   threadGrouping: ThreadGrouping;
+  threadSourceFilter: ThreadSourceFilter;
+  threadSort: ThreadSort;
   workspaceAvatarColors: Record<string, WorkspaceAvatarColor>;
   workspaceViews: Record<string, WorkspaceViewPreferences>;
 }
@@ -48,13 +50,6 @@ export interface WorkspaceToolContentProps extends WorkspaceToolProps { tool: Wo
 export type TerminalLaunchMenuProps = Pick<WorkspaceWorkspaceActionsMenuItemsProps,
   "workspace" | "focusedProjectId" | "terminalShells" | "preferredShellId" | "terminalQuickLaunchDefaults" | "runnableGlobalTerminalPresets" | "onItemSelected" | "onFocusWorkspace" | "onLaunchWorkspaceTerminal" | "onOpenCreateTerminal" | "onOpenWorkspaceTerminalPresets">;
 export interface WorkspaceTerminalTabProps { terminal: TerminalSession; selected: boolean; }
-
-export interface WorkspaceChangesSurfaceProps {
-  panel: ChangesPanelSectionProps;
-  collapsed: boolean;
-  swapped: boolean;
-  onStartResize: PointerEventHandler<HTMLDivElement>;
-}
 
 export interface WorkspaceWorktreeRowProps extends WorkspaceToolProps {
   worktree: WorktreeRecord;

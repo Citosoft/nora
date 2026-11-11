@@ -131,3 +131,12 @@ test("a cursor from a newer or different store fails hydration instead of silent
   try { await until(() => errors.length === 1); assert.match(errors[0].message, /cursor is unavailable/); }
   finally { close(); }
 });
+
+test("ordinary conversation commands still reject a receipt for a different thread", async () => {
+  const bridge = createConversationBridge({ async invoke() { return { ok: true, value: { kind: "receipt", receipt: {
+    commandId: "send", conversationId: "another-thread", cursor: 1, acceptedAt: "2026-11-10T10:00:00.000Z"
+  } } }; }, onCursor() { return () => {}; } });
+  await assert.rejects(bridge.execute({ schemaVersion: 1, environmentId: "local", command: {
+    kind: "submit", commandId: "send", conversationId: "expected-thread", runId: "run", instruction: "Continue"
+  } }), /incompatible response/);
+});

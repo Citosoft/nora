@@ -41,8 +41,8 @@ export function NativeConversationPanel() {
   const firstName = getGreetingFirstName(ports.userDisplayName);
   const pending = document.pending;
   const busy = runtime.busy;
-  const archived = !!header?.conversation.archivedAt;
-  const canSend = !busy && !archived && (!conversationId || !!header)
+  const settled = !!header?.conversation.archivedAt;
+  const canSend = !busy && !settled && (!conversationId || !!header)
     && (!!pending || (!!runtime.readyBinding && !!document.text.trim()));
   const showStop = !!active && active.state !== "recovering" && !pending && !document.text.trim();
   const sendLabel = pending ? "Retry saved instruction" : active ? "Queue instruction" : "Send instruction";
@@ -60,9 +60,9 @@ export function NativeConversationPanel() {
   return <section className="thread-conversation flex min-h-0 min-w-0 flex-1 flex-col" aria-label={conversationId ? "Thread" : "New thread"}>
     <div className="relative flex min-h-0 flex-1 flex-col" data-thread-insights={header ? insightsExpanded ? "expanded" : "collapsed" : undefined}>
     {header && <ThreadInsightsPanel header={header} providerLabel={nativeProviderLabel(ports.state.providers, header.conversation.provider)} changes={insights.changes} request={insights.request} expanded={insightsExpanded} busy={busy}
-      canArchive={!active && !header.queuedRuns.length && !archived} hasOlderHistory={!!view?.nextBefore}
+      canSettle={!active && !header.queuedRuns.length} hasOlderHistory={!!view?.nextBefore}
       onToggle={() => setInsightsExpanded((current) => !current)} onRefresh={insights.refresh} onLoadHistory={() => void older()}
-      onArchive={() => void execute({ kind: "archive", commandId: crypto.randomUUID(), conversationId: header.conversation.id })} />}
+      onSettleChange={() => void execute({ kind: settled ? "unarchive" : "archive", commandId: crypto.randomUUID(), conversationId: header.conversation.id })} />}
     <div className="thread-transcript min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-7" ref={transcript}
       onWheel={(event) => { if (event.deltaY < 0) follow.current = false; }}
       onScroll={() => { const element = transcript.current;
@@ -90,8 +90,8 @@ export function NativeConversationPanel() {
       {header && <NativeQueue conversationId={header.conversation.id} runs={header.queuedRuns} paused={header.conversation.queuePaused} busy={busy} execute={execute}
         steerTarget={capabilities?.steering && active?.state === "running" && active.nativeTurnId && !header.pendingRequests.length && !header.queuedRuns.some((run) => run.steering === "pending") ? active.id : null} />}
       <form className="relative space-y-2 rounded-lg border bg-card p-3 shadow-sm focus-within:ring-1 focus-within:ring-ring/30" onSubmit={(event) => { event.preventDefault(); if (canSend) void submit(); }}>
-        <NativeComposerInput inputRef={composer} value={pending?.submit.instruction ?? document.text} disabled={!!pending || archived}
-          placeholder={archived ? "This thread is archived" : active ? "Queue your next instruction…" : "Ask, plan, or start something…"}
+        <NativeComposerInput inputRef={composer} value={pending?.submit.instruction ?? document.text} disabled={!!pending || settled}
+          placeholder={settled ? "Reopen this settled thread to continue" : active ? "Queue your next instruction…" : "Ask, plan, or start something…"}
           suggestion={busy || pending || loadError || runtime.error ? null : selectPromptSuggestion(view, capabilities)}
           onChange={setText} onSubmit={() => { if (canSend) void submit(); }} />
         <div className="flex flex-wrap items-center gap-1 border-t pt-2">

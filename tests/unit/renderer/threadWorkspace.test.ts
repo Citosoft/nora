@@ -115,7 +115,7 @@ test("saved layouts reject duplicate thread identities and inconsistent pending 
   assert.equal(threadLayoutSchema.safeParse({ ...layout, environmentId: "remote" }).success, false);
 });
 
-test("navigation filters native attention/queue/archive state and pins by meaningful activity", async () => {
+test("navigation filters native attention, queue and settled state and pins by meaningful activity", async () => {
   const f = threadWorkspaceFixture(); const store = createThreadWorkspaceStore(f.deps);
   const archived = structuredClone(f.summaries[0]); archived.conversation.id = "archived"; archived.conversation.archivedAt = "2026-11-09T12:00:00.000Z";
   f.summaries.push(archived); f.summaries[0].queuedCount = 2; f.summaries[0].conversation.queuePaused = true;
@@ -123,7 +123,7 @@ test("navigation filters native attention/queue/archive state and pins by meanin
   assert.equal(buildThreadNavigation(store.snapshot(), "personal", "attention")[0].status, "Queue paused");
   assert.equal(buildThreadNavigation(store.snapshot(), "personal", "active")[0].queuedCount, 2);
   assert.equal(buildThreadNavigation(store.snapshot(), "personal", "all")[0].pinned, true);
-  assert.equal(buildThreadNavigation(store.snapshot(), "personal", "archive")[0].id, "archived");
+  assert.equal(buildThreadNavigation(store.snapshot(), "personal", "settled")[0].id, "archived");
 });
 
 test("navigation shows work only for executing runs, including closed threads", async () => {

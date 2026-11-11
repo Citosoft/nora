@@ -10,6 +10,7 @@ import { claudePermissionPolicy } from "./permissionPolicies";
 
 export class ClaudeAdapter implements ExecutionProvider {
   readonly kind = "claude";
+  get externalSessions() { return this.options.externalSessions; }
   readonly instanceId: string;
   readonly capabilities = { ...nativeCapabilities, promptSuggestions: true };
   private readonly active = new Map<string, ClaudeActive>();

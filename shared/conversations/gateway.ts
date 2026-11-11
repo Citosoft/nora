@@ -5,6 +5,7 @@ import { commandReceiptSchema, conversationCommandSchema, conversationEventSchem
 import { mcpResultSchema } from "@shared/providers/mcp";
 import { providerAccountResultSchema } from "@shared/providers/account";
 import { catalogResultSchema } from "./catalog";
+import { externalSessionsResultSchema } from "./externalSessions";
 
 const id = z.string().min(1).max(512);
 const cursor = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
@@ -12,6 +13,7 @@ const pageLimit = z.number().int().min(1).max(200).optional();
 const routed = { schemaVersion: z.literal(1), environmentId: id };
 export const executeRequestSchema = z.object({ ...routed, command: conversationCommandSchema }).strict();
 export const readRequestSchema = z.discriminatedUnion("kind", [
+  z.object({ ...routed, kind: z.literal("external-sessions"), providerKind: providerKindSchema, instanceId: id, workspace: workspaceRefSchema }).strict(),
   z.object({ ...routed, kind: z.literal("header"), conversationId: id }).strict(),
   z.object({ ...routed, kind: z.literal("summaries"), projectId: id.optional() }).strict(),
   z.object({ ...routed, kind: z.literal("history"), conversationId: id, scope: z.enum(["timeline", "runs"]),
@@ -36,6 +38,7 @@ const historySchema = z.discriminatedUnion("scope", [
 export const eventPageSchema = z.object({ schemaVersion: z.literal(1), after: cursor, nextCursor: cursor,
   events: z.array(conversationEventSchema).max(200) }).strict();
 export const readResultSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("external-sessions"), result: externalSessionsResultSchema }).strict(),
   z.object({ kind: z.literal("header"), header: headerSchema.nullable() }).strict(),
   z.object({ kind: z.literal("summaries"), summaries: z.array(summarySchema) }).strict(),
   z.object({ kind: z.literal("history"), page: historySchema }).strict(),

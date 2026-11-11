@@ -11,7 +11,7 @@ export function WorkspaceToolPanes() {
   const workspaces = useMemo(() => new Map(buildWorkspaceGroups(snapshot, new Set()).map((workspace) => [workspace.project.id, workspace])), [snapshot]);
   return <>{openedTools.map((entry) => {
     const workspace = workspaces.get(entry.projectId);
-    if (!workspace || entry.tool === "files" || entry.tool === "changes") return null;
+    if (!workspace) return null;
     const active = route?.projectId === entry.projectId && route.tool === entry.tool;
     return <SessionTabPane key={`${entry.projectId}:${entry.tool}`} visible={active}>
       <WorkspaceToolContent tool={entry.tool} workspace={workspace} active={active} />

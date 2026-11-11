@@ -1,3 +1,5 @@
+import type { ThreadSettlementTarget } from "./settlement.types";
+import type { ExternalSession } from "@shared/types/conversation/externalSessions.types";
 import type { z } from "zod";
 import type { threadLayoutSchema, threadDocumentSchema } from "@/components/app/logic/thread-workspace/schema";
 import type { ProviderBinding, ConversationCommand, ConversationSource } from "@shared/types/conversation/contracts.types";
@@ -30,6 +32,8 @@ export interface ThreadWorkspaceDeps {
 export interface OpenThreadDraft { source?: ConversationSource; workspaceId: string; text?: string; provider?: ProviderBinding; }
 export interface ThreadWorkspaceStore {
   readonly client: ConversationClient;
+  setSettled(target: ThreadSettlementTarget, settled: boolean): Promise<void>;
+  resumeExternal(workspaceId: string, session: ExternalSession): Promise<void>;
   snapshot(): ThreadWorkspaceSnapshot;
   subscribe(listener: () => void): () => void;
   start(): () => void;

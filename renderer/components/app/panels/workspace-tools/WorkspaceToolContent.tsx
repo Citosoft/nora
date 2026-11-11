@@ -10,6 +10,7 @@ import { WorkspaceBrowserTool } from "./WorkspaceBrowserTool";
 import { WorkspaceSessionPanelProvider } from "@/components/app/context/workspaceSessionPanelContext";
 import { WorkspaceDocumentsTool } from "@/components/app/panels/workspace-tools/WorkspaceDocumentsTool";
 import { WorkspaceTerminalsTool } from "@/components/app/panels/workspace-tools/WorkspaceTerminalsTool";
+import { WorkspaceWorktreesTool } from "./WorkspaceWorktreesTool";
 import { WorkspaceToolHeader } from "@/components/app/panels/workspace-tools/WorkspaceToolHeader";
 import type { WorkspaceToolContentProps } from "@/components/app/types/workspaceNavigation.types";
 import { WORKSPACE_TOOLS } from "@/components/app/constants/workspaceTools";
@@ -42,8 +43,7 @@ export function WorkspaceToolContent({ tool, workspace, active }: WorkspaceToolC
       if (!run.worktreeId) return Promise.reject(new Error("This workflow run does not have a managed worktree."));
       return actions.onOpenWorkflowRunChangeRequest(run.projectId, run.worktreeId);
     }} />; break;
-    // Files and Changes share the existing mounted panel in the workspace grid.
-    case "files": case "changes": return null;
+    case "worktrees": content = <WorkspaceWorktreesTool workspace={workspace} />; break;
     case "browser": content = <WorkspaceBrowserTool workspace={workspace} active={active} />; break;
   }
   return <AppMainCenterContentProvider value={scoped}><WorkspaceSessionPanelProvider value={scoped.workspaceSessionPanelProps}>

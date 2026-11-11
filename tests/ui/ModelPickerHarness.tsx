@@ -17,6 +17,7 @@ export function ModelPickerHarness() {
   const [draft, setDraft] = useState("A draft that must survive model selection");
   const scenario = useRef("ready");
   const client = useMemo<ConversationClient>(() => ({
+    async externalSessions() { return { status: "available", sessions: [] }; },
     async catalog(kind, instanceId) {
       await new Promise((resolve) => setTimeout(resolve, 40));
       if (scenario.current === "error") throw new Error("Private failure details");

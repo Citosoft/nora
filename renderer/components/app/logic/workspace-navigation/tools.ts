@@ -2,16 +2,16 @@ import { roleProfile } from "@shared/personalization/profiles";
 import type { RoleSelection, RoleTool } from "@shared/types/personalization/roles.types";
 import type { WorkspaceToolId } from "@/components/app/types/workspaceNavigation.types";
 
-const toolMapping: Readonly<Record<RoleTool, WorkspaceToolId>> = {
-  files: "files", changes: "changes", terminal: "terminals", browser: "browser", notes: "documents",
-  tasks: "tasks", workflows: "workflows", editor: "files", previews: "browser"
+const toolMapping: Readonly<Record<RoleTool, WorkspaceToolId | null>> = {
+  files: null, changes: null, terminal: "terminals", browser: "browser", notes: "documents",
+  tasks: "tasks", workflows: "workflows", editor: "documents", previews: "browser"
 };
 export const MAX_WORKSPACE_TOOL_PINS = 4;
 export function availableWorkspaceTools(git: boolean): WorkspaceToolId[] {
-  return ["files", ...(git ? ["changes"] as const : []), "documents", "tasks", "terminals", "browser", "workflows"];
+  return [...(git ? ["worktrees"] as const : []), "documents", "tasks", "terminals", "browser", "workflows"];
 }
 export function workspaceToolPins(role: RoleSelection | null, available: readonly WorkspaceToolId[], pins?: readonly WorkspaceToolId[]): WorkspaceToolId[] {
-  const defaults = roleProfile(role ?? { id: "general" }).tools.map((tool) => toolMapping[tool]);
+  const defaults = roleProfile(role ?? { id: "general" }).tools.map((tool) => toolMapping[tool]).filter((tool): tool is WorkspaceToolId => tool !== null);
   const selection = [...new Set(pins ?? defaults)].filter((tool) => available.includes(tool));
   return pins ? selection : selection.slice(0, 3);
 }

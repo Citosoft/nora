@@ -6,6 +6,7 @@ import type { ProviderCapabilities } from "@shared/types/provider/capabilities.t
 import type { ProviderCatalogResult } from "@shared/types/provider/catalog.types";
 import type { WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { SteeringResult } from "./steering.types";
+import type { ExternalSessionReader } from "./externalSessions.types";
 
 export type ProviderUpdate = z.infer<typeof providerUpdateSchema>;
 export type EmitProviderUpdate = (update: ProviderUpdate) => void;
@@ -17,6 +18,7 @@ import type { McpAction, McpResult } from "@shared/types/provider/mcp.types";
 import type { ProviderAccountAction, ProviderAccountResult } from "@shared/types/provider/account.types";
 
 export interface ExecutionProvider {
+  readonly externalSessions?: ExternalSessionReader;
   mcp?(workspace: WorkspaceRef | null, action: McpAction): Promise<McpResult>;
   /** Reads or starts sign-in for the runtime's own account, through the runtime's API where it offers one. */
   account?(action: ProviderAccountAction): Promise<ProviderAccountResult>;

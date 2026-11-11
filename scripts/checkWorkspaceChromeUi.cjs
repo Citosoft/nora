@@ -55,7 +55,7 @@ ipcMain.handle('fixture:open-url', (_event, url) => { openedUrls.push(url); });
   assert.equal(await evaluate(`document.documentElement.scrollWidth<=innerWidth`), true);
   assert.equal(await evaluate(`getComputedStyle(document.querySelector('[aria-label="Thread details"]')).position`), 'static');
   assert.equal(await evaluate(`(()=>{const panel=document.querySelector('[aria-label="Thread details"]').getBoundingClientRect();const composer=document.querySelector('textarea').getBoundingClientRect();return panel.bottom<=composer.top})()`), true);
-  await byText('Archive'); assert.ok((await events()).includes('archive'));
+  await byText('Settle'); assert.ok((await events()).includes('archive'));
   if (process.env.NORA_UI_EVIDENCE_DIR) {
     await fs.mkdir(process.env.NORA_UI_EVIDENCE_DIR, { recursive: true });
     await fs.writeFile(join(process.env.NORA_UI_EVIDENCE_DIR, 'workspace-chrome-narrow.png'), (await window.webContents.capturePage()).toPNG());

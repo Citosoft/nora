@@ -19,7 +19,8 @@ export function ModelUsage({ collapsed, tools, onInstallTool, onSwitchToolAccoun
       <div><p className="text-sm font-medium">Model usage</p><p className="mt-1 text-xs text-muted-foreground">Usage limits and accounts across your agents.</p></div>
       <div className="max-h-[55vh] space-y-2 overflow-y-auto">
         {usage.visibleTools.map((tool) => {
-          const info = usage.usageByToolId[tool.id] ?? null;
+          const entry = usage.usageByToolId[tool.id];
+          const info = entry?.info ?? null;
           const expanded = openToolId === tool.id;
           const summary = info?.windows.slice(0, 2).map((window) => `${window.shortLabel}${window.percentLeft}%`).join(" ");
           return <div key={tool.id} className="overflow-hidden rounded-lg border border-border/60">
@@ -33,8 +34,8 @@ export function ModelUsage({ collapsed, tools, onInstallTool, onSwitchToolAccoun
               <span className="text-[10px] tabular-nums text-muted-foreground">{summary || (info?.status === "unavailable" ? "Sign in" : "Details")}</span>
               <ChevronDown className={`size-3.5 shrink-0 text-muted-foreground ${expanded ? "rotate-180" : ""}`} aria-hidden="true" />
             </button>
-            {expanded && <div id={`${detailsId}-${tool.id}`}><UsageDetails tool={tool} usageInfo={info} isUsageLoading={usage.usageLoadingToolId === tool.id} isActionLoading={usage.actionToolId === tool.id}
-              error={usage.toolErrorById[tool.id] ?? null} onInstall={() => void usage.installTool(tool.id)} onSwitchAccount={(refreshUsage) => void usage.switchToolAccount(tool.id, { refreshUsage })} onRefresh={() => void usage.loadToolUsage(tool.id)} /></div>}
+            {expanded && <div id={`${detailsId}-${tool.id}`}><UsageDetails tool={tool} usageInfo={info} isUsageLoading={!!entry?.loading} isActionLoading={usage.actionToolId === tool.id}
+              error={usage.toolError(tool.id)} onInstall={() => void usage.installTool(tool.id)} onSwitchAccount={(refreshUsage) => void usage.switchToolAccount(tool.id, { refreshUsage })} onRefresh={() => void usage.loadToolUsage(tool.id, true)} /></div>}
           </div>;
         })}
         {!usage.visibleTools.length && <p className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">Enable an installed agent in Settings to see its usage here.</p>}

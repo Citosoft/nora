@@ -1,3 +1,4 @@
+import { applyThreadSettlement } from "./settlement";
 import type { ThreadWorkspaceInternals } from "@/components/app/types/thread-workspace/internals.types";
 import type { ThreadWorkspaceStore } from "@/components/app/types/thread-workspace/state.types";
 import { createDraftIntent, deliverDraftIntent } from "@/components/app/logic/nativeDraftIntent";
@@ -35,7 +36,10 @@ export function createThreadSubmission(internal: ThreadWorkspaceInternals): Pick
       const document = internal.snapshot().layout.documents.find((entry) => entry.id === id);
       if (!document || document.target.kind !== "thread" || document.target.conversationId !== command.conversationId || command.kind === "create" || command.kind === "submit" || internal.runtime(id).busy) return;
       internal.setRuntime(id, { busy: true, error: null });
-      try { await deps.client.execute(command); internal.refresh(); }
+      try {
+        if (command.kind === "archive" || command.kind === "unarchive") await applyThreadSettlement(internal, command);
+        else { await deps.client.execute(command); internal.refresh(); }
+      }
       catch (cause) { internal.setRuntime(id, { error: cause instanceof Error ? cause.message : "The thread command could not be delivered." }); }
       finally { internal.setRuntime(id, { busy: false }); }
     }

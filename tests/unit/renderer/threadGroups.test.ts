@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildThreadGroups } from "@/components/app/logic/thread-workspace/groups";
+import { availableThreadGroupings, buildThreadGroups, resolveThreadGrouping } from "@/components/app/logic/thread-workspace/groups";
 import type { ThreadNavigationRow } from "@/components/app/types/thread-workspace/ports.types";
 
 function row(id: string, workspaceId: string, overrides: Partial<ThreadNavigationRow> = {}): ThreadNavigationRow {
@@ -58,4 +58,39 @@ test("grouping uses only supplied search and filter results and omits empty grou
   const filtered = [row("matching", "native-b", { active: true })];
   assert.deepEqual(buildThreadGroups(filtered, "workspace", workspaces).map((group) => group.label), ["Beta"]);
   assert.deepEqual(buildThreadGroups(filtered, "activity", workspaces).map((group) => group.label), ["In progress"]);
+});
+
+test("workspace grouping is available only across all workspaces", () => {
+  assert.deepEqual(availableThreadGroupings(false).map((entry) => entry.id), ["none", "activity", "source", "provider"]);
+  assert.deepEqual(availableThreadGroupings(true).map((entry) => entry.id), ["none", "workspace", "activity", "source", "provider"]);
+});
+
+test("single-workspace scope suppresses saved workspace grouping and restores it across all workspaces", () => {
+  const saved = "workspace";
+  assert.equal(resolveThreadGrouping(saved, false), "none");
+  assert.equal(resolveThreadGrouping(saved, true), "workspace");
+  for (const grouping of ["none", "activity", "source", "provider"] as const) {
+    assert.equal(resolveThreadGrouping(grouping, false), grouping);
+    assert.equal(resolveThreadGrouping(grouping, true), grouping);
+  }
+});
+
+test("source grouping separates actual apps while keeping source badges out of row data", () => {
+  const rows = [row("pin", "native-a", { pinned: true, origin: "desktop" }), row("local", "native-a"),
+    row("cli", "native-a", { origin: "cli", providerKind: "codex" }), row("desktop", "native-a", { origin: "desktop", providerKind: "claude" })];
+  const groups = buildThreadGroups(rows, "source", workspaces);
+  assert.deepEqual(groups.map((group) => [group.label, group.rows.map((entry) => entry.id)]), [
+    ["Pinned", ["pin"]], ["Nora", ["local"]], ["Codex CLI", ["cli"]], ["Claude Desktop", ["desktop"]]
+  ]);
+});
+
+test("provider grouping combines Nora and resumable chats, preserves pins, and handles unbound drafts", () => {
+  const rows = [row("pin", "native-a", { pinned: true, providerKind: "codex" }),
+    row("codex", "native-a", { providerKind: "codex" }), row("imported", "native-b", { providerKind: "codex", origin: "desktop" }),
+    row("claude", "native-a", { providerKind: "claude", origin: "cli" }), row("draft", "native-a")];
+  const groups = buildThreadGroups(rows, "provider", workspaces, new Map([["codex", "Codex"], ["claude", "Claude"]]));
+  assert.deepEqual(groups.map((group) => [group.label, group.rows.map((entry) => entry.id)]), [
+    ["Pinned", ["pin"]], ["Claude", ["claude"]], ["Codex", ["codex", "imported"]], ["No provider", ["draft"]]
+  ]);
+  assert.equal(groups[1].providerKind, "claude");
 });

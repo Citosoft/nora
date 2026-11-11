@@ -1,3 +1,4 @@
+import type { ExternalSessionReader } from "./externalSessions.types";
 import type { ProviderAccountAction, ProviderAccountResult } from "@shared/types/provider/account.types";
 import type { McpResult } from "@shared/types/provider/mcp.types";
 import type { EffortLevel, PermissionMode, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
@@ -33,6 +34,7 @@ export interface ClaudeOpenInput {
   onRequest: (prompt: ClaudePrompt) => Promise<RequestResponse>;
 }
 export interface ClaudeOptions {
+  externalSessions?: ExternalSessionReader;
   instanceId: string;
   policies: Readonly<Record<string, PermissionMode>>;
   open: (input: ClaudeOpenInput) => ClaudeSession;

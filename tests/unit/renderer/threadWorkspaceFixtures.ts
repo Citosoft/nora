@@ -30,6 +30,7 @@ export function threadWorkspaceFixture() {
     write(value) { if (unavailable) throw new Error("Storage full"); saved = structuredClone(value); }
   };
   const client: ConversationClient = {
+    async externalSessions() { return { status: "available", sessions: [] }; },
     async execute(command) {
       commands.push(command);
       if (!accepted.has(command.commandId)) {
@@ -40,6 +41,10 @@ export function threadWorkspaceFixture() {
             createdAt: "2026-11-09T11:00:00.000Z", updatedAt: "2026-11-09T11:00:00.000Z", archivedAt: null, queuePaused: false };
           summaries.push({ conversation, latestRun: null, queuedCount: 0, pendingRequestCount: 0 });
         }
+      }
+      if (command.kind === "archive" || command.kind === "unarchive") {
+        const summary = summaries.find((entry) => entry.conversation.id === command.conversationId);
+        if (summary) summary.conversation.archivedAt = command.kind === "archive" ? "2026-11-09T11:00:00.000Z" : null;
       }
       if (loseReply && command.kind === "submit") { loseReply = false; throw new Error("Reply lost"); }
       return { commandId: command.commandId, conversationId: command.conversationId, acceptedAt: "2026-11-09T11:00:00.000Z", cursor: accepted.size };

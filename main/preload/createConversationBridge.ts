@@ -27,8 +27,10 @@ export function createConversationBridge(transport: ConversationTransport = {
     async account(input) { const value = await request(conversationChannels.account, input);
       if (value.kind !== "account") throw incompatible(); return value.result; },
     async execute(input) { const value = await request(conversationChannels.execute, input);
+      // Importing an already-linked native session resolves to its existing Nora conversation.
+      const importing = input.command.kind === "create" && !!input.command.externalSessionId;
       if (value.kind !== "receipt" || value.receipt.commandId !== input.command.commandId
-        || value.receipt.conversationId !== input.command.conversationId) throw incompatible(); return value.receipt; },
+        || (!importing && value.receipt.conversationId !== input.command.conversationId)) throw incompatible(); return value.receipt; },
     async read(input) { const value = await request(conversationChannels.read, input);
       if (value.kind !== input.kind) throw incompatible(); return value; },
     async watch(input) { const value = await request(conversationChannels.watch, input);

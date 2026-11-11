@@ -51,9 +51,13 @@ export interface ToolUsageDetail {
   value: string;
 }
 
+/** The reset cadence of a usage window: the rolling ~5-hour session, the weekly cap, or a billing month. */
+export type ToolUsagePeriod = "session" | "weekly" | "monthly";
+
 /** One rate-limit or billing window, normalized in main so the renderer never parses provider output. */
 export interface ToolUsageWindow {
   id: string;
+  period: ToolUsagePeriod;
   label: string;
   /** One-or-two letter tag for the compact usage readout (e.g. "S", "W", "M"). */
   shortLabel: string;

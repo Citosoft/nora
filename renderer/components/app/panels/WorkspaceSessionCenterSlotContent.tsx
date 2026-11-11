@@ -80,7 +80,7 @@ export function WorkspaceSessionCenterSlotContent(props: WorkspaceSessionCenterS
         />
       );
     case "file-editor": {
-      if (route?.tool === "files" || route?.tool === "documents") return null;
+      if (route?.tool === "documents") return null;
       const specTab = props.activeSpecEditorTab;
       return (
         <FileEditorPanel
