@@ -89,6 +89,7 @@ export const assembleSignedInChromeShellComposeSlice = (s: SignedInChromeShellAs
       onInstallTool: chromeShell.installStatusBarTool,
       onSwitchToolAccount: chromeShell.switchStatusBarToolAccount
     },
+    updateIndicators: chromeShell.updateIndicators,
     settingsGroup: chromeShell.settingsGroup
   };
 };

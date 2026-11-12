@@ -1,6 +1,9 @@
 import type { McpServerTableData, RuntimeMcpEntry } from "@/components/app/types/runtimeMcp.types";
 import type { McpServer } from "@shared/types/provider/mcp.types";
 
+/** Account connectors the user never connected are only offered by the provider, so they are not set up. */
+export const isSetUpMcpServer = (server: McpServer): boolean => server.accountConnector !== "available";
+
 const SCOPE_ORDER: Readonly<Record<McpServer["scope"], number>> = { global: 0, workspace: 1, unknown: 2 };
 
 /**
@@ -10,7 +13,7 @@ const SCOPE_ORDER: Readonly<Record<McpServer["scope"], number>> = { global: 0, w
 export function buildMcpServerTable(entries: readonly RuntimeMcpEntry[]): McpServerTableData {
   const discovered = entries.flatMap(({ source, state }) => state.status === "loaded" && state.result.kind === "servers"
     ? state.result.servers.map((server) => ({ server, source })) : []);
-  const rows = discovered.filter(({ server }) => server.accountConnector !== "available")
+  const rows = discovered.filter(({ server }) => isSetUpMcpServer(server))
     .sort((a, b) => SCOPE_ORDER[a.server.scope] - SCOPE_ORDER[b.server.scope]
       || a.source.label.localeCompare(b.source.label) || a.server.name.localeCompare(b.server.name));
   return { rows, availableAccountConnectors: discovered.length - rows.length };

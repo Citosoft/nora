@@ -8,6 +8,9 @@ import { useNativeConversationPorts } from "@/components/app/hooks/useNativeConv
 import { useNativeConversation } from "@/components/app/hooks/useNativeConversation";
 import { useThreadInsights } from "@/components/app/hooks/useThreadInsights";
 import { useThreadLinks } from "@/components/app/hooks/useThreadLinks";
+import { useThreadConnectors } from "@/components/app/hooks/useThreadConnectors";
+import { useThreadSkills } from "@/components/app/hooks/useThreadSkills";
+import { useConnectorSignInRefresh } from "@/components/app/hooks/useConnectorSignInRefresh";
 import { roleProfile } from "@shared/personalization/profiles";
 import { getGreetingFirstName } from "@/components/app/logic/thread-workspace/greeting";
 import { ThreadWorkspacePicker } from "../threads/ThreadWorkspacePicker";
@@ -17,8 +20,12 @@ import { NativeTimeline } from "./NativeTimeline";
 import { NativeRequestStack } from "./NativeRequestStack";
 import { NativeQueue } from "./NativeQueue";
 import type { ProviderCapabilities } from "@shared/types/provider/capabilities.types";
+import type { TimelineItem } from "@shared/types/conversation/contracts.types";
 import { ThreadInsightsPanel } from "./ThreadInsightsPanel";
+import { ThreadContextUsage } from "./ThreadContextUsage";
 import { nativeProviderLabel } from "@/components/app/logic/nativeProviderLabel";
+
+const NO_ITEMS: readonly TimelineItem[] = [];
 
 export function NativeConversationPanel() {
   const ports = useNativeConversationPorts();
@@ -34,6 +41,10 @@ export function NativeConversationPanel() {
   const header = view?.header;
   const onLinkClick = useThreadLinks(header?.conversation.workspace.path ?? workspace.workspace.path);
   const insights = useThreadInsights({ header, items: view?.items ?? [], workspace, hasOlderHistory: !!view?.nextBefore, readBranchRequest: ports.readBranchRequest });
+  const providerLabel = header ? nativeProviderLabel(ports.state.providers, header.conversation.provider) : null;
+  const connectors = useThreadConnectors(client, header && providerLabel !== null ? { conversation: header.conversation, providerLabel } : null);
+  const skills = useThreadSkills(client, header ? { conversation: header.conversation, items: view?.items ?? NO_ITEMS } : null);
+  useConnectorSignInRefresh(header?.conversation.id ?? null, view?.items ?? NO_ITEMS, connectors);
   const active = header?.activeRuns[0];
   const executionFailure = active ? active.failure : ports.latestFailure;
   const role = header?.conversation.role?.selection ?? document.role;
@@ -57,9 +68,10 @@ export function NativeConversationPanel() {
     else setNewActivity(true);
   }, [view?.items]);
   const chooseStarter = (text: string): void => { setText(text); composer.current?.focus(); };
-  return <section className="thread-conversation flex min-h-0 min-w-0 flex-1 flex-col" aria-label={conversationId ? "Thread" : "New thread"}>
-    <div className="relative flex min-h-0 flex-1 flex-col" data-thread-insights={header ? insightsExpanded ? "expanded" : "collapsed" : undefined}>
-    {header && <ThreadInsightsPanel header={header} providerLabel={nativeProviderLabel(ports.state.providers, header.conversation.provider)} changes={insights.changes} request={insights.request} expanded={insightsExpanded} busy={busy}
+  return <section className="thread-conversation flex min-h-0 min-w-0 flex-1 flex-col" aria-label={conversationId ? "Thread" : "New thread"}
+    data-thread-insights={header ? insightsExpanded ? "expanded" : "collapsed" : undefined}>
+    <div className="relative flex min-h-0 flex-1 flex-col">
+    {header && providerLabel !== null && <ThreadInsightsPanel header={header} providerLabel={providerLabel} connectors={connectors} skills={skills} changes={insights.changes} subagents={insights.subagents} request={insights.request} expanded={insightsExpanded} busy={busy}
       canSettle={!active && !header.queuedRuns.length} hasOlderHistory={!!view?.nextBefore}
       onToggle={() => setInsightsExpanded((current) => !current)} onRefresh={insights.refresh} onLoadHistory={() => void older()}
       onSettleChange={() => void execute({ kind: settled ? "unarchive" : "archive", commandId: crypto.randomUUID(), conversationId: header.conversation.id })} />}
@@ -71,7 +83,7 @@ export function NativeConversationPanel() {
         {loadError && <div role="alert"><p>{loadError}</p><Button onClick={reload}>Reload thread</Button></div>}
         {view?.nextBefore && <Button variant="ghost" onClick={() => void older()}>Load older messages</Button>}
         {conversationId && !view && !loadError && <p className="text-muted-foreground">Loading thread…</p>}
-        {view && <NativeTimeline items={view.items} runs={view.runHistory.runs} onLinkClick={onLinkClick} />}
+        {view && <NativeTimeline items={view.items} runs={view.runHistory.runs} onLinkClick={onLinkClick} connectors={connectors} />}
         {!conversationId && <div className="mx-auto flex w-full flex-col items-center gap-7 pb-6 pt-[clamp(2rem,12vh,9rem)] text-center">
           <div className="space-y-3"><p className="text-xs font-medium text-muted-foreground">{profile?.label ?? "Your workspace"}</p>
             <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">What would you like to work on in <span className="text-primary">{workspace.name}</span>{firstName && <>, <span className="whitespace-nowrap text-primary">{firstName}</span></>}?</h1></div>
@@ -82,6 +94,7 @@ export function NativeConversationPanel() {
     </div>
     </div>
     {newActivity && <Button variant="secondary" size="sm" className="mx-auto mb-3 rounded-full" onClick={jumpToLatest}><ArrowDown className="size-3.5" aria-hidden="true" />Jump to latest</Button>}
+    <div className="thread-composer">
     <div className="mx-auto w-full max-w-[848px] space-y-3 px-4 pb-5 sm:px-6">
       {header && <NativeRequestStack key={header.conversation.id} requests={header.pendingRequests} busy={busy} visible={ports.visible} onRespond={(requestId, response) => execute({ kind: "respond", commandId: crypto.randomUUID(), conversationId: header.conversation.id, requestId, response })} />}
       {active?.state === "recovering" && <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void execute({ kind: "reconcile", commandId: crypto.randomUUID(), conversationId: active.conversationId, runId: active.id })}>Check native status</Button>}
@@ -102,6 +115,7 @@ export function NativeConversationPanel() {
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0 flex-1"><NativeProviderPicker key={workspace.id} state={ports.state} workspace={workspace} client={client}
             initial={document.provider} locked={header?.conversation.provider ?? (conversationId ? document.provider : pending?.create?.provider) ?? null} onBinding={setBinding} onCapabilities={setCapabilities} /></div>
+          <ThreadContextUsage header={header ?? null} capabilities={capabilities} ready={!busy && !pending && !settled} compact={ports.compact} client={client} />
           <Button type={showStop ? "button" : "submit"} size={pending ? "sm" : "icon"} className="shrink-0 rounded-md" disabled={showStop ? busy || active?.state === "stopping" : !canSend}
             onClick={showStop && active ? () => void execute({ kind: "interrupt", commandId: crypto.randomUUID(), conversationId: active.conversationId, runId: active.id }) : undefined}
             aria-label={actionLabel}>
@@ -109,6 +123,7 @@ export function NativeConversationPanel() {
         </div>
       </form>
       </div>
+    </div>
     </div>
   </section>;
 }

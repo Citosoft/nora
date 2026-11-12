@@ -1,8 +1,9 @@
 import type { ExternalSessionsResult } from "@shared/types/conversation/externalSessions.types";
 import { discoverExternalSessions, readExternalTranscript } from "./externalSessions";
-import type { CommandReceipt, ConversationCommand, ProviderBinding, WorkspaceRef } from "@shared/types/conversation/contracts.types";
+import type { CommandReceipt, ContextUsage, Conversation, ConversationCommand, ProviderBinding, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ConversationEventPage, ConversationHeader, ConversationHistoryPage, ConversationSummary, HistoryQuery, HostShutdownResult } from "@shared/types/conversation/queries.types";
 import type { McpRequest, McpResult } from "@shared/types/provider/mcp.types";
+import type { SkillsRequest, SkillsResult } from "@shared/types/provider/skills.types";
 import type { ProviderAccountRequest, ProviderAccountResult } from "@shared/types/provider/account.types";
 import type { ProviderCatalogResult } from "@shared/types/provider/catalog.types";
 import type { HostDependencies, HostLifecycle, WorkerGroup } from "@main/types/execution/host.types";
@@ -33,6 +34,7 @@ export class ExecutionHost {
   private shutdownPromise: Promise<HostShutdownResult> | null = null;
   private readonly concurrency: number;
   private readonly naming: ConversationNaming | null;
+  private readonly contextReads = new Map<string, Promise<ContextUsage | null>>();
 
   constructor(private readonly deps: HostDependencies) {
     this.concurrency = deps.effectConcurrency ?? 8;
@@ -106,6 +108,26 @@ export class ExecutionHost {
     return { schemaVersion: 1, after, nextCursor: events.at(-1)?.cursor ?? after, events };
   }
   subscribe(input: EventSubscription): () => void { return this.engine.subscribe(input); }
+  /** Measures a thread once when it has no reading; concurrent views share one native read. */
+  async context(conversationId: string): Promise<ContextUsage | null> {
+    if (this.lifecycle !== "running") throw new ExecutionCommandError("conflict", "Execution host is not running");
+    const conversation = this.deps.store.header(conversationId)?.conversation;
+    if (!conversation) throw new ExecutionCommandError("missing", "Conversation does not exist");
+    if (conversation.context !== undefined) return conversation.context;
+    if (!conversation.nativeConversationId) return null;
+    const pending = this.contextReads.get(conversationId);
+    if (pending) return pending;
+    const read = this.measureContext(conversation).finally(() => { this.contextReads.delete(conversationId); });
+    this.contextReads.set(conversationId, read);
+    return read;
+  }
+  private async measureContext(conversation: Conversation): Promise<ContextUsage | null> {
+    const provider = this.deps.providers.resolve(conversation.provider.kind, conversation.provider.instanceId);
+    // Saved history is best effort: an unreadable session simply has no reading until its next turn.
+    const reading = provider.capabilities.contextUsage && provider.readContext ? await provider.readContext(conversation).catch(() => null) : null;
+    return reading ? this.engine.recordContext(conversation.id, reading) : null;
+  }
+
   async catalog(kind: ProviderBinding["kind"], instanceId: string, selection: WorkspaceRef): Promise<ProviderCatalogResult> {
     const workspace = await this.deps.workspaces.prepare(selection);
     if (this.lifecycle !== "running" || workspace.environmentId !== this.deps.store.environmentId) {
@@ -132,6 +154,16 @@ export class ExecutionHost {
     // Without a workspace, runtimes resolve from a neutral directory; never present its project config as global.
     return workspace || result.kind !== "servers" ? result
       : { ...result, servers: result.servers.filter((server) => server.scope !== "workspace") };
+  }
+
+  async skills(request: SkillsRequest): Promise<SkillsResult> {
+    const workspace = await this.deps.workspaces.prepare(request.workspace);
+    if (this.lifecycle !== "running" || workspace.environmentId !== this.environmentId) {
+      throw new ExecutionCommandError("environment", "Skill discovery must run on the owning execution host");
+    }
+    const provider = this.deps.providers.resolve(request.providerKind, request.instanceId);
+    return provider.skills ? provider.skills(workspace, request.refresh)
+      : { kind: "unavailable", message: "This runtime does not report its skills." };
   }
 
   /** Adds a runtime installed after startup; existing conversations keep the provider they were bound to. */

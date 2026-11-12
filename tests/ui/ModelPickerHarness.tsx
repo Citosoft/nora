@@ -18,6 +18,7 @@ export function ModelPickerHarness() {
   const scenario = useRef("ready");
   const client = useMemo<ConversationClient>(() => ({
     async externalSessions() { return { status: "available", sessions: [] }; },
+    async context() { return null; },
     async catalog(kind, instanceId) {
       await new Promise((resolve) => setTimeout(resolve, 40));
       if (scenario.current === "error") throw new Error("Private failure details");
@@ -30,6 +31,8 @@ export function ModelPickerHarness() {
     },
     async execute() { throw new Error("No inference is permitted in this fixture"); },
     async header() { return null; }, async summaries() { return []; },
+    async mcp() { return { kind: "unavailable", message: "No MCP in this fixture" }; },
+    async skills() { return { kind: "unavailable", message: "No skills in this fixture" }; },
     async history() { throw new Error("No conversation history in this fixture"); }, subscribe() { return () => {}; }
   }), []);
   return <main className="mx-auto max-w-3xl px-4 py-8">

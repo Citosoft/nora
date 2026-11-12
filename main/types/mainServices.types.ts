@@ -239,6 +239,7 @@ export interface ToolingService {
   saveToolConfig: (payload: SaveToolConfigPayload) => Promise<AppState>;
   getToolUsage: (toolId: string) => Promise<ToolUsageInfo | null>;
   switchToolAccount: (toolId: string) => Promise<void>;
+  checkProviderUpdates: () => Promise<import("@shared/types/provider/update.types").ProviderUpdateNotice[]>;
 }
 
 export interface ForgeService {

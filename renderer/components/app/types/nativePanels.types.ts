@@ -7,8 +7,23 @@ import type { ThreadDocument, ThreadDocumentRuntime } from "./thread-workspace/s
 import type { BranchRequestReader } from "./threadInsights.types";
 import type { ProviderCapabilities } from "@shared/types/provider/capabilities.types";
 import type { MarkdownRendererLinkClickHandler } from "./markdownRenderer.types";
+import type { ThreadConnectorsState } from "./threadConnectors.types";
 
-export interface NativeTimelineProps { items: readonly TimelineItem[]; runs?: readonly ConversationRun[]; onLinkClick?: MarkdownRendererLinkClickHandler; }
+export type NativeMessageItem = Extract<TimelineItem, { kind: "message" }>;
+export interface NativeMessageProps {
+  item: NativeMessageItem;
+  onLinkClick?: MarkdownRendererLinkClickHandler;
+}
+export interface NativeMessageActionsProps {
+  item: NativeMessageItem;
+}
+export interface NativeTimelineProps {
+  items: readonly TimelineItem[];
+  runs?: readonly ConversationRun[];
+  onLinkClick?: MarkdownRendererLinkClickHandler;
+  /** The thread's connector discovery, for connector sign-in cards. */
+  connectors?: ThreadConnectorsState | null;
+}
 export interface NativeReviewProps { result: ConversationReview; }
 export interface NativeRequestProps {
   request: RuntimeRequest;
@@ -37,6 +52,7 @@ export interface NativeConversationPorts {
   setBinding(binding: ProviderBinding | null): void;
   submit(): Promise<void>;
   execute(command: ConversationCommand): Promise<void>;
+  compact(): Promise<void>;
   selectWorkspace(workspaceId: string): void;
 }
 export interface NativeProviderPickerProps {

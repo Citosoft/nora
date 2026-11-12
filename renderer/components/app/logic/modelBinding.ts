@@ -20,8 +20,13 @@ export function resolveModelBinding(input: ModelBindingInput): ModelBindingResol
   const model = selectedNativeModel(catalog, locked?.model ?? input.modelId);
   const policy = locked?.permissionPolicy ?? input.policyId;
   const reasoning = locked ? locked.reasoning : input.reasoning;
+  const subagentModel = locked ? locked.subagentModel ?? null : input.subagentModel;
   if (!model) return { status: "blocked", message: catalog.catalog.models.length ? "The selected model is unavailable. Choose an available model before sending." : "This runtime has no available models." };
   if (!policy || !catalog.catalog.policies.some((entry) => entry.id === policy)) return { status: "blocked", message: "Choose a supported permission policy in the model picker before sending." };
   if (reasoning !== null && (!catalog.catalog.capabilities.reasoning || !model.reasoningEfforts.includes(reasoning))) return { status: "blocked", message: "The selected reasoning effort is unavailable for this model." };
-  return { status: "ready", binding: locked ?? { kind: provider.kind, instanceId: provider.instanceId, model: model.id, permissionPolicy: policy, reasoning } };
+  if (subagentModel !== null && (!catalog.catalog.capabilities.subagentModel || !catalog.catalog.models.some((entry) => entry.id === subagentModel))) {
+    return { status: "blocked", message: "The selected subagent model is unavailable. Choose another in the model picker before sending." };
+  }
+  return { status: "ready", binding: locked ?? { kind: provider.kind, instanceId: provider.instanceId, model: model.id, permissionPolicy: policy, reasoning,
+    ...(subagentModel !== null ? { subagentModel } : {}) } };
 }

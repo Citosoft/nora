@@ -31,6 +31,7 @@ export class ConversationGateway {
     switch (request.kind) {
       case "external-sessions": result = { kind: "external-sessions", result: await host.externalSessions(request.providerKind, request.instanceId, request.workspace) }; break;
       case "header": result = { kind: "header", header: host.header(request.conversationId) }; break;
+      case "context": result = { kind: "context", context: await host.context(request.conversationId) }; break;
       case "summaries": result = { kind: "summaries", summaries: host.summaries(request.projectId) }; break;
       case "history": result = { kind: "history", page: host.conversationHistory(request) }; break;
       case "events": result = { kind: "events", page: host.history(request.conversationId, request.after, request.limit) }; break;

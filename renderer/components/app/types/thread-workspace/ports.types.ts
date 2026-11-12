@@ -16,7 +16,7 @@ export interface ThreadRowProps {
   workspace: WorkspaceAvatarIdentity | null;
   request: ForgeBranchPullRequestStatus | null;
   onOpen(row: ThreadListRow): void;
-  onTogglePin(conversationId: string): void;
+  onTogglePin(row: ThreadListRow): void;
   onSetSettled?(row: ThreadListRow, settled: boolean): void;
 }
 export interface ThreadStatusIconProps { row: Pick<ThreadNavigationRow, "status" | "working" | "unread">; }
@@ -42,6 +42,7 @@ export interface ThreadNavigationRow {
 export interface ThreadNavigationPorts {
   client: ThreadWorkspaceStore["client"];
   resumeExternal: ThreadWorkspaceStore["resumeExternal"];
+  pinExternal: ThreadWorkspaceStore["pinExternal"];
   setSettled: ThreadWorkspaceStore["setSettled"];
   state: ThreadWorkspaceSnapshot;
   focusWorkspace(workspaceId: string): void;

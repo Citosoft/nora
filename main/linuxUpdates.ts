@@ -1,35 +1,11 @@
 import { APP_SHORT_NAME } from "@shared/appMeta";
 import type { LinuxUpdateStatus, ReleaseVersionStatus } from "@shared/appTypes";
 import { app } from "electron";
-import type { GithubReleaseResponse, ParsedVersion } from "./types/internal.types";
+import type { GithubReleaseResponse } from "./types/internal.types";
+import { compareParsedVersions, parseVersion } from "./helpers/semanticVersion";
 import { getLatestPublicReleaseApiUrl, getLatestPublicReleaseUrl, getPublicReleaseUrl } from "./updateRepository";
 
 const LINUX_APT_UPDATE_COMMAND = "sudo apt update && sudo apt upgrade nora";
-
-function parseVersion(value: string): ParsedVersion | null {
-  const normalized = value.trim().replace(/^v/i, "");
-  const match = normalized.match(/^(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/);
-  if (!match) {
-    return null;
-  }
-
-  const [, major, minor, patch] = match;
-  return {
-    major: Number(major),
-    minor: Number(minor),
-    patch: Number(patch)
-  };
-}
-
-function compareParsedVersions(left: ParsedVersion, right: ParsedVersion): number {
-  if (left.major !== right.major) {
-    return left.major - right.major;
-  }
-  if (left.minor !== right.minor) {
-    return left.minor - right.minor;
-  }
-  return left.patch - right.patch;
-}
 
 function normalizeReleaseVersion(tagName: string): string {
   return tagName.trim().replace(/^v/i, "");

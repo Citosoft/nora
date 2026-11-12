@@ -31,6 +31,9 @@ export function threadWorkspaceFixture() {
   };
   const client: ConversationClient = {
     async externalSessions() { return { status: "available", sessions: [] }; },
+    async mcp() { return { kind: "unavailable", message: "No MCP in this fixture" }; },
+    async skills() { return { kind: "unavailable", message: "No skills in this fixture" }; },
+    async context() { return null; },
     async execute(command) {
       commands.push(command);
       if (!accepted.has(command.commandId)) {

@@ -1,31 +1,44 @@
 import type { McpAction, McpResult } from "@shared/types/provider/mcp.types";
+import type { SkillsResult } from "@shared/types/provider/skills.types";
 import type { ProviderAccountAction, ProviderAccountResult } from "@shared/types/provider/account.types";
 import type { ExecutionProvider, EmitProviderUpdate, ProviderExecution } from "@main/types/execution/provider.types";
 import type { ClaudeActive, ClaudeOptions, ClaudePending, ClaudePrompt } from "@main/types/execution/claude.types";
-import type { RequestResponse, RuntimeRequest, ToolActivity, WorkspaceRef } from "@shared/types/conversation/contracts.types";
+import type { ContextReading, Conversation, RequestResponse, RuntimeRequest, SubagentActivity, ToolActivity, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ProviderCatalogResult } from "@shared/types/provider/catalog.types";
 import { nativeCapabilities } from "@main/execution/providerCapabilities";
 import { z } from "zod";
 import { claudePermissionPolicy } from "./permissionPolicies";
 
+/** Claude Code's slash command, which the SDK runs instead of sending the text to the model. */
+const CLAUDE_COMPACT_COMMAND = "/compact";
+
 export class ClaudeAdapter implements ExecutionProvider {
   readonly kind = "claude";
   get externalSessions() { return this.options.externalSessions; }
   readonly instanceId: string;
-  readonly capabilities = { ...nativeCapabilities, promptSuggestions: true };
+  readonly capabilities = { ...nativeCapabilities, subagentDetails: true, subagentModel: true, promptSuggestions: true, contextUsage: true, compaction: true };
   private readonly active = new Map<string, ClaudeActive>();
   private readonly requests = new Map<string, ClaudePending>();
   constructor(private readonly options: ClaudeOptions) { this.instanceId = options.instanceId; }
 
   async mcp(workspace: WorkspaceRef | null, action: McpAction): Promise<McpResult> {
-    if (action.kind === "login") return { kind: "unavailable", message: "Sign in to this MCP server in an interactive Claude Code session on the same machine, then refresh in Nora." };
-    return this.options.readMcp ? this.options.readMcp(workspace?.path ?? null)
+    return this.options.mcp ? this.options.mcp(workspace?.path ?? null, action)
       : { kind: "unavailable", message: "This Claude runtime does not expose MCP discovery." };
+  }
+
+  /** Claude rescans skill folders on every read, so a refresh needs no separate request. */
+  async skills(workspace: WorkspaceRef): Promise<SkillsResult> {
+    return this.options.skills ? this.options.skills(workspace.path)
+      : { kind: "unavailable", message: "This Claude runtime does not expose skill discovery." };
   }
 
   async account(action: ProviderAccountAction): Promise<ProviderAccountResult> {
     return this.options.account ? this.options.account(action)
       : { kind: "unavailable", message: "This Claude runtime does not expose its account." };
+  }
+
+  async readContext(conversation: Conversation): Promise<ContextReading | null> {
+    return this.options.readContext ? this.options.readContext(conversation) : null;
   }
 
   async catalog(workspace: WorkspaceRef): Promise<ProviderCatalogResult> {
@@ -61,14 +74,15 @@ export class ClaudeAdapter implements ExecutionProvider {
     // Reserve the SDK-supported caller-supplied session ID durably before spawning.
     emit({ ...base, eventId: "native-binding", kind: "bound", nativeConversationId: sessionId });
     const session = this.options.open({ sessionId, resume: !!snapshot.conversation.nativeConversationId,
-      nativeTurnId, instruction: run.instruction, cwd: snapshot.conversation.workspace.path,
+      nativeTurnId, instruction: run.action === "compact" ? CLAUDE_COMPACT_COMMAND : run.instruction, cwd: snapshot.conversation.workspace.path,
       ...(snapshot.conversation.role ? { guidance: snapshot.conversation.role.guidance } : {}),
       model: snapshot.conversation.provider.model, permissionMode: mode,
+      ...(snapshot.conversation.provider.subagentModel ? { subagentModel: snapshot.conversation.provider.subagentModel } : {}),
       effort: effort.data,
       onRequest: (prompt) => this.ask(execution, prompt, emit) });
     const active: ClaudeActive = { ...execution, emit, session, settled: false };
     this.active.set(run.attemptId, active);
-    const tools = new Map<string, ToolActivity>();
+    const tools = new Map<string, ToolActivity | SubagentActivity>();
     const timestamps = new Map(snapshot.items.map((item) => [item.id, item.createdAt]));
     const itemTime = (nativeId: string, kind: string): string => {
       const id = JSON.stringify([run.id, nativeId, kind]);
@@ -99,6 +113,16 @@ export class ClaudeAdapter implements ExecutionProvider {
             tools.set(item.id, item);
             emit({ ...base, eventId: frame.eventId, kind: "item", item }); break;
           }
+          case "subagent": {
+            const { kind, eventId, ...fields } = frame;
+            const item: SubagentActivity = { ...fields, kind, id: JSON.stringify([run.id, frame.nativeId, "subagent"]), runId: run.id,
+              createdAt: itemTime(frame.nativeId, "subagent") };
+            tools.set(item.id, item);
+            emit({ ...base, eventId, kind: "item", item }); break;
+          }
+          case "context":
+            emit({ ...base, eventId: frame.eventId, kind: "context",
+              context: frame.context ? { ...frame.context, updatedAt: this.options.now() } : null }); break;
           case "finished":
             active.settled = true;
             emit({ ...base, eventId: frame.eventId, kind: "finished", status: frame.status, failure: frame.failure, usage: frame.usage }); break;

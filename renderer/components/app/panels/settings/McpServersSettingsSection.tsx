@@ -23,7 +23,7 @@ export function McpServersSettingsSection() {
     selection: { environmentId: boot.environmentId, providerKind: provider.kind, instanceId: provider.instanceId,
       ...(workspace ? { workspace: workspace.workspace } : {}) }
   })), [boot.environmentId, boot.providers, workspace]);
-  const { entries, refresh, login } = useRuntimeMcpCatalog(sources);
+  const { entries, refresh, logins } = useRuntimeMcpCatalog(store.client, sources);
   const { rows, availableAccountConnectors } = useMemo(() => buildMcpServerTable(entries), [entries]);
   const isLoading = entries.some((entry) => entry.state.status === "loading");
 
@@ -41,13 +41,13 @@ export function McpServersSettingsSection() {
       </div>
       <div {...settingAnchorAttributes("MCP Servers")} className="mt-4 space-y-3" aria-live="polite">
         <div className="space-y-2 empty:hidden">{entries.map((entry) => <McpProviderNotice key={entry.source.key} entry={entry} />)}</div>
-        {rows.length ? <McpServerTable rows={rows} onLogin={login} />
+        {rows.length ? <McpServerTable rows={rows} logins={logins} />
           : !isLoading ? <p className="text-sm text-muted-foreground">No MCP servers were discovered.</p> : null}
         {availableAccountConnectors ? <p className="text-xs text-muted-foreground">
           {availableAccountConnectors === 1 ? "1 more connector is" : `${availableAccountConnectors} more connectors are`} available to your account but not connected. Connect them in Claude on the web, desktop or mobile to use them here.
         </p> : null}
       </div>
-      {sources.some((source) => source.kind === "claude") ? <p className="mt-4 text-xs text-muted-foreground">For Claude servers that need authentication, open Claude Code and use /mcp to sign in on the same machine, then refresh here.</p> : null}
+      {sources.some((source) => source.kind === "claude") ? <p className="mt-4 text-xs text-muted-foreground">Sign in opens your browser for remote servers and claude.ai connectors. For servers configured with other credentials, set them up in Claude Code, then refresh here.</p> : null}
     </>}
   </div>;
 }

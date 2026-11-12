@@ -5,7 +5,7 @@ import type { ModelBindingInput } from "@/components/app/types/modelPicker.types
 import { codexProvider, claudeProvider, pickerCatalog } from "./modelPickerFixtures";
 
 function selection(): ModelBindingInput {
-  return { provider: codexProvider, catalog: pickerCatalog(), modelId: "first", policyId: "read", reasoning: "high", locked: null };
+  return { provider: codexProvider, catalog: pickerCatalog(), modelId: "first", policyId: "read", reasoning: "high", subagentModel: null, locked: null };
 }
 
 test("bindings use advertised model/policy/reasoning and never silently substitute an explicit choice", () => {
@@ -29,4 +29,15 @@ test("missing/auth-required/incorrect catalogs block sending and never change a 
   const result = resolveModelBinding({ ...input, locked, modelId: "second", policyId: "read", reasoning: "high" });
   assert.equal(result.status, "ready"); if (result.status === "ready") assert.equal(result.binding, locked);
   assert.equal(resolveModelBinding({ ...input, locked: { ...locked, model: "removed" } }).status, "blocked");
+});
+
+test("a subagent model binds only when the runtime accepts one and offers that model", () => {
+  const input = selection();
+  assert.equal(resolveModelBinding({ ...input, subagentModel: "second" }).status, "blocked", "runtimes without the capability reject it");
+  const catalog = pickerCatalog(); catalog.catalog.capabilities.subagentModel = true;
+  const ready = resolveModelBinding({ ...input, catalog, subagentModel: "second" });
+  assert.equal(ready.status, "ready"); if (ready.status === "ready") assert.equal(ready.binding.subagentModel, "second");
+  assert.equal(resolveModelBinding({ ...input, catalog, subagentModel: "removed" }).status, "blocked");
+  const unset = resolveModelBinding({ ...input, catalog });
+  assert.ok(unset.status === "ready" && !("subagentModel" in unset.binding), "no choice leaves the runtime default");
 });

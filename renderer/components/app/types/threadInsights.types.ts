@@ -2,6 +2,9 @@ import type { ConversationHeader } from "@shared/types/conversation/queries.type
 import type { TimelineItem, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ForgeBranchPullRequestStatus } from "@shared/appTypes";
 import type { NativeWorkspace } from "@shared/types/personalization/workspaces.types";
+import type { ThreadConnectorsState } from "./threadConnectors.types";
+import type { ThreadSubagentSummary } from "./threadSubagents.types";
+import type { ThreadSkillsState } from "./threadSkills.types";
 
 export type BranchRequestReader = (projectId: string, branch: string) => Promise<ForgeBranchPullRequestStatus | null>;
 export type ThreadChangeSummary =
@@ -21,7 +24,10 @@ export interface ThreadInsightsInput {
 export interface ThreadInsightsPanelProps {
   header: ConversationHeader;
   providerLabel: string;
+  connectors: ThreadConnectorsState | null;
+  skills: ThreadSkillsState | null;
   changes: ThreadChangeSummary;
+  subagents: ThreadSubagentSummary;
   request: ThreadRequestState;
   expanded: boolean;
   busy: boolean;

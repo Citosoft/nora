@@ -1,6 +1,7 @@
-import type { SimulatorApprovalStep, SimulatorScenario, SimulatorStep } from "./types/scenarios.types";
+import type { SimulatorApprovalStep, SimulatorDisplayItem, SimulatorScenario, SimulatorStep } from "./types/scenarios.types";
 import { simulatedFileChanges, simulatedPatches } from "./fileChanges";
 import { simulatedMarkdown } from "./markdown";
+import type { ProviderSkill } from "@shared/types/provider/skills.types";
 
 export const simulatorScenarios: readonly SimulatorScenario[] = [
   { id: "tour", label: "Full chat loop", description: "Streaming, tools, a question, an approval and a final answer." },
@@ -10,13 +11,19 @@ export const simulatorScenarios: readonly SimulatorScenario[] = [
   { id: "approvals", label: "Action approvals", description: "Command, file and network approvals with different scopes." },
   { id: "approval-stack", label: "Stacked approvals", description: "Three approvals arrive together; respond one at a time." },
   { id: "suggestions", label: "Follow-up suggestion", description: "Ghost text after completion; Tab accepts it without sending." },
+  { id: "connector-sign-in", label: "Connector sign-in", description: "The model asks you to sign in to a connector before it continues." },
   { id: "usage-limit", label: "Provider usage limit", description: "The provider has no usage remaining and rejects the turn." },
   { id: "failure", label: "Provider failure", description: "A failed tool followed by a failed task." },
   { id: "recovery", label: "Lost connection", description: "Unconfirmed work, then Check native status to recover." },
   { id: "expired", label: "Expired request", description: "An unanswered question expires after two seconds." },
   { id: "long-output", label: "Long output", description: "Large output, long paths and scrolling." },
-  { id: "slow", label: "Queue and interrupt", description: "A slow task for testing queued messages and interruption." }
+  { id: "slow", label: "Queue and interrupt", description: "A slow task for testing queued messages and interruption." },
+  { id: "subagents", label: "Subagents", description: "Three agents work in parallel; follow them in thread details as they finish or fail." },
+  { id: "skills", label: "Skills", description: "Load one skill, read another and let a subagent use a third; thread details shows used and available skills." }
 ];
+
+/** The simulated connector that starts signed out; its sign-in completes locally without a browser. */
+export const simulatedConnectorName = "Issue tracker";
 
 const options = [
   { id: "allow", label: "Allow once", intent: "allow" as const, scope: "once" as const, description: "Allow only this simulated action." },
@@ -63,6 +70,70 @@ const tools: SimulatorStep[] = [
   { kind: "display", id: "plan", item: { kind: "plan", steps: [{ text: "Inspect the example project", state: "completed" }, { text: "Run validation", state: "completed" }] } }
 ];
 
+type SubagentPatch = Omit<Extract<SimulatorDisplayItem, { kind: "subagent" }>, "kind" | "nativeId">;
+const simulatedAgents = {
+  // The reviewer requests its own model; the others follow the thread's subagent model setting.
+  reviewer: { nativeId: "simulated-agent-reviewer", label: "Review the example diff", agentType: "code-reviewer", model: "simulated", effort: "high",
+    prompt: "Review the changes in src/main.ts and src/app.tsx for correctness and readability. Report concrete issues only." },
+  tests: { nativeId: "simulated-agent-tests", label: "Run the test suite", agentType: "test-runner",
+    prompt: "Run the project's unit tests and summarize any failures with the file and test name." },
+  research: { nativeId: "simulated-agent-research", label: "Check the API documentation", agentType: "researcher", effort: "low",
+    prompt: "Find the documented limits for the example API and compare them with the client defaults." }
+} as const;
+/** Re-emitting an agent under the same display id updates it in place, as a provider reporting progress would. */
+function agentStep(agent: keyof typeof simulatedAgents, patch: Partial<SubagentPatch>): SimulatorStep {
+  const { nativeId, ...base } = simulatedAgents[agent];
+  return { kind: "display", id: `agent-${agent}`, item: { kind: "subagent", nativeId, state: "running", ...base, ...patch } };
+}
+const subagents: SimulatorStep[] = [
+  { kind: "text", text: "I'll split this across three agents: one reviews the diff, one runs the tests and one checks the API documentation. Open **thread details** to follow them." },
+  agentStep("reviewer", {}),
+  agentStep("tests", {}),
+  agentStep("research", {}),
+  { kind: "tool", details: { parentId: simulatedAgents.reviewer.nativeId }, complete: true,
+    native: { id: "agent-review-read", type: "commandExecution", command: "git diff -- src/main.ts src/app.tsx", status: "completed", exitCode: 0, aggregatedOutput: "2 files changed, 18 insertions(+), 6 deletions(-)" } },
+  agentStep("reviewer", { progress: "Reading the changed files" }),
+  { kind: "tool", details: { parentId: simulatedAgents.tests.nativeId }, complete: true,
+    native: { id: "agent-tests-run", type: "commandExecution", command: "npm test", status: "completed", exitCode: 0, aggregatedOutput: "42 tests passed", durationMs: 2400 } },
+  agentStep("tests", { progress: "All 42 tests passed; checking coverage" }),
+  { kind: "tool", details: { parentId: simulatedAgents.research.nativeId }, complete: true, native: { id: "agent-research-search", type: "webSearch", query: "example API rate limits" } },
+  agentStep("research", { progress: "Comparing documented limits with the client" }),
+  { kind: "pause", milliseconds: 1200 },
+  agentStep("tests", { state: "completed", result: "All 42 unit tests passed. Coverage is unchanged at 87%." }),
+  { kind: "tool", details: { parentId: simulatedAgents.reviewer.nativeId }, complete: true,
+    native: { id: "agent-review-grep", type: "commandExecution", command: "rg retryCount src", status: "completed", exitCode: 0, aggregatedOutput: "src/main.ts:14: const retryCount = 3;" } },
+  agentStep("reviewer", { progress: "Checking retry handling in src/main.ts" }),
+  { kind: "tool", details: { parentId: simulatedAgents.research.nativeId }, complete: true,
+    native: { id: "agent-research-fetch", type: "mcpToolCall", server: "Team documents", tool: "Read page", arguments: { page: "api-limits" }, status: "failed", error: { message: "Page not found" } } },
+  agentStep("research", { state: "failed", result: "The API limits page could not be found, so the limits were not compared." }),
+  { kind: "pause", milliseconds: 1500 },
+  agentStep("reviewer", { state: "completed", result: "One issue: src/main.ts retries 3 times without backoff. Consider exponential backoff. No other problems found." }),
+  { kind: "text", text: "Two agents finished and one failed:\n\n- **Review**: add backoff to the retry loop in `src/main.ts`.\n- **Tests**: all 42 passed.\n- **Documentation**: the limits page was missing, so that check did not run." }
+];
+
+/** Skills the simulated runtime offers, one per scope; none are real files. */
+export const simulatedSkills: readonly ProviderSkill[] = [
+  { name: "code-review", description: "Review a diff for correctness and readability.", scope: "user" },
+  { name: "release-notes", description: "Draft release notes from merged changes.", scope: "workspace" },
+  { name: "pdf", description: "Read, split and summarize PDF documents.", scope: "plugin", plugin: "documents" },
+  { name: "simplify", description: "Suggest simplifications for changed code.", scope: "system" },
+  { name: "dataviz", description: "Choose and style charts for a dataset.", scope: "plugin", plugin: "analytics" }
+];
+const skillAgent = { nativeId: "simulated-agent-spec", label: "Summarize the product spec", agentType: "researcher",
+  prompt: "Summarize the attached product spec PDF in five bullet points." } as const;
+const skills: SimulatorStep[] = [
+  { kind: "text", text: "I'll load the review skill, check the release notes guide and have an agent summarize the spec. Thread details lists each skill under **Skills**." },
+  { kind: "tool", complete: true, details: { skill: { name: "code-review", evidence: "loaded" } },
+    native: { id: "skill-load", type: "dynamicToolCall", tool: "Skill", arguments: { skill: "code-review" }, status: "completed", success: true, contentItems: [{ type: "inputText", text: "Loaded skill: code-review" }] } },
+  { kind: "tool", complete: true, native: { id: "skill-read", type: "commandExecution", command: "cat .claude/skills/release-notes/SKILL.md", status: "completed", exitCode: 0,
+    aggregatedOutput: "---\nname: release-notes\ndescription: Draft release notes from merged changes.\n---\nGroup changes by Features and Fixes." } },
+  { kind: "display", id: "agent-spec", item: { kind: "subagent", ...skillAgent, state: "running" } },
+  { kind: "tool", complete: true, details: { parentId: skillAgent.nativeId, skill: { name: "pdf", evidence: "loaded" } },
+    native: { id: "skill-agent-load", type: "dynamicToolCall", tool: "Skill", arguments: { skill: "pdf" }, status: "completed", success: true, contentItems: [{ type: "inputText", text: "Loaded skill: pdf" }] } },
+  { kind: "display", id: "agent-spec", item: { kind: "subagent", ...skillAgent, state: "completed", result: "The spec covers onboarding, billing, exports, roles and audit logs." } },
+  { kind: "text", text: "Done. **code-review** was loaded, the **release-notes** guide was read directly, and the agent loaded **pdf**. The other skills stay listed as available." }
+];
+
 export function stepsForScenario(instruction: string): SimulatorStep[] {
   const id = instruction.trim().split(/\s/)[0].replace(/^\//, "");
   switch (id) {
@@ -73,6 +144,11 @@ export function stepsForScenario(instruction: string): SimulatorStep[] {
     case "approval-stack": return [{ kind: "approval-batch", approvals }];
     case "suggestions": return [{ kind: "text", text: "The example changes are ready. A suggested follow-up will appear in the empty composer when this turn finishes." },
       { kind: "suggestion", text: "Run the test suite and summarize any failures." }];
+    case "connector-sign-in": return [
+      { kind: "text", text: `To find the open issues assigned to you I need access to **${simulatedConnectorName}**, which isn't signed in yet.` },
+      { kind: "display", id: "connector-sign-in", item: { kind: "connector-sign-in", server: simulatedConnectorName,
+        reason: "Read the open issues assigned to you. Sign-in is simulated and never opens a browser." } },
+      { kind: "text", text: "Once you're signed in, send a message and I'll continue." }];
     case "usage-limit": return [{ kind: "failure", failure: { code: "usage-limit", message: "Codex usage limit reached", retryable: true } }];
     case "failure": return [failedTool, { kind: "failure" }];
     case "recovery": return [{ kind: "recovery" }];
@@ -80,6 +156,8 @@ export function stepsForScenario(instruction: string): SimulatorStep[] {
     case "long-output": return [{ kind: "tool", complete: true, native: { id: "long", type: "commandExecution", command: "npm run example-report", status: "completed", exitCode: 0,
       aggregatedOutput: Array.from({ length: 500 }, (_, index) => `Line ${index + 1}: /simulated/workspace/${"nested/".repeat(12)}file.ts — example output`).join("\n") } }];
     case "slow": return [tools[0], { kind: "pause", milliseconds: 15_000 }, tools[2]];
+    case "subagents": return subagents;
+    case "skills": return skills;
     default: return [{ kind: "text", text: "This is a simulated conversation. I’ll inspect the project, ask for your preferences, and request approval." },
       ...tools.slice(0, 6), questions, commandApproval];
   }

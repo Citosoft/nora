@@ -73,7 +73,7 @@ export function WorkspaceChromeHarness() {
       <main className="thread-conversation flex min-h-0 min-w-0 flex-1 flex-col bg-background">
         <>
           <div className="relative flex min-h-0 flex-1 flex-col" data-thread-insights={expanded ? "expanded" : "collapsed"}>
-            <ThreadInsightsPanel header={{ ...header, conversation: { ...header.conversation, archivedAt: archived ? "2026-11-10T10:00:00.000Z" : null } }} providerLabel="Codex" changes={insights.changes} request={insights.request} expanded={expanded} busy={false} canSettle={!archived} hasOlderHistory={false}
+            <ThreadInsightsPanel header={{ ...header, conversation: { ...header.conversation, archivedAt: archived ? "2026-11-10T10:00:00.000Z" : null } }} providerLabel="Codex" connectors={null} changes={insights.changes} request={insights.request} expanded={expanded} busy={false} canSettle={!archived} hasOlderHistory={false}
               onToggle={() => setExpanded((current) => !current)} onRefresh={insights.refresh} onLoadHistory={() => {}} onSettleChange={() => { setArchived(true); record("archive"); }} />
             <div className="thread-transcript min-h-0 flex-1 overflow-auto px-5 py-7"><p>Workspace controls are grouped in the sidebar. This conversation keeps its own change summary and branch request.</p></div>
           </div>

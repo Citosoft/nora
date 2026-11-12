@@ -6,5 +6,6 @@ export const simulatorPacing = {
   responseGapMs: 800,
   textChunkCharacters: 6,
   textChunkMs: 120,
-  requestExpiryMs: 2000
+  requestExpiryMs: 2000,
+  connectorSignInMs: 1500
 } as const;

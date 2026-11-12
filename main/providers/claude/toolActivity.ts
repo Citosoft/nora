@@ -2,8 +2,24 @@ import { claudeToolCallSchema, claudeToolResultSchema } from "./toolSchemas";
 import { z } from "zod";
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { ClaudeToolFrame } from "@main/types/execution/claude.types";
-import type { ToolState } from "@shared/types/conversation/contracts.types";
+import type { ToolDetails, ToolState } from "@shared/types/conversation/contracts.types";
+import type { JsonValue } from "@main/types/execution/rpc.types";
+import { skillReadEvidence } from "../skillEvidence";
 import { formatToolContent, formatToolInput } from "../toolPresentation";
+import { ClaudeSubagentActivity } from "./subagentActivity";
+
+const skillInputSchema = z.object({ skill: z.string().min(1) });
+const pathInputSchema = z.object({ file_path: z.string().optional(), command: z.string().optional() });
+
+/** The Skill tool loads a skill by name; a Read or Bash call on a SKILL.md reads one directly. */
+function claudeSkillEvidence(name: string, input: JsonValue): Pick<ToolDetails, "skill"> {
+  if (name === "Skill") {
+    const skill = skillInputSchema.safeParse(input);
+    return skill.success ? { skill: { name: skill.data.skill, evidence: "loaded" } } : {};
+  }
+  const target = pathInputSchema.safeParse(input);
+  return target.success && (name === "Read" || name === "Bash") ? skillReadEvidence(target.data.file_path ?? target.data.command) : {};
+}
 
 const errorContentSchema = z.object({ type: z.string().refine((type) => type.endsWith("_error")) });
 const detachedResultSchema = z.object({ detachedToolCall: z.literal(true) });
@@ -12,6 +28,8 @@ const detachedResultSchema = z.object({ detachedToolCall: z.literal(true) });
 export class ClaudeToolActivity {
   private readonly tools = new Map<string, ClaudeToolFrame>();
   private readonly hiddenTasks = new Set<string>();
+  /** Subagent calls, results and task events are reported by the subagent tracker instead of as tools. */
+  constructor(private readonly agents = new ClaudeSubagentActivity()) {}
 
   private put(frame: ClaudeToolFrame): ClaudeToolFrame[] {
     const previous = this.tools.get(frame.nativeId);
@@ -43,13 +61,14 @@ export class ClaudeToolActivity {
       });
     }
     if (message.type === "system" && message.subtype === "permission_denied") {
+      if (this.agents.has(message.tool_use_id)) return [];
       const previous = this.tools.get(message.tool_use_id);
       return this.put({ ...previous, kind: "tool", nativeId: message.tool_use_id, eventId: message.uuid,
         label: message.tool_name, output: message.decision_reason ?? "Permission was declined.", state: "declined" });
     }
     if (message.type === "system" && (message.subtype === "task_started" || message.subtype === "task_progress" || message.subtype === "task_notification")) {
       if (("ambient" in message && message.ambient) || ("skip_transcript" in message && message.skip_transcript)) this.hiddenTasks.add(message.task_id);
-      if (this.hiddenTasks.has(message.task_id)) return [];
+      if (this.hiddenTasks.has(message.task_id) || this.agents.ownsTask(message)) return [];
       const nativeId = `task:${message.run_id ?? message.task_id}`;
       const previous = this.tools.get(nativeId);
       const finished = message.subtype === "task_notification";
@@ -61,7 +80,7 @@ export class ClaudeToolActivity {
           ...(message.subtype === "task_progress" && message.summary ? { detail: message.summary } : {}) } });
     }
     if (message.type === "system" && message.subtype === "task_updated") {
-      if (this.hiddenTasks.has(message.task_id)) return [];
+      if (this.hiddenTasks.has(message.task_id) || this.agents.ownsTask(message)) return [];
       const nativeId = `task:${message.run_id ?? message.task_id}`;
       const previous = this.tools.get(nativeId);
       return this.put({ kind: "tool", nativeId, eventId: message.uuid, label: message.patch.description ?? previous?.label ?? "Background task",
@@ -76,14 +95,15 @@ export class ClaudeToolActivity {
       const call = claudeToolCallSchema.safeParse(block);
       if (call.success) {
         const native = call.data;
+        if (this.agents.isAgentCall(native.name)) return [];
         const category = native.name === "Bash" ? "command" : /^(Read|Write|Edit|Glob|Grep|MultiEdit)$/.test(native.name) ? "file"
           : /^(WebSearch|WebFetch)$/.test(native.name) ? "search" : native.name.startsWith("mcp__") ? "integration" : "other";
         return this.put({ kind: "tool", nativeId: native.id, eventId: `${message.uuid}:${native.id}`, label: native.name, output: "", state: "running",
-          details: { category, input: formatToolInput(native.input),
+          details: { category, input: formatToolInput(native.input), ...claudeSkillEvidence(native.name, native.input),
             ...("parent_tool_use_id" in message && message.parent_tool_use_id ? { parentId: message.parent_tool_use_id } : {}) } });
       }
       const result = claudeToolResultSchema.safeParse(block);
-      if (!result.success) return [];
+      if (!result.success || this.agents.has(result.data.tool_use_id)) return [];
       if (message.type === "user" && detachedResultSchema.safeParse(message.tool_use_result).success) return [];
       const native = result.data;
       const previous = this.tools.get(native.tool_use_id);

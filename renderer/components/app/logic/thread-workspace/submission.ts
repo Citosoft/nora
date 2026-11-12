@@ -2,9 +2,10 @@ import { applyThreadSettlement } from "./settlement";
 import type { ThreadWorkspaceInternals } from "@/components/app/types/thread-workspace/internals.types";
 import type { ThreadWorkspaceStore } from "@/components/app/types/thread-workspace/state.types";
 import { createDraftIntent, deliverDraftIntent } from "@/components/app/logic/nativeDraftIntent";
+import { compactContextCommand } from "@/components/app/logic/contextUsage";
 
 /** Persist exact command identities before IPC, retaining them after uncertain or lost replies. */
-export function createThreadSubmission(internal: ThreadWorkspaceInternals): Pick<ThreadWorkspaceStore, "submit" | "execute"> {
+export function createThreadSubmission(internal: ThreadWorkspaceInternals): Pick<ThreadWorkspaceStore, "submit" | "execute" | "compact"> {
   const { deps } = internal;
   return {
     async submit(id) {
@@ -30,6 +31,15 @@ export function createThreadSubmission(internal: ThreadWorkspaceInternals): Pick
           ? { ...entry, target: { kind: "thread", conversationId }, text: "", pending: null, updatedAt: deps.now() } : entry) });
         internal.refresh();
       } catch (cause) { internal.setRuntime(id, { error: cause instanceof Error ? cause.message : "Delivery was not confirmed. Retry checks the saved instruction identity." }); }
+      finally { internal.setRuntime(id, { busy: false }); }
+    },
+    /** Queues a context compaction run; it carries no draft text, so it bypasses the saved-instruction flow. */
+    async compact(id) {
+      const document = internal.snapshot().layout.documents.find((entry) => entry.id === id);
+      if (!document || document.target.kind !== "thread" || document.pending || internal.runtime(id).busy) return;
+      internal.setRuntime(id, { busy: true, error: null });
+      try { await deps.client.execute(compactContextCommand(document.target.conversationId, deps.nextId)); internal.refresh(); }
+      catch (cause) { internal.setRuntime(id, { error: cause instanceof Error ? cause.message : "Context compaction could not be requested." }); }
       finally { internal.setRuntime(id, { busy: false }); }
     },
     async execute(id, command) {

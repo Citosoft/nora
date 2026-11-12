@@ -12,9 +12,15 @@ export interface RuntimeMcpEntry { source: McpProviderSource; state: RuntimeMcpS
 export interface DiscoveredMcpServer { server: McpServer; source: McpProviderSource; }
 export interface McpServerTableData { rows: DiscoveredMcpServer[]; availableAccountConnectors: number; }
 
-export type McpLoginHandler = (source: McpProviderSource, serverName: string) => void;
-export interface McpServerTableProps { rows: readonly DiscoveredMcpServer[]; onLogin: McpLoginHandler; }
-export interface McpServerTableRowProps extends DiscoveredMcpServer { onLogin: McpLoginHandler; }
+/** A sign-in started from Nora: waiting on the browser and runtime, or failed with a reason. Absent when none is in progress. */
+export type McpLoginState = { status: "pending" } | { status: "failed"; message: string };
+export interface McpLoginControls {
+  state(source: McpProviderSource, serverName: string): McpLoginState | undefined;
+  start(source: McpProviderSource, serverName: string): void;
+}
+export interface McpServerTableProps { rows: readonly DiscoveredMcpServer[]; logins: McpLoginControls; }
+export interface McpServerTableRowProps extends DiscoveredMcpServer { logins: McpLoginControls; }
+export interface McpLoginButtonProps extends DiscoveredMcpServer { logins: McpLoginControls; compact?: boolean; }
 export interface McpProviderNoticeProps { entry: RuntimeMcpEntry; }
 export interface McpServerLogoUrls { light: string; dark: string; }
 export interface McpServerLogoProps { logo: McpServerLogo | undefined; }

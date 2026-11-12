@@ -160,6 +160,7 @@ function createSwitchToolDeps(tool: AgentCatalogEntry, onCommand: (command: stri
     }),
     setToolConfigs: () => undefined,
     getCliToolStatus: async (): Promise<ToolUsageInfo | null> => null,
+    checkProviderUpdates: async () => [],
     searchAgentSkills: async (toolId, query): Promise<AgentSkillSearchResult> => ({
       toolId,
       query,
@@ -304,6 +305,7 @@ test("installAgentTool resolves with refreshed detection after installer exit", 
     }),
     setToolConfigs: () => undefined,
     getCliToolStatus: async (): Promise<ToolUsageInfo | null> => null,
+    checkProviderUpdates: async () => [],
     searchAgentSkills: async (toolId, query): Promise<AgentSkillSearchResult> => ({
       toolId,
       query,

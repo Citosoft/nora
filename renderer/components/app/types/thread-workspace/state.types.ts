@@ -34,6 +34,8 @@ export interface ThreadWorkspaceStore {
   readonly client: ConversationClient;
   setSettled(target: ThreadSettlementTarget, settled: boolean): Promise<void>;
   resumeExternal(workspaceId: string, session: ExternalSession): Promise<void>;
+  /** Imports an outside thread and pins it without opening a tab. */
+  pinExternal(workspaceId: string, session: ExternalSession): Promise<void>;
   snapshot(): ThreadWorkspaceSnapshot;
   subscribe(listener: () => void): () => void;
   start(): () => void;
@@ -51,7 +53,10 @@ export interface ThreadWorkspaceStore {
   setBinding(documentId: string, binding: ProviderBinding | null): void;
   selectWorkspace(documentId: string, workspaceId: string): void;
   togglePin(conversationId: string): void;
+  setPinned(conversationId: string, pinned: boolean): void;
   submit(documentId: string): Promise<void>;
+  /** Commands other than instructions; `submit` is reserved for the composer's saved-instruction flow. */
   execute(documentId: string, command: ConversationCommand): Promise<void>;
+  compact(documentId: string): Promise<void>;
   refresh(): Promise<void>;
 }

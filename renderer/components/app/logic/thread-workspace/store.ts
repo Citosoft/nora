@@ -1,5 +1,5 @@
 import { setThreadSettlement } from "./settlement";
-import { importExternalSession } from "./externalSessions";
+import { importExternalSession, pinExternalSession } from "./externalSessions";
 import { unreadCompletions } from "./unread";
 import { effectiveRole } from "@shared/personalization/profiles";
 import { threadLayoutSchema } from "./schema";
@@ -43,7 +43,8 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
     try { deps.persistence.write(parsed.data); publish({ ...state, layout: parsed.data, storageError: null }); return true; }
     catch { publish({ ...state, layout: parsed.data, storageError: "Drafts could not be saved. Your text is retained here; retry when storage is available." }); return false; }
   };
-  const refresh = async (): Promise<void> => {
+  let latestRefresh: Promise<void> = Promise.resolve();
+  const readSummaries = async (): Promise<void> => {
     const current = ++sequence, generation = epoch;
     try {
       const summaries = await deps.client.summaries();
@@ -51,6 +52,16 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
     } catch (cause) {
       if (current === sequence && generation === epoch) publish({ ...state, loading: false, error: cause instanceof Error ? cause.message : "Threads could not be loaded from their execution host." });
     }
+  };
+  /**
+   * Resolves once the newest refresh has published. A reply superseded by a later read (for example one scheduled
+   * by the events a create emits) is discarded, so callers wait for that later read instead of acting on stale rows.
+   */
+  const refresh = async (): Promise<void> => {
+    let work = readSummaries();
+    latestRefresh = work;
+    await work;
+    while (latestRefresh !== work) { work = latestRefresh; await work; }
   };
   const scheduleRefresh = (): void => {
     if (scheduled) return;
@@ -63,6 +74,7 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
     client: deps.client,
     async setSettled(target, settled) { await setThreadSettlement(internal, target, settled); await refresh(); },
     resumeExternal: (workspaceId, session) => importExternalSession(deps, store, workspaceId, session),
+    pinExternal: (workspaceId, session) => pinExternalSession(deps, store, workspaceId, session),
     snapshot: () => state,
     subscribe(listener) { listeners.add(listener); return () => { listeners.delete(listener); }; },
     start() {
@@ -145,10 +157,12 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
       setRuntime(id, { readyBinding: null });
       save({ ...state.layout, focusedWorkspaceId: workspaceId, documents: state.layout.documents.map((entry) => entry.id === id ? { ...entry, workspaceId, role } : entry) });
     },
-    togglePin(conversationId) {
+    setPinned(conversationId, pinned) {
       const pins = state.layout.pinnedThreadIds;
-      save({ ...state.layout, pinnedThreadIds: pins.includes(conversationId) ? pins.filter((id) => id !== conversationId) : [...pins, conversationId] });
+      if (pins.includes(conversationId) === pinned) return;
+      save({ ...state.layout, pinnedThreadIds: pinned ? [...pins, conversationId] : pins.filter((id) => id !== conversationId) });
     },
+    togglePin(conversationId) { store.setPinned(conversationId, !state.layout.pinnedThreadIds.includes(conversationId)); },
     ...submission
   };
   return store;

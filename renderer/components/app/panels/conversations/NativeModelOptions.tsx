@@ -1,7 +1,8 @@
 import { Select } from "@/components/ui/select";
 import type { ModelOptionsProps } from "@/components/app/types/modelPicker.types";
+import { NativeSubagentModelOption } from "./NativeSubagentModelOption";
 
-export function NativeModelOptions({ catalog, model, policyId, reasoning, locked, onPolicy, onReasoning }: ModelOptionsProps) {
+export function NativeModelOptions({ catalog, model, policyId, reasoning, subagentModel, locked, onPolicy, onReasoning, onSubagentModel }: ModelOptionsProps) {
   const supportsReasoning = !!catalog?.capabilities.reasoning && !!model?.reasoningEfforts.length;
   const unavailable = !catalog || !model || catalog.authentication === "required";
   const policy = catalog?.policies.find((entry) => entry.id === policyId);
@@ -20,5 +21,6 @@ export function NativeModelOptions({ catalog, model, policyId, reasoning, locked
           ? reasoning ? `Use the ${reasoning} reasoning level.` : "Use the provider's configured effort instead of overriding it here."
           : "This model does not expose a reasoning setting."}</p>}
       </div>
+      {catalog?.capabilities.subagentModel && <NativeSubagentModelOption models={catalog.models} value={subagentModel} disabled={locked || unavailable} onChange={onSubagentModel} />}
   </section>;
 }

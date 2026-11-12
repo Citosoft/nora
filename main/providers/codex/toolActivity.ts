@@ -3,6 +3,7 @@ import type { TimelineIdentity } from "@main/types/execution/toolActivity.types"
 import type { ToolActivity, ToolState } from "@shared/types/conversation/contracts.types";
 import { formatToolContent, formatToolInput } from "../toolPresentation";
 import { codexToolSchema, nativeItemIdentitySchema } from "./toolSchemas";
+import { skillReadEvidence } from "../skillEvidence";
 
 export function codexToolState(status: string | undefined, complete: boolean): ToolState {
   if (status === "failed" || status === "errored") return "failed";
@@ -20,7 +21,7 @@ function readCodexTool(value: JsonValue, identity: TimelineIdentity, complete: b
   const parsed = codexToolSchema.safeParse(value);
   if (!parsed.success) {
     const envelope = nativeItemIdentitySchema.safeParse(value);
-    if (!envelope.success || ["agentMessage", "reasoning", "fileChange", "userMessage", "hookPrompt", "plan", "enteredReviewMode", "exitedReviewMode", "contextCompaction"].includes(envelope.data.type)) return null;
+    if (!envelope.success || ["agentMessage", "reasoning", "fileChange", "subAgentActivity", "userMessage", "hookPrompt", "plan", "enteredReviewMode", "exitedReviewMode", "contextCompaction"].includes(envelope.data.type)) return null;
     return { ...identity, kind: "tool", label: envelope.data.type, state: codexToolState(envelope.data.status, complete), output: previous?.output ?? "",
       details: { category: "other", detail: "Activity details are unavailable for this tool." } };
   }
@@ -30,7 +31,7 @@ function readCodexTool(value: JsonValue, identity: TimelineIdentity, complete: b
     case "commandExecution":
       return { ...tool, label: "Run command", output: native.aggregatedOutput ?? tool.output,
         state: native.exitCode != null && native.exitCode !== 0 ? "failed" : tool.state,
-        details: { category: "command", input: native.command, ...(native.cwd ? { detail: native.cwd } : {}),
+        details: { category: "command", input: native.command, ...skillReadEvidence(native.command), ...(native.cwd ? { detail: native.cwd } : {}),
           ...(native.durationMs != null ? { durationMs: native.durationMs } : {}), ...(native.exitCode != null ? { exitCode: native.exitCode } : {}) } };
     case "mcpToolCall": {
       const output = native.result ? [formatToolContent(native.result.content),
@@ -54,6 +55,5 @@ function readCodexTool(value: JsonValue, identity: TimelineIdentity, complete: b
     case "sleep": return { ...tool, label: "Wait", details: { category: "wait", input: `${native.durationMs / 1000} seconds` } };
     case "collabAgentToolCall":
     case "collabToolCall": return { ...tool, label: native.tool, details: { category: "agent", ...(native.prompt ? { input: native.prompt } : {}) } };
-    case "subAgentActivity": return { ...tool, label: "Agent activity", details: { category: "agent", detail: native.agentPath, input: formatToolInput(native.kind) } };
   }
 }

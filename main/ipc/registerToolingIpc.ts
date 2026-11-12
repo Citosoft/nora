@@ -40,6 +40,7 @@ export function registerToolingIpc({
     }
   });
   ipcMain.handle("app:refresh-catalog", () => withSnapshot(() => services.tooling.refreshCatalog()));
+  ipcMain.handle("app:check-provider-updates", () => services.tooling.checkProviderUpdates());
   ipcMain.handle("app:search-tool-skills", (_event, toolId: string, query: string) =>
     services.tooling.searchToolSkills(toolId, query)
   );

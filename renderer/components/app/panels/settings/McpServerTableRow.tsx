@@ -1,24 +1,20 @@
 import { useId, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import type { McpServerTableRowProps } from "@/components/app/types/runtimeMcp.types";
+import { McpLoginButton } from "@/components/app/panels/settings/McpLoginButton";
 import { McpServerLogo } from "@/components/app/panels/settings/McpServerLogo";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
-import { Badge, type BadgeProps } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { MCP_SERVER_STATUS_BADGES } from "@/components/app/constants/mcpServerStatus";
+import { Badge } from "@/components/ui/badge";
 import type { McpServer } from "@shared/types/provider/mcp.types";
 
-const STATUS_BADGES: Readonly<Record<McpServer["status"], { label: string; variant: BadgeProps["variant"] }>> = {
-  connected: { label: "Connected", variant: "success" }, pending: { label: "Connecting", variant: "secondary" },
-  "needs-auth": { label: "Sign-in required", variant: "warning" }, failed: { label: "Failed", variant: "destructive" },
-  disabled: { label: "Disabled", variant: "outline" }, unknown: { label: "Unknown", variant: "outline" }
-};
 const SCOPE_LABELS: Readonly<Record<McpServer["scope"], string>> = { global: "Global", workspace: "Workspace", unknown: "Unknown" };
 const CELL_CLASS_NAME = "px-3 py-2 align-middle";
 
-export function McpServerTableRow({ server, source, onLogin }: McpServerTableRowProps) {
+export function McpServerTableRow({ server, source, logins }: McpServerTableRowProps) {
   const [expanded, setExpanded] = useState(false);
   const detailsId = useId();
-  const status = STATUS_BADGES[server.status];
+  const status = MCP_SERVER_STATUS_BADGES[server.status];
   const hasDetails = server.tools.length > 0 || Boolean(server.message);
   return <>
     <tr className="border-b border-border/40 last:border-0">
@@ -41,7 +37,7 @@ export function McpServerTableRow({ server, source, onLogin }: McpServerTableRow
         </button> : <span className="text-muted-foreground">0</span>}
       </td>
       <td className={`${CELL_CLASS_NAME} text-right`}>
-        {server.canLogin ? <Button variant="outline" size="sm" onClick={() => onLogin(source, server.name)}>Sign in</Button> : null}
+        {server.canLogin ? <McpLoginButton server={server} source={source} logins={logins} /> : null}
       </td>
     </tr>
     {expanded ? <tr id={detailsId} className="border-b border-border/40 bg-muted/20 last:border-0">

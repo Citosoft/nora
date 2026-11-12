@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { providerKindSchema } from "@shared/providers/providerKinds";
-import { commandReceiptSchema, conversationCommandSchema, conversationEventSchema, conversationSchema,
+import { commandReceiptSchema, contextUsageSchema, conversationCommandSchema, conversationEventSchema, conversationSchema,
   requestSchema, runSchema, timelineItemSchema, workspaceRefSchema } from "./contracts";
 import { mcpResultSchema } from "@shared/providers/mcp";
 import { providerAccountResultSchema } from "@shared/providers/account";
+import { skillsResultSchema } from "@shared/providers/skills";
 import { catalogResultSchema } from "./catalog";
 import { externalSessionsResultSchema } from "./externalSessions";
 
@@ -15,6 +16,8 @@ export const executeRequestSchema = z.object({ ...routed, command: conversationC
 export const readRequestSchema = z.discriminatedUnion("kind", [
   z.object({ ...routed, kind: z.literal("external-sessions"), providerKind: providerKindSchema, instanceId: id, workspace: workspaceRefSchema }).strict(),
   z.object({ ...routed, kind: z.literal("header"), conversationId: id }).strict(),
+  /** Measures native context for a thread with no reading yet, from the runtime's saved history. */
+  z.object({ ...routed, kind: z.literal("context"), conversationId: id }).strict(),
   z.object({ ...routed, kind: z.literal("summaries"), projectId: id.optional() }).strict(),
   z.object({ ...routed, kind: z.literal("history"), conversationId: id, scope: z.enum(["timeline", "runs"]),
     before: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(), limit: pageLimit }).strict(),
@@ -40,6 +43,7 @@ export const eventPageSchema = z.object({ schemaVersion: z.literal(1), after: cu
 export const readResultSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("external-sessions"), result: externalSessionsResultSchema }).strict(),
   z.object({ kind: z.literal("header"), header: headerSchema.nullable() }).strict(),
+  z.object({ kind: z.literal("context"), context: contextUsageSchema.nullable() }).strict(),
   z.object({ kind: z.literal("summaries"), summaries: z.array(summarySchema) }).strict(),
   z.object({ kind: z.literal("history"), page: historySchema }).strict(),
   z.object({ kind: z.literal("events"), page: eventPageSchema }).strict(),
@@ -52,11 +56,12 @@ export const gatewayReplySchema = z.discriminatedUnion("ok", [
     ...readResultSchema.options,
     z.object({ kind: z.literal("mcp"), result: mcpResultSchema }).strict(),
     z.object({ kind: z.literal("account"), result: providerAccountResultSchema }).strict(),
+    z.object({ kind: z.literal("skills"), result: skillsResultSchema }).strict(),
     z.object({ kind: z.literal("receipt"), receipt: commandReceiptSchema }).strict(),
     z.object({ kind: z.literal("watch"), receipt: watchReceiptSchema }).strict(),
     z.object({ kind: z.literal("unwatched") }).strict()
   ]) }).strict(),
   z.object({ ok: z.literal(false), error: gatewayErrorSchema }).strict()
 ]);
-export const conversationChannels = Object.freeze({ execute: "conversation:execute", read: "conversation:read", mcp: "provider:mcp", account: "provider:account",
+export const conversationChannels = Object.freeze({ execute: "conversation:execute", read: "conversation:read", mcp: "provider:mcp", account: "provider:account", skills: "provider:skills",
   watch: "conversation:watch", unwatch: "conversation:unwatch", cursor: "conversation:cursor" });

@@ -13,6 +13,7 @@ import { useAppRootState } from "@/components/app/context/appRootStateContext";
 import { useAgentAttention } from "@/components/app/hooks/useAgentAttention";
 import { useAgentCreationAnalytics } from "@/components/app/hooks/useAgentCreationAnalytics";
 import { useAppRootChromeShellSources } from "@/components/app/hooks/useAppRootChromeShellSources";
+import { useUpdateIndicators } from "@/components/app/hooks/useUpdateIndicators";
 import { useAppRootForgeViewerWorkItemDetailEffect } from "@/components/app/hooks/useAppRootForgeViewerWorkItemDetailEffect";
 import { useAppRootModalExtrasSources } from "@/components/app/hooks/useAppRootModalExtrasSources";
 import { useAppRootSettingsRuntimeAssemblyInput } from "@/components/app/hooks/useAppRootSettingsRuntimeAssemblyInput";
@@ -36,7 +37,6 @@ import type { SignedInAppRootProps } from "@/components/app/types/signedInAppRoo
 import type { AppRootSignedInProviderSlicesWiringInput } from "@/components/app/types/appRootSignedInProviderSlicesWiring.types";
 import { AppRootOrchestratedTree } from "@/components/app/views/AppRootOrchestratedTree";
 import { SignedInShellComposition } from "@/components/app/views/signedInShellComposition";
-import { ToastProvider } from "@/components/ui/toast";
 import { useCallback, useMemo, useRef, type ReactElement } from "react";
 
 export function SignedInAppRoot(props: SignedInAppRootProps): ReactElement | null {
@@ -350,7 +350,9 @@ function SignedInAppRootContent({
         ].find((project) => project.id === uiState.workspaceTerminalPresetsProjectId) ?? null
       : null;
 
+  const updateIndicators = useUpdateIndicators(props.providerUpdates, props.autoUpdate, props.linuxUpdateNotice, props.captureError);
   const chromeShellSources = useAppRootChromeShellSources({
+    updateIndicators,
     keyboardShortcutActions,
     workspaceQuickSearchSource: derived.workspaceQuickSearchSource,
     workspaceQuickSearchRequestId,
@@ -937,13 +939,11 @@ function SignedInAppRootContent({
   }
 
   return (
-    <ToastProvider swipeDirection="right">
-      <SignedInShellComposition
-        signedIn={signedIn}
-        shellFrameValue={{ statusBar: props.shellFrame.statusBar, toasts: props.shellFrame.toasts, dismissToast: props.shellFrame.dismissToast }}
-      >
-        <AppRootOrchestratedTree />
-      </SignedInShellComposition>
-    </ToastProvider>
+    <SignedInShellComposition
+      signedIn={signedIn}
+      shellFrameValue={{ statusBar: props.shellFrame.statusBar, toasts: props.shellFrame.toasts, dismissToast: props.shellFrame.dismissToast }}
+    >
+      <AppRootOrchestratedTree />
+    </SignedInShellComposition>
   );
 }

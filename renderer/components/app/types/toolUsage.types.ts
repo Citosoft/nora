@@ -46,5 +46,8 @@ export interface UsageRings {
 
 export interface UsageWindowRowProps { window: ToolUsageWindow; }
 export interface UsageSummaryGridProps { info: ToolUsageInfo; }
-export interface UsageDonutProps { rings: UsageRings; className?: string; }
+/** One filled arc of a ring gauge. */
+export type GaugeRingValue = Pick<UsageRing, "percentUsed" | "tone">;
+/** Concentric rings from the outside in; null draws an empty track. */
+export interface RingGaugeProps { rings: ReadonlyArray<GaugeRingValue | null>; className?: string; }
 export interface ProviderUsageWidgetProps { provider: NativeProvider | null; }

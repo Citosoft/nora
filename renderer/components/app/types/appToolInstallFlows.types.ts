@@ -23,6 +23,7 @@ export type UseAppToolInstallFlowsResult = {
   refreshOnboardingTools: () => Promise<void>;
   installOnboardingTool: (toolId: string) => Promise<void>;
   installStatusBarTool: (toolId: string) => Promise<void>;
+  updateProviderTool: (toolId: string) => Promise<void>;
   switchStatusBarToolAccount: (toolId: string) => Promise<void>;
   setOnboardingToolEnabled: (toolId: string, enabled: boolean) => Promise<void>;
 };

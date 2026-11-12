@@ -13,7 +13,7 @@ import type {
   AgentSkillInstallOutputEvent,
   AgentSkillSearchResult
 } from "@shared/appTypes";
-import { Sparkles } from "lucide-react";
+import { ScrollText } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 function SkillSearchTranscript({ result }: { result: AgentSkillSearchResult }) {
@@ -192,7 +192,7 @@ export function SkillsSettingsSection() {
     <div className="max-w-4xl">
       <div>
         <div className="flex items-center gap-2 text-foreground">
-          <Sparkles className="size-5" aria-hidden="true" />
+          <ScrollText className="size-5" aria-hidden="true" />
           <div className="text-xl font-semibold">Skills</div>
         </div>
         <div className="mt-1 text-sm text-muted-foreground">

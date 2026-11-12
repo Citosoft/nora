@@ -13,6 +13,7 @@ export function NativeProviderPicker({ state, workspace, client, locked, initial
   const [policy, setPolicy] = useState<string | null>(initial?.permissionPolicy ?? null);
   const [needsPolicy, setNeedsPolicy] = useState(false);
   const [reasoning, setReasoning] = useState<string | null>(initial?.reasoning ?? null);
+  const [subagentModel, setSubagentModel] = useState<string | null>(initial?.subagentModel ?? null);
   const store = useMemo(() => createModelCatalogStore({ client, workspace: workspace.workspace }), [client, workspace.workspace]);
   const selectedKey = locked ? nativeProviderKey(locked) : choice.providerKey;
   const provider = state.providers.find((entry) => nativeProviderKey(entry) === selectedKey) ?? (!selectedKey ? state.providers[0] ?? null : null);
@@ -22,8 +23,9 @@ export function NativeProviderPicker({ state, workspace, client, locked, initial
   const available = catalog.status === "available" ? catalog.catalog : null;
   const policyId = locked?.permissionPolicy ?? policy ?? (needsPolicy ? "" : available?.policies[0]?.id ?? "");
   const effort = locked ? locked.reasoning : reasoning;
-  const resolution = useMemo(() => resolveModelBinding({ provider, catalog, modelId, policyId, reasoning: effort, locked }),
-    [provider, catalog, modelId, policyId, effort, locked]);
+  const agentModel = locked ? locked.subagentModel ?? null : subagentModel;
+  const resolution = useMemo(() => resolveModelBinding({ provider, catalog, modelId, policyId, reasoning: effort, subagentModel: agentModel, locked }),
+    [provider, catalog, modelId, policyId, effort, agentModel, locked]);
   // Resolve inherited defaults once; a later catalog reorder must not silently change the model.
   useEffect(() => {
     if (!locked && choice.modelId === null && provider && model) setChoice({ providerKey: nativeProviderKey(provider), modelId: model.id });
@@ -36,12 +38,13 @@ export function NativeProviderPicker({ state, workspace, client, locked, initial
   return <div className="space-y-2">
     <div className="flex min-w-0 items-center gap-1">
       <NativeModelPopover providers={state.providers} store={store} selectedProvider={provider} selectedModel={model} selectedModelId={modelId} locked={!!locked}
-        settings={{ catalog: available, policyId, reasoning: effort, onPolicy: (value) => { setPolicy(value); setNeedsPolicy(false); }, onReasoning: setReasoning }}
+        settings={{ catalog: available, policyId, reasoning: effort, subagentModel: agentModel,
+          onPolicy: (value) => { setPolicy(value); setNeedsPolicy(false); }, onReasoning: setReasoning, onSubagentModel: setSubagentModel }}
         onSelect={(nextProvider, nextModel) => {
           if (locked) return;
           const key = nativeProviderKey(nextProvider);
           const changedProvider = key !== (provider ? nativeProviderKey(provider) : null);
-          if (changedProvider) { setPolicy(null); setNeedsPolicy(true); }
+          if (changedProvider) { setPolicy(null); setNeedsPolicy(true); setSubagentModel(null); }
           if (changedProvider || model?.id !== nextModel.id) setReasoning(null);
           setChoice({ providerKey: key, modelId: nextModel.id });
         }} />

@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { threadRequestTarget } from "@/components/app/logic/thread-workspace/requests";
 import { summarizeThreadChanges } from "@/components/app/logic/thread-workspace/insights";
+import { summarizeThreadSubagents } from "@/components/app/logic/thread-workspace/subagents";
 import type { ThreadInsightsInput, ThreadRequestState } from "@/components/app/types/threadInsights.types";
 
 export function useThreadInsights({ header, items, workspace, hasOlderHistory, readBranchRequest }: ThreadInsightsInput) {
   const changes = useMemo(() => summarizeThreadChanges(items, hasOlderHistory), [items, hasOlderHistory]);
+  const subagents = useMemo(() => summarizeThreadSubagents(items), [items]);
   const [request, setRequest] = useState<ThreadRequestState>({ status: "unavailable" });
   const [revision, setRevision] = useState(0);
   const target = threadRequestTarget(header?.conversation.workspace, workspace);
@@ -25,5 +27,5 @@ export function useThreadInsights({ header, items, workspace, hasOlderHistory, r
     });
     return () => { cancelled = true; };
   }, [projectId, branch, readBranchRequest, reviewKey, revision]);
-  return { changes, request, refresh: () => setRevision((current) => current + 1) };
+  return { changes, subagents, request, refresh: () => setRevision((current) => current + 1) };
 }

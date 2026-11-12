@@ -55,7 +55,7 @@ test("a hint arriving while an empty replay page is in flight cannot skip the ne
     payload: { kind: "item", item: { kind: "milestone", id: "milestone", runId: "run", createdAt: "2026-10-21T10:00:00.000Z", text: "Activity" } } };
   let notify = (_hint: ConversationCursorHint): void => {};
   let watchId = ""; const afters: number[] = []; const seen: number[] = []; const errors: Error[] = [];
-  const bridge: ConversationBridge = { async mcp() { throw new Error("Unused"); }, async account() { throw new Error("Unused"); },
+  const bridge: ConversationBridge = { async mcp() { throw new Error("Unused"); }, async account() { throw new Error("Unused"); }, async skills() { throw new Error("Unused"); },
     async execute() { throw new Error("Unused"); },
     async read(request) {
       assert.ok(request.kind === "events"); afters.push(request.after);
@@ -107,7 +107,7 @@ test("turn review patches cross the typed IPC/client boundary without exposing u
 
 test("closing before the watch handshake returns cleans up its eventual remote registration", async () => {
   const gate = deferred<void>(); const cleanups: string[] = []; let listening = false;
-  const bridge: ConversationBridge = { async mcp() { throw new Error("Unused"); }, async account() { throw new Error("Unused"); }, async execute() { throw new Error("Unused"); }, async read() { throw new Error("View already closed"); },
+  const bridge: ConversationBridge = { async mcp() { throw new Error("Unused"); }, async account() { throw new Error("Unused"); }, async skills() { throw new Error("Unused"); }, async execute() { throw new Error("Unused"); }, async read() { throw new Error("View already closed"); },
     async watch(request) { await gate.promise; return { watchId: request.watchId, cursor: 5 }; },
     async unwatch(request) { cleanups.push(request.watchId); }, onCursor() { listening = true; return () => { listening = false; }; } };
   const close = createConversationClient(bridge, "local").subscribe({ after: 0, onEvent() { assert.fail("Closed view received an event"); }, onError() { assert.fail("Closed view received an error"); } });
@@ -125,7 +125,7 @@ test("preload rejects incompatible or credential-bearing responses with a saniti
 
 test("a cursor from a newer or different store fails hydration instead of silently waiting forever", async () => {
   const errors: Error[] = [];
-  const bridge: ConversationBridge = { async mcp() { throw new Error("Unused"); }, async account() { throw new Error("Unused"); }, async execute() { throw new Error("Unused"); }, async read() { throw new Error("Invalid cursor should not replay"); },
+  const bridge: ConversationBridge = { async mcp() { throw new Error("Unused"); }, async account() { throw new Error("Unused"); }, async skills() { throw new Error("Unused"); }, async execute() { throw new Error("Unused"); }, async read() { throw new Error("Invalid cursor should not replay"); },
     async watch(request) { return { watchId: request.watchId, cursor: 1 }; }, async unwatch() {}, onCursor() { return () => {}; } };
   const close = createConversationClient(bridge, "local").subscribe({ after: 99, onEvent() { assert.fail("Unexpected event"); }, onError: (error) => errors.push(error) });
   try { await until(() => errors.length === 1); assert.match(errors[0].message, /cursor is unavailable/); }

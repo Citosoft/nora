@@ -1,5 +1,6 @@
 import type { StatusBarEntry } from "@/components/app/types";
 import type { TitleBarProps } from "@/components/app/types/chromeDialog.types";
+import type { UpdateIndicators } from "@/components/app/types/updateIndicators.types";
 import type { AgentCatalogEntry, ToolUsageInfo } from "@shared/appTypes";
 
 export type AppToolsProps = Pick<TitleBarProps,
@@ -19,6 +20,7 @@ export interface WorkspaceStatusInput {
 export interface WorkspaceUtilitiesInput {
   status: WorkspaceStatusInput;
   appTools: AppToolsProps;
+  updates: UpdateIndicators;
 }
 
 export interface WorkspaceUtilitiesProps { collapsed: boolean; }

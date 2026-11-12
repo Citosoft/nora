@@ -2,6 +2,11 @@ import { z } from "zod";
 
 const base = { id: z.string(), status: z.string().optional() };
 const duration = { durationMs: z.number().nonnegative().nullable().optional() };
+/** The model and effort requested at spawn, or resolved at creation on activity records; absent from older records. */
+const agentModel = { model: z.string().nullable().optional(), reasoningEffort: z.string().nullable().optional() };
+const collabAgentStateSchema = z.object({ status: z.string(), message: z.string().nullable().optional() });
+export const collabAgentToolCallSchema = z.object({ ...base, type: z.literal("collabAgentToolCall"), tool: z.string(), prompt: z.string().nullable().optional(),
+  receiverThreadIds: z.array(z.string()).optional(), agentsStates: z.record(z.string(), collabAgentStateSchema.optional()).optional(), ...agentModel });
 export const codexToolSchema = z.discriminatedUnion("type", [
   z.object({ ...base, ...duration, type: z.literal("commandExecution"), command: z.string(), cwd: z.string().optional(),
     aggregatedOutput: z.string().nullable().optional(), exitCode: z.number().int().nullable().optional() }),
@@ -17,10 +22,12 @@ export const codexToolSchema = z.discriminatedUnion("type", [
   z.object({ ...base, type: z.literal("imageGeneration"), savedPath: z.string().nullable().optional(), revisedPrompt: z.string().nullable().optional(),
     failure: z.object({ message: z.string().optional() }).nullable().optional() }),
   z.object({ ...base, type: z.literal("sleep"), durationMs: z.number().nonnegative() }),
-  z.object({ ...base, type: z.literal("collabAgentToolCall"), tool: z.string(), prompt: z.string().nullable().optional(), receiverThreadIds: z.array(z.string()).optional() }),
-  z.object({ ...base, type: z.literal("collabToolCall"), tool: z.string(), prompt: z.string().nullable().optional() }),
-  z.object({ ...base, type: z.literal("subAgentActivity"), agentPath: z.string(), agentThreadId: z.string(), kind: z.json() })
+  collabAgentToolCallSchema,
+  z.object({ ...base, type: z.literal("collabToolCall"), tool: z.string(), prompt: z.string().nullable().optional() })
 ]);
+/** Lifecycle records Codex writes into the parent thread for each spawned agent; older records carry the kind as an object. */
+export const subAgentActivitySchema = z.object({ ...base, type: z.literal("subAgentActivity"), agentPath: z.string(), agentThreadId: z.string(),
+  kind: z.union([z.string(), z.object({ type: z.string() }).transform((kind) => kind.type)]), ...agentModel });
 export const nativeItemEnvelopeSchema = z.object({ threadId: z.string(), turnId: z.string(), item: z.json() });
 export const nativeItemIdentitySchema = z.object({ id: z.string(), type: z.string(), status: z.string().optional() });
 export const toolProgressSchema = z.object({ threadId: z.string(), turnId: z.string(), itemId: z.string(), message: z.string() });

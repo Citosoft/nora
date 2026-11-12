@@ -28,6 +28,8 @@ export type AgentDefinition = Omit<
 > & {
   executablePathCandidates: AgentExecutablePathCandidate[];
   windowsLaunchCommand?: string;
+  /** npm package that distributes this CLI; its registry `latest` tag is the update source. */
+  npmPackage: string | null;
   skillCatalog?:
     | {
         rootDir: string;

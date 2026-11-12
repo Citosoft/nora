@@ -1,31 +1,40 @@
 import { setTimeout as delay } from "node:timers/promises";
 import type { ExecutionProvider, EmitProviderUpdate, ProviderExecution } from "@main/types/execution/provider.types";
-import type { ExecutionFailure, RequestResponse, RuntimeRequest, TimelineItem } from "@shared/types/conversation/contracts.types";
+import type { ExecutionFailure, RequestResponse, RuntimeRequest, TimelineItem, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { SimulatorExecution, SimulatorStep } from "../types/scenarios.types";
 import type { ProviderCatalogResult } from "@shared/types/provider/catalog.types";
 import { nativeCapabilities } from "@main/execution/providerCapabilities";
 import { normalizeCodexTool } from "@main/providers/codex/toolActivity";
-import { stepsForScenario } from "../scenarios";
+import { simulatedSkills, stepsForScenario } from "../scenarios";
+import type { SkillsResult } from "@shared/types/provider/skills.types";
 import { simulatorPacing } from "../pacing";
 import type { SteeringResult } from "@main/types/execution/steering.types";
+import type { McpAction, McpResult } from "@shared/types/provider/mcp.types";
+import { SimulatedConnectors } from "./connectors";
 
 /** Deliberately has no SDK, subprocess, filesystem-tool or network implementation. */
 export class SimulatorProvider implements ExecutionProvider {
   readonly kind = "codex";
   readonly instanceId = "simulator";
-  readonly capabilities = { ...nativeCapabilities, steering: true, promptSuggestions: true };
+  readonly capabilities = { ...nativeCapabilities, steering: true, promptSuggestions: true, subagentDetails: true, subagentModel: true };
   private readonly active = new Map<string, SimulatorExecution>();
   private sequence = 0;
-  constructor(private readonly speed = 1) {}
+  private readonly connectors: SimulatedConnectors;
+  constructor(private readonly speed = 1) { this.connectors = new SimulatedConnectors(speed); }
+
+  async skills(): Promise<SkillsResult> { return { kind: "skills", skills: [...simulatedSkills] }; }
+
+  async mcp(_workspace: WorkspaceRef | null, action: McpAction): Promise<McpResult> { return this.connectors.handle(action); }
 
   async catalog(): Promise<ProviderCatalogResult> {
     return { status: "available" as const, catalog: { kind: this.kind, instanceId: this.instanceId, capabilities: this.capabilities,
-      authentication: "present" as const, models: [{ id: "simulated", name: "Simulated model · no tokens", description: "Local scripted responses", reasoningEfforts: [], defaultReasoningEffort: null }],
+      authentication: "present" as const, models: [{ id: "simulated", name: "Simulated model · no tokens", description: "Local scripted responses", reasoningEfforts: [], defaultReasoningEffort: null },
+        { id: "simulated-small", name: "Simulated small model · no tokens", description: "Local scripted responses for subagents", reasoningEfforts: [], defaultReasoningEffort: null }],
       policies: [{ id: "simulated", label: "Simulated permissions" }] } };
   }
 
   async start(execution: ProviderExecution, emit: EmitProviderUpdate): Promise<void> {
-    const active: SimulatorExecution = { ...execution, emit, controller: new AbortController(), done: false, tools: new Map(), responses: new Map() };
+    const active: SimulatorExecution = { ...execution, emit, controller: new AbortController(), done: false, tools: new Map(), agents: new Map(), responses: new Map() };
     this.active.set(execution.run.attemptId, active);
     const base = this.base(active);
     emit({ ...base, kind: "started", nativeConversationId: `simulated-${execution.snapshot.conversation.id}`, nativeTurnId: `turn-${execution.run.id}` });
@@ -39,13 +48,23 @@ export class SimulatorProvider implements ExecutionProvider {
           case "pause": await this.pause(active, step.milliseconds); break;
           case "text": await this.text(active, step.text); break;
           case "suggestion": active.promptSuggestion = step.text; break;
-          case "display": this.item(active, { ...step.item, id: `${active.run.id}:${step.id}`, runId: active.run.id, createdAt: new Date().toISOString() }); break;
+          case "display": {
+            if (step.item.kind === "connector-sign-in") this.connectors.signOut();
+            const id = `${active.run.id}:${step.id}`;
+            const item: TimelineItem = { ...step.item, id, runId: active.run.id, createdAt: active.agents.get(id)?.createdAt ?? new Date().toISOString(),
+              // Like Claude, an agent without its own model runs on the thread's subagent default, else the thread's model.
+              ...(step.item.kind === "subagent" && !step.item.model ? { model: active.snapshot.conversation.provider.subagentModel ?? active.snapshot.conversation.provider.model } : {}) };
+            if (item.kind === "subagent") active.agents.set(id, item);
+            this.item(active, item); break;
+          }
           case "tool": {
             const native = step.native;
             const nativeId = native !== null && typeof native === "object" && !Array.isArray(native) && typeof native.id === "string" ? native.id : "tool";
             const id = `${active.run.id}:${nativeId}`;
             const previous = active.tools.get(id);
-            const item = normalizeCodexTool(native, { id, runId: active.run.id, createdAt: previous?.createdAt ?? new Date().toISOString() }, step.complete, previous);
+            const normalized = normalizeCodexTool(native, { id, runId: active.run.id, createdAt: previous?.createdAt ?? new Date().toISOString() }, step.complete, previous);
+            const item = normalized && step.details
+              ? { ...normalized, details: { ...normalized.details, category: normalized.details?.category ?? "other", ...step.details } } : normalized;
             if (item) {
               if (step.complete) {
                 if (!previous) {
@@ -116,6 +135,8 @@ export class SimulatorProvider implements ExecutionProvider {
   private finish(active: SimulatorExecution, status: "completed" | "failed" | "interrupted", failure?: ExecutionFailure): void {
     if (active.done) return;
     for (const item of active.tools.values()) if (item.state === "running") this.item(active, { ...item,
+      state: status === "completed" ? "unconfirmed" : status === "failed" ? "failed" : "interrupted" });
+    for (const agent of active.agents.values()) if (agent.state === "running") this.item(active, { ...agent,
       state: status === "completed" ? "unconfirmed" : status === "failed" ? "failed" : "interrupted" });
     active.done = true;
     active.emit({ ...this.base(active), kind: "finished", status, usage: { inputTokens: 0, outputTokens: 0 },

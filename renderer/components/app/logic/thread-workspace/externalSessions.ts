@@ -12,7 +12,7 @@ export async function adoptExternalSession(deps: ThreadWorkspaceDeps, boot: Nati
   if (!provider) throw new Error("The external conversation's provider is unavailable.");
   const catalog = await deps.client.catalog(provider.kind, provider.instanceId, workspace.workspace);
   const policyId = catalog.status === "available" ? catalog.catalog.policies[0]?.id ?? null : null;
-  const resolution = resolveModelBinding({ provider, catalog, locked: null, modelId: null, policyId, reasoning: null });
+  const resolution = resolveModelBinding({ provider, catalog, locked: null, modelId: null, policyId, reasoning: null, subagentModel: null });
   if (resolution.status !== "ready") throw new Error(resolution.message ?? "Choose a ready provider before opening this external conversation.");
   const role = effectiveRole(boot.personalization, workspaceId);
   const receipt = await deps.client.execute({ kind: "create", commandId: deps.nextId(), conversationId: deps.nextId(),
@@ -21,9 +21,16 @@ export async function adoptExternalSession(deps: ThreadWorkspaceDeps, boot: Nati
   return receipt.conversationId;
 }
 
-
 export async function importExternalSession(deps: ThreadWorkspaceDeps, store: ThreadWorkspaceStore, workspaceId: string, session: ExternalSession): Promise<void> {
   const conversationId = await adoptExternalSession(deps, store.snapshot().boot, workspaceId, session);
   await store.refresh();
   store.openThread(conversationId);
+}
+
+/** Pinning imports the conversation like opening does, but leaves the current view alone. */
+export async function pinExternalSession(deps: ThreadWorkspaceDeps, store: ThreadWorkspaceStore, workspaceId: string, session: ExternalSession): Promise<void> {
+  const conversationId = await adoptExternalSession(deps, store.snapshot().boot, workspaceId, session);
+  // Pin before the list refreshes so the imported thread lands directly in Pinned.
+  store.setPinned(conversationId, true);
+  await store.refresh();
 }

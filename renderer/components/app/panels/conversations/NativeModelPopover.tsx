@@ -1,5 +1,5 @@
 import { useId, useRef, useState } from "react";
-import { Brain, ChevronDown, RefreshCw, ShieldCheck, X } from "lucide-react";
+import { Brain, ChevronDown, RefreshCw, ShieldCheck, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
@@ -22,9 +22,11 @@ export function NativeModelPopover({ providers, store, selectedProvider, selecte
   const permissionLabel = settings.catalog?.policies.find((policy) => policy.id === settings.policyId)?.label
     ?? (settings.policyId ? "Permissions unavailable" : "Choose permissions");
   const reasoningLabel = settings.reasoning ?? "Provider settings";
+  const subagentLabel = settings.subagentModel
+    ? settings.catalog?.models.find((model) => model.id === settings.subagentModel)?.name || settings.subagentModel : null;
   return <Popover open={open} onOpenChange={(value) => { if (value) setBrowsingKey(selectedKey); setOpen(value); }}>
     <PopoverTrigger asChild><Button type="button" size="sm" variant="ghost"
-      aria-label={`Choose provider and model: ${modelLabel}; Permissions: ${permissionLabel}; Reasoning: ${reasoningLabel}`}
+      aria-label={`Choose provider and model: ${modelLabel}; Permissions: ${permissionLabel}; Reasoning: ${reasoningLabel}${subagentLabel ? `; Subagents: ${subagentLabel}` : ""}`}
       className="h-auto min-h-8 max-w-full gap-2 px-2 py-1 font-normal">
       {selectedProvider && <AgentToolIcon toolId={selectedProvider.kind} label="" className="size-4 shrink-0" imageClassName="size-3.5" />}
       <span className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
@@ -36,6 +38,9 @@ export function NativeModelPopover({ providers, store, selectedProvider, selecte
           <span className="inline-flex min-w-0 items-center gap-1" title={`Reasoning: ${reasoningLabel}`}>
             <Brain className="size-3 shrink-0" aria-hidden="true" /><span className="truncate capitalize">{reasoningLabel}</span>
           </span>
+          {subagentLabel && <span className="inline-flex min-w-0 items-center gap-1" title={`Subagents: ${subagentLabel}`}>
+            <Users className="size-3 shrink-0" aria-hidden="true" /><span className="truncate">{subagentLabel}</span>
+          </span>}
         </span>
       </span>
       <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />

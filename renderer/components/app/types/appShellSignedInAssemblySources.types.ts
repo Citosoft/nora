@@ -232,6 +232,7 @@ export type AppShellSignedInChromeShellSources = {
   dismissLinuxUpdateNotice: AppChromeShellComposeSlice["topBanners"]["onDismissLinuxUpdate"];
   statusEntries: StatusBarEntry[];
   installStatusBarTool: AppChromeShellComposeSlice["workspaceStatus"]["onInstallTool"];
+  updateIndicators: AppChromeShellComposeSlice["updateIndicators"];
   switchStatusBarToolAccount: AppChromeShellComposeSlice["workspaceStatus"]["onSwitchToolAccount"];
   toggleSettingsPage: () => void;
   openStartupDependenciesDialog: () => void;

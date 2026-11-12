@@ -11,6 +11,7 @@
     "tests/native/crash/**/*.ts",
     "main/**/*.ts",
     "shared/**/*.ts",
+    "renderer/global.d.ts",
     "renderer/components/app/constants/uiLayout.ts",
     "renderer/components/app/logic/workspaceSessionSignatures.ts",
     "renderer/components/app/logic/fileTreePanelUtils.ts",

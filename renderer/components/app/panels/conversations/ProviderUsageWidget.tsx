@@ -6,7 +6,7 @@ import { useHoverPopover } from "@/components/app/hooks/useHoverPopover";
 import { useToolUsage } from "@/components/app/hooks/useToolUsage";
 import { describeUsageRings, hasUsageRings, selectUsageRings } from "@/components/app/logic/usageRings";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
-import { UsageDonut } from "@/components/app/shared/UsageDonut";
+import { RingGauge } from "@/components/app/shared/RingGauge";
 import { UsageSummaryGrid } from "@/components/app/shared/UsageSummaryGrid";
 import type { ProviderUsageWidgetProps } from "@/components/app/types/toolUsage.types";
 
@@ -24,7 +24,7 @@ export function ProviderUsageWidget({ provider }: ProviderUsageWidgetProps) {
   return <Popover open={hover.open} onOpenChange={hover.onOpenChange}>
     <PopoverTrigger asChild>
       <Button type="button" variant="ghost" size="sm" className="size-8 shrink-0 p-0" aria-label={`${label}: ${describeUsageRings(rings)}`} {...hover.triggerProps}>
-        <UsageDonut rings={rings} className={info.status === "available" ? undefined : "opacity-60"} />
+        <RingGauge rings={[rings.weekly, rings.session]} className={info.status === "available" ? undefined : "opacity-60"} />
       </Button>
     </PopoverTrigger>
     <PopoverContent side="top" align="end" aria-label={label} className="w-72 space-y-3" {...hover.contentProps}>

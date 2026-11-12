@@ -9,9 +9,8 @@ import { useSettingsRuntimeValue } from "@/components/app/hooks/useSettingsRunti
 import { StatusBarContext } from "@/components/app/logic/statusBarContext";
 import { AppMainView } from "@/components/app/views/AppMainView";
 import { AppModalDialogs } from "@/components/app/views/AppModalDialogs";
-import { AppToastStack } from "@/components/app/views/AppToastStack";
+import { AppToastRegions } from "@/components/app/views/AppToastRegions";
 import { useSignedInWorkspaceViewMount } from "@/components/app/views/signedInWorkspaceViewMount";
-import { ToastViewport } from "@/components/ui/toast";
 import type { ReactElement } from "react";
 
 export function AppRootOrchestratedTree(): ReactElement {
@@ -49,8 +48,7 @@ export function AppRootOrchestratedTree(): ReactElement {
 
           {appChromeComposition.settingsDialog}
           <AppModalDialogs />
-          <AppToastStack toasts={toasts} onDismiss={dismissToast} />
-          <ToastViewport />
+          <AppToastRegions toasts={toasts} onDismiss={dismissToast} />
         </>
       </AppModalDialogsProvider>
     </StatusBarContext.Provider>

@@ -212,3 +212,23 @@ test("unread completions track background outcomes and clear only when viewed", 
   await store.refresh();
   assert.deepEqual(store.snapshot().unreadThreadIds, [], "read outcomes do not reappear");
 });
+
+test("compacting a thread queues a compaction run, while generic execute still refuses instructions", async () => {
+  const f = threadWorkspaceFixture();
+  const store = createThreadWorkspaceStore(f.deps);
+  await store.refresh();
+  const id = store.openThread("existing"); assert.ok(id);
+  await store.execute(id, { kind: "submit", commandId: "bypass", conversationId: "existing", runId: "bypass-run", instruction: "Compact context", action: "compact" });
+  assert.equal(f.commands.length, 0);
+  await store.compact(id);
+  assert.equal(f.commands.length, 1);
+  const command = f.commands[0];
+  assert.equal(command.kind, "submit");
+  if (command.kind === "submit") {
+    assert.equal(command.conversationId, "existing"); assert.equal(command.action, "compact"); assert.equal(command.instruction, "Compact context");
+  }
+  assert.equal(store.snapshot().runtime[id]?.busy, false);
+  const draft = store.openDraft({ workspaceId: "personal" }); assert.ok(draft);
+  await store.compact(draft);
+  assert.equal(f.commands.length, 1);
+});

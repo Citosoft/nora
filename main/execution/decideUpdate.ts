@@ -49,7 +49,8 @@ export function decideUpdate(snapshot: ConversationState, update: ProviderUpdate
       }
       // A delayed stream chunk cannot replace the authoritative final message.
       if (previous && "complete" in previous && previous.complete && "complete" in update.item && !update.item.complete) break;
-      if (previous?.kind === "tool" && previous.state !== "running" && update.item.kind === "tool" && update.item.state === "running") break;
+      // A settled tool or agent run cannot be reopened by a late progress event.
+      if ((previous?.kind === "tool" || previous?.kind === "subagent") && previous.state !== "running" && (update.item.kind === "tool" || update.item.kind === "subagent") && update.item.state === "running") break;
       if (update.item.kind === "message" && update.item.role === "user") throw new ExecutionCommandError("invalid", "Provider cannot rewrite user instructions");
       add({ kind: "item", item: update.item });
       break;
@@ -93,6 +94,9 @@ export function decideUpdate(snapshot: ConversationState, update: ProviderUpdate
         failure: { code: "uncertain", message: "Native request expired; reconcile before continuing", retryable: false } } });
       break;
     }
+    case "context":
+      add({ kind: "conversation", conversation: { ...snapshot.conversation, context: update.context, updatedAt: context.now } });
+      break;
     case "disconnected":
       expireRequests();
       add({ kind: "run", run: { ...run, state: "recovering", failure: update.failure, updatedAt: context.now } });

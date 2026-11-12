@@ -2,6 +2,7 @@ import type { AppUiCommands } from "@/components/app/hooks/useAppUiCommands";
 import type { UseAppCenterTabsResult } from "@/components/app/types/appCenterTabs.types";
 import type { UseAiModelCatalogResult, UseAppAutoUpdateResult, UseBrowserTabsResult } from "@/components/app/types/appHooks.types";
 import type { UseAppToolInstallFlowsResult } from "@/components/app/types/appToolInstallFlows.types";
+import type { UseProviderUpdateToastsResult } from "@/components/app/types/providerUpdateToasts.types";
 import type { AppPreferences, UseLinuxUpdateNoticeResult, UseWorkspaceLoadingResult } from "@/components/app/types/workflow.types";
 import type { AppRootRuntimeProps } from "@/components/app/types/appRootRuntime.types";
 import type { UseAppBootstrapResult } from "@/components/app/types/component.types";
@@ -20,6 +21,7 @@ export type SignedInAppRootProps = AppRootRuntimeProps & {
   autoUpdate: UseAppAutoUpdateResult;
   aiModels: UseAiModelCatalogResult;
   toolInstallFlows: UseAppToolInstallFlowsResult;
+  providerUpdates: UseProviderUpdateToastsResult;
   navigation: ReturnType<typeof useAppNavigationActions>;
   browserTabs: UseBrowserTabsResult;
   centerTabs: UseAppCenterTabsResult;

@@ -290,6 +290,15 @@ export function useAppToolInstallFlows({
     }
   }, [safely, showToast, snapshot]);
 
+  /** Re-runs the install command: in a visible terminal when a project is open, otherwise as a managed background install. */
+  const updateProviderTool = useCallback(async (toolId: string): Promise<void> => {
+    if (snapshot?.project) {
+      await installStatusBarTool(toolId);
+      return;
+    }
+    await installOnboardingTool(toolId);
+  }, [installOnboardingTool, installStatusBarTool, snapshot?.project]);
+
   const switchStatusBarToolAccount = useCallback(async (toolId: string): Promise<void> => {
     try {
       await noraToolingManagementClient.switchManagedToolAccount(toolId);
@@ -320,6 +329,7 @@ export function useAppToolInstallFlows({
     refreshOnboardingTools,
     installOnboardingTool,
     installStatusBarTool,
+    updateProviderTool,
     switchStatusBarToolAccount,
     setOnboardingToolEnabled
   };

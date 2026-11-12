@@ -57,7 +57,11 @@ export function ThreadNavigation({ workspaceId: scope, onNew, query = "", unifie
         request={requests[row.id] ?? null} onOpen={(entry) => {
           if (entry.target.kind === "external") void resumable.open(entry.target.entry).then((opened) => { if (opened) onNavigate?.(); });
           else { onNavigate?.(); ports.openRow({ ...entry, target: entry.target }); }
-        }} onSetSettled={(entry, settled) => { void resumable.setSettled(entry, settled); }} onTogglePin={ports.togglePin} />)}
+        }} onSetSettled={(entry, settled) => { void resumable.setSettled(entry, settled); }}
+        onTogglePin={(entry) => {
+          if (entry.target.kind === "external") void resumable.pin(entry.target.entry);
+          else if (entry.target.kind === "thread") ports.togglePin(entry.target.conversationId);
+        }} />)}
     </div>)}
       {!rows.length && <p role="status" className="px-2 py-4 text-xs text-muted-foreground">{ports.state.loading || (canDiscover && resumable.controls.loading) ? "Loading threads…" : query ? "No matching threads." : filter === "all" ? "Start a thread to begin." : "No threads in this view."}</p>}
       {canDiscover ? <ExternalThreadControls state={resumable.controls} /> : resumable.controls.errors.map((message) => <p key={message} role="alert" className="px-2 py-1 text-xs text-destructive">{message}</p>)}

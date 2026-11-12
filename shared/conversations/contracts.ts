@@ -12,7 +12,9 @@ export const providerBindingSchema = z.object({
   instanceId: id,
   model: id,
   reasoning: z.string().nullable(),
-  permissionPolicy: id
+  permissionPolicy: id,
+  /** Default model for subagents the runtime spawns, for runtimes that accept one; absent uses the runtime's own default. */
+  subagentModel: id.optional()
 }).strict();
 export const workspaceRefSchema = z.object({
   projectId: id,
@@ -33,6 +35,18 @@ export const usageSchema = z.object({
   inputTokens: z.number().int().nonnegative(),
   outputTokens: z.number().int().nonnegative()
 }).strict();
+/** How full the native model context is, as reported by the runtime after its latest model request. */
+export const contextUsageSchema = z.object({
+  usedTokens: z.number().int().nonnegative(),
+  windowTokens: z.number().int().positive(),
+  /** Prompt tokens of the latest request, including cached ones. */
+  inputTokens: z.number().int().nonnegative(),
+  cachedInputTokens: z.number().int().nonnegative(),
+  outputTokens: z.number().int().nonnegative(),
+  updatedAt: z.string().datetime()
+}).strict();
+/** A run that asks the runtime to compact its context instead of delivering an instruction. */
+export const runActionSchema = z.literal("compact");
 export const conversationSourceSchema = z.object({ kind: z.literal("task"), projectId: id, path: z.string().min(1) }).strict();
 export const conversationSchema = z.object({
   id,
@@ -48,12 +62,15 @@ export const conversationSchema = z.object({
   archivedAt: time.nullable(),
   createdAt: time,
   updatedAt: time,
-  queuePaused: z.boolean()
+  queuePaused: z.boolean(),
+  /** Latest native context occupancy; null once compaction leaves it unknown, absent when never reported. */
+  context: contextUsageSchema.nullable().optional()
 }).strict();
 export const runSchema = z.object({
   id,
   conversationId: id,
   instruction: z.string().trim().min(1),
+  action: runActionSchema.optional(),
   state: z.enum(["queued", "starting", "running", "awaiting-approval", "awaiting-input", "stopping", "completed", "failed", "interrupted", "recovering"]),
   attemptId: id,
   nativeTurnId: id.nullable(),
@@ -72,7 +89,9 @@ export const toolStateSchema = z.enum(["running", "completed", "failed", "declin
 export const toolDetailsSchema = z.object({
   category: z.enum(["command", "integration", "search", "file", "image", "agent", "wait", "other"]),
   input: z.string().optional(), detail: z.string().optional(), parentId: z.string().optional(), patch: z.string().optional(),
-  durationMs: z.number().nonnegative().optional(), exitCode: z.number().int().optional()
+  durationMs: z.number().nonnegative().optional(), exitCode: z.number().int().optional(),
+  /** The skill this call used: `loaded` when the runtime reports loading it, `read` when its SKILL.md was read directly. */
+  skill: z.object({ name: z.string().min(1), evidence: z.enum(["loaded", "read"]) }).strict().optional()
 }).strict();
 export const approvalDetailsSchema = z.object({
   kind: z.enum(["command", "files", "network", "tool"]),
@@ -85,9 +104,15 @@ export const timelineItemSchema = z.discriminatedUnion("kind", [
   z.object({ ...itemBase, kind: z.literal("tool"), label: z.string(), output: z.string(), state: toolStateSchema, details: toolDetailsSchema.optional() }).strict(),
   z.object({ ...itemBase, kind: z.literal("milestone"), text: z.string() }).strict(),
   z.object({ ...itemBase, kind: z.literal("plan"), steps: z.array(z.object({ text: z.string(), state: z.enum(["pending", "running", "completed"]) }).strict()) }).strict(),
-  z.object({ ...itemBase, kind: z.literal("subagent"), label: z.string(), nativeId: id, state: z.enum(["running", "completed", "failed"]) }).strict(),
+  /** A delegated agent run; tool items whose `details.parentId` equals `nativeId` are that agent's own activity. */
+  z.object({ ...itemBase, kind: z.literal("subagent"), label: z.string(), nativeId: id, state: toolStateSchema,
+    agentType: z.string().optional(), prompt: z.string().optional(), progress: z.string().optional(), result: z.string().optional(),
+    /** The model the agent ran on, or the one requested until the runtime reports it. */
+    model: z.string().optional(), effort: z.string().optional() }).strict(),
   z.object({ ...itemBase, kind: z.literal("changes"), paths: z.array(z.string()), patches: z.record(z.string(), z.string().nullable()).optional(), attribution: z.enum(["turn", "workspace"]) }).strict(),
-  z.object({ ...itemBase, kind: z.literal("review"), result: conversationReviewSchema }).strict()
+  z.object({ ...itemBase, kind: z.literal("review"), result: conversationReviewSchema }).strict(),
+  /** The model asked the user to sign in to an MCP connector, named as the runtime reports it; connection state is read live, never stored. */
+  z.object({ ...itemBase, kind: z.literal("connector-sign-in"), server: z.string().min(1), reason: z.string().optional() }).strict()
 ]);
 const requestBase = {
   id, runId: id, attemptId: id, nativeId: id,
@@ -116,7 +141,7 @@ export const snapshotSchema = z.object({
 
 const commandBase = { commandId: id, conversationId: id };
 export const createConversationCommandSchema = z.object({ ...commandBase, kind: z.literal("create"), title: z.string().trim().min(1), workspace: workspaceRefSchema, provider: providerBindingSchema, parentId: id.nullable(), role: roleSelectionSchema.optional(), source: conversationSourceSchema.optional(), externalSessionId: id.optional() }).strict();
-export const submitConversationCommandSchema = z.object({ ...commandBase, kind: z.literal("submit"), runId: id, instruction: z.string().trim().min(1) }).strict();
+export const submitConversationCommandSchema = z.object({ ...commandBase, kind: z.literal("submit"), runId: id, instruction: z.string().trim().min(1), action: runActionSchema.optional() }).strict();
 export const conversationCommandSchema = z.discriminatedUnion("kind", [
   createConversationCommandSchema,
   submitConversationCommandSchema,

@@ -72,7 +72,14 @@ export class EffectWorker {
       const provider = this.providers.resolve(snapshot.conversation.provider.kind, snapshot.conversation.provider.instanceId);
       const execution = { snapshot, run };
       switch (effect.action.kind) {
-        case "start": await provider.start(execution, emit); break;
+        case "start":
+          if (run.action === "compact" && (!provider.capabilities.compaction || !snapshot.conversation.nativeConversationId)) {
+            emit({ eventId: JSON.stringify([effect.id, "compaction-unsupported"]), conversationId: effect.conversationId,
+              runId: effect.runId, attemptId: effect.attemptId, kind: "finished", status: "failed", usage: null,
+              failure: { code: "unsupported", message: "This provider cannot compact this thread's context", retryable: false } });
+            break;
+          }
+          await provider.start(execution, emit); break;
         case "interrupt": await provider.interrupt(execution, emit); break;
         case "reconcile": await provider.reconcile(execution, emit); break;
         case "respond": {

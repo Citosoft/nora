@@ -18,7 +18,7 @@ export async function handoffThread(store: ThreadWorkspaceStore, conversationId:
   const provider = header.conversation.provider;
   const catalog = await store.client.catalog(provider.kind, provider.instanceId, header.conversation.workspace);
   const resolution = resolveModelBinding({ provider: { ...provider, label: provider.kind }, catalog, locked: provider,
-    modelId: provider.model, policyId: provider.permissionPolicy, reasoning: provider.reasoning });
+    modelId: provider.model, policyId: provider.permissionPolicy, reasoning: provider.reasoning, subagentModel: provider.subagentModel ?? null });
   if (resolution.status !== "ready") return { kind: "draft", reason: resolution.message ?? "The model is unavailable; the context is retained as a draft." };
   store.setBinding(id, resolution.binding);
   await store.submit(id);

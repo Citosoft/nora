@@ -49,6 +49,7 @@ export const buildWorkspaceSidebarPortsFromAssembly = (a: AppShellSignedInAssemb
     sidebarBuild: assembleSignedInWorkspaceSidebarBuild(a),
     utilities: {
       status: chrome.workspaceStatus,
+      updates: chrome.updateIndicators,
       appTools: { ...buildAppToolsProps(buildTitleBarProps(chrome.titleBar)), onOpenConnectionsSettings,
         onOpenHomeTerminal: () => { void a.chromeShell.focusLocalTerminalDock(); }
       }

@@ -129,6 +129,7 @@ export const NORA_INTEGRATION_CLIENT_METHODS = [
 
 export const NORA_TOOLING_CLIENT_METHODS = [
   "refreshCatalog",
+  "checkProviderUpdates",
   "installTool",
   "removeTool",
   "searchToolSkills",

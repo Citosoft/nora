@@ -60,6 +60,7 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
       assertWriter();
       add({ kind: "conversation", conversation: { ...initial.conversation, updatedAt: context.now } });
       putRun({ id: command.runId, conversationId: command.conversationId, instruction: command.instruction,
+        ...(command.action ? { action: command.action } : {}),
         attemptId: JSON.stringify([command.conversationId, command.runId, 1]), nativeTurnId: null,
         state: "queued", createdAt: context.now, updatedAt: context.now, failure: null, usage: null, review: "pending" });
       break;
@@ -67,6 +68,7 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
     case "edit-queued":
     case "remove-queued": {
       if (!run || run.state !== "queued") throw new ExecutionCommandError("conflict", "Only unsent queued instructions can be edited or removed");
+      if (run.action && command.kind === "edit-queued") throw new ExecutionCommandError("conflict", "Context compaction has no instruction to edit");
       if (run.steering === "pending" || (run.steering && command.kind === "edit-queued")) throw new ExecutionCommandError("conflict", "Confirm steering delivery before editing this message");
       if (command.kind === "edit-queued") putRun({ ...run, instruction: command.instruction });
       else add({ kind: "remove-run", runId: run.id });
@@ -74,7 +76,7 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
     }
     case "steer-queued": {
       const target = initial.runs.find((entry) => entry.id === command.targetRunId);
-      if (!run || run.state !== "queued" || run.steering || !target || target.state !== "running" || !target.nativeTurnId
+      if (!run || run.state !== "queued" || run.steering || run.action || !target || target.action || target.state !== "running" || !target.nativeTurnId
         || initial.requests.some((request) => request.runId === target.id && ["pending", "responding"].includes(request.status))) {
         throw new ExecutionCommandError("conflict", "Steering requires an unsent message and a confirmed running turn");
       }
@@ -147,8 +149,10 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
     if (next) {
       assertWriter();
       putRun({ ...next, state: "starting", startedAt: context.now });
-      add({ kind: "item", item: { id: JSON.stringify([next.id, "instruction"]), runId: next.id,
-        createdAt: context.now, kind: "message", role: "user", text: next.instruction, complete: true } });
+      const instructionId = JSON.stringify([next.id, "instruction"]);
+      add({ kind: "item", item: next.action === "compact"
+        ? { id: instructionId, runId: next.id, createdAt: context.now, kind: "milestone", text: next.instruction }
+        : { id: instructionId, runId: next.id, createdAt: context.now, kind: "message", role: "user", text: next.instruction, complete: true } });
       decision.effects.push({ id: JSON.stringify([next.attemptId, "start"]), conversationId: command.conversationId,
         runId: next.id, attemptId: next.attemptId, status: "pending", action: { kind: "start" } });
     }

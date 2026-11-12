@@ -265,6 +265,27 @@ test("Claude SDK lifecycle preserves native continuation and serves approval thr
   assert.equal(opened[1].sessionId, opened[0].sessionId);
 });
 
+test("Claude receives the thread's subagent model and stores reported agents with their model", async (t) => {
+  const f = fixture(t); f.create("conversation", "checkout", { ...provider, kind: "claude", subagentModel: "haiku" }); f.submit();
+  const opened: ClaudeOpenInput[] = [];
+  const adapter = new ClaudeAdapter({ instanceId: "account-a", policies: { "native-default": "default" }, now, nextId: randomUUID, discover,
+    open(input) {
+      opened.push(input);
+      return { async interrupt() {}, close() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
+        yield { kind: "init", sessionId: input.sessionId, eventId: "init" };
+        yield { kind: "subagent", eventId: "agent", nativeId: "agent", label: "Review", state: "completed", model: "claude-haiku-5-5", effort: "low", result: "Done" };
+        yield { kind: "finished", eventId: "result", status: "completed", failure: null, usage: { inputTokens: 1, outputTokens: 1 } };
+      } };
+    } });
+  const registry = new ProviderRegistry(); registry.register(adapter);
+  await new EffectWorker(f.engine, registry).runNext();
+  assert.equal(opened[0].subagentModel, "haiku");
+  assert.equal(adapter.capabilities.subagentModel, true);
+  const agent = f.snapshot().items.find((item) => item.kind === "subagent");
+  assert.ok(agent?.kind === "subagent");
+  assert.equal(agent.model, "claude-haiku-5-5"); assert.equal(agent.effort, "low"); assert.equal(agent.result, "Done");
+});
+
 test("Claude stream loss does not fabricate completion or resubmit during reconciliation", async (t) => {
   const f = fixture(t); f.create("conversation", "checkout", { ...provider, kind: "claude" }); f.submit();
   let opened = 0;

@@ -4,9 +4,13 @@ import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 
 const toastVariants = cva(
-  "group pointer-events-auto relative flex w-full items-start gap-3 overflow-hidden rounded-lg border px-3.5 py-3 text-sm antialiased shadow-sm",
+  "group pointer-events-auto relative flex w-full items-start overflow-hidden rounded-lg border text-sm antialiased shadow-sm",
   {
     variants: {
+      density: {
+        comfortable: "gap-3 px-3.5 py-3",
+        compact: "items-center gap-2.5 px-3 py-2"
+      },
       variant: {
         info: "border-border/80 bg-card text-foreground shadow-black/[0.04] dark:shadow-black/30",
         success:
@@ -15,6 +19,7 @@ const toastVariants = cva(
       }
     },
     defaultVariants: {
+      density: "comfortable",
       variant: "info"
     }
   }
@@ -41,8 +46,8 @@ export const Toast = React.forwardRef<
   React.ElementRef<typeof ToastPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitive.Root> &
     VariantProps<typeof toastVariants>
->(({ className, variant, ...props }, ref) => (
-  <ToastPrimitive.Root ref={ref} className={cn(toastVariants({ variant }), className)} {...props} />
+>(({ className, variant, density, ...props }, ref) => (
+  <ToastPrimitive.Root ref={ref} className={cn(toastVariants({ variant, density }), className)} {...props} />
 ));
 Toast.displayName = ToastPrimitive.Root.displayName;
 

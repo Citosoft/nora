@@ -11,6 +11,10 @@ test("tooling management client delegates refresh, install, remove, switch, conf
       calls.push("refresh");
       return null as never;
     },
+    checkProviderUpdates: async () => {
+      calls.push("check-updates");
+      return [];
+    },
     installTool: async (payload) => {
       calls.push(`install:${payload.toolId}:${payload.action}`);
       return null as never;
@@ -38,6 +42,7 @@ test("tooling management client delegates refresh, install, remove, switch, conf
   } satisfies ToolingManagementGatewayDeps);
 
   await client.refreshToolCatalog();
+  await client.checkProviderUpdates();
   await client.installManagedTool({ toolId: "codex", action: "install", installCommand: "npm i" });
   await client.removeManagedTool({ toolId: "codex", action: "remove", installCommand: "npm rm" });
   await client.switchManagedToolAccount("codex");
@@ -47,6 +52,7 @@ test("tooling management client delegates refresh, install, remove, switch, conf
 
   assert.deepEqual(calls, [
     "refresh",
+    "check-updates",
     "install:codex:install",
     "remove:codex:remove",
     "switch:codex",

@@ -2,6 +2,8 @@ import { createCodexExternalSessions } from "./externalSessions";
 import { CodexMcpDiscovery } from "./mcp";
 import { codexAccount } from "./account";
 import type { McpAction, McpResult } from "@shared/types/provider/mcp.types";
+import type { SkillsResult } from "@shared/types/provider/skills.types";
+import { readCodexSkills } from "./skills";
 import type { ProviderAccountAction, ProviderAccountResult } from "@shared/types/provider/account.types";
 import { spawn } from "node:child_process";
 import { APP_VERSION } from "@shared/appMeta";
@@ -9,7 +11,7 @@ import { z } from "zod";
 import type { ExecutionProvider, EmitProviderUpdate, ProviderExecution } from "@main/types/execution/provider.types";
 import type { CodexActive, CodexRateLimits, CodexOptions, CodexPendingRequest } from "@main/types/execution/codex.types";
 import type { JsonValue } from "@main/types/execution/rpc.types";
-import type { ExecutionFailure, RequestResponse, RuntimeRequest, TimelineItem, WorkspaceRef } from "@shared/types/conversation/contracts.types";
+import type { ContextReading, Conversation, ExecutionFailure, RequestResponse, RuntimeRequest, SubagentActivity, TimelineItem, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ProviderCatalogResult } from "@shared/types/provider/catalog.types";
 import { StdioRpc } from "./stdioRpc";
 import { readCodexModels } from "./catalog";
@@ -18,11 +20,14 @@ import { supportsCodexSteering, steerResultSchema } from "./steering";
 import { CodexRpcError } from "./rpcError";
 import type { SteeringResult } from "@main/types/execution/steering.types";
 import { questionGuidance } from "@main/execution/questionGuidance";
-import { initializedSchema, threadSchema, turnSchema } from "./rpcSchemas";
+import { initializedSchema, rolloutPathSchema, threadSchema, turnSchema } from "./rpcSchemas";
 import { normalizeCodexTool, codexToolState } from "./toolActivity";
+import { normalizeCodexSubagents } from "./subagentActivity";
 import { nativeItemEnvelopeSchema, terminalInteractionSchema, toolProgressSchema } from "./toolSchemas";
 import { normalizeCodexApproval } from "./approvals";
 import { codexUsageReset } from "./usageReset";
+import { codexContextReading } from "./contextUsage";
+import { readRolloutContext } from "./rolloutContext";
 import { accountSchema, rateLimitsEventSchema, deltaSchema, itemEventSchema, questionSchema, readThreadSchema, reasoningEffortSchema, routingSchema, turnEventSchema, usageEventSchema } from "./nativeSchemas";
 
 /** Structured protocol boundary; capabilities are discovered from the configured runtime. */
@@ -32,7 +37,7 @@ export class CodexAdapter implements ExecutionProvider {
   readonly instanceId: string;
   private rateLimits: CodexRateLimits | null = null;
   private steeringSupported = false;
-  get capabilities() { return { ...nativeCapabilities, turnChanges: true, steering: this.steeringSupported }; }
+  get capabilities() { return { ...nativeCapabilities, turnChanges: true, subagentDetails: true, steering: this.steeringSupported, contextUsage: true, compaction: true }; }
   private connection: Promise<StdioRpc> | null = null;
   private mcpDiscovery: CodexMcpDiscovery | null = null;
   private readonly byThread = new Map<string, CodexActive>();
@@ -51,6 +56,14 @@ export class CodexAdapter implements ExecutionProvider {
       return await this.mcpDiscovery.request(workspace?.path ?? null, action);
     } catch {
       return { kind: "unavailable", message: "Codex MCP discovery is unavailable; check the configured runtime and refresh." };
+    }
+  }
+
+  async skills(workspace: WorkspaceRef, refresh: boolean): Promise<SkillsResult> {
+    try {
+      return await readCodexSkills(await this.connect(), workspace.path, refresh);
+    } catch {
+      return { kind: "unavailable", message: "Codex skill discovery is unavailable; check the configured runtime and refresh." };
     }
   }
 
@@ -129,6 +142,12 @@ export class CodexAdapter implements ExecutionProvider {
     }
   }
 
+  async readContext(conversation: Conversation): Promise<ContextReading | null> {
+    if (!conversation.nativeConversationId) return null;
+    const { thread } = await (await this.connect()).request("thread/read", { threadId: conversation.nativeConversationId, includeTurns: false }, rolloutPathSchema);
+    return thread.path ? readRolloutContext(thread.path) : null;
+  }
+
   async start(execution: ProviderExecution, emit: EmitProviderUpdate): Promise<void> {
     const { snapshot, run } = execution;
     const base = { conversationId: snapshot.conversation.id, runId: run.id, attemptId: run.attemptId };
@@ -180,6 +199,11 @@ export class CodexAdapter implements ExecutionProvider {
       : await rpc.request("thread/start", params, threadSchema);
     emit({ ...base, eventId: "native-binding", kind: "bound", nativeConversationId: binding.thread.id });
     this.byThread.set(binding.thread.id, active);
+    // Compaction runs as its own native turn; `turn/started` and `turn/completed` drive the run like any other.
+    if (run.action === "compact") {
+      await rpc.request("thread/compact/start", { threadId: binding.thread.id }, z.object({}).passthrough());
+      return;
+    }
     const turn = await rpc.request("turn/start", { threadId: binding.thread.id,
       input: [{ type: "text", text: run.instruction }],
       ...(effort.data ? { effort: effort.data } : {}) }, turnSchema);
@@ -221,7 +245,16 @@ export class CodexAdapter implements ExecutionProvider {
       }
       return;
     }
-    if (method === "thread/tokenUsage/updated") { active.usage = usageEventSchema.parse(params).tokenUsage.total; return; }
+    if (method === "thread/tokenUsage/updated") {
+      const { tokenUsage } = usageEventSchema.parse(params);
+      active.usage = { inputTokens: tokenUsage.total.inputTokens, outputTokens: tokenUsage.total.outputTokens };
+      const context = codexContextReading(tokenUsage);
+      if (context) {
+        const reading = `${context.usedTokens}:${context.windowTokens}`;
+        active.emit({ ...base, kind: "context", eventId: `context:${active.nativeTurnId ?? "pending"}:${reading}`, context: { ...context, updatedAt: this.options.now() } });
+      }
+      return;
+    }
     if (method === "item/mcpToolCall/progress") {
       const progress = toolProgressSchema.parse(params);
       if (progress.turnId !== active.nativeTurnId) return;
@@ -263,6 +296,10 @@ export class CodexAdapter implements ExecutionProvider {
       if (!envelope.success || envelope.data.turnId !== active.nativeTurnId) return;
       const identity = z.object({ id: z.string() }).safeParse(envelope.data.item);
       if (!identity.success) return;
+      const agents = normalizeCodexSubagents(envelope.data.item, { runId: active.run.id, now: this.options.now(), complete: method === "item/completed",
+        find: (nativeId) => this.latestSubagent(active, nativeId) });
+      for (const agent of agents?.items ?? []) this.item(active, agent, `${method}:${identity.data.id}:${agent.nativeId}:${agent.state}`);
+      if (agents?.replacesTool) return;
       const toolId = JSON.stringify([active.run.id, identity.data.id]);
       const previous = active.items.get(toolId) ?? active.snapshot.items.find((item) => item.id === toolId);
       const normalized = normalizeCodexTool(envelope.data.item, { id: toolId, runId: active.run.id,
@@ -296,6 +333,11 @@ export class CodexAdapter implements ExecutionProvider {
     }
   }
 
+  private latestSubagent(active: CodexActive, nativeId: string): SubagentActivity | undefined {
+    const matches = (item: TimelineItem): item is SubagentActivity => item.kind === "subagent" && item.nativeId === nativeId;
+    return [...active.items.values()].filter(matches).at(-1) ?? active.snapshot.items.filter(matches).at(-1);
+  }
+
   private item(active: CodexActive, item: TimelineItem, eventId: string): void {
     active.items.set(item.id, item);
     active.emit({ kind: "item", eventId, conversationId: active.snapshot.conversation.id, runId: active.run.id, attemptId: active.run.attemptId, item });
@@ -315,6 +357,8 @@ export class CodexAdapter implements ExecutionProvider {
 
   private settleTools(active: CodexActive, state: "unconfirmed" | "failed" | "interrupted"): void {
     for (const item of active.items.values()) {
+      if (item.kind === "subagent" && item.state === "running") this.item(active, { ...item, state, progress: state === "unconfirmed"
+        ? "The turn ended before this agent reported a result." : "The task stopped before this agent finished." }, `settled:${item.id}:${state}`);
       if (item.kind === "tool" && item.state === "running") this.item(active, { ...item, state,
         details: { ...item.details, category: item.details?.category ?? "other", detail: state === "unconfirmed"
           ? "No final tool result was received." : "The task stopped before this tool finished." } }, `settled:${item.id}:${state}`);

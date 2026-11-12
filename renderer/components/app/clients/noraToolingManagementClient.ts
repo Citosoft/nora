@@ -10,6 +10,7 @@ export function createToolingManagementClient(
 ): ToolingManagementClient {
   return {
     refreshToolCatalog: () => toolingGateway.refreshCatalog(),
+    checkProviderUpdates: () => toolingGateway.checkProviderUpdates(),
     installManagedTool: (payload) => toolingGateway.installTool(payload),
     removeManagedTool: (payload) => toolingGateway.removeTool(payload),
     switchManagedToolAccount: (toolId) => toolingGateway.switchToolAccount(toolId),

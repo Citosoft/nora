@@ -26,7 +26,7 @@ function openClaudeSession(input: ClaudeOpenInput, runtime: ClaudeRuntimeOptions
     systemPrompt: { type: "preset", preset: "claude_code", append: questionGuidance("AskUserQuestion", input.guidance) },
     ...(input.effort ? { effort: input.effort } : {}),
     pathToClaudeCodeExecutable: runtime.executablePath,
-    env: { ...process.env, ...runtime.environment },
+    env: { ...process.env, ...runtime.environment, ...(input.subagentModel ? { CLAUDE_CODE_SUBAGENT_MODEL: input.subagentModel } : {}) },
     ...(input.resume ? { resume: input.sessionId } : { sessionId: input.sessionId }),
     includePartialMessages: true,
     promptSuggestions: true,

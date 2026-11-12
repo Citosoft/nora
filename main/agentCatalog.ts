@@ -25,7 +25,8 @@ const QWEN_INSTALL_TEMPLATE =
     ? "powershell -Command \"Invoke-WebRequest 'https://qwen-code-assets.oss-cn-hangzhou.aliyuncs.com/installation/install-qwen.bat' -OutFile (Join-Path $env:TEMP 'install-qwen.bat'); & (Join-Path $env:TEMP 'install-qwen.bat')\""
     : `${INSTALL_SCRIPT_SHELL} https://qwen-code-assets.oss-cn-hangzhou.aliyuncs.com/installation/install-qwen.sh | bash`;
 
-type AgentDefinitionInput = Omit<AgentDefinition, "usageNotes" | "authFields" | "skillCatalog" | "executablePathCandidates" | "supportsUsageStatus" | "usageDashboardUrl" | "supportsAccountSwitch"> & {
+type AgentDefinitionInput = Omit<AgentDefinition, "usageNotes" | "authFields" | "skillCatalog" | "executablePathCandidates" | "supportsUsageStatus" | "usageDashboardUrl" | "supportsAccountSwitch" | "npmPackage"> & {
+  npmPackage?: string | null;
   usageNotes?: string[];
   authFields?: AgentDefinition["authFields"];
   skillCatalog?: AgentDefinition["skillCatalog"];
@@ -65,6 +66,7 @@ function agent(input: AgentDefinitionInput): AgentDefinition {
     usageDashboardUrl: input.usageDashboardUrl ?? null,
     supportsAccountSwitch: input.supportsAccountSwitch ?? false,
     skillCatalog: input.skillCatalog ?? null,
+    npmPackage: input.npmPackage ?? null,
     executablePathCandidates: [
       ...standardExecutablePathCandidates(input.aliases),
       ...(input.executablePathCandidates || [])
@@ -72,10 +74,11 @@ function agent(input: AgentDefinitionInput): AgentDefinition {
   };
 }
 
-function npmAgent(input: Omit<AgentDefinitionInput, "installTemplate"> & { packageName: string }): AgentDefinition {
+function npmAgent({ packageName, ...input }: Omit<AgentDefinitionInput, "installTemplate" | "npmPackage"> & { packageName: string }): AgentDefinition {
   return agent({
     ...input,
-    installTemplate: `npm install -g ${input.packageName}`
+    npmPackage: packageName,
+    installTemplate: `npm install -g ${packageName}`
   });
 }
 
@@ -105,12 +108,12 @@ const SHARED_AGENT_SKILLS_CONFIG: AgentSkillCatalogConfig = {
 };
 
 export const AGENT_DEFINITIONS: AgentDefinition[] = [
-  agent({
+  npmAgent({
     id: "codex",
     label: "Codex",
     aliases: ["codex"],
     launchCommand: "codex --no-alt-screen",
-    installTemplate: "npm install -g @openai/codex",
+    packageName: "@openai/codex",
     description: "OpenAI coding agent CLI",
     supportsUsageStatus: true,
     supportsAccountSwitch: true,

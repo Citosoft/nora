@@ -382,9 +382,15 @@ export function createToolingHelpers(deps: ToolingHelperDeps): ToolingHelpers {
     return deps.searchAgentSkills(toolId, query);
   }
 
+  /** Provider runtimes always run on this machine, so updates are checked against local detections. */
+  async function checkProviderUpdates() {
+    return deps.checkProviderUpdates(await deps.resolveLocalAgentCatalogDetections());
+  }
+
   return {
     refreshCatalog,
     scheduleCatalogRefresh,
+    checkProviderUpdates,
     installAgentTool,
     installToolSkill,
     removeToolSkill,

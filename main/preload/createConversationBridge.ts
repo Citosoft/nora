@@ -26,6 +26,8 @@ export function createConversationBridge(transport: ConversationTransport = {
       if (value.kind !== "mcp") throw incompatible(); return value.result; },
     async account(input) { const value = await request(conversationChannels.account, input);
       if (value.kind !== "account") throw incompatible(); return value.result; },
+    async skills(input) { const value = await request(conversationChannels.skills, input);
+      if (value.kind !== "skills") throw incompatible(); return value.result; },
     async execute(input) { const value = await request(conversationChannels.execute, input);
       // Importing an already-linked native session resolves to its existing Nora conversation.
       const importing = input.command.kind === "create" && !!input.command.externalSessionId;

@@ -1,7 +1,8 @@
+import { spawn } from "node:child_process";
 import { homedir } from "node:os";
 import type { AccountInfo, McpServerStatus } from "@anthropic-ai/claude-agent-sdk";
-import type { ClaudeRuntimeOptions, McpSettleOptions } from "@main/types/execution/claude.types";
-import type { McpResult, McpServer } from "@shared/types/provider/mcp.types";
+import type { ClaudeMcpLoginRunner, ClaudeRuntimeOptions, McpSettleOptions } from "@main/types/execution/claude.types";
+import type { McpAction, McpResult, McpServer } from "@shared/types/provider/mcp.types";
 import { resolveMcpServerLogo } from "@main/providers/mcpLogo";
 import { claudeLogin } from "./authentication";
 import { withClaudeControlSession } from "./controlSession";
@@ -12,6 +13,10 @@ const MCP_SETTLE_BUDGET_MS = 7_000;
 const MCP_SETTLE_INTERVAL_MS = 500;
 const defaultSleep = (ms: number) => new Promise<void>((resolve) => { setTimeout(resolve, ms); });
 const CONNECTORS = "Claude account connectors (added in Claude on the web, desktop or mobile)";
+// Browser OAuth waits on the user; give up after this so an abandoned sign-in does not leave the runtime running.
+const MCP_LOGIN_TIMEOUT_MS = 5 * 60_000;
+// Windows needs a shell to run the runtime's command shim, so only names that cannot carry shell syntax reach it.
+const SHELL_SAFE_SERVER_NAME = /^[\w .:@-]+$/;
 
 /** Claude reports `source` (newer CLIs) or `scope`; project and local config belong to the workspace, everything else is global. */
 export function claudeMcpScope(server: Pick<McpServerStatus, "source" | "scope">): McpServer["scope"] {
@@ -59,19 +64,39 @@ export function normalizeClaudeMcp(server: McpServerStatus): McpServer {
   // The SDK types `serverInfo` narrowly, but the runtime passes through MCP icons and website, which the resolver validates.
   const logo = resolveMcpServerLogo({ serverInfo: server.serverInfo,
     endpointUrl: server.config && "url" in server.config ? server.config.url : null });
+  // `claude mcp login` covers OAuth for remote (HTTP/SSE) servers and claude.ai connectors, not local stdio servers.
+  const canLogin = server.status === "needs-auth" && (isAccountConnector || (!!server.config && "url" in server.config));
   return { name: server.name, status: server.status,
-    authStatus: server.status === "needs-auth" ? "needs-auth" : "unknown", canLogin: false, scope: claudeMcpScope(server),
+    authStatus: server.status === "needs-auth" ? "needs-auth" : "unknown", canLogin, scope: claudeMcpScope(server),
     ...(isAccountConnector ? { accountConnector: server.status === "needs-auth" ? "available" : "connected" } : {}),
     ...(logo ? { logo } : {}),
     tools: (server.tools ?? []).map((tool) => ({ name: tool.name, ...(tool.description ? { description: tool.description } : {}) })),
-    ...(server.status === "failed" ? { message: "The runtime could not connect. Check the server configuration and sign-in in Claude Code." } : {}) };
+    ...(server.status === "failed" ? { message: "The runtime could not connect. Check the server configuration and sign-in in Claude Code." }
+      : server.status === "needs-auth" && !canLogin ? { message: "This server's sign-in is not OAuth-based. Configure its credentials in Claude Code, then refresh." } : {}) };
+}
+
+/**
+ * The Agent SDK exposes no MCP sign-in, so login delegates to the runtime's own `mcp login` browser flow and waits for it,
+ * then re-reads the servers so the caller sees the new status. Runs in the workspace so project-scoped servers resolve.
+ */
+export function createClaudeMcpLoginRunner(runtime: ClaudeRuntimeOptions): ClaudeMcpLoginRunner {
+  return (cwd, serverName) => new Promise<boolean>((resolve) => {
+    const shell = process.platform === "win32";
+    if (shell && !SHELL_SAFE_SERVER_NAME.test(serverName)) { resolve(false); return; }
+    const child = spawn(runtime.executablePath, ["mcp", "login", serverName], { cwd,
+      env: { ...process.env, ...runtime.environment }, stdio: "ignore", windowsHide: true, shell });
+    const timer = setTimeout(() => child.kill(), MCP_LOGIN_TIMEOUT_MS);
+    const finish = (completed: boolean) => { clearTimeout(timer); resolve(completed); };
+    child.once("error", () => finish(false));
+    child.once("exit", (code) => finish(code === 0));
+  });
 }
 
 /** Without a workspace, discovery runs from the home directory so only user, plugin, account and managed servers are relevant. */
-export function createClaudeMcpReader(runtime: ClaudeRuntimeOptions): (cwd: string | null) => Promise<McpResult> {
-  return async (cwd) => {
+export function createClaudeMcp(runtime: ClaudeRuntimeOptions, runLogin: ClaudeMcpLoginRunner = createClaudeMcpLoginRunner(runtime)): (cwd: string | null, action: McpAction) => Promise<McpResult> {
+  const read = async (directory: string): Promise<McpResult> => {
     try {
-      return await withClaudeControlSession(runtime, cwd ?? homedir(), async (session) => {
+      return await withClaudeControlSession(runtime, directory, async (session) => {
         const [servers, account] = await Promise.all([settleClaudeMcp(() => session.mcpServerStatus()), session.accountInfo().catch(() => null)]);
         const notice = account ? claudeAccountConnectorNotice(account) : undefined;
         return { kind: "servers", servers, ...(notice ? { notice } : {}) };
@@ -79,5 +104,12 @@ export function createClaudeMcpReader(runtime: ClaudeRuntimeOptions): (cwd: stri
     } catch {
       return { kind: "unavailable", message: "Claude MCP discovery is unavailable. Check the configured runtime, its MCP settings and authentication, then refresh." };
     }
+  };
+  return async (cwd, action) => {
+    const directory = cwd ?? homedir();
+    if (action.kind === "login" && !await runLogin(directory, action.serverName)) {
+      return { kind: "unavailable", message: `Sign-in to ${action.serverName} did not complete. Try again, or sign in from Claude Code with /mcp.` };
+    }
+    return read(directory);
   };
 }

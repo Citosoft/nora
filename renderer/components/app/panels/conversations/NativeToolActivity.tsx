@@ -2,6 +2,7 @@ import { Clock3, FileCode2, Globe, Image, LoaderCircle, Plug, Terminal, Users } 
 import { cn } from "@/lib/utils";
 import type { NativeToolActivityProps } from "@/components/app/types/nativeActivity.types";
 import { patchLineCounts } from "@shared/conversations/diff";
+import { toolStateLabel } from "@/components/app/logic/toolStateLabel";
 import { DiffCounts } from "./DiffCounts";
 import { NativeDiff } from "./NativeDiff";
 
@@ -11,8 +12,7 @@ export function NativeToolActivity({ item }: NativeToolActivityProps) {
     : category === "file" ? FileCode2 : category === "image" ? Image : category === "agent" ? Users : Clock3;
   const running = item.state === "running";
   const failed = item.state === "failed";
-  const status = item.state === "unconfirmed" ? "Result unconfirmed" : item.state === "interrupted" ? "Stopped"
-    : item.state === "declined" ? "Declined" : failed ? "Failed" : running ? "Running" : "Done";
+  const status = toolStateLabel(item.state);
   return <details className="min-w-0 text-sm text-muted-foreground" aria-label={`${item.label}: ${status}`}>
     <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md py-1 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden" title={item.details?.input ?? item.label}>
       <span className={cn("shrink-0", running && "motion-safe:animate-spin")} aria-hidden="true">{running ? <LoaderCircle className="size-3.5" /> : <Icon className="size-3.5" />}</span>

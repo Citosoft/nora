@@ -1,6 +1,6 @@
 import type { z } from "zod";
 import type { providerUpdateSchema } from "@main/execution/providerUpdateSchema";
-import type { ConversationRun, ProviderBinding, RequestResponse, RuntimeRequest } from "@shared/types/conversation/contracts.types";
+import type { ContextReading, Conversation, ConversationRun, ProviderBinding, RequestResponse, RuntimeRequest } from "@shared/types/conversation/contracts.types";
 import type { ExecutionState } from "./store.types";
 import type { ProviderCapabilities } from "@shared/types/provider/capabilities.types";
 import type { ProviderCatalogResult } from "@shared/types/provider/catalog.types";
@@ -15,17 +15,22 @@ export interface ProviderExecution {
   run: ConversationRun;
 }
 import type { McpAction, McpResult } from "@shared/types/provider/mcp.types";
+import type { SkillsResult } from "@shared/types/provider/skills.types";
 import type { ProviderAccountAction, ProviderAccountResult } from "@shared/types/provider/account.types";
 
 export interface ExecutionProvider {
   readonly externalSessions?: ExternalSessionReader;
   mcp?(workspace: WorkspaceRef | null, action: McpAction): Promise<McpResult>;
+  /** Lists the skills the runtime offers in a checkout; `refresh` re-scans skill folders. */
+  skills?(workspace: WorkspaceRef, refresh: boolean): Promise<SkillsResult>;
   /** Reads or starts sign-in for the runtime's own account, through the runtime's API where it offers one. */
   account?(action: ProviderAccountAction): Promise<ProviderAccountResult>;
   readonly kind: ProviderBinding["kind"];
   readonly instanceId: string;
   readonly capabilities: ProviderCapabilities;
   steer?(execution: ProviderExecution, instruction: string): Promise<SteeringResult>;
+  /** Reads the context occupancy of an idle native session from the runtime's saved history; null when unknown. */
+  readContext?(conversation: Conversation): Promise<ContextReading | null>;
   catalog(workspace: WorkspaceRef): Promise<ProviderCatalogResult>;
   close(): Promise<void>;
   start(execution: ProviderExecution, emit: EmitProviderUpdate): Promise<void>;

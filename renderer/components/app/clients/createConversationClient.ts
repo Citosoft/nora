@@ -15,12 +15,16 @@ export function createConversationClient(bridge: ConversationBridge, environment
     execute: (command) => bridge.execute({ ...route, command }),
     async header(conversationId) { const value = await bridge.read({ ...route, kind: "header", conversationId });
       return value.kind === "header" ? value.header : incompatible(); },
+    async context(conversationId) { const value = await bridge.read({ ...route, kind: "context", conversationId });
+      return value.kind === "context" ? value.context : incompatible(); },
     async summaries(projectId) { const value = await bridge.read({ ...route, kind: "summaries", projectId });
       return value.kind === "summaries" ? value.summaries : incompatible(); },
     async history(query) { const value = await bridge.read({ ...route, ...query, kind: "history" });
       return value.kind === "history" ? value.page : incompatible(); },
     async catalog(providerKind, instanceId, workspace) { const value = await bridge.read({ ...route, kind: "catalog", providerKind, instanceId, workspace });
       return value.kind === "catalog" ? value.result : incompatible(); },
+    mcp: (request) => bridge.mcp(request),
+    skills: (request) => bridge.skills(request),
     subscribe: (listener) => listenToConversation(bridge, environmentId, listener)
   };
 }

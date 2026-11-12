@@ -20,6 +20,7 @@ export function ThreadViewContent({ documentId }: ThreadViewContentProps) {
     setBinding: (binding: Parameters<NativeConversationPorts["setBinding"]>[0]) => store.setBinding(documentId, binding),
     submit: () => store.submit(documentId),
     execute: (command: Parameters<NativeConversationPorts["execute"]>[0]) => store.execute(documentId, command),
+    compact: () => store.compact(documentId),
     selectWorkspace: (workspaceId: string) => store.selectWorkspace(documentId, workspaceId)
   }), [store, documentId]);
   const ports = useMemo<NativeConversationPorts | null>(() => document && workspace ? { visible, client: store.client, workspace, state: state.boot, userDisplayName, readBranchRequest,

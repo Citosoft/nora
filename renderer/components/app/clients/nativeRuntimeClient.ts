@@ -4,6 +4,7 @@ import type { PersonalizationBridge } from "@shared/ipc/types/personalizationGat
 export const nativeConversationBridge: ConversationBridge = {
   mcp: (input) => window.nora.conversations.mcp(input),
   account: (input) => window.nora.conversations.account(input),
+  skills: (input) => window.nora.conversations.skills(input),
   execute: (input) => window.nora.conversations.execute(input),
   read: (input) => window.nora.conversations.read(input),
   watch: (input) => window.nora.conversations.watch(input),

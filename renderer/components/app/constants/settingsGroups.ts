@@ -9,10 +9,10 @@ import {
   Mic2,
   Palette,
   Plug,
+  ScrollText,
   Server,
   Shield,
   SlidersHorizontal,
-  Sparkles,
   TerminalSquare
 } from "lucide-react";
 
@@ -25,7 +25,7 @@ export const SETTINGS_GROUP_ITEMS: readonly SettingsGroupItem[] = [
   { value: "cli", label: "Providers", icon: Bot },
   { value: "mcp", label: "MCP Servers", icon: Server },
   { value: "agentUsage", label: "Agent usage", icon: BarChart3 },
-  { value: "skills", label: "Skills", icon: Sparkles },
+  { value: "skills", label: "Skills", icon: ScrollText },
   { value: "integrations", label: "Integrations", icon: Plug },
   { value: "connections", label: "Connections", icon: Server },
   { value: "ai", label: "AI", icon: Bot },

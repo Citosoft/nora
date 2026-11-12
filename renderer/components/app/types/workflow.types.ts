@@ -423,7 +423,10 @@ export type UseLinuxAptSetupPromptResult = {
 };
 
 export type UseLinuxUpdateNoticeResult = {
+  /** The banner's update; `null` once the banner is dismissed. */
   linuxUpdateStatus: Extract<LinuxUpdateStatus, { kind: "available" }> | null;
+  /** The available update regardless of banner dismissal, for persistent indicators. */
+  availableLinuxUpdate: Extract<LinuxUpdateStatus, { kind: "available" }> | null;
   dismissLinuxUpdateNotice: () => void;
 };
 

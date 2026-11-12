@@ -20,6 +20,8 @@ export interface ModelBindingInput {
   modelId: string | null;
   policyId: string | null;
   reasoning: string | null;
+  /** Default subagent model, or null for the runtime's own default. */
+  subagentModel: string | null;
   locked: ProviderBinding | null;
 }
 export type ModelBindingResolution = { status: "ready"; binding: ProviderBinding } | { status: "blocked"; message: string | null };
@@ -27,8 +29,10 @@ export interface ModelSettingsInput {
   catalog: ProviderCatalog | null;
   policyId: string;
   reasoning: string | null;
+  subagentModel: string | null;
   onPolicy(value: string): void;
   onReasoning(value: string | null): void;
+  onSubagentModel(value: string | null): void;
 }
 export interface ModelPopoverProps {
   providers: readonly NativeProvider[];
@@ -51,4 +55,10 @@ export interface ModelListProps {
 export interface ModelOptionsProps extends ModelSettingsInput {
   model: ProviderModel | null;
   locked: boolean;
+}
+export interface SubagentModelOptionProps {
+  models: readonly ProviderModel[];
+  value: string | null;
+  disabled: boolean;
+  onChange(value: string | null): void;
 }

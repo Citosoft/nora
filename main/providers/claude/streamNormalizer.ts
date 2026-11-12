@@ -1,7 +1,9 @@
 import { usageResetTimestamp } from "@shared/conversations/usageReset";
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
-import type { ClaudeFrame } from "@main/types/execution/claude.types";
+import type { ClaudeFrame, ClaudeRequestUsage } from "@main/types/execution/claude.types";
+import { claudeCompactedReading, claudeContextReading, claudeContextWindow } from "./contextUsage";
 import { ClaudeToolActivity } from "./toolActivity";
+import { ClaudeSubagentActivity } from "./subagentActivity";
 import { promptSuggestionSchema } from "@shared/conversations/contracts";
 
 /** Reconcile final SDK blocks into the same message identities as streamed chunks. */
@@ -12,7 +14,10 @@ export class ClaudeStreamNormalizer {
   private lastMessageId: string | null = null;
   private failure: "authentication" | "usage-limit" | "provider" = "provider";
   private resetsAt: string | undefined;
-  private readonly tools = new ClaudeToolActivity();
+  private readonly agents = new ClaudeSubagentActivity();
+  private readonly tools = new ClaudeToolActivity(this.agents);
+  private lastRequest: { usage: ClaudeRequestUsage; model: string } | null = null;
+  private compaction: { postTokens: number | undefined } | null = null;
 
   accept(message: SDKMessage): ClaudeFrame[] {
     if (message.type === "prompt_suggestion") {
@@ -28,12 +33,18 @@ export class ClaudeStreamNormalizer {
       }
       return [];
     }
-    const toolFrames = this.tools.accept(message);
-    return [...toolFrames, ...this.acceptText(message)];
+    // Agents register first so the tool tracker can leave their calls, results and task events to them.
+    const agentFrames = this.agents.accept(message);
+    return [...agentFrames, ...this.tools.accept(message), ...this.acceptText(message)];
   }
 
   private acceptText(message: SDKMessage): ClaudeFrame[] {
     if (message.type === "system" && message.subtype === "init") return [{ kind: "init", sessionId: message.session_id, eventId: message.uuid }];
+    if (message.type === "system" && message.subtype === "compact_boundary") {
+      this.compaction = { postTokens: message.compact_metadata.post_tokens };
+      this.lastRequest = null;
+      return [];
+    }
     if (message.type === "stream_event") {
       const key = message.parent_tool_use_id ?? "root";
       const event = message.event;
@@ -70,6 +81,7 @@ export class ClaudeStreamNormalizer {
       if (message.error === "authentication_failed" || message.error === "cloud_credential_error") this.failure = "authentication";
       else if (message.error === "rate_limit" || message.error === "billing_error") this.failure = "usage-limit";
       const id = message.message.id;
+      this.lastRequest = { usage: message.message.usage, model: message.message.model };
       const frames: ClaudeFrame[] = [];
       for (const [blockIndex, block] of message.message.content.entries()) {
         if (block.type === "text" || block.type === "thinking") {
@@ -88,10 +100,13 @@ export class ClaudeStreamNormalizer {
       const interrupted = message.terminal_reason === "aborted_streaming" || message.terminal_reason === "aborted_tools";
       const success = message.subtype === "success" && !message.is_error;
       const frames: ClaudeFrame[] = [];
-      frames.push(...this.tools.finish(interrupted ? "interrupted" : success ? "unconfirmed" : "failed", message.uuid));
+      const settled = interrupted ? "interrupted" : success ? "unconfirmed" : "failed";
+      frames.push(...this.agents.finish(settled, message.uuid), ...this.tools.finish(settled, message.uuid));
       if (message.subtype === "success" && !message.is_error && message.result) {
         frames.push({ kind: "text", nativeId: this.lastMessageId ?? message.uuid, eventId: `${message.uuid}:final`, text: message.result, complete: true });
       }
+      const context = this.context(message.modelUsage);
+      if (context !== undefined) frames.push({ kind: "context", eventId: `${message.uuid}:context`, context });
       frames.push({ kind: "finished", eventId: message.uuid, status: interrupted ? "interrupted" : success ? "completed" : "failed",
         failure: success || interrupted ? null : { code: this.failure, message: this.failure === "authentication" ? "Sign in to the configured Claude account"
           : this.failure === "usage-limit" ? "Claude usage limit reached" : "Claude could not complete this turn", retryable: true, ...(this.failure === "usage-limit" && this.resetsAt ? { resetsAt: this.resetsAt } : {}) },
@@ -99,6 +114,13 @@ export class ClaudeStreamNormalizer {
       return frames;
     }
     return [];
+  }
+  /** The latest request's occupancy, the compacted total, or undefined when this turn measured nothing. */
+  private context(modelUsage: Parameters<typeof claudeContextWindow>[0]) {
+    const windowTokens = claudeContextWindow(modelUsage, this.lastRequest?.model ?? null);
+    if (this.lastRequest && windowTokens) return claudeContextReading(this.lastRequest.usage, windowTokens);
+    if (this.compaction) return claudeCompactedReading(this.compaction.postTokens, windowTokens);
+    return undefined;
   }
   private text(id: string, kind: "text" | "reasoning"): string {
     return [...(this.blocks.get(id)?.entries() ?? [])].sort(([a], [b]) => a - b).flatMap(([, block]) => block.kind === kind ? [block.text] : []).join("");

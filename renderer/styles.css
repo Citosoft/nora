@@ -124,14 +124,17 @@
 
   @container (min-width: 800px) {
     .thread-insights { position: absolute; top: 1rem; right: 1rem; margin: 0; }
-    [data-thread-insights="expanded"] > .thread-transcript { padding-right: 20rem; }
-    [data-thread-insights="collapsed"] > .thread-transcript { padding-top: 4.5rem; }
+    /* Reserve the expanded panel's column so neither the transcript nor the composer runs under it. */
+    [data-thread-insights="expanded"] .thread-transcript,
+    [data-thread-insights="expanded"] .thread-composer { padding-right: 20rem; }
+    [data-thread-insights="collapsed"] .thread-transcript { padding-top: 4.5rem; }
   }
 
   [data-changes-sidebar-open="true"] .thread-insights { display: none; }
-  [data-changes-sidebar-open="true"] [data-thread-insights] > .thread-transcript {
+  [data-changes-sidebar-open="true"] [data-thread-insights] .thread-transcript {
     @apply pr-5 pt-7;
   }
+  [data-changes-sidebar-open="true"] [data-thread-insights] .thread-composer { padding-right: 0; }
 
   .setup-window-shell {
     --primary: 213 79% 47%;

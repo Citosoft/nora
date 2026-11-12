@@ -126,6 +126,9 @@ import { OrchestratorWorkspaceReadSurface } from "./orchestrator/workspaceReadSu
 import { createTerminalStateHelpers } from "./orchestrator/terminalState";
 import { TerminalMutationFacade } from "./orchestrator/terminalMutationFacade";
 import { createToolingHelpers } from "./orchestrator/tooling";
+import { createProviderUpdateChecker } from "./provider-updates/checkProviderUpdates";
+import { readCliVersion } from "./provider-updates/cliVersion";
+import { createNpmLatestVersionReader } from "./provider-updates/npmRegistry";
 import { getClaudeUsageStatus } from "./agent-usage/claudeUsageStatus";
 import { getCursorUsageStatus } from "./agent-usage/cursorUsageStatus";
 import { createToolStatusHelpers } from "./orchestrator/toolStatus";
@@ -616,6 +619,11 @@ export class Orchestrator implements OrchestratorFacade {
       },
       getCliToolStatus: (tool) => this.toolStatusHelpers.getCliToolStatus(tool) as Promise<ToolUsageInfo>,
       searchAgentSkills: (toolId, query) => searchAgentSkills(toolId, query),
+      checkProviderUpdates: createProviderUpdateChecker({
+        definitions: AGENT_DEFINITIONS,
+        readInstalledVersion: readCliVersion,
+        fetchLatestVersion: createNpmLatestVersionReader()
+      })
 
     });
     this.toolingMainService = new ToolingMainService(this.toolingHelpers);

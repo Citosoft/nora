@@ -22,7 +22,6 @@ test("Codex normalizes each tool family without forwarding provider payloads", (
     [{ id: "x", type: "imageGeneration", status: "completed", savedPath: "/result.png", result: "private-base64" }, "image"],
     [{ id: "x", type: "collabAgentToolCall", tool: "spawn_agent", prompt: "Review", receiverThreadIds: ["child"] }, "agent"],
     [{ id: "x", type: "collabToolCall", tool: "wait" }, "agent"],
-    [{ id: "x", type: "subAgentActivity", agentPath: "/reviewer", agentThreadId: "child", kind: { type: "started" } }, "agent"],
     [{ id: "x", type: "sleep", durationMs: 1000 }, "wait"]
   ];
   for (const [native, category] of cases) {

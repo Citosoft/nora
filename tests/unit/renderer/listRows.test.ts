@@ -43,3 +43,10 @@ test("per-app filters distinguish provider and source for stored and resumable t
   assert.equal(mergeThreadRows([...rows, imported], external, "codex-desktop").length, 1);
   assert.equal(mergeThreadRows([...rows, imported], external, "claude-desktop").length, 0);
 });
+
+test("only the importing outside thread shows its pending action, and every outside row waits", () => {
+  const second: ExternalSessionEntry = { ...entries[0], session: { ...entries[0].session, id: "native-second", title: "Second chat" } };
+  const rows = buildResumableThreadRows([entries[0], second], { key: JSON.stringify(["codex", "account", "native-other"]), action: "pin" });
+  assert.deepEqual(rows.map((row) => [row.target.pending, row.target.disabled]), [["pin", true], [null, true]]);
+  assert.deepEqual(buildResumableThreadRows(entries, null).map((row) => [row.target.pending, row.target.disabled]), [[null, false]]);
+});

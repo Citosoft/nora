@@ -18,6 +18,8 @@ import { useAppPreferences } from "@/components/app/hooks/useAppPreferences";
 import { useAppRootShellFrame } from "@/components/app/hooks/useAppRootShellFrame";
 import { useAppRootSnapshotCommands } from "@/components/app/hooks/useAppRootSnapshotCommands";
 import { useAppToolInstallFlows } from "@/components/app/hooks/useAppToolInstallFlows";
+import { useProviderUpdateToasts } from "@/components/app/hooks/useProviderUpdateToasts";
+import { noraToolingManagementClient } from "@/components/app/clients/noraToolingManagementClient";
 import { useAppUiCommands } from "@/components/app/hooks/useAppUiCommands";
 import { useBrowserTabs } from "@/components/app/hooks/useBrowserTabs";
 import { useKeyboardShortcuts } from "@/components/app/hooks/useKeyboardShortcuts";
@@ -39,9 +41,8 @@ import type { CreateTerminalPayload } from "@shared/appTypes";
 import type { FileEditorState } from "@/components/app/types";
 import type { ShortcutActionMap } from "@/components/app/types/workflow.types";
 import { AppPreLaunchView } from "@/components/app/views/AppPreLaunchView";
-import { AppToastStack } from "@/components/app/views/AppToastStack";
+import { AppToastRegions } from "@/components/app/views/AppToastRegions";
 import { SignedInAppRoot } from "@/components/app/views/SignedInAppRoot";
-import { ToastProvider, ToastViewport } from "@/components/ui/toast";
 import { useCallback, useMemo, useRef, useState, type Dispatch, type ReactElement, type SetStateAction } from "react";
 
 export function AppRootRuntime({ storedWorkspaceContentState }: AppRootRuntimeProps): ReactElement {
@@ -355,6 +356,12 @@ function AppRootRuntimeContent({
     showToast,
     captureError
   });
+  const providerUpdates = useProviderUpdateToasts({
+    checkProviderUpdates: noraToolingManagementClient.checkProviderUpdates,
+    showToast,
+    dismissToast,
+    updateProvider: toolInstallFlows.updateProviderTool
+  });
   const loadingActivity = <ActivityNotice entries={statusEntries} />;
   const onboardingActivity = <ActivityNotice entries={statusEntries} />;
   const { shouldRenderPreLaunch, preLaunchViewProps } = useAppPreLaunchViewProps({
@@ -487,12 +494,11 @@ function AppRootRuntimeContent({
 
   if (shouldRenderPreLaunch) {
     return (
-      <ToastProvider swipeDirection="right">
+      <>
         <PreLaunchKeyboardShortcutsRegistrar actions={preLaunchKeyboardShortcutActions} />
         {preRender}
-        <AppToastStack toasts={toasts} onDismiss={dismissToast} />
-        <ToastViewport />
-      </ToastProvider>
+        <AppToastRegions toasts={toasts} onDismiss={dismissToast} />
+      </>
     );
   }
 
@@ -508,6 +514,7 @@ function AppRootRuntimeContent({
       autoUpdate={autoUpdate}
       aiModels={aiModels}
       toolInstallFlows={toolInstallFlows}
+      providerUpdates={providerUpdates}
       navigation={navigation}
       browserTabs={browserTabs}
       centerTabs={centerTabs}

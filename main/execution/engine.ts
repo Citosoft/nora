@@ -1,7 +1,7 @@
 import type { ExternalTranscript } from "@main/types/execution/externalSessions.types";
 import { externalImportEvents } from "./externalImport";
 import { conversationCommandSchema, workspaceRefSchema } from "@shared/conversations/contracts";
-import type { CommandReceipt, ConversationCommand, ConversationSnapshot, EventPayload, WorkspaceRef } from "@shared/types/conversation/contracts.types";
+import type { CommandReceipt, ContextReading, ContextUsage, ConversationCommand, ConversationSnapshot, EventPayload, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ActiveSubscription, EngineDependencies, EventSubscription } from "@main/types/execution/engine.types";
 import type { StoreTransaction, ExecutionEffect } from "@main/types/execution/store.types";
 import type { ProviderUpdate } from "@main/types/execution/provider.types";
@@ -196,6 +196,23 @@ export class ConversationEngine {
       finalizeSteering(transaction, effect, result, this.deps.now(), this.deps.nextId);
     });
     this.publish();
+  }
+
+  /** Fills an unknown context from saved history; a live turn's reading always wins because it is newer. */
+  recordContext(conversationId: string, reading: ContextReading): ContextUsage | null {
+    this.deps.assertOwnership();
+    const recorded = this.deps.store.transaction((transaction): ContextUsage | null => {
+      const state = transaction.state(conversationId);
+      if (!state) throw new ExecutionCommandError("missing", "Conversation does not exist");
+      if (state.conversation.context !== undefined) return state.conversation.context;
+      const now = this.deps.now();
+      const context = { ...reading, updatedAt: now };
+      // Measuring is not activity, so the conversation's updatedAt (and its sort position) stays put.
+      this.commitEvents(transaction, conversationId, now, [{ kind: "conversation", conversation: { ...state.conversation, context } }]);
+      return context;
+    });
+    this.publish();
+    return recorded;
   }
 
   finishReview(effectId: string, input: ConversationReview): void {

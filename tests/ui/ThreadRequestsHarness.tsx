@@ -23,7 +23,7 @@ export function ThreadRequestsHarness() {
   const rows = buildThreadNavigation(state, "project", "all");
   const requests = useThreadPullRequests(state, rows.map((row) => row.id), readRequest);
   return <main className="h-screen bg-background p-8 text-foreground">
-    <div className="w-60" aria-label="PR threads">{rows.map((row) => <ThreadRow key={row.id} row={row} workspace={null} request={requests[row.id] ?? null} onOpen={(entry) => store.openThread(entry.id)} onTogglePin={store.togglePin} />)}</div>
+    <div className="w-60" aria-label="PR threads">{rows.map((row) => <ThreadRow key={row.id} row={row} workspace={null} request={requests[row.id] ?? null} onOpen={(entry) => store.openThread(entry.id)} onTogglePin={(entry) => { if (entry.target.kind === "thread") store.togglePin(entry.target.conversationId); }} />)}</div>
     <button id="running" onClick={() => { fixture.summaries[0].latestRun = { id: "run", state: "running", createdAt: fixture.deps.now(), updatedAt: fixture.deps.now(), failure: null }; void store.refresh(); }}>Run</button>
     <button id="unlink" onClick={() => { linked = false; window.dispatchEvent(new Event("focus")); }}>Unlink</button>
     <output>{reads}</output>

@@ -7,6 +7,7 @@ import { subscribeToIpcEvent } from "./subscribeToIpcEvent";
 export function createToolingBridge(): ToolingBridge {
   return {
     refreshCatalog: () => invokeIpc("app:refresh-catalog"),
+    checkProviderUpdates: () => invokeIpc("app:check-provider-updates"),
     installTool: async (payload) => {
       console.log("[nora preload] installTool invoke", payload);
       try {
