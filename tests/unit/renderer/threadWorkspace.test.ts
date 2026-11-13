@@ -11,7 +11,7 @@ function openDraft(f: ReturnType<typeof threadWorkspaceFixture>, text = "Write a
   const store = createThreadWorkspaceStore(f.deps);
   const id = store.openDraft({ workspaceId: "personal", text });
   assert.ok(id);
-  store.setBinding(id, threadBinding);
+  store.setBinding(id, threadBinding, "chosen");
   return { store, id };
 }
 
@@ -19,7 +19,7 @@ test("new views never create native work, and independent drafts survive closing
   const f = threadWorkspaceFixture();
   const { store, id } = openDraft(f);
   const second = store.openDraft({ workspaceId: "project", text: "Inspect changes" }); assert.ok(second);
-  store.setBinding(second, { ...threadBinding, model: "second" });
+  store.setBinding(second, { ...threadBinding, model: "second" }, "chosen");
   store.closeDocument(second);
   assert.equal(store.snapshot().layout.documents.length, 2);
   assert.equal(f.commands.length, 0);
@@ -65,10 +65,10 @@ test("uncertain delivery survives restart and retries once without duplicate nat
 
 test("catalog readiness can clear without erasing preferences, and failed readiness cannot send", async () => {
   const f = threadWorkspaceFixture(); const { store, id } = openDraft(f);
-  store.setBinding(id, null);
+  store.setBinding(id, null, "chosen");
   assert.deepEqual(store.snapshot().layout.documents[0].provider, threadBinding);
   await store.submit(id); assert.equal(f.commands.length, 0);
-  store.setBinding(id, threadBinding); await store.submit(id); assert.equal(f.commands.length, 2);
+  store.setBinding(id, threadBinding, "chosen"); await store.submit(id); assert.equal(f.commands.length, 2);
 });
 
 test("workspace selection re-evaluates a draft role but existing threads preserve their captured role", async () => {
@@ -102,7 +102,7 @@ test("corrupt and wrong-host view state is preserved and blocks native submissio
   const persistence = createThreadLayoutPersistence({ getItem: () => raw, setItem: (_key, value) => { raw = value; } }, "local");
   const store = createThreadWorkspaceStore({ ...f.deps, persistence });
   const id = store.openDraft({ workspaceId: "personal", text: "Keep this" }); assert.ok(id);
-  store.setBinding(id, threadBinding); await store.submit(id);
+  store.setBinding(id, threadBinding, "chosen"); await store.submit(id);
   assert.equal(raw, '{"broken":true}'); assert.equal(f.commands.length, 0);
   assert.ok(store.snapshot().storageError);
   assert.throws(() => persistence.write({ version: 1, environmentId: "remote", focusedWorkspaceId: null, activeId: null, documents: [], openIds: [], pinnedThreadIds: [] }), /another execution host/);
@@ -231,4 +231,16 @@ test("compacting a thread queues a compaction run, while generic execute still r
   const draft = store.openDraft({ workspaceId: "personal" }); assert.ok(draft);
   await store.compact(draft);
   assert.equal(f.commands.length, 1);
+});
+
+test("an inherited default binding can send but is not saved, so a reused empty draft keeps following the default", async () => {
+  const f = threadWorkspaceFixture(); const store = createThreadWorkspaceStore(f.deps);
+  const id = store.openDraft({ workspaceId: "personal" }); assert.ok(id);
+  store.setBinding(id, threadBinding, "inherited");
+  assert.equal(store.snapshot().layout.documents[0].provider, null);
+  assert.equal(store.snapshot().runtime[id].readyBinding, threadBinding);
+  assert.equal(store.openDraft({ workspaceId: "personal" }), id, "New thread reuses the empty draft");
+  assert.equal(store.snapshot().layout.documents[0].provider, null);
+  store.setBinding(id, threadBinding, "chosen");
+  assert.deepEqual(store.snapshot().layout.documents[0].provider, threadBinding);
 });

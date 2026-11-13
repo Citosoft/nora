@@ -169,7 +169,7 @@ export const TitleBarWorkspaceQuickSearch = ({
   }, [highlightedIndex, open, displayRows.length]);
 
   const titleBarSelectorSurfaceClass =
-    resolvedTheme === "light" ? "border-slate-300 bg-white" : "border-border/70 bg-background/70";
+    resolvedTheme === "light" ? "border-border bg-white" : "border-border/70 bg-background/70";
 
   const handleOpenChange = (next: boolean): void => {
     setOpen(next);

@@ -1,3 +1,5 @@
+import type { GroupRequest } from "@shared/types/bots/bots.types";
+import type { ComposerAttachment } from "@shared/types/agentInput.types";
 import type { ThreadSettlementTarget } from "./settlement.types";
 import type { ExternalSession } from "@shared/types/conversation/externalSessions.types";
 import type { z } from "zod";
@@ -6,6 +8,7 @@ import type { ProviderBinding, ConversationCommand, ConversationSource } from "@
 import type { ConversationSummary } from "@shared/types/conversation/queries.types";
 import type { NativeBoot } from "@shared/ipc/types/personalizationGateway.types";
 import type { ConversationClient } from "../conversationClient.types";
+import type { BindingOrigin } from "../modelPicker.types";
 
 export type ThreadLayout = z.infer<typeof threadLayoutSchema>;
 export type ThreadDocument = z.infer<typeof threadDocumentSchema>;
@@ -29,10 +32,14 @@ export interface ThreadWorkspaceDeps {
   nextId(): string;
   now(): string;
 }
-export interface OpenThreadDraft { source?: ConversationSource; workspaceId: string; text?: string; provider?: ProviderBinding; }
+export interface OpenThreadDraft { source?: ConversationSource; workspaceId: string; text?: string; provider?: ProviderBinding; botId?: string; group?: GroupRequest; }
 export interface ThreadWorkspaceStore {
+  addThreadReference(documentId: string, conversationId: string): Promise<void>;
+  removeThreadReference(documentId: string, referenceId: string): void;
   readonly client: ConversationClient;
   setSettled(target: ThreadSettlementTarget, settled: boolean): Promise<void>;
+  /** Retitles a stored thread; rejects with a user-meaningful message. */
+  renameThread(conversationId: string, title: string): Promise<void>;
   resumeExternal(workspaceId: string, session: ExternalSession): Promise<void>;
   /** Imports an outside thread and pins it without opening a tab. */
   pinExternal(workspaceId: string, session: ExternalSession): Promise<void>;
@@ -49,9 +56,14 @@ export interface ThreadWorkspaceStore {
   setThreadVisible(visible: boolean): void;
   closeDocument(documentId: string): void;
   discardDraft(documentId: string): void;
+  addAttachments(documentId: string, attachments: readonly ComposerAttachment[]): void;
+  removeAttachment(documentId: string, attachmentId: string): void;
   setText(documentId: string, text: string): void;
-  setBinding(documentId: string, binding: ProviderBinding | null): void;
+  /** Every binding becomes the send-ready binding; only a chosen one is saved with the draft. */
+  setBinding(documentId: string, binding: ProviderBinding | null, origin: BindingOrigin): void;
   selectWorkspace(documentId: string, workspaceId: string): void;
+  /** Chooses the bot a new thread runs as; null talks to Nora. */
+  selectBot(documentId: string, botId: string | null): void;
   togglePin(conversationId: string): void;
   setPinned(conversationId: string, pinned: boolean): void;
   submit(documentId: string): Promise<void>;

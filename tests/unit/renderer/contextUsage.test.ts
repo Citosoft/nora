@@ -1,9 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { compactContextCommand, contextCompactionState, contextGauge, describeContextUsage, formatTokenCount } from "@/components/app/logic/contextUsage";
+import { compactContextCommand, contextCacheHitPercent, contextCompactionState, contextGauge, describeContextUsage, formatTokenCount } from "@/components/app/logic/contextUsage";
 import type { ConversationRun } from "@shared/types/conversation/contracts.types";
 
 const context = { usedTokens: 180_000, windowTokens: 200_000, inputTokens: 178_000, cachedInputTokens: 0, outputTokens: 2_000, updatedAt: "2026-11-11T00:00:00.000Z" };
+
+test("cache reuse uses prompt input, without subtracting cached tokens from occupancy", () => {
+  assert.equal(contextCacheHitPercent({ ...context, inputTokens: 100, cachedInputTokens: 80 }), 80);
+  assert.equal(contextCacheHitPercent({ ...context, inputTokens: 0 }), null);
+  assert.equal(contextCacheHitPercent({ ...context, inputTokens: 10, cachedInputTokens: 11 }), 100);
+  assert.equal(contextGauge({ ...context, cachedInputTokens: 100_000 }).percentUsed, 90);
+});
 
 test("context gauge reports percent, tone and remaining tokens", () => {
   assert.deepEqual(contextGauge(context), { percentUsed: 90, tone: "critical", remainingTokens: 20_000 });

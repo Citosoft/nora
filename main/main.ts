@@ -1,3 +1,6 @@
+import { registerWindowSettingsIpc } from "./ipc/registerWindowSettingsIpc";
+import { createWindowSettingsPort } from "./helpers/windowSettingsPort";
+import { WINDOW_SETTINGS_CHANNELS } from "@shared/nora-tools/windowSettings";
 import { APP_SHORT_NAME } from "@shared/appMeta";
 import { APP_RUNTIME_SETTINGS } from "@shared/constants/appRuntimeSettings";
 import type {
@@ -11,10 +14,20 @@ import { randomUUID } from "node:crypto";
 import { DEFAULT_APP_SETTINGS } from "@shared/appTypes";
 import { app, BrowserWindow, session, dialog, ipcMain, shell } from "electron";
 import { openNativeRuntime } from "./helpers/nativeRuntime";
+import { withMainOwnedSettings } from "./helpers/mainOwnedSettings";
 import { createWindowStartup } from "./helpers/windowStartup";
+import { createAccountRuntime } from "./account/runtime";
+import { registerAccountIpc } from "./ipc/registerAccountIpc";
+import { registerSettingsSyncIpc } from "./ipc/registerSettingsSyncIpc";
+import { createSettingsSyncService } from "./settings-sync/service";
+import { createSettingsUpdates } from "./helpers/settingsUpdates";
+import { SYNC_CHANNELS } from "@shared/settings-sync/contracts";
 import { createAppShutdown } from "./helpers/appShutdown";
 import { registerConversationIpc } from "./ipc/registerConversationIpc";
 import { registerPersonalizationIpc } from "./ipc/registerPersonalizationIpc";
+import { registerBotMemoryIpc } from "./ipc/registerBotMemoryIpc";
+import { startDesktopAttention } from "./attention/desktop";
+import { personalizationChangedChannel } from "@shared/personalization/gateway";
 import type { NativeRuntime } from "./types/native-runtime/runtime.types";
 import path from "node:path";
 import { AppSettingsStore } from "./appSettingsStore";
@@ -79,13 +92,16 @@ let loopRunner: LoopRunner;
 let stopRendererWatcher: (() => void) | null = null;
 let isClosingMainWindow = false;
 const windowStartup = createWindowStartup({
-  hasWindow: () => BrowserWindow.getAllWindows().length > 0,
+  hasWindow: () => !!mainWindow && !mainWindow.isDestroyed(),
   createWindow
 });
 const appShutdown = createAppShutdown({
   shutdown: async () => {
+    await settingsSync.dispose();
+    accountRuntime.dispose();
     loopRunner?.dispose();
-    await nativeRuntime?.host.shutdown();
+    stopDesktopAttention?.();
+    await nativeRuntime?.shutdown();
     if (mainWindow) await shutdownMainWindow();
   },
   quit: () => app.quit(),
@@ -93,6 +109,15 @@ const appShutdown = createAppShutdown({
 });
 const appSettingsStore = new AppSettingsStore(getAppSettingsPath());
 let appSettings: AppSettings = DEFAULT_APP_SETTINGS;
+let stopDesktopAttention: (() => void) | null = null;
+const windowSettingsPort = createWindowSettingsPort({ send(request) {
+  if (!mainWindow || mainWindow.isDestroyed()) throw new Error("Open Nora to change window preferences.");
+  mainWindow.webContents.send(WINDOW_SETTINGS_CHANNELS.request, request);
+} });
+const settingsUpdates = createSettingsUpdates({ read: () => appSettings,
+  save: async (next) => { appSettings = await appSettingsStore.save(next); return appSettings; },
+  onSaved: () => settingsSync.localChanged()
+});
 const workspaceLoadingTimingByProject = new Map<string, { startedAt: number; lastStepAt: number }>();
 const SQUIRREL_WINDOW_LIFETIME_MS = APP_RUNTIME_SETTINGS.main.squirrelWindowLifetimeMs;
 const STATE_BROADCAST_INTERVAL_MS = APP_RUNTIME_SETTINGS.main.stateBroadcastIntervalMs;
@@ -277,6 +302,19 @@ loadEnvFile(process.cwd());
 
 const shouldExitForSquirrelLifecycle = handleSquirrelLifecycle(SQUIRREL_WINDOW_LIFETIME_MS);
 const hasSingleInstanceLock = shouldExitForSquirrelLifecycle ? false : app.requestSingleInstanceLock();
+const accountRuntime = createAccountRuntime({
+  configPath: path.join(__dirname, "..", "runtime", "account-config.json"),
+  rendererDirectory: path.join(__dirname, "..", "renderer"),
+  mainWindow: () => mainWindow,
+  onSessionChanged: () => settingsSync.sessionChanged()
+});
+const settingsSync = createSettingsSyncService({ path: path.join(getStateDir(), "settings-sync.json"),
+  client: accountRuntime.cloud, session: accountRuntime.session, readSettings: () => appSettings,
+  updateSettings: settingsUpdates.update, providers: () => nativeRuntime.personalization.state().providers,
+  onSettingsApplied: () => nativeRuntime.personalization.publish(),
+  notify: (state) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(SYNC_CHANNELS.changed, state); },
+  applied: (input) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(SYNC_CHANNELS.applied, input); }
+});
 
 if (!shouldExitForSquirrelLifecycle && !hasSingleInstanceLock) {
   app.quit();
@@ -360,7 +398,10 @@ function createWindow(): void {
   });
   mainWindow.maximize();
 
-  void mainWindow.loadFile(path.join(__dirname, "..", "renderer", "index.html"));
+  void accountRuntime.load(mainWindow).catch((error: unknown) => {
+    console.error("Nora's renderer could not load:", error);
+    dialog.showErrorBox("Nora could not open", "Your local settings could not be restored. Restart Nora to try again.");
+  });
 
   if (process.env.NORA_DEV_WATCH === "1") {
     stopRendererWatcher?.();
@@ -381,6 +422,7 @@ function createWindow(): void {
     stopRendererWatcher = null;
     isClosingMainWindow = false;
     mainWindow = null;
+    if (process.platform !== "darwin") app.quit();
   });
 }
 
@@ -421,8 +463,13 @@ function registerIpc(): void {
   const isAllowedSender = (event: import("./types/execution/gateway.types").ConversationInvocation): boolean =>
     !!mainWindow && !mainWindow.isDestroyed() && event.sender.id === mainWindow.webContents.id
       && event.senderFrame?.url === mainWindow.webContents.getURL();
+  registerAccountIpc({ ipc: ipcMain, runtime: accountRuntime, isAllowedSender });
+  registerWindowSettingsIpc({ ipc: ipcMain, port: windowSettingsPort, isAllowedSender });
+  registerSettingsSyncIpc({ ipc: ipcMain, service: settingsSync, isAllowedSender });
   registerConversationIpc({ ipc: ipcMain, isAllowedSender, resolveHost: (environmentId) => environmentId === nativeRuntime.host.environmentId ? nativeRuntime.host : null });
-  registerPersonalizationIpc({ ipc: ipcMain, isAllowedSender, service: nativeRuntime.personalization });
+  registerBotMemoryIpc({ ipc: ipcMain, isAllowedSender, memory: nativeRuntime.memory });
+  registerPersonalizationIpc({ ipc: ipcMain, isAllowedSender, service: nativeRuntime.personalization,
+    notify: (state) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(personalizationChangedChannel, state); } });
   onAutoUpdateStatusChanged((status) => {
     notifyAutoUpdateStatus(status);
   });
@@ -472,10 +519,7 @@ function registerIpc(): void {
     openLocalTerminal: () => services.session.openLocalTerminal(),
     sendTerminalInput: (sessionId, input) => services.session.sendTerminalInput(sessionId, input),
     getAppSettings: () => appSettings,
-    saveAppSettings: async (nextSettings) => {
-      appSettings = await appSettingsStore.save(nextSettings);
-      return appSettings;
-    },
+    saveAppSettings: (nextSettings, baseline) => settingsUpdates.update((current) => withMainOwnedSettings(current, nextSettings, baseline)),
     showAgentCompletionNotification,
     analyticsRuntimeConfig,
     getSnapshot: () => services.snapshot.getSnapshot(),
@@ -560,7 +604,9 @@ async function bootstrap(): Promise<void> {
   });
   const initialSnapshot = await orchestrator.initialize();
   nativeRuntime = await openNativeRuntime({ stateDirectory: getStateDir(), personalDirectory: path.join(getNoraRoot(), "Personal"),
-    readSettings: () => appSettings, saveSettings: async (next) => { appSettings = await appSettingsStore.save(next); return appSettings; },
+    readSettings: () => appSettings, updateSettings: settingsUpdates.update,
+    windowSettings: windowSettingsPort, settingsSync,
+    onSettingsChanged: (settings) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("app:settings-changed", settings); },
     projects: () => {
       const state = services.snapshot.getSnapshot();
       return [...new Map([...(state.project ? [state.project] : []), ...state.workspaces.map((entry) => entry.project)].map((project) => [project.id, project])).values()];
@@ -568,9 +614,16 @@ async function bootstrap(): Promise<void> {
     activateWorkspace: async (selectedPath) => { await services.workspace.selectProject(selectedPath); },
     chooseFolder: async () => { const selection = await dialog.showOpenDialog({ properties: ["openDirectory"], title: "Add workspace" });
       const selectedPath = selection.canceled ? null : selection.filePaths[0]; return selectedPath ? { path: selectedPath, name: path.basename(selectedPath) } : null; },
-    openFolder: async (selectedPath) => { const error = await shell.openPath(selectedPath); if (error) throw new Error(error); }
+    openFolder: async (selectedPath) => { const error = await shell.openPath(selectedPath); if (error) throw new Error(error); },
+    tasks: { list: (projectId) => services.workspace.listWorkspaceTasks(projectId), board: (projectId) => services.workspace.getWorkspaceTaskBoard(projectId),
+      saveBoard: (projectId, board) => services.workspace.saveWorkspaceTaskBoard(projectId, board),
+      create: (projectId, title, content) => services.workspace.createWorkspaceTaskFile(projectId, title, content) }
   });
   registerIpc();
+  stopDesktopAttention = startDesktopAttention({ host: nativeRuntime.host, getMainWindow: () => mainWindow, getAppIcon, focusMainWindow,
+    notificationsEnabled: () => appSettings.agentCompletionNotificationsEnabled });
+  await settingsSync.initialize();
+  accountRuntime.initialize();
   windowStartup.start();
   notifyStateChanged(initialSnapshot);
   setLastBroadcastSnapshot(initialSnapshot);

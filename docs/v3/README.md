@@ -14,6 +14,7 @@ On **2026-11-09**, the owner expanded the scope to any kind of work while retain
 - [Architecture proposal](architecture.md): domain ownership, provider integration, durable execution, migration and implementation order.
 - [UI discovery and decision record](ui-discovery.md): reviewed references, all 39 decisions and explicit approval.
 - [Role-aware onboarding proposal](role-onboarding.md): confirmed presets, Personal workspace, new-conversation-only role changes and proposed mappings/layouts.
+- [Bots proposal](bots.md): configurable bots with roles, models, memory, bot-to-bot asks, group chats and animated avatars; decisions B1–B7 recorded; all five slices implemented, with remaining gaps listed in the doc.
 - [Whole-UI transition map](ui-transition.md): unified thread model, direct New thread flow and source-backed changes across every affected surface.
 - [Interface specification](ui-specification.md): screen layouts, component inventory, states and interactions.
 - [Delivery and acceptance](delivery.md): migration/cutover boundaries and validation matrix.

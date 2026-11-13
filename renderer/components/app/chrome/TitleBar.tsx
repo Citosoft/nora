@@ -91,13 +91,13 @@ export function TitleBar({
     });
   }, [recentWorkspaces]);
   const titleBarIconToneClass = resolvedTheme === "light" ? "text-slate-700" : "text-muted-foreground";
-  const titleBarSelectorSurfaceClass = resolvedTheme === "light" ? "border-slate-300 bg-white" : "border-border/70 bg-background/70";
+  const titleBarSelectorSurfaceClass = resolvedTheme === "light" ? "border-border bg-white" : "border-border/70 bg-background/70";
 
   return (
     <div
       ref={titleBarRef}
       className={[
-        "workspace-shell-surface app-drag relative flex h-12 min-h-12 max-h-12 shrink-0 items-center overflow-hidden border-b border-border/60 bg-background/70 py-1.5",
+        "workspace-shell-surface workspace-chrome-surface app-drag relative flex h-12 min-h-12 max-h-12 shrink-0 items-center overflow-hidden border-b border-border/60 bg-background/70 py-1.5",
         useMacTitleBarChrome ? "pl-0" : "pl-1.5"
       ].join(" ")}
     >

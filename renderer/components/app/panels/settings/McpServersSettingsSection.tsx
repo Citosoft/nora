@@ -18,7 +18,7 @@ export function McpServersSettingsSection() {
   const workspace = boot.workspaces.find((entry) => entry.id === workspaceId)
     ?? boot.workspaces.find((entry) => entry.id === snapshot.layout.focusedWorkspaceId) ?? boot.workspaces[0];
   // One request per provider: with a workspace it returns global and workspace servers together; without one, global only.
-  const sources = useMemo<McpProviderSource[]>(() => boot.providers.map((provider) => ({
+  const sources = useMemo<McpProviderSource[]>(() => boot.providers.filter((provider) => provider.reportsMcp).map((provider) => ({
     key: `${provider.kind}:${provider.instanceId}`, label: provider.label, kind: provider.kind,
     selection: { environmentId: boot.environmentId, providerKind: provider.kind, instanceId: provider.instanceId,
       ...(workspace ? { workspace: workspace.workspace } : {}) }
@@ -29,7 +29,7 @@ export function McpServersSettingsSection() {
 
   return <div className="max-w-5xl">
     <SettingsSectionHeader title="MCP Servers" icon={Server}
-      description="MCP servers discovered from your provider runtimes: global servers available everywhere, plus servers configured for the selected workspace. Manage server configuration and credentials in each runtime." />
+      description="Nora's built-in server, plus MCP servers discovered from your provider runtimes: global servers available everywhere, and servers configured for the selected workspace. Manage server configuration and credentials in each runtime." />
     {!sources.length ? <p className="mt-6 text-sm text-muted-foreground">Connect a supported provider to discover MCP servers.</p> : <>
       <div className="mt-6 flex flex-wrap items-end justify-between gap-3">
         {workspace ? <label className="w-full max-w-xs space-y-1 text-xs text-muted-foreground">Workspace
@@ -41,8 +41,8 @@ export function McpServersSettingsSection() {
       </div>
       <div {...settingAnchorAttributes("MCP Servers")} className="mt-4 space-y-3" aria-live="polite">
         <div className="space-y-2 empty:hidden">{entries.map((entry) => <McpProviderNotice key={entry.source.key} entry={entry} />)}</div>
-        {rows.length ? <McpServerTable rows={rows} logins={logins} />
-          : !isLoading ? <p className="text-sm text-muted-foreground">No MCP servers were discovered.</p> : null}
+        <McpServerTable rows={rows} logins={logins} builtIn={boot.noraTools} />
+        {!rows.length && !isLoading ? <p className="text-sm text-muted-foreground">No MCP servers were discovered in your provider runtimes.</p> : null}
         {availableAccountConnectors ? <p className="text-xs text-muted-foreground">
           {availableAccountConnectors === 1 ? "1 more connector is" : `${availableAccountConnectors} more connectors are`} available to your account but not connected. Connect them in Claude on the web, desktop or mobile to use them here.
         </p> : null}

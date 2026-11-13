@@ -12,8 +12,10 @@ export const ACP_PROVIDER_KINDS = [
   "cline", "amp", "kilo", "kiro", "aug", "autohand", "droid", "kimi", "mistral-vibe"
 ] as const;
 
+/** Nora's own coordinator: group chats run on it, delegating each reply to a member bot's thread. Never discovered or offered as a model. */
+export const NORA_PROVIDER_KIND = "nora";
 /** Every runtime provider Nora can drive. Widening is backward compatible with stored conversations; narrowing is not. */
-export const PROVIDER_KINDS = [...NATIVE_PROVIDER_KINDS, ...ACP_PROVIDER_KINDS] as const;
+export const PROVIDER_KINDS = [...NATIVE_PROVIDER_KINDS, ...ACP_PROVIDER_KINDS, NORA_PROVIDER_KIND] as const;
 export const providerKindSchema = z.enum(PROVIDER_KINDS);
 
 const acpKinds: ReadonlySet<string> = new Set(ACP_PROVIDER_KINDS);

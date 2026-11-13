@@ -1,5 +1,5 @@
 import type { ApprovalRequest } from "@shared/types/conversation/contracts.types";
-import type { ApprovalAction, ApprovalActionGroups } from "@/components/app/types/nativeActivity.types";
+import type { ApprovalAction, ApprovalActionGroups, CompactApprovalActions } from "@/components/app/types/nativeActivity.types";
 
 export function groupApprovalActions(options: ApprovalRequest["options"]): ApprovalActionGroups {
   const actions = options.map((option): ApprovalAction => ({ option, intent: option.intent
@@ -15,4 +15,11 @@ export function groupApprovalActions(options: ApprovalRequest["options"]): Appro
     secondary: actions.filter((action) => action !== primary && action.intent !== "deny" && action.intent !== "cancel"),
     negative: actions.filter((action) => action.intent === "deny" || action.intent === "cancel")
   };
+}
+
+/** For a one-line row: the narrowest Allow, a plain Decline, and every other choice (session or always allow, Stop task) for a menu. */
+export function compactApprovalActions(options: ApprovalRequest["options"]): CompactApprovalActions {
+  const { primary, secondary, negative } = groupApprovalActions(options);
+  const decline = negative.find((action) => action.intent === "deny") ?? null;
+  return { allow: primary, decline, more: [...secondary, ...negative.filter((action) => action !== decline)] };
 }

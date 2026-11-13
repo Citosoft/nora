@@ -8,6 +8,8 @@ export function createConversationClient(bridge: ConversationBridge, environment
   const route = { schemaVersion: 1 as const, environmentId };
   const incompatible = (): never => { throw new ConversationAccessError({ code: "unavailable", message: "Conversation response does not match the requested operation" }); };
   return {
+    async reference(conversationId) { const value = await bridge.read({ ...route, kind: "thread-reference", conversationId });
+      return value.kind === "thread-reference" ? value.reference : incompatible(); },
     async externalSessions(providerKind, instanceId, workspace) {
       const value = await bridge.read({ ...route, kind: "external-sessions", providerKind, instanceId, workspace });
       return value.kind === "external-sessions" ? value.result : incompatible();

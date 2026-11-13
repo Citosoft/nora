@@ -5,7 +5,29 @@ import test from "node:test";
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { ClaudeMessageStream } from "@main/types/execution/claude.types";
 import { readClaudeStream } from "@main/providers/claude/readStream";
-import { claudeResult } from "./toolFixtures";
+import { claudeAssistantMessage, claudeResult } from "./toolFixtures";
+
+test("native compaction policy is read before releasing the session and failed reads do not fail the turn", async () => {
+  for (const fail of [false, true]) {
+    let released = false;
+    const source: ClaudeMessageStream = { close() {}, async *[Symbol.asyncIterator](): AsyncGenerator<SDKMessage> {
+      yield claudeAssistantMessage([{ type: "text", text: "Done", citations: null }]);
+      const result = claudeResult();
+      result.modelUsage = { fixture: { inputTokens: 1, outputTokens: 1, cacheReadInputTokens: 0, cacheCreationInputTokens: 0,
+        webSearchRequests: 0, costUSD: 0, contextWindow: 1_000_000, maxOutputTokens: 0 } };
+      yield result;
+    } };
+    const frames = await collect(readClaudeStream(source, () => { released = true; }, 5, async () => {
+      assert.equal(released, false);
+      if (fail) throw new Error("Policy unavailable");
+      return 900_000;
+    }));
+    const context = frames.find((frame) => frame.kind === "context");
+    assert.ok(context?.kind === "context");
+    assert.equal(context.context?.autoCompactThreshold, fail ? undefined : 900_000);
+    assert.ok(frames.some((frame) => frame.kind === "finished" && frame.status === "completed"));
+  }
+});
 
 async function collect<T>(source: AsyncIterable<T>): Promise<T[]> {
   const values: T[] = [];

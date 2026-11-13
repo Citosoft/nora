@@ -13,9 +13,10 @@ test("buildSessionCenterSurfacePortsFromAssembly forwards session slices and cor
   const terminalFontId = "jetbrains-mono" as AppShellSignedInAssemblySources["sessionSurface"]["terminalFontId"];
 
   const sessionSurface = { ...sessionSurfaceBase, terminalThemeId, terminalFontId };
+  let settingsGroup: string | undefined;
 
   const assembly = {
-    core: { snapshot, resolvedTheme } as AppShellSignedInAssemblySources["core"],
+    core: { snapshot, resolvedTheme, openSettingsPage: (group) => { settingsGroup = group; } } as AppShellSignedInAssemblySources["core"],
     sessionSurface,
     centerTabs,
     aiModels
@@ -29,4 +30,6 @@ test("buildSessionCenterSurfacePortsFromAssembly forwards session slices and cor
   assert.strictEqual(ports.resolvedTheme, resolvedTheme);
   assert.strictEqual(ports.terminalThemeId, terminalThemeId);
   assert.strictEqual(ports.terminalFontId, terminalFontId);
+  ports.onOpenThreadSettings();
+  assert.equal(settingsGroup, "threads");
 });

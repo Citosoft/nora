@@ -1,5 +1,4 @@
-import type { CreateTerminalDialogDefaults } from "@/components/app/types";
-import type { WorkspaceScriptLauncher, WorkspaceSummary } from "@shared/appTypes";
+import type { CreateTerminalPayload, WorkspaceScriptLauncher, WorkspaceSummary } from "@shared/appTypes";
 
 export function getPreferredWorkspaceScripts(
   workspace: WorkspaceSummary | null,
@@ -26,7 +25,7 @@ export function formatWorkspaceScriptActionLabel(script: WorkspaceScriptLauncher
   return `run ${script.scriptName}`;
 }
 
-export function createScriptTerminalDefaults(script: WorkspaceScriptLauncher, shellId: string): CreateTerminalDialogDefaults {
+export function createScriptTerminalDefaults(script: WorkspaceScriptLauncher, shellId: string): Pick<CreateTerminalPayload, "name" | "shellId" | "launchConfig"> {
   const label = formatWorkspaceScriptActionLabel(script);
   return {
     name: label,
@@ -39,4 +38,8 @@ export function createScriptTerminalDefaults(script: WorkspaceScriptLauncher, sh
       packageManager: script.packageManager
     }
   };
+}
+
+export function createScriptTerminalPayload(script: WorkspaceScriptLauncher, shellId: string): CreateTerminalPayload {
+  return { ...createScriptTerminalDefaults(script, shellId), target: { kind: "root" } };
 }

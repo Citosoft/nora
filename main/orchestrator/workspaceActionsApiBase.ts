@@ -115,6 +115,10 @@ export abstract class WorkspaceActionsApiBase {
     return this.getWorkspaceActions().createWorkspaceTask(projectId, taskDescription);
   }
 
+  async createWorkspaceTaskFile(projectId: string, title: string, content: string): Promise<string> {
+    return this.getWorkspaceActions().createWorkspaceTaskFile(projectId, title, content);
+  }
+
   async getWorkspaceSplitViews(projectId: string): Promise<WorkspaceSplitViewCollection> {
     return this.getWorkspaceActions().getWorkspaceSplitViews(projectId);
   }

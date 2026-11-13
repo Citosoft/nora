@@ -861,10 +861,10 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
     ? "gap-1.5 px-2.5 py-1.5 text-xs text-slate-600 hover:text-slate-900 data-[state=active]:bg-white data-[state=active]:text-slate-900"
     : "gap-1.5 px-2.5 py-1.5 text-xs";
   const detectedContextCardClass = resolvedTheme === "light"
-    ? "rounded-[4px] border border-slate-300/90 bg-white"
+    ? "rounded-[4px] border border-border/90 bg-white"
     : "rounded-[4px] border border-border/60 bg-card/40";
   const detectedContextActionClass = resolvedTheme === "light"
-    ? "w-full rounded-md border border-slate-300/90 bg-white px-2 py-2 text-left outline-none transition-colors hover:border-slate-400 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+    ? "w-full rounded-md border border-border/90 bg-white px-2 py-2 text-left outline-none transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     : "w-full rounded-md border border-border/60 bg-background/30 px-2 py-2 text-left outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
   const gitTabPullRequestStatusDot = forgeOverview?.repo?.provider === "github" && activeBranch ? (

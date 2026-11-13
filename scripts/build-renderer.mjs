@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { build } from "esbuild";
+import { writeAccountBuildConfig } from "./account-build-config.mjs";
 
 function loadEnvFile() {
   const envPath = path.resolve(process.cwd(), ".env");
@@ -37,6 +38,7 @@ function loadEnvFile() {
 }
 
 loadEnvFile();
+await writeAccountBuildConfig();
 
 await build({
   entryPoints: ["renderer/main.tsx"],

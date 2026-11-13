@@ -37,6 +37,7 @@ export function createWorkspaceService(deps: WorkspaceServiceDeps): WorkspaceSer
     getWorkspaceTaskBoard: deps.getWorkspaceTaskBoard,
     saveWorkspaceTaskBoard: deps.saveWorkspaceTaskBoard,
     createWorkspaceTask: deps.createWorkspaceTask,
+    createWorkspaceTaskFile: deps.createWorkspaceTaskFile,
     getWorkspaceSplitViews: deps.getWorkspaceSplitViews,
     saveWorkspaceSplitViews: deps.saveWorkspaceSplitViews,
     saveWorkspaceTerminalPresets: deps.saveWorkspaceTerminalPresets,

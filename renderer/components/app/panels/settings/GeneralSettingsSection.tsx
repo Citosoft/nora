@@ -148,8 +148,8 @@ export function GeneralSettingsSection() {
         )}
       />
       <SettingRow
-        title="Agent Completion Notifications"
-        description={`Show an OS notification when an agent finishes a burst of work while ${APP_SHORT_NAME} is not focused.`}
+        title="Desktop notifications"
+        description={`While ${APP_SHORT_NAME} is not focused, notify when a thread or bot is waiting for your approval or answer, or an agent finishes a burst of work. Clicking a waiting notification opens that thread.`}
         control={
           <ToggleButton
             checked={appSettings.agentCompletionNotificationsEnabled}

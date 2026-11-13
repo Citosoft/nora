@@ -70,6 +70,8 @@ export type ChangesPanelSectionBuildDeps = {
   setForgeWorkItemDetailErrorMessage: Dispatch<SetStateAction<string | null>>;
   setIsCenterDiffExpanded: Dispatch<SetStateAction<boolean>>;
   setIsCenterFullDiffExpanded: Dispatch<SetStateAction<boolean>>;
+  /** Opens the center full-diff viewer on the active workspace's changes. */
+  openWorkspaceFullDiff(): void;
   setIsCreatePullRequestDialogOpen: Dispatch<SetStateAction<boolean>>;
   setIsTaskBoardOpen: Dispatch<SetStateAction<boolean>>;
   setTaskEditorState: Dispatch<SetStateAction<TaskEditorState | null>>;

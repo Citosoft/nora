@@ -1,3 +1,4 @@
+import { useAgentWindowSettings } from "@/components/app/hooks/useAgentWindowSettings";
 import { normalizeAppSettings } from "@/components/app/logic/normalizeAppSettings";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import {
@@ -30,10 +31,12 @@ import {
   writeStoredVercelToken,
   writeStoredVercelWorkspaceLinks
 } from "@/components/app/logic/appPersistence";
-import { applyAccentColor, applyTheme, applyUiFont, resolveThemeMode } from "@/components/app/logic/appTheme";
+import { applyTheme, applyUiFont } from "@/components/app/logic/appTheme";
 import { DEFAULT_UI_FONT_ID } from "@/components/app/logic/appUiFonts";
 import { readUserDisplayName, writeUserDisplayName } from "@/components/app/logic/userDisplayName";
 import { useUserDisplayName } from "@/components/app/hooks/useUserDisplayName";
+import { useSyncedAppearance } from "@/components/app/hooks/useSyncedAppearance";
+import { mergeAppPreferences } from "@/components/app/logic/account/syncedPreferences";
 import type {
   AccentColor,
   ResolvedTheme,
@@ -70,6 +73,25 @@ export function useAppPreferences(): AppPreferences {
   const appSettingsRef = useRef(appSettings);
   const appSettingsSaveChainRef = useRef<Promise<void>>(Promise.resolve());
   const appSettingsSaveVersionRef = useRef(0);
+  useEffect(() => noraSystemClient.onAppSettingsChanged((settings) => {
+    appSettingsRef.current = settings;
+    setAppSettings(settings);
+  }), []);
+  const [appearanceLoaded, setAppearanceLoaded] = useState(false);
+  useSyncedAppearance({ loaded: appearanceLoaded && isAppSettingsLoaded,
+    appearance: { themeMode, accentColor, terminalThemeId, terminalFontId, uiFontId, userDisplayName },
+    apply(next) {
+      writeStoredThemeMode(next.themeMode); writeStoredAccentColor(next.accentColor); writeStoredTerminalThemeId(next.terminalThemeId);
+      writeStoredTerminalFontId(next.terminalFontId); writeStoredUiFontId(next.uiFontId); writeUserDisplayName(next.userDisplayName);
+      setThemeMode(next.themeMode); setAccentColor(next.accentColor); setTerminalThemeId(next.terminalThemeId);
+      setTerminalFontId(next.terminalFontId); setUiFontId(next.uiFontId);
+      setResolvedTheme(applyTheme(next.themeMode, next.accentColor)); applyUiFont(next.uiFontId);
+    },
+    applySettings(values, expected) {
+      const next = mergeAppPreferences(appSettingsRef.current, values, expected);
+      appSettingsRef.current = next; setAppSettings(next);
+    }
+  });
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
@@ -106,6 +128,7 @@ export function useAppPreferences(): AppPreferences {
     setVercelAccountLabel(storedVercelAccountLabel);
     setResolvedTheme(applyTheme(storedMode, storedAccentColor));
     applyUiFont(storedUiFontId);
+    setAppearanceLoaded(true);
 
     const handleSystemThemeChange = () => {
       setResolvedTheme(applyTheme(readStoredThemeMode(), readStoredAccentColor()));
@@ -156,13 +179,13 @@ export function useAppPreferences(): AppPreferences {
   const updateThemeMode = (nextMode: ThemeMode) => {
     writeStoredThemeMode(nextMode);
     setThemeMode(nextMode);
-    setResolvedTheme(applyTheme(nextMode, accentColor));
+    setResolvedTheme(applyTheme(nextMode, readStoredAccentColor()));
   };
 
   const updateAccentColor = (nextAccentColor: AccentColor) => {
     writeStoredAccentColor(nextAccentColor);
     setAccentColor(nextAccentColor);
-    applyAccentColor(nextAccentColor, resolveThemeMode(themeMode, resolvedTheme));
+    setResolvedTheme(applyTheme(readStoredThemeMode(), nextAccentColor));
   };
 
   const updateTerminalTheme = (nextThemeId: TerminalThemeId) => {
@@ -234,14 +257,15 @@ export function useAppPreferences(): AppPreferences {
   };
 
   const saveAppSettings = async (updater: (current: AppSettings) => AppSettings) => {
-    const nextSettings = normalizeAppSettings(updater(appSettingsRef.current));
+    const baseline = appSettingsRef.current;
+    const nextSettings = normalizeAppSettings(updater(baseline));
     appSettingsRef.current = nextSettings;
     setAppSettings(nextSettings);
 
     const saveVersion = ++appSettingsSaveVersionRef.current;
     const saveTask = appSettingsSaveChainRef.current
       .catch(() => undefined)
-      .then(() => noraSystemClient.saveAppSettings(nextSettings));
+      .then(() => noraSystemClient.saveAppSettings(nextSettings, baseline));
     appSettingsSaveChainRef.current = saveTask.then(() => undefined, () => undefined);
     const savedSettings = normalizeAppSettings(await saveTask);
 
@@ -418,6 +442,15 @@ export function useAppPreferences(): AppPreferences {
       hardwareAccelerationEnabled: appSettingsRef.current.hardwareAccelerationEnabled
     });
   };
+
+  useAgentWindowSettings({
+    themeMode: updateThemeMode, accentColor: updateAccentColor, terminalThemeId: updateTerminalTheme,
+    terminalFontId: updateTerminalFont, uiFontId: updateUiFont, userDisplayName: updateUserDisplayName,
+    defaultIdeId: updateDefaultIde, forceMacTitleBarPreview: updateForceMacTitleBarPreview,
+    githubToken: updateGithubToken, gitlabToken: updateGitlabToken, gitlabHost: updateGitlabHost, vercelToken: updateVercelToken,
+    githubAccountLabel: updateGithubAccountLabel, gitlabAccountLabel: updateGitlabAccountLabel,
+    vercelAccountLabel: updateVercelAccountLabel, vercelWorkspaceLinks: updateVercelWorkspaceLinks
+  });
 
   return {
     themeMode,

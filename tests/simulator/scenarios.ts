@@ -10,7 +10,10 @@ export const simulatorScenarios: readonly SimulatorScenario[] = [
   { id: "questions", label: "Questions", description: "Single choice, multiple choices and a free-text answer." },
   { id: "approvals", label: "Action approvals", description: "Command, file and network approvals with different scopes." },
   { id: "approval-stack", label: "Stacked approvals", description: "Three approvals arrive together; respond one at a time." },
+  { id: "background-requests", label: "Background requests", description: "Open another conversation within 6 seconds; approvals and questions then arrive in the waiting tray, answerable in place." },
   { id: "suggestions", label: "Follow-up suggestion", description: "Ghost text after completion; Tab accepts it without sending." },
+  { id: "provider-switch", label: "Switch provider", description: "Keep decisions and history while continuing from Codex to Claude in the same chat." },
+  { id: "output-budget", label: "Tool output budget", description: "Save a large synthetic log, show its diagnostic excerpt and read a targeted chunk." },
   { id: "connector-sign-in", label: "Connector sign-in", description: "The model asks you to sign in to a connector before it continues." },
   { id: "usage-limit", label: "Provider usage limit", description: "The provider has no usage remaining and rejects the turn." },
   { id: "failure", label: "Provider failure", description: "A failed tool followed by a failed task." },
@@ -134,16 +137,35 @@ const skills: SimulatorStep[] = [
   { kind: "text", text: "Done. **code-review** was loaded, the **release-notes** guide was read directly, and the agent loaded **pdf**. The other skills stay listed as available." }
 ];
 
+/** Requests raised while you are looking elsewhere, so they surface as in-app toasts rather than in this thread. */
+const BACKGROUND_DELAY_MS = 6000;
+const backgroundRequests: SimulatorStep[] = [
+  { kind: "text", text: `Open another conversation or scenario now. In ${BACKGROUND_DELAY_MS / 1000} seconds this thread will ask for two approvals, `
+    + "then a quick question, then one that needs this thread. Each appears in the waiting tray in the bottom-right corner while you are elsewhere." },
+  { kind: "pause", milliseconds: BACKGROUND_DELAY_MS },
+  { kind: "approval-batch", approvals: [commandApproval, approvals[1]] },
+  { kind: "questions", questions: [{ id: "branch", text: "Which branch should I use for the fix?", options: ["main", "release", "new branch"], multiple: false }] },
+  { ...questions },
+  { kind: "text", text: "All background requests were answered. Run the scenario in a second thread to see requests from several threads in one tray." }
+];
+
 export function stepsForScenario(instruction: string): SimulatorStep[] {
   const id = instruction.trim().split(/\s/)[0].replace(/^\//, "");
   switch (id) {
+    case "output-budget": return [{ kind: "output-budget" }];
     case "tools": return tools;
     case "markdown": return [{ kind: "text", text: simulatedMarkdown }];
     case "questions": return [questions];
     case "approvals": return approvals;
     case "approval-stack": return [{ kind: "approval-batch", approvals }];
+    case "background-requests": return backgroundRequests;
     case "suggestions": return [{ kind: "text", text: "The example changes are ready. A suggested follow-up will appear in the empty composer when this turn finishes." },
       { kind: "suggestion", text: "Run the test suite and summarize any failures." }];
+    case "provider-switch": return [
+      { kind: "text", text: "We've agreed to **preserve the public API**, add a parser in `src/parser.ts`, and cover malformed input with unit tests. The parser and tests are still unfinished." },
+      { kind: "display", id: "handoff-plan", item: { kind: "plan", steps: [{ text: "Preserve the public API", state: "completed" }, { text: "Implement the parser and test malformed input", state: "pending" }] } },
+      { kind: "text", text: "To try a provider handoff, wait for this turn to finish, then click **Change** beside the model picker. Choose the **Claude** icon and a simulated model, choose **Simulated permissions**, close the picker, and send **Continue the parser work**. The same chat keeps this history and gains a provider-change marker. Everything is local and uses zero tokens." }
+    ];
     case "connector-sign-in": return [
       { kind: "text", text: `To find the open issues assigned to you I need access to **${simulatedConnectorName}**, which isn't signed in yet.` },
       { kind: "display", id: "connector-sign-in", item: { kind: "connector-sign-in", server: simulatedConnectorName,

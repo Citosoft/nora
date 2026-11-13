@@ -8,6 +8,8 @@ import type { ResolvedTheme, TerminalFontId, TerminalThemeId } from "@/component
 
 /** Read surface for session center (tabs, editor host, split views, terminal dock theming) — assembly-backed. */
 export type SessionCenterPorts = {
+  onOpenThreadSettings(): void;
+  onOpenBotSettings(): void;
   sessionSurface: AppShellSignedInSessionSurfaceSources;
   centerTabs: AppShellSignedInCenterTabsSources;
   aiModels: AppShellSignedInAiModelSources;

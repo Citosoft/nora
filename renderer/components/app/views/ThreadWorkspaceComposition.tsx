@@ -24,7 +24,9 @@ export function ThreadWorkspaceComposition({ store, children }: ThreadWorkspaceC
   }, [store]);
   const actions = useMemo(() => ({
     client: store.client, resumeExternal: store.resumeExternal, pinExternal: store.pinExternal, setSettled: store.setSettled,
+    renameThread: store.renameThread,
     focusWorkspace: store.focusWorkspace,
+    showHome: store.deactivate,
     openDraft: (workspaceId: string) => { store.openDraft({ workspaceId }); },
     openRow: (row: Parameters<ThreadNavigationPorts["openRow"]>[0]) => {
       if (row.target.kind === "draft") store.focusDocument(row.target.documentId);

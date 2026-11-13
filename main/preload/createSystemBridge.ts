@@ -1,3 +1,4 @@
+import { WINDOW_SETTINGS_CHANNELS, windowSettingsRequestSchema, windowSettingsReplySchema } from "@shared/nora-tools/windowSettings";
 import type { AutoUpdateStatus, ForgeOAuthDevicePrompt } from "@shared/appTypes";
 import type {
   AppClosingProgressPayload,
@@ -22,7 +23,13 @@ export function createSystemBridge(): SystemBridge {
     onWindowStateChanged: (listener) => subscribeToIpcEvent<WindowState>("window:state-changed", listener),
     getDetectedUserIdentity: () => invokeIpc("app:get-detected-user-identity"),
     getAppSettings: () => invokeIpc("app:get-app-settings"),
-    saveAppSettings: (settings) => invokeIpc("app:save-app-settings", settings),
+    onWindowSettingsRequest: (listener) => subscribeToIpcEvent<unknown>(WINDOW_SETTINGS_CHANNELS.request, (input) => {
+      const parsed = windowSettingsRequestSchema.safeParse(input);
+      if (parsed.success) listener(parsed.data);
+    }),
+    replyWindowSettings: (reply) => invokeIpc(WINDOW_SETTINGS_CHANNELS.reply, windowSettingsReplySchema.parse(reply)),
+    onAppSettingsChanged: (listener) => subscribeToIpcEvent("app:settings-changed", listener),
+    saveAppSettings: (settings, baseline) => invokeIpc("app:save-app-settings", settings, baseline),
     relaunchApplication: (options) => invokeIpc("app:relaunch", options),
     getAnalyticsRuntimeConfig: () => invokeIpc("app:get-analytics-runtime-config"),
     getStartupDependencyReport: () => invokeIpc("app:get-startup-dependency-report"),
@@ -63,6 +70,8 @@ export function createSystemBridge(): SystemBridge {
     installLocalAiModel: (modelId) => invokeIpc("app:install-local-ai-model", modelId),
     installLocalAiRuntime: () => invokeIpc("app:install-local-ai-runtime"),
     transcribeVoiceInput: (payload) => invokeIpc("app:transcribe-voice-input", payload),
+    readComposerAttachmentThumbnail: (filePath) => invokeIpc("app:read-composer-attachment-thumbnail", filePath),
+    saveComposerAttachment: (payload) => invokeIpc("app:save-composer-attachment", payload),
     savePastedImage: (payload) => invokeIpc("app:save-pasted-image", payload),
     showAgentCompletionNotification: (payload) => invokeIpc("app:show-agent-completion-notification", payload),
     onAppClosingProgress: (listener) =>

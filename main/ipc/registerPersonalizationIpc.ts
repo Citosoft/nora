@@ -14,5 +14,6 @@ export function registerPersonalizationIpc(deps: PersonalizationIpcDeps): () => 
       return { ok: false, message: personalizationErrorMessage(error, parsed.data.kind) };
     }
   });
-  return () => deps.ipc.removeHandler(personalizationChannel);
+  const unsubscribe = deps.service.subscribe(deps.notify);
+  return () => { unsubscribe(); deps.ipc.removeHandler(personalizationChannel); };
 }

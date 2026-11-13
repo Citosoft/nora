@@ -4,6 +4,11 @@ import type { WorkspaceAvatarIdentity } from "@/components/app/types/workspaceAv
 import type { ThreadListRow } from "./list.types";
 
 export type ThreadGrouping = "none" | "workspace" | "activity" | "source" | "provider";
+/** Whether group members' own threads (where each bot does its work) are listed beside the group chat. */
+export type MemberThreadVisibility = "visible" | "hidden";
+/** `compact` fits section headings such as the Bots sidebar's Groups heading. */
+export interface MemberThreadsToggleProps { compact?: boolean; }
+export interface MemberThreadVisibilityControl { visibility: MemberThreadVisibility; setVisibility(visibility: MemberThreadVisibility): void; }
 export interface ThreadNavigationGroup {
   id: string;
   label: string | null;

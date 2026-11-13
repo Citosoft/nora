@@ -7,6 +7,7 @@ import { WorkspaceRuntimeProvider } from "@/components/app/context/workspaceRunt
 import { WorkspaceSidebarProvider } from "@/components/app/context/workspaceSidebarContext";
 import { LocalTerminalDock as AppLocalTerminalDock } from "@/components/app/panels/LocalTerminalDock";
 import { WorkspaceSidebar as AppWorkspaceSidebar } from "@/components/app/sidebar/WorkspaceSidebar";
+import { SidebarModeStrip } from "@/components/app/sidebar/SidebarModeStrip";
 import { AppMainCenterContent } from "@/components/app/views/AppMainCenterContent";
 
 export function AppSignedInWorkspaceView() {
@@ -27,7 +28,9 @@ export function AppSignedInWorkspaceView() {
   } = useAppSignedInWorkspaceView();
 
   const workspaceSidebarCell = (
-    <div className="relative min-h-0" style={{ gridColumn: areSidebarsSwapped ? 3 : 1, gridRow: 1 }}>
+    <div className={`flex min-h-0 ${areSidebarsSwapped ? "flex-row-reverse" : ""}`} style={{ gridColumn: areSidebarsSwapped ? 3 : 1, gridRow: 1 }}>
+      <SidebarModeStrip edge={areSidebarsSwapped ? "right" : "left"} />
+      <div className="relative min-h-0 min-w-0 flex-1">
       <AppWorkspaceSidebar />
       {!isWorkspaceSidebarCollapsed ? (
         <div
@@ -41,6 +44,7 @@ export function AppSignedInWorkspaceView() {
           onPointerDown={onStartWorkspaceSidebarResize}
         />
       ) : null}
+      </div>
     </div>
   );
 

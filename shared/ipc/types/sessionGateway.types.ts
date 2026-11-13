@@ -1,6 +1,7 @@
 import type {
   AgentContextSourceSummary,
   AgentContextState,
+  AgentContextSelection,
   AgentContextPreview,
   AgentPromptDispatchResult,
   AgentPromptSubmission,
@@ -21,6 +22,7 @@ export interface SessionBridge {
   getAgentTerminalBuffer: (agentId: string) => Promise<string>;
   getAgentContextPreview: (agentId: string) => Promise<AgentContextPreview>;
   getAgentContextState: (agentId: string) => Promise<AgentContextState>;
+  prepareAgentContextHandoff: (selections: AgentContextSelection[]) => Promise<string>;
   listWorkspaceAgentContextSources: (
     projectId: string,
     excludeAgentId?: string

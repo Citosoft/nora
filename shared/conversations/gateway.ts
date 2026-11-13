@@ -7,6 +7,7 @@ import { providerAccountResultSchema } from "@shared/providers/account";
 import { skillsResultSchema } from "@shared/providers/skills";
 import { catalogResultSchema } from "./catalog";
 import { externalSessionsResultSchema } from "./externalSessions";
+import { threadReferenceSchema } from "./references";
 
 const id = z.string().min(1).max(512);
 const cursor = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
@@ -16,6 +17,7 @@ export const executeRequestSchema = z.object({ ...routed, command: conversationC
 export const readRequestSchema = z.discriminatedUnion("kind", [
   z.object({ ...routed, kind: z.literal("external-sessions"), providerKind: providerKindSchema, instanceId: id, workspace: workspaceRefSchema }).strict(),
   z.object({ ...routed, kind: z.literal("header"), conversationId: id }).strict(),
+  z.object({ ...routed, kind: z.literal("thread-reference"), conversationId: id }).strict(),
   /** Measures native context for a thread with no reading yet, from the runtime's saved history. */
   z.object({ ...routed, kind: z.literal("context"), conversationId: id }).strict(),
   z.object({ ...routed, kind: z.literal("summaries"), projectId: id.optional() }).strict(),
@@ -43,6 +45,7 @@ export const eventPageSchema = z.object({ schemaVersion: z.literal(1), after: cu
 export const readResultSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("external-sessions"), result: externalSessionsResultSchema }).strict(),
   z.object({ kind: z.literal("header"), header: headerSchema.nullable() }).strict(),
+  z.object({ kind: z.literal("thread-reference"), reference: threadReferenceSchema }).strict(),
   z.object({ kind: z.literal("context"), context: contextUsageSchema.nullable() }).strict(),
   z.object({ kind: z.literal("summaries"), summaries: z.array(summarySchema) }).strict(),
   z.object({ kind: z.literal("history"), page: historySchema }).strict(),

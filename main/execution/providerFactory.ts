@@ -11,15 +11,19 @@ import { createClaudeContextReader, createClaudeContextWindowReader } from "@mai
 import { CodexAdapter } from "@main/providers/codex/adapter";
 import type { NativeInstance } from "@main/types/execution/localHost.types";
 import type { ExecutionProvider } from "@main/types/execution/provider.types";
+import type { ProviderFactoryDependencies } from "@main/types/execution/providerFactory.types";
+import { DEFAULT_THREAD_PREFERENCES } from "@shared/personalization/threads";
 
 /** Builds the adapter for a discovered runtime; constructing one does not start its process. */
-export function createExecutionProvider(instance: NativeInstance, now: () => string): ExecutionProvider {
+export function createExecutionProvider(instance: NativeInstance, { now, preferences, toolOutputDirectory, runContext }: ProviderFactoryDependencies): ExecutionProvider {
+  const compactToolOutput = () => (preferences?.() ?? DEFAULT_THREAD_PREFERENCES).toolOutputBudget === "compact";
   switch (instance.kind) {
-    case "codex": return new CodexAdapter({ ...instance.options, now });
+    case "codex": return new CodexAdapter({ ...instance.options, now, compactToolOutput, runContext });
     case "claude": return new ClaudeAdapter({ instanceId: instance.instanceId, policies: instance.policies,
-      externalSessions: createClaudeExternalSessions(instance.instanceId), open: createClaudeOpener(instance.runtime), discover: createClaudeDiscovery(instance.runtime), mcp: createClaudeMcp(instance.runtime), skills: createClaudeSkills(instance.runtime),
+      autoCompactTokens: () => preferences?.().claudeAutoCompactTokens ?? null,
+      externalSessions: createClaudeExternalSessions(instance.instanceId), open: createClaudeOpener(instance.runtime, { directory: toolOutputDirectory, enabled: compactToolOutput }), discover: createClaudeDiscovery(instance.runtime), mcp: createClaudeMcp(instance.runtime), skills: createClaudeSkills(instance.runtime),
       account: createClaudeAccount(instance.runtime), readContext: createClaudeContextReader(createClaudeContextWindowReader(instance.runtime)),
-      now, nextId: randomUUID });
-    case "acp": return new AcpAdapter({ ...instance.options, now });
+      now, nextId: randomUUID, runContext });
+    case "acp": return new AcpAdapter({ ...instance.options, now, runContext });
   }
 }

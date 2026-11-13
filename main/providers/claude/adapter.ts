@@ -1,3 +1,5 @@
+import { joinGuidance, optionalRunContext } from "@main/nora-tools/endpoint";
+import { conversationGuidance } from "@shared/conversations/guidance";
 import type { McpAction, McpResult } from "@shared/types/provider/mcp.types";
 import type { SkillsResult } from "@shared/types/provider/skills.types";
 import type { ProviderAccountAction, ProviderAccountResult } from "@shared/types/provider/account.types";
@@ -71,11 +73,16 @@ export class ClaudeAdapter implements ExecutionProvider {
     }
     const sessionId = snapshot.conversation.nativeConversationId ?? this.options.nextId();
     const nativeTurnId = this.options.nextId();
+    const autoCompactTokens = this.options.autoCompactTokens?.();
+    const runContext = await optionalRunContext(this.options.runContext, snapshot.conversation);
+    const guidance = joinGuidance(conversationGuidance(snapshot.conversation), runContext.guidance);
+    const noraTools = runContext.tools;
     // Reserve the SDK-supported caller-supplied session ID durably before spawning.
     emit({ ...base, eventId: "native-binding", kind: "bound", nativeConversationId: sessionId });
     const session = this.options.open({ sessionId, resume: !!snapshot.conversation.nativeConversationId,
+      ...(autoCompactTokens ? { autoCompactTokens } : {}),
       nativeTurnId, instruction: run.action === "compact" ? CLAUDE_COMPACT_COMMAND : run.instruction, cwd: snapshot.conversation.workspace.path,
-      ...(snapshot.conversation.role ? { guidance: snapshot.conversation.role.guidance } : {}),
+      ...(guidance ? { guidance } : {}), ...(noraTools ? { noraTools } : {}),
       model: snapshot.conversation.provider.model, permissionMode: mode,
       ...(snapshot.conversation.provider.subagentModel ? { subagentModel: snapshot.conversation.provider.subagentModel } : {}),
       effort: effort.data,

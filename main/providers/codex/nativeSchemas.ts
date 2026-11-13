@@ -14,9 +14,9 @@ export const itemEventSchema = z.object({ threadId: z.string(), turnId: z.string
 export const questionSchema = z.object({ threadId: z.string(), turnId: z.string(), questions: z.array(z.object({ id: z.string(), question: z.string(), isOther: z.boolean().optional(), options: z.array(z.object({ label: z.string() })).nullable().optional() })) });
 export const readThreadSchema = z.object({ thread: z.object({ id: z.string(), turns: z.array(z.object({ id: z.string(), status: z.string(), items: z.array(z.json()), error: turnErrorSchema.nullable().optional() })) }) });
 const tokenCount = z.number().int().nonnegative();
-const tokenBreakdownSchema = z.object({ inputTokens: tokenCount, outputTokens: tokenCount, cachedInputTokens: tokenCount.optional() });
+const tokenBreakdownSchema = z.object({ inputTokens: tokenCount, outputTokens: tokenCount, cachedInputTokens: tokenCount.optional(), cacheWriteInputTokens: tokenCount.optional() });
 /** `last` is the latest model request (the live context); `total` accumulates the whole thread. */
-export const usageEventSchema = z.object({ threadId: z.string(), tokenUsage: z.object({ total: tokenBreakdownSchema,
+export const usageEventSchema = z.object({ threadId: z.string(), turnId: z.string().optional(), tokenUsage: z.object({ total: tokenBreakdownSchema,
   last: tokenBreakdownSchema.optional(), modelContextWindow: z.number().int().positive().nullable().optional() }) });
 export const modelListSchema = z.object({ data: z.array(z.object({ model: z.string(), displayName: z.string(), description: z.string(),
   hidden: z.boolean(), defaultReasoningEffort: reasoningEffortSchema, supportedReasoningEfforts: z.array(z.object({ reasoningEffort: reasoningEffortSchema })) })),

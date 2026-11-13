@@ -1,3 +1,4 @@
+import type { ThreadModelDefault } from "@shared/types/personalization/threadModel.types";
 import type { NativeProvider } from "@shared/ipc/types/personalizationGateway.types";
 import type { ProviderBinding, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ProviderCatalog, ProviderCatalogResult, ProviderModel } from "@shared/types/provider/catalog.types";
@@ -13,9 +14,13 @@ export interface ModelCatalogDeps {
   client: Pick<ConversationClient, "catalog">;
   workspace: WorkspaceRef;
 }
-export interface ModelChoice { providerKey: string; modelId: string | null; }
+/** Inherited choices follow the configured thread default and are not saved with the draft. */
+export interface ModelChoice { providerKey: string; modelId: string | null; inherited: boolean; }
+/** Whether a draft's binding was picked by the user (saved with the draft) or inherited from the default (not saved). */
+export type BindingOrigin = "chosen" | "inherited";
 export interface ModelBindingInput {
-  provider: NativeProvider | null;
+  /** Only the provider's identity matters for binding; MCP reporting and labels do not. */
+  provider: Pick<NativeProvider, "kind" | "instanceId"> | null;
   catalog: ModelCatalogState;
   modelId: string | null;
   policyId: string | null;
@@ -35,6 +40,7 @@ export interface ModelSettingsInput {
   onSubagentModel(value: string | null): void;
 }
 export interface ModelPopoverProps {
+  continuation?: boolean;
   providers: readonly NativeProvider[];
   store: ModelCatalogStore;
   selectedProvider: NativeProvider | null;
@@ -61,4 +67,28 @@ export interface SubagentModelOptionProps {
   value: string | null;
   disabled: boolean;
   onChange(value: string | null): void;
+}
+export interface ThreadModelDefaultFieldsProps {
+  target?: "thread" | "subagent";
+  /** Catalogs are checkout-scoped; the default is chosen from the focused workspace's catalog. */
+  workspace: WorkspaceRef;
+}
+export interface ThreadModelDefaultSettingProps { target?: "thread" | "subagent"; }
+export interface ProviderOptionLabelProps { kind: NativeProvider["kind"]; label: string; }
+export interface ProviderModelFieldLabels {
+  provider: string;
+  model: string;
+  /** Option that clears the choice; omit when a provider and model are required. */
+  clear?: string;
+}
+/** Controlled provider and model selects backed by the workspace's model catalogs. */
+export interface ProviderModelFieldsProps {
+  workspace: WorkspaceRef;
+  value: ThreadModelDefault | null;
+  onChange(value: ThreadModelDefault | null): void;
+  labels: ProviderModelFieldLabels;
+  disabled?: boolean;
+  error?: string | null;
+  /** Explains why the chosen provider cannot be used here, or null when it can. */
+  unsupportedReason?(catalog: ProviderCatalog): string | null;
 }

@@ -29,7 +29,8 @@ import type {
   WriteWorkspaceFilePayload
 } from "@shared/appTypes";
 import type { WorkspaceImageFileContent } from "@shared/types/workspaceFile.types";
-import { ipcMain } from "electron";
+import { app, ipcMain } from "electron";
+import { prepareContextHandoff } from "@main/helpers/contextHandoff";
 import { generateCommitMessageFromChanges } from "@main/ai/commitMessageGenerator";
 import { openPathWithDefaultApp } from "@main/helpers/openPathWithDefaultApp";
 
@@ -69,6 +70,10 @@ export function registerWorkspaceIpc({
   );
   ipcMain.handle("app:get-agent-context-state", (_event, agentId: string) =>
     services.snapshot.getAgentContextState(agentId)
+  );
+  ipcMain.handle("app:prepare-agent-context-handoff", (_event, selections: unknown) =>
+    prepareContextHandoff(selections, { storageRoot: app.getPath("userData"),
+      readSource: (agentId) => services.snapshot.getAgentContextState(agentId) })
   );
   ipcMain.handle("app:create-project-workspace", (_event, payload: CreateProjectWorkspacePayload) =>
     createProjectWorkspace(payload)

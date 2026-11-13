@@ -11,16 +11,18 @@ import { simulatorPacing } from "../pacing";
 import type { SteeringResult } from "@main/types/execution/steering.types";
 import type { McpAction, McpResult } from "@shared/types/provider/mcp.types";
 import { SimulatedConnectors } from "./connectors";
+import { providerTransitionSteps } from "../providerTransition";
+import { join } from "node:path";
+import { outputBudgetSteps } from "../outputBudget";
 
 /** Deliberately has no SDK, subprocess, filesystem-tool or network implementation. */
 export class SimulatorProvider implements ExecutionProvider {
-  readonly kind = "codex";
   readonly instanceId = "simulator";
   readonly capabilities = { ...nativeCapabilities, steering: true, promptSuggestions: true, subagentDetails: true, subagentModel: true };
   private readonly active = new Map<string, SimulatorExecution>();
   private sequence = 0;
   private readonly connectors: SimulatedConnectors;
-  constructor(private readonly speed = 1) { this.connectors = new SimulatedConnectors(speed); }
+  constructor(private readonly speed = 1, readonly kind: "codex" | "claude" = "codex") { this.connectors = new SimulatedConnectors(speed); }
 
   async skills(): Promise<SkillsResult> { return { kind: "skills", skills: [...simulatedSkills] }; }
 
@@ -37,14 +39,18 @@ export class SimulatorProvider implements ExecutionProvider {
     const active: SimulatorExecution = { ...execution, emit, controller: new AbortController(), done: false, tools: new Map(), agents: new Map(), responses: new Map() };
     this.active.set(execution.run.attemptId, active);
     const base = this.base(active);
-    emit({ ...base, kind: "started", nativeConversationId: `simulated-${execution.snapshot.conversation.id}`, nativeTurnId: `turn-${execution.run.id}` });
+    emit({ ...base, kind: "started", nativeConversationId: execution.snapshot.conversation.nativeConversationId ?? `simulated-${this.kind}-${execution.snapshot.conversation.id}-${execution.run.id}`, nativeTurnId: `turn-${execution.run.id}` });
     try {
       if (!await this.pause(active, simulatorPacing.firstResponseMs)) return;
       this.item(active, { id: `${active.run.id}:reasoning`, runId: active.run.id, createdAt: new Date().toISOString(), kind: "reasoning", text: "Example reasoning summary for testing the expandable UI.", complete: true });
-      for (const step of stepsForScenario(execution.run.instruction)) {
+      const steps = execution.run.handoff ? providerTransitionSteps(execution) : stepsForScenario(execution.run.instruction);
+      const expanded: SimulatorStep[] = [];
+      for (const step of steps) expanded.push(...(step.kind === "output-budget" ? await outputBudgetSteps(join(execution.snapshot.conversation.workspace.path, "tool-outputs")) : [step]));
+      for (const step of expanded) {
         if (active.done) break;
         if (step.kind !== "pause" && !await this.pause(active, simulatorPacing.actionGapMs)) break;
         switch (step.kind) {
+          case "output-budget": throw new Error("Output budget scenario was not expanded");
           case "pause": await this.pause(active, step.milliseconds); break;
           case "text": await this.text(active, step.text); break;
           case "suggestion": active.promptSuggestion = step.text; break;

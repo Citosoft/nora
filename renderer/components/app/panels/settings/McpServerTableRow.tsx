@@ -1,8 +1,9 @@
 import { useId, useState } from "react";
-import { ChevronRight } from "lucide-react";
 import type { McpServerTableRowProps } from "@/components/app/types/runtimeMcp.types";
 import { McpLoginButton } from "@/components/app/panels/settings/McpLoginButton";
 import { McpServerLogo } from "@/components/app/panels/settings/McpServerLogo";
+import { McpToolsToggle } from "./McpToolsToggle";
+import { McpToolDetailsRow } from "./McpToolDetailsRow";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { MCP_SERVER_STATUS_BADGES } from "@/components/app/constants/mcpServerStatus";
 import { Badge } from "@/components/ui/badge";
@@ -30,24 +31,12 @@ export function McpServerTableRow({ server, source, logins }: McpServerTableRowP
       <td className={`${CELL_CLASS_NAME} text-muted-foreground`}>{SCOPE_LABELS[server.scope]}</td>
       <td className={CELL_CLASS_NAME}><Badge variant={status.variant} className="whitespace-nowrap">{status.label}</Badge></td>
       <td className={CELL_CLASS_NAME}>
-        {hasDetails ? <button type="button" aria-expanded={expanded} aria-controls={detailsId} onClick={() => setExpanded((value) => !value)}
-          className="inline-flex items-center gap-1 rounded-[3px] text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          <ChevronRight className={`size-3.5 transition-transform ${expanded ? "rotate-90" : ""}`} aria-hidden="true" />
-          {server.tools.length}<span className="sr-only"> tools for {server.name}</span>
-        </button> : <span className="text-muted-foreground">0</span>}
+        {hasDetails ? <McpToolsToggle count={server.tools.length} expanded={expanded} controls={detailsId} serverName={server.name} onToggle={() => setExpanded((value) => !value)} /> : <span className="text-muted-foreground">0</span>}
       </td>
       <td className={`${CELL_CLASS_NAME} text-right`}>
         {server.canLogin ? <McpLoginButton server={server} source={source} logins={logins} /> : null}
       </td>
     </tr>
-    {expanded ? <tr id={detailsId} className="border-b border-border/40 bg-muted/20 last:border-0">
-      <td colSpan={6} className="px-3 py-3 text-xs">
-        {server.message ? <p className="mb-2 text-muted-foreground">{server.message}</p> : null}
-        {server.tools.length ? <ul className="space-y-2">{server.tools.map((tool) => <li key={tool.name}>
-          <span className="break-words font-medium">{tool.name}</span>
-          {tool.description ? <p className="mt-0.5 whitespace-pre-wrap break-words text-muted-foreground">{tool.description}</p> : null}
-        </li>)}</ul> : null}
-      </td>
-    </tr> : null}
+    {expanded ? <McpToolDetailsRow id={detailsId} message={server.message} tools={server.tools} /> : null}
   </>;
 }

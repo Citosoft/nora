@@ -1,4 +1,4 @@
 import { createNoraClient } from "./noraClientFactory";
 
-/** Read-only access to archived v2 context. Never starts or sends to a legacy agent. */
-export const legacyHistoryClient = createNoraClient(["getAgentContextState", "getAgentContextPreview", "listWorkspaceAgentContextSources"] as const);
+/** Reads archived context and prepares local handoff snapshots; never starts or sends to a legacy agent. */
+export const legacyHistoryClient = createNoraClient(["getAgentContextState", "getAgentContextPreview", "listWorkspaceAgentContextSources", "prepareAgentContextHandoff"] as const);

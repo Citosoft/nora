@@ -1,3 +1,4 @@
+import type { NoraToolEndpoint, NoraRunContextResolver } from "@main/types/nora-tools/noraTools.types";
 import type { ExternalSessionReader } from "./externalSessions.types";
 import type { ProviderAccountAction, ProviderAccountResult } from "@shared/types/provider/account.types";
 import type { McpAction, McpResult } from "@shared/types/provider/mcp.types";
@@ -25,6 +26,7 @@ export interface ClaudeSession extends AsyncIterable<ClaudeFrame> {
 }
 export interface ClaudeMessageStream extends AsyncIterable<SDKMessage> { close(): void; }
 export interface ClaudeOpenInput {
+  autoCompactTokens?: number;
   sessionId: string;
   resume: boolean;
   instruction: string;
@@ -36,9 +38,14 @@ export interface ClaudeOpenInput {
   effort: EffortLevel | null;
   /** Default model for subagents; per-agent definitions and explicit Agent call models still take precedence. */
   subagentModel?: string;
+  /** Nora's own MCP tools for this conversation, when it gets them. */
+  noraTools?: NoraToolEndpoint;
   onRequest: (prompt: ClaudePrompt) => Promise<RequestResponse>;
 }
 export interface ClaudeOptions {
+  /** Nora's per-run additions: its tool server and run guidance such as a bot's notes. */
+  runContext?: NoraRunContextResolver;
+  autoCompactTokens?: () => number | null;
   externalSessions?: ExternalSessionReader;
   instanceId: string;
   policies: Readonly<Record<string, PermissionMode>>;
@@ -67,6 +74,16 @@ export interface ClaudeRuntimeOptions {
   environment?: NodeJS.ProcessEnv;
   discoveryTimeoutMs?: number;
 }
+/** One spawned control session; `close` ends its idle input and waits for the runtime to exit. */
+export interface ClaudeControlSessionHandle<Session> {
+  session: Session;
+  close(): Promise<void>;
+}
+export type ClaudeControlSessionOpener<Session> = (runtime: ClaudeRuntimeOptions, cwd: string, model: string | undefined) => ClaudeControlSessionHandle<Session>;
+export interface ClaudeSharedControlSession<Session> extends ClaudeControlSessionHandle<Session> {
+  readers: number;
+}
+export type ClaudeControlSessionRunner<Session> = <T>(runtime: ClaudeRuntimeOptions, cwd: string, read: (session: Session) => Promise<T>, model?: string) => Promise<T>;
 export interface ClaudeDiscovery {
   models: ProviderModel[];
   authentication: ProviderCatalog["authentication"];
@@ -78,6 +95,7 @@ export interface ClaudeRequestUsage {
   output_tokens: number;
   cache_creation_input_tokens?: number | null;
   cache_read_input_tokens?: number | null;
+  cache_creation?: { ephemeral_1h_input_tokens: number; ephemeral_5m_input_tokens: number } | null;
 }
 
 export type ClaudeToolFrame = Extract<ClaudeFrame, { kind: "tool" }>;

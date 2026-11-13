@@ -1,3 +1,4 @@
+import { noraToolsStatus } from "@shared/nora-tools/catalog";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { ExecutionHost } from "@main/execution/host";
@@ -7,6 +8,7 @@ import type { NativeBoot } from "@shared/ipc/types/personalizationGateway.types"
 import type { WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import { SimulatorProvider } from "./provider";
 import { createSimulatorCheckpoints } from "./checkpoints";
+import { createThreadReferenceWriter } from "@main/execution/thread-references/writeSnapshot";
 export { registerConversationIpc } from "@main/ipc/registerConversationIpc";
 
 /** Production engine, queue, persistence and IPC; only the provider and workspace are simulated. */
@@ -15,15 +17,16 @@ export function createSimulatorHost(directory: string, speed = 1) {
   // Scripted tools never write a checkout; pending scenarios can safely share this workspace.
   const workspace = { environmentId, projectId: "simulator", checkoutId: "simulator", path: directory, branch: "simulated", access: "read" as const, versionControl: "none" as const };
   const boot: NativeBoot = { environmentId, cursor: 0, personalization: { defaultRole: { id: "general" }, workspaceRoles: {} },
-    providers: [{ kind: "codex", instanceId: "simulator", label: "Simulator · no LLM" }],
-    workspaces: [{ id: "simulator", name: "Chat simulator", kind: "personal", workspace }] };
-  const providers = new ProviderRegistry(); providers.register(new SimulatorProvider(speed));
+    providers: [{ kind: "codex", instanceId: "simulator", label: "Codex simulator · no LLM", reportsMcp: false }, { kind: "claude", instanceId: "simulator", label: "Claude simulator · no LLM", reportsMcp: false }],
+    workspaces: [{ id: "simulator", name: "Chat simulator", kind: "personal", workspace }], sharedBots: [], noraTools: noraToolsStatus("idle") };
+  const providers = new ProviderRegistry(); providers.register(new SimulatorProvider(speed)); providers.register(new SimulatorProvider(speed, "claude"));
   const store = new SqliteExecutionStore(join(directory, "simulator.sqlite"), environmentId);
   const verify = async (selection: WorkspaceRef): Promise<void> => {
     if (selection.environmentId !== environmentId || selection.path !== directory) throw new Error("Only the isolated simulator workspace is available");
   };
   const host = new ExecutionHost({ store, providers, owner: { id: randomUUID(), processId: process.pid }, isProcessAlive: () => false,
     now: () => new Date().toISOString(), nextId: randomUUID, shutdownGraceMs: 500,
+    writeThreadReference: createThreadReferenceWriter(join(directory, "thread-references")),
     workspaces: { async prepare(selection) { await verify(selection); return selection; }, verify },
     reviewer: async () => ({ status: "ready", scope: "workspace", paths: [] }),
     checkpoints: createSimulatorCheckpoints(),

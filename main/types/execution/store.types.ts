@@ -15,6 +15,8 @@ export interface StoreReader {
   snapshots(): ConversationSnapshot[];
   state(conversationId: string, runId?: string): ConversationState | null;
   activeStates(): ConversationState[];
+  /** Pending tool or subagent activity across every saved turn, including work outliving its root turn. */
+  hasBackgroundActivity(conversationId: string): boolean;
   execution(conversationId: string, runId: string): ExecutionState | null;
   item(conversationId: string, itemId: string): TimelineItem | null;
   request(conversationId: string, requestId: string): RuntimeRequest | null;

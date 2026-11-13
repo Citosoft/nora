@@ -11,9 +11,7 @@ import { WorkspaceSessionPanelProvider } from "@/components/app/context/workspac
 import { WorkspaceDocumentsTool } from "@/components/app/panels/workspace-tools/WorkspaceDocumentsTool";
 import { WorkspaceTerminalsTool } from "@/components/app/panels/workspace-tools/WorkspaceTerminalsTool";
 import { WorkspaceWorktreesTool } from "./WorkspaceWorktreesTool";
-import { WorkspaceToolHeader } from "@/components/app/panels/workspace-tools/WorkspaceToolHeader";
 import type { WorkspaceToolContentProps } from "@/components/app/types/workspaceNavigation.types";
-import { WORKSPACE_TOOLS } from "@/components/app/constants/workspaceTools";
 
 export function WorkspaceToolContent({ tool, workspace, active }: WorkspaceToolContentProps) {
   const value = useAppMainCenterContent();
@@ -48,7 +46,6 @@ export function WorkspaceToolContent({ tool, workspace, active }: WorkspaceToolC
   }
   return <AppMainCenterContentProvider value={scoped}><WorkspaceSessionPanelProvider value={scoped.workspaceSessionPanelProps}>
     <section className="flex h-full min-h-0 flex-col" aria-label={`${tool} for ${workspace.project.name}`}>
-      <WorkspaceToolHeader title={WORKSPACE_TOOLS.find((entry) => entry.id === tool)?.label ?? tool} workspaceName={workspace.project.name} />
       <div className="min-h-0 flex-1">{content}</div>
     </section>
   </WorkspaceSessionPanelProvider></AppMainCenterContentProvider>;

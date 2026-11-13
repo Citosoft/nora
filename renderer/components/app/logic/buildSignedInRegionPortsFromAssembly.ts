@@ -11,12 +11,15 @@ import type { SessionCenterPorts } from "@/components/app/types/sessionCenterPor
 import type { WorkspaceSidebarPorts } from "@/components/app/types/workspaceSidebarPorts.types";
 import type { AppChromeShellComposeSlice } from "@/components/app/types/appChromeShellComposeSlice.types";
 import type { AppModalDialogsBuildDeps } from "@/components/app/types/appModalDialogsBuild.types";
-import type { BranchRequestReader } from "@/components/app/types/threadInsights.types";
+import type { ThreadForgeClient } from "@/components/app/types/threadForge.types";
+import type { CenterDiffPorts } from "@/components/app/types/centerDiff.types";
 
 /** Session center surface fields (terminal dock theme + tabs/editor slices) without center-column build deps. */
 export const buildSessionCenterSurfacePortsFromAssembly = (
   a: AppShellSignedInAssemblySources
 ): Omit<SessionCenterPorts, "centerContentBuild"> => ({
+  onOpenThreadSettings: () => a.core.openSettingsPage("threads"),
+  onOpenBotSettings: () => a.core.openSettingsPage("bots"),
   sessionSurface: a.sessionSurface,
   centerTabs: a.centerTabs,
   aiModels: a.aiModels,
@@ -30,20 +33,23 @@ export const buildSessionCenterPortsFromAssembly = (a: AppShellSignedInAssemblyS
   centerContentBuild: assembleSignedInCenterContentBuild(a)
 });
 
-export const buildChangesColumnPortsFromAssembly = (a: AppShellSignedInAssemblySources): ChangesColumnPorts => ({
+export const buildChangesColumnPortsFromAssembly = (
+  a: AppShellSignedInAssemblySources,
+  centerDiff: Pick<CenterDiffPorts, "openWorkspaceDiff">
+): ChangesColumnPorts => ({
   forge: a.forge,
   forgeWorkItemMutators: a.forgeWorkItemMutators,
   vercel: a.vercel,
   gitBranches: a.gitBranches,
   changesFileHandlers: a.changesFileHandlers,
-  changesPanelSectionBuild: assembleSignedInChangesPanelSectionBuild(a)
+  changesPanelSectionBuild: assembleSignedInChangesPanelSectionBuild(a, centerDiff)
 });
 
 export const buildModalClusterPorts = (modalDialogs: AppModalDialogsBuildDeps): ModalClusterPorts => ({
   modalDialogs
 });
 
-export const buildWorkspaceSidebarPortsFromAssembly = (a: AppShellSignedInAssemblySources, chrome: AppChromeShellComposeSlice, readBranchRequest: BranchRequestReader): WorkspaceSidebarPorts => {
+export const buildWorkspaceSidebarPortsFromAssembly = (a: AppShellSignedInAssemblySources, chrome: AppChromeShellComposeSlice, threadForge: ThreadForgeClient): WorkspaceSidebarPorts => {
   const onOpenConnectionsSettings = () => a.core.openSettingsPage("connections");
   return {
     sidebarBuild: assembleSignedInWorkspaceSidebarBuild(a),
@@ -54,7 +60,7 @@ export const buildWorkspaceSidebarPortsFromAssembly = (a: AppShellSignedInAssemb
         onOpenHomeTerminal: () => { void a.chromeShell.focusLocalTerminalDock(); }
       }
     },
-    readBranchRequest,
+    threadForge,
     recentWorkspaces: chrome.titleBar.recentWorkspaces,
     onOpenRecentWorkspace: chrome.titleBar.handleOpenRecentWorkspace,
     onOpenConnectionsSettings,

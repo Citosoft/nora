@@ -4,6 +4,7 @@ import type { ConversationHeader, ConversationHistoryPage, ConversationSummary, 
 import type { ProviderCatalogResult } from "@shared/types/provider/catalog.types";
 import type { McpRequest, McpResult } from "@shared/types/provider/mcp.types";
 import type { SkillsRequest, SkillsResult } from "@shared/types/provider/skills.types";
+import type { ThreadReference } from "@shared/types/conversation/references.types";
 
 export interface ConversationListener {
   after: number;
@@ -12,6 +13,7 @@ export interface ConversationListener {
   onError: (error: Error) => void;
 }
 export interface ConversationClient {
+  reference(conversationId: string): Promise<ThreadReference>;
   externalSessions(kind: ProviderBinding["kind"], instanceId: string, workspace: WorkspaceRef): Promise<ExternalSessionsResult>;
   execute(command: ConversationCommand): Promise<CommandReceipt>;
   header(conversationId: string): Promise<ConversationHeader | null>;

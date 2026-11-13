@@ -160,6 +160,9 @@ export class WorkspaceMainService implements WorkspaceService {
   createWorkspaceTask = (projectId: string, taskDescription: string): Promise<AppState> =>
     this.actions().createWorkspaceTask(projectId, taskDescription);
 
+  createWorkspaceTaskFile = (projectId: string, title: string, content: string): Promise<string> =>
+    this.actions().createWorkspaceTaskFile(projectId, title, content);
+
   getWorkspaceSplitViews = (projectId: string): Promise<WorkspaceSplitViewCollection> =>
     this.actions().getWorkspaceSplitViews(projectId);
 

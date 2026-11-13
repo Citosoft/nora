@@ -316,6 +316,28 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
     return deps.writeWorkspaceTaskBoard(deps.getProjectTarget(project), project.id, board);
   };
 
+  /** Writes a task file under `.nora/tasks` and places it on the board; returns its workspace-relative path. */
+  const writeWorkspaceTask = async (project: Awaited<ReturnType<typeof deps.resolveProjectSummaryById>>, title: string, content: string): Promise<string> => {
+    const slug = deps.slugify(title) || "task";
+    const taskPath = `.nora/tasks/${slug}-${Date.now().toString(36)}.md`;
+    const target = deps.getProjectTarget(project);
+    await deps.writeWorkspaceTextFile(target, project.id, taskPath, content);
+    const board = await deps.readWorkspaceTaskBoard(target, project.id);
+    await deps.writeWorkspaceTaskBoard(target, project.id, deps.addTaskToWorkspaceTaskBoard(board, taskPath), [
+      ...(await deps.listWorkspaceTaskPaths(target, project.id)),
+      taskPath
+    ]);
+    return taskPath;
+  };
+
+  const createWorkspaceTaskFile = async (projectId: string, title: string, content: string): Promise<string> => {
+    const project = await deps.resolveProjectSummaryById(projectId);
+    if (!title.trim()) throw new Error("Task title cannot be empty.");
+    const taskPath = await writeWorkspaceTask(project, title.trim(), content);
+    await deps.refreshWorkspaceSummaries("createWorkspaceTaskFile");
+    return taskPath;
+  };
+
   const createWorkspaceTask = async (projectId: string, taskDescription: string): Promise<AppState> => {
     const project = await deps.resolveProjectSummaryById(projectId);
     const trimmedDescription = taskDescription.trim();
@@ -324,16 +346,7 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
     }
 
     const title = deriveTaskTitle(createTaskDraft(trimmedDescription), trimmedDescription);
-    const slug = deps.slugify(title) || "task";
-    const taskPath = `.nora/tasks/${slug}-${Date.now().toString(36)}.md`;
-    const target = deps.getProjectTarget(project);
-
-    await deps.writeWorkspaceTextFile(target, project.id, taskPath, createTaskDraft(title));
-    const board = await deps.readWorkspaceTaskBoard(target, project.id);
-    await deps.writeWorkspaceTaskBoard(target, project.id, deps.addTaskToWorkspaceTaskBoard(board, taskPath), [
-      ...(await deps.listWorkspaceTaskPaths(target, project.id)),
-      taskPath
-    ]);
+    const taskPath = await writeWorkspaceTask(project, title, createTaskDraft(title));
 
     if (deps.getSnapshot().project?.id === project.id) {
       deps.setState({
@@ -408,6 +421,7 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
     getWorkspaceTaskBoard,
     saveWorkspaceTaskBoard,
     createWorkspaceTask,
+    createWorkspaceTaskFile,
     getWorkspaceSplitViews,
     saveWorkspaceSplitViews,
     saveWorkspaceTerminalPresets

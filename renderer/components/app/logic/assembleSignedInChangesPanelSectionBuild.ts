@@ -1,5 +1,6 @@
 import type { AppShellSignedInAssemblySources } from "@/components/app/types/appShellSignedInAssemblySources.types";
 import type { ChangesPanelSectionBuildDeps } from "@/components/app/types/changesPanelSectionBuild.types";
+import type { CenterDiffPorts } from "@/components/app/types/centerDiff.types";
 
 type SignedInChangesPanelAssemblySlice = Pick<
   AppShellSignedInAssemblySources,
@@ -16,7 +17,8 @@ type SignedInChangesPanelAssemblySlice = Pick<
 >;
 
 export const assembleSignedInChangesPanelSectionBuild = (
-  s: SignedInChangesPanelAssemblySlice
+  s: SignedInChangesPanelAssemblySlice,
+  centerDiff: Pick<CenterDiffPorts, "openWorkspaceDiff">
 ): ChangesPanelSectionBuildDeps => {
   const {
     core,
@@ -64,6 +66,7 @@ export const assembleSignedInChangesPanelSectionBuild = (
     ...forgeWorkItemMutators,
     setIsCenterDiffExpanded: sessionSurface.setIsCenterDiffExpanded,
     setIsCenterFullDiffExpanded: sessionSurface.setIsCenterFullDiffExpanded,
+    openWorkspaceFullDiff: centerDiff.openWorkspaceDiff,
     setIsCreatePullRequestDialogOpen: modalExtras.setIsCreatePullRequestDialogOpen,
     setIsTaskBoardOpen: workspaceContent.setIsTaskBoardOpen,
     setTaskEditorState: workspaceContent.setTaskEditorState,

@@ -160,6 +160,26 @@ export interface ForgeBranchPullRequestStatus {
   webUrl: string | null;
 }
 
+/** What a change request from one checkout would contain: its branch diff against the repository's default branch. */
+export interface ForgeBranchChanges {
+  branch: string;
+  /** Default branch the diff is measured against; null when the repository has none to compare with. */
+  baseBranch: string | null;
+  /** Supported remote the change request would be opened on; null when the checkout has none. */
+  provider: ForgeProvider | null;
+  files: number;
+  additions: number;
+  deletions: number;
+  /** Line totals omit some untracked files when a checkout has too many to count. */
+  partial: boolean;
+  /** Commits on the branch that the base branch lacks; a change request needs at least one. */
+  commitsAhead: number;
+  /** Changed files a change request would not include until they are committed. */
+  uncommittedFiles: number;
+  /** Local branches a change request could target. */
+  branches: string[];
+}
+
 export interface ForgeRequestOptions {
   githubToken?: string | null;
   gitlabToken?: string | null;
@@ -176,6 +196,8 @@ export interface ForgeCreatePullRequestPayload {
   body: string;
   baseBranch: string;
   draft?: boolean;
+  /** Checkout to push from; must be the project's root or one of its Git worktrees. Defaults to the active checkout. */
+  sourcePath?: string;
 }
 
 export interface VercelProjectLink {

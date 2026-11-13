@@ -31,7 +31,7 @@ async function discoverAcpAgent(kind: AcpProviderKind, environment: NodeJS.Proce
   return {
     instance: { kind: "acp", options: { kind, instanceId: "local", label: definition.label, executable, args: launch.args,
       environment: { ...environment, ...launch.env } } },
-    provider: { kind, instanceId: "local", label: definition.label }
+    provider: { kind, instanceId: "local", label: definition.label, reportsMcp: false }
   };
 }
 
@@ -46,12 +46,12 @@ export async function discoverNativeProviders(environment: NodeJS.ProcessEnv): P
   if (codex) {
     const instance: NativeInstance = { kind: "codex", options: { instanceId: "local", executable: codex, arguments: ["app-server", "--listen", "stdio://"], environment,
       policies: { "read-only": { approvalPolicy: "on-request", sandbox: "read-only" }, "workspace-write": { approvalPolicy: "on-request", sandbox: "workspace-write" } } } };
-    discovered.push({ instance, provider: { kind: "codex", instanceId: "local", label: "Codex" } });
+    discovered.push({ instance, provider: { kind: "codex", instanceId: "local", label: "Codex", reportsMcp: true } });
   }
   if (claude) {
     const instance: NativeInstance = { kind: "claude", instanceId: "local", runtime: { executablePath: claude, environment },
       policies: { default: "default", auto: "auto", "accept-edits": "acceptEdits", plan: "plan" } };
-    discovered.push({ instance, provider: { kind: "claude", instanceId: "local", label: "Claude" } });
+    discovered.push({ instance, provider: { kind: "claude", instanceId: "local", label: "Claude", reportsMcp: true } });
   }
   return [...discovered, ...acp.filter((entry): entry is NativeProviderDiscovery => entry !== null)];
 }

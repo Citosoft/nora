@@ -1,5 +1,6 @@
 import type { ConversationRun, TimelineItem, ToolActivity } from "@shared/types/conversation/contracts.types";
 import type { NativeTimelineEntry, NativeTimelineRow } from "@/components/app/types/nativeActivity.types";
+import { askBotCall } from "./askBotCalls";
 
 /**
  * Keep one stable tool activity row per turn and merge back-to-back reasoning into one row,
@@ -10,6 +11,8 @@ export function groupNativeTimelineEntries(items: readonly TimelineItem[]): Nati
   const entries: NativeTimelineEntry[] = [];
   const toolGroups = new Map<string, ToolActivity[]>();
   for (const item of items) {
+    const ask = item.kind === "tool" ? askBotCall(item) : null;
+    if (ask) { entries.push({ kind: "ask", call: ask }); continue; }
     if (item.kind === "tool") {
       const group = toolGroups.get(item.runId);
       if (group) { group.push(item); continue; }
@@ -26,7 +29,7 @@ export function groupNativeTimelineEntries(items: readonly TimelineItem[]): Nati
 }
 
 function entryRunId(entry: NativeTimelineEntry): string {
-  return entry.kind === "item" ? entry.item.runId : entry.runId;
+  return entry.kind === "item" ? entry.item.runId : entry.kind === "ask" ? entry.call.tool.runId : entry.runId;
 }
 
 function entryKey(entry: NativeTimelineEntry): string {
@@ -34,6 +37,7 @@ function entryKey(entry: NativeTimelineEntry): string {
     case "tools": return `tools:${entry.runId}`;
     case "reasoning": return `reasoning:${entry.items[0].id}`;
     case "item": return entry.item.id;
+    case "ask": return `ask:${entry.call.tool.id}`;
   }
 }
 

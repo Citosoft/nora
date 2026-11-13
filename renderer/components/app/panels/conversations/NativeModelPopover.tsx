@@ -9,7 +9,7 @@ import type { ModelPopoverProps } from "@/components/app/types/modelPicker.types
 import { NativeModelList } from "./NativeModelList";
 import { NativeModelOptions } from "./NativeModelOptions";
 
-export function NativeModelPopover({ providers, store, selectedProvider, selectedModel, selectedModelId, locked, settings, onSelect }: ModelPopoverProps) {
+export function NativeModelPopover({ providers, store, selectedProvider, selectedModel, selectedModelId, locked, settings, onSelect, continuation }: ModelPopoverProps) {
   const [open, setOpen] = useState(false);
   const [browsingKey, setBrowsingKey] = useState<string | null>(null);
   const selectedKey = selectedProvider ? nativeProviderKey(selectedProvider) : null;
@@ -74,7 +74,7 @@ export function NativeModelPopover({ providers, store, selectedProvider, selecte
         {browsingSelected ? <NativeModelOptions {...settings} model={selectedModel} locked={locked} />
           : <p className="text-xs text-muted-foreground">Select a model to configure its reasoning and permissions.</p>}
       </div>
-      <footer className="flex shrink-0 items-center justify-between gap-3 border-t px-3 py-2 text-xs text-muted-foreground"><span>{locked ? "Start a new thread to change these settings." : "Settings apply to this new thread."}</span>
+      <footer className="flex shrink-0 items-center justify-between gap-3 border-t px-3 py-2 text-xs text-muted-foreground"><span>{locked ? "Use Change beside the model picker when the chat is idle." : continuation ? "Changes apply with your next send in a fresh session with saved context." : "Settings apply to this new thread."}</span>
         <div className="flex shrink-0 items-center gap-1">{browsed && <Button size="sm" variant="ghost" disabled={catalog.status === "loading"} onClick={() => void store.load(browsed, true)} aria-label="Refresh provider models"><RefreshCw className="size-3.5" aria-hidden="true" />Refresh</Button>}
           <Button type="button" size="sm" onClick={() => setOpen(false)}>Done</Button></div></footer>
     </PopoverContent>

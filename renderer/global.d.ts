@@ -1,4 +1,5 @@
 import type { NoraBridge } from "@shared/ipc/types/noraBridge.types";
+import type { AccountSessionBridge } from "@shared/types/account/account.types";
 import type * as React from "react";
 
 declare global {
@@ -11,6 +12,7 @@ declare global {
 
   interface Window {
     nora: NoraBridge;
+    noraAccount: AccountSessionBridge;
   }
 
   interface ElectronDidNavigateEvent extends Event {

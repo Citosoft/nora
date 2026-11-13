@@ -8,7 +8,7 @@ import { claudeLogin } from "./authentication";
 import { withClaudeControlSession } from "./controlSession";
 
 const WORKSPACE_ORIGINS = new Set(["project", "local"]);
-// Connectors typically settle within ~3s; the budget stays inside the control session's 10s discovery timeout.
+// Connectors typically settle within ~3s; the budget, which includes the runtime's start, stays inside the control session's discovery timeout.
 const MCP_SETTLE_BUDGET_MS = 7_000;
 const MCP_SETTLE_INTERVAL_MS = 500;
 const defaultSleep = (ms: number) => new Promise<void>((resolve) => { setTimeout(resolve, ms); });
@@ -101,7 +101,8 @@ export function createClaudeMcp(runtime: ClaudeRuntimeOptions, runLogin: ClaudeM
         const notice = account ? claudeAccountConnectorNotice(account) : undefined;
         return { kind: "servers", servers, ...(notice ? { notice } : {}) };
       });
-    } catch {
+    } catch (error) {
+      console.warn(`Claude MCP discovery failed in ${directory}: ${error instanceof Error ? error.message : String(error)}`);
       return { kind: "unavailable", message: "Claude MCP discovery is unavailable. Check the configured runtime, its MCP settings and authentication, then refresh." };
     }
   };

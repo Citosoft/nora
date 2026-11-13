@@ -1,3 +1,4 @@
+import type { NoraRunContextResolver } from "@main/types/nora-tools/noraTools.types";
 import type { ClientContext, InitializeResponse, NewSessionResponse, RequestPermissionRequest, RequestPermissionResponse, SessionNotification } from "@agentclientprotocol/sdk";
 import type { AcpProviderKind } from "@shared/types/provider/providerKind.types";
 import type { ProviderCatalog } from "@shared/types/provider/catalog.types";
@@ -13,6 +14,8 @@ export interface AcpLaunchSpec {
 }
 
 export interface AcpOptions {
+  /** Nora's per-run additions: its tool server and run guidance such as a bot's notes. */
+  runContext?: NoraRunContextResolver;
   kind: AcpProviderKind;
   instanceId: string;
   label: string;

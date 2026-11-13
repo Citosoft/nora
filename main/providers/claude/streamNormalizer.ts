@@ -5,9 +5,12 @@ import { claudeCompactedReading, claudeContextReading, claudeContextWindow } fro
 import { ClaudeToolActivity } from "./toolActivity";
 import { ClaudeSubagentActivity } from "./subagentActivity";
 import { promptSuggestionSchema } from "@shared/conversations/contracts";
+import { claudeTokenUsage } from "./tokenUsage";
+import { claudeCacheExpiry } from "./cacheExpiry";
 
 /** Reconcile final SDK blocks into the same message identities as streamed chunks. */
 export class ClaudeStreamNormalizer {
+  constructor(private readonly requestStartedAt = Date.now()) {}
   private readonly messageIds = new Map<string, string>();
   private readonly blocks = new Map<string, Map<number, { kind: "text" | "reasoning"; text: string }>>();
   private readonly indices = new Map<string, number>();
@@ -19,7 +22,7 @@ export class ClaudeStreamNormalizer {
   private lastRequest: { usage: ClaudeRequestUsage; model: string } | null = null;
   private compaction: { postTokens: number | undefined } | null = null;
 
-  accept(message: SDKMessage): ClaudeFrame[] {
+  accept(message: SDKMessage, autoCompactThreshold?: number): ClaudeFrame[] {
     if (message.type === "prompt_suggestion") {
       const suggestion = promptSuggestionSchema.safeParse(message.suggestion);
       return suggestion.success ? [{ kind: "prompt-suggestion", eventId: message.uuid, suggestion: suggestion.data }] : [];
@@ -35,10 +38,10 @@ export class ClaudeStreamNormalizer {
     }
     // Agents register first so the tool tracker can leave their calls, results and task events to them.
     const agentFrames = this.agents.accept(message);
-    return [...agentFrames, ...this.tools.accept(message), ...this.acceptText(message)];
+    return [...agentFrames, ...this.tools.accept(message), ...this.acceptText(message, autoCompactThreshold)];
   }
 
-  private acceptText(message: SDKMessage): ClaudeFrame[] {
+  private acceptText(message: SDKMessage, autoCompactThreshold?: number): ClaudeFrame[] {
     if (message.type === "system" && message.subtype === "init") return [{ kind: "init", sessionId: message.session_id, eventId: message.uuid }];
     if (message.type === "system" && message.subtype === "compact_boundary") {
       this.compaction = { postTokens: message.compact_metadata.post_tokens };
@@ -106,11 +109,19 @@ export class ClaudeStreamNormalizer {
         frames.push({ kind: "text", nativeId: this.lastMessageId ?? message.uuid, eventId: `${message.uuid}:final`, text: message.result, complete: true });
       }
       const context = this.context(message.modelUsage);
+      // The SDK timestamp is the turn's send time, before its model requests, so the estimate never
+      // gains the time spent generating a long reply. Startup time is a conservative fallback.
+      const requestSentAt = message.subtype === "success" ? message.request_sent_wall_ms : undefined;
+      const sentAt = requestSentAt !== undefined && Number.isFinite(requestSentAt)
+        && requestSentAt >= this.requestStartedAt && requestSentAt <= Date.now() ? requestSentAt : this.requestStartedAt;
+      const expiry = this.lastRequest ? claudeCacheExpiry(this.lastRequest.usage, sentAt) : undefined;
+      if (context && expiry) context.promptCacheExpiresAt = expiry;
+      if (context && autoCompactThreshold && Number.isSafeInteger(autoCompactThreshold) && autoCompactThreshold > 0) context.autoCompactThreshold = autoCompactThreshold;
       if (context !== undefined) frames.push({ kind: "context", eventId: `${message.uuid}:context`, context });
       frames.push({ kind: "finished", eventId: message.uuid, status: interrupted ? "interrupted" : success ? "completed" : "failed",
         failure: success || interrupted ? null : { code: this.failure, message: this.failure === "authentication" ? "Sign in to the configured Claude account"
           : this.failure === "usage-limit" ? "Claude usage limit reached" : "Claude could not complete this turn", retryable: true, ...(this.failure === "usage-limit" && this.resetsAt ? { resetsAt: this.resetsAt } : {}) },
-        usage: { inputTokens: message.usage.input_tokens, outputTokens: message.usage.output_tokens } });
+        usage: claudeTokenUsage(message.usage) });
       return frames;
     }
     return [];

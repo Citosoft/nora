@@ -3,7 +3,15 @@ import { randomUUID } from "node:crypto";
 import test from "node:test";
 import type { SDKAssistantMessage, SDKPartialAssistantMessage } from "@anthropic-ai/claude-agent-sdk";
 import { ClaudeStreamNormalizer } from "@main/providers/claude/streamNormalizer";
-import { claudeMessage as message, claudeUsage } from "./toolFixtures";
+import { claudeMessage as message, claudeUsage, claudeResult } from "./toolFixtures";
+
+test("Claude accounts for cached reads and writes in total prompt usage", () => {
+  const result = claudeResult("Done");
+  result.usage = { ...result.usage, input_tokens: 100, cache_read_input_tokens: 5_000, cache_creation_input_tokens: 2_000, output_tokens: 50 };
+  const frame = new ClaudeStreamNormalizer().accept(result).find((entry) => entry.kind === "finished");
+  assert.ok(frame?.kind === "finished");
+  assert.deepEqual(frame.usage, { inputTokens: 7_100, cachedInputTokens: 5_000, cacheCreationInputTokens: 2_000, outputTokens: 50 });
+});
 
 function partial(event: SDKPartialAssistantMessage["event"]): SDKPartialAssistantMessage {
   return { type: "stream_event", event, uuid: randomUUID(), parent_tool_use_id: null, session_id: "session" };

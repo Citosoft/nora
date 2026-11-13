@@ -3,6 +3,8 @@ import { AiSettingsSection } from "@/components/app/panels/settings/AiSettingsSe
 import { AppearanceSettingsSection } from "@/components/app/panels/settings/AppearanceSettingsSection";
 import { BrowserSettingsSection } from "@/components/app/panels/settings/BrowserSettingsSection";
 import { CliSettingsSection } from "@/components/app/panels/settings/CliSettingsSection";
+import { ThreadsSettingsSection } from "@/components/app/panels/settings/ThreadsSettingsSection";
+import { BotsSettingsSection } from "@/components/app/panels/settings/BotsSettingsSection";
 import { DevSettingsSection } from "@/components/app/panels/settings/DevSettingsSection";
 import { GeneralSettingsSection } from "@/components/app/panels/settings/GeneralSettingsSection";
 import { McpServersSettingsSection } from "@/components/app/panels/settings/McpServersSettingsSection";
@@ -73,6 +75,14 @@ export function SettingsPage({ initialGroup }: SettingsPageProps) {
 
           <TabsContent value="cli" className="mt-0">
             <CliSettingsSection />
+          </TabsContent>
+
+          <TabsContent value="threads" className="mt-0">
+            <ThreadsSettingsSection />
+          </TabsContent>
+
+          <TabsContent value="bots" className="mt-0">
+            <BotsSettingsSection />
           </TabsContent>
 
           <TabsContent value="mcp" className="mt-0">

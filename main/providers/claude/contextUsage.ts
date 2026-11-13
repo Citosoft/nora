@@ -1,6 +1,7 @@
 import type { ModelUsage } from "@anthropic-ai/claude-agent-sdk";
 import type { ContextReading } from "@shared/types/conversation/contracts.types";
 import type { ClaudeRequestUsage } from "@main/types/execution/claude.types";
+import { claudeTokenUsage } from "./tokenUsage";
 
 /** The context window of the model that served the latest top-level request, else the largest one reported. */
 export function claudeContextWindow(modelUsage: Readonly<Record<string, ModelUsage>>, model: string | null): number | null {
@@ -12,9 +13,10 @@ export function claudeContextWindow(modelUsage: Readonly<Record<string, ModelUsa
 
 /** Claude counts cache reads and writes apart from `input_tokens`; all of them occupy the context. */
 export function claudeContextReading(usage: ClaudeRequestUsage, windowTokens: number): ContextReading {
-  const inputTokens = usage.input_tokens + (usage.cache_creation_input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0);
+  const { inputTokens, cacheCreationInputTokens, cachedInputTokens } = claudeTokenUsage(usage);
   return { usedTokens: inputTokens + usage.output_tokens, windowTokens, inputTokens,
-    cachedInputTokens: usage.cache_read_input_tokens ?? 0, outputTokens: usage.output_tokens };
+    ...(cacheCreationInputTokens !== undefined ? { cacheCreationInputTokens } : {}),
+    cachedInputTokens: cachedInputTokens ?? 0, outputTokens: usage.output_tokens };
 }
 
 /** After compaction only the remaining total is known; it is all prompt context for the next request. */

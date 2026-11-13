@@ -9,7 +9,7 @@ import { FileEditorPanel } from "@/components/app/panels/FileEditorPanel";
 import { ThreadWorkspaceCenter } from "@/components/app/panels/threads/ThreadWorkspaceCenter";
 import { ForgeDetailPanel } from "@/components/app/panels/ForgePanel";
 import { ForgeWorkflowRunPanel } from "@/components/app/panels/ForgeWorkflowRunPanel";
-import { FullDiffViewer } from "@/components/app/panels/FullDiffViewer";
+import { CenterFullDiff } from "@/components/app/panels/CenterFullDiff";
 import type { ForgeViewerTabState } from "@/components/app/types";
 import type { ChangeEntry } from "@shared/appTypes";
 import type {
@@ -69,7 +69,7 @@ export function WorkspaceSessionCenterSlotContent(props: WorkspaceSessionCenterS
 
   switch (slot.kind) {
     case "diff-full":
-      return <FullDiffViewer changes={props.snapshotChanges} resolvedTheme={props.resolvedTheme} />;
+      return <CenterFullDiff snapshotChanges={props.snapshotChanges} resolvedTheme={props.resolvedTheme} />;
     case "diff-file":
       return (
         <DiffViewer

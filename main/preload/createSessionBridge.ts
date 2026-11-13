@@ -16,6 +16,7 @@ export function createSessionBridge(): SessionBridge {
     getAgentTerminalBuffer: (agentId) => invokeIpc("app:get-agent-terminal-buffer", agentId),
     getAgentContextPreview: (agentId) => invokeIpc("app:get-agent-context-preview", agentId),
     getAgentContextState: (agentId) => invokeIpc("app:get-agent-context-state", agentId),
+    prepareAgentContextHandoff: (selections) => invokeIpc("app:prepare-agent-context-handoff", selections),
     listWorkspaceAgentContextSources: (projectId, excludeAgentId) =>
       invokeIpc("app:list-workspace-agent-context-sources", projectId, excludeAgentId),
     clearAgentContext: (agentId) => invokeIpc("app:clear-agent-context", agentId),

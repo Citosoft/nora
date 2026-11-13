@@ -1,3 +1,4 @@
+import { noraToolsStatus } from "@shared/nora-tools/catalog";
 import { useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { NativeProviderPicker } from "@/components/app/panels/conversations/NativeProviderPicker";
@@ -8,7 +9,7 @@ import { pickerCatalog, pickerWorkspace, codexProvider, claudeProvider } from ".
 
 const workspace = { id: "personal", name: "Personal", kind: "personal" as const, workspace: pickerWorkspace };
 const state: NativeBoot = { environmentId: "local", cursor: 0, personalization: { defaultRole: { id: "general" }, workspaceRoles: {} },
-  workspaces: [workspace], providers: [codexProvider, claudeProvider] };
+  workspaces: [workspace], providers: [codexProvider, claudeProvider], sharedBots: [], noraTools: noraToolsStatus("idle") };
 
 /** Component-only acceptance host. It is neither an application shell nor a live provider integration. */
 export function ModelPickerHarness() {
@@ -17,12 +18,13 @@ export function ModelPickerHarness() {
   const [draft, setDraft] = useState("A draft that must survive model selection");
   const scenario = useRef("ready");
   const client = useMemo<ConversationClient>(() => ({
+    async reference() { throw new Error("unused"); },
     async externalSessions() { return { status: "available", sessions: [] }; },
     async context() { return null; },
     async catalog(kind, instanceId) {
       await new Promise((resolve) => setTimeout(resolve, 40));
       if (scenario.current === "error") throw new Error("Private failure details");
-      const result = pickerCatalog({ kind, instanceId, label: kind });
+      const result = pickerCatalog({ kind, instanceId });
       result.catalog.models = result.catalog.models.map((model) => ({ ...model, name: `${kind === "codex" ? "Codex" : "Claude"} ${model.id === "first" ? "Alpha" : "Beta"}` }));
       if (scenario.current === "empty") result.catalog.models = [];
       if (scenario.current === "auth") result.catalog.authentication = "required";

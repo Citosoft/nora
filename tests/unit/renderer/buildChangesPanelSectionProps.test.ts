@@ -58,6 +58,7 @@ function createBuildDeps(
     setForgeWorkItemDetailErrorMessage: () => null,
     setIsCenterDiffExpanded: () => true,
     setIsCenterFullDiffExpanded: () => false,
+    openWorkspaceFullDiff: () => {},
     setIsCreatePullRequestDialogOpen: () => true,
     setIsTaskBoardOpen: () => true,
     setTaskEditorState: () => null,

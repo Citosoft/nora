@@ -641,19 +641,19 @@ export function useWorkspaceContentController({
       source: { kind: "task", projectId: task.projectId, path: task.path } });
     if (id) { setTaskEditorState(null); setIsTaskBoardOpen(false); setIsSpecBrowserOpen(false); setIsNoteBrowserOpen(false); }
   };
-  const handleSpawnTaskAgent = async (_toolId: string): Promise<void> => {
+  const handleStartTaskThread = async (): Promise<void> => {
     if (!taskEditorState) return;
     try { await openTaskThread(taskEditorState); } catch (cause) { captureError(cause); }
   };
-  const handleSpawnAgentsForTasks = async (_toolId: string, tasks: TaskCenterTaskReference[]): Promise<void> => {
+  const handleStartTaskThreads = async (tasks: TaskCenterTaskReference[]): Promise<void> => {
     try { for (const task of tasks) await openTaskThread(task); } catch (cause) { captureError(cause); }
   };
-  const generateWorkspaceTasksWithAgent = async (projectId: string, _toolId: string, brief: string | null, specPath: string | null): Promise<void> => {
+  const generateWorkspaceTasks = async (projectId: string, brief: string | null, specPath: string | null): Promise<void> => {
     const project = snapshot?.workspaces.find((entry) => entry.project.id === projectId)?.project ?? (snapshot?.project?.id === projectId ? snapshot.project : null);
-    if (!project) return;
-    try { await native.launch({ projectId, text: createTaskPlanningInstruction({ projectName: project.name, projectRootPath: project.rootPath, brief, specPath }) });
-      setTaskEditorState(null); setIsTaskBoardOpen(false); setIsSpecBrowserOpen(false); setIsNoteBrowserOpen(false);
-    } catch (cause) { captureError(cause); }
+    if (!project) throw new Error("Choose an available workspace to plan tasks.");
+    const id = await native.launch({ projectId, text: createTaskPlanningInstruction({ projectName: project.name, projectRootPath: project.rootPath, brief, specPath }) });
+    if (!id) throw new Error(native.store.snapshot().error ?? "Unable to open a planning thread. Try again.");
+    setTaskEditorState(null); setIsTaskBoardOpen(false); setIsSpecBrowserOpen(false); setIsNoteBrowserOpen(false);
   };
   const handleCreateAgentFromDialog = async (payload: CreateAgentPayload, taskPath: string | null): Promise<void> => {
     if (!snapshot?.project) return;
@@ -688,9 +688,9 @@ export function useWorkspaceContentController({
     handleDeleteTask,
     handleDeleteSpec,
     handleDeleteNote,
-    handleSpawnTaskAgent,
-    handleSpawnAgentsForTasks,
-    generateWorkspaceTasksWithAgent,
+    handleStartTaskThread,
+    handleStartTaskThreads,
+    generateWorkspaceTasks,
     handleCreateAgentFromDialog
   };
 }

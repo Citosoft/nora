@@ -1,7 +1,6 @@
-import type { ExternalTranscript } from "@main/types/execution/externalSessions.types";
 import { externalImportEvents } from "./externalImport";
 import { conversationCommandSchema, workspaceRefSchema } from "@shared/conversations/contracts";
-import type { CommandReceipt, ContextReading, ContextUsage, ConversationCommand, ConversationSnapshot, EventPayload, WorkspaceRef } from "@shared/types/conversation/contracts.types";
+import type { CommandReceipt, ContextReading, ContextUsage, ConversationCommand, ConversationSnapshot, EventPayload } from "@shared/types/conversation/contracts.types";
 import type { ActiveSubscription, EngineDependencies, EventSubscription } from "@main/types/execution/engine.types";
 import type { StoreTransaction, ExecutionEffect } from "@main/types/execution/store.types";
 import type { ProviderUpdate } from "@main/types/execution/provider.types";
@@ -20,7 +19,8 @@ import type { ConversationReview } from "@shared/types/conversation/review.types
 import type { CheckpointCapture } from "@main/types/execution/checkpoints.types";
 import { recordCheckpoint } from "./checkpoints/record";
 import { hasPendingCheckpointReview } from "./checkpoints/admission";
-import type { RoleSelection } from "@shared/types/personalization/roles.types";
+import type { PreparedCommand } from "@main/types/execution/preparedCommand.types";
+import { assertTransitionIdle } from "./provider-transition/admission";
 
 export class ConversationEngine {
   private readonly subscriptions = new Set<ActiveSubscription>();
@@ -44,12 +44,14 @@ export class ConversationEngine {
     return previous.receipt;
   }
 
-  execute(input: ConversationCommand, preparedWorkspace?: WorkspaceRef, preparedRole?: RoleSelection | null, externalTranscript?: ExternalTranscript): CommandReceipt {
+  /** `prepared` carries host-resolved inputs that are not part of the command's durable identity. */
+  execute(input: ConversationCommand, prepared: PreparedCommand = {}): CommandReceipt {
     this.deps.assertOwnership();
+    const { workspace: preparedWorkspace, role: preparedRole, bot, group, externalTranscript, steerFollowUp = false, providerTransition } = prepared;
     const command = conversationCommandSchema.parse(input);
     const decisionCommand = command.kind === "create"
       ? { ...command, ...(preparedWorkspace ? { workspace: workspaceRefSchema.parse(preparedWorkspace) } : {}),
-        ...(preparedRole ? { role: preparedRole } : {}) } : command;
+        ...(preparedRole && !command.botId && !command.group ? { role: preparedRole } : {}) } : command;
     const fingerprint = commandFingerprint(command);
     const key = JSON.stringify(["command", command.conversationId, command.commandId]);
     const result = this.deps.store.transaction((transaction) => {
@@ -71,7 +73,12 @@ export class ConversationEngine {
         }
       }
       const state = transaction.state(command.conversationId, "runId" in command ? command.runId : undefined);
+      if (command.kind === "submit" && command.providerChange) {
+        assertTransitionIdle(transaction, command.conversationId);
+        if (!providerTransition || state?.cursor !== providerTransition.cursor) throw new ExecutionCommandError("conflict", "The chat changed while preparing the handoff. Retry the saved instruction.");
+      }
       const decision = decideCommand(decisionCommand, { now, environmentId: this.deps.store.environmentId, state,
+        steerFollowUp, providerTransition, bot, group,
         writers: state ? transaction.writers(state.conversation.workspace) : [], effects: transaction.unfinishedEffects() });
       const created = decision.events.find((event) => event.kind === "conversation");
       const events = command.kind === "create" && externalTranscript && created?.kind === "conversation"

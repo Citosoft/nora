@@ -1,5 +1,6 @@
 import type {
   AgentContextSelection,
+  ChangeEntry,
   AgentContextSourceSummary,
   AgentContextState,
   AgentContextPreview,
@@ -15,6 +16,7 @@ import type {
   ExternalHarnessContextRef,
   ExternalHarnessSessionSummary,
   ForgeAddCommentPayload,
+  ForgeBranchChanges,
   ForgeBranchPullRequestStatus,
   ForgeCreatePullRequestPayload,
   ForgeOverview,
@@ -157,6 +159,8 @@ export interface WorkspaceService {
     projectId: string,
     taskDescription: string
   ) => Promise<AppState>;
+  /** Creates a task with the given Markdown content and returns its workspace-relative path. */
+  createWorkspaceTaskFile: (projectId: string, title: string, content: string) => Promise<string>;
   getWorkspaceSplitViews: (projectId: string) => Promise<WorkspaceSplitViewCollection>;
   saveWorkspaceSplitViews: (
     projectId: string,
@@ -252,6 +256,12 @@ export interface ForgeService {
     branch: string,
     options: ForgeRequestOptions
   ) => Promise<ForgeBranchPullRequestStatus | null>;
+  getForgeBranchChanges: (
+    projectId: string,
+    checkoutPath: string,
+    options: ForgeRequestOptions
+  ) => Promise<ForgeBranchChanges | null>;
+  getForgeBranchDiff: (projectId: string, checkoutPath: string) => Promise<ChangeEntry[] | null>;
   getForgeWorkItemDetail: (
     projectId: string,
     kind: ForgeWorkItemKind,

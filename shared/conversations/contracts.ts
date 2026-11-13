@@ -3,6 +3,8 @@ import { z } from "zod";
 import { providerKindSchema } from "@shared/providers/providerKinds";
 import { conversationReviewSchema } from "./review";
 import { roleSelectionSchema, roleSnapshotSchema } from "@shared/personalization/contracts";
+import { threadReferenceSchema } from "./references";
+import { botAuthorSchema, botIdSchema, botSnapshotSchema, groupRequestSchema, groupSchema } from "@shared/bots/contracts";
 
 const id = z.string().min(1).max(512);
 const time = z.string().datetime();
@@ -32,7 +34,10 @@ export const failureSchema = z.object({
   resetsAt: z.string().datetime().optional()
 }).strict();
 export const usageSchema = z.object({
+  /** Total prompt tokens, including cache reads and writes. */
   inputTokens: z.number().int().nonnegative(),
+  cachedInputTokens: z.number().int().nonnegative().optional(),
+  cacheCreationInputTokens: z.number().int().nonnegative().optional(),
   outputTokens: z.number().int().nonnegative()
 }).strict();
 /** How full the native model context is, as reported by the runtime after its latest model request. */
@@ -42,7 +47,12 @@ export const contextUsageSchema = z.object({
   /** Prompt tokens of the latest request, including cached ones. */
   inputTokens: z.number().int().nonnegative(),
   cachedInputTokens: z.number().int().nonnegative(),
+  /** Absent when the provider does not report cache writes separately. */
+  cacheCreationInputTokens: z.number().int().nonnegative().optional(),
   outputTokens: z.number().int().nonnegative(),
+  /** Conservative expiry estimate from runtime-reported cache lifetime; absent when unknown. */
+  promptCacheExpiresAt: z.string().datetime().optional(),
+  autoCompactThreshold: z.number().int().positive().optional(),
   updatedAt: z.string().datetime()
 }).strict();
 /** A run that asks the runtime to compact its context instead of delivering an instruction. */
@@ -53,13 +63,21 @@ export const conversationSchema = z.object({
   origin: externalSessionOriginSchema.optional(),
   source: conversationSourceSchema.optional(),
   role: roleSnapshotSchema.nullable().optional(),
+  /** Set when the thread runs as a bot; such threads carry no role guidance. */
+  bot: botSnapshotSchema.optional(),
+  /** Set for a group chat; its members answer in child threads coordinated by Nora. */
+  group: groupSchema.optional(),
   title: z.string().min(1),
   workspace: workspaceRefSchema,
   provider: providerBindingSchema,
   parentId: id.nullable(),
   nativeConversationId: id.nullable(),
+  /** Retain a transition handoff until a provider confirms accepting its first turn. */
+  pendingHandoffRunId: id.optional(),
   // Settled threads retain the existing persisted archive field so their saved history needs no migration.
   archivedAt: time.nullable(),
+  /** Reopening restarts the automatic-settlement grace period without changing last activity. */
+  reopenedAt: time.optional(),
   createdAt: time,
   updatedAt: time,
   queuePaused: z.boolean(),
@@ -70,7 +88,12 @@ export const runSchema = z.object({
   id,
   conversationId: id,
   instruction: z.string().trim().min(1),
+  provider: providerBindingSchema.optional(),
+  /** Saved once when continuing in a fresh provider session; never replay native tool state. */
+  handoff: z.object({ previousProvider: providerBindingSchema, previousNativeConversationId: id.nullable(), reference: threadReferenceSchema, context: z.string().max(16_000) }).strict().optional(),
   action: runActionSchema.optional(),
+  /** Automatic compaction must be skipped if provider submission misses this deadline. */
+  compactionDeadline: time.optional(),
   state: z.enum(["queued", "starting", "running", "awaiting-approval", "awaiting-input", "stopping", "completed", "failed", "interrupted", "recovering"]),
   attemptId: id,
   nativeTurnId: id.nullable(),
@@ -99,7 +122,9 @@ export const approvalDetailsSchema = z.object({
   paths: z.array(z.string()).optional(), target: z.string().optional(), input: z.string().optional()
 }).strict();
 export const timelineItemSchema = z.discriminatedUnion("kind", [
-  z.object({ ...itemBase, kind: z.literal("message"), role: z.enum(["user", "assistant"]), text: z.string(), complete: z.boolean() }).strict(),
+  z.object({ ...itemBase, kind: z.literal("message"), role: z.enum(["user", "assistant"]), text: z.string(), complete: z.boolean(),
+    /** The bot that wrote an assistant message in a group chat. */
+    author: botAuthorSchema.optional() }).strict(),
   z.object({ ...itemBase, kind: z.literal("reasoning"), text: z.string(), complete: z.boolean() }).strict(),
   z.object({ ...itemBase, kind: z.literal("tool"), label: z.string(), output: z.string(), state: toolStateSchema, details: toolDetailsSchema.optional() }).strict(),
   z.object({ ...itemBase, kind: z.literal("milestone"), text: z.string() }).strict(),
@@ -140,8 +165,9 @@ export const snapshotSchema = z.object({
 }).strict();
 
 const commandBase = { commandId: id, conversationId: id };
-export const createConversationCommandSchema = z.object({ ...commandBase, kind: z.literal("create"), title: z.string().trim().min(1), workspace: workspaceRefSchema, provider: providerBindingSchema, parentId: id.nullable(), role: roleSelectionSchema.optional(), source: conversationSourceSchema.optional(), externalSessionId: id.optional() }).strict();
-export const submitConversationCommandSchema = z.object({ ...commandBase, kind: z.literal("submit"), runId: id, instruction: z.string().trim().min(1), action: runActionSchema.optional() }).strict();
+export const createConversationCommandSchema = z.object({ ...commandBase, kind: z.literal("create"), title: z.string().trim().min(1), workspace: workspaceRefSchema, provider: providerBindingSchema, parentId: id.nullable(), role: roleSelectionSchema.optional(), botId: botIdSchema.optional(), group: groupRequestSchema.optional(), source: conversationSourceSchema.optional(), externalSessionId: id.optional() }).strict();
+export const submitConversationCommandSchema = z.object({ ...commandBase, kind: z.literal("submit"), runId: id, instruction: z.string().trim().min(1), action: runActionSchema.optional(), compactionDeadline: time.optional(),
+  providerChange: z.object({ expected: providerBindingSchema, next: providerBindingSchema }).strict().optional() }).strict();
 export const conversationCommandSchema = z.discriminatedUnion("kind", [
   createConversationCommandSchema,
   submitConversationCommandSchema,
@@ -153,7 +179,9 @@ export const conversationCommandSchema = z.discriminatedUnion("kind", [
   z.object({ ...commandBase, kind: z.literal("reconcile"), runId: id }).strict(),
   z.object({ ...commandBase, kind: z.literal("respond"), requestId: id, response: requestResponseSchema }).strict(),
   z.object({ ...commandBase, kind: z.literal("archive") }).strict(),
-  z.object({ ...commandBase, kind: z.literal("unarchive") }).strict()
+  z.object({ ...commandBase, kind: z.literal("unarchive") }).strict(),
+  /** Retitles a thread, settled or not. */
+  z.object({ ...commandBase, kind: z.literal("rename"), title: z.string().trim().min(1).max(200) }).strict()
 ]);
 export const commandReceiptSchema = z.object({
   commandId: id,

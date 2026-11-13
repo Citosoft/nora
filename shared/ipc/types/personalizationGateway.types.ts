@@ -5,4 +5,7 @@ export type NativeBoot = z.infer<typeof nativeBootSchema>;
 export type NativeProvider = z.infer<typeof nativeProviderSchema>;
 export type PersonalizationRequest = z.infer<typeof personalizationRequestSchema>;
 export type PersonalizationReply = z.infer<typeof personalizationReplySchema>;
-export interface PersonalizationBridge { request(input: PersonalizationRequest): Promise<NativeBoot>; }
+export interface PersonalizationBridge {
+  request(input: PersonalizationRequest): Promise<NativeBoot>;
+  onChanged(listener: (state: NativeBoot) => void): () => void;
+}

@@ -7,7 +7,7 @@ import type { ExternalSession } from "@shared/types/conversation/externalSession
 
 for (const kind of ["codex", "claude"] as const) test(`opening a ${kind} CLI conversation creates its binding and opens the thread without submitting a prompt or changing drafts`, async () => {
   const f = threadWorkspaceFixture();
-  f.deps.boot = { ...f.deps.boot, providers: [{ kind, instanceId: "account", label: kind }] };
+  f.deps.boot = { ...f.deps.boot, providers: [{ kind, instanceId: "account", label: kind, reportsMcp: true }] };
   f.deps.client.catalog = async () => pickerCatalog(f.deps.boot.providers[0]);
   const store = createThreadWorkspaceStore(f.deps);
   const draft = store.openDraft({ workspaceId: "personal", text: "Keep this draft" });

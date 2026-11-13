@@ -1,5 +1,7 @@
 import type {
+  ChangeEntry,
   ForgeAddCommentPayload,
+  ForgeBranchChanges,
   ForgeBranchPullRequestStatus,
   ForgeCreatePullRequestPayload,
   ForgeOAuthProviderConfig,
@@ -27,6 +29,12 @@ export interface IntegrationBridge {
     branch: string,
     options: ForgeRequestOptions
   ) => Promise<ForgeBranchPullRequestStatus | null>;
+  getForgeBranchChanges: (
+    projectId: string,
+    checkoutPath: string,
+    options: ForgeRequestOptions
+  ) => Promise<ForgeBranchChanges | null>;
+  getForgeBranchDiff: (projectId: string, checkoutPath: string) => Promise<ChangeEntry[] | null>;
   getForgeWorkItemDetail: (
     projectId: string,
     kind: ForgeWorkItemKind,

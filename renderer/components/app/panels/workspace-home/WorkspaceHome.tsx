@@ -11,7 +11,7 @@ const toolDescriptions: Record<WorkspaceToolId, string> = {
 };
 const dateFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
 
-export function WorkspaceHome({ workspace, activity, loading, error, onNewThread, onOpenThread, onRetry, onOpenTool }: WorkspaceHomeProps) {
+export function WorkspaceHome({ workspace, activity, loading, error, onNewThread, onOpenThread, onRetry, onOpenTool, commands }: WorkspaceHomeProps) {
   return <section aria-label="Workspace home" className="workspace-home min-h-0 flex-1 overflow-y-auto">
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-9 px-6 py-10 sm:px-10 sm:py-14">
       <header className="min-w-0">
@@ -27,6 +27,8 @@ export function WorkspaceHome({ workspace, activity, loading, error, onNewThread
         <div><h2 className="text-lg font-medium tracking-tight">What’s next for this project?</h2><p className="mt-1 text-sm text-muted-foreground">Bring an idea, tackle a bug, or explore the code.</p></div>
         <Button onClick={onNewThread} disabled={!workspace} className="gap-2"><MessageSquarePlus className="size-4" aria-hidden="true" />New thread<ArrowRight className="ml-2 size-3.5" aria-hidden="true" /></Button>
       </div>
+
+      {commands}
 
       <section aria-labelledby="home-activity-title">
         <div className="flex flex-wrap items-center justify-between gap-3"><h2 id="home-activity-title" className="text-sm font-medium">Pick up where you left off</h2>

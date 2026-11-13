@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { context } from "esbuild";
+import { writeAccountBuildConfig } from "./account-build-config.mjs";
 
 const root = process.cwd();
 const isWindows = process.platform === "win32";
@@ -101,6 +102,7 @@ function runCommand(command, args, label, extraEnv = {}) {
 }
 
 async function copyStatic() {
+  await writeAccountBuildConfig();
   await mkdir(path.join(root, "dist", "renderer"), { recursive: true });
   await mkdir(path.join(root, "dist", "runtime"), { recursive: true });
   await runCommand(nodeExe, [generateOAuthBuildConfigScript], "oauth-build-config");

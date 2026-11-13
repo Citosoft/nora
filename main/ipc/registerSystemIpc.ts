@@ -54,7 +54,7 @@ interface RegisterSystemIpcDeps {
   openLocalTerminal: () => Promise<{ id: string }>;
   sendTerminalInput: (sessionId: string, input: string) => Promise<void>;
   getAppSettings: () => AppSettings;
-  saveAppSettings: (nextSettings: AppSettings) => Promise<AppSettings>;
+  saveAppSettings: (nextSettings: AppSettings, baseline: AppSettings) => Promise<AppSettings>;
   showAgentCompletionNotification: (payload: AgentCompletionNotificationPayload) => Promise<void>;
   analyticsRuntimeConfig: AnalyticsRuntimeConfig;
   getSnapshot: () => AppState;
@@ -159,7 +159,7 @@ export function registerSystemIpc({
   ipcMain.handle("app:reveal-file-in-folder", (_event, filePath: string) => {
     shell.showItemInFolder(filePath);
   });
-  ipcMain.handle("app:save-app-settings", (_event, nextSettings: AppSettings) => saveAppSettings(nextSettings));
+  ipcMain.handle("app:save-app-settings", (_event, nextSettings: AppSettings, baseline: AppSettings) => saveAppSettings(nextSettings, baseline));
   ipcMain.handle("app:show-agent-completion-notification", (_event, payload: AgentCompletionNotificationPayload) =>
     showAgentCompletionNotification(payload)
   );

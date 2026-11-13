@@ -1,4 +1,7 @@
+import { conversationGuidance } from "@shared/conversations/guidance";
 import { createHash } from "node:crypto";
+import { acpNoraServers } from "./noraTools";
+import { joinGuidance, optionalRunContext } from "@main/nora-tools/endpoint";
 import { homedir } from "node:os";
 import { methods } from "@agentclientprotocol/sdk";
 import type { NewSessionRequest, RequestPermissionRequest, RequestPermissionResponse, SessionNotification, ToolCall, ToolCallUpdate } from "@agentclientprotocol/sdk";
@@ -7,7 +10,6 @@ import type { EmitProviderUpdate, ExecutionProvider, ProviderExecution } from "@
 import type { ExecutionFailure, RequestResponse, RuntimeRequest, TimelineItem, ToolActivity, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ProviderCapabilities } from "@shared/types/provider/capabilities.types";
 import type { ProviderCatalogResult } from "@shared/types/provider/catalog.types";
-import type { McpResult } from "@shared/types/provider/mcp.types";
 import type { ProviderAccountAction, ProviderAccountResult } from "@shared/types/provider/account.types";
 import type { AcpProviderKind } from "@shared/types/provider/providerKind.types";
 import { nativeCapabilities } from "@main/execution/providerCapabilities";
@@ -68,10 +70,6 @@ export class AcpAdapter implements ExecutionProvider {
 
   private timeout<T>(work: Promise<T>, message: string): Promise<T> {
     return withAcpTimeout(work, this.options.setupTimeoutMs ?? DEFAULT_SETUP_TIMEOUT_MS, message);
-  }
-
-  async mcp(): Promise<McpResult> {
-    return { kind: "unavailable", message: `${this.options.label} does not report MCP server status over ACP yet. Manage its MCP servers in ${this.options.label}.` };
   }
 
   async catalog(workspace: WorkspaceRef): Promise<ProviderCatalogResult> {
@@ -154,7 +152,8 @@ export class AcpAdapter implements ExecutionProvider {
     const fail = (eventId: string, failure: ExecutionFailure): void => emit({ ...base, eventId, kind: "finished", status: "failed", usage: null, failure });
     const label = this.options.label;
     const cwd = snapshot.conversation.workspace.path;
-    const guidance = snapshot.conversation.role?.guidance;
+    const runContext = await optionalRunContext(this.options.runContext, snapshot.conversation);
+    const guidance = joinGuidance(conversationGuidance(snapshot.conversation), runContext.guidance);
     let live: AcpLiveConnection;
     let sessionId: string;
     let setup: AcpSessionSetup;
@@ -163,20 +162,21 @@ export class AcpAdapter implements ExecutionProvider {
     try {
       live = await this.connect();
       const capabilities = live.init.agentCapabilities;
+      const mcpServers = acpNoraServers(runContext.tools, capabilities);
       const existing = snapshot.conversation.nativeConversationId;
       if (existing) {
         sessionId = existing;
         if (capabilities?.sessionCapabilities?.resume) {
-          setup = await this.timeout(live.agent.request(methods.agent.session.resume, { sessionId, cwd, mcpServers: [] }), `${label} did not resume the session`);
+          setup = await this.timeout(live.agent.request(methods.agent.session.resume, { sessionId, cwd, mcpServers }), `${label} did not resume the session`);
         } else if (capabilities?.loadSession) {
           // Replayed history arrives before the turn is registered, so it is not re-recorded.
-          setup = await this.timeout(live.agent.request(methods.agent.session.load, { sessionId, cwd, mcpServers: [] }), `${label} did not load the session`);
+          setup = await this.timeout(live.agent.request(methods.agent.session.load, { sessionId, cwd, mcpServers }), `${label} did not load the session`);
         } else {
           fail("unsupported-resume", { code: "unsupported", message: `${label} cannot continue an existing conversation; start a new thread`, retryable: false });
           return;
         }
       } else {
-        const request: NewSessionRequest = { cwd, mcpServers: [],
+        const request: NewSessionRequest = { cwd, mcpServers,
           ...(guidance && capabilities?.sessionCapabilities?.systemPrompt ? { systemPrompt: { mode: "append", content: [{ type: "text", text: guidance }] } } : {}) };
         const created = await this.timeout(live.agent.request(methods.agent.session.new, request), `${label} did not open a session`);
         sessionId = created.sessionId;

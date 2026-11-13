@@ -17,16 +17,21 @@ const viewSchema = z.object({
   documentKind: z.enum(["notes", "specs"]).catch("notes")
 }).catch(defaultWorkspaceView);
 const preferencesSchema = z.object({
+  sidebarMode: z.enum(["threads", "bots"]).catch("threads"),
   pinnedWorkspaceIds: z.array(z.string()),
   toolPins: z.record(z.string(), storedToolsSchema),
   threadGrouping: z.enum(["none", "workspace", "activity", "source", "provider"]).catch("none"),
+  memberThreads: z.enum(["visible", "hidden"]).catch("visible"),
   threadSourceFilter: threadSourceFilterSchema.catch("all"),
   threadSort: threadSortSchema.catch("recent"),
   workspaceAvatarColors: z.record(z.string(), z.enum(workspaceAvatarColors.map((color) => color.id))).catch({}),
   workspaceViews: z.record(z.string(), viewSchema).catch({})
 });
+function defaultSidebarPreferences(): SidebarPreferences {
+  return { sidebarMode: "threads", pinnedWorkspaceIds: [], toolPins: {}, threadGrouping: "none", memberThreads: "visible", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} };
+}
 export function parseSidebarPreferences(raw: string | null): SidebarPreferences {
-  if (!raw) return { pinnedWorkspaceIds: [], toolPins: {}, threadGrouping: "none", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} };
+  if (!raw) return defaultSidebarPreferences();
   try { return preferencesSchema.parse(JSON.parse(raw)); }
-  catch { return { pinnedWorkspaceIds: [], toolPins: {}, threadGrouping: "none", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} }; }
+  catch { return defaultSidebarPreferences(); }
 }

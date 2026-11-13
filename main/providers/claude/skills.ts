@@ -31,7 +31,8 @@ export function createClaudeSkills(runtime: ClaudeRuntimeOptions, home = homedir
       const skills = await Promise.all(commands.map(async (command): Promise<ProviderSkill> => ({ name: command.name, description: command.description,
         ...await claudeSkillScope(command, cwd, home) })));
       return { kind: "skills", skills };
-    } catch {
+    } catch (error) {
+      console.warn(`Claude skill discovery failed in ${cwd}: ${error instanceof Error ? error.message : String(error)}`);
       return { kind: "unavailable", message: "Claude skill discovery is unavailable. Check the configured runtime, then refresh." };
     }
   };

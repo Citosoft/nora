@@ -7,12 +7,13 @@ import { provider } from "../main/execution/fixture";
 
 test("lost instruction replies retry original create/submit identities instead of creating another native turn", async () => {
   let sequence = 0;
-  const intent = createDraftIntent({ conversationId: null, provider, role: { id: "writing" }, text: "Draft a brief", workspace: {
+  const intent = createDraftIntent({ conversationId: null, provider, role: { id: "writing" }, botId: null, text: "Draft a brief", workspace: {
     id: "personal", name: "Personal", kind: "personal", workspace: { projectId: "personal", checkoutId: "c", environmentId: "local", path: "/personal", branch: "", access: "write" }
   } }, () => `id-${++sequence}`);
   const commands: ConversationCommand[] = [];
   let loseReply = true;
   const client: ConversationClient = {
+    async reference() { throw new Error("unused"); },
     async externalSessions() { return { status: "available", sessions: [] }; },
     async mcp() { return { kind: "unavailable", message: "unused" }; },
     async skills() { return { kind: "unavailable", message: "unused" }; },
@@ -27,4 +28,13 @@ test("lost instruction replies retry original create/submit identities instead o
   assert.deepEqual(commands.slice(0, 2), commands.slice(2));
   assert.equal(intent.create?.role?.id, "writing");
   assert.equal(intent.submit.instruction, "Draft a brief");
+});
+
+test("bot drafts name the bot instead of the user's role", () => {
+  let sequence = 0;
+  const workspace = { id: "personal", name: "Personal", kind: "personal" as const,
+    workspace: { projectId: "personal", checkoutId: "c", environmentId: "local", path: "/personal", branch: "", access: "write" as const } };
+  const intent = createDraftIntent({ conversationId: null, provider, role: { id: "writing" }, botId: "ada", text: "Hello", workspace }, () => `id-${++sequence}`);
+  assert.equal(intent.create?.botId, "ada");
+  assert.equal(intent.create?.role, undefined);
 });

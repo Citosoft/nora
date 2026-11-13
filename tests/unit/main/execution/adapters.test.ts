@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { join } from "node:path";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import test from "node:test";
 import { z } from "zod";
 import { ClaudeAdapter } from "@main/providers/claude/adapter";
@@ -13,10 +15,111 @@ import type { ClaudeFrame, ClaudeOpenInput } from "@main/types/execution/claude.
 import type { ConversationEngine } from "@main/execution/engine";
 import { fixture, provider } from "./fixture";
 import { questionGuidance } from "@main/execution/questionGuidance";
+import { snapshotBot } from "@shared/bots/snapshot";
 
 const server = join(process.cwd(), "tests/unit/main/execution/fixtures/codexServer.cjs");
 const now = () => "2026-10-21T10:00:00.000Z";
+
+test("Codex applies the compact native output ceiling on start and resume without increasing a stricter user limit", async (t) => {
+  const f = fixture(t); f.create();
+  const adapter = new CodexAdapter({ instanceId: "account-a", executable: process.execPath, arguments: [server], compactToolOutput: () => true,
+    environment: { NORA_CODEX_FIXTURE_MODE: "guidance", NORA_CODEX_OUTPUT_LIMIT: "500", NORA_CODEX_EXPECT_OUTPUT_LIMIT: "500" },
+    policies: { "native-default": { approvalPolicy: "on-request", sandbox: "workspace-write" } }, now });
+  const providers = new ProviderRegistry(); providers.register(adapter); const worker = new EffectWorker(f.engine, providers);
+  try {
+    for (const run of ["first", "resumed"]) {
+      f.submit(run); const done = waitFor(f.engine, "completed"); await worker.runNext(["start"]); await done; await worker.runNext(["review"]);
+    }
+    assert.deepEqual(f.snapshot().runs.map((run) => run.state), ["completed", "completed"]);
+  } finally { await providers.close(); }
+});
 const discover = async () => ({ models: [], authentication: "unknown" as const });
+
+test("Codex counts only this turn across requests, external work and a Nora restart", async (t) => {
+  const directory = mkdtempSync(join(tmpdir(), "nora-turn-usage-"));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const rollout = join(directory, "rollout.jsonl"); writeFileSync(rollout, "");
+  const f = fixture(t); f.create();
+  for (const runId of ["first", "resumed"]) {
+    const adapter = new CodexAdapter({ instanceId: "account-a", executable: process.execPath, arguments: [server],
+      environment: { NORA_CODEX_FIXTURE_MODE: "turn-usage", NORA_CODEX_FIXTURE_ROLLOUT_PATH: rollout },
+      policies: { "native-default": { approvalPolicy: "on-request", sandbox: "workspace-write" } }, now });
+    const registry = new ProviderRegistry(); registry.register(adapter);
+    try {
+      f.submit(runId);
+      const done = waitFor(f.engine, "completed");
+      const worker = new EffectWorker(f.engine, registry);
+      await worker.runNext(["start"]); await done; await worker.runNext(["review"]);
+      assert.deepEqual(f.snapshot().runs.find((run) => run.id === runId)?.usage,
+        { inputTokens: 300, outputTokens: 30, cachedInputTokens: 160, cacheCreationInputTokens: 70 });
+      assert.equal(f.snapshot().conversation.context?.usedTokens, 220, "latest-request occupancy is not turn usage");
+    } finally { await registry.close(); }
+    if (runId === "first") {
+      // A different native client did work while Nora was closed; its tokens are not this next turn's.
+      writeFileSync(rollout, JSON.stringify({ type: "event_msg", payload: { type: "token_count", info: {
+        total_token_usage: { input_tokens: 5000, output_tokens: 500, cached_input_tokens: 3000, cache_write_input_tokens: 1000 },
+        last_token_usage: { input_tokens: 200, output_tokens: 20, cached_input_tokens: 100, cache_write_input_tokens: 50 }, model_context_window: 200000
+      } } }) + "\n");
+      f.restart();
+    }
+  }
+});
+
+test("resumed Codex turns without a native baseline retain live context but do not claim lifetime totals as turn usage", async (t) => {
+  const f = fixture(t); f.create();
+  const adapter = new CodexAdapter({ instanceId: "account-a", executable: process.execPath, arguments: [server],
+    environment: { NORA_CODEX_FIXTURE_MODE: "context-cache" },
+    policies: { "native-default": { approvalPolicy: "on-request", sandbox: "workspace-write" } }, now });
+  const registry = new ProviderRegistry(); registry.register(adapter);
+  const worker = new EffectWorker(f.engine, registry);
+  try {
+    for (const id of ["first", "resumed"]) {
+      f.submit(id); const done = waitFor(f.engine, "completed");
+      await worker.runNext(["start"]); await done; await worker.runNext(["review"]);
+    }
+    assert.equal(f.snapshot().runs[1].usage, null);
+    assert.equal(f.snapshot().conversation.context?.usedTokens, 1050);
+  } finally { await registry.close(); }
+});
+
+test("Claude receives the configured compaction threshold on each new turn and clearing it restores native defaults", async (t) => {
+  const f = fixture(t); f.create("conversation", "checkout", { ...provider, kind: "claude" });
+  let threshold: number | null = 300_000;
+  const opened: ClaudeOpenInput[] = [];
+  const adapter = new ClaudeAdapter({ instanceId: "account-a", policies: { "native-default": "default" }, now, nextId: randomUUID, discover,
+    autoCompactTokens: () => threshold,
+    open(input) {
+      opened.push(input);
+      return { close() {}, async interrupt() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
+        yield { kind: "finished", eventId: "finished", status: "completed", failure: null, usage: { inputTokens: 0, outputTokens: 0 } };
+      } };
+    } });
+  const registry = new ProviderRegistry(); registry.register(adapter);
+  const worker = new EffectWorker(f.engine, registry);
+  try {
+    f.submit("first"); await worker.runNext(["start"]); await worker.runNext(["review"]);
+    threshold = null;
+    f.submit("second"); await worker.runNext(["start"]);
+    assert.equal(opened[0].autoCompactTokens, 300_000);
+    assert.equal(opened[1].autoCompactTokens, undefined);
+    assert.equal(opened[1].resume, true);
+  } finally { await registry.close(); }
+});
+
+test("Codex retains cache accounting when occupancy stays unchanged and cache reuse changes", async (t) => {
+  const f = fixture(t); f.create(); f.submit();
+  const adapter = new CodexAdapter({ instanceId: "account-a", executable: process.execPath, arguments: [server],
+    environment: { NORA_CODEX_FIXTURE_MODE: "context-cache" },
+    policies: { "native-default": { approvalPolicy: "on-request", sandbox: "workspace-write" } }, now });
+  const registry = new ProviderRegistry(); registry.register(adapter);
+  try {
+    const done = waitFor(f.engine, "completed");
+    await new EffectWorker(f.engine, registry).runNext(["start"]); await done;
+    assert.deepEqual(f.snapshot().conversation.context, { usedTokens: 1050, windowTokens: 200000, inputTokens: 1000,
+      cachedInputTokens: 800, cacheCreationInputTokens: 200, outputTokens: 50, updatedAt: now() });
+    assert.deepEqual(f.snapshot().runs[0].usage, { inputTokens: 1000, outputTokens: 50, cachedInputTokens: 800, cacheCreationInputTokens: 200 });
+  } finally { await registry.close(); }
+});
 
 test("Codex discovers steering support from the runtime and sends input to the exact active turn", async (t) => {
   const f = fixture(t); f.create(); f.submit();
@@ -92,6 +195,29 @@ test("Claude receives a separate saved guidance field while the user's instructi
   assert.equal(opened[0].instruction, "first"); assert.equal(opened[1].instruction, "follow-up");
   assert.equal(opened[0].guidance, f.snapshot().conversation.role?.guidance);
   assert.equal(opened[1].guidance, opened[0].guidance); assert.equal(opened[1].resume, true);
+  await registry.close();
+});
+
+test("Claude receives a bot thread's guidance instead of the role's", async (t) => {
+  const f = fixture(t);
+  const bot = snapshotBot({ id: "ada", name: "Ada", role: "Reviewer", instructions: "Review carefully.", avatar: { seed: 1 }, scope: { kind: "global" }, revision: 1,
+    binding: { kind: "claude", instanceId: "account-a", model: provider.model, reasoning: null, permissionPolicy: null } });
+  f.engine.execute({ kind: "create", commandId: "create", conversationId: "conversation", title: "Bot", parentId: null, botId: "ada", provider: { ...provider, kind: "claude" },
+    workspace: { environmentId: "local", projectId: "project", checkoutId: "checkout", path: "/test/checkout", branch: "main", access: "write" } }, { bot, role: { id: "research" } });
+  const opened: ClaudeOpenInput[] = [];
+  const adapter = new ClaudeAdapter({ instanceId: "account-a", policies: { "native-default": "default" }, now, nextId: randomUUID, discover,
+    open(input) {
+      opened.push(input);
+      return { async interrupt() {}, close() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
+        yield { kind: "init", eventId: "init", sessionId: input.sessionId };
+        yield { kind: "finished", eventId: "done", status: "completed", failure: null, usage: { inputTokens: 0, outputTokens: 0 } };
+      } };
+    } });
+  const registry = new ProviderRegistry(); registry.register(adapter);
+  const worker = new EffectWorker(f.engine, registry);
+  f.submit("first"); await worker.runNext(); await worker.runNext(["review"]);
+  assert.equal(opened[0].guidance, bot.guidance);
+  assert.match(opened[0].guidance ?? "", /Review carefully\./);
   await registry.close();
 });
 

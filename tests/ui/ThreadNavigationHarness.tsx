@@ -53,7 +53,7 @@ fixture.deps.client.execute = async (command) => {
   }
   return receipt;
 };
-fixture.deps.client.catalog = async (kind, instanceId) => pickerCatalog({ kind, instanceId, label: kind });
+fixture.deps.client.catalog = async (kind, instanceId) => pickerCatalog({ kind, instanceId });
 const store = createThreadWorkspaceStore(fixture.deps);
 store.focusWorkspace("project");
 store.togglePin("pinned");
@@ -80,7 +80,7 @@ function SidebarPreview() {
         onSourceFilterChange={(threadSourceFilter) => navigation.setPreferences((current) => ({ ...current, threadSourceFilter }))} grouping={navigation.preferences.threadGrouping}
         onGroupingChange={(threadGrouping) => navigation.setPreferences((current) => ({ ...current, threadGrouping }))} />
     </aside>
-    <div className="flex-1 p-10"><h1 className="text-xl font-semibold">Workspace threads</h1><p className="mt-2 text-sm text-muted-foreground">Find a thread across your workspaces.</p><button id="load-external" onClick={() => { showExternal = true; store.updateBoot({ ...store.snapshot().boot, providers: [...fixture.deps.boot.providers, { kind: "claude", instanceId: "account", label: "Claude" }] }); }}>Load external conversations</button><output id="navigation-state" className="sr-only">{JSON.stringify({ grouping: navigation.preferences.threadGrouping, activeId: state.layout.activeId, commands: fixture.commands.map((command) => command.kind) })}</output></div>
+    <div className="flex-1 p-10"><h1 className="text-xl font-semibold">Workspace threads</h1><p className="mt-2 text-sm text-muted-foreground">Find a thread across your workspaces.</p><button id="load-external" onClick={() => { showExternal = true; store.updateBoot({ ...store.snapshot().boot, providers: [...fixture.deps.boot.providers, { kind: "claude", instanceId: "account", label: "Claude", reportsMcp: true }] }); }}>Load external conversations</button><output id="navigation-state" className="sr-only">{JSON.stringify({ grouping: navigation.preferences.threadGrouping, activeId: state.layout.activeId, commands: fixture.commands.map((command) => command.kind) })}</output></div>
   </main>;
 }
 const root = document.getElementById("app");

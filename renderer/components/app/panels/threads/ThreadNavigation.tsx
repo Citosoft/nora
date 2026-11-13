@@ -11,7 +11,8 @@ import { useThreadPullRequests } from "@/components/app/hooks/useThreadPullReque
 import { useOptionalWorkspaceSidebarPorts } from "@/components/app/hooks/useWorkspaceSidebarPorts";
 import { Button } from "@/components/ui/button";
 import { useThreadNavigationPorts } from "@/components/app/hooks/useThreadNavigationPorts";
-import { buildThreadNavigation } from "@/components/app/logic/thread-workspace/navigation";
+import { applyMemberThreadVisibility, buildThreadNavigation } from "@/components/app/logic/thread-workspace/navigation";
+import { useMemberThreadVisibility } from "@/components/app/hooks/useMemberThreadVisibility";
 import { buildThreadGroups, resolveThreadGrouping } from "@/components/app/logic/thread-workspace/groups";
 import type { WorkspaceAvatarIdentity } from "@/components/app/types/workspaceAvatar.types";
 import type { ThreadGrouping } from "@/components/app/types/thread-workspace/navigation.types";
@@ -33,18 +34,19 @@ export function ThreadNavigation({ workspaceId: scope, onNew, query = "", unifie
   const workspaces = useMemo(() => new Map<string, WorkspaceAvatarIdentity>(ports.state.boot.workspaces.map((workspace) => [
     workspace.id, { id: workspace.shellProjectId ?? workspace.id, name: workspace.name }
   ])), [ports.state.boot.workspaces]);
+  const { visibility: memberThreads } = useMemberThreadVisibility();
   const storedRows = useMemo(() => {
     const search = query.trim().toLocaleLowerCase();
-    return buildThreadNavigation(ports.state, workspaceId, filter).filter((row) =>
+    return applyMemberThreadVisibility(buildThreadNavigation(ports.state, workspaceId, filter), memberThreads).filter((row) =>
       `${row.title} ${showWorkspaces ? workspaces.get(row.workspaceId)?.name ?? "" : ""}`.toLocaleLowerCase().includes(search));
-  }, [ports.state, workspaceId, filter, query, showWorkspaces, workspaces]);
+  }, [ports.state, workspaceId, filter, query, showWorkspaces, workspaces, memberThreads]);
   const canDiscover = filter === "all" && sourceFilter !== "nora";
   const resumable = useResumableThreads({ ports, workspaceId, query, sourceFilter, sort, enabled: canDiscover });
   const rows = useMemo(() => mergeThreadRows(storedRows, resumable.rows, sourceFilter, sort), [storedRows, resumable.rows, sourceFilter, sort]);
   const providerLabels = useMemo(() => new Map(ports.state.boot.providers.map((provider) => [provider.kind, provider.label])), [ports.state.boot.providers]);
   const groups = useMemo(() => buildThreadGroups(rows, grouping, workspaces, providerLabels), [rows, grouping, workspaces, providerLabels]);
-  const readBranchRequest = useOptionalWorkspaceSidebarPorts()?.readBranchRequest ?? null;
-  const requests = useThreadPullRequests(ports.state, rows.map((row) => row.id), readBranchRequest);
+  const threadForge = useOptionalWorkspaceSidebarPorts()?.threadForge ?? null;
+  const requests = useThreadPullRequests(ports.state, rows.map((row) => row.id), threadForge);
   return <section className="flex min-h-0 flex-1 flex-col" aria-label="Threads">
     <ThreadToolbar sort={sort} onSortChange={onSortChange ?? setLocalSort} sourceFilter={sourceFilter} onSourceFilterChange={onSourceFilterChange ?? setLocalSource} canGroupByWorkspace={showWorkspaces} filter={filter} grouping={grouping} onFilterChange={setFilter} onGroupingChange={onGroupingChange ?? setLocalGrouping}
       allWorkspaces={unified ? allWorkspaces : undefined} onScopeChange={setAllWorkspaces} newDisabled={!workspaceId && !onNew}
@@ -58,6 +60,7 @@ export function ThreadNavigation({ workspaceId: scope, onNew, query = "", unifie
           if (entry.target.kind === "external") void resumable.open(entry.target.entry).then((opened) => { if (opened) onNavigate?.(); });
           else { onNavigate?.(); ports.openRow({ ...entry, target: entry.target }); }
         }} onSetSettled={(entry, settled) => { void resumable.setSettled(entry, settled); }}
+        onRename={(entry, title) => entry.target.kind === "thread" ? ports.renameThread(entry.target.conversationId, title) : Promise.resolve()}
         onTogglePin={(entry) => {
           if (entry.target.kind === "external") void resumable.pin(entry.target.entry);
           else if (entry.target.kind === "thread") ports.togglePin(entry.target.conversationId);

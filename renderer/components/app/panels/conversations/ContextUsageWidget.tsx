@@ -3,7 +3,7 @@ import { LoaderCircle, Shrink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useHoverPopover } from "@/components/app/hooks/useHoverPopover";
-import { contextGauge, describeContextUsage, formatTokenCount } from "@/components/app/logic/contextUsage";
+import { contextCacheHitPercent, contextGauge, describeContextUsage, formatTokenCount } from "@/components/app/logic/contextUsage";
 import { RingGauge } from "@/components/app/shared/RingGauge";
 import type { ContextUsageWidgetProps } from "@/components/app/types/contextUsage.types";
 
@@ -13,12 +13,17 @@ const formatTime = (iso: string): string => new Date(iso).toLocaleTimeString(und
 export function ContextUsageWidget({ context, compaction }: ContextUsageWidgetProps) {
   const hover = useHoverPopover();
   const gauge = context ? contextGauge(context) : null;
+  const cacheHitPercent = context ? contextCacheHitPercent(context) : null;
   const summary = describeContextUsage(context);
   const rows = context && gauge ? [
     { label: "Used", value: `${formatTokenCount(context.usedTokens)} tokens` },
     { label: "Remaining", value: `${formatTokenCount(gauge.remainingTokens)} tokens` },
     { label: "Window", value: `${formatTokenCount(context.windowTokens)} tokens` },
     { label: "Prompt", value: `${formatTokenCount(context.inputTokens)} (${formatTokenCount(context.cachedInputTokens)} cached)` },
+    ...(context.cacheCreationInputTokens !== undefined ? [{ label: "Cache writes", value: `${formatTokenCount(context.cacheCreationInputTokens)} tokens` }] : []),
+    ...(cacheHitPercent !== null ? [{ label: "Cache reuse", value: `${cacheHitPercent}% of prompt` }] : []),
+    ...(context.autoCompactThreshold !== undefined ? [{ label: "Auto-compact at", value: `${formatTokenCount(context.autoCompactThreshold)} tokens` }] : []),
+    ...(context.promptCacheExpiresAt ? [{ label: "Estimated cache expiry", value: formatTime(context.promptCacheExpiresAt) }] : []),
     { label: "Last reply", value: `${formatTokenCount(context.outputTokens)} tokens` }
   ] : [];
   return <Popover open={hover.open} onOpenChange={hover.onOpenChange}>
@@ -43,6 +48,7 @@ export function ContextUsageWidget({ context, compaction }: ContextUsageWidgetPr
           </Fragment>)}
         </div>
         <p className="text-[11px] text-muted-foreground">Updated {formatTime(context.updatedAt)}</p>
+        <p className="text-[11px] text-muted-foreground">Cached tokens reuse prior processing and still count toward the context window.</p>
       </> : <p role="status" className="text-xs text-muted-foreground">{summary}.</p>}
       {compaction && <div className="space-y-2 border-t pt-3">
         <p className="text-xs text-muted-foreground">Compacting summarizes earlier conversation so the agent keeps working with more room.</p>

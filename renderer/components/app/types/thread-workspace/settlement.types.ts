@@ -7,4 +7,12 @@ export interface ThreadRowContextMenuProps {
   children: ReactNode;
   row: ThreadListRow;
   onSetSettled?: (row: ThreadListRow, settled: boolean) => void;
+  onRename?: (row: ThreadListRow, title: string) => Promise<void>;
+}
+export interface RenameThreadDialogProps {
+  /** "group" or "thread", used in the dialog's wording. */
+  noun: string;
+  title: string;
+  onRename(title: string): Promise<void>;
+  onClose(): void;
 }

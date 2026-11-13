@@ -24,7 +24,6 @@ export function deriveAppMainCenterContentValue(
         isSaving: args.taskEditorState.isSaving,
         errorMessage: args.taskEditorState.errorMessage,
         resolvedTheme: args.resolvedTheme,
-        tools: snapshot.agentCatalog,
         onChange: (value: string) =>
           args.setTaskEditorState((current) =>
             current
@@ -48,8 +47,8 @@ export function deriveAppMainCenterContentValue(
               : current
           ),
         onClose: () => args.setTaskEditorState(null),
-        onSpawnAgent: (toolId: string) => {
-          void args.handleSpawnTaskAgent(toolId);
+        onStartThread: () => {
+          void args.handleStartTaskThread();
         },
         onDuplicateToNew: () => {
           void args.duplicateTaskToNew();
@@ -62,7 +61,6 @@ export function deriveAppMainCenterContentValue(
     workspaceSpecs: args.workspaceSpecs,
     workspaceTaskBoards: args.workspaceTaskBoards,
     updateWorkspaceTaskBoard: args.updateWorkspaceTaskBoard,
-    tools: snapshot.agentCatalog,
     onOpenTask: createOpenTaskInWorkspaceHandler({
       focusWorkspaceWithRecovery: args.focusWorkspaceWithRecovery,
       openTaskEditor: args.openTaskEditor,
@@ -71,11 +69,11 @@ export function deriveAppMainCenterContentValue(
     onCreateTask: (projectId: string) => {
       void args.createWorkspaceTask(projectId);
     },
-    onGenerateTasks: (projectId: string, toolId: string, brief: string | null, specPath: string | null) =>
-      args.generateWorkspaceTasksWithAgent(projectId, toolId, brief, specPath),
+    onGenerateTasks: (projectId: string, brief: string | null, specPath: string | null) =>
+      args.generateWorkspaceTasks(projectId, brief, specPath),
     onToggleTaskComplete: args.handleToggleTaskComplete,
     onDeleteTask: args.handleDeleteTask,
-    onSpawnAgentsForTasks: args.handleSpawnAgentsForTasks,
+    onStartTaskThreads: args.handleStartTaskThreads,
     generateTasksRequest: args.generateTasksRequest,
     onClose: () => {
       args.setGenerateTasksRequest(null);

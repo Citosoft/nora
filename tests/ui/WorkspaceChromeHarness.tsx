@@ -11,7 +11,8 @@ import { useThreadInsights } from "@/components/app/hooks/useThreadInsights";
 import { Textarea } from "@/components/ui/textarea";
 import type { AppToolsProps } from "@/components/app/types/workspaceUtilities.types";
 import type { TitleBarProps } from "@/components/app/types/chromeDialog.types";
-import type { AgentCatalogEntry, ForgeBranchPullRequestStatus } from "@shared/appTypes";
+import type { AgentCatalogEntry, ForgeBranchChanges, ForgeBranchPullRequestStatus } from "@shared/appTypes";
+import type { ThreadForgeClient } from "@/components/app/types/threadForge.types";
 import type { NativeWorkspace } from "@shared/types/personalization/workspaces.types";
 import type { ConversationHeader } from "@shared/types/conversation/queries.types";
 import type { TimelineItem } from "@shared/types/conversation/contracts.types";
@@ -44,12 +45,19 @@ export function WorkspaceChromeHarness() {
   const [archived, setArchived] = useState(false);
   const scenario = useRef("ready");
   const record = useCallback((event: string) => setEvents((current) => [...current, event]), []);
-  const readBranchRequest = useCallback(async (projectId: string, branch: string): Promise<ForgeBranchPullRequestStatus | null> => {
-    record(`branch:${projectId}:${branch}`);
-    if (scenario.current === "failed") throw new Error("Could not load this branch's change request.");
-    return scenario.current === "none" ? null : { branch, branchExistsOnRemote: true, state: "open", label: "Open", pullRequestNumber: 42, webUrl: "https://example.com/nora/pull/42" };
-  }, [record]);
-  const insights = useThreadInsights({ header, items, workspace, hasOlderHistory: false, readBranchRequest });
+  const forge = useMemo<ThreadForgeClient>(() => ({
+    connections: { github: true, gitlab: false },
+    readBranchRequest: async (projectId, branch): Promise<ForgeBranchPullRequestStatus | null> => {
+      record(`branch:${projectId}:${branch}`);
+      if (scenario.current === "failed") throw new Error("Could not load this branch's change request.");
+      return scenario.current === "none" ? null : { branch, branchExistsOnRemote: true, state: "open", label: "Open", pullRequestNumber: 42, webUrl: "https://example.com/nora/pull/42" };
+    },
+    readBranchChanges: async (_projectId, _checkoutPath): Promise<ForgeBranchChanges | null> => ({ branch: workspace.workspace.branch, baseBranch: "main", provider: "github",
+      files: 3, additions: 42, deletions: 7, partial: false, commitsAhead: 2, uncommittedFiles: 1, branches: [workspace.workspace.branch, "main"] }),
+    readBranchDiff: async () => [],
+    createChangeRequest: async () => { record("create-pr"); throw new Error("Fixture cannot create pull requests."); }
+  }), [record]);
+  const insights = useThreadInsights({ header, items, workspace, hasOlderHistory: false, forge });
   const appTools: AppToolsProps = {
     resolvedTheme: theme, settingsActive: settings,
     onToggleTheme: () => { const next = theme === "dark" ? "light" : "dark"; setTheme(next); document.documentElement.dataset.theme = next; document.documentElement.classList.toggle("dark", next === "dark"); },
@@ -73,8 +81,8 @@ export function WorkspaceChromeHarness() {
       <main className="thread-conversation flex min-h-0 min-w-0 flex-1 flex-col bg-background">
         <>
           <div className="relative flex min-h-0 flex-1 flex-col" data-thread-insights={expanded ? "expanded" : "collapsed"}>
-            <ThreadInsightsPanel header={{ ...header, conversation: { ...header.conversation, archivedAt: archived ? "2026-11-10T10:00:00.000Z" : null } }} providerLabel="Codex" connectors={null} changes={insights.changes} request={insights.request} expanded={expanded} busy={false} canSettle={!archived} hasOlderHistory={false}
-              onToggle={() => setExpanded((current) => !current)} onRefresh={insights.refresh} onLoadHistory={() => {}} onSettleChange={() => { setArchived(true); record("archive"); }} />
+            <ThreadInsightsPanel header={{ ...header, conversation: { ...header.conversation, archivedAt: archived ? "2026-11-10T10:00:00.000Z" : null } }} providerLabel="Codex" connectors={null} skills={null} subagents={insights.subagents} changes={insights.changes} branch={insights.branch} expanded={expanded} busy={false} canSettle={!archived} hasOlderHistory={false}
+              onToggle={() => setExpanded((current) => !current)} onLoadHistory={() => {}} onSettleChange={() => { setArchived(true); record("archive"); }} />
             <div className="thread-transcript min-h-0 flex-1 overflow-auto px-5 py-7"><p>Workspace controls are grouped in the sidebar. This conversation keeps its own change summary and branch request.</p></div>
           </div>
           <div className="m-4 rounded-2xl border bg-card p-3"><Textarea aria-label="Fixture message" variant="embedded" placeholder="Ask, plan, or start something…" /></div>

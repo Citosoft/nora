@@ -267,21 +267,18 @@ export type TaskBoardWorkspaceEntry = {
 
 export type TaskBoardPanelProps = {
   workspaces: TaskBoardWorkspaceEntry[];
-  availableTools: AgentCatalogEntry[];
   activeWorkspaceId: string | null;
   viewMode: TaskBoardViewMode;
   selectedTaskKeys: string[];
-  selectedToolId: string;
-  isSpawningAgents: boolean;
+  isStartingThreads: boolean;
   onViewModeChange: (nextMode: TaskBoardViewMode) => void;
   onSelectWorkspace: (projectId: string) => void;
   onToggleTaskSelection: (projectId: string, taskPath: string) => void;
   onClearTaskSelection: () => void;
-  onSelectedToolChange: (toolId: string) => void;
-  onSpawnSelectedAgents: () => Promise<void>;
+  onStartSelectedThreads: () => Promise<void>;
   onOpenTask: (projectId: string, taskPath: string) => void;
   onCreateTask: (projectId: string) => void;
-  onGenerateTasks: (projectId: string, toolId: string, brief: string | null, specPath: string | null) => Promise<void>;
+  onGenerateTasks: (projectId: string, brief: string | null, specPath: string | null) => Promise<void>;
   onToggleTaskComplete: (projectId: string, fromPath: string, toPath: string) => Promise<void>;
   onDeleteTask: (projectId: string, taskPath: string) => Promise<void>;
   onMoveTask: (projectId: string, taskPath: string, sectionId: string) => Promise<void>;
@@ -318,12 +315,11 @@ export type TaskPanelProps = {
   isSaving: boolean;
   errorMessage: string | null;
   resolvedTheme: ResolvedTheme;
-  tools: AgentCatalogEntry[];
   onChange: (value: string) => void;
   onSave: () => void;
   onRevert: () => void;
   onClose: () => void;
-  onSpawnAgent: (toolId: string) => void;
+  onStartThread: () => void;
   onDuplicateToNew: () => void;
 };
 
@@ -542,13 +538,12 @@ export type TaskCenterProps = {
   workspaceSpecs: WorkspaceSpecsState;
   workspaceTaskBoards: WorkspaceTaskBoardsState;
   updateWorkspaceTaskBoard: (projectId: string, updater: (currentBoard: WorkspaceTaskBoard) => WorkspaceTaskBoard) => Promise<WorkspaceTaskBoard>;
-  tools: AgentCatalogEntry[];
   onOpenTask: (projectId: string, path: string) => void;
   onCreateTask: (projectId: string) => void;
-  onGenerateTasks: (projectId: string, toolId: string, brief: string | null, specPath: string | null) => Promise<void>;
+  onGenerateTasks: (projectId: string, brief: string | null, specPath: string | null) => Promise<void>;
   onToggleTaskComplete: (projectId: string, fromPath: string, toPath: string) => Promise<void>;
   onDeleteTask: (projectId: string, path: string) => Promise<void>;
-  onSpawnAgentsForTasks: (toolId: string, tasks: TaskCenterTaskReference[]) => Promise<void>;
+  onStartTaskThreads: (tasks: TaskCenterTaskReference[]) => Promise<void>;
   generateTasksRequest: { projectId: string; specPath: string; nonce: number } | null;
   onClose: () => void;
 };

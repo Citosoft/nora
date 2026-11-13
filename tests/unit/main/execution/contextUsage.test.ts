@@ -14,6 +14,17 @@ const modelUsage = (contextWindow: number): ModelUsage => ({ inputTokens: 0, out
   cacheCreationInputTokens: 0, webSearchRequests: 0, costUSD: 0, contextWindow, maxOutputTokens: 0 });
 const reading = { usedTokens: 50_000, windowTokens: 200_000, inputTokens: 48_000, cachedInputTokens: 40_000, outputTokens: 2_000, updatedAt: "2026-10-21T10:00:30.000Z" };
 
+test("cache accounting survives the durable store and restart", (t) => {
+  const f = fixture(t); f.create(); f.submit();
+  const context = { ...reading, cacheCreationInputTokens: 5_000 };
+  f.engine.accept({ kind: "context", eventId: "context", conversationId: "conversation", runId: "run", attemptId: f.snapshot().runs[0].attemptId, context });
+  const usage = { inputTokens: 48_000, cachedInputTokens: 40_000, cacheCreationInputTokens: 5_000, outputTokens: 2_000 };
+  f.update({ kind: "finished", eventId: "done", status: "completed", failure: null, usage });
+  f.restart();
+  assert.deepEqual(f.snapshot().conversation.context, context);
+  assert.deepEqual(f.snapshot().runs[0].usage, usage);
+});
+
 test("context readings update the conversation while its turn is active and are ignored afterwards", (t) => {
   const f = fixture(t);
   f.create(); f.submit();
@@ -68,7 +79,7 @@ test("Claude reports the latest top-level request against its model's context wi
   const frames = stream.accept({ ...claudeResult("Done"), modelUsage: { fixture: modelUsage(200_000), haiku: modelUsage(100_000) } });
   const context = frames.find((frame) => frame.kind === "context");
   assert.deepEqual(context?.kind === "context" && context.context,
-    { usedTokens: 33_500, windowTokens: 200_000, inputTokens: 33_000, cachedInputTokens: 30_000, outputTokens: 500 });
+    { usedTokens: 33_500, windowTokens: 200_000, inputTokens: 33_000, cachedInputTokens: 30_000, cacheCreationInputTokens: 2_000, outputTokens: 500 });
 });
 
 test("Claude compaction reports the compacted total, or an unknown context when it is not given", () => {

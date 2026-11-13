@@ -1,8 +1,9 @@
+import { noraToolsStatus } from "@shared/nora-tools/catalog";
 import { materializeLegacyContext } from "@/components/app/logic/thread-workspace/legacyContext";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { NativeRuntimeContext } from "@/components/app/context/nativeRuntimeContext";
-import { nativeConversationBridge, nativePersonalizationClient } from "@/components/app/clients/nativeRuntimeClient";
+import { nativeAttentionClient, nativeConversationBridge, nativePersonalizationClient } from "@/components/app/clients/nativeRuntimeClient";
 import { createConversationClient } from "@/components/app/clients/createConversationClient";
 import { createThreadWorkspaceStore } from "@/components/app/logic/thread-workspace/store";
 import { createThreadLayoutPersistence } from "@/components/app/logic/thread-workspace/persistence";
@@ -22,11 +23,15 @@ export function NativeRuntimeProvider({ children }: NativeRuntimeProviderProps) 
   }, []);
   const reload = useCallback(() => { setError(null); void request({ kind: "boot" }).catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "Nora could not connect to its execution host.")); }, [request]);
   useEffect(reload, [reload]);
+  // Changes made outside this window, such as a bot created by a thread, arrive as pushed state.
+  useEffect(() => nativePersonalizationClient.onChanged(setBoot), []);
   const environmentId = boot?.environmentId;
-  const store = useMemo(() => environmentId ? createThreadWorkspaceStore({ boot: { environmentId, cursor: 0, providers: [], workspaces: [],
+  const store = useMemo(() => environmentId ? createThreadWorkspaceStore({ boot: { environmentId, cursor: 0, providers: [], workspaces: [], sharedBots: [], noraTools: noraToolsStatus("idle"),
     personalization: { defaultRole: null, workspaceRoles: {} } }, client: createConversationClient(nativeConversationBridge, environmentId),
     persistence: createThreadLayoutPersistence(localStorage, environmentId), nextId: () => crypto.randomUUID(), now: () => new Date().toISOString() }) : null, [environmentId]);
   useEffect(() => { if (store && boot) store.updateBoot(boot); }, [store, boot]);
+  // A clicked "needs your approval" notification opens the waiting thread, even one hidden from the sidebar.
+  useEffect(() => store ? nativeAttentionClient.onOpenThread((conversationId) => { store.openThread(conversationId); }) : undefined, [store]);
   const launch = useCallback(async (input: ThreadLaunchInput = {}): Promise<string | null> => {
     if (!store) return null;
     const next = input.projectId ? await request({ kind: "register-workspace", projectId: input.projectId }) : await request({ kind: "boot" });
@@ -36,7 +41,7 @@ export function NativeRuntimeProvider({ children }: NativeRuntimeProviderProps) 
     if (!workspace) throw new Error("Choose an available workspace on the owning execution host.");
     const context = input.contextSelections?.length ? await materializeLegacyContext(input.contextSelections) : "";
     const text = [input.text, context].filter(Boolean).join("\n\n");
-    return store.openDraft({ source: input.source, workspaceId: workspace.id, ...(text ? { text } : {}) });
+    return store.openDraft({ source: input.source, workspaceId: workspace.id, ...(text ? { text } : {}), ...(input.botId ? { botId: input.botId } : {}), ...(input.group ? { group: input.group } : {}) });
   }, [store, request]);
   const ports = useMemo<NativeRuntimePorts | null>(() => store && boot ? { store, boot, request, launch } : null, [store, boot, request, launch]);
   if (!boot || !ports) return <SetupWindowShell><div role={error ? "alert" : "status"} className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-sm"><p>{error ?? "Opening Nora…"}</p>{error && <Button onClick={reload}>Reconnect</Button>}</div></SetupWindowShell>;

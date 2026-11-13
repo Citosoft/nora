@@ -136,9 +136,9 @@ export function AppRootWorkspaceSessionProvider({
     handleDeleteTask,
     handleDeleteSpec,
     handleDeleteNote,
-    handleSpawnTaskAgent,
-    handleSpawnAgentsForTasks,
-    generateWorkspaceTasksWithAgent,
+    handleStartTaskThread,
+    handleStartTaskThreads,
+    generateWorkspaceTasks,
     handleCreateAgentFromDialog
   } = useWorkspaceContentController({
     workspaceTasks: resources.workspaceTasks,
@@ -189,9 +189,9 @@ export function AppRootWorkspaceSessionProvider({
     handleDeleteTask,
     handleDeleteSpec,
     handleDeleteNote,
-    handleSpawnTaskAgent,
-    handleSpawnAgentsForTasks,
-    generateWorkspaceTasksWithAgent,
+    handleStartTaskThread,
+    handleStartTaskThreads,
+    generateWorkspaceTasks,
     handleCreateAgentFromDialog
   };
   const fileMutations = useWorkspaceFileMutations({

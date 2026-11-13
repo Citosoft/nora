@@ -60,6 +60,11 @@ export class SqliteQueries {
       (SELECT 1 FROM conversation_runs r WHERE r.conversation_id = h.id AND r.state IN (${activeSql})) ORDER BY h.rowid`)
       .flatMap((id) => { const state = this.state(id); return state ? [state] : []; });
   }
+  hasBackgroundActivity(conversationId: string): boolean {
+    return !!this.database.prepare(`SELECT 1 FROM conversation_items WHERE conversation_id = ?
+      AND json_extract(json, '$.kind') IN ('tool', 'subagent')
+      AND json_extract(json, '$.state') IN ('running', 'unconfirmed') LIMIT 1`).get(conversationId);
+  }
   execution(conversationId: string, runId: string): ExecutionState | null {
     const state = this.state(conversationId, runId);
     if (!state) return null;

@@ -2,6 +2,7 @@ import type { ThreadListRow, ThreadSourceFilter, ThreadSort } from "./list.types
 import type { ForgeBranchPullRequestStatus } from "@shared/appTypes";
 import type { ReactNode } from "react";
 import type { ConversationRun, ProviderBinding } from "@shared/types/conversation/contracts.types";
+import type { BotSnapshot, GroupMember } from "@shared/types/bots/bots.types";
 import type { NativeWorkspace } from "@shared/types/personalization/workspaces.types";
 import type { ThreadDocument, ThreadWorkspaceStore, ThreadWorkspaceSnapshot } from "./state.types";
 import type { ThreadGrouping } from "./navigation.types";
@@ -18,14 +19,26 @@ export interface ThreadRowProps {
   onOpen(row: ThreadListRow): void;
   onTogglePin(row: ThreadListRow): void;
   onSetSettled?(row: ThreadListRow, settled: boolean): void;
+  /** Offered for stored threads only; rejects with a message the rename dialog shows. */
+  onRename?(row: ThreadListRow, title: string): Promise<void>;
 }
 export interface ThreadStatusIconProps { row: Pick<ThreadNavigationRow, "status" | "working" | "unread">; }
+/** A descendant thread waiting on the user, surfaced on its visible ancestor's row. */
+export interface WaitingThread { conversationId: string; name: string; }
 export interface ThreadNavigationRow {
   target: { kind: "draft"; documentId: string } | { kind: "thread"; conversationId: string };
   id: string;
   title: string;
   workspaceId: string;
   providerKind: ProviderBinding["kind"] | null;
+  /** The bot the thread runs as, shown in place of the provider icon. */
+  bot?: Pick<BotSnapshot, "botId" | "name" | "avatar"> | null;
+  /** Members of a group chat, shown as stacked avatars. */
+  group?: readonly Pick<GroupMember, "botId" | "name" | "avatar">[] | null;
+  /** A bot working for this thread that is waiting for an approval or answer. */
+  waitingOn?: WaitingThread | null;
+  /** A group member's own thread, where it does the work behind its replies in the group. */
+  groupMember?: boolean;
   origin?: "cli" | "desktop";
   status: ThreadNavigationStatus;
   active: boolean;
@@ -44,8 +57,10 @@ export interface ThreadNavigationPorts {
   resumeExternal: ThreadWorkspaceStore["resumeExternal"];
   pinExternal: ThreadWorkspaceStore["pinExternal"];
   setSettled: ThreadWorkspaceStore["setSettled"];
+  renameThread: ThreadWorkspaceStore["renameThread"];
   state: ThreadWorkspaceSnapshot;
   focusWorkspace(workspaceId: string): void;
+  showHome(): void;
   openDraft(workspaceId: string): void;
   openRow(row: ThreadNavigationRow): void;
   togglePin(conversationId: string): void;

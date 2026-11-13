@@ -3,9 +3,9 @@ import type { NativeProvider } from "@shared/ipc/types/personalizationGateway.ty
 import type { WorkspaceRef } from "@shared/types/conversation/contracts.types";
 
 export const pickerWorkspace: WorkspaceRef = { environmentId: "local", projectId: "personal", checkoutId: "checkout", path: "/personal", branch: "", access: "write" };
-export const codexProvider: NativeProvider = { kind: "codex", instanceId: "account", label: "Codex" };
-export const claudeProvider: NativeProvider = { kind: "claude", instanceId: "account", label: "Claude" };
-export function pickerCatalog(provider = codexProvider): Extract<ProviderCatalogResult, { status: "available" }> {
+export const codexProvider: NativeProvider = { kind: "codex", instanceId: "account", label: "Codex", reportsMcp: true };
+export const claudeProvider: NativeProvider = { kind: "claude", instanceId: "account", label: "Claude", reportsMcp: true };
+export function pickerCatalog(provider: Pick<NativeProvider, "kind" | "instanceId"> = codexProvider): Extract<ProviderCatalogResult, { status: "available" }> {
   return { status: "available", catalog: { kind: provider.kind, instanceId: provider.instanceId,
     authentication: "present", capabilities: { resume: true, interrupt: true, steering: false, approvals: true, questions: true,
       reasoning: true, attachments: false, turnChanges: true, subagentDetails: false },

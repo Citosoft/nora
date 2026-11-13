@@ -22,8 +22,9 @@
 
 @layer base {
   :root {
-    --background: 40 33% 97%;
-    --shell-background: 210 16% 93%;
+    --background: 0 0% 100%;
+    --shell-background: 0 0% 98.4%;
+    --chrome-background: 180 4% 95.5%;
     --foreground: 220 28% 14%;
     --card: 0 0% 100%;
     --card-foreground: 220 28% 14%;
@@ -31,31 +32,31 @@
     --popover-foreground: 220 28% 14%;
     --primary: 161 67% 37%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 32% 94%;
+    --secondary: 180 3% 93.5%;
     --secondary-foreground: 220 28% 14%;
-    --muted: 210 30% 95%;
+    --muted: 0 0% 97%;
     --muted-foreground: 220 12% 43%;
     --accent: 168 35% 92%;
     --accent-foreground: 220 28% 14%;
     --destructive: 354 74% 52%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 22% 86%;
-    --input: 214 22% 86%;
+    --border: 214 22% 89%;
+    --input: var(--border);
     --ring: 161 67% 37%;
     --radius: 8px;
     --radius-control: 5px;
     --app-system-font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     --app-ui-font: var(--app-system-font);
     --button-default-bg: 156 31% 92%;
-    --button-default-border: 156 18% 76%;
+    --button-default-border: 156 18% 81%;
     --button-default-hover: 156 28% 88%;
     --button-default-active: 156 26% 84%;
     --button-outline-bg: 210 8% 94%;
-    --button-outline-border: 215 10% 78%;
+    --button-outline-border: 215 10% 84%;
     --button-outline-hover: 210 8% 90%;
     --form-control-bg: 0 0% 100%;
-    --form-control-border: 214 22% 86%;
-    --form-control-hover: 210 32% 98%;
+    --form-control-border: var(--border);
+    --form-control-hover: 0 0% 98%;
     --body-gradient-a: rgba(58, 174, 131, 0.14);
     --body-gradient-b: rgba(88, 137, 244, 0.1);
   }
@@ -63,6 +64,7 @@
   :root[data-theme="dark"] {
     --background: 0 0% 10%;
     --shell-background: 0 0% 11.5%;
+    --chrome-background: 0 0% 9.5%;
     --foreground: 210 20% 94%;
     --card: 0 0% 14%;
     --card-foreground: 210 20% 94%;
@@ -393,7 +395,7 @@
   }
 
   :root[data-theme="light"] .workspace-sidebar-collapsed-surface {
-    background-color: hsl(var(--background) / 0.7);
+    background-color: hsl(var(--shell-background));
   }
 
   :root[data-theme="light"] .collapsed-sidebar-bottom-metric {
@@ -401,8 +403,8 @@
   }
 
   :root[data-theme="light"] .titlebar-dropdown-menu {
-    background-color: hsl(210 16% 93% / 0.92) !important;
-    border-color: hsl(214 18% 80%) !important;
+    background-color: hsl(var(--shell-background)) !important;
+    border-color: hsl(var(--border)) !important;
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
     box-shadow: 0 16px 32px rgba(16, 24, 40, 0.18);
@@ -413,12 +415,13 @@
   }
 
   :root[data-theme="light"] .center-column-surface {
+    background-color: hsl(var(--background)) !important;
     box-shadow: none !important;
   }
 
   :root[data-theme="light"] .workspace-shell-surface {
-    background-color: hsl(210 16% 93% / 0.92) !important;
-    border-color: hsl(214 18% 80%) !important;
+    background-color: hsl(var(--shell-background)) !important;
+    border-color: hsl(var(--border)) !important;
   }
 
   :root[data-theme="light"] .workspace-shell-surface .text-muted-foreground {
@@ -426,15 +429,15 @@
   }
 
   :root[data-theme="light"] .workspace-shell-control-border {
-    border-color: hsl(214 18% 80%) !important;
+    border-color: hsl(var(--border)) !important;
   }
 
   :root[data-theme="light"] .center-column-host {
-    border-color: hsl(214 18% 80%) !important;
+    border-color: hsl(var(--border)) !important;
   }
 
   :root[data-theme="light"] .model-usage-popover {
-    border-color: hsl(214 22% 70%) !important;
+    border-color: hsl(var(--border)) !important;
     color: hsl(215 30% 22%) !important;
   }
 
@@ -443,7 +446,7 @@
   }
 
   :root[data-theme="light"] .workspace-centers-content-surface {
-    background-color: hsl(210 20% 96%) !important;
+    background-color: hsl(var(--background)) !important;
   }
 
   :root[data-theme="dark"] .center-column-surface {
@@ -452,6 +455,10 @@
 
   :root[data-theme="dark"] .workspace-shell-surface {
     background-color: hsl(var(--shell-background));
+  }
+
+  :root[data-theme] .workspace-shell-surface.workspace-chrome-surface {
+    background-color: hsl(var(--chrome-background)) !important;
   }
 
   :root[data-theme="dark"] .chat-pane-message-bubble {

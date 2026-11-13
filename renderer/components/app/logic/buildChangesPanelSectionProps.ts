@@ -120,13 +120,7 @@ export const buildChangesPanelSectionProps = (
         d.setActiveWorkspaceContentTab("diff");
       },
       onDiscardChange: (pathName) => d.safely(() => noraWorkspaceClient.discardChange(pathName)),
-      onOpenFullDiff: () => {
-        d.setTaskEditorState(null);
-        d.setIsTaskBoardOpen(false);
-        d.setIsCenterFullDiffExpanded(true);
-        d.setIsCenterDiffExpanded(true);
-        d.setActiveWorkspaceContentTab("diff");
-      },
+      onOpenFullDiff: d.openWorkspaceFullDiff,
       onCommitChanges: (message, paths) => d.safely(() => noraWorkspaceClient.commitChanges(message, paths)),
       canGenerateAiCommitMessage: canGenerateSimpleText(d.appSettingsAi),
       onGenerateCommitMessage: async (paths) => {

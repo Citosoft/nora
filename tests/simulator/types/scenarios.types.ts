@@ -2,12 +2,13 @@ import type { JsonValue } from "@main/types/execution/rpc.types";
 import type { ApprovalDetails, ApprovalRequest, ExecutionFailure, QuestionRequest, RequestResponse, SubagentActivity, TimelineItem, ToolActivity, ToolDetails } from "@shared/types/conversation/contracts.types";
 import type { EmitProviderUpdate, ProviderExecution } from "@main/types/execution/provider.types";
 
-export type ScenarioId = "tour" | "tools" | "markdown" | "questions" | "approvals" | "approval-stack" | "suggestions" | "connector-sign-in" | "failure" | "usage-limit" | "recovery" | "expired" | "long-output" | "slow" | "subagents" | "skills";
+export type ScenarioId = "tour" | "tools" | "markdown" | "questions" | "approvals" | "approval-stack" | "background-requests" | "suggestions" | "connector-sign-in" | "failure" | "usage-limit" | "recovery" | "expired" | "long-output" | "slow" | "subagents" | "skills" | "provider-switch" | "output-budget";
 export interface SimulatorScenario { id: ScenarioId; label: string; description: string; }
 type SimulatorDisplayKind = "plan" | "subagent" | "changes" | "milestone" | "connector-sign-in";
 export type SimulatorDisplayItem = { [Kind in SimulatorDisplayKind]: Omit<Extract<TimelineItem, { kind: Kind }>, "id" | "runId" | "createdAt"> }[SimulatorDisplayKind];
 export interface SimulatorApprovalStep { kind: "approval"; title: string; details: ApprovalDetails; options: ApprovalRequest["options"]; }
 export type SimulatorStep =
+  | { kind: "output-budget" }
   | { kind: "text"; text: string }
   | { kind: "suggestion"; text: string }
   /** `details` adds what a real adapter would attach: the subagent that ran the tool, or the skill it used. */

@@ -1,3 +1,4 @@
+import type { NoraToolsStatus } from "@shared/types/nora-tools/noraTools.types";
 import type { McpRequest, McpResult, McpServer, McpServerLogo } from "@shared/types/provider/mcp.types";
 import type { NativeProvider } from "@shared/ipc/types/personalizationGateway.types";
 
@@ -18,7 +19,10 @@ export interface McpLoginControls {
   state(source: McpProviderSource, serverName: string): McpLoginState | undefined;
   start(source: McpProviderSource, serverName: string): void;
 }
-export interface McpServerTableProps { rows: readonly DiscoveredMcpServer[]; logins: McpLoginControls; }
+export interface McpServerTableProps { rows: readonly DiscoveredMcpServer[]; logins: McpLoginControls; builtIn: NoraToolsStatus; }
+export interface NoraMcpServerRowProps { status: NoraToolsStatus; }
+export interface McpToolsToggleProps { count: number; expanded: boolean; controls: string; serverName: string; onToggle(): void; }
+export interface McpToolDetailsRowProps { id: string; message?: string; tools: readonly { name: string; description?: string }[]; }
 export interface McpServerTableRowProps extends DiscoveredMcpServer { logins: McpLoginControls; }
 export interface McpLoginButtonProps extends DiscoveredMcpServer { logins: McpLoginControls; compact?: boolean; }
 export interface McpProviderNoticeProps { entry: RuntimeMcpEntry; }

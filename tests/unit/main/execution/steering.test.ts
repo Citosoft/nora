@@ -21,6 +21,24 @@ function setup(t: TestContext, steer: NonNullable<ExecutionProvider["steer"]> = 
   return { f, worker, command };
 }
 
+test("preferred steering is admitted atomically with submission and preserves retry identity", (t) => {
+  const f = fixture(t); f.create(); f.submit();
+  f.update({ kind: "started", eventId: "start", nativeConversationId: "thread", nativeTurnId: "turn" });
+  const command = { kind: "submit" as const, commandId: "follow-up", conversationId: "conversation", runId: "follow-up", instruction: "Focus here" };
+  const receipt = f.engine.execute(command, { steerFollowUp: true });
+  assert.equal(f.snapshot().runs[1].steering, "pending");
+  assert.equal(f.store.unfinishedEffects().filter((effect) => effect.action.kind === "steer").length, 1);
+  assert.deepEqual(f.engine.execute(command, { steerFollowUp: false }), receipt);
+  assert.equal(f.store.unfinishedEffects().filter((effect) => effect.action.kind === "steer").length, 1);
+});
+
+test("preferred steering falls back to the queue when there is no confirmed active turn", (t) => {
+  const f = fixture(t); f.create(); f.submit();
+  f.engine.execute({ kind: "submit", commandId: "follow-up", conversationId: "conversation", runId: "follow-up", instruction: "Next" },
+    { steerFollowUp: true });
+  assert.equal(f.snapshot().runs[1].state, "queued"); assert.equal(f.snapshot().runs[1].steering, undefined);
+});
+
 test("steering consumes a queued message only after acknowledgement and retries never deliver twice", async (t) => {
   let calls = 0;
   const { f, worker, command } = setup(t, async (_execution, instruction) => { calls++; assert.equal(instruction, "queued"); return { status: "accepted" }; });

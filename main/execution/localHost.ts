@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
-import { dirname, isAbsolute } from "node:path";
+import { dirname, isAbsolute, join } from "node:path";
+import { createThreadReferenceWriter } from "./thread-references/writeSnapshot";
 import type { LocalHostOptions } from "@main/types/execution/localHost.types";
 import { ExecutionHost } from "./host";
 import { createExecutionProvider } from "./providerFactory";
@@ -20,11 +21,14 @@ export async function openLocalHost(options: LocalHostOptions): Promise<Executio
   const providers = new ProviderRegistry();
   const now = (): string => new Date().toISOString();
   try {
-    for (const instance of options.instances) providers.register(createExecutionProvider(instance, now));
+    for (const instance of options.instances) providers.register(createExecutionProvider(instance, { now, preferences: options.threadPreferences,
+      toolOutputDirectory: join(dirname(options.databasePath), "tool-outputs"), runContext: options.runContext }));
     const workspaces = new LocalWorkspaceAuthority({ environmentId: options.environmentId, registrations: options.registrations,
       inspectCheckout: createCheckoutInspector(options.gitExecutable) });
     const host = new ExecutionHost({ store, providers, workspaces, reviewer: createGitReviewer(options.gitExecutable, workspaces),
-      roleForWorkspace: options.roleForWorkspace, generateThreadName: options.generateThreadName,
+      writeThreadReference: createThreadReferenceWriter(join(dirname(options.databasePath), "thread-references")),
+      roleForWorkspace: options.roleForWorkspace, botForWorkspace: options.botForWorkspace, generateThreadName: options.generateThreadName, idleCompactionMode: options.idleCompactionMode,
+      threadPreferences: options.threadPreferences,
       checkpoints: createGitCheckpoints(options.gitExecutable, workspaces, now,
         [options.databasePath, `${options.databasePath}-wal`, `${options.databasePath}-shm`]),
       owner: { id: randomUUID(), processId: process.pid },

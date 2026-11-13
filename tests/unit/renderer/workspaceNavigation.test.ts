@@ -30,18 +30,18 @@ test("saved pins override role changes, preserve explicit empty choices and keep
 
 test("malformed preferences recover to defaults", () => {
   for (const raw of [null, "{", "null", '{"toolPins": {"a": ["invalid"]}, "pinnedWorkspaceIds": []}']) {
-    assert.deepEqual(parseSidebarPreferences(raw), { pinnedWorkspaceIds: [], toolPins: {}, threadGrouping: "none", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} });
+    assert.deepEqual(parseSidebarPreferences(raw), { sidebarMode: "threads", pinnedWorkspaceIds: [], toolPins: {}, threadGrouping: "none", memberThreads: "visible", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} });
   }
 });
 
 test("thread grouping migrates existing preferences, persists choices and preserves pins on invalid grouping", () => {
   const legacy = { pinnedWorkspaceIds: ["a"], toolPins: { a: ["documents"] } };
-  assert.deepEqual(parseSidebarPreferences(JSON.stringify(legacy)), { ...legacy, threadGrouping: "none", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} });
+  assert.deepEqual(parseSidebarPreferences(JSON.stringify(legacy)), { ...legacy, sidebarMode: "threads", threadGrouping: "none", memberThreads: "visible", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} });
   for (const threadGrouping of ["none", "workspace", "activity", "source", "provider"]) {
-    const saved = { ...legacy, threadGrouping, threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} };
+    const saved = { ...legacy, sidebarMode: "bots", threadGrouping, memberThreads: "hidden", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} };
     assert.deepEqual(parseSidebarPreferences(JSON.stringify(saved)), saved);
   }
-  assert.deepEqual(parseSidebarPreferences(JSON.stringify({ ...legacy, threadGrouping: "invalid" })), { ...legacy, threadGrouping: "none", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} });
+  assert.deepEqual(parseSidebarPreferences(JSON.stringify({ ...legacy, threadGrouping: "invalid" })), { ...legacy, sidebarMode: "threads", threadGrouping: "none", memberThreads: "visible", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} });
 });
 
 test("tool navigation is scoped to workspace and capability", () => {

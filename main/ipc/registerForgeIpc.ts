@@ -26,6 +26,12 @@ export function registerForgeIpc({
   ipcMain.handle("app:get-forge-branch-pull-request-status", (_event, projectId: string, branch: string, options: ForgeRequestOptions) =>
     services.forge.getForgeBranchPullRequestStatus(projectId, branch, options)
   );
+  ipcMain.handle("app:get-forge-branch-changes", (_event, projectId: string, checkoutPath: string, options: ForgeRequestOptions) =>
+    services.forge.getForgeBranchChanges(projectId, checkoutPath, options)
+  );
+  ipcMain.handle("app:get-forge-branch-diff", (_event, projectId: string, checkoutPath: string) =>
+    services.forge.getForgeBranchDiff(projectId, checkoutPath)
+  );
   ipcMain.handle(
     "app:get-forge-work-item-detail",
     (_event, projectId: string, kind: ForgeWorkItemKind, number: number, options: ForgeRequestOptions) =>

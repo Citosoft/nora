@@ -94,8 +94,10 @@ import { OrchestratorLifecycleService } from "./orchestrator/orchestratorLifecyc
 import {
   getProjectTarget as getProjectTargetForSummary,
   getWorktreeTarget as getWorktreeTargetForSummary,
+  resolveProjectCheckoutTarget,
   resolveWorkspaceFileTarget as resolveWorkspaceFileTargetFromState
 } from "./orchestrator/workspacePathResolution";
+import { readGitBranchChanges, readGitBranchDiff } from "./orchestrator/gitBranchChanges";
 import {
   resolveTerminalShellFromList
 } from "./orchestrator/runtimeFacade";
@@ -658,7 +660,10 @@ export class Orchestrator implements OrchestratorFacade {
         }
       },
       pushWorkspaceChanges,
-      readCurrentBranch
+      readCurrentBranch,
+      resolveProjectCheckout: (project, checkoutPath) => resolveProjectCheckoutTarget(project, checkoutPath, execGit),
+      readBranchChanges: (target) => readGitBranchChanges(target, execGit),
+      readBranchDiff: (target) => readGitBranchDiff(target, execGit)
     });
     this.forgeMainService = new ForgeMainService(this.forgeHelpers);
     this.localTerminalHelpers = createLocalTerminalHelpers({

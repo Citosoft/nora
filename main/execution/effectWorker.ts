@@ -7,13 +7,15 @@ import type { WorkspaceReviewer } from "@main/types/execution/review.types";
 import type { TurnCheckpoints } from "@main/types/execution/checkpoints.types";
 import { safeCapture } from "./checkpoints/safeCapture";
 import { reviewExecution } from "./checkpoints/review";
+import type { EffectWorkerOptions } from "@main/types/execution/worker.types";
 
 export class EffectWorker {
   constructor(private readonly engine: ConversationEngine, private readonly providers: ProviderResolver,
     private readonly emit: EmitProviderUpdate = engine.accept.bind(engine),
     private readonly beforeStart?: (workspace: WorkspaceRef) => Promise<void>,
     private readonly reviewer: WorkspaceReviewer = async () => ({ status: "unavailable", reason: "unsupported" }),
-    private readonly checkpoints?: TurnCheckpoints) {}
+    private readonly checkpoints?: TurnCheckpoints,
+    private readonly options?: EffectWorkerOptions) {}
 
   /** Multiple calls may drain concurrently; claim is committed before any native side effect. */
   async runNext(allowed?: readonly ExecutionEffect["action"]["kind"][]): Promise<boolean> {
@@ -56,6 +58,15 @@ export class EffectWorker {
       }
     }
     const emit = this.emit;
+    if (effect.action.kind === "start" && run.compactionDeadline &&
+      (this.options?.idleCompactionMode() !== "before-expiry" || Date.parse(this.options.now()) >= Date.parse(run.compactionDeadline))) {
+      emit({ kind: "item", eventId: "automatic-compaction-skipped", conversationId: effect.conversationId, runId: run.id, attemptId: run.attemptId,
+        item: { kind: "milestone", id: JSON.stringify([run.id, "instruction"]), runId: run.id, createdAt: run.startedAt ?? run.createdAt,
+          text: "Skipped automatic compaction: cache timing or preferences changed" } });
+      emit({ kind: "finished", eventId: "automatic-compaction-skipped-result", conversationId: effect.conversationId, runId: run.id,
+        attemptId: run.attemptId, status: "completed", failure: null, usage: null });
+      this.engine.finishEffect(effect.id); return;
+    }
     if (effect.action.kind === "steer") {
       try {
         const provider = this.providers.resolve(snapshot.conversation.provider.kind, snapshot.conversation.provider.instanceId);
@@ -70,7 +81,9 @@ export class EffectWorker {
     }
     try {
       const provider = this.providers.resolve(snapshot.conversation.provider.kind, snapshot.conversation.provider.instanceId);
-      const execution = { snapshot, run };
+      const sourceRunId = snapshot.conversation.pendingHandoffRunId;
+      const handoff = run.handoff ?? (sourceRunId ? this.engine.execution(effect.conversationId, sourceRunId)?.runs.find((entry) => entry.id === sourceRunId)?.handoff : undefined);
+      const execution = { snapshot, run: handoff ? { ...run, handoff, instruction: `${handoff.context}\n\nCurrent instruction:\n${run.instruction}` } : run };
       switch (effect.action.kind) {
         case "start":
           if (run.action === "compact" && (!provider.capabilities.compaction || !snapshot.conversation.nativeConversationId)) {

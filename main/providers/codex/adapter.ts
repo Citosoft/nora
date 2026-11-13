@@ -1,3 +1,6 @@
+import { codexNoraToolsConfig } from "./noraTools";
+import { joinGuidance, optionalRunContext } from "@main/nora-tools/endpoint";
+import { conversationGuidance } from "@shared/conversations/guidance";
 import { createCodexExternalSessions } from "./externalSessions";
 import { CodexMcpDiscovery } from "./mcp";
 import { codexAccount } from "./account";
@@ -20,6 +23,7 @@ import { supportsCodexSteering, steerResultSchema } from "./steering";
 import { CodexRpcError } from "./rpcError";
 import type { SteeringResult } from "@main/types/execution/steering.types";
 import { questionGuidance } from "@main/execution/questionGuidance";
+import { codexOutputConfig } from "./outputBudget";
 import { initializedSchema, rolloutPathSchema, threadSchema, turnSchema } from "./rpcSchemas";
 import { normalizeCodexTool, codexToolState } from "./toolActivity";
 import { normalizeCodexSubagents } from "./subagentActivity";
@@ -27,7 +31,8 @@ import { nativeItemEnvelopeSchema, terminalInteractionSchema, toolProgressSchema
 import { normalizeCodexApproval } from "./approvals";
 import { codexUsageReset } from "./usageReset";
 import { codexContextReading } from "./contextUsage";
-import { readRolloutContext } from "./rolloutContext";
+import { readRolloutContext, readRolloutTotalUsage } from "./rolloutContext";
+import { codexTotalUsage, updateCodexTurnUsage, EMPTY_CODEX_USAGE } from "./tokenUsage";
 import { accountSchema, rateLimitsEventSchema, deltaSchema, itemEventSchema, questionSchema, readThreadSchema, reasoningEffortSchema, routingSchema, turnEventSchema, usageEventSchema } from "./nativeSchemas";
 
 /** Structured protocol boundary; capabilities are discovered from the configured runtime. */
@@ -155,7 +160,7 @@ export class CodexAdapter implements ExecutionProvider {
     let rejectReady: CodexActive["rejectReady"] = () => {};
     const ready = new Promise<string>((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
     void ready.catch(() => {});
-    const active: CodexActive = { ...execution, emit, items: new Map(), usage: null, nativeTurnId: null, ready, resolveReady, rejectReady };
+    const active: CodexActive = { ...execution, emit, items: new Map(), usage: null, usageBaseline: null, nativeTurnId: null, ready, resolveReady, rejectReady };
     this.byAttempt.set(run.attemptId, active);
     const fail = (eventId: string, failure: ExecutionFailure): void => {
       emit({ ...base, eventId, kind: "finished", status: "failed", usage: null, failure });
@@ -191,13 +196,18 @@ export class CodexAdapter implements ExecutionProvider {
       fail("readiness-unavailable", { code: "provider", message: "Codex runtime readiness is unavailable; check its configuration and sign-in before retrying", retryable: true });
       return;
     }
+    const outputConfig = await codexOutputConfig(rpc, snapshot.conversation.workspace.path, this.options.compactToolOutput?.() ?? false);
+    const runContext = await optionalRunContext(this.options.runContext, snapshot.conversation);
+    const noraTools = runContext.tools;
     const params = { model: snapshot.conversation.provider.model, cwd: snapshot.conversation.workspace.path, ...policy,
-      config: { "features.default_mode_request_user_input": true },
-      developerInstructions: questionGuidance("request_user_input", snapshot.conversation.role?.guidance) };
+      config: { "features.default_mode_request_user_input": true, ...outputConfig, ...(noraTools ? codexNoraToolsConfig(noraTools) : {}) },
+      developerInstructions: questionGuidance("request_user_input", joinGuidance(conversationGuidance(snapshot.conversation), runContext.guidance)) };
     const binding = snapshot.conversation.nativeConversationId
-      ? await rpc.request("thread/resume", { threadId: snapshot.conversation.nativeConversationId, ...params }, threadSchema)
+      ? await rpc.request("thread/resume", { threadId: snapshot.conversation.nativeConversationId, excludeTurns: true, ...params }, threadSchema)
       : await rpc.request("thread/start", params, threadSchema);
     emit({ ...base, eventId: "native-binding", kind: "bound", nativeConversationId: binding.thread.id });
+    active.usageBaseline = !snapshot.conversation.nativeConversationId ? { ...EMPTY_CODEX_USAGE }
+      : binding.thread.path ? await readRolloutTotalUsage(binding.thread.path).catch(() => null) : null;
     this.byThread.set(binding.thread.id, active);
     // Compaction runs as its own native turn; `turn/started` and `turn/completed` drive the run like any other.
     if (run.action === "compact") {
@@ -246,12 +256,14 @@ export class CodexAdapter implements ExecutionProvider {
       return;
     }
     if (method === "thread/tokenUsage/updated") {
-      const { tokenUsage } = usageEventSchema.parse(params);
-      active.usage = { inputTokens: tokenUsage.total.inputTokens, outputTokens: tokenUsage.total.outputTokens };
+      const { tokenUsage, turnId } = usageEventSchema.parse(params);
+      if (turnId && turnId !== active.nativeTurnId) return;
+      const measuredUsage = updateCodexTurnUsage(codexTotalUsage(tokenUsage.total), active.usageBaseline);
+      active.usageBaseline = measuredUsage.baseline; active.usage = measuredUsage.usage;
       const context = codexContextReading(tokenUsage);
       if (context) {
-        const reading = `${context.usedTokens}:${context.windowTokens}`;
-        active.emit({ ...base, kind: "context", eventId: `context:${active.nativeTurnId ?? "pending"}:${reading}`, context: { ...context, updatedAt: this.options.now() } });
+        const measured = { ...context, updatedAt: this.options.now() };
+        active.emit({ ...base, kind: "context", eventId: `context:${active.nativeTurnId ?? "pending"}:${JSON.stringify(measured)}`, context: measured });
       }
       return;
     }
@@ -429,7 +441,7 @@ export class CodexAdapter implements ExecutionProvider {
     // Without an exact persisted native turn ID, even a recent turn is not proof of ownership.
     if (!turn) throw new Error("Cannot confirm the submitted native turn");
     if (turn.status === "inProgress") throw new Error("Turn is active in another owner; a read does not reconnect its live requests");
-    const active: CodexActive = { ...execution, emit, nativeTurnId: turn.id, items: new Map(), usage: null,
+    const active: CodexActive = { ...execution, emit, nativeTurnId: turn.id, items: new Map(), usage: null, usageBaseline: null,
       ready: Promise.resolve(turn.id), resolveReady() {}, rejectReady() {} };
     for (const item of turn.items) this.onRecoveredItem(active, threadId, turn.id, item);
     this.finish(active, turn.id, turn.status, turn.error?.codexErrorInfo);

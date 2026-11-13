@@ -6,9 +6,10 @@ import type {
   SaveToolConfigPayload
 } from "@shared/appTypes";
 import type { SavePastedImagePayload } from "@shared/types/agentInput.types";
-import { ipcMain } from "electron";
+import { app, ipcMain } from "electron";
 import type { AppState } from "@shared/appTypes";
 import type { MainServices } from "@main/services/mainServices";
+import { readComposerAttachmentThumbnail, saveComposerAttachment } from "@main/helpers/composerAttachments";
 import { savePastedImage } from "@main/pastedImages";
 
 interface RegisterToolingIpcDeps {
@@ -79,5 +80,7 @@ export function registerToolingIpc({
     }
   });
   ipcMain.handle("app:switch-tool-account", (_event, toolId: string) => services.tooling.switchToolAccount(toolId));
+  ipcMain.handle("app:read-composer-attachment-thumbnail", (_event, filePath: unknown) => readComposerAttachmentThumbnail(filePath, app.getPath("userData")));
+  ipcMain.handle("app:save-composer-attachment", (_event, payload: unknown) => saveComposerAttachment(payload, app.getPath("userData")));
   ipcMain.handle("app:save-pasted-image", (_event, payload: SavePastedImagePayload) => savePastedImage(payload));
 }

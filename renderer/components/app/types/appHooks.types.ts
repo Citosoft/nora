@@ -293,8 +293,8 @@ export type UseWorkspaceContentControllerResult = {
   handleDeleteTask: (projectId: string, pathName: string) => Promise<void>;
   handleDeleteSpec: (projectId: string, pathName: string) => Promise<void>;
   handleDeleteNote: (projectId: string, pathName: string) => Promise<void>;
-  handleSpawnTaskAgent: (toolId: string) => Promise<void>;
-  handleSpawnAgentsForTasks: (toolId: string, tasks: TaskCenterTaskReference[]) => Promise<void>;
-  generateWorkspaceTasksWithAgent: (projectId: string, toolId: string, brief: string | null, specPath: string | null) => Promise<void>;
+  handleStartTaskThread: () => Promise<void>;
+  handleStartTaskThreads: (tasks: TaskCenterTaskReference[]) => Promise<void>;
+  generateWorkspaceTasks: (projectId: string, brief: string | null, specPath: string | null) => Promise<void>;
   handleCreateAgentFromDialog: (payload: CreateAgentPayload, taskPath: string | null) => Promise<void>;
 };

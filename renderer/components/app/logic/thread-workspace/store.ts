@@ -1,7 +1,10 @@
+import { COMPOSER_ATTACHMENT_MAX_COUNT } from "@shared/composerAttachments";
 import { setThreadSettlement } from "./settlement";
+import { createThreadReferences } from "./references";
 import { importExternalSession, pinExternalSession } from "./externalSessions";
 import { unreadCompletions } from "./unread";
 import { effectiveRole } from "@shared/personalization/profiles";
+import { findEffectiveBot } from "@shared/bots/catalog";
 import { threadLayoutSchema } from "./schema";
 import { emptyThreadLayout } from "./persistence";
 import { closeThreadDocument, createThreadDraft, focusThreadDocument, openThreadDocument } from "./changes";
@@ -73,6 +76,10 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
   const store: ThreadWorkspaceStore = {
     client: deps.client,
     async setSettled(target, settled) { await setThreadSettlement(internal, target, settled); await refresh(); },
+    async renameThread(conversationId, title) {
+      await deps.client.execute({ kind: "rename", commandId: deps.nextId(), conversationId, title });
+      await refresh();
+    },
     resumeExternal: (workspaceId, session) => importExternalSession(deps, store, workspaceId, session),
     pinExternal: (workspaceId, session) => pinExternalSession(deps, store, workspaceId, session),
     snapshot: () => state,
@@ -97,7 +104,8 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
     openDraft(input) {
       try {
         const existing = !input.text && !input.provider && !input.source ? state.layout.documents.find((entry) => entry.workspaceId === input.workspaceId
-          && entry.target.kind === "draft" && !entry.text && !entry.pending) : undefined;
+          && entry.target.kind === "draft" && !entry.text && !entry.attachments?.length && !entry.threadReferences?.length && !entry.pending
+          && (entry.botId ?? null) === (input.botId ?? null) && !entry.group && !input.group) : undefined;
         const document = existing ?? createThreadDraft(state.boot, input, `draft:${deps.nextId()}`, deps.now());
         save(focusThreadDocument({ ...state.layout, documents: existing ? state.layout.documents : [...state.layout.documents, document] }, document));
         publish({ ...state, focusRevision: state.focusRevision + 1 });
@@ -134,17 +142,33 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
       if (document.pending || runtime(id).busy) { setRuntime(id, { error: "Confirm delivery before discarding this instruction." }); return; }
       save({ ...closeThreadDocument(state.layout, id), documents: state.layout.documents.filter((entry) => entry.id !== id) });
     },
+    addAttachments(id, attachments) {
+      const document = state.layout.documents.find((entry) => entry.id === id);
+      if (!document || document.pending || runtime(id).busy) return;
+      const combined = [...(document.attachments ?? []), ...attachments];
+      if (combined.length > COMPOSER_ATTACHMENT_MAX_COUNT) {
+        setRuntime(id, { error: `Attach up to ${COMPOSER_ATTACHMENT_MAX_COUNT} files per instruction.` }); return;
+      }
+      save({ ...state.layout, documents: state.layout.documents.map((entry) => entry.id === id
+        ? { ...entry, attachments: combined, updatedAt: deps.now() } : entry) });
+    },
+    removeAttachment(id, attachmentId) {
+      const document = state.layout.documents.find((entry) => entry.id === id);
+      if (!document || document.pending || runtime(id).busy) return;
+      save({ ...state.layout, documents: state.layout.documents.map((entry) => entry.id === id
+        ? { ...entry, attachments: entry.attachments?.filter((file) => file.id !== attachmentId), updatedAt: deps.now() } : entry) });
+    },
     setText(id, text) {
       const document = state.layout.documents.find((entry) => entry.id === id);
       if (!document || document.pending) return;
       if (text.length > 2_000_000) { setRuntime(id, { error: "This draft exceeds the text limit." }); return; }
       save({ ...state.layout, documents: state.layout.documents.map((entry) => entry.id === id ? { ...entry, text, updatedAt: deps.now() } : entry) });
     },
-    setBinding(id, binding) {
+    setBinding(id, binding, origin) {
       const document = state.layout.documents.find((entry) => entry.id === id);
       if (!document) return;
       setRuntime(id, { readyBinding: binding });
-      if (binding && !document.pending && !runtime(id).busy && JSON.stringify(binding) !== JSON.stringify(document.provider)) {
+      if (binding && origin === "chosen" && !document.pending && !runtime(id).busy && JSON.stringify(binding) !== JSON.stringify(document.provider)) {
         save({ ...state.layout, documents: state.layout.documents.map((entry) => entry.id === id ? { ...entry, provider: binding } : entry) });
       }
     },
@@ -152,10 +176,24 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
       const document = state.layout.documents.find((entry) => entry.id === id);
       const workspace = state.boot.workspaces.find((entry) => entry.id === workspaceId);
       if (!workspace || !document || document.target.kind !== "draft" || document.pending || runtime(id).busy) return;
+      if (document.group) { setRuntime(id, { error: "A group's members belong to its workspace. Start a new group to use another workspace." }); return; }
       const role = effectiveRole(state.boot.personalization, workspaceId);
       if (!role) { setRuntime(id, { error: "Choose a workspace role before sending." }); return; }
       setRuntime(id, { readyBinding: null });
-      save({ ...state.layout, focusedWorkspaceId: workspaceId, documents: state.layout.documents.map((entry) => entry.id === id ? { ...entry, workspaceId, role } : entry) });
+      // A bot the new workspace hides or lacks falls back to Nora rather than failing on send.
+      const keepsBot = !!document.botId && !!findEffectiveBot(state.boot.personalization.bots, workspaceId, state.boot.sharedBots, document.botId);
+      save({ ...state.layout, focusedWorkspaceId: workspaceId, documents: state.layout.documents.map((entry) => entry.id === id
+        ? { ...entry, workspaceId, role, botId: keepsBot ? entry.botId : null, ...(document.botId && !keepsBot ? { provider: null } : {}) } : entry) });
+    },
+    selectBot(id, botId) {
+      const document = state.layout.documents.find((entry) => entry.id === id);
+      if (!document || document.target.kind !== "draft" || document.pending || runtime(id).busy || document.group || (document.botId ?? null) === botId) return;
+      if (botId && !findEffectiveBot(state.boot.personalization.bots, document.workspaceId, state.boot.sharedBots, botId)) {
+        setRuntime(id, { error: "This bot is not available in this workspace." }); return;
+      }
+      // Clearing the saved model lets the picker start from the bot's model, or the thread default for Nora.
+      setRuntime(id, { readyBinding: null, error: null });
+      save({ ...state.layout, documents: state.layout.documents.map((entry) => entry.id === id ? { ...entry, botId, provider: null, updatedAt: deps.now() } : entry) });
     },
     setPinned(conversationId, pinned) {
       const pins = state.layout.pinnedThreadIds;
@@ -163,6 +201,7 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
       save({ ...state.layout, pinnedThreadIds: pinned ? [...pins, conversationId] : pins.filter((id) => id !== conversationId) });
     },
     togglePin(conversationId) { store.setPinned(conversationId, !state.layout.pinnedThreadIds.includes(conversationId)); },
+    ...createThreadReferences(internal),
     ...submission
   };
   return store;

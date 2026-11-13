@@ -1,4 +1,6 @@
 import { effectiveRole } from "@shared/personalization/profiles";
+import { findEffectiveBot } from "@shared/bots/catalog";
+import { GROUP_BINDING } from "@shared/bots/groups";
 import type { NativeBoot } from "@shared/ipc/types/personalizationGateway.types";
 import type { ThreadDocument, ThreadLayout, OpenThreadDraft } from "@/components/app/types/thread-workspace/state.types";
 import type { ConversationSummary } from "@shared/types/conversation/queries.types";
@@ -13,7 +15,11 @@ export function createThreadDraft(boot: NativeBoot, input: OpenThreadDraft, id: 
   if (!workspace || workspace.workspace.environmentId !== boot.environmentId) throw new Error("Choose a workspace on the owning execution host.");
   const role = effectiveRole(boot.personalization, workspace.id);
   if (!role) throw new Error("Choose your role before starting a thread.");
-  return { id, ...(input.source ? { source: input.source } : {}), workspaceId: workspace.id, target: { kind: "draft" }, role, text: input.text ?? "", provider: input.provider ?? null, pending: null, updatedAt: now };
+  const available = (botId: string): boolean => !!findEffectiveBot(boot.personalization.bots, workspace.id, boot.sharedBots, botId);
+  if (input.botId && !available(input.botId)) throw new Error("This bot is not available in this workspace.");
+  if (input.group && !input.group.botIds.every(available)) throw new Error("A member of this group is not available in this workspace.");
+  return { id, ...(input.source ? { source: input.source } : {}), workspaceId: workspace.id, target: { kind: "draft" }, role, ...(input.botId ? { botId: input.botId } : {}), ...(input.group ? { group: input.group } : {}),
+    text: input.text ?? "", provider: input.group ? GROUP_BINDING : input.provider ?? null, pending: null, updatedAt: now };
 }
 
 export function openThreadDocument(summary: ConversationSummary, id: string): ThreadDocument {

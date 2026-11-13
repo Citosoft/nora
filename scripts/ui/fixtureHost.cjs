@@ -19,6 +19,8 @@ async function createFixtureHost(entry, options = {}) {
   try {
     await fs.mkdir(join(directory, 'product-icons'));
     for (const icon of ['openai.com.png', 'anthropic.com.png']) await fs.copyFile(join(root, 'renderer/product-icons', icon), join(directory, 'product-icons', icon));
+    // The app mark loads ./icon.svg relative to the page, as it does from dist/renderer in the app.
+    await fs.copyFile(join(root, 'renderer/icon.svg'), join(directory, 'icon.svg'));
     const buildOptions = { entryPoints: [resolve(root, entry)], bundle: true, platform: 'browser', format: 'iife',
       outfile: join(directory, 'bundle.js'), tsconfig: join(root, 'tsconfig.json'), jsx: 'automatic' };
     const stylesInput = options.stylesInput ?? join(root, 'renderer/styles.css');

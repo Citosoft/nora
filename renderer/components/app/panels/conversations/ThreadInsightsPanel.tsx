@@ -1,5 +1,5 @@
-import { ChevronDown, ChevronUp, ExternalLink, FileCode2, GitBranch, GitPullRequest, LoaderCircle, RefreshCcw } from "lucide-react";
-import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
+import { ChevronDown, ChevronUp, FileCode2, GitBranch } from "lucide-react";
+import { formatChangeTotals } from "@/components/app/logic/thread-workspace/insights";
 import type { ThreadInsightsPanelProps } from "@/components/app/types/threadInsights.types";
 import { Button } from "@/components/ui/button";
 import { useId } from "react";
@@ -8,16 +8,18 @@ import { DiffCounts } from "./DiffCounts";
 import { ThreadConnectors } from "./ThreadConnectors";
 import { ThreadSubagents } from "./ThreadSubagents";
 import { ThreadSkills } from "./ThreadSkills";
+import { ThreadBranchSection } from "./ThreadBranchSection";
 
-export function ThreadInsightsPanel({ header, providerLabel, connectors, skills, changes, subagents, request, expanded, busy, canSettle, hasOlderHistory, onToggle, onRefresh, onLoadHistory, onSettleChange }: ThreadInsightsPanelProps) {
+export function ThreadInsightsPanel({ header, providerLabel, connectors, skills, changes, subagents, branch, expanded, busy, canSettle, hasOlderHistory, onToggle, onLoadHistory, onSettleChange }: ThreadInsightsPanelProps) {
   const detailsId = useId();
   const conversation = header.conversation;
-  const changeRequest = request.status === "ready" ? request.request : null;
   const active = header.activeRuns[0];
-  // Live agent work outranks settled change counts while the panel is collapsed.
+  const branchChanges = branch.changes.status === "ready" ? branch.changes.value : null;
+  // Live agent work outranks change counts while the panel is collapsed; the checkout's branch diff outranks turn evidence.
   const compactSummary = subagents.running ? `${subagents.running} ${subagents.running === 1 ? "subagent" : "subagents"} running`
-    : changes.status === "ready" && changes.scope === "turn"
-    ? `${changes.partial ? "Known " : ""}+${changes.additions} / −${changes.deletions} · ${changes.files} ${changes.files === 1 ? "file" : "files"}`
+    : branchChanges ? formatChangeTotals(branchChanges, branchChanges.partial)
+    : changes.status === "ready" && changes.scope === "turn" && changes.additions !== null && changes.deletions !== null
+    ? formatChangeTotals({ files: changes.files, additions: changes.additions, deletions: changes.deletions }, changes.partial)
     : "Thread details";
   return <aside className="thread-insights mx-4 mt-3 w-72 max-w-[calc(100%-2rem)] shrink-0 self-end rounded-lg border border-border/70 bg-card/95 shadow-lg backdrop-blur" aria-label="Thread details">
     <button type="button" className="flex w-full items-center gap-2 rounded-lg px-3.5 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={onToggle} aria-expanded={expanded} aria-controls={detailsId}>
@@ -41,14 +43,7 @@ export function ThreadInsightsPanel({ header, providerLabel, connectors, skills,
         </> : <p className="text-muted-foreground">{changes.status === "pending" ? "Changes appear after a turn is reviewed." : "Review evidence is unavailable."}</p>}
         {hasOlderHistory && <Button variant="ghost" size="sm" className="h-7 px-0 text-[11px]" onClick={onLoadHistory}>Include earlier messages</Button>}
       </div>
-      <div className="space-y-2 border-t border-border/50 pt-3">
-        <div className="flex items-center gap-1.5 font-medium"><GitPullRequest className="size-3.5" aria-hidden="true" />Branch PR / MR<Button variant="ghost" size="icon" className="ml-auto size-6" aria-label="Refresh thread change request" onClick={onRefresh} disabled={request.status === "loading" || request.status === "unavailable"}><RefreshCcw className="size-3" aria-hidden="true" /></Button></div>
-        {request.status === "loading" ? <p className="flex items-center gap-1.5 text-muted-foreground"><LoaderCircle className="size-3 motion-safe:animate-spin" aria-hidden="true" />Checking branch…</p>
-          : request.status === "failed" ? <p role="status" className="text-muted-foreground">{request.message}</p>
-          : request.status === "unavailable" ? <p className="text-muted-foreground">Available for connected repository threads.</p>
-          : changeRequest?.pullRequestNumber ? <Button variant="ghost" className="h-8 w-full justify-start px-0 text-xs" disabled={!changeRequest.webUrl} onClick={() => { if (changeRequest.webUrl) void noraSystemClient.openExternalUrl(changeRequest.webUrl); }}>#{changeRequest.pullRequestNumber}<span className="ml-auto text-muted-foreground">{changeRequest.label}</span><ExternalLink className="size-3" aria-hidden="true" /></Button>
-          : <p className="text-muted-foreground">No pull or merge request found.</p>}
-      </div>
+      <ThreadBranchSection branch={branch} />
       {connectors && <ThreadConnectors connectors={connectors} />}
       {skills && <ThreadSkills skills={skills} />}
       <div className="flex items-center justify-between gap-2 border-t border-border/50 pt-3 text-[10px] text-muted-foreground"><span className="truncate">{providerLabel} · {conversation.provider.permissionPolicy}</span><Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" disabled={busy || !canSettle} onClick={onSettleChange}>{conversation.archivedAt ? "Reopen" : "Settle"}</Button></div>

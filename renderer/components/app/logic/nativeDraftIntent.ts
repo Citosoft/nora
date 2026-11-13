@@ -1,5 +1,6 @@
 import type { NativeDraftInput, NativeDraftIntent } from "@/components/app/types/nativeConversation.types";
 import type { ConversationClient } from "@/components/app/types/conversationClient.types";
+import { sameProviderBinding } from "@shared/conversations/providerBinding";
 
 export function createDraftIntent(input: NativeDraftInput, nextId: () => string): NativeDraftIntent {
   const conversationId = input.conversationId ?? nextId();
@@ -7,10 +8,14 @@ export function createDraftIntent(input: NativeDraftInput, nextId: () => string)
   if (!input.conversationId) {
     if (!input.role) throw new Error("Choose your role before starting a thread.");
     create = { kind: "create", commandId: nextId(), conversationId, title: input.text.trim().slice(0, 100),
-      ...(input.source ? { source: input.source } : {}), workspace: input.workspace.workspace, provider: input.provider, parentId: null, role: input.role };
+      ...(input.source ? { source: input.source } : {}), workspace: input.workspace.workspace, provider: input.provider, parentId: null,
+      // Bot threads carry the bot's guidance and groups their members' instead of the user's role.
+      ...(input.group ? { group: input.group } : input.botId ? { botId: input.botId } : { role: input.role }) };
   }
   return { create,
-    submit: { kind: "submit", commandId: nextId(), conversationId, runId: nextId(), instruction: input.text.trim() } };
+    submit: { kind: "submit", commandId: nextId(), conversationId, runId: nextId(), instruction: input.text.trim(),
+      ...(input.conversationId && input.currentProvider && !sameProviderBinding(input.currentProvider, input.provider)
+        ? { providerChange: { expected: input.currentProvider, next: input.provider } } : {}) } };
 }
 
 /** Save identities before IPC. Retrying a lost reply repeats the same durable command, never a new turn. */

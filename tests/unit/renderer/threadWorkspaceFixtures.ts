@@ -1,3 +1,4 @@
+import { noraToolsStatus } from "@shared/nora-tools/catalog";
 import type { NativeBoot } from "@shared/ipc/types/personalizationGateway.types";
 import type { Conversation, ConversationCommand } from "@shared/types/conversation/contracts.types";
 import type { ConversationSummary } from "@shared/types/conversation/queries.types";
@@ -7,7 +8,7 @@ import { pickerCatalog, pickerWorkspace, codexProvider } from "./modelPickerFixt
 import { snapshotRole } from "@shared/personalization/profiles";
 
 export const threadBoot: NativeBoot = { environmentId: "local", cursor: 0,
-  personalization: { defaultRole: { id: "general" }, workspaceRoles: {} }, providers: [codexProvider],
+  personalization: { defaultRole: { id: "general" }, workspaceRoles: {} }, providers: [codexProvider], sharedBots: [], noraTools: noraToolsStatus("idle"),
   workspaces: [{ id: "personal", name: "Personal", kind: "personal", workspace: pickerWorkspace },
     { id: "project", name: "Project", kind: "folder", shellProjectId: "shell", workspace: { ...pickerWorkspace, projectId: "project", checkoutId: "git", path: "/project", branch: "main", versionControl: "git" } }] };
 export const threadBinding = { kind: "codex" as const, instanceId: "account", model: "first", reasoning: null, permissionPolicy: "read" };
@@ -30,6 +31,10 @@ export function threadWorkspaceFixture() {
     write(value) { if (unavailable) throw new Error("Storage full"); saved = structuredClone(value); }
   };
   const client: ConversationClient = {
+    async reference(conversationId) {
+      return { id: `reference-${conversationId}`, conversationId, environmentId: "local", title: "Referenced chat",
+        indexPath: `/references/${conversationId}/index.md`, capturedAt: "2026-11-09T11:00:00.000Z", cursor: 1 };
+    },
     async externalSessions() { return { status: "available", sessions: [] }; },
     async mcp() { return { kind: "unavailable", message: "No MCP in this fixture" }; },
     async skills() { return { kind: "unavailable", message: "No skills in this fixture" }; },

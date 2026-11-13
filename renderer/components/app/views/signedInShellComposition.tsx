@@ -20,7 +20,9 @@ import {
 } from "@/components/app/logic/buildSignedInRegionPortsFromAssembly";
 import type { SignedInShellCompositionProps } from "@/components/app/types/signedInShellComposition.types";
 import { useMemo, type ReactElement } from "react";
-import { createBranchRequestReader } from "@/components/app/logic/createBranchRequestReader";
+import { createThreadForgeClient } from "@/components/app/logic/createThreadForgeClient";
+import { CenterDiffProvider } from "@/components/app/context/centerDiffContext";
+import { useCenterDiffController } from "@/components/app/hooks/useCenterDiffController";
 
 /**
  * Signed-in shell: settings + region port providers (memoized assembly slices), layout + frame.
@@ -33,7 +35,7 @@ export const SignedInShellComposition = ({
 }: SignedInShellCompositionProps): ReactElement => {
   const { signedInAssemblySources, modalDialogsBuild, settingsRuntimeBuild, chromeShellCompose, shellLayout } = signedIn;
   const a = signedInAssemblySources;
-  const readBranchRequest = useMemo(() => createBranchRequestReader({
+  const threadForge = useMemo(() => createThreadForgeClient({
     githubToken: a.workspaceSidebarRest.githubToken,
     gitlabToken: a.workspaceSidebarRest.gitlabToken,
     gitlabHost: a.workspaceSidebarRest.gitlabHost
@@ -43,9 +45,19 @@ export const SignedInShellComposition = ({
     () => buildSessionCenterPortsFromAssembly(a),
     [a.core, a.workspaceCatalog, a.workspaceContent, a.chromeShell, a.sessionSurface, a.centerTabs, a.forge, a.aiModels]
   );
+  const centerDiff = useCenterDiffController({
+    fullDiffOpen: a.sessionSurface.isCenterFullDiffExpanded,
+    setTaskEditorState: a.workspaceContent.setTaskEditorState,
+    setIsTaskBoardOpen: a.workspaceContent.setIsTaskBoardOpen,
+    setIsCenterFullDiffExpanded: a.sessionSurface.setIsCenterFullDiffExpanded,
+    setIsCenterDiffExpanded: a.sessionSurface.setIsCenterDiffExpanded,
+    setActiveWorkspaceContentTab: a.sessionSurface.setActiveWorkspaceContentTab
+  });
+  const { openWorkspaceDiff } = centerDiff;
   const changesColumnPorts = useMemo(
-    () => buildChangesColumnPortsFromAssembly(a),
+    () => buildChangesColumnPortsFromAssembly(a, { openWorkspaceDiff }),
     [
+      openWorkspaceDiff,
       a.core,
       a.forge,
       a.forgeWorkItemMutators,
@@ -60,8 +72,8 @@ export const SignedInShellComposition = ({
   );
   const modalClusterPorts = useMemo(() => buildModalClusterPorts(modalDialogsBuild), [modalDialogsBuild]);
   const workspaceSidebarPorts = useMemo(
-    () => buildWorkspaceSidebarPortsFromAssembly(a, chromeShellCompose, readBranchRequest),
-    [a.core, a.workspaceCatalog, a.workspaceContent, a.workspaceSidebarRest, a.chromeShell, a.sessionSurface, chromeShellCompose, readBranchRequest]
+    () => buildWorkspaceSidebarPortsFromAssembly(a, chromeShellCompose, threadForge),
+    [a.core, a.workspaceCatalog, a.workspaceContent, a.workspaceSidebarRest, a.chromeShell, a.sessionSurface, chromeShellCompose, threadForge]
   );
   const chromeShellPorts = useMemo(
     () => buildChromeShellPorts(chromeShellCompose, a.chromeShell),
@@ -71,6 +83,7 @@ export const SignedInShellComposition = ({
   return (
     <SettingsRuntimeBuildProvider value={settingsRuntimeBuild}>
       <DiffAnnotationProvider>
+      <CenterDiffProvider value={centerDiff}>
         <SessionCenterPortsProvider value={sessionCenterPorts}>
           <ChangesColumnPortsProvider value={changesColumnPorts}>
             <ModalClusterPortsProvider value={modalClusterPorts}>
@@ -86,6 +99,7 @@ export const SignedInShellComposition = ({
             </ModalClusterPortsProvider>
           </ChangesColumnPortsProvider>
         </SessionCenterPortsProvider>
+      </CenterDiffProvider>
       </DiffAnnotationProvider>
     </SettingsRuntimeBuildProvider>
   );

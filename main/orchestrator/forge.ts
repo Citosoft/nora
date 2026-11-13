@@ -1,5 +1,7 @@
 import type {
+  ChangeEntry,
   ForgeAddCommentPayload,
+  ForgeBranchChanges,
   ForgeBranchPullRequestStatus,
   ForgeCreatePullRequestPayload,
   ForgeRepoSummary,
@@ -258,12 +260,38 @@ export function createForgeHelpers(deps: ForgeHelperDeps): ForgeHelpers {
       throw new Error(NO_REPO_ERROR);
     }
 
-    const sourcePath = state.project?.id === projectId
-      ? deps.getActiveChangesRoot(state)
-      : project.rootPath;
-    await deps.pushWorkspaceChanges({ path: sourcePath, location: project.location });
-    const sourceBranch = payload.sourceBranch.trim() || await deps.readCurrentBranch({ path: sourcePath, location: project.location });
+    // Thread checkouts name their own source; other callers push from the active checkout.
+    const source = payload.sourcePath
+      ? await deps.resolveProjectCheckout(project, payload.sourcePath)
+      : { path: state.project?.id === projectId ? deps.getActiveChangesRoot(state) : project.rootPath, location: project.location };
+    await deps.pushWorkspaceChanges(source);
+    const sourceBranch = payload.sourceBranch.trim() || await deps.readCurrentBranch(source);
     return deps.createForgePullRequestForRepo(repo, sourceBranch, payload, options);
+  }
+
+  async function getForgeBranchChanges(
+    projectId: string,
+    checkoutPath: string,
+    options: ForgeRequestOptions
+  ): Promise<ForgeBranchChanges | null> {
+    const project = await deps.resolveProjectSummaryById(projectId);
+    if (!isGitProject(project)) {
+      return null;
+    }
+    const target = await deps.resolveProjectCheckout(project, checkoutPath);
+    const [changes, repo] = await Promise.all([
+      deps.readBranchChanges(target),
+      readProjectForgeRepo(project, options).catch(() => null)
+    ]);
+    return changes ? { ...changes, provider: repo?.provider ?? null } : null;
+  }
+
+  async function getForgeBranchDiff(projectId: string, checkoutPath: string): Promise<ChangeEntry[] | null> {
+    const project = await deps.resolveProjectSummaryById(projectId);
+    if (!isGitProject(project)) {
+      return null;
+    }
+    return deps.readBranchDiff(await deps.resolveProjectCheckout(project, checkoutPath));
   }
 
   async function performForgeWorkItemAction(
@@ -285,6 +313,8 @@ export function createForgeHelpers(deps: ForgeHelperDeps): ForgeHelpers {
   return {
     getForgeOverview,
     getForgeBranchPullRequestStatus,
+    getForgeBranchChanges,
+    getForgeBranchDiff,
     getForgeWorkItemDetail,
     getForgeWorkflowRunDetail,
     addForgeWorkItemComment,

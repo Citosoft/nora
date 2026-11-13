@@ -11,6 +11,9 @@ export function createIntegrationBridge(): IntegrationBridge {
     getForgeOverview: (projectId, options) => invokeIpc("app:get-forge-overview", projectId, options),
     getForgeBranchPullRequestStatus: (projectId, branch, options) =>
       invokeIpc("app:get-forge-branch-pull-request-status", projectId, branch, options),
+    getForgeBranchChanges: (projectId, checkoutPath, options) =>
+      invokeIpc("app:get-forge-branch-changes", projectId, checkoutPath, options),
+    getForgeBranchDiff: (projectId, checkoutPath) => invokeIpc("app:get-forge-branch-diff", projectId, checkoutPath),
     getForgeWorkItemDetail: (projectId, kind, number, options) =>
       invokeIpc("app:get-forge-work-item-detail", projectId, kind, number, options),
     getForgeWorkflowRunDetail: (projectId, runId, options) =>

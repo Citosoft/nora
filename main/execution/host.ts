@@ -16,9 +16,18 @@ import { ExecutionCommandError } from "./errors";
 import { conversationCommandSchema } from "@shared/conversations/contracts";
 import { ConversationNaming } from "./conversationNaming";
 import { isActiveRun } from "./projection";
+import { IdleCompaction } from "./idleCompaction";
+import { DEFAULT_THREAD_PREFERENCES } from "@shared/personalization/threads";
+import { IdleSettlement } from "./idleSettlement";
+import { prepareProviderTransition } from "./provider-transition/prepare";
+import { snapshotBot } from "@shared/bots/snapshot";
+import type { BotSnapshot, GroupDescriptor, GroupRequest } from "@shared/types/bots/bots.types";
+import { GROUP_HOP_LIMIT_DEFAULT } from "@shared/bots/contracts";
 
 /** The environment owner, independent of Electron windows, views and SSH connections. */
 export class ExecutionHost {
+  private readonly idleCompaction: IdleCompaction;
+  private readonly idleSettlement: IdleSettlement;
   private readonly ownership: ExecutionOwnership;
   private readonly engine: ConversationEngine;
   private readonly worker: EffectWorker;
@@ -43,11 +52,22 @@ export class ExecutionHost {
     this.engine = new ConversationEngine({ store: deps.store, now: deps.now, nextId: deps.nextId,
       assertOwnership: () => this.ownership.assertCurrent() });
     this.naming = deps.generateThreadName ? new ConversationNaming({ generate: deps.generateThreadName,
-      apply: (id, expected, title) => { if (this.lifecycle === "running") this.engine.applyGeneratedTitle(id, expected, title); } }) : null;
+      apply: (id, expected, title) => { if (this.lifecycle === "running" && (deps.threadPreferences?.().automaticTitles ?? true)) this.engine.applyGeneratedTitle(id, expected, title); } }) : null;
     this.worker = new EffectWorker(this.engine, deps.providers, (update) => {
       if (this.lifecycle !== "running" && this.lifecycle !== "stopping") return;
       try { this.engine.accept(update); } catch { this.fault(); }
-    }, deps.workspaces.verify.bind(deps.workspaces), deps.reviewer, deps.checkpoints);
+    }, deps.workspaces.verify.bind(deps.workspaces), deps.reviewer, deps.checkpoints,
+    { now: deps.now, idleCompactionMode: () => deps.idleCompactionMode?.() ?? "suggest" });
+    const dispatchMaintenance = (command: ConversationCommand): void => {
+      if (this.lifecycle !== "running") throw new ExecutionCommandError("conflict", "Execution host is stopping");
+      this.engine.execute(command); this.schedule();
+    };
+    this.idleCompaction = new IdleCompaction({ store: deps.store, providers: deps.providers, now: deps.now,
+      mode: () => deps.idleCompactionMode?.() ?? "suggest", onError: () => this.fault(),
+      dispatch: dispatchMaintenance });
+    this.idleSettlement = new IdleSettlement({ store: deps.store, now: deps.now,
+      days: () => deps.threadPreferences?.().settleAfterDays ?? null, onError: () => this.fault(),
+      dispatch: dispatchMaintenance });
   }
 
   start(): void {
@@ -59,6 +79,8 @@ export class ExecutionHost {
       this.lifecycle = "running";
       this.unsubscribe = this.engine.subscribe({ after: this.deps.store.cursor(), onEvent: () => this.schedule(), onError: () => this.fault() });
       this.schedule();
+      this.idleCompaction.start();
+      this.idleSettlement.start();
     } catch (error) { this.ownership.release(); throw error; }
   }
 
@@ -77,24 +99,53 @@ export class ExecutionHost {
       }
     }
     const workspace = command.kind === "create" ? await this.deps.workspaces.prepare(command.workspace) : undefined;
+    const providerTransition = command.kind === "submit" ? await prepareProviderTransition(command, this.deps) : undefined;
     if (this.lifecycle !== "running") throw new ExecutionCommandError("conflict", "Execution host is not accepting instructions");
     if (command.kind === "create") this.deps.providers.resolve(command.provider.kind, command.provider.instanceId);
-    const role = command.kind === "create" ? command.role ?? this.deps.roleForWorkspace?.(command.workspace.projectId) : undefined;
+    const bot = command.kind === "create" && command.botId ? this.resolveBot(command.workspace.projectId, command.botId) : undefined;
+    const group = command.kind === "create" && command.group ? this.resolveGroup(command.workspace.projectId, command.group) : undefined;
+    const role = command.kind === "create" && !bot && !group ? command.role ?? this.deps.roleForWorkspace?.(command.workspace.projectId) : undefined;
     const previousRuns = command.kind === "submit" && this.naming
       ? this.deps.store.history({ conversationId: command.conversationId, scope: "runs", limit: 1 }) : null;
     const firstInstruction = previousRuns?.scope === "runs" && previousRuns.runs.length === 0;
     const externalTranscript = command.kind === "create" && command.externalSessionId && workspace
       ? await readExternalTranscript(this.deps.providers.resolve(command.provider.kind, command.provider.instanceId), workspace, command.externalSessionId) : undefined;
     if (this.lifecycle !== "running") throw new ExecutionCommandError("conflict", "Execution host is not accepting instructions");
-    const receipt = this.engine.execute(command, workspace, role, externalTranscript);
-    if (firstInstruction && command.kind === "submit") {
+    const preferences = this.deps.threadPreferences?.() ?? DEFAULT_THREAD_PREFERENCES;
+    const owner = command.kind === "submit" ? this.deps.store.header(command.conversationId)?.conversation : null;
+    const provider = owner && preferences.followUp === "steer" && !(command.kind === "submit" && command.action)
+      ? this.deps.providers.resolve(owner.provider.kind, owner.provider.instanceId) : null;
+    const steerFollowUp = preferences.followUp === "steer" && !!provider?.capabilities.steering && !!provider.steer;
+    const receipt = this.engine.execute(command, { workspace, role, bot, group, externalTranscript, steerFollowUp, providerTransition });
+    if (firstInstruction && command.kind === "submit" && preferences.automaticTitles && !command.action) {
       const conversation = this.deps.store.header(command.conversationId)?.conversation;
       if (conversation) this.naming?.start(command.conversationId, conversation.title, command.instruction);
     }
     this.schedule();
     return receipt;
   }
+  private resolveBot(workspaceId: string, botId: string): BotSnapshot {
+    const bot = this.deps.botForWorkspace?.(workspaceId, botId);
+    if (!bot) throw new ExecutionCommandError("invalid", "This bot is no longer available in this workspace. Choose another bot or Nora.");
+    return snapshotBot(bot);
+  }
+  private resolveGroup(workspaceId: string, request: GroupRequest): GroupDescriptor {
+    const members = request.botIds.map((botId) => {
+      const bot = this.deps.botForWorkspace?.(workspaceId, botId);
+      if (!bot) throw new ExecutionCommandError("invalid", "A member of this group is no longer available in this workspace. Choose the members again.");
+      return { botId: bot.id, name: bot.name, role: bot.role, avatar: bot.avatar };
+    });
+    if (request.writer && !request.botIds.includes(request.writer)) throw new ExecutionCommandError("invalid", "The group's writer must be one of its members.");
+    if (request.lead && !request.botIds.includes(request.lead)) throw new ExecutionCommandError("invalid", "The group's lead must be one of its members.");
+    return { members, writer: request.writer, lead: request.lead, hopLimit: GROUP_HOP_LIMIT_DEFAULT };
+  }
   header(conversationId: string): ConversationHeader | null { return this.deps.store.header(conversationId); }
+  async reference(conversationId: string) {
+    if (this.lifecycle !== "running" || !this.deps.writeThreadReference) throw new ExecutionCommandError("unavailable", "Chat references are unavailable on this execution host");
+    const snapshot = this.deps.store.snapshot(conversationId);
+    if (!snapshot || snapshot.conversation.workspace.environmentId !== this.environmentId) throw new ExecutionCommandError("missing", "This chat is unavailable on its owning execution host");
+    return this.deps.writeThreadReference(snapshot, this.deps.now());
+  }
   get environmentId(): string { return this.deps.store.environmentId; }
   eventCursor(): number { return this.deps.store.cursor(); }
   conversationHistory(query: HistoryQuery): ConversationHistoryPage { return this.deps.store.history(query); }
@@ -206,6 +257,8 @@ export class ExecutionHost {
   private fault(): void {
     if (this.lifecycle === "faulted" || this.lifecycle === "stopped") return;
     this.lifecycle = "faulted";
+    this.idleCompaction.close();
+    this.idleSettlement.close();
     this.naming?.close();
     try { this.deps.onFailure({ code: "host", message: "Nora could not maintain durable execution state; execution has been stopped for recovery", retryable: false }); }
     catch { /* An observer cannot prevent provider shutdown. */ }
@@ -217,6 +270,8 @@ export class ExecutionHost {
     return this.shutdownPromise;
   }
   private async stop(): Promise<HostShutdownResult> {
+    this.idleCompaction.close();
+    this.idleSettlement.close();
     if (this.lifecycle === "idle") { this.lifecycle = "stopped"; this.deps.store.close(); return { unconfirmedRuns: [] }; }
     this.lifecycle = "stopping";
     this.naming?.close();

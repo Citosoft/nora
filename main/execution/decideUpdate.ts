@@ -36,7 +36,7 @@ export function decideUpdate(snapshot: ConversationState, update: ProviderUpdate
       if (snapshot.conversation.nativeConversationId && snapshot.conversation.nativeConversationId !== update.nativeConversationId) {
         throw new ExecutionCommandError("conflict", "Native conversation identity changed during execution");
       }
-      add({ kind: "conversation", conversation: { ...snapshot.conversation, nativeConversationId: update.nativeConversationId, updatedAt: context.now } });
+      add({ kind: "conversation", conversation: { ...snapshot.conversation, nativeConversationId: update.nativeConversationId, pendingHandoffRunId: undefined, updatedAt: context.now } });
       add({ kind: "run", run: { ...run, nativeTurnId: update.nativeTurnId,
         state: run.state === "stopping" ? "stopping" : "running", failure: null, updatedAt: context.now } });
       break;

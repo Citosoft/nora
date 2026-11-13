@@ -9,6 +9,18 @@ import { PersonalizationService } from "@main/personalization/service";
 import { discoverNativeProviders } from "@main/helpers/nativeProviderDiscovery";
 import { buildProcessEnv } from "@main/processEnv";
 import { effectiveRole } from "@shared/personalization/profiles";
+import { findEffectiveBot } from "@shared/bots/catalog";
+import { createSharedBotLibrary } from "@main/bots/sharedBotLibrary";
+import { createNoraToolServer } from "@main/nora-tools/server";
+import { createNoraToolOperations } from "@main/nora-tools/operations/index";
+import { createRunContextResolver } from "@main/nora-tools/runContext";
+import { GroupCoordinator } from "@main/bots/groups/coordinator";
+import { createGroupRouter } from "@main/bots/groups/router";
+import { openBotMemoryStore } from "@main/bots/memory/store";
+import { randomUUID } from "node:crypto";
+import type { BotConversationHost } from "@main/types/bots/conversations.types";
+import type { ExecutionHost } from "@main/execution/host";
+import { threadPreferences } from "@shared/personalization/threads";
 import { restoreWorkspaceSelection } from "@main/helpers/restoreWorkspaceSelection";
 import type { NativeRuntimeOptions, NativeRuntime } from "@main/types/native-runtime/runtime.types";
 import type { WorkspaceCatalog } from "@main/types/personalization/services.types";
@@ -46,21 +58,53 @@ export async function openNativeRuntime(options: NativeRuntimeOptions): Promise<
   const now = (): string => new Date().toISOString();
   const instances = discovered.map((entry) => entry.instance);
   const providers = discovered.map((entry) => entry.provider);
-  const host = await openLocalHost({ environmentId, databasePath: join(options.stateDirectory, "execution.sqlite"), gitExecutable: "git", instances,
+  const readThreadPreferences = () => threadPreferences(options.readSettings().personalization);
+  const bots = createSharedBotLibrary();
+  // The tool server and the services it calls reference each other; tools only run after startup finishes.
+  let host: ExecutionHost | undefined;
+  let personalization: PersonalizationService | undefined;
+  const started = <T,>(value: T | undefined): T => { if (!value) throw new Error("Nora is still starting. Try again in a moment."); return value; };
+  const lazyHost: BotConversationHost = {
+    execute: (command) => started(host).execute(command), header: (id) => host?.header(id) ?? null, summaries: () => started(host).summaries(),
+    conversationHistory: (query) => started(host).conversationHistory(query), subscribe: (subscription) => started(host).subscribe(subscription),
+    eventCursor: () => started(host).eventCursor(), catalog: (kind, instanceId, workspace) => started(host).catalog(kind, instanceId, workspace)
+  };
+  const memory = openBotMemoryStore(join(options.stateDirectory, "bot-memory.sqlite"), { now: () => new Date().toISOString(), nextId: randomUUID });
+  const noraTools = createNoraToolServer(createNoraToolOperations({
+    host: lazyHost, nextId: randomUUID, memory,
+    readSettings: options.readSettings, updateSettings: options.updateSettings,
+    windowSettings: options.windowSettings, settingsSync: options.settingsSync,
+    onSettingsChanged: (settings) => { started(personalization).publish(); options.onSettingsChanged(settings); },
+    boot: () => started(personalization).state(),
+    saveBot: async (bot, previousScope) => { await started(personalization).request({ kind: "save-bot", bot, previousScope }); },
+    ...(options.tasks ? { tasks: options.tasks } : {})
+  }), () => personalization?.publish());
+  const runContext = createRunContextResolver(noraTools, memory);
+  await bots.refresh(catalog.list());
+  host = await openLocalHost({ runContext, environmentId, databasePath: join(options.stateDirectory, "execution.sqlite"), gitExecutable: "git", instances,
+    idleCompactionMode: () => options.readSettings().personalization.idleCompaction ?? "suggest",
+    threadPreferences: readThreadPreferences,
     generateThreadName: (instruction, signal) => generateThreadName(options.readSettings().ai, instruction, signal),
     registrations: () => catalog.registrations(), roleForWorkspace: (id) => effectiveRole(options.readSettings().personalization, id),
+    botForWorkspace: (workspaceId, botId) => findEffectiveBot(options.readSettings().personalization.bots, workspaceId, bots.list(), botId),
     onFailure: (failure) => console.error(`Native execution: ${failure.message}`) });
-  const personalization = new PersonalizationService({ read: options.readSettings,
-    update: (change) => options.saveSettings(change(options.readSettings())) }, catalog, { environmentId, providers, cursor: () => host.eventCursor(),
+  host.adoptProvider(new GroupCoordinator({ host: lazyHost, nextId: randomUUID, now,
+    bot: (workspaceId, botId) => findEffectiveBot(options.readSettings().personalization.bots, workspaceId, bots.list(), botId),
+    route: createGroupRouter(() => options.readSettings().ai) }));
+  personalization = new PersonalizationService({ read: options.readSettings,
+    update: options.updateSettings }, catalog, { environmentId, providers, cursor: () => host.eventCursor(),
     refreshProviders: async () => {
       const found = await discoverNativeProviders(buildProcessEnv(process.env));
-      for (const entry of found) host.adoptProvider(createExecutionProvider(entry.instance, now));
+      for (const entry of found) started(host).adoptProvider(createExecutionProvider(entry.instance, { now, preferences: readThreadPreferences,
+        toolOutputDirectory: join(options.stateDirectory, "tool-outputs"), runContext }));
       return found.map((entry) => entry.provider);
     },
-    chooseFolder: options.chooseFolder, openFolder: options.openFolder, activateWorkspace,
+    chooseFolder: options.chooseFolder, openFolder: options.openFolder, activateWorkspace, bots, noraToolsRunning: noraTools.running,
     resolveProject: (id) => {
       const project = options.projects().find((entry) => entry.id === id && entry.location?.kind !== "ssh");
       return project ? { path: project.rootPath, name: project.name } : null;
     } });
-  return { host, personalization, catalog };
+  const openedHost = host;
+  return { host: openedHost, personalization, catalog, memory,
+    async shutdown() { await openedHost.shutdown(); await noraTools.close(); memory.close(); } };
 }

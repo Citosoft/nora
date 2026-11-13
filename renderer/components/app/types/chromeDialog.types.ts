@@ -200,12 +200,10 @@ export type WorkspaceOption = {
 export type GenerateTasksDialogProps = {
   open: boolean;
   workspaces: WorkspaceOption[];
-  tools: AgentCatalogEntry[];
   defaultWorkspaceId: string | null;
-  defaultToolId: string;
   defaultSpecPath?: string | null;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (payload: { projectId: string; toolId: string; brief: string | null; specPath: string | null }) => Promise<void>;
+  onSubmit: (payload: { projectId: string; brief: string | null; specPath: string | null }) => Promise<void>;
 };
 
 export type LinuxAptSetupDialogProps = {

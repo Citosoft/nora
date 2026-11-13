@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
+import { join, dirname } from "node:path";
+import { readFile } from "node:fs/promises";
+import { createThreadReferenceWriter } from "@main/execution/thread-references/writeSnapshot";
 import { ExecutionHost } from "@main/execution/host";
 import { ProviderRegistry } from "@main/execution/providerRegistry";
 import { conversationChannels } from "@shared/conversations/gateway";
@@ -8,6 +11,30 @@ import { ConversationAccessError } from "@shared/conversations/errors";
 import { fixture, workspaceAuthority } from "./fixture";
 import { FixtureSubscriber, GatewayFixture } from "./gatewayFixture";
 import { ProviderDouble } from "./providerDouble";
+
+test("native chat references route through the owning host without starting the provider or trusting caller paths", async (t) => {
+  const f = fixture(t); f.create();
+  const providers = new ProviderRegistry(); const provider = new ProviderDouble(); providers.register(provider);
+  const host = new ExecutionHost({ store: f.store, providers, workspaces: workspaceAuthority,
+    owner: { id: randomUUID(), processId: process.pid }, isProcessAlive: () => true, now: () => "2026-11-12T10:00:00.000Z", nextId: randomUUID,
+    writeThreadReference: createThreadReferenceWriter(join(dirname(f.path), "references")), onFailure: () => assert.fail("host failed") });
+  host.start(); const ipc = new GatewayFixture({ resolveHost: (id) => id === "local" ? host : null });
+  const sender = new FixtureSubscriber(1); const bridge = ipc.bridge(sender);
+  const request = { schemaVersion: 1 as const, environmentId: "local", kind: "thread-reference" as const, conversationId: "conversation" };
+  try {
+    const value = await bridge.read(request);
+    assert.ok(value.kind === "thread-reference");
+    assert.equal(value.reference.environmentId, "local"); assert.equal(value.reference.conversationId, "conversation");
+    assert.ok((await readFile(value.reference.indexPath, "utf8")).includes("no shareable messages"));
+    assert.equal(provider.starts, 0);
+    await assert.rejects(bridge.read({ ...request, environmentId: "other" }), /owning execution host/);
+    await assert.rejects(bridge.read({ ...request, conversationId: "missing" }), /unavailable/);
+    const injected = await ipc.invoke(sender, conversationChannels.read, { ...request, indexPath: "/untrusted" });
+    assert.ok(!injected.ok && injected.error.code === "invalid");
+    sender.allowed = false;
+    await assert.rejects(bridge.read(request), /unavailable for this window/);
+  } finally { ipc.dispose(); await host.shutdown(); }
+});
 
 test("IPC validates schema and sender, isolates environments and sanitizes unexpected host failures", async (t) => {
   const f = fixture(t); f.create();

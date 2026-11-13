@@ -95,6 +95,7 @@ module.exports = {
     ignoreModules: ["node-pty"]
   },
   packagerConfig: {
+    protocols: [{ name: "Nora account", schemes: ["nora-account"] }],
     asar: {
       unpack: "**/node_modules/node-pty/prebuilds/**"
     },
@@ -144,6 +145,7 @@ module.exports = {
     new MakerDeb({
       options: {
         bin: "Nora",
+        mimeType: ["x-scheme-handler/nora-account"],
         icon: iconPngPath,
         categories: ["Development", "IDE"]
       }

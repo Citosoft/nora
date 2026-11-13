@@ -10,7 +10,6 @@ import { createThreadWorkspaceStore } from "@/components/app/logic/thread-worksp
 import { ThreadWorkspaceComposition } from "@/components/app/views/ThreadWorkspaceComposition";
 import { ThreadWorkspaceCenter } from "@/components/app/panels/threads/ThreadWorkspaceCenter";
 import { SessionTabPane, SessionTabStack } from "@/components/app/panels/SessionTabStack";
-import { WorkspaceToolHeader } from "@/components/app/panels/workspace-tools/WorkspaceToolHeader";
 import type { ProjectSummary } from "@shared/appTypes";
 import { threadWorkspaceFixture } from "../unit/renderer/threadWorkspaceFixtures";
 
@@ -37,6 +36,7 @@ function NavigationControls() {
   return <main className="flex h-screen flex-col bg-background text-foreground">
     <nav className="flex gap-4 p-4">
       <button id="open-tool" onClick={() => navigation.openTool(current?.project?.id ?? "", "documents")}>Documents</button>
+      {navigation.route && <button aria-label="Close documents" onClick={navigation.returnToThread}>Return to thread</button>}
       <button id="thread" onClick={() => store.focusDocument(documentId)}>Thread</button>
       <button id="workspace" onClick={() => setUiState((state) => ({ ...state, snapshot: { ...snapshot, project: current?.project?.id === "shell" ? { ...project, id: "other" } : project } }))}>Switch workspace</button>
       <button id="pin" onClick={() => navigation.setPreferences((value) => ({ ...value, pinnedWorkspaceIds: [...value.pinnedWorkspaceIds, "shell"] }))}>Pin</button>
@@ -46,7 +46,7 @@ function NavigationControls() {
     <output id="navigation-state">{JSON.stringify({ route: navigation.route, preferences: navigation.preferences, error: navigation.preferenceError, writes })}</output>
     <SessionTabStack>
       <SessionTabPane visible={!navigation.route}><ThreadWorkspaceCenter /></SessionTabPane>
-      {navigation.route && <SessionTabPane visible className="bg-background"><WorkspaceToolHeader title="Documents" workspaceName="Project" /><p>Workspace tool content</p></SessionTabPane>}
+      {navigation.route && <SessionTabPane visible className="bg-background"><p>Workspace tool content</p></SessionTabPane>}
     </SessionTabStack>
   </main>;
 }

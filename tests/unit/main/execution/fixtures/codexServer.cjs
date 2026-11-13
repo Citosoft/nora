@@ -1,4 +1,5 @@
 const { createInterface } = require("node:readline");
+const fs = require("node:fs");
 const mode = process.env.NORA_CODEX_FIXTURE_MODE || "approval";
 const send = (value) => process.stdout.write(`${JSON.stringify(value)}\n`);
 const notify = (method, params) => send({ method, params });
@@ -17,12 +18,16 @@ createInterface({ input: process.stdin }).on("line", (line) => {
   else if (message.method === "account/read" && mode === "readiness-error") send({ id: message.id, error: { code: -32603, message: "secret configuration details" } });
   else if (message.method === "account/read") send({ id: message.id, result: { requiresOpenaiAuth: true,
     account: mode === "signed-out" ? null : { type: "chatgpt" } } });
+  else if (message.method === "config/read") send({ id: message.id, result: { config: { tool_output_token_limit: Number(process.env.NORA_CODEX_OUTPUT_LIMIT || 10000) } } });
   else if (message.method === "model/list") send({ id: message.id, result: {
     data: [{ model: message.params.cursor ? "second-model" : "first-model", displayName: "Catalog model", description: "No entitlement claim",
       hidden: false, defaultReasoningEffort: "medium", supportedReasoningEfforts: [{ reasoningEffort: "medium" }, { reasoningEffort: "ultra" }] }],
     nextCursor: message.params.cursor ? null : "page-two"
   } });
   else if (message.method === "thread/start" || message.method === "thread/resume") {
+    if (process.env.NORA_CODEX_EXPECT_OUTPUT_LIMIT && message.params.config?.tool_output_token_limit !== Number(process.env.NORA_CODEX_EXPECT_OUTPUT_LIMIT)) {
+      send({ id: message.id, error: { code: -32602, message: "Output budget mismatch" } }); return;
+    }
     if (message.params.config?.["features.default_mode_request_user_input"] !== true || !message.params.developerInstructions?.includes("request_user_input")) {
       send({ id: message.id, error: { code: -32602, message: "Interactive questions must be enabled and explained on start and resume" } }); return;
     }
@@ -30,7 +35,7 @@ createInterface({ input: process.stdin }).on("line", (line) => {
       send({ id: message.id, error: { code: -32602, message: "Conversation guidance mismatch" } }); return;
     }
     if (message.method === "thread/resume") resumeCount++;
-    send({ id: message.id, result: { thread: { id: "thread" } } });
+    send({ id: message.id, result: { thread: { id: "thread", path: process.env.NORA_CODEX_FIXTURE_ROLLOUT_PATH ?? null } } });
   } else if (message.method === "turn/start") {
     if (message.params.effort && message.params.effort !== "ultra" && message.params.effort !== "medium") {
       send({ id: message.id, error: { code: -32602, message: "Invalid fixture effort" } }); return;
@@ -39,6 +44,30 @@ createInterface({ input: process.stdin }).on("line", (line) => {
     notify("turn/started", { threadId: "thread", turn: { id: "turn", status: "inProgress" } });
     if (mode === "crash") { process.exit(1); return; }
     if (mode === "hold") return;
+    if (mode === "turn-usage") {
+      const path = process.env.NORA_CODEX_FIXTURE_ROLLOUT_PATH;
+      const lines = fs.readFileSync(path, "utf8").trim().split("\n").filter(Boolean);
+      const before = lines.length ? JSON.parse(lines.at(-1)).payload.info.total_token_usage : { input_tokens: 0, output_tokens: 0, cached_input_tokens: 0, cache_write_input_tokens: 0 };
+      notify("thread/tokenUsage/updated", { threadId: "thread", turnId: "stale-turn", tokenUsage: {
+        total: { inputTokens: 999999, outputTokens: 999999 }, modelContextWindow: 200000 } });
+      for (const [input, output, cached, written] of [[100, 10, 60, 20], [300, 30, 160, 70]]) {
+        const total = { input_tokens: before.input_tokens + input, output_tokens: before.output_tokens + output,
+          cached_input_tokens: before.cached_input_tokens + cached, cache_write_input_tokens: before.cache_write_input_tokens + written };
+        const usage = { inputTokens: total.input_tokens, outputTokens: total.output_tokens, cachedInputTokens: total.cached_input_tokens, cacheWriteInputTokens: total.cache_write_input_tokens };
+        const last = { inputTokens: input === 100 ? 100 : 200, outputTokens: input === 100 ? 10 : 20, cachedInputTokens: input === 100 ? 60 : 100, cacheWriteInputTokens: input === 100 ? 20 : 50 };
+        fs.appendFileSync(path, JSON.stringify({ type: "event_msg", payload: { type: "token_count", info: { total_token_usage: total,
+          last_token_usage: { input_tokens: last.inputTokens, output_tokens: last.outputTokens, cached_input_tokens: last.cachedInputTokens, cache_write_input_tokens: last.cacheWriteInputTokens }, model_context_window: 200000 } } }) + "\n");
+        notify("thread/tokenUsage/updated", { threadId: "thread", turnId: "turn", tokenUsage: { total: usage, last, modelContextWindow: 200000 } });
+      }
+      finish(); return;
+    }
+    if (mode === "context-cache") {
+      for (const cachedInputTokens of [500, 800]) {
+        const usage = { inputTokens: 1000, outputTokens: 50, cachedInputTokens, cacheWriteInputTokens: 1000 - cachedInputTokens };
+        notify("thread/tokenUsage/updated", { threadId: "thread", tokenUsage: { total: usage, last: usage, modelContextWindow: 200000 } });
+      }
+      finish(); return;
+    }
     if (mode === "tools") {
       const item = (method, value) => notify(method, { ...route, item: value });
       item("item/started", { id: "mcp", type: "mcpToolCall", server: "docs", tool: "search", arguments: { query: "test", token: "private" }, status: "inProgress" });

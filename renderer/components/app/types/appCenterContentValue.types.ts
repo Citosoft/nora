@@ -48,7 +48,7 @@ export type AppCenterContentValueArgs = {
   taskEditorState: TaskEditorState | null;
   setTaskEditorState: Dispatch<SetStateAction<TaskEditorState | null>>;
   saveTaskEditor: () => void | Promise<void>;
-  handleSpawnTaskAgent: (toolId: string) => Promise<void>;
+  handleStartTaskThread: () => Promise<void>;
   duplicateTaskToNew: () => Promise<void>;
   workspaceTasks: UseWorkspaceResourcesResult["workspaceTasks"];
   workspaceSpecs: WorkspaceSpecsState;
@@ -61,10 +61,10 @@ export type AppCenterContentValueArgs = {
   focusWorkspaceWithRecovery: (projectId: string) => Promise<AppState | null>;
   openTaskEditor: (projectId: string, pathName: string) => Promise<void>;
   createWorkspaceTask: UseWorkspaceContentControllerResult["createWorkspaceTask"];
-  generateWorkspaceTasksWithAgent: (projectId: string, toolId: string, brief: string | null, specPath: string | null) => Promise<void>;
+  generateWorkspaceTasks: (projectId: string, brief: string | null, specPath: string | null) => Promise<void>;
   handleToggleTaskComplete: UseWorkspaceContentControllerResult["handleToggleTaskComplete"];
   handleDeleteTask: UseWorkspaceContentControllerResult["handleDeleteTask"];
-  handleSpawnAgentsForTasks: (toolId: string, tasks: TaskCenterTaskReference[]) => Promise<void>;
+  handleStartTaskThreads: (tasks: TaskCenterTaskReference[]) => Promise<void>;
   generateTasksRequest: { projectId: string; specPath: string; nonce: number } | null;
   setGenerateTasksRequest: Dispatch<SetStateAction<{ projectId: string; specPath: string; nonce: number } | null>>;
   isTaskBoardOpen: boolean;

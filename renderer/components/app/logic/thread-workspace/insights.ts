@@ -31,3 +31,8 @@ export function summarizeThreadChanges(items: readonly TimelineItem[], hasOlderH
   };
   return { status: "unavailable" };
 }
+
+/** One-line `+a / −d · n files` summary shared by the collapsed panel header. */
+export function formatChangeTotals(totals: { files: number; additions: number; deletions: number }, partial: boolean): string {
+  return `${partial ? "Known " : ""}+${totals.additions} / −${totals.deletions} · ${totals.files} ${totals.files === 1 ? "file" : "files"}`;
+}

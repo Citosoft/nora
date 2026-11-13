@@ -10,11 +10,12 @@ import { NativeFileChanges } from "./NativeFileChanges";
 import { NativeTurnTime } from "./NativeTurnTime";
 import { NativeReasoning } from "./NativeReasoning";
 import { ConnectorSignInCard } from "./ConnectorSignInCard";
+import { NativeAskBotCard } from "./NativeAskBotCard";
 import type { NativeTimelineEntry } from "@/components/app/types/nativeActivity.types";
 
-function renderItem(item: Extract<NativeTimelineEntry, { kind: "item" }>["item"], { onLinkClick, connectors = null }: Pick<NativeTimelineProps, "onLinkClick" | "connectors">) {
+function renderItem(item: Extract<NativeTimelineEntry, { kind: "item" }>["item"], { onLinkClick, onOpenAuthorThread, connectors = null }: Pick<NativeTimelineProps, "onLinkClick" | "onOpenAuthorThread" | "connectors">) {
   switch (item.kind) {
-    case "message": return <NativeMessage key={item.id} item={item} onLinkClick={onLinkClick} />;
+    case "message": return <NativeMessage key={item.id} item={item} onLinkClick={onLinkClick} onOpenAuthorThread={onOpenAuthorThread} />;
     case "milestone": return <p key={item.id} className="text-sm text-muted-foreground">{item.text}</p>;
     case "plan": return <ol key={item.id} className="space-y-2 text-sm">{item.steps.map((step, index) => <li key={index}>{step.state} · {step.text}</li>)}</ol>;
     case "changes": return <NativeFileChanges key={item.id} item={item} />;
@@ -25,11 +26,12 @@ function renderItem(item: Extract<NativeTimelineEntry, { kind: "item" }>["item"]
   }
 }
 
-export function NativeTimeline({ items, runs = [], onLinkClick, connectors }: NativeTimelineProps) {
+export function NativeTimeline({ items, runs = [], onLinkClick, onOpenAuthorThread, connectors, resolveBot, onOpenThread }: NativeTimelineProps) {
   return <div className="space-y-5">{buildNativeTimeline(items, runs).map(({ key, entry, timing }) => <Fragment key={key}>
       {entry.kind === "tools" ? <NativeToolHistory items={entry.items} />
         : entry.kind === "reasoning" ? <NativeReasoning items={entry.items} />
-        : renderItem(entry.item, { onLinkClick, connectors })}
+        : entry.kind === "ask" ? <NativeAskBotCard call={entry.call} bot={resolveBot?.(entry.call.bot) ?? null} onOpenThread={onOpenThread} />
+        : renderItem(entry.item, { onLinkClick, onOpenAuthorThread, connectors })}
       {timing && <NativeTurnTime {...timing} />}
     </Fragment>)}</div>;
 }

@@ -1,13 +1,11 @@
 import { useAppMainCenterContent } from "@/components/app/context/appMainCenterContentContext";
 import { MarkdownRenderer } from "@/components/app/shared/MarkdownRenderer";
-import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Editor from "@monaco-editor/react";
-import { isAgentToolAvailable } from "@shared/agentToolState";
 import { CheckCircle2, CopyPlus, Eye, FileText, LoaderCircle, PencilLine, RotateCcw, Save, Sparkles, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 export function TaskPanel() {
   const { taskPanelProps } = useAppMainCenterContent();
@@ -29,16 +27,14 @@ export function TaskPanel() {
     isSaving,
     errorMessage,
     resolvedTheme,
-    tools,
     onChange,
     onSave,
     onRevert,
     onClose,
-    onSpawnAgent,
+    onStartThread,
     onDuplicateToNew
   } = taskPanelProps;
   const [mode, setMode] = useState<"preview" | "edit">("preview");
-  const availableTools = useMemo(() => tools.filter((tool) => isAgentToolAvailable(tool)), [tools]);
   const isDirty = content !== savedContent;
   const isBusy = isCreating || isLoading || isSaving;
 
@@ -153,32 +149,10 @@ export function TaskPanel() {
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-2">
-            <div className="mr-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              <Sparkles className="size-3.5" />
-              Spawn new worktree agent
-            </div>
-            {availableTools.map((tool) => (
-              <Button
-                key={tool.id}
-                variant="outline"
-                size="icon"
-                className="size-9"
-                tooltip={`Spawn a new ${tool.label} agent on a new worktree for this task`}
-                aria-label={`Spawn a new ${tool.label} agent on a new worktree for this task`}
-                onClick={() => onSpawnAgent(tool.id)}
-                disabled={isBusy}
-              >
-                <AgentToolIcon
-                  toolId={tool.id}
-                  label={tool.label}
-                  className="size-6 rounded-[4px] bg-transparent"
-                  imageClassName="size-5 rounded-[4px]"
-                />
-              </Button>
-            ))}
-            {!availableTools.length ? (
-              <div className="text-sm text-muted-foreground">No detected agent CLIs are available.</div>
-            ) : null}
+            <Button variant="outline" size="sm" onClick={onStartThread} disabled={isBusy}>
+              <Sparkles className="size-3.5" />Start thread
+            </Button>
+            <span className="text-xs text-muted-foreground">Work on this task in a new thread.</span>
           </div>
         )}
       </div>

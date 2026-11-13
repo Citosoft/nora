@@ -2,8 +2,31 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { ConversationNaming } from "@main/execution/conversationNaming";
 import { fixture } from "./fixture";
+import { DEFAULT_THREAD_PREFERENCES } from "@shared/personalization/threads";
 
 const flush = () => new Promise<void>((resolve) => setImmediate(resolve));
+
+test("disabling automatic titles avoids generation for newly submitted threads", async (t) => {
+  const { ExecutionHost } = await import("@main/execution/host");
+  const { ProviderRegistry } = await import("@main/execution/providerRegistry");
+  const { ProviderDouble } = await import("./providerDouble");
+  const { workspaceAuthority } = await import("./fixture");
+  const { randomUUID } = await import("node:crypto");
+  const f = fixture(t); f.create();
+  f.engine.applyGeneratedTitle("conversation", "conversation", "Opening prompt");
+  const providers = new ProviderRegistry(); providers.register(new ProviderDouble());
+  let calls = 0;
+  const host = new ExecutionHost({ store: f.store, providers, workspaces: workspaceAuthority,
+    owner: { id: randomUUID(), processId: process.pid }, isProcessAlive: () => true, now: () => "2026-10-21T10:00:00.000Z", nextId: randomUUID,
+    onFailure: () => assert.fail("host failed"), threadPreferences: () => ({ ...DEFAULT_THREAD_PREFERENCES, automaticTitles: false }),
+    generateThreadName: async () => { calls++; return "Generated title"; } });
+  host.start();
+  try {
+    await host.execute({ kind: "submit", commandId: "send", conversationId: "conversation", runId: "run", instruction: "Opening prompt" });
+    await flush();
+    assert.equal(calls, 0); assert.equal(f.snapshot().conversation.title, "Opening prompt");
+  } finally { await host.shutdown(); }
+});
 
 test("naming enriches prompt titles without executing a custom title", async () => {
   const applied: string[] = [];
@@ -81,4 +104,20 @@ test("host names only the first accepted instruction without delaying acceptance
     await flush();
     assert.equal(host.header("conversation")?.conversation.title, "Generated title");
   } finally { await host.shutdown(); }
+});
+
+test("renaming retitles settled threads too, keeps last activity, and a late generated title never overwrites it", (t) => {
+  const f = fixture(t);
+  f.create();
+  const { title: original, updatedAt } = f.snapshot().conversation;
+  f.command({ kind: "rename", commandId: "rename", conversationId: "conversation", title: "Launch crew" });
+  assert.deepEqual([f.snapshot().conversation.title, f.snapshot().conversation.updatedAt], ["Launch crew", updatedAt]);
+  f.engine.applyGeneratedTitle("conversation", original, "Generated later");
+  assert.equal(f.snapshot().conversation.title, "Launch crew");
+  const before = f.store.cursor();
+  f.command({ kind: "rename", commandId: "same", conversationId: "conversation", title: "Launch crew" });
+  assert.equal(f.store.cursor(), before);
+  f.command({ kind: "archive", commandId: "archive", conversationId: "conversation" });
+  f.command({ kind: "rename", commandId: "settled", conversationId: "conversation", title: "Launch crew (done)" });
+  assert.equal(f.snapshot().conversation.title, "Launch crew (done)");
 });

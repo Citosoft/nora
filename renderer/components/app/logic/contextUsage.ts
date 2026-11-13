@@ -27,6 +27,12 @@ export function describeContextUsage(context: ContextUsage | null | undefined): 
   return `${gauge.percentUsed}% used, ${formatTokenCount(context.usedTokens)} of ${formatTokenCount(context.windowTokens)} tokens`;
 }
 
+/** Cache reuse reduces input processing, but cached tokens still occupy the context window. */
+export function contextCacheHitPercent(context: ContextUsage): number | null {
+  if (!context.inputTokens) return null;
+  return Math.min(100, Math.round(context.cachedInputTokens / context.inputTokens * 100));
+}
+
 /** Compaction waits behind other work; a queued or running compaction shows as in progress. */
 export function contextCompactionState(runs: ReadonlyArray<ConversationRun>, idle: boolean): ContextCompactionState {
   if (runs.some((run) => run.action === "compact")) return "compacting";

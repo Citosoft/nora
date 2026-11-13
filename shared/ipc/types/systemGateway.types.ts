@@ -1,3 +1,4 @@
+import type { WindowSettingsRequest, WindowSettingsReply } from "@shared/types/nora-tools/settings.types";
 import type {
   AgentCompletionNotificationPayload,
   AnalyticsRuntimeConfig,
@@ -24,6 +25,8 @@ import type {
   RemoteConnectionOptions
 } from "../../appTypes";
 import type {
+  ComposerAttachment,
+  SaveComposerAttachmentPayload,
   PastedImageReference,
   SavePastedImagePayload
 } from "../../types/agentInput.types";
@@ -65,7 +68,10 @@ export interface SystemBridge {
   onWindowStateChanged: (listener: (state: WindowState) => void) => () => void;
   getDetectedUserIdentity: () => Promise<DetectedUserIdentity>;
   getAppSettings: () => Promise<AppSettings>;
-  saveAppSettings: (settings: AppSettings) => Promise<AppSettings>;
+  onWindowSettingsRequest: (listener: (request: WindowSettingsRequest) => void) => () => void;
+  replyWindowSettings: (reply: WindowSettingsReply) => Promise<void>;
+  onAppSettingsChanged: (listener: (settings: AppSettings) => void) => () => void;
+  saveAppSettings: (settings: AppSettings, baseline: AppSettings) => Promise<AppSettings>;
   relaunchApplication: (options?: { hardwareAccelerationEnabled?: boolean }) => Promise<void>;
   getAnalyticsRuntimeConfig: () => Promise<AnalyticsRuntimeConfig>;
   getStartupDependencyReport: () => Promise<StartupDependencyReport>;
@@ -101,6 +107,8 @@ export interface SystemBridge {
   installLocalAiModel: (modelId: LocalLlmModelId) => Promise<LocalAiModelStatus>;
   installLocalAiRuntime: () => Promise<LocalAiRuntimeStatus>;
   transcribeVoiceInput: (payload: VoiceInputTranscriptionPayload) => Promise<string>;
+  readComposerAttachmentThumbnail: (filePath: string) => Promise<string | null>;
+  saveComposerAttachment: (payload: SaveComposerAttachmentPayload) => Promise<ComposerAttachment>;
   savePastedImage: (payload: SavePastedImagePayload) => Promise<PastedImageReference>;
   showAgentCompletionNotification: (payload: AgentCompletionNotificationPayload) => Promise<void>;
   onAppClosingProgress: (listener: (payload: AppClosingProgressPayload) => void) => () => void;
