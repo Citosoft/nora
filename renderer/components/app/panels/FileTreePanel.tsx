@@ -644,7 +644,7 @@ export function FileTreePanel({
 
   if (errorMessage) {
     return (
-      <div className="m-3 border border-dashed border-border/70 bg-background/40 p-4 text-sm text-muted-foreground">
+      <div className="m-3 border border-dashed border-border/70 bg-background p-4 text-sm text-muted-foreground">
         {errorMessage}
       </div>
     );
@@ -652,7 +652,7 @@ export function FileTreePanel({
 
   if (!fileTree.length) {
     return (
-      <div className="m-3 border border-dashed border-border/70 bg-background/40 p-4 text-sm text-muted-foreground">
+      <div className="m-3 border border-dashed border-border/70 bg-background p-4 text-sm text-muted-foreground">
         No files available in this project.
       </div>
     );
@@ -716,7 +716,7 @@ export function FileTreePanel({
                   key={`${result.path}:${result.lineNumber ?? "path"}`}
                   type="button"
                   draggable
-                  className="flex w-full flex-col items-start gap-1 rounded-[6px] px-3 py-2 text-left transition hover:bg-accent/30"
+                  className="flex w-full flex-col items-start gap-1 rounded-lg px-3 py-2 text-left transition hover:bg-accent/30"
                   onDragStart={(event) => {
                     setWorkspaceRelativePathDragData(event.dataTransfer, result.path, "file");
                   }}
@@ -740,7 +740,7 @@ export function FileTreePanel({
               ))}
             </div>
           ) : (
-            <div className="m-3 border border-dashed border-border/70 bg-background/40 p-4 text-sm text-muted-foreground">
+            <div className="m-3 border border-dashed border-border/70 bg-background p-4 text-sm text-muted-foreground">
               No matches found for “{trimmedSearchQuery}”.
             </div>
           )
@@ -815,7 +815,7 @@ export function FileTreePanel({
                 : "This removes the file from the project. This action cannot be undone here."}
             </DialogDescription>
             {deleteTarget ? (
-              <div className="rounded-[4px] border border-border/70 bg-background/40 px-3 py-2 text-sm text-foreground">
+              <div className="rounded-md border border-border/70 bg-background px-3 py-2 text-sm text-foreground">
                 {deleteTarget.path}
               </div>
             ) : null}

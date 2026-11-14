@@ -178,7 +178,7 @@ export function WorkspaceSplitViewPanel({ view }: WorkspaceSplitViewPanelProps) 
 
   return (
     <div
-      className={`h-full overflow-hidden bg-card/95 p-3 transition-colors ${isExternalDropActive ? "bg-primary/5" : ""}`}
+      className={`h-full overflow-hidden bg-card p-3 transition-colors ${isExternalDropActive ? "bg-primary/5" : ""}`}
       onDragOver={(event) => {
         if (draggingTileId || !declaresExternalDrop(event.dataTransfer)) {
           return;
@@ -227,7 +227,7 @@ export function WorkspaceSplitViewPanel({ view }: WorkspaceSplitViewPanelProps) 
             return (
               <div
                 key={`empty:${column}:${row}`}
-                className={`relative min-h-0 overflow-hidden rounded-[6px] border border-dashed transition-colors ${isActiveDropTarget ? "border-primary bg-primary/10 shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.35)]" : "border-border/70 bg-background/20"}`}
+                className={`relative min-h-0 overflow-hidden rounded-lg border border-dashed transition-colors ${isActiveDropTarget ? "border-primary bg-primary/10 shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.35)]" : "border-border/70 bg-background"}`}
                 style={{
                   gridColumn: `${column} / span 1`,
                   gridRow: `${row} / span 1`
@@ -275,7 +275,7 @@ export function WorkspaceSplitViewPanel({ view }: WorkspaceSplitViewPanelProps) 
                 }}
               >
                 {isActiveDropTarget ? (
-                  <div className="pointer-events-none absolute inset-0 z-10 rounded-[6px] bg-primary/10" aria-hidden="true" />
+                  <div className="pointer-events-none absolute inset-0 z-10 rounded-lg bg-primary/10" aria-hidden="true" />
                 ) : null}
                 <Card className="h-full rounded-none border-0 bg-transparent shadow-none">
                   <CardContent className="flex h-full items-center justify-center p-6 text-center">
@@ -386,7 +386,7 @@ export function WorkspaceSplitViewPanel({ view }: WorkspaceSplitViewPanelProps) 
           return (
             <div
               key={tile.id}
-              className={`group relative min-h-0 overflow-hidden rounded-[6px] border bg-background/40 transition-colors ${isDraggedTile ? "border-primary/70 opacity-70" : isActiveDropTarget ? "border-primary bg-primary/10 shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.35)]" : "border-border/70"}`}
+              className={`group relative min-h-0 overflow-hidden rounded-lg border bg-background transition-colors ${isDraggedTile ? "border-primary/70 opacity-70" : isActiveDropTarget ? "border-primary bg-primary/10 shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.35)]" : "border-border/70"}`}
               style={{
                 gridColumn: `${tile.column} / span 1`,
                 gridRow: `${tile.row} / span 1`
@@ -434,14 +434,14 @@ export function WorkspaceSplitViewPanel({ view }: WorkspaceSplitViewPanelProps) 
               }}
             >
               {isActiveDropTarget ? (
-                <div className="pointer-events-none absolute inset-0 z-10 rounded-[6px] bg-primary/10" aria-hidden="true" />
+                <div className="pointer-events-none absolute inset-0 z-10 rounded-lg bg-primary/10" aria-hidden="true" />
               ) : null}
               <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-2 border-b border-border/60 bg-background/92 px-3 py-2 backdrop-blur">
                 <div className="flex min-w-0 items-center gap-2">
                   <button
                     type="button"
                     draggable
-                    className="grid size-7 shrink-0 place-items-center rounded-[4px] border border-border/60 bg-background/60 text-muted-foreground transition hover:text-foreground"
+                    className="grid size-7 shrink-0 place-items-center rounded-md border border-border/60 bg-background text-muted-foreground transition hover:text-foreground"
                     onDragStart={(event) => {
                       setDraggingTileId(tile.id);
                       setActiveDropTargetId(null);
@@ -463,7 +463,7 @@ export function WorkspaceSplitViewPanel({ view }: WorkspaceSplitViewPanelProps) 
                     onClick={focusTile}
                   >
                     <div className="truncate text-sm font-medium text-foreground">{title}</div>
-                    <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                    <div className="text-[11px] font-medium text-muted-foreground">
                       {subtitle}
                     </div>
                   </button>
@@ -524,7 +524,7 @@ export function WorkspaceSplitViewPanel({ view }: WorkspaceSplitViewPanelProps) 
               </div>
               <div className="h-full pt-12">
                 {isMissing ? (
-                  <Card className="h-full rounded-none border-0 bg-card/95">
+                  <Card className="h-full rounded-none border-0 bg-card">
                     <CardContent className="flex h-full items-center justify-center p-6 text-center text-muted-foreground">
                       <div className="space-y-3">
                         <Unplug className="mx-auto size-7 text-primary" />

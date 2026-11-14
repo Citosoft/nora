@@ -38,7 +38,7 @@ const buildWorktreeInputs = (snapshot: ReturnType<typeof useCanonicalAppSnapshot
 
 const StatBlock = ({ label, value }: { label: string; value: string }) => (
   <div className="flex min-w-[4.5rem] flex-col gap-0.5 border-l border-border/50 pl-3 first:border-l-0 first:pl-0">
-    <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
+    <span className="text-xs font-medium text-muted-foreground">{label}</span>
     <span className="tabular-nums text-sm font-semibold leading-none text-foreground">{value}</span>
   </div>
 );
@@ -138,8 +138,8 @@ const ProviderCard = ({
           />
         </div>
 
-        <div className="min-h-[168px] min-w-[min(100%,12rem)] flex-1 basis-full rounded-lg border border-border/40 bg-background/40 p-2 sm:min-w-[14rem] lg:min-h-[180px] lg:basis-0">
-          <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Daily trend</div>
+        <div className="min-h-[168px] min-w-[min(100%,12rem)] flex-1 basis-full rounded-lg border border-border/40 bg-background p-2 sm:min-w-[14rem] lg:min-h-[180px] lg:basis-0">
+          <div className="mb-1 text-xs font-medium text-muted-foreground">Daily trend</div>
           <AgentUsageDailyTrendChart rows={stats.recentDays} variant={variant} />
         </div>
       </div>

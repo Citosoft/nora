@@ -31,7 +31,7 @@ function createBuildDeps(
     forgeBranchPullRequestStatus: null,
     forgeOverview: null,
     forgeWorkItemDetail: null,
-    handleSpawnForgeIssueAgent: async () => {},
+    handleStartForgeIssueThread: async () => {},
     handleSpawnForgeReviewAgent: async () => {},
     isChangesSidebarCollapsed: false,
     isLoadingForgeOverview: false,

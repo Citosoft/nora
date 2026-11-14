@@ -1,20 +1,15 @@
-import { roleProfile } from "@shared/personalization/profiles";
-import type { RoleSelection, RoleTool } from "@shared/types/personalization/roles.types";
 import type { WorkspaceToolId } from "@/components/app/types/workspaceNavigation.types";
 
-const toolMapping: Readonly<Record<RoleTool, WorkspaceToolId | null>> = {
-  files: null, changes: null, terminal: "terminals", browser: "browser", notes: "documents",
-  tasks: "tasks", workflows: "workflows", editor: "documents", previews: "browser"
-};
-export const MAX_WORKSPACE_TOOL_PINS = 4;
+export const DEFAULT_WORKSPACE_TOOL_PINS: readonly WorkspaceToolId[] = ["terminals", "browser", "documents"];
+
 export function availableWorkspaceTools(git: boolean): WorkspaceToolId[] {
-  return [...(git ? ["worktrees"] as const : []), "documents", "tasks", "terminals", "browser", "workflows"];
+  return [...(git ? ["worktrees", "merge-requests", "issues"] as const : []), "documents", "tasks", "terminals", "browser", "workflows"];
 }
-export function workspaceToolPins(role: RoleSelection | null, available: readonly WorkspaceToolId[], pins?: readonly WorkspaceToolId[]): WorkspaceToolId[] {
-  const defaults = roleProfile(role ?? { id: "general" }).tools.map((tool) => toolMapping[tool]).filter((tool): tool is WorkspaceToolId => tool !== null);
-  const selection = [...new Set(pins ?? defaults)].filter((tool) => available.includes(tool));
-  return pins ? selection : selection.slice(0, 3);
+
+export function workspaceToolPins(available: readonly WorkspaceToolId[], pins: readonly WorkspaceToolId[] = DEFAULT_WORKSPACE_TOOL_PINS): WorkspaceToolId[] {
+  return [...new Set(pins)].filter((tool) => available.includes(tool));
 }
+
 export function toggleWorkspaceToolPin(pins: readonly WorkspaceToolId[], tool: WorkspaceToolId): WorkspaceToolId[] {
-  return pins.includes(tool) ? pins.filter((entry) => entry !== tool) : pins.length < MAX_WORKSPACE_TOOL_PINS ? [...pins, tool] : [...pins];
+  return pins.includes(tool) ? pins.filter((entry) => entry !== tool) : [...new Set([...pins, tool])];
 }

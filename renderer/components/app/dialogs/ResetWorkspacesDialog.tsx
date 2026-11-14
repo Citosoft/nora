@@ -34,7 +34,7 @@ export function ResetWorkspacesDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
-          <div className="rounded-[4px] border border-destructive/25 bg-destructive/5 p-3 text-sm text-muted-foreground">
+          <div className="rounded-md border border-destructive/25 bg-destructive/5 p-3 text-sm text-muted-foreground">
             Local repositories you opened directly are not deleted. Only {APP_SHORT_NAME}-managed project state and managed worktree checkout directories are cleared.
           </div>
         </DialogBody>

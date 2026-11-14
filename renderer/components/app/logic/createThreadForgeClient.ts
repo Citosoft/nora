@@ -6,6 +6,12 @@ import type { ForgeRequestOptions } from "@shared/appTypes";
 export function createThreadForgeClient(options: ForgeRequestOptions): ThreadForgeClient {
   return {
     connections: { github: !!options.githubToken?.trim(), gitlab: !!options.gitlabToken?.trim() },
+    readIssues: async (projectId) => {
+      const overview = await noraIntegrationClient.getForgeOverview(projectId, options);
+      if (overview.errorMessage) throw new Error(overview.errorMessage);
+      if (!overview.repo) throw new Error("Connect a GitHub or GitLab repository to select issues.");
+      return overview.issues;
+    },
     readBranchRequest: (projectId, branch) => noraIntegrationClient.getForgeBranchPullRequestStatus(projectId, branch, options),
     readBranchChanges: (projectId, checkoutPath) => noraIntegrationClient.getForgeBranchChanges(projectId, checkoutPath, options),
     readBranchDiff: (projectId, checkoutPath) => noraIntegrationClient.getForgeBranchDiff(projectId, checkoutPath),

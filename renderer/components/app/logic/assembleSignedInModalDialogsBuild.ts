@@ -3,7 +3,7 @@ import type { AppShellSignedInAssemblySources } from "@/components/app/types/app
 
 type SignedInModalDialogsAssemblySlice = Pick<
   AppShellSignedInAssemblySources,
-  "core" | "modalExtras" | "workspaceCatalog" | "forge" | "gitBranches"
+  "workspaceContent" | "core" | "modalExtras" | "workspaceCatalog" | "forge" | "gitBranches"
 >;
 
 export const assembleSignedInModalDialogsBuild = (s: SignedInModalDialogsAssemblySlice): AppModalDialogsBuildDeps => {
@@ -12,6 +12,7 @@ export const assembleSignedInModalDialogsBuild = (s: SignedInModalDialogsAssembl
 
   return {
     ...core,
+    createTaskDialog: s.workspaceContent.createTaskDialog,
     ...modalExtras,
     workspaceTasks: workspaceCatalog.workspaceTasks,
     forgeOverview: forge.forgeOverview,

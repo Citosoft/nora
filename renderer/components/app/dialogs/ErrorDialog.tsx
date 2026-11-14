@@ -24,7 +24,7 @@ export function ErrorDialog({
         }
       >
         <DialogBody>
-          <div className="rounded-[4px] border border-destructive/25 bg-destructive/5 p-3 text-sm text-foreground">
+          <div className="rounded-md border border-destructive/25 bg-destructive/5 p-3 text-sm text-foreground">
             {message || "An unexpected error occurred."}
           </div>
         </DialogBody>

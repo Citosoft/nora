@@ -4,10 +4,11 @@ import { BotAvatar } from "@/components/app/shared/BotAvatar";
 import { Button } from "@/components/ui/button";
 import { BOT_ORIGIN_LABELS } from "@/components/app/constants/botOrigins";
 import type { BotHomeCardProps } from "@/components/app/types/botNavigation.types";
+import { NORA_ASSISTANT } from "@/components/app/logic/botNavigation";
 
-export function BotHomeCard({ item, onStart, onContinue, onEdit }: BotHomeCardProps) {
+export function BotHomeCard({ item, onStart, onEdit }: BotHomeCardProps) {
   const threads = item.threads.length;
-  return <li className="flex flex-col gap-3 rounded-xl border bg-card p-4">
+  return <li className="flex flex-col gap-3 rounded-lg border bg-card p-4">
     <div className="flex items-start gap-3">
       {item.avatar ? <BotAvatar avatar={item.avatar} state={item.state} size={52} label={item.name} />
         : <span className="flex size-[52px] shrink-0 items-center justify-center rounded-full bg-muted"><AppMark className="size-7" /></span>}
@@ -21,8 +22,7 @@ export function BotHomeCard({ item, onStart, onContinue, onEdit }: BotHomeCardPr
         <Pencil className="size-3.5" aria-hidden="true" /></Button>}
     </div>
     <div className="mt-auto flex flex-wrap gap-2">
-      <Button type="button" size="sm" className="gap-1.5" onClick={onStart}><MessageSquarePlus className="size-3.5" aria-hidden="true" />New thread</Button>
-      {onContinue && <Button type="button" variant="ghost" size="sm" onClick={onContinue}>Continue latest</Button>}
+      <Button type="button" size="sm" className="gap-1.5" onClick={onStart}><MessageSquarePlus className="size-3.5" aria-hidden="true" />{item.id === NORA_ASSISTANT.id ? "New thread" : "Message"}</Button>
     </div>
   </li>;
 }

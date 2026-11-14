@@ -43,7 +43,7 @@ export const assembleSignedInChangesPanelSectionBuild = (
     forgeBranchPullRequestStatus: forge.forgeBranchPullRequestStatus,
     forgeOverview: forge.forgeOverview,
     forgeWorkItemDetail: forge.forgeWorkItemDetail,
-    handleSpawnForgeIssueAgent: forge.handleSpawnForgeIssueAgent,
+    handleStartForgeIssueThread: forge.handleStartForgeIssueThread,
     handleSpawnForgeReviewAgent: forge.handleSpawnForgeReviewAgent,
     isChangesSidebarCollapsed: chromeShell.isChangesSidebarCollapsed,
     isLoadingForgeOverview: forge.isLoadingForgeOverview,

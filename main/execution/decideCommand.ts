@@ -37,13 +37,20 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
     if (!!command.group !== !!context.group || (command.group && command.provider.kind !== NORA_PROVIDER_KIND)) {
       throw new ExecutionCommandError("invalid", "The group chat's members could not be resolved");
     }
+    if (command.direct && (command.group || command.botId || command.role)) throw new ExecutionCommandError("invalid", "A direct chat cannot also be a group, a bot thread or carry a role");
+    if (!!command.direct !== !!context.direct || (command.direct && command.provider.kind !== NORA_PROVIDER_KIND)) {
+      throw new ExecutionCommandError("invalid", "The bot for this chat could not be resolved");
+    }
+    if (context.direct?.scope.kind === "workspace" && context.direct.scope.workspaceId !== command.workspace.projectId) {
+      throw new ExecutionCommandError("invalid", "A workspace bot's chat belongs to its own workspace");
+    }
     add({ kind: "conversation", conversation: {
       ...(command.source ? { source: command.source } : {}),
       id: command.conversationId, title: command.title,
-      // A group never writes itself; only its writer member's thread may.
-      workspace: context.group ? { ...command.workspace, access: "read" } : command.workspace,
-      role: command.role && !context.bot && !context.group ? snapshotRole(command.role) : null,
-      ...(context.bot ? { bot: context.bot } : {}), ...(context.group ? { group: context.group } : {}),
+      // A chat never writes itself; only its work threads (or a group's writer member) may.
+      workspace: context.group || context.direct ? { ...command.workspace, access: "read" } : command.workspace,
+      role: command.role && !context.bot && !context.group && !context.direct ? snapshotRole(command.role) : null,
+      ...(context.bot ? { bot: context.bot } : {}), ...(context.group ? { group: context.group } : {}), ...(context.direct ? { direct: context.direct } : {}),
       provider: command.provider, parentId: command.parentId, nativeConversationId: null,
       archivedAt: null, queuePaused: false, createdAt: context.now, updatedAt: context.now
     } });
@@ -53,6 +60,16 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
   if (command.kind === "rename") {
     // Renaming is bookkeeping, not activity: it leaves `updatedAt` alone so the thread keeps its place in recency-sorted lists.
     if (state.conversation.title !== command.title) add({ kind: "conversation", conversation: { ...state.conversation, title: command.title } });
+    return decision;
+  }
+  if (command.kind === "set-direct-workspace") {
+    const direct = state.conversation.direct;
+    if (!direct) throw new ExecutionCommandError("invalid", "Only a direct chat has a working workspace");
+    if (direct.scope.kind === "workspace" && direct.scope.workspaceId !== command.workspaceId) {
+      throw new ExecutionCommandError("invalid", `${direct.name} only works in its own workspace`);
+    }
+    // Like renaming, this is bookkeeping and leaves `updatedAt` alone.
+    if (direct.workspaceId !== command.workspaceId) add({ kind: "conversation", conversation: { ...state.conversation, direct: { ...direct, workspaceId: command.workspaceId } } });
     return decision;
   }
   if (command.kind === "unarchive") {

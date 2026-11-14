@@ -454,11 +454,11 @@ export function WorkflowRunSetup({ definition, onBack, onStarted }: WorkflowRunS
                 </div>
                 <div className="space-y-4 text-sm">
                   <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Goal source</p>
+                    <p className="text-xs font-medium text-muted-foreground">Goal source</p>
                     <p className="mt-1 font-medium">{sourceLabel}</p>
                   </div>
                   {objective.trim() ? <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    <p className="text-xs font-medium text-muted-foreground">
                       {goalKind === "custom" ? "Goal" : "Additional instructions"}
                     </p>
                     <p className="mt-1 whitespace-pre-wrap leading-6 text-muted-foreground">{objective.trim()}</p>
@@ -500,11 +500,11 @@ export function WorkflowRunSetup({ definition, onBack, onStarted }: WorkflowRunS
                 </div>
                 <div className="space-y-4 text-sm">
                   <div className="space-y-2">
-                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Agents</p>
+                    <p className="text-xs font-medium text-muted-foreground">Agents</p>
                     {definition ? (
                       <div className="space-y-2">
                         {[definition.writer, ...definition.reviewers].map((role) => (
-                          <div key={role.id} className="flex items-center gap-3 rounded-md border border-primary/15 bg-background/60 p-2.5">
+                          <div key={role.id} className="flex items-center gap-3 rounded-md border border-primary/15 bg-background p-2.5">
                             <AgentToolIcon
                               toolId={role.toolId}
                               label={role.toolId}

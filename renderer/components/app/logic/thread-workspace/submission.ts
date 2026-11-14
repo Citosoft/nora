@@ -5,6 +5,7 @@ import type { ThreadWorkspaceStore } from "@/components/app/types/thread-workspa
 import { createDraftIntent, deliverDraftIntent } from "@/components/app/logic/nativeDraftIntent";
 import { compactContextCommand } from "@/components/app/logic/contextUsage";
 import { ConversationAccessError } from "@shared/conversations/errors";
+import { directDraft } from "@/components/app/logic/directChats";
 
 /** Persist exact command identities before IPC, retaining them after uncertain or lost replies. */
 export function createThreadSubmission(internal: ThreadWorkspaceInternals): Pick<ThreadWorkspaceStore, "submit" | "execute" | "compact"> {
@@ -27,7 +28,7 @@ export function createThreadSubmission(internal: ThreadWorkspaceInternals): Pick
           const currentProvider = target.kind === "thread" ? state.summaries.find((entry) => entry.conversation.id === target.conversationId)?.conversation.provider : undefined;
           if (document.target.kind === "thread" && !currentProvider) throw new Error("Reload this chat before sending. Its provider could not be confirmed.");
           intent = createDraftIntent({ conversationId: document.target.kind === "thread" ? document.target.conversationId : null, currentProvider,
-            source: document.source, workspace, provider: binding, role: document.role, botId: document.botId ?? null, ...(document.group ? { group: document.group } : {}), text: buildComposerInstruction(document.text, document.attachments, document.threadReferences) }, deps.nextId);
+            source: document.source, workspace, provider: binding, role: document.role, ...(document.group ? { group: document.group } : {}), ...(directDraft(state, document, workspace) ?? {}), text: buildComposerInstruction(document.text, document.attachments, document.threadReferences) }, deps.nextId);
         }
         if (!internal.save({ ...state.layout, documents: state.layout.documents.map((entry) => entry.id === id ? { ...entry, pending: intent } : entry) })) return;
         const conversationId = await deliverDraftIntent(deps.client, intent);

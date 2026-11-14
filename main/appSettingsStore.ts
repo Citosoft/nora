@@ -1,4 +1,4 @@
-import { parseAiSimpleTaskProvider } from "@shared/ai/settings";
+import { parseAiSimpleTaskProvider, parseMemoryReviewSettings, parseRuntimeModelByProvider } from "@shared/ai/settings";
 import {
   DEFAULT_APP_SETTINGS,
   type AiSettings,
@@ -172,7 +172,9 @@ function parseAiSettings(candidate: AppSettings["ai"] | undefined): AiSettings {
     apiKeys,
     modelByProvider,
     simpleTaskProvider,
-    localLlmModelId
+    localLlmModelId,
+    runtimeModelByProvider: parseRuntimeModelByProvider(parsedSettings.runtimeModelByProvider),
+    memoryReview: parseMemoryReviewSettings(parsedSettings.memoryReview, simpleTaskProvider)
   };
 }
 

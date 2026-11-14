@@ -13,11 +13,42 @@ import type { AppChromeShellComposeSlice } from "@/components/app/types/appChrom
 import type { AppModalDialogsBuildDeps } from "@/components/app/types/appModalDialogsBuild.types";
 import type { ThreadForgeClient } from "@/components/app/types/threadForge.types";
 import type { CenterDiffPorts } from "@/components/app/types/centerDiff.types";
+import { noraIntegrationClient } from "@/components/app/clients/noraIntegrationClient";
 
 /** Session center surface fields (terminal dock theme + tabs/editor slices) without center-column build deps. */
 export const buildSessionCenterSurfacePortsFromAssembly = (
   a: AppShellSignedInAssemblySources
 ): Omit<SessionCenterPorts, "centerContentBuild"> => ({
+  forgeItems: {
+    projectId: a.core.snapshot.project?.id ?? null,
+    overview: a.forge.forgeOverview,
+    loading: a.forge.isLoadingForgeOverview,
+    refresh: a.forge.refreshForgeOverview,
+    readDetail: (projectId, kind, item) => {
+      const repo = a.forge.forgeOverview?.repo;
+      if (projectId !== a.core.snapshot.project?.id || !repo) return Promise.reject(new Error("This item’s workspace is no longer active."));
+      return noraIntegrationClient.getForgeWorkItemDetail(projectId, kind, item.number, {
+        githubToken: a.workspaceSidebarRest.githubToken,
+        gitlabToken: a.workspaceSidebarRest.gitlabToken,
+        gitlabHost: a.workspaceSidebarRest.gitlabHost,
+        forgeRepoHostOverride: repo.provider === "gitlab" ? repo.host : null,
+        forgeRepoFullNameOverride: repo.provider === "gitlab" ? repo.fullName : null
+      });
+    },
+    openIntegrations: () => a.core.openSettingsPage("integrations"),
+    open: (projectId, kind, item) => {
+      if (projectId !== a.core.snapshot.project?.id) return;
+      a.sessionSurface.setActiveWorkspaceContentTab(null);
+      a.sessionSurface.workspaceSessionViews.setActiveViewId(null);
+      a.workspaceContent.setTaskEditorState(null);
+      a.workspaceContent.setIsTaskBoardOpen(false);
+      a.workspaceContent.setIsSpecBrowserOpen(false);
+      a.workspaceContent.setIsNoteBrowserOpen(false);
+      const repo = a.forge.forgeOverview?.repo;
+      const override = repo?.provider === "gitlab" ? { host: repo.host, fullName: repo.fullName } : null;
+      a.centerTabs.openForgeViewer(projectId, kind, item.number, `${kind === "pull_request" && repo?.provider === "gitlab" ? "!" : "#"}${item.number} ${item.title}`, override);
+    }
+  },
   onOpenThreadSettings: () => a.core.openSettingsPage("threads"),
   onOpenBotSettings: () => a.core.openSettingsPage("bots"),
   sessionSurface: a.sessionSurface,

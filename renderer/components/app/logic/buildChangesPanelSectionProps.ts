@@ -65,7 +65,7 @@ export const buildChangesPanelSectionProps = (
         void d.performForgeWorkItemAction(action);
       },
       onForgeCommentSubmit: (payload) => d.addForgeWorkItemComment(payload),
-      onSpawnIssueAgent: (toolId) => d.handleSpawnForgeIssueAgent(toolId),
+      onStartIssueThread: () => d.handleStartForgeIssueThread(),
       onSpawnReviewAgent: (toolId, selections, targetMode) => d.handleSpawnForgeReviewAgent(toolId, selections, targetMode),
       onOpenCreatePullRequest: () => d.setIsCreatePullRequestDialogOpen(true)
     },

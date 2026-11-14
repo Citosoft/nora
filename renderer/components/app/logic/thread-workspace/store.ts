@@ -6,6 +6,7 @@ import { unreadCompletions } from "./unread";
 import { effectiveRole } from "@shared/personalization/profiles";
 import { findEffectiveBot } from "@shared/bots/catalog";
 import { threadLayoutSchema } from "./schema";
+import { findDirectChat } from "@/components/app/logic/directChats";
 import { emptyThreadLayout } from "./persistence";
 import { closeThreadDocument, createThreadDraft, focusThreadDocument, openThreadDocument } from "./changes";
 import type { ThreadWorkspaceDeps, ThreadWorkspaceStore, ThreadWorkspaceSnapshot, ThreadLayout, ThreadDocumentRuntime } from "@/components/app/types/thread-workspace/state.types";
@@ -45,6 +46,14 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
     if (corrupt) { publish({ ...state, layout: parsed.data }); return false; }
     try { deps.persistence.write(parsed.data); publish({ ...state, layout: parsed.data, storageError: null }); return true; }
     catch { publish({ ...state, layout: parsed.data, storageError: "Drafts could not be saved. Your text is retained here; retry when storage is available." }); return false; }
+  };
+  /** Focuses an open document; a direct chat moves to the focused workspace first, since it works in every workspace. */
+  const focusDocumentHere = (document: ThreadLayout["documents"][number], followsUser: boolean): void => {
+    const focused = state.layout.focusedWorkspaceId;
+    const here = followsUser && focused && document.workspaceId !== focused ? { ...document, workspaceId: focused } : document;
+    const layout = here === document ? state.layout : { ...state.layout, documents: state.layout.documents.map((entry) => entry.id === document.id ? here : entry) };
+    save(focusThreadDocument(layout, here));
+    publish({ ...state, focusRevision: state.focusRevision + 1 });
   };
   let latestRefresh: Promise<void> = Promise.resolve();
   const readSummaries = async (): Promise<void> => {
@@ -105,7 +114,7 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
       try {
         const existing = !input.text && !input.provider && !input.source ? state.layout.documents.find((entry) => entry.workspaceId === input.workspaceId
           && entry.target.kind === "draft" && !entry.text && !entry.attachments?.length && !entry.threadReferences?.length && !entry.pending
-          && (entry.botId ?? null) === (input.botId ?? null) && !entry.group && !input.group) : undefined;
+          && entry.direct?.botId === input.direct?.botId && !entry.group && !input.group) : undefined;
         const document = existing ?? createThreadDraft(state.boot, input, `draft:${deps.nextId()}`, deps.now());
         save(focusThreadDocument({ ...state.layout, documents: existing ? state.layout.documents : [...state.layout.documents, document] }, document));
         publish({ ...state, focusRevision: state.focusRevision + 1 });
@@ -113,15 +122,27 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
       } catch (cause) { publish({ ...state, error: cause instanceof Error ? cause.message : "New thread could not be opened." }); return null; }
     },
     openThread(conversationId) {
+      const summary = state.summaries.find((entry) => entry.conversation.id === conversationId);
       const existing = state.layout.documents.find((entry) => (entry.target.kind === "thread" && entry.target.conversationId === conversationId)
         || entry.pending?.submit.conversationId === conversationId);
-      if (existing) { save(focusThreadDocument(state.layout, existing)); publish({ ...state, focusRevision: state.focusRevision + 1 }); return existing.id; }
-      const summary = state.summaries.find((entry) => entry.conversation.id === conversationId);
+      if (existing) {
+        focusDocumentHere(existing, !!summary?.conversation.direct);
+        return existing.id;
+      }
       if (!summary || summary.conversation.workspace.environmentId !== state.boot.environmentId) {
         publish({ ...state, error: "This thread is unavailable on its owning host." }); return null;
       }
-      const document = openThreadDocument(summary, `thread:${deps.nextId()}`);
+      const document = openThreadDocument(summary, `thread:${deps.nextId()}`, state.layout.focusedWorkspaceId);
       save(focusThreadDocument({ ...state.layout, documents: [...state.layout.documents, document] }, document)); publish({ ...state, focusRevision: state.focusRevision + 1 }); return document.id;
+    },
+    openDirect(workspaceId, botId) {
+      const bot = findEffectiveBot(state.boot.personalization.bots, workspaceId, state.boot.sharedBots, botId);
+      if (!bot) { publish({ ...state, error: "This bot is not available in this workspace." }); return null; }
+      const chat = findDirectChat(state.summaries, bot);
+      if (chat) return store.openThread(chat.conversation.id);
+      const draft = state.layout.documents.find((entry) => entry.target.kind === "draft" && entry.direct?.botId === botId);
+      if (draft) { focusDocumentHere(draft, true); return draft.id; }
+      return store.openDraft({ workspaceId, direct: { botId } });
     },
     focusDocument(id) {
       const document = state.layout.documents.find((entry) => entry.id === id);
@@ -135,6 +156,10 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
     setWindowFocused(focused) { windowFocused = focused; publish(state); },
     setThreadVisible(visible) { threadVisible = visible; publish(state); },
     deactivate() { save({ ...state.layout, activeId: null }); },
+    showHome() {
+      save({ ...state.layout, activeId: null });
+      publish({ ...state, focusRevision: state.focusRevision + 1 });
+    },
     closeDocument(id) { save(closeThreadDocument(state.layout, id)); },
     discardDraft(id) {
       const document = state.layout.documents.find((entry) => entry.id === id);
@@ -176,24 +201,11 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
       const document = state.layout.documents.find((entry) => entry.id === id);
       const workspace = state.boot.workspaces.find((entry) => entry.id === workspaceId);
       if (!workspace || !document || document.target.kind !== "draft" || document.pending || runtime(id).busy) return;
-      if (document.group) { setRuntime(id, { error: "A group's members belong to its workspace. Start a new group to use another workspace." }); return; }
+      if (document.group || document.direct) { setRuntime(id, { error: "A chat chooses where its bots work, not the workspace it was started from." }); return; }
       const role = effectiveRole(state.boot.personalization, workspaceId);
       if (!role) { setRuntime(id, { error: "Choose a workspace role before sending." }); return; }
       setRuntime(id, { readyBinding: null });
-      // A bot the new workspace hides or lacks falls back to Nora rather than failing on send.
-      const keepsBot = !!document.botId && !!findEffectiveBot(state.boot.personalization.bots, workspaceId, state.boot.sharedBots, document.botId);
-      save({ ...state.layout, focusedWorkspaceId: workspaceId, documents: state.layout.documents.map((entry) => entry.id === id
-        ? { ...entry, workspaceId, role, botId: keepsBot ? entry.botId : null, ...(document.botId && !keepsBot ? { provider: null } : {}) } : entry) });
-    },
-    selectBot(id, botId) {
-      const document = state.layout.documents.find((entry) => entry.id === id);
-      if (!document || document.target.kind !== "draft" || document.pending || runtime(id).busy || document.group || (document.botId ?? null) === botId) return;
-      if (botId && !findEffectiveBot(state.boot.personalization.bots, document.workspaceId, state.boot.sharedBots, botId)) {
-        setRuntime(id, { error: "This bot is not available in this workspace." }); return;
-      }
-      // Clearing the saved model lets the picker start from the bot's model, or the thread default for Nora.
-      setRuntime(id, { readyBinding: null, error: null });
-      save({ ...state.layout, documents: state.layout.documents.map((entry) => entry.id === id ? { ...entry, botId, provider: null, updatedAt: deps.now() } : entry) });
+      save({ ...state.layout, focusedWorkspaceId: workspaceId, documents: state.layout.documents.map((entry) => entry.id === id ? { ...entry, workspaceId, role } : entry) });
     },
     setPinned(conversationId, pinned) {
       const pins = state.layout.pinnedThreadIds;

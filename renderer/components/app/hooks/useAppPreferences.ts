@@ -47,7 +47,7 @@ import type {
   UiFontId
 } from "@/components/app/types";
 import type { AppPreferences } from "@/components/app/types/component.types";
-import { DEFAULT_APP_SETTINGS, type AiProvider, type AppSettings } from "@shared/appTypes";
+import { DEFAULT_APP_SETTINGS, type AiProvider, type AiSimpleTaskSettings, type AppSettings } from "@shared/appTypes";
 import { useEffect, useRef, useState } from "react";
 
 export function useAppPreferences(): AppPreferences {
@@ -426,7 +426,7 @@ export function useAppPreferences(): AppPreferences {
   };
 
   const updateAiSimpleTaskSettings = async (
-    settings: Pick<AppSettings["ai"], "simpleTaskProvider" | "localLlmModelId">
+    settings: AiSimpleTaskSettings
   ) => {
     await saveAppSettings((current) => ({
       ...current,

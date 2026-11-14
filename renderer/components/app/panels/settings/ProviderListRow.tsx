@@ -5,7 +5,7 @@ import type { ProviderListRowProps } from "@/components/app/types/providerList.t
 
 export function ProviderListRow({ tool, accountView, connecting, onToggle, onSignIn }: ProviderListRowProps) {
   return <li className="flex items-center gap-4 border-b border-border/60 py-4 last:border-0">
-    <AgentToolIcon toolId={tool.id} label="" className="size-9 shrink-0" imageClassName="size-6 rounded-[4px]" />
+    <AgentToolIcon toolId={tool.id} label="" className="size-9 shrink-0" imageClassName="size-6 rounded-md" />
     <div className="min-w-0 flex-1">
       <div className="font-medium text-foreground">{tool.label}</div>
       {accountView ? <ProviderAccountStatus providerLabel={tool.label} view={accountView} onSignIn={onSignIn} />

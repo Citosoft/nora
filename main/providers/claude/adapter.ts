@@ -1,4 +1,4 @@
-import { joinGuidance, optionalRunContext } from "@main/nora-tools/endpoint";
+import { instructionWithTurnNotes, joinGuidance, optionalRunContext } from "@main/nora-tools/endpoint";
 import { conversationGuidance } from "@shared/conversations/guidance";
 import type { McpAction, McpResult } from "@shared/types/provider/mcp.types";
 import type { SkillsResult } from "@shared/types/provider/skills.types";
@@ -81,7 +81,7 @@ export class ClaudeAdapter implements ExecutionProvider {
     emit({ ...base, eventId: "native-binding", kind: "bound", nativeConversationId: sessionId });
     const session = this.options.open({ sessionId, resume: !!snapshot.conversation.nativeConversationId,
       ...(autoCompactTokens ? { autoCompactTokens } : {}),
-      nativeTurnId, instruction: run.action === "compact" ? CLAUDE_COMPACT_COMMAND : run.instruction, cwd: snapshot.conversation.workspace.path,
+      nativeTurnId, instruction: run.action === "compact" ? CLAUDE_COMPACT_COMMAND : instructionWithTurnNotes(run.instruction, runContext), cwd: snapshot.conversation.workspace.path,
       ...(guidance ? { guidance } : {}), ...(noraTools ? { noraTools } : {}),
       model: snapshot.conversation.provider.model, permissionMode: mode,
       ...(snapshot.conversation.provider.subagentModel ? { subagentModel: snapshot.conversation.provider.subagentModel } : {}),

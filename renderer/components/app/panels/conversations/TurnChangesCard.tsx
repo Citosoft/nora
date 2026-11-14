@@ -14,6 +14,8 @@ export function TurnChangesCard({ review }: TurnChangesCardProps) {
   const filesId = useId();
   const noteId = useId();
   const count = review.changes.length;
+  if (count === 0) return null;
+
   const hiddenCount = Math.max(0, count - previewLimit);
   const visible = showAll || viewChanges ? review.changes : review.changes.slice(0, previewLimit);
   const partial = review.changes.some((change) => patchLineCounts(change.patch) === null);
@@ -25,7 +27,7 @@ export function TurnChangesCard({ review }: TurnChangesCardProps) {
       </div>
       <div className="ml-auto flex items-center gap-2">
         <Button type="button" variant="ghost" size="sm" disabled aria-label="Undo unavailable for turn changes" tooltip="Undo is not available for turn reviews.">Undo<Undo2 className="size-3.5" aria-hidden="true" /></Button>
-        <Button type="button" variant="outline" size="sm" disabled={!count} aria-expanded={viewChanges} aria-controls={filesId} onClick={() => setViewChanges((current) => !current)}>{viewChanges ? "Hide changes" : "View changes"}</Button>
+        <Button type="button" variant="outline" size="sm" aria-expanded={viewChanges} aria-controls={filesId} onClick={() => setViewChanges((current) => !current)}>{viewChanges ? "Hide changes" : "View changes"}</Button>
       </div>
     </header>
     <div id={filesId} className="min-w-0">{visible.map((change) => {
@@ -38,7 +40,7 @@ export function TurnChangesCard({ review }: TurnChangesCardProps) {
         </summary>
         <div className="px-4 pb-3">{change.patch ? <NativeDiff patch={change.patch} /> : <p className="text-xs text-muted-foreground">{change.presentation === "binary" ? "Binary file changed." : "Patch exceeds the preview limit."}</p>}</div>
       </details>;
-    })}{!count && <p className="px-4 py-3 text-muted-foreground">No file changes observed.</p>}</div>
+    })}</div>
     {hiddenCount > 0 && !viewChanges && <button type="button" className="flex w-full items-center gap-2 border-t bg-muted/30 px-4 py-3 text-left hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" aria-expanded={showAll} aria-controls={filesId} onClick={() => setShowAll((current) => !current)}>
       {showAll ? "Show fewer files" : `Show ${hiddenCount} more ${hiddenCount === 1 ? "file" : "files"}`}<ChevronDown className={`size-4 ${showAll ? "rotate-180" : ""}`} aria-hidden="true" />
     </button>}

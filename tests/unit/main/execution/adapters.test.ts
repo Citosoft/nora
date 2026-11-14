@@ -198,6 +198,28 @@ test("Claude receives a separate saved guidance field while the user's instructi
   await registry.close();
 });
 
+test("Claude gets this turn's note changes in front of the instruction while its guidance stays fixed", async (t) => {
+  const f = fixture(t); f.create("conversation", "checkout", { ...provider, kind: "claude" }, { id: "research" });
+  const opened: ClaudeOpenInput[] = [];
+  const turns = [null, "<nora_note_update>\n- [n1] Prefers tabs\n</nora_note_update>"];
+  const adapter = new ClaudeAdapter({ instanceId: "account-a", policies: { "native-default": "default" }, now, nextId: randomUUID, discover,
+    runContext: async () => ({ tools: null, guidance: "Your saved notes: none", turnNotes: turns[opened.length] ?? null }),
+    open(input) {
+      opened.push(input);
+      return { async interrupt() {}, close() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
+        yield { kind: "init", eventId: "init", sessionId: input.sessionId };
+        yield { kind: "finished", eventId: "done", status: "completed", failure: null, usage: { inputTokens: 0, outputTokens: 0 } };
+      } };
+    } });
+  const registry = new ProviderRegistry(); registry.register(adapter);
+  const worker = new EffectWorker(f.engine, registry);
+  for (const id of ["first", "follow-up"]) { f.submit(id); await worker.runNext(); await worker.runNext(["review"]); }
+  assert.deepEqual(opened.map((input) => input.instruction), ["first", "<nora_note_update>\n- [n1] Prefers tabs\n</nora_note_update>\n\nfollow-up"]);
+  assert.equal(opened[1].guidance, opened[0].guidance);
+  assert.match(opened[0].guidance ?? "", /Your saved notes: none/);
+  await registry.close();
+});
+
 test("Claude receives a bot thread's guidance instead of the role's", async (t) => {
   const f = fixture(t);
   const bot = snapshotBot({ id: "ada", name: "Ada", role: "Reviewer", instructions: "Review carefully.", avatar: { seed: 1 }, scope: { kind: "global" }, revision: 1,

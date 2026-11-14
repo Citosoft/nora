@@ -1,7 +1,10 @@
+import { parseIssueReference } from "@/components/app/logic/forge-items/issueReference";
+import { IssueReferencePill } from "./IssueReferencePill";
 import { useMemo } from "react";
 import type { MouseEvent, ReactNode } from "react";
 import ReactMarkdown, { defaultUrlTransform, type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { markdownHtmlPlugins } from "@/components/app/logic/markdownHtml";
 import { cn } from "@/lib/utils";
 import type { MarkdownRendererLinkClickHandler, MarkdownRendererProps } from "@/components/app/types/markdownRenderer.types";
 
@@ -17,7 +20,8 @@ function buildMarkdownComponents(onLinkClick?: MarkdownRendererLinkClickHandler)
   ul: ({ children, className }) => <ul className={cn("mt-3 list-disc space-y-2 pl-6 text-sm leading-7 text-foreground first:mt-0", className)}>{children}</ul>,
   ol: ({ children }: { children?: ReactNode }) => <ol className="mt-3 list-decimal space-y-2 pl-6 text-sm leading-7 text-foreground first:mt-0">{children}</ol>,
   li: ({ children, className }) => <li className={cn("pl-1 marker:text-muted-foreground [&.task-list-item]:list-none", className)}>{children}</li>,
-  a: ({ children, href }: { children?: ReactNode; href?: string }) => {
+  a: ({ children, href, title }) => {
+    const reference = parseIssueReference(href, title, typeof children === "string" ? children : Array.isArray(children) ? children.filter((child) => typeof child === "string").join("") : "");
     const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
       if (!href || !onLinkClick || href.startsWith("#")) {
         return;
@@ -28,8 +32,8 @@ function buildMarkdownComponents(onLinkClick?: MarkdownRendererLinkClickHandler)
     };
 
     return (
-      <a className="text-primary underline underline-offset-4" href={href} onClick={handleClick}>
-        {children}
+      <a className={reference ? "inline rounded-full no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" : "text-primary underline underline-offset-4"} href={href} title={reference ? reference.webUrl : title} onClick={handleClick}>
+        {reference ? <IssueReferencePill reference={reference} /> : children}
       </a>
     );
   },
@@ -60,11 +64,11 @@ function buildMarkdownComponents(onLinkClick?: MarkdownRendererLinkClickHandler)
   };
 }
 
-export function MarkdownRenderer({ children, className, onLinkClick }: MarkdownRendererProps) {
+export function MarkdownRenderer({ children, className, onLinkClick, allowHtml = false }: MarkdownRendererProps) {
   const components = useMemo(() => buildMarkdownComponents(onLinkClick), [onLinkClick]);
   return (
     <div className={className}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}
+      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={allowHtml ? markdownHtmlPlugins : undefined} components={components}
         urlTransform={(url, key) => key === "href" && onLinkClick && /^(?:file:|[a-z]:[\\/])/i.test(url) ? url : defaultUrlTransform(url)}>
         {children}
       </ReactMarkdown>

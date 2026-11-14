@@ -6,6 +6,8 @@ import type { WorkspaceHomeProps } from "@/components/app/types/workspace-home/h
 import type { WorkspaceToolId } from "@/components/app/types/workspaceNavigation.types";
 
 const toolDescriptions: Record<WorkspaceToolId, string> = {
+  "merge-requests": "Review workspace merge requests",
+  issues: "Browse workspace issues",
   documents: "Notes, specs & project files", tasks: "Plan what comes next", terminals: "Your command line",
   worktrees: "Isolated branches of work", browser: "Preview your project", workflows: "Repeatable runs"
 };
@@ -23,7 +25,7 @@ export function WorkspaceHome({ workspace, activity, loading, error, onNewThread
         </div>}
       </header>
 
-      <div className="flex flex-wrap items-center justify-between gap-5 rounded-xl border bg-gradient-to-br from-primary/10 via-background to-background p-6">
+      <div className="flex flex-wrap items-center justify-between gap-5 rounded-lg border bg-gradient-to-br from-primary/10 via-background to-background p-6">
         <div><h2 className="text-lg font-medium tracking-tight">What’s next for this project?</h2><p className="mt-1 text-sm text-muted-foreground">Bring an idea, tackle a bug, or explore the code.</p></div>
         <Button onClick={onNewThread} disabled={!workspace} className="gap-2"><MessageSquarePlus className="size-4" aria-hidden="true" />New thread<ArrowRight className="ml-2 size-3.5" aria-hidden="true" /></Button>
       </div>

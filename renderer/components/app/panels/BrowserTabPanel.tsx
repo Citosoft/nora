@@ -562,20 +562,20 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
   };
 
   return (
-    <Card className="center-column-surface h-full min-h-0 rounded-none border-x-0 border-t-0 bg-card/95">
+    <Card className="center-column-surface h-full min-h-0 rounded-none border-x-0 border-t-0 bg-background">
       <CardContent
         className={cn(
           "grid h-full p-0",
           annotationCount > 0 ? "grid-rows-[auto_minmax(0,1fr)_auto]" : "grid-rows-[auto_minmax(0,1fr)]"
         )}
       >
-        <div className="workspace-shell-surface border-b border-border/60 bg-background/60 px-4 py-3">
+        <div className="workspace-shell-surface workspace-chrome-surface border-b border-border/60 px-3 py-2">
           <div className="flex items-center gap-2">
-            <div className="workspace-shell-control-border flex shrink-0 overflow-hidden rounded-[6px] border border-border/70 bg-background/40">
+            <div className="workspace-shell-control-border flex shrink-0 overflow-hidden rounded-md border border-border/70 bg-background">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="icon"
-                className="button-default-surface workspace-shell-control-border h-10 w-10 shrink-0 rounded-none border-0 border-r border-border/70 shadow-none"
+                className="workspace-shell-control-border size-8 shrink-0 rounded-none border-0 border-r border-border/70 shadow-none"
                 onClick={() => {
                   if (webviewRef.current?.canGoBack()) {
                     webviewRef.current.goBack();
@@ -594,9 +594,9 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
                 <ArrowLeft className="size-4" />
               </Button>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="icon"
-                className="workspace-shell-control-border h-10 w-10 shrink-0 rounded-none border-0 border-r border-border/70 shadow-none"
+                className="workspace-shell-control-border size-8 shrink-0 rounded-none border-0 border-r border-border/70 shadow-none"
                 onClick={() => {
                   if (webviewRef.current?.canGoForward()) {
                     webviewRef.current.goForward();
@@ -615,9 +615,9 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
                 <ArrowRight className="size-4" />
               </Button>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="icon"
-                className="h-10 w-10 shrink-0 rounded-none border-0 shadow-none"
+                className="size-8 shrink-0 rounded-none border-0 shadow-none"
                 onClick={() => {
                   onUpdateTab(tab.id, (current) => ({ ...current, status: "starting" }));
                   if (currentUrl === "about:blank") {
@@ -633,7 +633,7 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
             </div>
             <div
               className={cn(
-                "workspace-shell-control-border relative flex min-w-0 flex-1 items-stretch overflow-hidden rounded-[6px] border border-border/70 bg-background/40",
+                "workspace-shell-control-border relative flex min-w-0 flex-1 items-stretch overflow-hidden rounded-md border border-border/70 bg-background",
                 "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background"
               )}
             >
@@ -650,24 +650,25 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
                     navigateToInput();
                   }
                 }}
+                aria-label="Page URL"
                 placeholder="Enter a URL"
-                className="h-10 min-w-0 flex-1 rounded-none border-0 bg-transparent pl-9 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                className="h-8 min-w-0 flex-1 rounded-none border-0 bg-transparent pl-9 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
               />
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={navigateToInput}
-                className="button-default-surface workspace-shell-control-border h-10 shrink-0 rounded-none border-0 border-l border-border/70 px-4 text-[12px] font-semibold shadow-none"
+                className="workspace-shell-control-border h-8 shrink-0 rounded-none border-0 border-l border-border/70 px-3 text-xs font-medium shadow-none"
               >
                 Go
               </Button>
             </div>
-            <div className="workspace-shell-control-border flex shrink-0 overflow-hidden rounded-[6px] border border-border/70 bg-background/40">
+            <div className="workspace-shell-control-border flex shrink-0 overflow-hidden rounded-md border border-border/70 bg-background">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="icon"
                 className={cn(
-                  "button-default-surface workspace-shell-control-border h-10 w-10 shrink-0 rounded-none border-0 border-r border-border/70 shadow-none",
-                  inspectModeEnabled && "bg-primary/15 text-primary"
+                  "workspace-shell-control-border size-8 shrink-0 rounded-none border-0 border-r border-border/70 shadow-none",
+                  inspectModeEnabled && "bg-secondary text-foreground"
                 )}
                 onClick={() => {
                   if (currentUrl === "about:blank") {
@@ -682,9 +683,9 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
                 <MousePointer2 className="size-4" />
               </Button>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="icon"
-                className="button-default-surface workspace-shell-control-border h-10 w-10 shrink-0 rounded-none border-0 border-r border-border/70 shadow-none"
+                className="workspace-shell-control-border size-8 shrink-0 rounded-none border-0 border-r border-border/70 shadow-none"
                 onClick={() => {
                   if (currentUrl === "about:blank") {
                     return;
@@ -697,9 +698,9 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
                 <Bug className="size-4" />
               </Button>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="icon"
-                className="h-10 w-10 shrink-0 rounded-none border-0 shadow-none"
+                className="size-8 shrink-0 rounded-none border-0 shadow-none"
                 onClick={() => {
                   if (currentUrl !== "about:blank") {
                     void noraSystemClient.openExternalUrl(currentUrl);
@@ -790,7 +791,7 @@ export function BrowserTabPanel(props: BrowserTabPanelProps) {
                   />
                 </ContextMenuTrigger>
                 <ContextMenuContent className="min-w-72">
-                  <div className="px-2 py-1 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Selection Actions</div>
+                  <div className="px-2 py-1 text-xs font-medium text-muted-foreground">Selection actions</div>
                   <ContextMenuItem onSelect={() => {
                     void handleCreateTaskFromSelection();
                   }}>

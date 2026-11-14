@@ -32,7 +32,7 @@ export interface ThreadWorkspaceDeps {
   nextId(): string;
   now(): string;
 }
-export interface OpenThreadDraft { source?: ConversationSource; workspaceId: string; text?: string; provider?: ProviderBinding; botId?: string; group?: GroupRequest; }
+export interface OpenThreadDraft { source?: ConversationSource; workspaceId: string; text?: string; provider?: ProviderBinding; direct?: { botId: string }; group?: GroupRequest; }
 export interface ThreadWorkspaceStore {
   addThreadReference(documentId: string, conversationId: string): Promise<void>;
   removeThreadReference(documentId: string, referenceId: string): void;
@@ -49,9 +49,12 @@ export interface ThreadWorkspaceStore {
   updateBoot(boot: NativeBoot): void;
   openDraft(input: OpenThreadDraft): string | null;
   openThread(conversationId: string): string | null;
+  /** Opens the bot's direct chat, or a draft of it when the user has not messaged the bot yet. */
+  openDirect(workspaceId: string, botId: string): string | null;
   focusDocument(documentId: string): void;
   focusWorkspace(workspaceId: string): void;
   deactivate(): void;
+  showHome(): void;
   setWindowFocused(focused: boolean): void;
   setThreadVisible(visible: boolean): void;
   closeDocument(documentId: string): void;
@@ -63,7 +66,6 @@ export interface ThreadWorkspaceStore {
   setBinding(documentId: string, binding: ProviderBinding | null, origin: BindingOrigin): void;
   selectWorkspace(documentId: string, workspaceId: string): void;
   /** Chooses the bot a new thread runs as; null talks to Nora. */
-  selectBot(documentId: string, botId: string | null): void;
   togglePin(conversationId: string): void;
   setPinned(conversationId: string, pinned: boolean): void;
   submit(documentId: string): Promise<void>;

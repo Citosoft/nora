@@ -6,6 +6,7 @@ import type {
   AgentSkillSearchResult,
   AiModelCatalogEntry,
   AiProvider,
+  AiSimpleTaskSettings,
   AppSettings,
   BrowserCookieProfileSummary,
   ForgeOAuthProviderConfig,
@@ -92,7 +93,7 @@ export type SettingsRuntimeValue = {
   updateAiModel: (provider: AiProvider, model: string) => void;
   updateVoiceSettings: (voice: AppSettings["voice"]) => void;
   updateAiSimpleTaskSettings: (
-    settings: Pick<AppSettings["ai"], "simpleTaskProvider" | "localLlmModelId">
+    settings: AiSimpleTaskSettings
   ) => void;
   aiModelOptions: Record<AiProvider, AiModelCatalogEntry[]>;
   aiModelLoading: Record<AiProvider, boolean>;

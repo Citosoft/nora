@@ -4,6 +4,9 @@ import { useThreadCenterPorts } from "@/components/app/hooks/useThreadCenterPort
 import { useOptionalWorkspaceSidebarPorts } from "@/components/app/hooks/useWorkspaceSidebarPorts";
 import { useOptionalSessionCenterPorts } from "@/components/app/hooks/useSessionCenterPorts";
 import { NativeConversationPanel } from "@/components/app/panels/conversations/NativeConversationPanel";
+import { ChatConversationPanel } from "@/components/app/panels/chat/ChatConversationPanel";
+import { isChat } from "@/components/app/logic/directChats";
+import { buildChatWorkThreads } from "@/components/app/logic/chatWorkThreads";
 import type { NativeConversationPorts } from "@/components/app/types/nativePanels.types";
 import type { ThreadViewContentProps } from "@/components/app/types/thread-workspace/ports.types";
 
@@ -30,18 +33,19 @@ export function ThreadViewContent({ documentId }: ThreadViewContentProps) {
     execute: (command: Parameters<NativeConversationPorts["execute"]>[0]) => store.execute(documentId, command),
     compact: () => store.compact(documentId),
     selectWorkspace: (workspaceId: string) => store.selectWorkspace(documentId, workspaceId),
-    selectBot: (botId: string | null) => store.selectBot(documentId, botId),
     openThread: (id: string) => store.openThread(id)
   }), [store, documentId]);
-  const memberThreads = useMemo(() => new Map(state.summaries.flatMap(({ conversation }) => conversationId && conversation.parentId === conversationId
-    && conversation.bot && !conversation.archivedAt ? [[conversation.bot.botId, conversation.id] as const] : [])), [state.summaries, conversationId]);
+  const summary = state.summaries.find((entry) => entry.conversation.id === conversationId);
+  const chat = !!document?.direct || !!document?.group || (!!summary && isChat(summary.conversation));
+  const workThreads = useMemo(() => chat && conversationId ? buildChatWorkThreads(state.summaries, conversationId, state.boot.workspaces) : [],
+    [chat, conversationId, state.summaries, state.boot.workspaces]);
   const referenceChoices = useMemo(() => state.summaries.filter((summary) => summary.conversation.id !== conversationId
     && summary.conversation.workspace.environmentId === state.boot.environmentId).map(({ conversation }) => ({ id: conversation.id, title: conversation.title,
       workspace: state.boot.workspaces.find((entry) => entry.id === conversation.workspace.projectId)?.name ?? conversation.workspace.path, settled: !!conversation.archivedAt })),
     [state.summaries, state.boot.environmentId, state.boot.workspaces, conversationId]);
-  const ports = useMemo<NativeConversationPorts | null>(() => document && workspace ? { visible, client: store.client, workspace, state: state.boot, userDisplayName, threadForge, openThreadSettings, openBotSettings, referenceChoices, memberThreads,
+  const ports = useMemo<NativeConversationPorts | null>(() => document && workspace ? { visible, client: store.client, workspace, state: state.boot, userDisplayName, threadForge, openThreadSettings, openBotSettings, referenceChoices, workThreads,
     document, runtime: state.runtime[documentId] ?? { busy: false, error: null, readyBinding: null }, storageError: state.storageError, latestFailure, ...actions } : null,
-  [visible, store.client, workspace, state.boot, document, state.runtime, state.storageError, latestFailure, actions, documentId, userDisplayName, threadForge, openThreadSettings, openBotSettings, referenceChoices, memberThreads]);
+  [visible, store.client, workspace, state.boot, document, state.runtime, state.storageError, latestFailure, actions, documentId, userDisplayName, threadForge, openThreadSettings, openBotSettings, referenceChoices, workThreads]);
   if (!ports) return <section className="p-6 text-sm text-muted-foreground" role="status">This thread's workspace is unavailable on its owning host. Its saved draft has been retained.</section>;
-  return <NativeConversationContext.Provider value={ports}><NativeConversationPanel /></NativeConversationContext.Provider>;
+  return <NativeConversationContext.Provider value={ports}>{chat ? <ChatConversationPanel /> : <NativeConversationPanel />}</NativeConversationContext.Provider>;
 }

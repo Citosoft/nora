@@ -1,34 +1,13 @@
 import {
-  browserReviewComposerSurfaceClass,
-  browserReviewComposerTextareaClass
-} from "@/components/app/panels/browser-annotation/browserAnnotationUi";
-import type { BrowserAnnotationComposerTarget } from "@/components/app/types/browserAnnotationContext.types";
+  reviewComposerSurfaceClass,
+  reviewComposerTextareaClass
+} from "@/components/app/logic/reviewStyles";
+import { formatBrowserElementLabel } from "@/components/app/logic/browserAnnotation";
+import type { BrowserCommentComposerProps } from "@/components/app/types/browserAnnotationContext.types";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { MessageSquarePlus, X } from "lucide-react";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-
-type BrowserCommentComposerProps = {
-  target: BrowserAnnotationComposerTarget;
-  onSave: (body: string) => void;
-  onCancel: () => void;
-  disabled?: boolean;
-};
-
-const formatElementSummary = (target: BrowserAnnotationComposerTarget): string => {
-  const tag = target.tagName.toLowerCase();
-  const id = target.attributes.id?.trim();
-  if (id) {
-    return `${tag}#${id}`;
-  }
-
-  const testId = target.attributes["data-testid"]?.trim();
-  if (testId) {
-    return `${tag}[data-testid="${testId}"]`;
-  }
-
-  return tag;
-};
 
 export function BrowserCommentComposer({ target, onSave, onCancel, disabled = false }: BrowserCommentComposerProps) {
   const [draft, setDraft] = useState("");
@@ -39,6 +18,7 @@ export function BrowserCommentComposer({ target, onSave, onCancel, disabled = fa
   }, [target.key]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (disabled) return;
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       event.preventDefault();
       const next = draft.trim();
@@ -53,16 +33,16 @@ export function BrowserCommentComposer({ target, onSave, onCancel, disabled = fa
   };
 
   return (
-    <div className="absolute inset-x-4 bottom-4 z-20 max-w-xl">
-      <div className={browserReviewComposerSurfaceClass}>
-        <div className="flex items-start justify-between gap-3">
+    <div className="absolute inset-x-3 bottom-3 z-20 max-h-[calc(100%-1.5rem)] max-w-lg overflow-y-auto rounded-lg">
+      <div className={reviewComposerSurfaceClass}>
+        <div className="flex items-start justify-between gap-3 border-b border-border/60 px-4 py-3">
           <div className="min-w-0 space-y-1">
-            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
-              <MessageSquarePlus className="size-3.5" />
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <MessageSquarePlus className="size-3.5" aria-hidden="true" />
               <span>Add page comment</span>
             </div>
-            <div className="truncate text-sm font-medium text-foreground" title={formatElementSummary(target)}>
-              {formatElementSummary(target)}
+            <div className="truncate font-mono text-xs text-foreground" title={formatBrowserElementLabel(target)}>
+              {formatBrowserElementLabel(target)}
             </div>
             {target.textPreview ? (
               <div className="line-clamp-2 text-xs text-muted-foreground" title={target.textPreview}>
@@ -76,24 +56,27 @@ export function BrowserCommentComposer({ target, onSave, onCancel, disabled = fa
           <Button
             variant="ghost"
             size="icon"
-            className="size-7 shrink-0"
+            className="size-7 shrink-0 text-muted-foreground"
             onClick={onCancel}
             disabled={disabled}
             aria-label="Close comment composer"
           >
-            <X className="size-4" />
+            <X className="size-4" aria-hidden="true" />
           </Button>
         </div>
-        <Textarea
-          ref={textareaRef}
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Describe what should change about this element"
-          className={browserReviewComposerTextareaClass}
-          disabled={disabled}
-        />
-        <div className="flex items-center justify-end gap-2">
+        <div className="px-4 py-3">
+          <Textarea
+            ref={textareaRef}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={handleKeyDown}
+            aria-label="Page comment"
+            placeholder="Describe what should change about this element"
+            className={reviewComposerTextareaClass}
+            disabled={disabled}
+          />
+        </div>
+        <div className="flex items-center justify-end gap-2 border-t border-border/60 px-4 py-3">
           <Button variant="ghost" size="sm" onClick={onCancel} disabled={disabled}>
             Cancel
           </Button>

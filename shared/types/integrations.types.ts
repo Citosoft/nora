@@ -31,6 +31,7 @@ export interface ForgeRepoSummary {
 }
 
 export interface ForgeWorkItemSummary {
+  draft?: boolean;
   id: string;
   number: number;
   title: string;

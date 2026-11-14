@@ -28,7 +28,7 @@ export function registerBotTools(server: McpServer, context: NoraToolContext, de
   }, (input) => runTool(async () => {
     const bot = await deps.bots.create(input, context);
     return `Created ${bot.name} (id ${bot.id}), available ${availability(bot.scope)}, using ${bot.binding.kind} / ${bot.binding.model}. `
-      + "It now appears in the Bots sidebar and under Talk to in new threads; the user can edit it in Settings → Bots.";
+      + "It now appears in the Bots sidebar, where the user can message it; they can edit it in Settings → Bots.";
   }));
   server.registerTool("update_bot", { ...NORA_TOOLS.update_bot,
     inputSchema: {

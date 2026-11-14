@@ -13,7 +13,7 @@ function ProviderUpdatesButton({ notices, onUpdate, collapsed }: ProviderUpdates
   const label = notices.length === 1 ? `${notices[0].label} update available` : `${notices.length} provider updates available`;
   return <Popover open={open} onOpenChange={setOpen}>
     <PopoverTrigger asChild>
-      <Button variant="ghost" size="icon" aria-label={label} tooltip={label} className="relative size-8 text-muted-foreground">
+      <Button variant="ghost" size="icon" aria-label={label} tooltip={label} className={`relative ${collapsed ? "size-8" : "h-8 w-full min-w-0"} text-muted-foreground`}>
         <CircleArrowUp className="size-4" aria-hidden="true" /><IndicatorDot />
       </Button>
     </PopoverTrigger>
@@ -44,7 +44,7 @@ function noraUpdateLabel(state: NoraUpdateState): string {
   }
 }
 
-function NoraUpdateButton({ state, onInstall, onOpenRelease }: NoraUpdateIndicator) {
+function NoraUpdateButton({ state, onInstall, onOpenRelease, collapsed }: NoraUpdateIndicator & { collapsed: boolean }) {
   const label = noraUpdateLabel(state);
   const busy = state.phase === "downloading" || state.phase === "installing";
   // While busy the button stays focusable so its tooltip still explains the in-progress state.
@@ -53,7 +53,7 @@ function NoraUpdateButton({ state, onInstall, onOpenRelease }: NoraUpdateIndicat
     else if (state.phase === "manual") onOpenRelease();
   };
   return <Button variant="ghost" size="icon" aria-label={label} aria-disabled={busy} tooltip={label}
-    className={`relative size-8 ${busy ? "cursor-default opacity-70" : ""}`} onClick={run}>
+    className={`relative ${collapsed ? "size-8" : "h-8 w-full min-w-0"} ${busy ? "cursor-default opacity-70" : ""}`} onClick={run}>
     <AppMark className={`size-4 shrink-0 ${busy ? "motion-safe:animate-pulse" : ""}`} />
     {!busy && <IndicatorDot />}
   </Button>;
@@ -62,8 +62,8 @@ function NoraUpdateButton({ state, onInstall, onOpenRelease }: NoraUpdateIndicat
 /** Footer indicators for available updates; renders nothing when everything is current. */
 export function UpdateIndicators({ providers, nora, collapsed }: UpdateIndicatorsInput & { collapsed: boolean }) {
   if (!providers && !nora) return null;
-  return <div role="group" aria-label="Available updates" className={`flex ${collapsed ? "flex-col" : ""} items-center gap-1`}>
-    {nora && <NoraUpdateButton {...nora} />}
+  return <div role="group" aria-label="Available updates" className={collapsed ? "flex flex-col items-center gap-1" : "contents"}>
+    {nora && <NoraUpdateButton {...nora} collapsed={collapsed} />}
     {providers && <ProviderUpdatesButton {...providers} collapsed={collapsed} />}
   </div>;
 }

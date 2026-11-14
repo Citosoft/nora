@@ -11,6 +11,7 @@ import { WorkspaceSessionPanelProvider } from "@/components/app/context/workspac
 import { WorkspaceDocumentsTool } from "@/components/app/panels/workspace-tools/WorkspaceDocumentsTool";
 import { WorkspaceTerminalsTool } from "@/components/app/panels/workspace-tools/WorkspaceTerminalsTool";
 import { WorkspaceWorktreesTool } from "./WorkspaceWorktreesTool";
+import { ForgeItemsTool } from "./forge-items/ForgeItemsTool";
 import type { WorkspaceToolContentProps } from "@/components/app/types/workspaceNavigation.types";
 
 export function WorkspaceToolContent({ tool, workspace, active }: WorkspaceToolContentProps) {
@@ -22,7 +23,7 @@ export function WorkspaceToolContent({ tool, workspace, active }: WorkspaceToolC
   const scoped: AppMainCenterContentValue = { ...value,
     workspaceSessionPanelProps: { ...value.workspaceSessionPanelProps, project: workspace.project, workspace },
     taskCenterProps: { ...value.taskCenterProps, projectId, onClose: returnToThread,
-      onCreateTask: (id: string) => { closeTool(); value.taskCenterProps.onCreateTask(id); },
+      onCreateTask: value.taskCenterProps.onCreateTask,
       onOpenTask: (id: string, path: string) => { closeTool(); value.taskCenterProps.onOpenTask(id, path); } },
     noteCenterProps: { ...value.noteCenterProps, projectId, onClose: returnToThread,
       onCreateNote: value.noteCenterProps.onCreateNote,
@@ -34,6 +35,8 @@ export function WorkspaceToolContent({ tool, workspace, active }: WorkspaceToolC
   };
   let content: ReactNode;
   switch (tool) {
+    case "merge-requests": content = <ForgeItemsTool workspace={workspace} kind="pull_request" />; break;
+    case "issues": content = <ForgeItemsTool workspace={workspace} kind="issue" />; break;
     case "tasks": content = <TaskCenter />; break;
     case "documents": content = <WorkspaceDocumentsTool workspace={workspace} active={active} />; break;
     case "terminals": content = <WorkspaceTerminalsTool workspace={workspace} />; break;

@@ -222,6 +222,7 @@ export function useAppPreLaunchViewProps(args: UseAppPreLaunchViewPropsArgs): {
       }),
       loadingOnboardingDialogProps: buildOnboardingDialogProps({
         mode: "loading",
+        safely,
         snapshot: null,
         effectiveStartupDependencyReport,
         isStartupDependencyDialogBusy,
@@ -255,6 +256,7 @@ export function useAppPreLaunchViewProps(args: UseAppPreLaunchViewPropsArgs): {
       onboardingOnboardingDialogProps: snapshot
         ? buildOnboardingDialogProps({
             mode: "onboarding",
+            safely,
             snapshot,
             effectiveStartupDependencyReport,
             isStartupDependencyDialogBusy,

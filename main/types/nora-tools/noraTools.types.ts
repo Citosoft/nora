@@ -5,13 +5,19 @@ import type { BotMemoryEntry, BotAvatarEyes, BotAvatarPalette, BotAvatarShape, B
 
 /** Where a runtime reaches Nora's own tools for one conversation; the token identifies that conversation. */
 export interface NoraToolEndpoint { url: string; token: string; }
-/** Null for conversations that do not get Nora's tools (group chats, which run on Nora's coordinator). */
+/** Null for conversations that do not get Nora's tools (group and direct chats, which run on Nora's coordinators). */
 export type NoraToolEndpointResolver = (conversation: Conversation) => Promise<NoraToolEndpoint | null>;
 /** Per-run additions for a conversation: Nora's tool endpoint and guidance that changes between runs, such as a bot's saved notes. */
-export interface NoraRunContext { tools: NoraToolEndpoint | null; guidance: string | null; }
+export interface NoraRunContext {
+  tools: NoraToolEndpoint | null;
+  /** Session guidance; kept stable across a thread's turns so providers can cache the conversation behind it. */
+  guidance: string | null;
+  /** Context for this turn only (saved-note changes), sent in front of the user's instruction. */
+  turnNotes: string | null;
+}
 export type NoraRunContextResolver = (conversation: Conversation) => Promise<NoraRunContext>;
-/** The calling thread and which tool set it gets; `group` is the group chat a member thread answers in. */
-export interface NoraToolContext { conversation: Conversation; audience: Exclude<NoraToolAudience, "member">; group?: Conversation; }
+/** The calling thread and which tool set it gets; `chat` is the group or direct chat a bot thread answers in. */
+export interface NoraToolContext { conversation: Conversation; audience: Exclude<NoraToolAudience, "member">; chat?: Conversation; }
 
 export interface BotModelInput { provider?: string; model?: string; }
 export interface BotAvatarInput { shape?: BotAvatarShape; colour?: BotAvatarPalette; eyes?: BotAvatarEyes; }
@@ -55,18 +61,22 @@ export interface NoraThreadOperations {
   read(conversationId: string, limit: number, context: NoraToolContext): NoraThreadTranscript;
 }
 
-export interface NoraGroupMessage { author: string; text: string; createdAt: string; }
-export interface NoraGroupHistory { title: string; messages: readonly NoraGroupMessage[]; more: boolean; }
-export interface NoraGroupOperations {
-  /** Group messages older than the newest `skip`, newest last; only for a member thread's own group. */
-  history(skip: number, limit: number, context: NoraToolContext): NoraGroupHistory;
+export interface NoraChatMessage { author: string; text: string; createdAt: string; }
+export interface NoraChatHistory { title: string; messages: readonly NoraChatMessage[]; more: boolean; }
+export interface NoraChatOperations {
+  /** Chat messages older than the newest `skip`, newest last; only for a bot thread's own group or direct chat. */
+  history(skip: number, limit: number, context: NoraToolContext): NoraChatHistory;
 }
 
-export interface NoraTaskInfo { path: string; title: string; column: string; columnId: string; completed: boolean; }
+export interface NoraTaskInfo { id: string; path: string; title: string; column: string; columnId: string; completed: boolean; }
+export interface NoraTaskDetail { task: NoraTaskInfo; content: string; }
 export interface NoraTaskOperations {
   list(context: NoraToolContext): Promise<NoraTaskInfo[]>;
   create(title: string, details: string | undefined, context: NoraToolContext): Promise<NoraTaskInfo>;
   move(path: string, column: string, context: NoraToolContext): Promise<NoraTaskInfo>;
+  read(id: string, context: NoraToolContext): Promise<NoraTaskDetail>;
+  start(id: string, context: NoraToolContext): Promise<NoraTaskInfo>;
+  finish(id: string, context: NoraToolContext): Promise<NoraTaskInfo>;
 }
 
 export interface AskBotResult { botName: string; conversationId: string; reply: string; }
@@ -74,9 +84,12 @@ export interface NoraAskOperations {
   /** Runs the bot in its own child thread of the caller and waits for its final reply. */
   ask(bot: string, message: string, context: NoraToolContext, signal: AbortSignal): Promise<AskBotResult>;
 }
+/** A new note in a scope, or a correction of one of the thread's own saved notes by id. */
+export type RememberInput = { kind: "add"; text: string; scope: "bot" | "workspace" } | { kind: "update"; memoryId: string; text: string };
 export interface NoraMemoryOperations {
-  remember(text: string, scope: "bot" | "workspace", context: NoraToolContext): BotMemoryEntry;
+  remember(input: RememberInput, context: NoraToolContext): { note: BotMemoryEntry; updated: boolean };
   recall(query: string, context: NoraToolContext): BotMemoryEntry[];
+  forget(memoryId: string, context: NoraToolContext): BotMemoryEntry;
 }
 
 /** App operations the tools call; each acts as the user would in Nora, scoped to the calling thread. */
@@ -88,7 +101,7 @@ export interface NoraToolDeps {
   app: NoraAppOperations;
   settings: NoraSettingsOperations;
   threads: NoraThreadOperations;
-  groups: NoraGroupOperations;
+  chats: NoraChatOperations;
   tasks: NoraTaskOperations;
 }
 export interface NoraToolServer {

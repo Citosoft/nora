@@ -1,3 +1,4 @@
+import { createWorkspaceWorktree } from "./orchestrator/createWorkspaceWorktree";
 import type {
   AgentContextPreview,
   AgentSession,
@@ -873,6 +874,17 @@ export class Orchestrator implements OrchestratorFacade {
       pushChanges: () => pushChangesWithValidation(this.createSessionActionsDependencies())
     });
     this.sessionMainService = new SessionMainService({
+      createWorktree: (payload) => createWorkspaceWorktree(payload, {
+        worktrees: this.worktreeHelpers,
+        getSnapshot: () => this.getSnapshot(),
+        validateBranch: async (project, branch) => {
+          try { await execGit(this.getProjectTarget(project), ["check-ref-format", "--branch", branch]); }
+          catch { throw new Error("Enter a valid new Git branch name, such as feature/my-worktree."); }
+        },
+        updateState: (update) => { this.stateGateway.updateState(update); },
+        persistWorkspaceState: (state) => this.persistenceHelpers.persistWorkspaceState(state),
+        refreshProjectState: () => this.refreshProjectState()
+      }),
       sessionCreation: this.sessionCreationHelpers,
       localTerminal: this.localTerminalHelpers,
       sessionLifecycle: this.sessionLifecycleHelpers,

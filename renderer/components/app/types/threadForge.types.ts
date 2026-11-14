@@ -4,7 +4,8 @@ import type {
   ForgeBranchPullRequestStatus,
   ForgeCreatePullRequestPayload,
   ForgeProvider,
-  ForgeWorkItemDetail
+  ForgeWorkItemDetail,
+  ForgeWorkItemSummary
 } from "@shared/appTypes";
 import type { ThreadBranchDiffTarget } from "./centerDiff.types";
 
@@ -14,6 +15,7 @@ export type ThreadForgeConnections = Record<ForgeProvider, boolean>;
 /** Credential-bound forge access for thread surfaces; tokens never leave this client. */
 export interface ThreadForgeClient {
   connections: ThreadForgeConnections;
+  readIssues(projectId: string): Promise<ForgeWorkItemSummary[]>;
   readBranchRequest(projectId: string, branch: string): Promise<ForgeBranchPullRequestStatus | null>;
   readBranchChanges(projectId: string, checkoutPath: string): Promise<ForgeBranchChanges | null>;
   /** Per-file patches for the same changes `readBranchChanges` counts; null for a detached checkout. */

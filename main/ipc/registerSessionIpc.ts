@@ -1,3 +1,4 @@
+import { parseCreateWorktreePayload } from "@shared/worktreeCreation";
 import type { AppState, CreateAgentPayload, CreateTerminalPayload } from "@shared/appTypes";
 import { ipcMain } from "electron";
 import type { MainServices } from "@main/services/mainServices";
@@ -29,6 +30,9 @@ export function registerSessionIpc({ services, withSnapshot, loopRunner }: Regis
       validateCreateAgentPayload(normalized);
       return services.session.createAgent(normalized);
     })
+  );
+  ipcMain.handle("app:create-worktree", (_event, payload: unknown) =>
+    withSnapshot(() => services.session.createWorktree(parseCreateWorktreePayload(payload)))
   );
   ipcMain.handle("app:create-terminal", (_event, payload: CreateTerminalPayload) =>
     withSnapshot(() => services.session.createTerminal(payload))

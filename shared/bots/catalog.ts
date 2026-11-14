@@ -1,5 +1,8 @@
 import type { BotDefinition, BotOrigin, BotSettings, EffectiveBot, SharedBotSet, WorkspaceBotSettings } from "@shared/types/bots/bots.types";
 
+/** Nora, the built-in assistant every bot-less thread runs as. It has no definition, but its id is reserved so its notes never mix with a bot's. */
+export const NORA_BOT_ID = "nora";
+
 export const EMPTY_WORKSPACE_BOTS: Readonly<WorkspaceBotSettings> = { private: [], hidden: [] };
 
 export function emptyBotSettings(): BotSettings { return { global: [], workspaces: {} }; }
@@ -44,9 +47,9 @@ export function newBotId(name: string, taken: ReadonlySet<string>): string {
   }
 }
 
-/** Every id a new bot must avoid: global ids plus the workspace's shared and private ones, so a new bot never silently overrides another. */
+/** Every id a new bot must avoid: Nora's, global ids plus the workspace's shared and private ones, so a new bot never silently overrides another. */
 export function knownBotIds(settings: BotSettings | undefined, workspaceId: string | null, shared: readonly SharedBotSet[]): Set<string> {
-  const ids = new Set((settings?.global ?? []).map((bot) => bot.id));
+  const ids = new Set([NORA_BOT_ID, ...(settings?.global ?? []).map((bot) => bot.id)]);
   if (workspaceId) {
     for (const bot of shared.find((entry) => entry.workspaceId === workspaceId)?.bots ?? []) ids.add(bot.id);
     for (const bot of workspaceBotSettings(settings, workspaceId).private) ids.add(bot.id);

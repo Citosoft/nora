@@ -7,7 +7,7 @@ import { provider } from "../main/execution/fixture";
 
 test("lost instruction replies retry original create/submit identities instead of creating another native turn", async () => {
   let sequence = 0;
-  const intent = createDraftIntent({ conversationId: null, provider, role: { id: "writing" }, botId: null, text: "Draft a brief", workspace: {
+  const intent = createDraftIntent({ conversationId: null, provider, role: { id: "writing" }, text: "Draft a brief", workspace: {
     id: "personal", name: "Personal", kind: "personal", workspace: { projectId: "personal", checkoutId: "c", environmentId: "local", path: "/personal", branch: "", access: "write" }
   } }, () => `id-${++sequence}`);
   const commands: ConversationCommand[] = [];
@@ -30,11 +30,13 @@ test("lost instruction replies retry original create/submit identities instead o
   assert.equal(intent.submit.instruction, "Draft a brief");
 });
 
-test("bot drafts name the bot instead of the user's role", () => {
+test("direct-chat drafts name the bot, are titled after it and are stored in their home workspace", () => {
   let sequence = 0;
   const workspace = { id: "personal", name: "Personal", kind: "personal" as const,
     workspace: { projectId: "personal", checkoutId: "c", environmentId: "local", path: "/personal", branch: "", access: "write" as const } };
-  const intent = createDraftIntent({ conversationId: null, provider, role: { id: "writing" }, botId: "ada", text: "Hello", workspace }, () => `id-${++sequence}`);
-  assert.equal(intent.create?.botId, "ada");
-  assert.equal(intent.create?.role, undefined);
+  const home = { ...workspace, id: "home", workspace: { ...workspace.workspace, projectId: "home" } };
+  const intent = createDraftIntent({ conversationId: null, provider, role: { id: "writing" }, text: "Hello", workspace,
+    direct: { request: { botId: "ada", workspaceId: "personal" }, title: "Ada", home } }, () => `id-${++sequence}`);
+  assert.deepEqual(intent.create?.direct, { botId: "ada", workspaceId: "personal" });
+  assert.deepEqual([intent.create?.title, intent.create?.workspace.projectId, intent.create?.role], ["Ada", "home", undefined]);
 });

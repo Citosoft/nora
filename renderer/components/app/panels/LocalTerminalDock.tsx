@@ -70,7 +70,7 @@ export function LocalTerminalDock() {
         <div className="h-px w-16 rounded-full bg-border/60 transition-colors group-hover:bg-primary/50" />
       </div>
       {terminal ? (
-        <div className="flex h-[calc(100%-0.5rem)] min-h-0 flex-col bg-card/95">
+        <div className="flex h-[calc(100%-0.5rem)] min-h-0 flex-col bg-card">
           <div className="workspace-shell-surface flex items-center justify-between border-b border-border/60 px-4 py-2.5">
             <div className="flex min-w-0 items-center gap-2 text-sm font-medium">
               <TerminalSquare className="size-4 shrink-0 text-primary" />
@@ -111,7 +111,7 @@ export function LocalTerminalDock() {
       ) : (
         <div className="flex h-[calc(100%-0.5rem)] items-center justify-center px-6">
           <div className="flex max-w-md flex-col items-center gap-3 text-center">
-            <div className="grid size-11 place-items-center rounded-[8px] border border-border/70 bg-background/60 text-primary">
+            <div className="grid size-11 place-items-center rounded-lg border border-border/70 bg-background text-primary">
               <LoaderCircle className="size-5 animate-spin" />
             </div>
             <div className="space-y-1">

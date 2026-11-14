@@ -12,6 +12,7 @@ import type {
   CommitChangesPayload,
   CreateAgentPayload,
   CreateTerminalPayload,
+  CreateWorktreePayload,
   CreateWorkspaceDirectoryPayload,
   ExternalHarnessContextRef,
   ExternalHarnessSessionSummary,
@@ -188,6 +189,7 @@ export interface WorkspaceService {
 
 export interface SessionService {
   createAgent: (payload: CreateAgentPayload) => Promise<AppState>;
+  createWorktree: (payload: CreateWorktreePayload) => Promise<AppState>;
   createTerminal: (payload: CreateTerminalPayload) => Promise<AppState>;
   renameTerminal: (sessionId: string, name: string) => Promise<AppState>;
   openLocalTerminal: (shellId?: string) => Promise<LocalTerminalState>;

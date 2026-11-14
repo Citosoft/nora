@@ -10,6 +10,8 @@ import type { AppSettings, WorkspaceTaskBoard, WorkspaceTaskSummary } from "@sha
 /** Task board access for a shell project, backed by the workspace service. */
 export interface NoraTaskStore {
   list(projectId: string): Promise<WorkspaceTaskSummary[]>;
+  read(projectId: string, path: string): Promise<string>;
+  move(projectId: string, fromPath: string, toPath: string): Promise<void>;
   board(projectId: string): Promise<WorkspaceTaskBoard>;
   saveBoard(projectId: string, board: WorkspaceTaskBoard): Promise<WorkspaceTaskBoard>;
   /** Writes a new task file and places it on the board; returns its workspace-relative path. */
@@ -24,6 +26,7 @@ export interface NoraToolOperationOptions {
   memory: BotMemoryStore;
   /** Absent when the task board is unavailable in this environment. */
   tasks?: NoraTaskStore;
+  onTasksChanged?: (projectId: string) => void;
 }
 /** The model a bot falls back to when the caller names no provider or model. */
 export interface BotBindingFallback { kind: ProviderBinding["kind"]; instanceId: string; model: string; reasoning: string | null; permissionPolicy: string | null; }

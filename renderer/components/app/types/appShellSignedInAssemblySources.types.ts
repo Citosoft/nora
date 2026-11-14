@@ -61,7 +61,7 @@ export type AppShellSignedInForgeSources = Pick<
   | "performForgeWorkItemAction"
   | "refreshForgeOverview"
   | "resolveGitlabForgeRepoOverride"
-  | "handleSpawnForgeIssueAgent"
+  | "handleStartForgeIssueThread"
   | "handleSpawnForgeReviewAgent"
   | "focusedForgeViewerTab"
 > &

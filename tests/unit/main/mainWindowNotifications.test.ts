@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import test, { mock } from "node:test";
 
 function fixture() {
-  const send = mock.fn<(channel: string, payload: object | null) => void>();
+  const send = mock.fn<(channel: string, payload: object | string | null) => void>();
   const frame = { isDestroyed: () => false, detached: false, send };
   const webContents = { isDestroyed: () => false, mainFrame: frame };
   const window = { isDestroyed: () => false, webContents };
@@ -64,7 +64,7 @@ test("shutdown progress skips disposed frames and resumes delivery to a replacem
   f.notifications.notifyAppClosingProgress({ detail: "Stopping agents", command: null });
   f.frame.isDestroyed = () => true;
   f.notifications.notifyAppClosingProgress({ detail: "Agents stopped", command: null });
-  const replacementSend = mock.fn<(channel: string, payload: object | null) => void>();
+  const replacementSend = mock.fn<(channel: string, payload: object | string | null) => void>();
   f.webContents.mainFrame = { isDestroyed: () => false, detached: false, send: replacementSend };
   f.notifications.notifyWindowStateChanged();
 
@@ -101,4 +101,14 @@ test("workspace timing remains recorded after the renderer goes away", (t) => {
   assert.ok(f.deps.workspaceLoadingTimingByProject.has("project"));
   assert.equal(log.mock.callCount(), 1);
   assert.equal(f.send.mock.callCount(), 0);
+});
+
+
+test("task changes identify the owning project and skip disposed renderers", () => {
+  const f = fixture();
+  f.notifications.notifyWorkspaceTasksChanged("background-project");
+  assert.deepEqual(f.send.mock.calls[0].arguments, ["workspace:tasks-changed", "background-project"]);
+  f.frame.detached = true;
+  f.notifications.notifyWorkspaceTasksChanged("background-project");
+  assert.equal(f.send.mock.callCount(), 1);
 });

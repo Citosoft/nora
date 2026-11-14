@@ -324,7 +324,9 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
       anthropic: "claude-3-5-haiku-latest"
     },
     simpleTaskProvider: "cloud",
-    localLlmModelId: "qwen2.5-0.5b-instruct"
+    localLlmModelId: "qwen2.5-0.5b-instruct",
+    runtimeModelByProvider: { codex: null, claude: null },
+    memoryReview: { provider: "claude", runtimeModel: null }
   },
   voice: {
     dictationProvider: "openai",

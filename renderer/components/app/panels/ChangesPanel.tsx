@@ -244,7 +244,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
     onRefreshForgeItem,
     onForgeAction,
     onForgeCommentSubmit,
-    onSpawnIssueAgent,
+    onStartIssueThread,
     onSpawnReviewAgent,
     onOpenCreatePullRequest
   } = useChangesPanelForge();
@@ -851,21 +851,11 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
 
   const commitSubtitle = (entry: CommitHistoryEntry) =>
     `${entry.author} · ${formatCommitTimestamp(entry.authoredAt)} · ${entry.shortHash}`;
-  const activeSidebarTabClass = resolvedTheme === "light"
-    ? "bg-white text-slate-900 shadow-[0_1px_1px_rgba(15,23,42,0.08)]"
-    : "bg-muted text-foreground";
-  const inactiveSidebarTabClass = resolvedTheme === "light"
-    ? "text-slate-600 hover:text-slate-900"
-    : "text-muted-foreground hover:text-foreground";
-  const contextSubTabTriggerClass = resolvedTheme === "light"
-    ? "gap-1.5 px-2.5 py-1.5 text-xs text-slate-600 hover:text-slate-900 data-[state=active]:bg-white data-[state=active]:text-slate-900"
-    : "gap-1.5 px-2.5 py-1.5 text-xs";
-  const detectedContextCardClass = resolvedTheme === "light"
-    ? "rounded-[4px] border border-border/90 bg-white"
-    : "rounded-[4px] border border-border/60 bg-card/40";
-  const detectedContextActionClass = resolvedTheme === "light"
-    ? "w-full rounded-md border border-border/90 bg-white px-2 py-2 text-left outline-none transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-    : "w-full rounded-md border border-border/60 bg-background/30 px-2 py-2 text-left outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+  const activeSidebarTabClass = "bg-secondary text-foreground";
+  const inactiveSidebarTabClass = "text-muted-foreground hover:text-foreground";
+  const contextSubTabTriggerClass = "gap-1.5 px-2.5 py-1.5 text-xs";
+  const detectedContextCardClass = "rounded-lg border border-border/60 bg-card";
+  const detectedContextActionClass = "w-full rounded-md border border-border/60 bg-background px-2 py-2 text-left outline-none transition-colors hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
   const gitTabPullRequestStatusDot = forgeOverview?.repo?.provider === "github" && activeBranch ? (
     <Tooltip
@@ -890,12 +880,12 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
   ) : null;
 
   return (
-    <section className="workspace-shell-surface flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-card/95">
+    <section className="workspace-shell-surface flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-card">
       {!collapsed ? (
         <CardHeader className="min-w-0 border-b border-border/60 px-0 py-2">
           <div className="mb-2 flex items-center gap-3 px-4">
             <div className="min-w-0 flex-1">
-              <div className="flex w-full flex-wrap items-center rounded-[4px] border border-border/60 bg-background/40 p-1 sm:flex-nowrap">
+              <div className="flex w-full flex-wrap items-center rounded-md border border-border/60 bg-background p-1 sm:flex-nowrap">
                 {availableTabs.map((tab) => {
                   const { label, Icon, title } = CHANGES_PANEL_TAB_PRESENTATION[tab];
                   return (
@@ -963,7 +953,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                   <GitBranch className="size-3.5 shrink-0" />
                   <span className="truncate">{sourcePath}</span>
                 </div>
-                <div className="pointer-events-none absolute left-0 top-full z-20 mt-2 hidden rounded-[4px] border border-border/70 bg-popover/95 px-3 py-2 text-[11px] leading-5 text-popover-foreground shadow-xl backdrop-blur group-hover:block">
+                <div className="pointer-events-none absolute left-0 top-full z-20 mt-2 hidden rounded-md border border-border/70 bg-popover/95 px-3 py-2 text-[11px] leading-5 text-popover-foreground shadow-xl backdrop-blur group-hover:block">
                   {sourcePath}
                 </div>
               </div>
@@ -1050,7 +1040,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                 {isInspectingCommit ? (
                   <div className="grid gap-2 border-b border-border/50 pb-3">
                     <div className="flex items-start gap-2">
-                      <div className="grid h-9 w-9 shrink-0 place-items-center border border-border/60 bg-background/50 text-muted-foreground">
+                      <div className="grid h-9 w-9 shrink-0 place-items-center border border-border/60 bg-background text-muted-foreground">
                         <History className="size-4" />
                       </div>
                       <div className="min-w-0 flex-1">
@@ -1062,7 +1052,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                         </div>
                       </div>
                     </div>
-                    <Button variant="outline" className="h-8 justify-start gap-2 rounded-[6px] px-3 text-[11px] font-semibold" onClick={() => void onClearCommitInspection()}>
+                    <Button variant="outline" className="h-8 justify-start gap-2 rounded-lg px-3 text-[11px] font-semibold" onClick={() => void onClearCommitInspection()}>
                       <Undo2 className="size-4" />
                       <span>Back to working tree</span>
                     </Button>
@@ -1070,7 +1060,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                 ) : (
                   <div className="grid gap-2 border-b border-border/50 pb-3">
                     <div className="flex items-center gap-2">
-                      <div className="grid h-9 w-9 shrink-0 place-items-center border border-border/60 bg-background/50 text-muted-foreground">
+                      <div className="grid h-9 w-9 shrink-0 place-items-center border border-border/60 bg-background text-muted-foreground">
                         <MessageSquare className="size-4" />
                       </div>
                       <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -1101,7 +1091,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                         ) : null}
                       </div>
                     </div>
-                    <div className="grid grid-cols-4 gap-0 rounded-[6px] border border-border/70 bg-background/40">
+                    <div className="grid grid-cols-4 gap-0 rounded-lg border border-border/70 bg-background">
                       <Button
                         variant="outline"
                         className="button-default-surface h-8 w-full justify-center gap-1.5 rounded-none border-0 border-r border-border/70 px-3 text-[11px] font-semibold tracking-normal"
@@ -1200,7 +1190,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                       <History className="size-3.5" />
                       Recent commits
                     </div>
@@ -1218,7 +1208,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                     </div>
                   </div>
                   {isRecentCommitsCollapsed ? null : (
-                    <div className="max-h-44 overflow-auto border-y border-border/50 bg-background/20">
+                    <div className="max-h-44 overflow-auto border-y border-border/50 bg-background">
                       <div className="divide-y divide-border/40">
                         {snapshot.commitHistory.length ? (
                           snapshot.commitHistory.map((entry) => (
@@ -1232,7 +1222,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                               title={`${entry.subject}\n${entry.author}\n${entry.shortHash} · ${formatCommitTimestamp(entry.authoredAt)}`}
                             >
                               <div className="flex items-start gap-3 px-3 py-2.5">
-                                <div className="grid h-8 w-8 shrink-0 place-items-center border border-border/50 bg-background/55 text-muted-foreground">
+                                <div className="grid h-8 w-8 shrink-0 place-items-center border border-border/50 bg-background text-muted-foreground">
                                   <GitBranch className="size-3.5" />
                                 </div>
                                 <div className="min-w-0 flex-1">
@@ -1291,7 +1281,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
           ) : activeTab === "context" ? (
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
               {!snapshot.project ? (
-                <div className="m-3 border border-dashed border-border/70 bg-background/40 p-4 text-sm text-muted-foreground">
+                <div className="m-3 border border-dashed border-border/70 bg-background p-4 text-sm text-muted-foreground">
                   Choose a project to browse workspace context.
                 </div>
               ) : (
@@ -1329,11 +1319,11 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                     ) : (
                       <div className="space-y-5 p-3 pb-6">
                         <section className="space-y-2" aria-labelledby="detected-nora-agents-heading">
-                          <h3 id="detected-nora-agents-heading" className="px-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          <h3 id="detected-nora-agents-heading" className="px-0.5 text-xs font-medium text-muted-foreground">
                             Nora project agents
                           </h3>
                           {!sortedAgentContextSources.length ? (
-                            <div className="border border-dashed border-border/70 bg-background/40 p-3 text-sm text-muted-foreground">
+                            <div className="border border-dashed border-border/70 bg-background p-3 text-sm text-muted-foreground">
                               No other agents in this project have tracked context yet. Launch an agent and send prompts to
                               build shareable conversation groups.
                             </div>
@@ -1407,7 +1397,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                         </section>
 
                         <section className="space-y-2" aria-labelledby="detected-external-harness-heading">
-                          <h3 id="detected-external-harness-heading" className="px-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          <h3 id="detected-external-harness-heading" className="px-0.5 text-xs font-medium text-muted-foreground">
                             Local CLI transcripts
                           </h3>
                           <p className="px-0.5 text-[11px] leading-relaxed text-muted-foreground">
@@ -1415,7 +1405,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                             Remote-only checkouts are skipped.
                           </p>
                           {!snapshot.changesRoot ? (
-                            <div className="border border-dashed border-border/70 bg-background/40 p-3 text-sm text-muted-foreground">
+                            <div className="border border-dashed border-border/70 bg-background p-3 text-sm text-muted-foreground">
                               Focus a worktree checkout to scan local harness stores for this folder.
                             </div>
                           ) : isExternalHarnessLoading && externalHarnessSessions.length === 0 ? (
@@ -1424,7 +1414,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                               Scanning local CLI sessions
                             </div>
                           ) : !externalHarnessSessions.length ? (
-                            <div className="border border-dashed border-border/70 bg-background/40 p-3 text-sm text-muted-foreground">
+                            <div className="border border-dashed border-border/70 bg-background p-3 text-sm text-muted-foreground">
                               No matching local CLI sessions for this worktree path, or every session is already linked to a Nora
                               agent.
                             </div>
@@ -1491,7 +1481,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                     className="absolute inset-0 m-0 mt-0 overflow-y-auto p-0 focus-visible:outline-none data-[state=inactive]:hidden"
                   >
                     {!snapshot.changesRoot ? (
-                      <div className="m-3 border border-dashed border-border/70 bg-background/40 p-4 text-sm text-muted-foreground">
+                      <div className="m-3 border border-dashed border-border/70 bg-background p-4 text-sm text-muted-foreground">
                         Focus a worktree checkout to list files under{" "}
                         <span className="font-mono text-[11px]">.nora/imported_context</span> for that checkout.
                       </div>
@@ -1510,7 +1500,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                     ) : importedLoading && importedBundles.length === 0 ? (
                       <div className="px-4 pb-4 text-sm text-muted-foreground">Loading imported bundles…</div>
                     ) : importedBundlesUnique.length === 0 ? (
-                      <div className="m-3 border border-dashed border-border/70 bg-background/40 p-4 text-sm text-muted-foreground">
+                      <div className="m-3 border border-dashed border-border/70 bg-background p-4 text-sm text-muted-foreground">
                         No files in{" "}
                         <span className="font-mono text-[11px]">.nora/imported_context</span>
                         . Bundles appear here when you share context into an agent launched in this worktree.
@@ -1632,20 +1622,20 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
               onRefreshDetail={onRefreshForgeItem}
               onAction={onForgeAction}
               onCommentSubmit={onForgeCommentSubmit}
-              onSpawnIssueAgent={onSpawnIssueAgent}
+              onStartIssueThread={onStartIssueThread}
               onSpawnReviewAgent={onSpawnReviewAgent}
             />
           ) : snapshot.changes.length ? (
             <div className="min-h-0 flex-1 overflow-auto">
               <div className="border-b border-border/40 px-4 py-2.5">
                 <div className="flex min-w-0 flex-nowrap items-center gap-2">
-                  <div className="flex shrink-0 items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  <div className="flex shrink-0 items-center gap-2 text-xs font-medium text-muted-foreground">
                     <FolderGit2 className="size-3.5 shrink-0" />
                     <span className="whitespace-nowrap">{isInspectingCommit ? "Files" : "Changed"}</span>
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 flex-nowrap items-center justify-end gap-2">
-                      <div className="flex shrink-0 items-center gap-0 rounded-[6px] border border-border/70 bg-background/40">
+                      <div className="flex shrink-0 items-center gap-0 rounded-lg border border-border/70 bg-background">
                         <Button
                           variant="outline"
                           size="sm"
@@ -1791,7 +1781,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
               )}
             </div>
           ) : (
-            <div className="m-3 border border-dashed border-border/70 bg-background/40 p-4 text-sm text-muted-foreground">
+            <div className="m-3 border border-dashed border-border/70 bg-background p-4 text-sm text-muted-foreground">
               {isInspectingCommit ? "No diff available for this commit." : "The focused worktree is clean right now."}
             </div>
           )}

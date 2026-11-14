@@ -1,4 +1,4 @@
-import { CheckCircle2, Circle, Trash2, Users } from "lucide-react";
+import { CheckCircle2, Circle, Play, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { TaskItemProps } from "@/components/app/types/taskCenter.types";
@@ -7,10 +7,11 @@ export function TaskItem({
   task,
   assignmentCount,
   selected,
-  selectionDisabled,
+  isStartingThreads,
   layout,
   onToggleSelection,
   onOpen,
+  onStart,
   onToggleComplete,
   onDelete,
   onDragStart,
@@ -26,7 +27,7 @@ export function TaskItem({
         "group flex items-start gap-3 transition-colors",
         isBoard
           ? "rounded-lg border bg-background p-3 hover:border-border/80"
-          : "border-b border-border/50 px-3 py-3.5 last:border-b-0 hover:bg-muted/40",
+          : "border-b border-border/50 px-4 py-3.5 last:border-b-0 hover:bg-muted/40 sm:px-6",
         selected && "bg-primary/5",
         selected && isBoard && "border-primary/40",
         isBoard && !task.completed && "cursor-grab active:cursor-grabbing"
@@ -36,7 +37,7 @@ export function TaskItem({
         type="checkbox"
         checked={selected}
         onChange={onToggleSelection}
-        disabled={task.completed || selectionDisabled}
+        disabled={task.completed || isStartingThreads}
         aria-label={`Select ${task.title}`}
         className="form-control-surface mt-1 size-3.5 shrink-0 rounded border accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-30"
       />
@@ -86,6 +87,20 @@ export function TaskItem({
         )}
       </div>
       <div className="flex shrink-0 items-center gap-1">
+        {!task.completed && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-7 text-muted-foreground hover:text-foreground"
+            disabled={isStartingThreads}
+            onClick={() => void onStart()}
+            aria-label={`Start ${task.title}`}
+            tooltip="Start task"
+          >
+            <Play className="size-3.5" aria-hidden="true" />
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="icon"

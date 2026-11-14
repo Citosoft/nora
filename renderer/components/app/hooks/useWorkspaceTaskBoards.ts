@@ -1,3 +1,4 @@
+import { useWorkspaceTaskRevision } from "@/components/app/hooks/useWorkspaceTaskRevision";
 import { getWorkspaceProjectIds } from "@/components/app/logic/workspaceProjectIds";
 import type { WorkspaceTaskBoardsState } from "@/components/app/types";
 import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
@@ -8,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 
 export function useWorkspaceTaskBoards() {
   const snapshot = useCanonicalAppSnapshot();
+  const taskRevision = useWorkspaceTaskRevision();
   const [workspaceTaskBoards, setWorkspaceTaskBoards] = useState<WorkspaceTaskBoardsState>({});
   const workspaceTaskBoardsRef = useRef<WorkspaceTaskBoardsState>({});
 
@@ -83,7 +85,7 @@ export function useWorkspaceTaskBoards() {
     return () => {
       mounted = false;
     };
-  }, [snapshot?.project?.id, snapshot?.workspaces.map((workspace) => workspace.project.id).join("\n"), snapshot?.changes.map((change) => change.path).join("\n")]);
+  }, [taskRevision, snapshot?.project?.id, snapshot?.workspaces.map((workspace) => workspace.project.id).join("\n"), snapshot?.changes.map((change) => change.path).join("\n")]);
 
   const saveWorkspaceTaskBoard = async (projectId: string, board: WorkspaceTaskBoard): Promise<WorkspaceTaskBoard> => {
     const previousState = workspaceTaskBoardsRef.current[projectId] ?? {

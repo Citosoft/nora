@@ -5,6 +5,7 @@ import test from "node:test";
 
 function createSessionServiceStub(): SessionService {
   return {
+    createWorktree: async () => { throw new Error("not used"); },
     createAgent: async () => {
       throw new Error("not used");
     },

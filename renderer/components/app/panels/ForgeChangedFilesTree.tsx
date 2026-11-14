@@ -31,7 +31,7 @@ function ForgeChangedFilesTreeNode({
         <button
           type="button"
           className={cn(
-            "flex w-full items-center gap-2 rounded-[4px] px-2 py-1.5 text-left text-sm transition hover:bg-accent/30",
+            "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition hover:bg-accent/30",
             "text-muted-foreground hover:text-foreground"
           )}
           style={{ paddingLeft: `${8 + depth * 14}px` }}
@@ -65,7 +65,7 @@ function ForgeChangedFilesTreeNode({
     <button
       type="button"
       className={cn(
-        "flex w-full items-center gap-2 rounded-[4px] px-2 py-1.5 text-left text-sm transition hover:bg-accent/30",
+        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition hover:bg-accent/30",
         isSelected ? "bg-primary/10 text-foreground" : "text-foreground/90"
       )}
       style={{ paddingLeft: `${8 + depth * 14}px` }}
@@ -131,11 +131,11 @@ export function ForgeChangedFilesTree({
         <div className="flex items-center gap-2">
           <ListTree className="size-4 text-primary" />
           <div className="min-w-0">
-            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Files</div>
+            <div className="text-xs font-medium text-muted-foreground">Files</div>
             <div className="text-[11px] text-muted-foreground">{changes.length} changed file{changes.length === 1 ? "" : "s"}</div>
           </div>
         </div>
-        <Button variant="ghost" size="icon" className="size-7 rounded-[4px]" onClick={onClose} aria-label="Close file tree">
+        <Button variant="ghost" size="icon" className="size-7 rounded-md" onClick={onClose} aria-label="Close file tree">
           <X className="size-3.5" />
         </Button>
       </div>

@@ -37,9 +37,7 @@ export function BotsHome() {
         <h2 id="bots-home-bots" className="sr-only">Bots</h2>
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{home.items.map((item) => {
           const bot = home.bots.find((entry) => entry.bot.id === item.id)?.bot ?? null;
-          const latest = item.threads[0];
-          return <BotHomeCard key={item.id} item={item} onStart={() => home.startThread(bot ? bot.id : null)}
-            onContinue={latest ? () => home.openThread(latest) : null} onEdit={bot ? () => open(bot, null) : null} />;
+          return <BotHomeCard key={item.id} item={item} onStart={() => home.startThread(bot ? bot.id : null)} onEdit={bot ? () => open(bot, null) : null} />;
         })}</ul>
       </section>
       {(home.groupThreads.length > 0 || canGroup) && <section aria-labelledby="bots-home-groups" className="space-y-3">

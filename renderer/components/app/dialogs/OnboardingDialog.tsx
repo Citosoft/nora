@@ -1,3 +1,5 @@
+import { OnboardingSkillStep } from "@/components/app/dialogs/OnboardingSkillStep";
+import { useOnboardingSkillInstall } from "@/components/app/hooks/useOnboardingSkillInstall";
 import { formatDependencyLabel, getMissingInstallDependencies } from "@/components/app/logic/toolInstallDependencies";
 import { formatInstallLogText } from "@/components/app/logic/terminalLogText";
 import { getNextToolPopoverState } from "@/components/app/logic/toolPopoverPosition";
@@ -24,7 +26,7 @@ import { AlertTriangle, CheckCircle2, ChevronDown, Copy, LoaderCircle, RefreshCc
 import type { MouseEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-type OnboardingStep = "dependencies" | "tools" | "appearance" | "settings" | "workspace";
+type OnboardingStep = "dependencies" | "tools" | "skill" | "appearance" | "settings" | "workspace";
 type DependencyCopyState = "idle" | "copying" | "copied" | "failed";
 
 export type OnboardingDialogProps = {
@@ -65,6 +67,9 @@ export type OnboardingDialogProps = {
   onChooseWorkspace: () => void;
   onSkipOnboarding: () => void;
   onStart: () => void;
+  isNoraSkillInstalled: boolean;
+  canInstallNoraSkill: boolean;
+  onInstallNoraSkill: () => Promise<void>;
 };
 
 const ACCENT_OPTIONS: AccentColor[] = ["silver", "green", "blue", "amber", "rose", "violet"];
@@ -82,7 +87,7 @@ const THEME_OPTION_LABELS: Record<ThemeMode, string> = {
   light: "Light",
   dark: "Dark"
 };
-const ONBOARDING_STEPS: OnboardingStep[] = ["dependencies", "tools", "appearance", "settings", "workspace"];
+const ONBOARDING_STEPS: OnboardingStep[] = ["dependencies", "tools", "skill", "appearance", "settings", "workspace"];
 const ONBOARDING_STEP_COPY: Record<OnboardingStep, { title: string; description: string }> = {
   dependencies: {
     title: "Check local dependencies",
@@ -91,6 +96,10 @@ const ONBOARDING_STEP_COPY: Record<OnboardingStep, { title: string; description:
   tools: {
     title: "Set up agent CLIs",
     description: "Review detected coding agents and install or enable the tools you want available."
+  },
+  skill: {
+    title: "Give your agents the Nora skill",
+    description: "Help your agents manage tasks and work with the app."
   },
   appearance: {
     title: "Choose your appearance",
@@ -143,8 +152,12 @@ export function OnboardingDialog({
   onSetToolEnabled,
   onChooseWorkspace,
   onSkipOnboarding,
-  onStart
+  onStart,
+  isNoraSkillInstalled,
+  canInstallNoraSkill,
+  onInstallNoraSkill
 }: OnboardingDialogProps) {
+  const skillInstall = useOnboardingSkillInstall(onInstallNoraSkill);
   const [step, setStep] = useState<OnboardingStep>("dependencies");
   const [isSkipConfirmOpen, setIsSkipConfirmOpen] = useState(false);
   const [activeToolPopover, setActiveToolPopover] = useState<ToolPopoverState | null>(null);
@@ -318,7 +331,7 @@ export function OnboardingDialog({
 
               <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {isLoadingDependencies ? (
-                  <div className="flex items-center gap-3 rounded-[6px] border border-border/70 bg-card/70 px-4 py-3 text-sm text-foreground md:col-span-2 xl:col-span-3">
+                  <div className="flex items-center gap-3 rounded-lg border border-border/70 bg-card px-4 py-3 text-sm text-foreground md:col-span-2 xl:col-span-3">
                     <LoaderCircle className="size-4 animate-spin text-primary" />
                     Checking dependencies...
                   </div>
@@ -329,7 +342,7 @@ export function OnboardingDialog({
                 ].map((group) =>
                   group.items.length ? (
                     <div key={group.title} className="md:col-span-2 xl:col-span-3">
-                      <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{group.title}</div>
+                      <div className="mb-2 text-xs font-medium text-muted-foreground">{group.title}</div>
                       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                         {group.items.map((dependency) => {
                           const isAvailable = dependency.status === "available";
@@ -348,12 +361,12 @@ export function OnboardingDialog({
                             <div
                               key={dependency.id}
                               className={[
-                                "min-w-0 rounded-[6px] border p-2.5 transition-colors",
+                                "min-w-0 rounded-lg border p-2.5 transition-colors",
                                 wasCopied
                                   ? "border-emerald-500/45 bg-emerald-500/10"
                                   : copyFailed
                                   ? "border-destructive/45 bg-destructive/10"
-                                  : "border-border/70 bg-card/70"
+                                  : "border-border/70 bg-card"
                               ].join(" ")}
                             >
                               <div className="flex min-w-0 items-center justify-between gap-3">
@@ -425,14 +438,14 @@ export function OnboardingDialog({
                                     <div className="mt-1.5 text-sm text-muted-foreground">{dependency.summary}</div>
                                   ) : null}
                                   {dependency.detectedPath ? (
-                                    <div className="mt-2 break-all rounded-[4px] border border-border/60 bg-background px-3 py-1.5 text-xs text-foreground">
+                                    <div className="mt-2 break-all rounded-md border border-border/60 bg-background px-3 py-1.5 text-xs text-foreground">
                                       {dependency.detectedPath}
                                     </div>
                                   ) : null}
                                   {!isAvailable && dependency.manualInstructions.length ? (
                                     <div className="mt-2 space-y-1.5">
                                       {dependency.manualInstructions.map((instruction) => (
-                                        <div key={instruction} className="break-words rounded-[4px] border border-border/60 bg-background px-3 py-1.5 text-sm text-foreground">
+                                        <div key={instruction} className="break-words rounded-md border border-border/60 bg-background px-3 py-1.5 text-sm text-foreground">
                                           {instruction}
                                         </div>
                                       ))}
@@ -450,7 +463,7 @@ export function OnboardingDialog({
               </div>
 
               {installErrorMessage ? (
-                <div className="mt-4 rounded-[4px] border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-foreground">
+                <div className="mt-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-foreground">
                   {installErrorMessage}
                 </div>
               ) : null}
@@ -479,14 +492,14 @@ export function OnboardingDialog({
                   const hasMissingInstallDependencies = missingInstallDependencies.length > 0;
                   const missingInstallDependencyLabel = missingInstallDependencies.map((dependencyId) => formatDependencyLabel(dependencyId)).join(", ");
                   return (
-                    <div key={tool.id} className="min-w-0 rounded-[6px] border border-border/70 bg-card/70 p-3">
+                    <div key={tool.id} className="min-w-0 rounded-lg border border-border/70 bg-card p-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex min-w-0 items-start gap-3">
                           <AgentToolIcon toolId={tool.id} label={tool.label} className="mt-0.5 size-9" imageClassName="size-5 rounded-sm" />
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
                               <div className="truncate font-medium text-foreground">{tool.label}</div>
-                              <span className="rounded-full border border-border/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                              <span className="rounded-full border border-border/70 px-2 py-0.5 text-xs font-medium text-muted-foreground">
                                 {tool.detected ? "installed" : "missing"}
                               </span>
                             </div>
@@ -537,7 +550,7 @@ export function OnboardingDialog({
                       </div>
 
                       {tool.installLog.length ? (
-                        <pre className="terminal-text mt-3 max-h-28 overflow-auto rounded-[4px] border border-border/60 bg-black/30 p-2 text-xs leading-5 text-muted-foreground">
+                        <pre className="terminal-text mt-3 max-h-28 overflow-auto rounded-md border border-border/60 bg-background p-2 text-xs leading-5 text-muted-foreground">
                           {formatInstallLogText(tool.installLog)}
                         </pre>
                       ) : null}
@@ -546,10 +559,13 @@ export function OnboardingDialog({
                 })}
               </div>
 
-              <div className="mt-4 rounded-[6px] border border-border/70 bg-card/70 px-3 py-2 text-sm text-muted-foreground">
+              <div className="mt-4 rounded-lg border border-border/70 bg-card px-3 py-2 text-sm text-muted-foreground">
                 {detectedToolCount} of {tools.length} supported agent CLIs detected.
               </div>
             </div>
+          ) : step === "skill" ? (
+            <OnboardingSkillStep installed={isNoraSkillInstalled} available={canInstallNoraSkill}
+              state={skillInstall.state} onInstall={() => { void skillInstall.startInstall(); }} />
           ) : step === "appearance" ? (
             <div className="min-h-0 flex-1">
               <div>
@@ -572,12 +588,12 @@ export function OnboardingDialog({
                             "rounded-[5px] border p-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                             themeMode === option
                               ? "border-primary bg-primary/10 text-foreground"
-                              : "border-border/70 bg-background/50 text-muted-foreground hover:border-primary/35 hover:text-foreground"
+                              : "border-border/70 bg-background text-muted-foreground hover:border-primary/35 hover:text-foreground"
                           ].join(" ")}
                         >
                           <div
                             className={[
-                              "h-20 overflow-hidden rounded-[4px] border",
+                              "h-20 overflow-hidden rounded-md border",
                               option === "dark"
                                 ? "border-zinc-700 bg-zinc-950"
                                 : option === "light"
@@ -649,7 +665,7 @@ export function OnboardingDialog({
                   <div className="space-y-2 md:pl-4">
                     <div className="text-sm font-medium text-foreground">Accent color</div>
                     <div className="flex justify-center pt-3">
-                      <div className="grid grid-cols-6 gap-2 rounded-[6px] border border-border/70 bg-card/50 p-2">
+                      <div className="grid grid-cols-6 gap-2 rounded-lg border border-border/70 bg-card p-2">
                         {ACCENT_OPTIONS.map((option) => (
                           <button
                             key={option}
@@ -707,7 +723,7 @@ export function OnboardingDialog({
                     </Select>
                   </label>
 
-                  <label className="flex items-center justify-between gap-3 rounded-[4px] border border-border/70 bg-card/70 px-3 py-2">
+                  <label className="flex items-center justify-between gap-3 rounded-md border border-border/70 bg-card px-3 py-2">
                     <div className="flex-1">
                       <div className="text-sm font-medium text-foreground">Project state location</div>
                       <div className="mt-1 text-xs text-muted-foreground">
@@ -725,7 +741,7 @@ export function OnboardingDialog({
                     </div>
                   </label>
 
-                  <label className="flex items-center justify-between gap-3 rounded-[4px] border border-border/70 bg-card/70 px-3 py-2">
+                  <label className="flex items-center justify-between gap-3 rounded-md border border-border/70 bg-card px-3 py-2">
                     <div>
                       <div className="text-sm font-medium text-foreground">Hardware acceleration</div>
                       <div className="mt-1 text-xs text-muted-foreground">Disable this if you hit GPU rendering issues.</div>
@@ -754,7 +770,7 @@ export function OnboardingDialog({
                 </Button>
               </div>
 
-              <div className="mt-4 rounded-[6px] border border-border/70 bg-card/70 p-3">
+              <div className="mt-4 rounded-lg border border-border/70 bg-card p-3">
                 {hasSelectedWorkspace ? (
                   <>
                     <div className="flex items-center gap-3">
@@ -827,12 +843,12 @@ export function OnboardingDialog({
                   Continue
                 </Button>
               ) : step === "tools" ? (
-                <Button onClick={() => setStep("appearance")}>
+                <Button onClick={() => setStep("skill")}>
                   Continue
                 </Button>
               ) : nextStep ? (
                 <Button onClick={() => setStep(nextStep)}>
-                  Continue
+                  {step === "skill" && !isNoraSkillInstalled && skillInstall.state.kind !== "installing" ? "Skip for now" : "Continue"}
                 </Button>
               ) : (
                 <Button onClick={onStart}>

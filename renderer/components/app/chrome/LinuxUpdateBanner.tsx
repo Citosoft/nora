@@ -19,7 +19,7 @@ export function LinuxUpdateBanner({
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-[4px] border border-border/70 bg-background/80 px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-accent/60"
+            className="inline-flex items-center gap-2 rounded-md border border-border/70 bg-background/80 px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-accent/60"
             onClick={onCopyCommand}
           >
             <Copy className="size-4" />
@@ -27,20 +27,20 @@ export function LinuxUpdateBanner({
           </button>
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-[4px] border border-border/70 bg-background/80 px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-accent/60"
+            className="inline-flex items-center gap-2 rounded-md border border-border/70 bg-background/80 px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-accent/60"
             onClick={onOpenRelease}
           >
             <Download className="size-4" />
             <span>Open release</span>
           </button>
-          <code className="rounded-[4px] border border-border/70 bg-background/70 px-2 py-1 text-xs text-foreground">
+          <code className="rounded-md border border-border/70 bg-background px-2 py-1 text-xs text-foreground">
             {status.updateCommand}
           </code>
         </div>
       </div>
       <button
         type="button"
-        className="shrink-0 rounded-[4px] p-1.5 text-muted-foreground transition hover:bg-background/70 hover:text-foreground"
+        className="shrink-0 rounded-md p-1.5 text-muted-foreground transition hover:bg-background hover:text-foreground"
         onClick={onDismiss}
         aria-label="Dismiss Linux update notice"
       >

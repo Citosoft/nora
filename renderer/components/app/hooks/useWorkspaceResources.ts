@@ -1,3 +1,4 @@
+import { useWorkspaceTaskRevision } from "@/components/app/hooks/useWorkspaceTaskRevision";
 import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
 import type {
   WorkspaceFileTreeState,
@@ -33,6 +34,7 @@ function getUniqueWorkspaceProjects(snapshot: AppState | null) {
 
 export function useWorkspaceResources(): UseWorkspaceResourcesResult {
   const snapshot = useCanonicalAppSnapshot();
+  const taskRevision = useWorkspaceTaskRevision();
   const [workspaceFileTree, setWorkspaceFileTree] = useState<WorkspaceFileTreeState>(EMPTY_FILE_TREE_STATE);
   const [workspaceTasks, setWorkspaceTasks] = useState<WorkspaceTasksState>({});
   const [workspaceSpecs, setWorkspaceSpecs] = useState<WorkspaceSpecsState>({});
@@ -253,7 +255,7 @@ export function useWorkspaceResources(): UseWorkspaceResourcesResult {
     return () => {
       mounted = false;
     };
-  }, [snapshot?.project?.id, snapshot?.workspaces.map((workspace) => workspace.project.id).join("\n"), snapshot?.changes.map((change) => change.path).join("\n")]);
+  }, [taskRevision, snapshot?.project?.id, snapshot?.workspaces.map((workspace) => workspace.project.id).join("\n"), snapshot?.changes.map((change) => change.path).join("\n")]);
 
   useEffect(() => {
     const uniqueProjects = getUniqueWorkspaceProjects(snapshot);

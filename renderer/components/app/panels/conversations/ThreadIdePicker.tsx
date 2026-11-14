@@ -42,7 +42,7 @@ export function ThreadIdePicker({ workspace }: ThreadIdePickerProps) {
         disabled={isLoadingInstalledIdes || opening} aria-label="Choose IDE"><ChevronDown className="size-3.5" aria-hidden="true" /></Button>}>
         {sortedIdes.map((ide) => <DropdownMenuItem key={ide.id} onSelect={() => { void open(ide.id); }}>
           <IdeBadge ide={ide} /><span className="truncate">{ide.name}</span>
-          {defaultIdeId === ide.id && <span className="ml-auto rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">Default</span>}
+          {defaultIdeId === ide.id && <span className="ml-auto rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">Default</span>}
         </DropdownMenuItem>)}
       </DropdownMenu>
     </div>

@@ -1,6 +1,6 @@
 import type { WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { RoleSelection } from "@shared/types/personalization/roles.types";
-import type { BotSnapshot, GroupDescriptor } from "@shared/types/bots/bots.types";
+import type { BotSnapshot, DirectDescriptor, GroupDescriptor } from "@shared/types/bots/bots.types";
 import type { ExternalTranscript } from "./externalSessions.types";
 import type { PreparedProviderTransition } from "./providerTransition.types";
 
@@ -10,6 +10,7 @@ export interface PreparedCommand {
   role?: RoleSelection | null;
   bot?: BotSnapshot;
   group?: GroupDescriptor;
+  direct?: DirectDescriptor;
   externalTranscript?: ExternalTranscript;
   steerFollowUp?: boolean;
   providerTransition?: PreparedProviderTransition;

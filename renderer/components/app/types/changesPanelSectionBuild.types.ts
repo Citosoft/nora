@@ -30,7 +30,7 @@ export type ChangesPanelSectionBuildDeps = {
   forgeBranchPullRequestStatus: ChangesPanelForgeSlice["branchPullRequestStatus"];
   forgeOverview: ChangesPanelForgeSlice["overview"];
   forgeWorkItemDetail: ForgeWorkItemDetail | null;
-  handleSpawnForgeIssueAgent: ChangesPanelForgeSlice["onSpawnIssueAgent"];
+  handleStartForgeIssueThread: ChangesPanelForgeSlice["onStartIssueThread"];
   handleSpawnForgeReviewAgent: ChangesPanelForgeSlice["onSpawnReviewAgent"];
   isChangesSidebarCollapsed: boolean;
   isLoadingForgeOverview: boolean;

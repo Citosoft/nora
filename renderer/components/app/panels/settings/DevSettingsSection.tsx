@@ -13,7 +13,7 @@ export function DevSettingsSection() {
         description="Internal preview controls for validating UI behavior in development builds."
         icon={FlaskConical}
       />
-      <div className="divide-y divide-border/60 rounded-[6px] border border-border/70 bg-card/35 px-5">
+      <div className="divide-y divide-border/60 rounded-lg border border-border/70 bg-card px-5">
         <SettingRow
           title="Onboarding Flow"
           description="Reopen the first-run onboarding flow with the current project and settings data."

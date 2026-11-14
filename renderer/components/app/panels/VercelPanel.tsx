@@ -100,7 +100,7 @@ export function VercelPanel({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background/20">
+    <div className="flex h-full min-h-0 flex-col bg-background">
       <div className="border-b border-border/50 px-4 py-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -146,8 +146,8 @@ export function VercelPanel({
       {!linkedProject ? (
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
           {suggestedProject ? (
-            <div className="rounded-[8px] border border-primary/35 bg-primary/10 p-4">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+            <div className="rounded-lg border border-border/60 bg-muted/30 p-4">
+              <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                 <Link2 className="size-3.5" />
                 Suggested match
               </div>
@@ -162,8 +162,8 @@ export function VercelPanel({
             </div>
           ) : null}
 
-          <div className="rounded-[8px] border border-border/60 bg-card/70 p-4">
-            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          <div className="rounded-lg border border-border/60 bg-card p-4">
+            <div className="text-xs font-medium text-muted-foreground">
               Match project
             </div>
             <div className="mt-3 space-y-3">
@@ -180,7 +180,7 @@ export function VercelPanel({
                 ))}
               </Select>
               {selectedProject ? (
-                <div className="rounded-[6px] border border-border/50 bg-background/55 p-3">
+                <div className="rounded-lg border border-border/50 bg-background p-3">
                   <div className="text-sm font-medium text-foreground">{selectedProject.name}</div>
                   <div className="mt-1 text-xs text-muted-foreground">{formatProjectCaption(selectedProject)}</div>
                 </div>
@@ -198,7 +198,7 @@ export function VercelPanel({
           </div>
 
           {!projects.length && !isLoadingProjects ? (
-            <div className="rounded-[8px] border border-dashed border-border/60 px-4 py-6 text-sm text-muted-foreground">
+            <div className="rounded-lg border border-dashed border-border/60 px-4 py-6 text-sm text-muted-foreground">
               No Vercel projects were found for this account.
             </div>
           ) : null}
@@ -207,7 +207,7 @@ export function VercelPanel({
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="border-b border-border/40 px-4 py-3">
             <div className="flex items-center justify-between gap-3">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Deployments</div>
+              <div className="text-xs font-medium text-muted-foreground">Deployments</div>
               <Button
                 variant="outline"
                 size="sm"
@@ -224,7 +224,7 @@ export function VercelPanel({
             <div className="space-y-2">
               {recentDeployments.length ? (
                 recentDeployments.map((deployment) => (
-                  <div key={deployment.id} className="rounded-[8px] border border-border/50 bg-card/70 px-3 py-2.5">
+                  <div key={deployment.id} className="rounded-lg border border-border/50 bg-card px-3 py-2.5">
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
                         <div className="flex min-w-0 items-center gap-2">
@@ -270,7 +270,7 @@ export function VercelPanel({
                   </div>
                 ))
               ) : (
-                <div className="rounded-[8px] border border-dashed border-border/60 px-4 py-6 text-sm text-muted-foreground">
+                <div className="rounded-lg border border-dashed border-border/60 px-4 py-6 text-sm text-muted-foreground">
                   {isLoadingDeployments ? "Loading deployments..." : "No recent deployments found for this project."}
                 </div>
               )}

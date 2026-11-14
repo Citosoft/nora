@@ -1,6 +1,6 @@
 import { useNativeRuntimePorts } from "./useNativeRuntimePorts";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
-import { formatForgeIssueInstruction } from "@/components/app/logic/appUtils";
+import { formatForgeIssueInstruction } from "@/components/app/logic/forge-items/issueReference";
 import {
   buildForgeReviewInstruction,
 } from "@/components/app/logic/forgeReviewHandoff";
@@ -31,7 +31,7 @@ export function useForgeActionHandlers({
   captureError: (error: unknown) => void;
   trackForgeIssueAgentCreation: (payload: CreateAgentPayload) => void;
 }): {
-  handleSpawnForgeIssueAgent: (toolId: string) => Promise<void>;
+  handleStartForgeIssueThread: () => Promise<void>;
   handleSpawnForgeReviewAgent: (
     toolId: string,
     selections: ForgeReviewCommentSelection[],
@@ -41,11 +41,11 @@ export function useForgeActionHandlers({
 } {
   const snapshot = useCanonicalAppSnapshot();
   const native = useNativeRuntimePorts();
-  const handleSpawnForgeIssueAgent = useCallback(async (_toolId: string): Promise<void> => {
-    if (!snapshot?.project || forgeWorkItemDetail?.kind !== "issue") return;
-    try { await native.launch({ projectId: snapshot.project.id, text: formatForgeIssueInstruction(forgeWorkItemDetail) }); }
-    catch (cause) { captureError(cause); }
-  }, [native.launch, snapshot?.project, forgeWorkItemDetail, captureError]);
+  const handleStartForgeIssueThread = useCallback(async (): Promise<void> => {
+    if (!snapshot?.project || forgeWorkItemDetail?.kind !== "issue") throw new Error("Open an issue in the active workspace before starting a fix thread.");
+    const id = await native.launch({ projectId: snapshot.project.id, text: formatForgeIssueInstruction(forgeWorkItemDetail), submit: true });
+    if (!id) throw new Error("The thread runtime is unavailable. Please try again.");
+  }, [native.launch, snapshot?.project, forgeWorkItemDetail]);
   const handleSpawnForgeReviewAgent = useCallback(async (_toolId: string, selections: ForgeReviewCommentSelection[], _targetMode: ForgeReviewAgentTargetMode): Promise<void> => {
     if (!snapshot?.project || forgeWorkItemDetail?.kind !== "pull_request" || !selections.length) return;
     try { await native.launch({ projectId: snapshot.project.id, text: buildForgeReviewInstruction(forgeWorkItemDetail, selections) }); }
@@ -68,7 +68,7 @@ export function useForgeActionHandlers({
   }, [canOpenProjectInIde, captureError, snapshot?.project, statusBar]);
 
   return {
-    handleSpawnForgeIssueAgent,
+    handleStartForgeIssueThread,
     handleSpawnForgeReviewAgent,
     handleOpenProjectInIde
   };

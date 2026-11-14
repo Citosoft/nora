@@ -1,3 +1,4 @@
+import { NORA_SKILL_NAME, NORA_SKILL_REFERENCE } from "@shared/skills/bundled";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { noraToolingClient } from "@/components/app/clients/noraToolingClient";
 import { useSettingsRuntime } from "@/components/app/hooks/useSettingsRuntime";
@@ -20,20 +21,20 @@ function SkillSearchTranscript({ result }: { result: AgentSkillSearchResult }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="mt-3 rounded-[4px] border border-border/60 bg-card/30 p-3">
+    <div className="mt-3 rounded-md border border-border/60 bg-card/30 p-3">
       <button
         type="button"
-        className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground"
+        className="text-xs font-medium text-muted-foreground hover:text-foreground"
         onClick={() => setOpen((current) => !current)}
       >
         {open ? "Hide raw output" : "Show raw output"}
       </button>
       {open ? (
-        <div className="mt-3 rounded-[4px] border border-border/60 bg-black/80 p-3">
-          <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+        <div className="mt-3 rounded-md border border-border/60 bg-background p-3">
+          <div className="mb-2 text-xs font-medium text-muted-foreground">
             {result.command}
           </div>
-          <pre className="terminal-text whitespace-pre-wrap break-words text-xs leading-5 text-slate-200">
+          <pre className="terminal-text whitespace-pre-wrap break-words text-xs leading-5 text-foreground">
             {result.rawOutput || result.lines.join("\n")}
           </pre>
         </div>
@@ -60,7 +61,7 @@ function SkillSearchMatches({
       {result.matches.map((match) => (
         <div
           key={match.reference}
-          className="flex items-start justify-between gap-3 rounded-[4px] border border-border/50 bg-card/40 px-3 py-3"
+          className="flex items-start justify-between gap-3 rounded-md border border-border/50 bg-card px-3 py-3"
         >
           <div className="min-w-0">
             <div className="font-medium text-foreground">{match.reference}</div>
@@ -202,8 +203,8 @@ export function SkillsSettingsSection() {
 
       {sharedSkillsCatalog ? (
         <div className="mt-6 space-y-4">
-          <div className="rounded-[6px] border border-border/60 bg-card/50 px-4 py-4">
-            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          <div className="rounded-lg border border-border/60 bg-card px-4 py-4">
+            <div className="text-xs font-medium text-muted-foreground">
               {sharedSkillsCatalog.sourceLabel || "Shared agent skills"}
             </div>
             <div className="mt-1 break-all text-sm text-foreground">
@@ -217,7 +218,27 @@ export function SkillsSettingsSection() {
             ) : null}
           </div>
 
-          <Tabs defaultValue="find" className="rounded-[6px] border border-border/60 bg-card/40 p-1">
+          <section className="rounded-lg border border-border/60 bg-card px-4 py-4" aria-label="Nora skill">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-medium text-foreground">Nora</div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  Manage Nora tasks, bots, threads and settings with the built-in MCP tools. Task handoffs need only a task ID.
+                </div>
+              </div>
+              <Button variant="outline" size="sm" disabled={isInstalling || !sharedSkillsToolId}
+                onClick={() => startInstall(NORA_SKILL_REFERENCE)}>
+                {isInstalling && installReference === NORA_SKILL_REFERENCE ? "Installing..." : sharedSkillsCatalog.skills.some((skill) => skill.id === NORA_SKILL_NAME) ? "Reinstall Nora skill" : "Install Nora skill"}
+              </Button>
+            </div>
+            {installReference === NORA_SKILL_REFERENCE && installStatus ? (
+              <div role="status" className={["mt-2 text-xs", installStatus.kind === "error" ? "text-destructive" : "text-muted-foreground"].join(" ")}>
+                {installStatus.message}
+              </div>
+            ) : null}
+          </section>
+
+          <Tabs defaultValue="find" className="rounded-lg border border-border/60 bg-card p-1">
             <TabsList className="grid w-full grid-cols-3 border-0 bg-transparent p-0">
               <TabsTrigger value="find" className="justify-center py-2 text-sm">
                 Find
@@ -288,11 +309,11 @@ export function SkillsSettingsSection() {
                   </div>
                 ) : null}
                 {installTranscript ? (
-                  <div className="mt-3 rounded-[4px] border border-border/60 bg-black/80 p-3">
-                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                  <div className="mt-3 rounded-md border border-border/60 bg-background p-3">
+                    <div className="mb-2 text-xs font-medium text-muted-foreground">
                       {installTranscript.command || "Resolving skills command..."}
                     </div>
-                    <pre className="terminal-text max-h-48 overflow-auto whitespace-pre-wrap break-words text-xs leading-5 text-slate-200">
+                    <pre className="terminal-text max-h-48 overflow-auto whitespace-pre-wrap break-words text-xs leading-5 text-foreground">
                       {installTranscript.lines.length
                         ? installTranscript.lines.join("\n")
                         : "Waiting for command output..."}
@@ -329,12 +350,12 @@ export function SkillsSettingsSection() {
                       {sharedSkillsCatalog.skills.map((skill) => (
                         <div
                           key={skill.id}
-                          className="flex items-start justify-between gap-3 rounded-[4px] border border-border/50 bg-background/45 px-3 py-3"
+                          className="flex items-start justify-between gap-3 rounded-md border border-border/50 bg-background/45 px-3 py-3"
                         >
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
                               <div className="font-medium text-foreground">{skill.name}</div>
-                              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-700 dark:text-emerald-300">
+                              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
                                 Enabled
                               </span>
                             </div>
@@ -368,7 +389,7 @@ export function SkillsSettingsSection() {
           </Tabs>
         </div>
       ) : (
-        <div className="mt-6 rounded-[6px] border border-border/60 bg-card/50 px-4 py-4 text-sm text-muted-foreground">
+        <div className="mt-6 rounded-lg border border-border/60 bg-card px-4 py-4 text-sm text-muted-foreground">
           Shared skills are not available for the detected agent setup.
         </div>
       )}

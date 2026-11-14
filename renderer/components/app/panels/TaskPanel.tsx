@@ -60,11 +60,11 @@ export function TaskPanel() {
   }, [isBusy, onSave]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background/10">
+    <div className="flex h-full min-h-0 flex-col bg-background">
       <div className="border-b border-border/50 px-4 py-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
               <FileText className="size-3.5" />
               {completed ? "Completed task" : "Project task"}
             </div>
@@ -130,9 +130,9 @@ export function TaskPanel() {
         </div>
       </div>
 
-      <div className="border-b border-border/50 bg-background/40 px-4 py-3">
+      <div className="border-b border-border/50 bg-background px-4 py-3">
         {completed ? (
-          <div className="flex items-start gap-3 rounded-[6px] border border-emerald-500/25 bg-emerald-500/8 px-4 py-3 text-sm">
+          <div className="flex items-start gap-3 rounded-lg border border-emerald-500/25 bg-emerald-500/8 px-4 py-3 text-sm">
             <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" />
             <div className="min-w-0">
               <div className="font-medium text-foreground">This task is completed.</div>
@@ -158,7 +158,7 @@ export function TaskPanel() {
       </div>
 
       {errorMessage ? (
-        <div className="mx-4 mt-4 rounded-[6px] border border-destructive/35 bg-destructive/8 px-4 py-3 text-sm text-foreground">
+        <div className="mx-4 mt-4 rounded-lg border border-destructive/35 bg-destructive/8 px-4 py-3 text-sm text-foreground">
           {errorMessage}
         </div>
       ) : null}
@@ -182,7 +182,7 @@ export function TaskPanel() {
             </TabsList>
           </div>
           <TabsContent value="preview" className="min-h-0 flex-1">
-            <div className="h-full min-h-0 overflow-auto rounded-[6px] border border-border/60 bg-background px-6 py-5">
+            <div className="h-full min-h-0 overflow-auto rounded-lg border border-border/60 bg-background px-6 py-5">
               {isLoading ? (
                 <div className="flex h-full items-center justify-center gap-3 text-sm text-muted-foreground">
                   <LoaderCircle className="size-4 animate-spin" />
@@ -191,7 +191,7 @@ export function TaskPanel() {
               ) : (
                 <div className="space-y-3">
                   {isCreating ? (
-                    <div className="inline-flex items-center gap-2 rounded-[6px] border border-primary/25 bg-primary/8 px-3 py-2 text-xs text-muted-foreground">
+                    <div className="inline-flex items-center gap-2 rounded-lg border border-primary/25 bg-primary/8 px-3 py-2 text-xs text-muted-foreground">
                       <LoaderCircle className="size-3.5 animate-spin text-primary" />
                       Creating task file...
                     </div>
@@ -206,7 +206,7 @@ export function TaskPanel() {
             </div>
           </TabsContent>
           <TabsContent value="edit" className="min-h-0 flex-1">
-            <div className="h-full min-h-0 overflow-hidden rounded-[6px] border border-border/60 bg-background">
+            <div className="h-full min-h-0 overflow-hidden rounded-lg border border-border/60 bg-background">
               {isLoading ? (
                 <div className="flex h-full items-center justify-center gap-3 text-sm text-muted-foreground">
                   <LoaderCircle className="size-4 animate-spin" />

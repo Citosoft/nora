@@ -47,3 +47,16 @@ export type UseBrowserAnnotationsStateResult = {
   spawnReviewAgent: (toolId: string) => Promise<void>;
   buildReviewReferences: () => AgentContextReference[];
 };
+
+export interface BrowserCommentComposerProps {
+  target: BrowserAnnotationComposerTarget;
+  onSave(body: string): void;
+  onCancel(): void;
+  disabled?: boolean;
+}
+
+export interface BrowserReviewTrayProps {
+  reviewState: Pick<UseBrowserAnnotationsStateResult,
+    "annotations" | "annotationCount" | "isSendingReview" | "removeAnnotation" | "clearAnnotations" |
+    "sendReviewToAgent" | "spawnReviewAgent" | "runningAgentTargets" | "availableTools">;
+}

@@ -1,5 +1,5 @@
 import { DEFAULT_APP_SETTINGS, type AppSettings } from "@shared/appTypes";
-import { parseAiSimpleTaskProvider } from "@shared/ai/settings";
+import { parseAiSimpleTaskProvider, parseMemoryReviewSettings, parseRuntimeModelByProvider } from "@shared/ai/settings";
 
 export function normalizeAppSettings(candidate: AppSettings): AppSettings {
   const preferredProvider =
@@ -31,7 +31,9 @@ export function normalizeAppSettings(candidate: AppSettings): AppSettings {
       localLlmModelId:
         candidate.ai?.localLlmModelId === "qwen2.5-0.5b-instruct" || candidate.ai?.localLlmModelId === "smollm2-360m-instruct"
           ? candidate.ai.localLlmModelId
-          : DEFAULT_APP_SETTINGS.ai.localLlmModelId
+          : DEFAULT_APP_SETTINGS.ai.localLlmModelId,
+      runtimeModelByProvider: parseRuntimeModelByProvider(candidate.ai?.runtimeModelByProvider),
+      memoryReview: parseMemoryReviewSettings(candidate.ai?.memoryReview, parseAiSimpleTaskProvider(candidate.ai?.simpleTaskProvider))
     },
     voice: {
       dictationProvider:

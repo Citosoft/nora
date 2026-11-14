@@ -108,7 +108,7 @@ export function ForgeWorkflowRunPanel({
 
         {errorMessage ? (
           <div
-            className="rounded-[6px] border border-destructive/25 bg-destructive/5 px-3 py-2.5 text-sm text-destructive"
+            className="rounded-lg border border-destructive/25 bg-destructive/5 px-3 py-2.5 text-sm text-destructive"
             role="alert"
           >
             {errorMessage}
@@ -160,9 +160,9 @@ export function ForgeWorkflowRunPanel({
               </div>
             </header>
 
-            <Card className="shrink-0 border-border/60 bg-white p-4 !shadow-none dark:bg-card/50">
+            <Card className="shrink-0 border-border/60 bg-white p-4 !shadow-none dark:bg-card">
               <div className="mb-3 flex items-center justify-between gap-2">
-                <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Stages</h3>
+                <h3 className="text-xs font-medium text-muted-foreground">Stages</h3>
                 <span className="text-xs tabular-nums text-muted-foreground">
                   {detail.jobs.length} {detail.jobs.length === 1 ? "job" : "jobs"}
                 </span>
@@ -179,11 +179,11 @@ export function ForgeWorkflowRunPanel({
                           onClick={() => setSelectedJobId(job.id)}
                           aria-current={isActive ? "step" : undefined}
                           className={cn(
-                            "flex w-[12.5rem] shrink-0 snap-start flex-col rounded-[6px] border px-3 py-2.5 text-left transition-all",
+                            "flex w-[12.5rem] shrink-0 snap-start flex-col rounded-lg border px-3 py-2.5 text-left transition-all",
                             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                             isActive
                               ? "border-primary/45 bg-accent/45 ring-1 ring-primary/15"
-                              : "border-border/60 bg-background/40 hover:border-primary/28 hover:bg-accent/20"
+                              : "border-border/60 bg-background hover:border-primary/28 hover:bg-accent/20"
                           )}
                         >
                           <div className="mb-1.5 flex items-start gap-2">
@@ -209,14 +209,14 @@ export function ForgeWorkflowRunPanel({
                   })}
                 </div>
               ) : (
-                <p className="rounded-[6px] border border-dashed border-border/60 px-3 py-6 text-center text-sm text-muted-foreground">
+                <p className="rounded-lg border border-dashed border-border/60 px-3 py-6 text-center text-sm text-muted-foreground">
                   No stages found for this run.
                 </p>
               )}
             </Card>
 
             {selectedJob ? (
-              <Card className="shrink-0 border-border/60 bg-white p-4 !shadow-none dark:bg-card/50">
+              <Card className="shrink-0 border-border/60 bg-white p-4 !shadow-none dark:bg-card">
                 <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/45 pb-4">
                   <div className="flex min-w-0 items-start gap-3">
                     <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/55">
@@ -251,7 +251,7 @@ export function ForgeWorkflowRunPanel({
 
                 <div className="pt-4">
                   <div className="mb-3 flex items-baseline justify-between gap-2">
-                    <h4 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Steps</h4>
+                    <h4 className="text-xs font-medium text-muted-foreground">Steps</h4>
                     <span className="text-xs tabular-nums text-muted-foreground">{selectedJob.steps.length}</span>
                   </div>
 
@@ -279,7 +279,7 @@ export function ForgeWorkflowRunPanel({
                       })}
                     </ol>
                   ) : (
-                    <p className="rounded-[6px] border border-dashed border-border/60 px-3 py-5 text-center text-sm text-muted-foreground">
+                    <p className="rounded-lg border border-dashed border-border/60 px-3 py-5 text-center text-sm text-muted-foreground">
                       No steps recorded for this job.
                     </p>
                   )}

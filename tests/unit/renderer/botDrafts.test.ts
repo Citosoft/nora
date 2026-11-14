@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createThreadWorkspaceStore } from "@/components/app/logic/thread-workspace/store";
 import { buildThreadNavigation } from "@/components/app/logic/thread-workspace/navigation";
-import { threadBinding, threadWorkspaceFixture } from "./threadWorkspaceFixtures";
+import { threadWorkspaceFixture } from "./threadWorkspaceFixtures";
 import { bot } from "../shared/bots/fixtures";
-import { GROUP_BINDING } from "@shared/bots/groups";
+import { DIRECT_BINDING, GROUP_BINDING } from "@shared/bots/chats";
 import { snapshotBot } from "@shared/bots/snapshot";
 import { botModelRevertSeed, isBotModelOverride } from "@/components/app/logic/botThreads";
 
@@ -14,34 +14,34 @@ function fixtureWithBots() {
   return f;
 }
 
-test("a bot draft opens separately from a plain empty draft and creates a bot thread", async () => {
+test("a bot's direct chat opens one draft per bot, stays out of workspace lists and is created in its home workspace", async () => {
   const f = fixtureWithBots();
   const store = createThreadWorkspaceStore(f.deps);
   const plain = store.openDraft({ workspaceId: "personal" });
-  const withBot = store.openDraft({ workspaceId: "personal", botId: "ada" });
-  assert.ok(plain && withBot);
-  assert.notEqual(plain, withBot);
-  assert.equal(store.openDraft({ workspaceId: "personal", botId: "ada" }), withBot);
-  const row = buildThreadNavigation(store.snapshot(), "personal", "all").find((entry) => entry.id === withBot);
-  assert.deepEqual(row?.bot, { botId: "ada", name: "Ada", avatar: { seed: 7 } });
-  store.setBinding(withBot, threadBinding, "chosen");
-  store.setText(withBot, "Hello Ada");
-  await store.submit(withBot);
+  const chat = store.openDirect("personal", "ada");
+  assert.ok(plain && chat);
+  assert.notEqual(plain, chat);
+  assert.equal(store.openDirect("personal", "ada"), chat);
+  assert.equal(buildThreadNavigation(store.snapshot(), "personal", "all").some((entry) => entry.id === chat), false);
+  assert.deepEqual(store.snapshot().layout.documents.find((entry) => entry.id === chat)?.provider, DIRECT_BINDING);
+  store.setBinding(chat, DIRECT_BINDING, "inherited");
+  store.setText(chat, "Hello Ada");
+  await store.submit(chat);
   const create = f.commands.find((command) => command.kind === "create");
-  assert.equal(create?.kind === "create" ? create.botId : null, "ada");
-  assert.equal(create?.kind === "create" ? create.role : "unexpected", undefined);
+  assert.ok(create?.kind === "create");
+  assert.deepEqual([create.direct, create.title, create.workspace.projectId, create.role, create.botId],
+    [{ botId: "ada", workspaceId: "personal" }, "Ada", "personal", undefined, undefined]);
 });
 
-test("a hidden bot cannot start a draft, and switching to a workspace that hides it falls back to Nora", () => {
+test("a bot hidden in a workspace cannot be messaged from it, and a chat draft cannot move workspaces", () => {
   const f = fixtureWithBots();
   const store = createThreadWorkspaceStore(f.deps);
-  assert.equal(store.openDraft({ workspaceId: "project", botId: "ada" }), null);
-  const id = store.openDraft({ workspaceId: "personal", botId: "ada" });
+  assert.equal(store.openDirect("project", "ada"), null);
+  assert.match(store.snapshot().error ?? "", /not available/);
+  const id = store.openDirect("personal", "ada");
   assert.ok(id);
   store.selectWorkspace(id, "project");
-  assert.equal(store.snapshot().layout.documents.find((entry) => entry.id === id)?.botId, null);
-  store.selectBot(id, "ada");
-  assert.match(store.snapshot().runtime[id]?.error ?? "", /not available/);
+  assert.match(store.snapshot().runtime[id]?.error ?? "", /chooses where its bots work/);
 });
 
 test("a group draft uses the coordinator's binding, sends its members and stays in its workspace", async () => {
@@ -55,7 +55,7 @@ test("a group draft uses the coordinator's binding, sends its members and stays 
   const row = buildThreadNavigation(store.snapshot(), "personal", "all").find((entry) => entry.id === id);
   assert.deepEqual(row?.group?.map((member) => member.botId), ["ada", "rex"]);
   store.selectWorkspace(id, "project");
-  assert.match(store.snapshot().runtime[id]?.error ?? "", /belong to its workspace/);
+  assert.match(store.snapshot().runtime[id]?.error ?? "", /chooses where its bots work/);
   store.setBinding(id, GROUP_BINDING, "inherited");
   store.setText(id, "@Ada plan it");
   await store.submit(id);

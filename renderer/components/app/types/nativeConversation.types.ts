@@ -3,7 +3,7 @@ import type { ConversationHeader } from "@shared/types/conversation/queries.type
 import type { ConversationClient } from "./conversationClient.types";
 import type { NativeWorkspace } from "@shared/types/personalization/workspaces.types";
 import type { RoleSelection } from "@shared/types/personalization/roles.types";
-import type { GroupRequest } from "@shared/types/bots/bots.types";
+import type { DirectRequest, GroupRequest } from "@shared/types/bots/bots.types";
 
 export interface NativeConversationView {
   header: ConversationHeader;
@@ -28,7 +28,8 @@ export interface NativeDraftInput {
   workspace: NativeWorkspace;
   provider: ProviderBinding;
   role: RoleSelection | null;
-  botId: string | null;
   group?: GroupRequest;
+  /** A new direct chat: which bot, where new tasks start, and where the chat itself is stored. */
+  direct?: { request: DirectRequest; title: string; home: NativeWorkspace };
   text: string;
 }

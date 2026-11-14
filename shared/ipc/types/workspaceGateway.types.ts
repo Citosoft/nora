@@ -38,6 +38,7 @@ export interface WorkspaceLoadingProgressPayload {
 }
 
 export interface WorkspaceBridge {
+  onWorkspaceTasksChanged: (listener: (projectId: string) => void) => () => void;
   chooseProject: () => Promise<AppState>;
   chooseProjectAtPath: (defaultPath: string, title?: string) => Promise<AppState>;
   createProjectWorkspace: (payload: CreateProjectWorkspacePayload) => Promise<CreateProjectWorkspaceResult>;

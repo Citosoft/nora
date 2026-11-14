@@ -1,6 +1,7 @@
 import type { ThreadWorkspaceSnapshot } from "@/components/app/types/thread-workspace/state.types";
 import type { ThreadNavigationFilter, ThreadNavigationRow, ThreadNavigationStatus, ThreadRunState } from "@/components/app/types/thread-workspace/ports.types";
-import type { MemberThreadVisibility } from "@/components/app/types/thread-workspace/navigation.types";
+import { isChat } from "@/components/app/logic/directChats";
+import type { WorkThreadVisibility } from "@/components/app/types/thread-workspace/navigation.types";
 import { threadDocumentTitle } from "./changes";
 import { waitingDescendants } from "./attention";
 import { findEffectiveBot } from "@shared/bots/catalog";
@@ -12,14 +13,12 @@ const statusLabels: Readonly<Record<ThreadRunState, ThreadNavigationStatus>> = {
 const terminal = new Set<ThreadRunState>(["completed", "failed", "interrupted"]);
 const working = new Set<ThreadRunState>(["starting", "running", "stopping"]);
 
-function draftBot(state: ThreadWorkspaceSnapshot, workspaceId: string, botId: string | null | undefined): ThreadNavigationRow["bot"] {
-  const bot = botId ? findEffectiveBot(state.boot.personalization.bots, workspaceId, state.boot.sharedBots, botId) : null;
-  return bot ? { botId: bot.id, name: bot.name, avatar: bot.avatar } : null;
-}
-
 function draftGroup(state: ThreadWorkspaceSnapshot, workspaceId: string, botIds: readonly string[] | undefined): ThreadNavigationRow["group"] {
   if (!botIds) return null;
-  return botIds.flatMap((botId) => { const member = draftBot(state, workspaceId, botId); return member ? [member] : []; });
+  return botIds.flatMap((botId) => {
+    const bot = findEffectiveBot(state.boot.personalization.bots, workspaceId, state.boot.sharedBots, botId);
+    return bot ? [{ botId: bot.id, name: bot.name, avatar: bot.avatar }] : [];
+  });
 }
 
 /** Project native summaries directly; no terminal-agent records or token-based activity inference. */
@@ -27,19 +26,20 @@ export function buildThreadNavigation(state: ThreadWorkspaceSnapshot, workspaceI
   const pins = new Set(state.layout.pinnedThreadIds);
   const activeDocument = state.layout.documents.find((entry) => entry.id === state.layout.activeId);
   const rows: ThreadNavigationRow[] = [];
-  const groupIds = new Set(state.summaries.flatMap(({ conversation }) => conversation.group ? [conversation.id] : []));
+  const chatIds = new Set(state.summaries.flatMap(({ conversation }) => isChat(conversation) ? [conversation.id] : []));
+  // Direct chats belong to their bot, not a workspace; the Bots sidebar reaches them from any workspace.
   if (filter !== "settled") for (const document of state.layout.documents) {
-    if (document.target.kind !== "draft" || (workspaceId && document.workspaceId !== workspaceId)) continue;
+    if (document.target.kind !== "draft" || document.direct || (workspaceId && document.workspaceId !== workspaceId)) continue;
     rows.push({ id: document.id, target: { kind: "draft", documentId: document.id }, title: threadDocumentTitle(document, state.summaries),
       workspaceId: document.workspaceId, providerKind: document.provider?.kind ?? null,
-      bot: draftBot(state, document.workspaceId, document.botId), group: draftGroup(state, document.workspaceId, document.group?.botIds), status: document.pending ? "Delivery unconfirmed" : "Draft",
+      bot: null, group: draftGroup(state, document.workspaceId, document.group?.botIds), status: document.pending ? "Delivery unconfirmed" : "Draft",
       active: !!document.pending, working: false, unread: false, attention: !!document.pending, pinned: false, selected: document.id === state.layout.activeId,
       hasDraft: true, queuedCount: 0, updatedAt: document.updatedAt });
   }
   const waiting = waitingDescendants(state.summaries);
   for (const summary of state.summaries) {
     const { conversation, latestRun, queuedCount, pendingRequestCount } = summary;
-    if (conversation.workspace.environmentId !== state.boot.environmentId || (workspaceId && conversation.workspace.projectId !== workspaceId)
+    if (conversation.direct || conversation.workspace.environmentId !== state.boot.environmentId || (workspaceId && conversation.workspace.projectId !== workspaceId)
       || (!!conversation.archivedAt !== (filter === "settled"))) continue;
     // A create accepted before a lost submit reply is represented by its recoverable draft, once.
     if (state.layout.documents.some((entry) => entry.target.kind === "draft" && entry.pending?.submit.conversationId === conversation.id)) continue;
@@ -50,7 +50,7 @@ export function buildThreadNavigation(state: ThreadWorkspaceSnapshot, workspaceI
       bot: conversation.bot ? { botId: conversation.bot.botId, name: conversation.bot.name, avatar: conversation.bot.avatar } : null,
       group: conversation.group?.members ?? null,
       waitingOn: conversation.archivedAt ? null : waiting.get(conversation.id) ?? null,
-      groupMember: !!conversation.parentId && groupIds.has(conversation.parentId),
+      workThread: !!conversation.parentId && chatIds.has(conversation.parentId),
       settled: !!conversation.archivedAt,
       status: conversation.archivedAt ? "Settled" : pendingRequestCount ? (latestRun?.state === "awaiting-approval" ? "Needs approval" : "Needs input")
         : conversation.queuePaused && queuedCount ? "Queue paused" : latestRun ? statusLabels[latestRun.state] : "Ready",
@@ -65,7 +65,7 @@ export function buildThreadNavigation(state: ThreadWorkspaceSnapshot, workspaceI
     .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt.localeCompare(a.updatedAt) || a.id.localeCompare(b.id));
 }
 
-/** Hidden member threads still surface while they need the user, since an approval or question there blocks the group's reply. */
-export function applyMemberThreadVisibility<Row extends Pick<ThreadNavigationRow, "groupMember" | "attention">>(rows: readonly Row[], visibility: MemberThreadVisibility): Row[] {
-  return visibility === "visible" ? [...rows] : rows.filter((row) => !row.groupMember || row.attention);
+/** Hidden work threads still surface while they need the user, since an approval or question there blocks the chat's reply. */
+export function applyWorkThreadVisibility<Row extends Pick<ThreadNavigationRow, "workThread" | "attention">>(rows: readonly Row[], visibility: WorkThreadVisibility): Row[] {
+  return visibility === "visible" ? [...rows] : rows.filter((row) => !row.workThread || row.attention);
 }

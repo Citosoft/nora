@@ -112,6 +112,7 @@ export function AppRootWorkspaceSessionProvider({
     workspaceFileTree: resources.workspaceFileTree
   });
   const {
+    createTaskDialog,
     taskEditorState,
     setTaskEditorState,
     isCreatingSpec,
@@ -165,6 +166,7 @@ export function AppRootWorkspaceSessionProvider({
     trackAgentCreation
   });
   const content: UseWorkspaceContentControllerResult = {
+    createTaskDialog,
     taskEditorState,
     setTaskEditorState,
     isCreatingSpec,

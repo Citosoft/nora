@@ -4,7 +4,7 @@ import { providerKindSchema } from "@shared/providers/providerKinds";
 import { conversationReviewSchema } from "./review";
 import { roleSelectionSchema, roleSnapshotSchema } from "@shared/personalization/contracts";
 import { threadReferenceSchema } from "./references";
-import { botAuthorSchema, botIdSchema, botSnapshotSchema, groupRequestSchema, groupSchema } from "@shared/bots/contracts";
+import { botAuthorSchema, botIdSchema, botSnapshotSchema, groupRequestSchema, groupSchema, directSchema, directRequestSchema } from "@shared/bots/contracts";
 
 const id = z.string().min(1).max(512);
 const time = z.string().datetime();
@@ -67,6 +67,8 @@ export const conversationSchema = z.object({
   bot: botSnapshotSchema.optional(),
   /** Set for a group chat; its members answer in child threads coordinated by Nora. */
   group: groupSchema.optional(),
+  /** Set for a bot's direct-message chat; its tasks run in child work threads coordinated by Nora. */
+  direct: directSchema.optional(),
   title: z.string().min(1),
   workspace: workspaceRefSchema,
   provider: providerBindingSchema,
@@ -123,8 +125,10 @@ export const approvalDetailsSchema = z.object({
 }).strict();
 export const timelineItemSchema = z.discriminatedUnion("kind", [
   z.object({ ...itemBase, kind: z.literal("message"), role: z.enum(["user", "assistant"]), text: z.string(), complete: z.boolean(),
-    /** The bot that wrote an assistant message in a group chat. */
-    author: botAuthorSchema.optional() }).strict(),
+    /** The bot that wrote an assistant message in a group or direct chat. */
+    author: botAuthorSchema.optional(),
+    /** The child thread that did the work behind a chat reply. */
+    workThreadId: id.optional() }).strict(),
   z.object({ ...itemBase, kind: z.literal("reasoning"), text: z.string(), complete: z.boolean() }).strict(),
   z.object({ ...itemBase, kind: z.literal("tool"), label: z.string(), output: z.string(), state: toolStateSchema, details: toolDetailsSchema.optional() }).strict(),
   z.object({ ...itemBase, kind: z.literal("milestone"), text: z.string() }).strict(),
@@ -165,7 +169,7 @@ export const snapshotSchema = z.object({
 }).strict();
 
 const commandBase = { commandId: id, conversationId: id };
-export const createConversationCommandSchema = z.object({ ...commandBase, kind: z.literal("create"), title: z.string().trim().min(1), workspace: workspaceRefSchema, provider: providerBindingSchema, parentId: id.nullable(), role: roleSelectionSchema.optional(), botId: botIdSchema.optional(), group: groupRequestSchema.optional(), source: conversationSourceSchema.optional(), externalSessionId: id.optional() }).strict();
+export const createConversationCommandSchema = z.object({ ...commandBase, kind: z.literal("create"), title: z.string().trim().min(1), workspace: workspaceRefSchema, provider: providerBindingSchema, parentId: id.nullable(), role: roleSelectionSchema.optional(), botId: botIdSchema.optional(), group: groupRequestSchema.optional(), direct: directRequestSchema.optional(), source: conversationSourceSchema.optional(), externalSessionId: id.optional() }).strict();
 export const submitConversationCommandSchema = z.object({ ...commandBase, kind: z.literal("submit"), runId: id, instruction: z.string().trim().min(1), action: runActionSchema.optional(), compactionDeadline: time.optional(),
   providerChange: z.object({ expected: providerBindingSchema, next: providerBindingSchema }).strict().optional() }).strict();
 export const conversationCommandSchema = z.discriminatedUnion("kind", [
@@ -181,7 +185,9 @@ export const conversationCommandSchema = z.discriminatedUnion("kind", [
   z.object({ ...commandBase, kind: z.literal("archive") }).strict(),
   z.object({ ...commandBase, kind: z.literal("unarchive") }).strict(),
   /** Retitles a thread, settled or not. */
-  z.object({ ...commandBase, kind: z.literal("rename"), title: z.string().trim().min(1).max(200) }).strict()
+  z.object({ ...commandBase, kind: z.literal("rename"), title: z.string().trim().min(1).max(200) }).strict(),
+  /** Chooses where a direct chat starts new tasks. */
+  z.object({ ...commandBase, kind: z.literal("set-direct-workspace"), workspaceId: id }).strict()
 ]);
 export const commandReceiptSchema = z.object({
   commandId: id,

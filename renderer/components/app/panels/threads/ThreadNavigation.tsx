@@ -11,8 +11,8 @@ import { useThreadPullRequests } from "@/components/app/hooks/useThreadPullReque
 import { useOptionalWorkspaceSidebarPorts } from "@/components/app/hooks/useWorkspaceSidebarPorts";
 import { Button } from "@/components/ui/button";
 import { useThreadNavigationPorts } from "@/components/app/hooks/useThreadNavigationPorts";
-import { applyMemberThreadVisibility, buildThreadNavigation } from "@/components/app/logic/thread-workspace/navigation";
-import { useMemberThreadVisibility } from "@/components/app/hooks/useMemberThreadVisibility";
+import { applyWorkThreadVisibility, buildThreadNavigation } from "@/components/app/logic/thread-workspace/navigation";
+import { useWorkThreadVisibility } from "@/components/app/hooks/useWorkThreadVisibility";
 import { buildThreadGroups, resolveThreadGrouping } from "@/components/app/logic/thread-workspace/groups";
 import type { WorkspaceAvatarIdentity } from "@/components/app/types/workspaceAvatar.types";
 import type { ThreadGrouping } from "@/components/app/types/thread-workspace/navigation.types";
@@ -34,12 +34,12 @@ export function ThreadNavigation({ workspaceId: scope, onNew, query = "", unifie
   const workspaces = useMemo(() => new Map<string, WorkspaceAvatarIdentity>(ports.state.boot.workspaces.map((workspace) => [
     workspace.id, { id: workspace.shellProjectId ?? workspace.id, name: workspace.name }
   ])), [ports.state.boot.workspaces]);
-  const { visibility: memberThreads } = useMemberThreadVisibility();
+  const { visibility: workThreads } = useWorkThreadVisibility();
   const storedRows = useMemo(() => {
     const search = query.trim().toLocaleLowerCase();
-    return applyMemberThreadVisibility(buildThreadNavigation(ports.state, workspaceId, filter), memberThreads).filter((row) =>
+    return applyWorkThreadVisibility(buildThreadNavigation(ports.state, workspaceId, filter), workThreads).filter((row) =>
       `${row.title} ${showWorkspaces ? workspaces.get(row.workspaceId)?.name ?? "" : ""}`.toLocaleLowerCase().includes(search));
-  }, [ports.state, workspaceId, filter, query, showWorkspaces, workspaces, memberThreads]);
+  }, [ports.state, workspaceId, filter, query, showWorkspaces, workspaces, workThreads]);
   const canDiscover = filter === "all" && sourceFilter !== "nora";
   const resumable = useResumableThreads({ ports, workspaceId, query, sourceFilter, sort, enabled: canDiscover });
   const rows = useMemo(() => mergeThreadRows(storedRows, resumable.rows, sourceFilter, sort), [storedRows, resumable.rows, sourceFilter, sort]);

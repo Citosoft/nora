@@ -61,7 +61,7 @@ export function ProjectSelectorScreen() {
   }
 
   return (
-    <Card className="center-column-surface h-full min-h-0 rounded-none border-x-0 border-t-0 bg-card/95">
+    <Card className="center-column-surface h-full min-h-0 rounded-none border-x-0 border-t-0 bg-card">
       <CardContent className="flex h-full items-center justify-center p-8 text-center text-muted-foreground">
         <div className="mx-auto max-w-3xl space-y-6">
           <div className="space-y-2">
@@ -81,7 +81,7 @@ export function ProjectSelectorScreen() {
                   {addWorkspaceShortcutParts.map(({ part, showPlus }, index) => (
                     <span key={`${part}-${index}`} className="inline-flex items-center gap-1">
                       {showPlus ? <span className="text-[10px] text-muted-foreground">+</span> : null}
-                      <span className="rounded-[4px] border border-border/70 bg-muted/40 px-1.5 py-0.5 font-mono text-[11px] leading-none text-foreground">
+                      <span className="rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5 font-mono text-[11px] leading-none text-foreground">
                         {part}
                       </span>
                     </span>
@@ -91,7 +91,7 @@ export function ProjectSelectorScreen() {
             </Button>
           </div>
           <div className="mx-auto w-full max-w-xl space-y-2 text-left">
-            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            <div className="text-xs font-medium text-muted-foreground">
               Recent Projects
             </div>
             {recentWorkspacePreview.length ? (
@@ -100,7 +100,7 @@ export function ProjectSelectorScreen() {
                   <button
                     key={project.rootPath}
                     type="button"
-                    className="w-full rounded-[4px] border border-border/60 bg-background/60 px-3 py-2.5 text-left transition hover:bg-accent/50"
+                    className="w-full rounded-md border border-border/60 bg-background px-3 py-2.5 text-left transition hover:bg-accent/50"
                     onClick={() => onSelectRecent(project.rootPath)}
                   >
                     <div className="flex items-center gap-2">
@@ -109,7 +109,7 @@ export function ProjectSelectorScreen() {
                         {(recentWorkspaceShortcutParts[index] ?? []).map(({ part, showPlus }, partIndex) => (
                           <span key={`${project.rootPath}-${part}-${partIndex}`} className="inline-flex items-center gap-1">
                             {showPlus ? <span className="text-[10px] text-muted-foreground">+</span> : null}
-                            <span className="rounded-[4px] border border-border/70 bg-muted/40 px-1.5 py-0.5 font-mono text-[11px] leading-none text-foreground">
+                            <span className="rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5 font-mono text-[11px] leading-none text-foreground">
                               {part}
                             </span>
                           </span>
@@ -138,13 +138,13 @@ export function ProjectSelectorScreen() {
               {availableTools.map((tool) => (
                 <div
                   key={tool.id}
-                  className="inline-flex items-center gap-2 rounded-[8px] border border-border/60 bg-background/70 px-3 py-2"
+                  className="inline-flex items-center gap-2 rounded-lg border border-border/60 bg-background px-3 py-2"
                 >
                   <AgentToolIcon
                     toolId={tool.id}
                     label={tool.label}
-                    className="size-6 rounded-[4px]"
-                    imageClassName="size-4 rounded-[4px]"
+                    className="size-6 rounded-md"
+                    imageClassName="size-4 rounded-md"
                   />
                   <span className="text-sm text-foreground">{tool.label}</span>
                 </div>

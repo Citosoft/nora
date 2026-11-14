@@ -1,3 +1,4 @@
+import { workspaceTasksChangedChannel } from "@shared/workspaceTaskEvents";
 import type {
   AgentSkillInstallOutputEvent,
   AutoUpdateStatus,
@@ -104,6 +105,7 @@ export function createMainWindowNotifications({
     notifyLocalTerminalChanged,
     notifyRemoteMountOutput,
     notifyToolSkillInstallOutput,
+    notifyWorkspaceTasksChanged: (projectId) => sendNotification(workspaceTasksChangedChannel, () => projectId),
     notifyWorkspaceLoadingProgress,
     notifyVercelRuntimeLogEvent,
     notifyAutoUpdateStatus,

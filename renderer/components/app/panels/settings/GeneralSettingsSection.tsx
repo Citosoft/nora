@@ -1,5 +1,6 @@
 import { useSettingsRuntime } from "@/components/app/hooks/useSettingsRuntime";
 import { SettingRow, SettingsSectionHeader, ToggleButton } from "@/components/app/panels/settings/settingsUi";
+import { WorkRoleSetting } from "@/components/app/panels/settings/WorkRoleSetting";
 import { IdeBadge } from "@/components/app/shared/IdeBadge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
@@ -37,6 +38,7 @@ export function GeneralSettingsSection() {
         description="Core project preferences and defaults."
         icon={SlidersHorizontal}
       />
+      <WorkRoleSetting />
       {missingOptionalStartupDependencyCount > 0 ? (
         <SettingRow
           title="Optional Startup Dependencies"
@@ -81,7 +83,7 @@ export function GeneralSettingsSection() {
                   <Code2 className="size-4 text-primary" />
                   <span className="truncate">Use automatic selection</span>
                   {!selectedDefaultIde ? (
-                    <span className="ml-auto rounded-[4px] bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-primary">
+                    <span className="ml-auto rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
                       Current
                     </span>
                   ) : null}
@@ -91,7 +93,7 @@ export function GeneralSettingsSection() {
                     <IdeBadge ide={ide} className="size-4" iconClassName="size-2.5" />
                     <span className="truncate">{ide.name}</span>
                     {selectedDefaultIde?.id === ide.id ? (
-                      <span className="ml-auto rounded-[4px] bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-primary">
+                      <span className="ml-auto rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
                         Current
                       </span>
                     ) : null}

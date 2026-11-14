@@ -19,7 +19,7 @@ export function TerminalThemePreview({
 
   return (
     <div
-      className="overflow-hidden rounded-[6px] border border-border/70 shadow-sm"
+      className="overflow-hidden rounded-lg border border-border/70 shadow-sm"
       style={{ backgroundColor: palette.background, color: palette.foreground }}
     >
       <div
@@ -74,7 +74,7 @@ export function SettingRow({
   return (
     <div
       {...settingAnchorAttributes(searchTitle ?? (typeof title === "string" ? title : undefined))}
-      className={`grid gap-4 rounded-[6px] border-b border-border/60 py-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start ${settingRevealHighlightClassName}`}
+      className={`grid gap-4 rounded-lg border-b border-border/60 py-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start ${settingRevealHighlightClassName}`}
     >
       <div className="min-w-0">
         <div className="text-sm font-medium text-foreground">{title}</div>
@@ -126,10 +126,10 @@ export function ToggleButton({
       aria-label={accessibleName}
       onClick={() => onChange(!checked)}
       className={[
-        "flex w-full items-center justify-between rounded-[4px] border px-3 py-2 text-left transition",
+        "flex w-full items-center justify-between rounded-md border px-3 py-2 text-left transition",
         checked
           ? "border-primary/40 bg-primary/10 text-foreground"
-          : "border-border/70 bg-background/50 text-muted-foreground hover:border-primary/25 hover:text-foreground"
+          : "border-border/70 bg-background text-muted-foreground hover:border-primary/25 hover:text-foreground"
       ].join(" ")}
     >
       <span className="text-sm">{label}</span>

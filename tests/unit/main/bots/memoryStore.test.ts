@@ -17,8 +17,9 @@ test("notes are per bot, scoped to everywhere or one workspace, searchable and b
   assert.deepEqual(store.list("ada", "w").map((note) => note.text), ["Releases ship on Tuesdays", "Prefers British spelling"]);
   assert.equal(store.list("ada", null).length, 3);
   assert.deepEqual(store.search("ada", "w", "tuesdays release", 5).map((note) => note.text), ["Releases ship on Tuesdays"]);
-  assert.equal(store.digest("ada", "w", 1000), "- Releases ship on Tuesdays\n- Prefers British spelling");
-  assert.equal(store.digest("ada", "w", 30), "- Releases ship on Tuesdays");
+  const ids = (digest: ReturnType<typeof store.digest>) => digest && [digest.notes.map((note) => note.id), digest.omitted];
+  assert.deepEqual(ids(store.digest("ada", "w", 1000)), [["n2", "n1"], 0]);
+  assert.deepEqual(ids(store.digest("ada", "w", 35)), [["n2"], 1], "the budget counts each note as the model sees it, id included");
   assert.equal(store.digest("nobody", "w", 1000), null);
   const [first] = store.list("ada", "w");
   assert.equal(store.update(first.id, "Releases ship on Wednesdays").text, "Releases ship on Wednesdays");
@@ -26,4 +27,32 @@ test("notes are per bot, scoped to everywhere or one workspace, searchable and b
   assert.deepEqual(store.list("ada", "w").map((note) => note.text), ["Prefers British spelling"]);
   assert.throws(() => store.update("missing", "x"), /no longer exists/);
   assert.throws(() => store.add({ botId: "ada", workspaceId: null, text: " ", source: { kind: "user" } }));
+});
+
+test("search ranks by full-text match with stemming and prefixes, ignores punctuation and dedupes identical saves", (t) => {
+  const directory = mkdtempSync(join(tmpdir(), "nora-memory-"));
+  let clock = 0, sequence = 0;
+  const path = join(directory, "memory.sqlite");
+  const open = () => openBotMemoryStore(path, { now: () => new Date(Date.UTC(2026, 10, 13, 0, 0, clock++)).toISOString(), nextId: () => `n${++sequence}` });
+  let store = open();
+  t.after(() => { store.close(); rmSync(directory, { recursive: true, force: true }); });
+  store.add({ botId: "ada", workspaceId: null, text: "Deploys go through the staging cluster first", source: { kind: "user" } });
+  store.add({ botId: "ada", workspaceId: null, text: "Releases ship on Tuesdays after the deploy freeze", source: { kind: "user" } });
+  store.add({ botId: "ada", workspaceId: "other", text: "Release notes live in docs/releases", source: { kind: "user" } });
+  store.add({ botId: "rex", workspaceId: null, text: "Rex also releases on Tuesdays", source: { kind: "user" } });
+  assert.deepEqual(store.search("ada", "w", "release tuesday", 5).map((note) => note.id), ["n2"]);
+  assert.deepEqual(store.search("ada", "w", "deploy", 5).map((note) => note.id).sort(), ["n1", "n2"]);
+  assert.deepEqual(store.search("ada", "w", "stag*", 5).map((note) => note.id), ["n1"]);
+  assert.deepEqual(store.search("ada", "w", "\"(", 5).map((note) => note.id), ["n2", "n1"]);
+  assert.equal(store.add({ botId: "ada", workspaceId: null, text: " Deploys go through the staging cluster first ", source: { kind: "bot", conversationId: "c" } }).id, "n1");
+  assert.equal(store.list("ada", null).length, 3);
+  store.update("n1", "Deploys go through canary first");
+  assert.deepEqual(store.search("ada", "w", "canary", 5).map((note) => note.id), ["n1"]);
+  assert.deepEqual(store.search("ada", "w", "staging", 5), []);
+  store.remove("n1");
+  assert.deepEqual(store.search("ada", "w", "canary", 5), []);
+  assert.equal(store.get("n2")?.text, "Releases ship on Tuesdays after the deploy freeze");
+  store.close();
+  store = open();
+  assert.deepEqual(store.search("ada", "w", "freeze", 5).map((note) => note.id), ["n2"]);
 });

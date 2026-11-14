@@ -1,14 +1,17 @@
 import { execFile } from "node:child_process";
 import { z } from "zod";
-import type { RuntimeTextInput } from "@main/types/ai/textGeneration.types";
+import type { RuntimeTextInput, GeneratedText } from "@main/types/ai/textGeneration.types";
 
-const eventSchema = z.object({ type: z.string(), item: z.object({ type: z.string(), text: z.string().optional() }).optional() });
+/** Usage is accounting only: a missing or odd usage block never fails a generation. */
+const usageSchema = z.object({ input_tokens: z.number().nonnegative().optional(), output_tokens: z.number().nonnegative().optional() }).optional().catch(undefined);
+const eventSchema = z.object({ type: z.string(), item: z.object({ type: z.string(), text: z.string().optional() }).optional(),
+  usage: usageSchema.optional() });
 
 /** Isolated, ephemeral CLI invocation. Authentication stays with Codex. */
-export function generateCodexText(input: RuntimeTextInput): Promise<string> {
+export function generateCodexText(input: RuntimeTextInput): Promise<GeneratedText> {
   return new Promise((resolve, reject) => {
     const child = execFile(input.executable, [
-      "exec", "--ignore-user-config", "--ignore-rules", "--ephemeral", "--skip-git-repo-check",
+      "exec", ...(input.model ? ["--model", input.model] : []), "--ignore-user-config", "--ignore-rules", "--ephemeral", "--skip-git-repo-check",
       "--sandbox", "read-only", "--color", "never", "--json",
       "--disable", "shell_tool", "--disable", "unified_exec", "--disable", "apply_patch_freeform",
       "--disable", "apps", "--disable", "multi_agent", "--disable", "hooks",
@@ -18,22 +21,29 @@ export function generateCodexText(input: RuntimeTextInput): Promise<string> {
     ], { cwd: input.cwd, env: input.environment, encoding: "utf8", timeout: 90_000,
       signal: input.request.signal, killSignal: "SIGKILL", maxBuffer: 1024 * 1024, windowsHide: true }, (error, stdout) => {
       if (error) { reject(new Error("Codex text generation failed")); return; }
-      try { resolve(parseCodexText(stdout)); } catch (failure) { reject(failure); }
+      try { resolve({ ...parseCodexOutput(stdout), model: input.model }); } catch (failure) { reject(failure); }
     });
     child.stdin?.on("error", () => { /* The process callback owns failures, including early exit. */ });
     child.stdin?.end(`${input.request.system}\nDo not use tools. Respond only with the requested text.\n\n${input.request.user}`);
   });
 }
 
-export function parseCodexText(stdout: string): string {
+/** The final agent message and the turn's token usage (input includes cached tokens) from `codex exec --json`. */
+export function parseCodexOutput(stdout: string): Omit<GeneratedText, "model"> {
   let text = "";
   let completed = false;
+  let usage: GeneratedText["usage"] = null;
   for (const line of stdout.split(/\r?\n/).filter((entry) => entry.trim())) {
     const event = eventSchema.parse(JSON.parse(line));
     if (event.type === "error" || event.type === "turn.failed") throw new Error("Codex generation failed");
-    if (event.type === "turn.completed") completed = true;
+    if (event.type === "turn.completed") {
+      completed = true;
+      if (event.usage && (event.usage.input_tokens !== undefined || event.usage.output_tokens !== undefined)) {
+        usage = { inputTokens: event.usage.input_tokens ?? 0, outputTokens: event.usage.output_tokens ?? 0 };
+      }
+    }
     if (event.type === "item.completed" && event.item?.type === "agent_message") text = event.item.text?.trim() ?? "";
   }
   if (!completed || !text) throw new Error("Codex returned no completed text");
-  return text;
+  return { text, usage };
 }

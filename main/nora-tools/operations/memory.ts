@@ -1,21 +1,32 @@
+import { editableNote } from "@main/bots/memory/editable";
+import { memoryOwnerOf } from "@main/bots/memory/owner";
+import type { BotMemoryEntry } from "@shared/types/bots/bots.types";
 import type { NoraMemoryOperations, NoraToolContext } from "@main/types/nora-tools/noraTools.types";
 import type { NoraToolOperationOptions } from "@main/types/nora-tools/operations.types";
 
 const RECALL_LIMIT = 20;
 
-function botIdOf({ conversation }: NoraToolContext): string {
-  if (!conversation.bot) throw new Error("Only bots keep notes.");
-  return conversation.bot.botId;
-}
-
+/** Nora and every bot keep their own notes; group chats never reach here because they get no tools. */
 export function createMemoryOperations(options: NoraToolOperationOptions): NoraMemoryOperations {
+  const ownNote = (memoryId: string, { conversation }: NoraToolContext): BotMemoryEntry =>
+    editableNote(options.memory, memoryId, memoryOwnerOf(conversation), conversation.workspace.projectId);
   return {
-    remember(text, scope, context) {
-      return options.memory.add({ botId: botIdOf(context), workspaceId: scope === "workspace" ? context.conversation.workspace.projectId : null,
-        text, source: { kind: "bot", conversationId: context.conversation.id } });
+    remember(input, context) {
+      const { conversation } = context;
+      if (input.kind === "update") {
+        ownNote(input.memoryId, context);
+        return { note: options.memory.update(input.memoryId, input.text), updated: true };
+      }
+      return { note: options.memory.add({ botId: memoryOwnerOf(conversation), workspaceId: input.scope === "workspace" ? conversation.workspace.projectId : null,
+        text: input.text, source: { kind: "bot", conversationId: conversation.id } }), updated: false };
     },
-    recall(query, context) {
-      return options.memory.search(botIdOf(context), context.conversation.workspace.projectId, query, RECALL_LIMIT);
+    recall(query, { conversation }) {
+      return options.memory.search(memoryOwnerOf(conversation), conversation.workspace.projectId, query, RECALL_LIMIT);
+    },
+    forget(memoryId, context) {
+      const note = ownNote(memoryId, context);
+      options.memory.remove(memoryId);
+      return note;
     }
   };
 }

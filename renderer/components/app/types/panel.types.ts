@@ -161,7 +161,7 @@ export type ForgePanelProps = {
   onRefreshDetail: () => void;
   onAction: (action: ForgeWorkItemAction) => void;
   onCommentSubmit: (payload: ForgeAddCommentPayload) => Promise<void>;
-  onSpawnIssueAgent: (toolId: string) => Promise<void>;
+  onStartIssueThread: () => Promise<void>;
   onSpawnReviewAgent: (
     toolId: string,
     selections: ForgeReviewCommentSelection[],
@@ -184,7 +184,7 @@ export type ForgeDetailPanelProps = Pick<
   | "onRefreshDetail"
   | "onAction"
   | "onCommentSubmit"
-  | "onSpawnIssueAgent"
+  | "onStartIssueThread"
   | "onSpawnReviewAgent"
 > & {
   repoFullName?: string | null;
@@ -276,6 +276,7 @@ export type TaskBoardPanelProps = {
   onToggleTaskSelection: (projectId: string, taskPath: string) => void;
   onClearTaskSelection: () => void;
   onStartSelectedThreads: () => Promise<void>;
+  onStartTask: (projectId: string, taskPath: string) => Promise<void>;
   onOpenTask: (projectId: string, taskPath: string) => void;
   onCreateTask: (projectId: string) => void;
   onGenerateTasks: (projectId: string, brief: string | null, specPath: string | null) => Promise<void>;
@@ -467,7 +468,7 @@ export type WorkspaceSessionPanelProps = {
   onRefreshForgeItem: () => void;
   onForgeAction: (action: ForgeWorkItemAction) => void;
   onForgeCommentSubmit: (payload: ForgeAddCommentPayload) => Promise<void>;
-  onSpawnIssueAgent: (toolId: string) => Promise<void>;
+  onStartIssueThread: () => Promise<void>;
   onSpawnReviewAgent: (
     toolId: string,
     selections: ForgeReviewCommentSelection[],

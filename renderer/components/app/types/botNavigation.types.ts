@@ -27,6 +27,7 @@ export interface BotNavigationProps {
   query: string;
   collapsed: boolean;
   /** Starts a thread with a bot, or with Nora when the id is null. */
+  /** Opens a bot's chat, or starts a Nora thread for null. */
   onStart(botId: string | null): void;
   onNavigate(): void;
   /** Switches the sidebar to Threads, where every thread is listed. */
@@ -43,7 +44,7 @@ export interface BotNavigationRowProps {
   onOpen(row: ThreadNavigationRow): void;
   onTogglePin(row: ThreadNavigationRow): void;
   onShowAllThreads(): void;
-  /** Opens the bot's info panel; absent for Nora, which has no definition to show. */
+  /** Opens the info panel (for Nora: its threads and notes). */
   onShowInfo?(): void;
   /** Opens the bot editor; absent for Nora. */
   onEdit?(): void;
@@ -52,18 +53,20 @@ export interface BotNavigationRowProps {
 }
 export interface BotRowContextMenuProps extends Pick<BotNavigationRowProps, "expanded" | "onToggle" | "onStart" | "onShowInfo" | "onEdit" | "onDelete"> {
   children: ReactNode;
+  id: string;
   name: string;
   hasThreads: boolean;
 }
-/** Everything the bot info panel shows, shaped from the bot's definition and this workspace's threads. */
-export interface BotInfo {
+/** Everything the info panel shows: a configured bot's definition and groups, or Nora, which has only its threads and notes. */
+export type BotInfo = {
+  kind: "bot";
   item: BotNavigationItem;
   bot: EffectiveBot;
   /** Provider label for the bot's model, e.g. "Claude"; the raw kind when the provider is not installed. */
   provider: string;
   /** Group chats in this workspace the bot is a member of, most recent first. */
   groups: readonly ThreadNavigationRow[];
-}
+} | { kind: "nora"; item: BotNavigationItem };
 export interface BotInfoPanelProps {
   info: BotInfo;
   workspace: NativeWorkspace | null;
@@ -72,6 +75,7 @@ export interface BotInfoPanelProps {
   onStart(): void;
   onOpen(row: ThreadNavigationRow): void;
   onTogglePin(row: ThreadNavigationRow): void;
+  /** Edit and Delete apply to configured bots only; Nora's panel has neither. */
   onEdit(): void;
   onDelete(): void;
   onClose(): void;
@@ -102,7 +106,7 @@ export interface BotsHomeState {
   openThread(row: ThreadNavigationRow): void;
   togglePin(row: ThreadNavigationRow): void;
 }
-export interface BotHomeCardProps { item: BotNavigationItem; onStart(): void; onContinue: (() => void) | null; onEdit: (() => void) | null; }
+export interface BotHomeCardProps { item: BotNavigationItem; onStart(): void; onEdit: (() => void) | null; }
 export interface BotTemplateCardProps { template: BotTemplate; onUse(): void; }
 export interface BotsIntroProps { onNewBot(): void; faces: readonly BotTemplate[]; }
 export interface BotTemplateSectionProps { id: string; title: string; description?: string; templates: readonly BotTemplate[]; onUse(template: BotTemplate): void; }

@@ -1,3 +1,4 @@
+import { launchThreadDraft } from "@/components/app/logic/thread-workspace/launchDraft";
 import { noraToolsStatus } from "@shared/nora-tools/catalog";
 import { materializeLegacyContext } from "@/components/app/logic/thread-workspace/legacyContext";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -41,7 +42,7 @@ export function NativeRuntimeProvider({ children }: NativeRuntimeProviderProps) 
     if (!workspace) throw new Error("Choose an available workspace on the owning execution host.");
     const context = input.contextSelections?.length ? await materializeLegacyContext(input.contextSelections) : "";
     const text = [input.text, context].filter(Boolean).join("\n\n");
-    return store.openDraft({ source: input.source, workspaceId: workspace.id, ...(text ? { text } : {}), ...(input.botId ? { botId: input.botId } : {}), ...(input.group ? { group: input.group } : {}) });
+    return launchThreadDraft(store, { source: input.source, workspaceId: workspace.id, ...(text ? { text } : {}), ...(input.group ? { group: input.group } : {}) }, input.submit);
   }, [store, request]);
   const ports = useMemo<NativeRuntimePorts | null>(() => store && boot ? { store, boot, request, launch } : null, [store, boot, request, launch]);
   if (!boot || !ports) return <SetupWindowShell><div role={error ? "alert" : "status"} className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-sm"><p>{error ?? "Opening Nora…"}</p>{error && <Button onClick={reload}>Reconnect</Button>}</div></SetupWindowShell>;

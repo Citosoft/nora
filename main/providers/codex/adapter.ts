@@ -1,5 +1,5 @@
 import { codexNoraToolsConfig } from "./noraTools";
-import { joinGuidance, optionalRunContext } from "@main/nora-tools/endpoint";
+import { instructionWithTurnNotes, joinGuidance, optionalRunContext } from "@main/nora-tools/endpoint";
 import { conversationGuidance } from "@shared/conversations/guidance";
 import { createCodexExternalSessions } from "./externalSessions";
 import { CodexMcpDiscovery } from "./mcp";
@@ -215,7 +215,7 @@ export class CodexAdapter implements ExecutionProvider {
       return;
     }
     const turn = await rpc.request("turn/start", { threadId: binding.thread.id,
-      input: [{ type: "text", text: run.instruction }],
+      input: [{ type: "text", text: instructionWithTurnNotes(run.instruction, runContext) }],
       ...(effort.data ? { effort: effort.data } : {}) }, turnSchema);
     active.nativeTurnId = turn.turn.id;
     active.resolveReady(turn.turn.id);

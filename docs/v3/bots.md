@@ -1,6 +1,6 @@
 # Bots
 
-Status: proposal drafted and owner decisions B1–B7 recorded on 2026-11-13 (see [decision record](#decision-record)); the owner approved building it the same day. All five slices are implemented as of 2026-11-13; see the implementation notes under each section and the remaining gaps under [Implementation slices](#implementation-slices).
+Status: proposal drafted and owner decisions B1–B7 recorded on 2026-11-13, with direct chats (B8–B11) added on 2026-11-14 (see [decision record](#decision-record)); the owner approved building it the same day. All five slices are implemented as of 2026-11-13; see the implementation notes under each section and the remaining gaps under [Implementation slices](#implementation-slices).
 
 ## Summary
 
@@ -133,14 +133,23 @@ interface BotMemoryEntry {
 }
 ```
 
-Stored in a dedicated SQLite file (`bot-memory.sqlite` in Nora's state directory, separate from the execution store), owned by `main/bots/memory/store.ts`. Entries are written only when a bot calls `remember` or the user adds one (B2); Nora does not summarise runs into memory automatically. Entries are plain text the user can read, add, edit and delete from the bot's info panel and editor. Memory is **never** instructions: it is delivered inside a delimited block labeled as notes, subordinate to system and user instructions, and is excluded from permission decisions.
+Stored in a dedicated SQLite file (`bot-memory.sqlite` in Nora's state directory, separate from the execution store), owned by `main/bots/memory/store.ts`. Entries are written when a bot calls `remember`, when the user adds one, or by the background memory review below (B2, revised 2026-11-13). Entries are plain text the user can read, add, edit and delete from the bot's info panel and editor. Memory is **never** instructions: it is delivered inside a delimited block labeled as notes, subordinate to system and user instructions, and is excluded from permission decisions.
 
 Delivery per run:
 
-1. A bounded digest (most recently used + pinned entries, e.g. ≤ 1,500 tokens) is attached to the run's instruction context.
-2. The `recall` tool searches the rest.
+1. A bounded digest (the most recently saved or edited applicable entries, up to 4,000 characters) is attached to the run's instruction context, followed by a count of the entries that did not fit and a pointer to `recall`.
+2. The `recall` tool searches the rest with SQLite full-text search (FTS5, porter stemming, each word a prefix term, best match first).
 
-Because this is per run rather than part of the frozen snapshot, memory stays current in long-lived threads without rewriting guidance.
+**Background memory review** (`main/bots/memory/review/`). So notes do not depend on the model remembering to call `remember`, a scheduler watches completed turns (compaction turns excluded) of every bot and Nora thread except group chats, and reviews a thread after 10 new turns, after 10 minutes of quiet, or when it is settled. Reviews run one at a time on their own source and model, chosen under Memory in Settings → Bots and separate from simple tasks (the Claude or Codex runtime with any of its models, or the Cloud API; on-device models are not offered because a review's notes and transcript do not fit their context), read only messages newer than the thread's cursor (`bot_memory_reviews` in `bot-memory.sqlite`; marked before the model call, so a failing model never re-reads the same messages), and skip the model when no new user message arrived. The model sees the owner's applicable notes (newest 12,000 characters, each marked as written by the user or the assistant) and the newest 24,000 characters of the conversation, and answers one JSON object of at most 10 add, update and forget operations; most answers are empty. The operations go through the same checks as the tools (`main/bots/memory/editable.ts`): only the owner's notes that apply in the thread's workspace, never notes the user wrote. Added notes carry source `review` and show as "Saved automatically". **Automatic memory** in Settings → Bots turns it off; the setting is read at each review. Because reviews spend the user's subscription or API usage, every review that calls a model is logged in `memory-reviews.sqlite` (`main/bots/memory/review/log.ts`, kept 90 days) with its thread, owner, source, model, duration, outcome and the tokens the source reported; Settings → Bots shows the last 7 days' totals and the 20 most recent reviews. Turns completed before a restart are not reviewed until the thread has a new turn.
+
+**Keeping notes tidy.** Every note in the digest and in `recall` results carries its id in brackets. `remember` with `memory_id` replaces the text of a note the thread's own bot saved, and `forget` deletes one, so bots correct and merge notes instead of piling up near-duplicates; saving identical text twice in the same scope keeps the first note. Notes the user wrote, and notes scoped to another workspace, are refused for both: only the user changes those.
+3. Guidance with the tools tells the thread that only notes carry over: save preferences, decisions and lasting facts with `remember` before finishing, and when work continues, look back with `recall` or `list_threads`/`read_thread`.
+
+**Nora's memory.** Nora, the built-in global assistant, keeps notes like any bot under the reserved id `nora` (`NORA_BOT_ID` in `shared/bots/catalog.ts`; `knownBotIds` always includes it, so a new bot named Nora gets `nora-2`). Every bot-less thread reads and writes them, and Nora's row in the Bots sidebar opens an info panel with its threads and notes.
+
+**Looking back at earlier threads.** Bot threads also get `list_threads` and `read_thread`, limited to threads run as the same bot (including its ask and group-member threads); Nora threads see every thread.
+
+**Prompt caching.** Providers cache a conversation behind its system prompt, so notes that change in the guidance would make the next turn re-read the whole conversation uncached, and Nora's notes are shared by every Nora thread. `main/bots/memory/delivery.ts` therefore freezes the digest into a thread's guidance on its first run (per app session) and never changes it; later changes (added or edited notes, and frozen notes no longer among the newest) travel as a `<nora_note_update>` block in front of the next user instruction (`instructionWithTurnNotes`, used by the Claude, Codex and ACP adapters), sent only when it differs from the last block. This also gives ACP agents, whose guidance is fixed when the session opens, the changes they previously never saw. After an app restart a thread freezes its notes again once.
 
 ## Nora tool server
 
@@ -153,7 +162,7 @@ Because this is per run rather than part of the frozen snapshot, memory stays cu
 | Threads | `list_threads`, `read_thread` | Reads final user and assistant messages only, never tool output; bounded per message and per call. |
 | Tasks | `list_tasks`, `create_task`, `move_task` | Project workspaces only; `create_task` goes through the workspace service's `createWorkspaceTaskFile`. |
 
-None of the tools delete anything or start model work. Deleting bots or tasks, settling threads and starting threads (`ask_bot`) are deliberately left to the window for now. Settings → MCP Servers lists it first as a built-in row (status, tools, where it applies), because runtimes never report it. Bot threads get `ask_bot`, `list_bots`, `remember` and `recall`, plus `group_history` when they answer in a group chat; Nora threads get the app tools plus `ask_bot`; group chats get none. The catalog marks each tool's audience.
+Apart from `forget`, which deletes only a note the thread's own bot (or Nora) saved, none of the tools delete anything or start model work. Deleting bots or tasks, settling threads and starting threads (`ask_bot`) are deliberately left to the window for now. Settings → MCP Servers lists it first as a built-in row (status, tools, where it applies), because runtimes never report it. Bot threads get `ask_bot`, `list_bots`, `remember`, `recall`, `forget` and `list_threads`/`read_thread` for their own threads, plus `group_history` when they answer in a group chat; Nora threads get the app tools plus `ask_bot`, `remember`, `recall` and `forget`; group chats get none. The catalog marks each tool's audience.
 
 Memory, bot-to-bot asks and group posting need tools the model can call. Nora currently passes user MCP servers to providers but does not host its own. Add one Nora-owned MCP server in `main/bots/`, started on demand and injected into the session configuration by each adapter:
 
@@ -183,9 +192,9 @@ Only threads bound to a bot receive the server. Tools are capability-gated per p
 6. **Access:** members default to read access. At most one member is the group's writer; changing it is an explicit control. Workspace admission and conflict handling (D10) are unchanged.
 7. **Stop** in a group stops the active member and clears the pending speaker queue; queued user messages behave as in D18.
 
-Each member receives, per turn, the group messages since its last reply (up to 40,000 characters, oldest cut first), not the full history, keeping native contexts bounded; its own native session already holds what came before. When the catch-up is cut, the prompt says so and the member can page back through the group with the `group_history` Nora tool, which only bot threads whose parent is a group get.
+Each member receives, per turn, the group messages since its last reply (up to 40,000 characters, oldest cut first), not the full history, keeping native contexts bounded; its own native session already holds what came before. When the catch-up is cut, the prompt says so and the member can page back through the group with the `chat_history` Nora tool, which only bot threads whose parent is a group or direct chat get.
 
-**Member thread visibility.** Each member's child thread holds its tool calls, approvals and questions. A sidebar preference (`memberThreads`; Thread view options, the eye button beside Groups in the Bots sidebar, or the one in a group's composer) lists those threads or hides them. While shown, each member reply in the group links to its thread (**View work**). While hidden, a member thread still appears in lists whenever it needs attention, because a pending approval there blocks the group's reply.
+**Work thread visibility.** Each member's child thread (and each direct chat's work thread) holds its tool calls, approvals and questions. A sidebar preference (`workThreads`, read from the older `memberThreads` key; Thread view options, the eye button beside Groups in the Bots sidebar, or the one in a chat's header) lists those threads or hides them. Every chat reply links to the exact thread behind it (**View work**, from the message's `workThreadId`). While hidden, a work thread still appears in lists whenever it needs attention, because a pending approval there blocks the chat's reply.
 
 ## Scoping and storage
 
@@ -207,24 +216,29 @@ Remote (SSH) workspaces read workspace bot files through the owning host, consis
 - **Settings → Bots** lists global bots with avatar, name, role and model. **New bot** opens the bot editor.
 - **Workspace settings → Bots** shows workspace bots plus inherited global bots with an on/off toggle per workspace.
 - **Bot editor** (one dialog for create and edit, in two columns that stack on narrow windows: avatar, name and role, model and availability on the left; instructions and, for existing bots, memory on the right): avatar preview with Reroll and optional shape/colour/eyes pins; name; role line; instructions (multiline, with a starter template); provider/model/reasoning using the existing model picker; memory on/off; scope (global or this workspace) and, for workspace bots, **Shared with the repository** or **Private to you**. Saving shows "Applies to new threads".
-- **Bot info panel** (`BotInfoPanel`, opened from a bot's row in the Bots sidebar, by its info button or context menu): a non-modal side panel with the bot's role, model, availability, instructions, memory (add, edit, delete), recent threads and groups, plus New thread, Edit and Delete. It does not yet open from avatars elsewhere, such as thread rows or message authors.
+- **Bot info panel** (`BotInfoPanel`, opened from a bot's row in the Bots sidebar, by its info button or context menu): a non-modal side panel with the bot's role, model, availability, instructions, memory (add, edit, delete), recent work and groups, plus Message, Edit and Delete. It does not yet open from avatars elsewhere, such as thread rows or message authors.
 
 ### Talking to a bot
 
-- The **New thread** screen gains a **Talk to** picker beside the model picker, defaulting to **Nora**. Choosing a bot sets the binding from the bot and shows it read-only, with an explicit **Override model** affordance. Starter tasks on the empty state come from the bot's role when set.
+**Direct chats (B8–B11, 2026-11-14).** Each bot has one persistent **direct chat** (a conversation with a `direct` descriptor: the bot's face, its scope and the workspace new tasks start in). It replaces the former Talk to picker; existing bot threads stay readable.
+
+- **Messages only.** Direct and group chats render in `ChatConversationPanel` (`renderer/components/app/panels/chat/`): user bubbles, bot replies with face and name, short notices, a "working in …" line while a bot works, and pending approvals or questions from the chat's work threads as inline cards (the same controls as the attention tray, which then skips them). There is no model, checkout, attachment or insights control; the composer has only the message, Send/Stop and, for a direct chat, **Working in {workspace}**.
+- **Work threads per task.** Each user message is a run on Nora's `DirectCoordinator` (`main/bots/direct/`). A cheap router call (`createDirectRouter`) decides whether the message continues an open work thread or starts a new task, and in which workspace; an answer naming no open thread or allowed workspace falls back to the latest open thread in the chat's working workspace, or a new one there (`resolveDirectRoute`). A new task gets a fresh child thread with the bot's own model and **write** access in that workspace; its prompt carries the chat so far, so the conversation carries over, while a continuing thread gets only what is new since it last replied. The reply is posted to the chat with `author` and `workThreadId`.
+- **Any workspace.** A global bot's chat is stored in the Personal workspace (or the workspace it was first opened from when there is none) and opens in whichever workspace is focused; its work can run in any workspace where the bot is available. A workspace bot's chat lives in, and only works in, its own workspace. Direct chats are not listed in workspace thread lists; the bot's row in the Bots sidebar opens them.
+- The chat keeps the bot's name as its title (no automatic retitling), gets no Nora tools itself, and is skipped by the background memory review; its work threads keep notes as usual.
 - **@mention a bot in an ordinary thread** = a one-off ask via `ask_bot`. The answer renders inline as an attributed card with the bot's avatar. The thread does **not** become a group chat; nothing changes type implicitly.
 - **New group** is a separate entry that opens the same New thread screen in group mode with a member picker. Members come from the current workspace's effective catalog only (B3), up to six (B6).
 
 ### Bots home
 
-Choosing Bots in the mode strip (or the home button while in Bots mode) shows **Bots home** in the center whenever no thread is open; Threads mode keeps the workspace home. It shows a card per bot (Nora first, then the workspace's bots, then global ones) with its face state, role, model and thread count, and **New thread**, **Continue latest** and **Edit**; then the workspace's group chats with **New group**; then **Start from a template**. With no bots yet, an introduction explains roles and models, memory and bots working together, and points at creating one or asking Nora. Templates (`shared/bots/templates.ts`) open the bot editor prefilled with a name, role, instructions and a pinned face; the model is chosen there before saving. Each template is tagged with the roles it suits; templates for the workspace's effective role are shown first as "Suggested for …" and the rest under "More templates", so none are hidden. A custom role gets General's suggestions. Instructions are the same whichever role picks a template.
+Choosing Bots in the mode strip (or the home button while in Bots mode) shows **Bots home** in the center whenever no thread is open; Threads mode keeps the workspace home. It shows a card per bot (Nora first, then the workspace's bots, then global ones) with its face state, role, model and thread count, and **Message** (Nora: **New thread**) and **Edit**; then the workspace's group chats with **New group**; then **Start from a template**. With no bots yet, an introduction explains roles and models, memory and bots working together, and points at creating one or asking Nora. Templates (`shared/bots/templates.ts`) open the bot editor prefilled with a name, role, instructions and a pinned face; the model is chosen there before saving. Each template is tagged with the roles it suits; templates for the workspace's effective role are shown first as "Suggested for …" and the rest under "More templates", so none are hidden. A custom role gets General's suggestions. Instructions are the same whichever role picks a template.
 
 ### Navigation
 
 - Bot threads use the bot's avatar in place of the status icon in `ThreadRow`; the avatar's animation state carries the same status (with a non-colour, screen-reader label, per D35).
 - Group chats show up to three stacked avatars.
 - Plain Nora threads keep their existing status icons and Nora branding; Nora has no blob avatar (B7).
-- The sidebar has two modes, switched from a narrow vertical strip on the sidebar's outer edge (Threads and Bots icons). The strip stays visible when the sidebar collapses, follows the sidebar when sidebars are swapped, and the chosen mode is remembered across launches. Threads mode is unchanged. Bots mode lists the focused workspace's own bots, then global bots; each shows its aggregate avatar state and expands to its unsettled threads, a bot without threads starts one on click, and + always starts a new thread. In Bots mode the primary button becomes **New bot**.
+- The sidebar has two modes, switched from a narrow vertical strip on the sidebar's outer edge (Threads and Bots icons). The strip stays visible when the sidebar collapses, follows the sidebar when sidebars are swapped, and the chosen mode is remembered across launches. Threads mode is unchanged. Bots mode lists the focused workspace's own bots, then global bots; each shows its aggregate avatar state; a click opens the bot's chat (Nora starts a new thread) and the chevron lists the threads it works in. In Bots mode the primary button becomes **New bot**.
 - The workspace home may show the effective bot roster as quick-start entries.
 
 ### Avatar
@@ -280,7 +294,7 @@ Each slice is complete through contracts, main, IPC, renderer and tests before t
 - `ask_bot` respects hop and cycle limits; every ask produces a navigable thread with its own approvals.
 - Group chats reply in mention order, route unmentioned messages to zero–two members, run one member at a time and honour Stop and the writer control.
 - Avatar bodies are deterministic per seed and never move; only faces animate. Avatars are readable in light and dark themes, static under reduced motion, labelled for screen readers and do not add per-row animation loops.
-- Keyboard access for the Talk to picker, member picker, @mention autocomplete, bot editor and info panel.
+- Keyboard access for the chat composer and workspace choice, member picker, @mention autocomplete, bot editor and info panel.
 
 ## Decision record
 
@@ -289,7 +303,7 @@ Owner answers recorded on 2026-11-13. These settle product direction; they are n
 | ID | Question | Decision |
 | --- | --- | --- |
 | B1 | Where are workspace bots stored? | **Both, chosen per bot.** Shared bots are repo files at `.nora/bots/<slug>.md`; private bots live in local settings. Private overrides shared for the same `id`. |
-| B2 | How does memory get written? | **Explicit only.** Bots write through `remember`; users can add, edit and delete entries. No automatic run summaries. |
+| B2 | How does memory get written? | **Explicit only.** Bots write through `remember`; users can add, edit and delete entries. No automatic run summaries. **Revised 2026-11-13:** the owner approved a background memory review (on by default, off in Settings → Threads) that adds, updates and forgets notes but never changes notes the user wrote. |
 | B3 | Can group chats span workspaces? | **No, one workspace.** Members come from that workspace's effective catalog. |
 | B4 | Can a thread override the bot's model? | **Yes, explicitly**, shown as "Ada on Sonnet (override)" and revertible. |
 | B5 | Does the user's role guidance apply in bot threads? | **No.** Bot threads use only the bot's instructions; `role` is null when `bot` is set. |
@@ -297,3 +311,7 @@ Owner answers recorded on 2026-11-13. These settle product direction; they are n
 | B7 | Does Nora's default assistant get a blob avatar? | **No.** Plain threads keep Nora branding and status icons. |
 | N1 | How does the Nora assistant bot relate to default threads? | **They are the same.** Nora is listed first in Bots mode and every bot-less thread gets Nora's tools. |
 | N2 | Does `create_bot` ask before saving? | **No, it saves directly.** The result says what was created; the user edits or deletes it in Bots. |
+| B8 | How do bot conversations look? | **Like a messaging app (2026-11-14).** Direct and group chats show only messages; the work happens in work threads linked from each reply. |
+| B9 | How many work threads sit behind a direct chat? | **A new one per task**, chosen by a router; follow-ups continue their task's thread. |
+| B10 | What happens to the Talk to picker? | **Replaced by direct chats.** Clicking a bot opens its one chat; existing bot threads stay readable. |
+| B11 | Where does a direct chat live? | **One per bot, working in any workspace** the bot is available in; approvals show inline as chat cards. |

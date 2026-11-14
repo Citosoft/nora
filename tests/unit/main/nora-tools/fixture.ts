@@ -48,11 +48,13 @@ export function noraFixture() {
   const memory = openBotMemoryStore(":memory:", { now: () => "2026-11-13T00:00:00.000Z", nextId: () => `note${++sequence}` });
   let settings = structuredClone(DEFAULT_APP_SETTINGS);
   let settingsNotifications = 0;
+  const taskNotifications: string[] = [];
   const deps = createNoraToolOperations({
     ...settingsPortsFixture(),
     readSettings: () => settings,
     async updateSettings(change) { settings = change(settings); return settings; },
     onSettingsChanged() { settingsNotifications += 1; },
+    onTasksChanged: (projectId) => { taskNotifications.push(projectId); },
     nextId: () => `id${++sequence}`, memory,
     host: {
       header: (id) => { const found = conversations.get(id); return found ? header(found) : null; },
@@ -69,6 +71,16 @@ export function noraFixture() {
       else boot = { ...boot, personalization: { ...boot.personalization, bots: putStoredBot(boot.personalization.bots, stored) } };
     },
     tasks: {
+      async read(_projectId, path) { const task = tasks.find((entry) => entry.path === path); if (!task) throw new Error("Missing task"); return `# ${task.title}\n\nComplete the work.`; },
+      async move(_projectId, fromPath, toPath) {
+        tasks = tasks.map((task) => task.path === fromPath ? { ...task, path: toPath, completed: toPath.startsWith(".nora/tasks/completed/") } : task);
+        // The real workspace move can prune source entries before saving the renamed board.
+        const taskPositions = { ...board.taskPositions };
+        const taskAssignments = { ...board.taskAssignments };
+        delete taskPositions[fromPath];
+        delete taskAssignments[fromPath];
+        board = { ...board, taskPositions, taskAssignments };
+      },
       async list(projectId) { if (projectId !== "shell-w") throw new Error("wrong project"); return tasks; },
       async board() { return board; },
       async saveBoard(_projectId, next) { board = next; return board; },
@@ -80,5 +92,5 @@ export function noraFixture() {
       }
     }
   });
-  return { deps, saved, conversations, items, memory, get settings() { return settings; }, get settingsNotifications() { return settingsNotifications; }, get board() { return board; } };
+  return { taskNotifications, deps, saved, conversations, items, memory, get settings() { return settings; }, get settingsNotifications() { return settingsNotifications; }, get board() { return board; }, get tasks() { return tasks; } };
 }

@@ -53,6 +53,6 @@ test("bot definitions reject unsafe ids and oversized fields", () => {
 
 test("known ids cover global bots and the workspace's shared and private bots", () => {
   const settings: BotSettings = { global: [bot("ada")], workspaces: { w: { private: [personal("rex")], hidden: [] }, other: { private: [bot("zed")], hidden: [] } } };
-  assert.deepEqual([...knownBotIds(settings, "w", [{ workspaceId: "w", bots: [shared("moss")], problems: [] }])].sort(), ["ada", "moss", "rex"]);
-  assert.deepEqual([...knownBotIds(settings, null, [])], ["ada"]);
+  assert.deepEqual([...knownBotIds(settings, "w", [{ workspaceId: "w", bots: [shared("moss")], problems: [] }])].sort(), ["ada", "moss", "nora", "rex"]);
+  assert.deepEqual([...knownBotIds(settings, null, [])].sort(), ["ada", "nora"]);
 });

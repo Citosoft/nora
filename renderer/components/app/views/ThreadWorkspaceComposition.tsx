@@ -26,7 +26,7 @@ export function ThreadWorkspaceComposition({ store, children }: ThreadWorkspaceC
     client: store.client, resumeExternal: store.resumeExternal, pinExternal: store.pinExternal, setSettled: store.setSettled,
     renameThread: store.renameThread,
     focusWorkspace: store.focusWorkspace,
-    showHome: store.deactivate,
+    showHome: store.showHome,
     openDraft: (workspaceId: string) => { store.openDraft({ workspaceId }); },
     openRow: (row: Parameters<ThreadNavigationPorts["openRow"]>[0]) => {
       if (row.target.kind === "draft") store.focusDocument(row.target.documentId);

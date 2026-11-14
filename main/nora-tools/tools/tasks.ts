@@ -8,7 +8,7 @@ export function registerTaskTools(server: McpServer, context: NoraToolContext, d
   server.registerTool("list_tasks", { ...NORA_TOOLS.list_tasks, annotations: { readOnlyHint: true, openWorldHint: false } }, () => runTool(async () => {
     const tasks = await deps.tasks.list(context);
     if (!tasks.length) return "This workspace's task board is empty.";
-    return tasks.map((task) => `- ${task.title} (path ${task.path}); column ${task.column}${task.completed ? "; completed" : ""}`).join("\n");
+    return tasks.map((task) => `- ${task.title} (id ${task.id}; path ${task.path}); column ${task.column}${task.completed ? "; completed" : ""}`).join("\n");
   }));
   server.registerTool("create_task", { ...NORA_TOOLS.create_task,
     inputSchema: {
@@ -18,8 +18,23 @@ export function registerTaskTools(server: McpServer, context: NoraToolContext, d
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false }
   }, (input) => runTool(async () => {
     const task = await deps.tasks.create(input.title, input.details, context);
-    return `Created task "${task.title}" at ${task.path} in ${task.column}.`;
+    return `Created task "${task.title}" (id ${task.id}) at ${task.path} in ${task.column}.`;
   }));
+  const taskIdSchema = { id: z.string().trim().min(1).max(1024).describe("Stable task id from list_tasks or the task handoff") };
+  server.registerTool("read_task", { ...NORA_TOOLS.read_task, inputSchema: taskIdSchema,
+    annotations: { readOnlyHint: true, openWorldHint: false }
+  }, (input) => runTool(async () => {
+    const { task, content } = await deps.tasks.read(input.id, context);
+    return `${task.title} (id ${task.id}); column ${task.column}; ${task.completed ? "completed" : "incomplete"}\n\n${content}`;
+  }));
+  for (const name of ["start_task", "finish_task"] as const) {
+    server.registerTool(name, { ...NORA_TOOLS[name], inputSchema: taskIdSchema,
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+    }, (input) => runTool(async () => {
+      const task = await (name === "start_task" ? deps.tasks.start : deps.tasks.finish)(input.id, context);
+      return `${task.title} (id ${task.id}); column ${task.column}; ${task.completed ? "completed" : "incomplete"}.`;
+    }));
+  }
   server.registerTool("move_task", { ...NORA_TOOLS.move_task,
     inputSchema: {
       path: z.string().min(1).max(1024).describe("Task path from list_tasks, e.g. .nora/tasks/fix-login-abc.md"),

@@ -12,7 +12,7 @@ const POINTS = [
 
 /** Empty state: what bots are, before the templates below it. */
 export function BotsIntro({ onNewBot, faces }: BotsIntroProps) {
-  return <div className="flex flex-col gap-6 rounded-xl border bg-gradient-to-br from-primary/10 via-background to-background p-6 sm:p-8">
+  return <div className="flex flex-col gap-6 rounded-lg border bg-gradient-to-br from-primary/10 via-background to-background p-6 sm:p-8">
     <div className="flex items-center" aria-hidden="true">
       {faces.slice(0, 5).map((template, index) => <span key={template.id} className={index ? "-ml-3" : ""}>
         <BotAvatar avatar={{ seed: index, ...template.avatar }} state={index === 2 ? "speaking" : "idle"} size={48} /></span>)}

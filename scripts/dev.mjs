@@ -105,6 +105,7 @@ async function copyStatic() {
   await writeAccountBuildConfig();
   await mkdir(path.join(root, "dist", "renderer"), { recursive: true });
   await mkdir(path.join(root, "dist", "runtime"), { recursive: true });
+  await cp(path.join(root, "skills"), path.join(root, "dist", "skills"), { recursive: true });
   await runCommand(nodeExe, [generateOAuthBuildConfigScript], "oauth-build-config");
   await cp(path.join(root, "renderer", "index.html"), path.join(root, "dist", "renderer", "index.html"));
   await cp(rendererIconSvgPath, path.join(root, "dist", "renderer", "icon.svg"));

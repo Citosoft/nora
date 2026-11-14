@@ -1,7 +1,7 @@
 import type { RoleId } from "@shared/types/personalization/roles.types";
 import type { z } from "zod";
 import type { BOT_AVATAR_EYES, BOT_AVATAR_PALETTES, BOT_AVATAR_SHAPES, botAvatarSchema, botBindingSchema, botDefinitionSchema,
-  botFileProblemSchema, botScopeSchema, botAuthorSchema, groupMemberSchema, groupSchema, groupRequestSchema, botMemoryEntrySchema, botSettingsSchema, botSnapshotSchema, sharedBotSetSchema, workspaceBotSettingsSchema } from "@shared/bots/contracts";
+  botFileProblemSchema, botScopeSchema, botAuthorSchema, groupMemberSchema, groupSchema, groupRequestSchema, directSchema, directRequestSchema, botMemoryEntrySchema, botSettingsSchema, botSnapshotSchema, sharedBotSetSchema, workspaceBotSettingsSchema } from "@shared/bots/contracts";
 
 export type BotAvatarShape = (typeof BOT_AVATAR_SHAPES)[number];
 export type BotAvatarPalette = (typeof BOT_AVATAR_PALETTES)[number];
@@ -34,6 +34,8 @@ export type BotAuthor = z.infer<typeof botAuthorSchema>;
 export type GroupMember = z.infer<typeof groupMemberSchema>;
 export type GroupDescriptor = z.infer<typeof groupSchema>;
 export type GroupRequest = z.infer<typeof groupRequestSchema>;
+export type DirectDescriptor = z.infer<typeof directSchema>;
+export type DirectRequest = z.infer<typeof directRequestSchema>;
 export type BotMemoryEntry = z.infer<typeof botMemoryEntrySchema>;
 /** A starting point for a new bot; avatar parts are pinned so each template keeps a recognisable face. */
 export interface BotTemplate {

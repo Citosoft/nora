@@ -27,6 +27,13 @@ test("tool history groups an entire turn across messages without combining turns
   assert.deepEqual(groupNativeTimelineEntries([]), []);
 });
 
+test("reasoning with no visible text is skipped without splitting surrounding reasoning", () => {
+  const a = reasoning("a"); const b = reasoning("b");
+  const empty = { ...reasoning("empty"), text: "  \n" };
+  assert.deepEqual(groupNativeTimelineEntries([empty]), []);
+  assert.deepEqual(groupNativeTimelineEntries([a, empty, b]), [{ kind: "reasoning", runId: "turn", items: [a, b] }]);
+});
+
 test("consecutive reasoning merges into one row, including across folded tool calls, but not across messages or turns", () => {
   const [a, b, c, d, e] = [reasoning("a"), reasoning("b"), reasoning("c"), reasoning("d"), reasoning("e", "next-turn")];
   const first = tool("first"); const second = tool("second"); const reply = message("reply");

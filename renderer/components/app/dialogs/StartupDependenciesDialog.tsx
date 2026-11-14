@@ -89,12 +89,12 @@ export function StartupDependenciesDialog({
 
         <DialogBody className="space-y-4">
           {showSimulationControls && simulatedMissingDependencyIds.length ? (
-            <div className="rounded-[4px] border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-foreground">
+            <div className="rounded-md border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-foreground">
               Simulation mode is active. Missing states below are mocked for UI testing only.
             </div>
           ) : null}
 
-          <div className="flex min-h-0 flex-col rounded-[4px] border border-border/70 bg-background/60 p-4">
+          <div className="flex min-h-0 flex-col rounded-md border border-border/70 bg-background p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-medium text-foreground">Checklist</div>
@@ -121,7 +121,7 @@ export function StartupDependenciesDialog({
                 return (
                   <div
                     key={dependency.id}
-                    className="rounded-[6px] border border-border/70 bg-card/70 p-4"
+                    className="rounded-lg border border-border/70 bg-card p-4"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0 flex-1">
@@ -134,41 +134,41 @@ export function StartupDependenciesDialog({
                             <AlertTriangle className="size-4 shrink-0 text-orange-500" />
                           )}
                           <div className="font-medium text-foreground">{dependency.label}</div>
-                          <span className="rounded-full border border-border/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                          <span className="rounded-full border border-border/70 px-2 py-0.5 text-xs font-medium text-muted-foreground">
                             {dependency.severity}
                           </span>
                           {!isAvailable ? (
-                            <span className="rounded-full border border-border/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                            <span className="rounded-full border border-border/70 px-2 py-0.5 text-xs font-medium text-muted-foreground">
                               {dependency.status}
                             </span>
                           ) : null}
                           {isSimulatedMissing ? (
-                            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-700">
+                            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700">
                               simulated
                             </span>
                           ) : null}
                         </div>
                         <div className="mt-2 text-sm text-muted-foreground">{dependency.summary}</div>
                         {dependency.detectedPath ? (
-                          <div className="mt-3 rounded-[4px] border border-border/60 bg-background px-3 py-2 text-xs text-foreground">
+                          <div className="mt-3 rounded-md border border-border/60 bg-background px-3 py-2 text-xs text-foreground">
                             {dependency.detectedPath}
                           </div>
                         ) : null}
                         {dependency.installHint ? (
-                          <div className="mt-3 rounded-[4px] border border-border/60 bg-background px-3 py-2 text-sm text-foreground">
+                          <div className="mt-3 rounded-md border border-border/60 bg-background px-3 py-2 text-sm text-foreground">
                             {dependency.installHint}
                           </div>
                         ) : null}
                         {dependency.manualInstructions.length ? (
                           <div className="mt-3 space-y-2">
-                            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                            <div className="text-xs font-medium text-muted-foreground">
                               Manual instructions
                             </div>
                             <div className="space-y-2">
                               {dependency.manualInstructions.map((instruction) => (
                                 <div
                                   key={instruction}
-                                  className="rounded-[4px] border border-border/60 bg-background px-3 py-2 text-sm text-foreground"
+                                  className="rounded-md border border-border/60 bg-background px-3 py-2 text-sm text-foreground"
                                 >
                                   {instruction}
                                 </div>
@@ -233,16 +233,16 @@ export function StartupDependenciesDialog({
           </div>
 
           {isLoading ? (
-            <div className="flex items-center gap-3 rounded-[4px] border border-border/70 bg-background/60 px-4 py-3 text-sm text-foreground">
+            <div className="flex items-center gap-3 rounded-md border border-border/70 bg-background px-4 py-3 text-sm text-foreground">
               <LoaderCircle className="size-4 animate-spin text-primary" />
               Checking startup dependencies...
             </div>
           ) : missingDependencies.length === 0 ? (
-            <div className="rounded-[4px] border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-foreground">
+            <div className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-foreground">
               All checked dependencies are available.
             </div>
           ) : (
-            <div className="rounded-[4px] border border-border/70 bg-background/60 px-4 py-3 text-sm text-foreground">
+            <div className="rounded-md border border-border/70 bg-background px-4 py-3 text-sm text-foreground">
               {hasBlockingDependencies
                 ? "One or more mandatory dependencies are missing."
                 : "Optional dependencies are missing. The app can continue without them."}
@@ -250,7 +250,7 @@ export function StartupDependenciesDialog({
           )}
 
           {installErrorMessage ? (
-            <div className="rounded-[4px] border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-foreground">
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-foreground">
               {installErrorMessage}
             </div>
           ) : null}

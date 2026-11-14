@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { BotMemoryNote } from "./BotMemoryNote";
 import type { BotMemorySectionProps } from "@/components/app/types/botMemory.types";
+import { NOTE_SOURCE_LABELS } from "@/components/app/constants/botMemorySources";
 
 /** The bot's notes: what it saved with remember plus anything the user adds, all visible and editable here. */
 export function BotMemorySection({ botId, botName, workspaces, currentWorkspace, disabled }: BotMemorySectionProps) {
@@ -24,7 +25,7 @@ export function BotMemorySection({ botId, botName, workspaces, currentWorkspace,
     {memory.loading ? <p role="status" className="text-xs text-muted-foreground">Loading notes…</p>
       : memory.notes.length ? <ul className="max-h-56 divide-y divide-border/60 overflow-y-auto rounded-md border border-border/60">
         {memory.notes.map((note) => <BotMemoryNote key={note.id} text={note.text} scope={scopeLabel(note.workspaceId)} disabled={locked}
-          source={note.source.kind === "bot" ? `Saved by ${botName}` : "Added by you"} onSave={(next) => memory.update(note.id, next)} onRemove={() => void memory.remove(note.id)} />)}
+          source={NOTE_SOURCE_LABELS[note.source.kind](botName)} onSave={(next) => memory.update(note.id, next)} onRemove={() => void memory.remove(note.id)} />)}
       </ul> : <p className="text-xs text-muted-foreground">No notes yet.</p>}
     {/* Rendered inside the bot editor's form, so this is a group with its own Enter handling rather than a nested form. */}
     <div role="group" aria-label="Add a note" className="flex flex-wrap gap-2">

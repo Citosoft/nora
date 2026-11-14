@@ -3,12 +3,11 @@ import type { Dispatch, ReactNode, SetStateAction } from "react";
 import type { LucideIcon } from "lucide-react";
 import type { WorkspaceSummary, RecentProject, TerminalSession, WorktreeRecord, ForgeBranchPullRequestStatus } from "@shared/appTypes";
 import type { WorkspaceWorkspaceActionsMenuItemsProps } from "@/components/app/types/workspaceSidebarActionsMenu.types";
-import type { RoleSelection } from "@shared/types/personalization/roles.types";
-import type { MemberThreadVisibility, ThreadGrouping } from "@/components/app/types/thread-workspace/navigation.types";
+import type { WorkThreadVisibility, ThreadGrouping } from "@/components/app/types/thread-workspace/navigation.types";
 import type { WorkspaceAvatarColor } from "@/components/app/types/workspaceAvatar.types";
 import type { WorkspaceViewPreferences } from "./workspaceView.types";
 
-export type WorkspaceToolId = "worktrees" | "documents" | "tasks" | "workflows" | "terminals" | "browser";
+export type WorkspaceToolId = "worktrees" | "merge-requests" | "issues" | "documents" | "tasks" | "workflows" | "terminals" | "browser";
 export interface WorkspaceToolItem { id: WorkspaceToolId; label: string; icon: LucideIcon; }
 /** Threads lists conversations; Bots lists the bots you can talk to. */
 export type SidebarMode = "threads" | "bots";
@@ -17,7 +16,7 @@ export interface SidebarPreferences {
   pinnedWorkspaceIds: string[];
   toolPins: Record<string, WorkspaceToolId[]>;
   threadGrouping: ThreadGrouping;
-  memberThreads: MemberThreadVisibility;
+  workThreads: WorkThreadVisibility;
   threadSourceFilter: ThreadSourceFilter;
   threadSort: ThreadSort;
   workspaceAvatarColors: Record<string, WorkspaceAvatarColor>;
@@ -37,7 +36,6 @@ export interface WorkspaceNavigationValue {
 }
 export interface WorkspaceNavigationProviderProps { children: ReactNode; }
 export interface WorkspaceToolProps { workspace: WorkspaceSummary; }
-export interface WorkspaceShortcutsProps extends WorkspaceToolProps { role: RoleSelection | null; collapsed: boolean; }
 export interface WorkspaceSwitcherProps {
   workspaces: WorkspaceSummary[];
   activeId: string | null;

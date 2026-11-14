@@ -24,6 +24,30 @@ function getRequestUrl(input: RequestInfo | URL): string {
   return typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 }
 
+test("forge overviews normalize draft flags for GitHub and GitLab requests", async (t) => {
+  const originalFetch = globalThis.fetch;
+  t.after(() => { globalThis.fetch = originalFetch; });
+  globalThis.fetch = async (input: RequestInfo | URL): Promise<Response> => {
+    const url = getRequestUrl(input);
+    if (url.includes("/pulls?")) return createJsonResponse([
+      { number: 7, title: "No draft prefix", state: "open", draft: true },
+      { number: 8, title: "Draft: no longer a draft", state: "open", draft: false }
+    ]);
+    if (url.includes("/merge_requests?")) return createJsonResponse([
+      { iid: 9, title: "Current draft", state: "opened", draft: true },
+      { iid: 10, title: "Older work in progress", state: "opened", work_in_progress: true },
+      { iid: 11, title: "Ready", state: "opened", draft: false, work_in_progress: true }
+    ]);
+    if (url.includes("/actions/runs?")) return createJsonResponse({ workflow_runs: [] });
+    return createJsonResponse([]);
+  };
+  const ops = createForgeRemoteOps(() => 0);
+  const github = await ops.fetchForgeOverviewForRepo(githubRepo, {});
+  assert.deepEqual(github.pullRequests.map((item) => item.draft), [true, false]);
+  const gitlab = await ops.fetchForgeOverviewForRepo({ ...githubRepo, provider: "gitlab", host: "gitlab.example" }, {});
+  assert.deepEqual(gitlab.pullRequests.map((item) => item.draft), [true, true, false]);
+});
+
 function getJsonBody(init?: RequestInit): Record<string, unknown> {
   const body = typeof init?.body === "string" ? init.body : "{}";
   const parsed = JSON.parse(body) as unknown;

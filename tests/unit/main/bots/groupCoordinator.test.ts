@@ -96,11 +96,11 @@ test("the lead answers what the router cannot place; without a lead the notice e
   assert.match((await selectSpeakers({ message: "hi", group: { ...led, lead: null }, route: route(new Error("no AI")), signal })).notice ?? "", /could not pick/);
 });
 
-test("a member's prompt names the lead and points at group_history when older messages are cut", () => {
+test("a member's prompt names the lead and points at chat_history when older messages are cut", () => {
   const led = { ...group, group: { ...group.group!, lead: "ada" } };
   const long: TimelineItem[] = [{ kind: "message", id: "u", runId: "r", createdAt: "t", role: "user", text: "x".repeat(50_000), complete: true }];
   assert.match(groupPrompt(led, members, members[0], long), /You lead this group/);
   const rex = groupPrompt(led, members, members[1], long);
   assert.match(rex, /Ada leads this group/);
-  assert.match(rex, /earlier messages omitted; call group_history/);
+  assert.match(rex, /earlier messages omitted; call chat_history/);
 });

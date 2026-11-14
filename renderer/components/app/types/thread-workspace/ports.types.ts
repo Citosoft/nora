@@ -38,7 +38,7 @@ export interface ThreadNavigationRow {
   /** A bot working for this thread that is waiting for an approval or answer. */
   waitingOn?: WaitingThread | null;
   /** A group member's own thread, where it does the work behind its replies in the group. */
-  groupMember?: boolean;
+  workThread?: boolean;
   origin?: "cli" | "desktop";
   status: ThreadNavigationStatus;
   active: boolean;

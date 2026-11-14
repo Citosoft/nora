@@ -46,7 +46,7 @@ export type WorkspaceSessionCenterSlotContentProps = {
     | "onRefreshDetail"
     | "onAction"
     | "onCommentSubmit"
-    | "onSpawnIssueAgent"
+    | "onStartIssueThread"
     | "onSpawnReviewAgent"
   >;
   stableTools: AgentCatalogEntry[];

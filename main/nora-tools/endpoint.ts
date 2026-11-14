@@ -8,7 +8,7 @@ export const NORA_MCP_SERVER_NAME = NORA_MCP_SERVER;
 export const NORA_CLAUDE_TOOL_NAMES = (Object.keys(NORA_TOOLS) as NoraToolName[]).map((name) => `mcp__${NORA_MCP_SERVER_NAME}__${name}`);
 /** ask_bot waits for another bot's whole turn, so runtimes must allow long tool calls. */
 export const NORA_TOOL_TIMEOUT_SECONDS = 16 * 60;
-const EMPTY: NoraRunContext = { tools: null, guidance: null };
+const EMPTY: NoraRunContext = { tools: null, guidance: null, turnNotes: null };
 
 /** Run additions are an enhancement: if they cannot be prepared, the turn still runs without them. */
 export async function optionalRunContext(resolve: NoraRunContextResolver | undefined, conversation: Conversation): Promise<NoraRunContext> {
@@ -20,6 +20,11 @@ export async function optionalRunContext(resolve: NoraRunContextResolver | undef
 export function joinGuidance(...parts: readonly (string | null | undefined)[]): string | undefined {
   const text = parts.filter((part): part is string => !!part?.trim()).join("\n\n");
   return text || undefined;
+}
+
+/** The instruction a provider receives: this turn's note changes, if any, then the user's own words. */
+export function instructionWithTurnNotes(instruction: string, context: Pick<NoraRunContext, "turnNotes">): string {
+  return context.turnNotes ? `${context.turnNotes}\n\n${instruction}` : instruction;
 }
 
 export function noraAuthorization(endpoint: NoraToolEndpoint): string { return `Bearer ${endpoint.token}`; }

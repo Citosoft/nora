@@ -416,13 +416,13 @@ export function WorkflowDesigner({
                   </div>
                   <div className="space-y-4 text-sm">
                     <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Run goal</p>
+                      <p className="text-xs font-medium text-muted-foreground">Run goal</p>
                       <p className="mt-1 leading-6 text-muted-foreground">Chosen when you start a run</p>
                     </div>
                     <div className="space-y-2">
-                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Agents</p>
+                      <p className="text-xs font-medium text-muted-foreground">Agents</p>
                       <div className="space-y-2">
-                        <div className="flex items-center gap-3 rounded-md border border-primary/15 bg-background/60 p-2.5">
+                        <div className="flex items-center gap-3 rounded-md border border-primary/15 bg-background p-2.5">
                           <AgentToolIcon
                             toolId={draft.writer.toolId}
                             label={draft.writer.toolId}
@@ -438,7 +438,7 @@ export function WorkflowDesigner({
                           <Badge variant="secondary">Writer</Badge>
                         </div>
                         {draft.reviewers.map((reviewer, index) => (
-                          <div key={reviewer.id} className="flex items-center gap-3 rounded-md border border-primary/15 bg-background/60 p-2.5">
+                          <div key={reviewer.id} className="flex items-center gap-3 rounded-md border border-primary/15 bg-background p-2.5">
                             <AgentToolIcon
                               toolId={reviewer.toolId}
                               label={reviewer.toolId}

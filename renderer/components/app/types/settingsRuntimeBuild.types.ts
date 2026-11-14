@@ -3,6 +3,7 @@ import type {
   AgentSkillSearchResult,
   AiProvider,
   AnalyticsRuntimeConfig,
+  AiSimpleTaskSettings,
   AppSettings,
   AppState,
   BrowserCookieProfileSummary,
@@ -83,7 +84,7 @@ export type BuildSettingsRuntimeValueDeps = {
   updateAiModel: (provider: AiProvider, model: string) => Promise<void>;
   updateVoiceSettings: (voice: AppSettings["voice"]) => Promise<void>;
   updateAiSimpleTaskSettings: (
-    settings: Pick<AppSettings["ai"], "simpleTaskProvider" | "localLlmModelId">
+    settings: AiSimpleTaskSettings
   ) => Promise<void>;
   aiModelOptions: SettingsRuntimeValue["aiModelOptions"];
   aiModelLoading: SettingsRuntimeValue["aiModelLoading"];

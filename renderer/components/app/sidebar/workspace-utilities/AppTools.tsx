@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 
 export function AppTools({ collapsed = false, settingsActive = false, ...actions }: AppToolsProps) {
   const [open, setOpen] = useState(false);
+  const buttonSize = collapsed ? "size-8" : "h-8 w-full min-w-0";
   const helpActions = [
     { label: "Documentation", icon: BookOpen, run: () => { void noraSystemClient.openExternalUrl(APP_DOCS_URL); } },
     { label: "Startup dependencies", icon: Wrench, run: actions.onOpenStartupDependencies },
@@ -24,16 +25,15 @@ export function AppTools({ collapsed = false, settingsActive = false, ...actions
     { label: "Keyboard shortcuts", icon: Keyboard, run: actions.onOpenKeyboardShortcuts },
     { label: themeLabel, icon: actions.resolvedTheme === "dark" ? Sun : Moon, run: actions.onToggleTheme }
   ];
-  return <nav aria-label="App tools" className={`flex min-w-0 items-center gap-1 ${collapsed ? "flex-col" : "flex-wrap"}`}>
-    {footerActions.map(({ label, icon: Icon, run: action }) => action && <Button key={label} type="button" variant="ghost" size="icon" className="size-8 shrink-0 text-muted-foreground" aria-label={label} tooltip={label} onClick={action}>
+  return <nav aria-label="App tools" className={collapsed ? "flex flex-col items-center gap-1" : "contents"}>
+    {footerActions.map(({ label, icon: Icon, run: action }) => action && <Button key={label} type="button" variant="ghost" size="icon" className={`${buttonSize} text-muted-foreground`} aria-label={label} tooltip={label} onClick={action}>
       <Icon className="size-4" aria-hidden="true" />
     </Button>)}
+    <Button type="button" variant="ghost" size="icon" aria-label="Open settings" aria-pressed={settingsActive} tooltip="Settings" onClick={() => run(actions.onOpenSettings)} className={`${buttonSize} ${settingsActive ? "bg-accent text-foreground" : "text-muted-foreground"}`}><Settings className="size-4" aria-hidden="true" /></Button>
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild><Button variant="ghost" size="icon" aria-label="Open app menu" aria-pressed={settingsActive} tooltip="Settings and help" className={`size-8 ${settingsActive ? "bg-accent text-foreground" : "text-muted-foreground"}`}><Settings className="size-4" aria-hidden="true" /></Button></PopoverTrigger>
-      <PopoverContent side={collapsed ? "right" : "top"} align="start" className="w-64 max-h-[70vh] overflow-y-auto p-1.5" aria-label="Settings and help">
-        <p className="px-3 py-2 text-xs font-medium">App settings</p>
-        <Button variant="ghost" className="h-9 w-full justify-start text-xs" aria-label="Open settings" onClick={() => run(actions.onOpenSettings)}><Settings className="size-4" aria-hidden="true" />Settings</Button>
-        <div className="my-1 border-t" />
+      <PopoverTrigger asChild><Button type="button" variant="ghost" size="icon" aria-label="Open help menu" tooltip="Help and about" className={`${buttonSize} text-muted-foreground`}><CircleHelp className="size-4" aria-hidden="true" /></Button></PopoverTrigger>
+      <PopoverContent side={collapsed ? "right" : "top"} align="start" className="w-64 max-h-[70vh] overflow-y-auto p-1.5" aria-label="Help and about">
+        <p className="px-3 py-2 text-xs font-medium">Help and about</p>
         {helpActions.map(({ label, icon: Icon, run: action }) => <Button key={label} variant="ghost" className="h-9 w-full justify-start text-xs" onClick={() => run(action)}><Icon className="size-4" aria-hidden="true" />{label}</Button>)}
         <Button variant="ghost" className="h-9 w-full justify-start text-xs" onClick={() => run(actions.onOpenAbout)}><AppMark className="size-4" />About Nora</Button>
       </PopoverContent>

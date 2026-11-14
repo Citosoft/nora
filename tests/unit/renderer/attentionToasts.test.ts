@@ -19,7 +19,7 @@ test("toasts cover waiting requests outside the viewed thread, oldest first, and
   const viewed = conversation("viewed");
   const settled = conversation("settled", { archivedAt: "2026-11-13T00:00:00.000Z" });
   const summaries = [summary(nora, 1), summary(rex, 2), summary(viewed, 1), summary(settled, 1)];
-  const sources = attentionSources(summaries, "viewed");
+  const sources = attentionSources(summaries, ({ conversation }) => conversation.id !== "viewed");
   assert.deepEqual(sources.map((source) => source.conversationId), ["nora", "rex"]);
   const headers = new Map([["nora", header(nora, [approval("n1", "2026-11-13T00:00:03Z")])],
     ["rex", header(rex, [approval("r1", "2026-11-13T00:00:01Z"), approval("r2", "2026-11-13T00:00:02Z", "responding")])]]);

@@ -1,10 +1,12 @@
+import { buildTaskContent } from "@/components/app/logic/taskForm";
+import type { TaskCreationRequest } from "@/components/app/types/taskCreation.types";
 import { useNativeRuntimePorts } from "./useNativeRuntimePorts";
 import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
-import { formatTaskFileInstruction } from "@/components/app/logic/appUtils";
+import { formatTaskHandoffInstruction } from "@/components/app/logic/taskHandoff";
 import { createNoteDraft } from "@/components/app/logic/noteUtils";
 import { createSpecDraft } from "@/components/app/logic/specUtils";
 import { getTaskAssignments, getTaskBoardSectionTitle } from "@/components/app/logic/taskBoardUtils";
-import { createDuplicatedTaskContent, createTaskDraft, createTaskPlanningInstruction, deriveTaskTitle } from "@/components/app/logic/taskUtils";
+import { createDuplicatedTaskContent, createTaskPlanningInstruction, deriveTaskTitle } from "@/components/app/logic/taskUtils";
 import type { TaskEditorState } from "@/components/app/types";
 import type { UseWorkspaceContentControllerArgs, UseWorkspaceContentControllerResult } from "@/components/app/types/appHooks.types";
 import type { TaskCenterTaskReference } from "@/components/app/types/component.types";
@@ -34,6 +36,7 @@ export function useWorkspaceContentController({
 }: UseWorkspaceContentControllerArgs): UseWorkspaceContentControllerResult {
   const snapshot = useCanonicalAppSnapshot();
   const native = useNativeRuntimePorts();
+  const [taskCreationRequest, setTaskCreationRequest] = useState<TaskCreationRequest | null>(null);
   const [taskEditorState, setTaskEditorState] = useState<TaskEditorState | null>(null);
   const [isCreatingSpec, setIsCreatingSpec] = useState(false);
   const [isCreatingNote, setIsCreatingNote] = useState(false);
@@ -83,12 +86,6 @@ export function useWorkspaceContentController({
     return snapshot.workspaces.find((workspace) => workspace.project.id === projectId)?.project.name ?? "Project";
   };
 
-  const resolveWorkspaceStatePath = async (projectId: string, relativePath: string): Promise<string> =>
-    noraWorkspaceClient.resolveWorkspaceStatePath({
-      projectId,
-      path: relativePath
-    });
-
   const buildTaskAssignedAgents = (projectId: string, taskPath: string) => {
     const board = workspaceTaskBoards[projectId]?.board;
     const assignments = board ? getTaskAssignments(taskPath, board) : [];
@@ -101,23 +98,6 @@ export function useWorkspaceContentController({
       assignedAt: assignment.assignedAt,
       isActive: activeAgentIds.has(assignment.agentId)
     }));
-  };
-
-  const appendTaskContext = (content: string, contextText?: string): string => {
-    const normalizedContext = contextText?.trim();
-    if (!normalizedContext) {
-      return content;
-    }
-
-    return [
-      content,
-      "",
-      "## Browser context",
-      "",
-      "```text",
-      normalizedContext,
-      "```"
-    ].join("\n");
   };
 
   const appendSpecContext = (content: string, contextText?: string): string => {
@@ -161,38 +141,31 @@ export function useWorkspaceContentController({
       return;
     }
 
-    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const pathName = `.nora/tasks/task-${stamp}.md`;
-    const title = `Task ${new Intl.DateTimeFormat(undefined, {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    }).format(new Date())}`;
-    const content = appendTaskContext(createTaskDraft(title), options?.contextText);
-
-    setTaskEditorState(null);
-    setIsTaskBoardOpen(false);
-    setIsSpecBrowserOpen(false);
-    setIsNoteBrowserOpen(false);
-    setIsCenterDiffExpanded(false);
-
-    const statusId = statusBar.beginStatus("Creating task", true);
-    try {
-      const next = await noraWorkspaceClient.writeWorkspaceFile({
-        projectId,
-        path: pathName,
-        content
-      });
-      updateSnapshotState(next);
-      void reloadWorkspaceTasksForProject(projectId);
-      await openWorkspaceSpec(projectId, pathName);
-    } catch (error: unknown) {
-      captureError(error);
-    } finally {
-      statusBar.endStatus(statusId);
-    }
+    setTaskCreationRequest({ projectId, contextText: options?.contextText });
   };
+
+  const createTaskDialog: UseWorkspaceContentControllerResult["createTaskDialog"] = taskCreationRequest ? {
+    projectName: resolveProjectName(taskCreationRequest.projectId),
+    initialContext: taskCreationRequest.contextText ?? "",
+    onClose: () => setTaskCreationRequest(null),
+    onSave: async (values) => {
+      const projectId = taskCreationRequest.projectId;
+      if (!resolveProjectRootPath(projectId)) {
+        throw new Error("This workspace is no longer available.");
+      }
+      const content = buildTaskContent(values);
+      const pathName = `.nora/tasks/task-${crypto.randomUUID()}.md`;
+      const statusId = statusBar.beginStatus("Creating task", true);
+      try {
+        const next = await noraWorkspaceClient.writeWorkspaceFile({ projectId, path: pathName, content });
+        updateSnapshotState(next);
+        void reloadWorkspaceTasksForProject(projectId);
+        setTaskCreationRequest(null);
+      } finally {
+        statusBar.endStatus(statusId);
+      }
+    }
+  } : null;
 
   const openWorkspaceSpec = async (projectId: string, pathName: string): Promise<void> => {
     // Dismiss task/spec/note centers so the workspace session (file editor) is visible and focused.
@@ -636,8 +609,7 @@ export function useWorkspaceContentController({
   };
 
   const openTaskThread = async (task: TaskCenterTaskReference): Promise<void> => {
-    const absolutePath = await resolveWorkspaceStatePath(task.projectId, task.path);
-    const id = await native.launch({ projectId: task.projectId, text: formatTaskFileInstruction(absolutePath),
+    const id = await native.launch({ submit: true, projectId: task.projectId, text: formatTaskHandoffInstruction(task.path),
       source: { kind: "task", projectId: task.projectId, path: task.path } });
     if (id) { setTaskEditorState(null); setIsTaskBoardOpen(false); setIsSpecBrowserOpen(false); setIsNoteBrowserOpen(false); }
   };
@@ -651,7 +623,7 @@ export function useWorkspaceContentController({
   const generateWorkspaceTasks = async (projectId: string, brief: string | null, specPath: string | null): Promise<void> => {
     const project = snapshot?.workspaces.find((entry) => entry.project.id === projectId)?.project ?? (snapshot?.project?.id === projectId ? snapshot.project : null);
     if (!project) throw new Error("Choose an available workspace to plan tasks.");
-    const id = await native.launch({ projectId, text: createTaskPlanningInstruction({ projectName: project.name, projectRootPath: project.rootPath, brief, specPath }) });
+    const id = await native.launch({ submit: true, projectId, text: createTaskPlanningInstruction({ projectName: project.name, projectRootPath: project.rootPath, brief, specPath }) });
     if (!id) throw new Error(native.store.snapshot().error ?? "Unable to open a planning thread. Try again.");
     setTaskEditorState(null); setIsTaskBoardOpen(false); setIsSpecBrowserOpen(false); setIsNoteBrowserOpen(false);
   };
@@ -664,6 +636,7 @@ export function useWorkspaceContentController({
   };
 
   return {
+    createTaskDialog,
     taskEditorState,
     setTaskEditorState,
     isCreatingSpec,

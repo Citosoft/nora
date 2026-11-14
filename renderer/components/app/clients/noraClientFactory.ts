@@ -62,6 +62,7 @@ export const NORA_WORKSPACE_CLIENT_METHODS = [
   "generateCommitMessage",
   "pullChanges",
   "pushChanges",
+  "onWorkspaceTasksChanged",
   "onWorkspaceLoadingProgress"
 ] as const satisfies readonly (keyof NoraBridge)[];
 
@@ -106,6 +107,7 @@ export const NORA_TERMINAL_CLIENT_METHODS = [
 ] as const satisfies readonly (keyof NoraBridge)[];
 
 export const NORA_SESSION_CLIENT_METHODS = [
+  "createWorktree",
   ...NORA_AGENT_CLIENT_METHODS,
   ...NORA_TERMINAL_CLIENT_METHODS
 ] as const satisfies readonly (keyof NoraBridge)[];

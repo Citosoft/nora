@@ -160,7 +160,7 @@ export function deriveAppMainCenterContentValue(
     forgeViewerTabs: args.uiState.forgeViewerTabs,
     handleOpenWorkspaceBrowser: args.handleOpenWorkspaceBrowser,
     handleSelectAiChatProviderModel: args.handleSelectAiChatProviderModel,
-    handleSpawnForgeIssueAgent: args.handleSpawnForgeIssueAgent,
+    handleStartForgeIssueThread: args.handleStartForgeIssueThread,
     handleSpawnForgeReviewAgent: args.handleSpawnForgeReviewAgent,
     isDiffExpanded: args.isCenterDiffExpanded,
     isFullDiffExpanded: args.isCenterFullDiffExpanded,

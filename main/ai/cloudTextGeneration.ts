@@ -3,7 +3,7 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import type { AiProvider, AiSettings } from "@shared/appTypes";
-import type { TextGenerationRequest, TextGenerationResult } from "@main/types/ai/textGeneration.types";
+import type { GeneratedText, TextGenerationRequest, TextGenerationResult } from "@main/types/ai/textGeneration.types";
 
 const PROVIDER_PRIORITY: AiProvider[] = ["openai", "google", "anthropic"];
 
@@ -18,20 +18,20 @@ export async function generateCloudText(settings: AiSettings, request: TextGener
   const provider = resolveProvider(settings);
   if (!provider) throw new Error("Add an AI provider API key in Settings → AI, or select a provider runtime or local model.");
   const model = resolveProviderModel(settings, provider);
-  const text = provider === "google"
+  const output = provider === "google"
     ? await generateWithGoogleFallbacks(settings.apiKeys.google, model, request)
-    : await generateWithModel(createProviderModel(provider, settings.apiKeys[provider], model), request);
-  return { text, provider };
+    : await generateWithModel(createProviderModel(provider, settings.apiKeys[provider], model), model, request);
+  return { ...output, provider };
 }
 
-async function generateWithGoogleFallbacks(apiKey: string, selectedModel: string, request: TextGenerationRequest): Promise<string> {
+async function generateWithGoogleFallbacks(apiKey: string, selectedModel: string, request: TextGenerationRequest): Promise<GeneratedText> {
   let lastError: unknown = null;
   const modelCandidates = dedupeModels([selectedModel, ...GOOGLE_MODEL_FALLBACKS]);
 
   for (const modelId of modelCandidates) {
     try {
       const model = createGoogleGenerativeAI({ apiKey: apiKey.trim() })(modelId);
-      return await generateWithModel(model, request);
+      return await generateWithModel(model, modelId, request);
     } catch (error: unknown) {
       lastError = error;
       if (!isGoogleModelNotFoundError(error)) {
@@ -45,7 +45,7 @@ async function generateWithGoogleFallbacks(apiKey: string, selectedModel: string
     : new Error("No compatible Gemini model is available for this Google API key.");
 }
 
-async function generateWithModel(model: Parameters<typeof generateText>[0]["model"], request: TextGenerationRequest): Promise<string> {
+async function generateWithModel(model: Parameters<typeof generateText>[0]["model"], modelId: string, request: TextGenerationRequest): Promise<GeneratedText> {
   const response = await generateText({
     model,
     system: request.system,
@@ -53,7 +53,9 @@ async function generateWithModel(model: Parameters<typeof generateText>[0]["mode
     abortSignal: AbortSignal.any([AbortSignal.timeout(90_000), ...(request.signal ? [request.signal] : [])]),
     temperature: 0.2
   });
-  return response.text;
+  const { inputTokens, outputTokens } = response.usage;
+  return { text: response.text, model: modelId,
+    usage: inputTokens === undefined && outputTokens === undefined ? null : { inputTokens: inputTokens ?? 0, outputTokens: outputTokens ?? 0 } };
 }
 
 function resolveProvider(settings: AiSettings): AiProvider | null {

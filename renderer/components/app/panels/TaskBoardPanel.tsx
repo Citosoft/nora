@@ -28,6 +28,7 @@ export function TaskBoardPanel(props: TaskBoardPanelProps) {
     onSelectWorkspace,
     onToggleTaskSelection,
     onOpenTask,
+    onStartTask,
     onCreateTask,
     onGenerateTasks,
     onToggleTaskComplete,
@@ -70,7 +71,7 @@ export function TaskBoardPanel(props: TaskBoardPanelProps) {
   };
 
   return (
-    <section aria-label="Task center" className="flex h-full min-h-0 flex-col bg-background">
+    <section aria-label="Task center" className="flex h-full min-h-0 min-w-0 flex-col bg-background">
       <TaskCenterHeader
         workspaces={workspaces}
         activeWorkspace={activeWorkspace}
@@ -87,11 +88,11 @@ export function TaskBoardPanel(props: TaskBoardPanelProps) {
         onGenerate={() => setIsGenerateTasksDialogOpen(true)}
         onClose={onClose}
       />
-      <div className="min-h-0 flex-1 overflow-auto px-6 py-5 sm:px-8">
+      <div className={`min-h-0 min-w-0 flex-1 overflow-auto py-5 ${viewMode === "board" ? "px-6 sm:px-8" : ""}`}>
         {error && (
           <p
             role="alert"
-            className="mb-4 rounded-lg border border-destructive/25 bg-destructive/5 p-3 text-sm text-destructive"
+            className={`mb-4 rounded-lg border border-destructive/25 bg-destructive/5 p-3 text-sm text-destructive ${viewMode === "list" ? "mx-4 sm:mx-6" : ""}`}
           >
             {error}
           </p>
@@ -108,12 +109,12 @@ export function TaskBoardPanel(props: TaskBoardPanelProps) {
             <p className="mt-2 text-xs text-muted-foreground">Your project tasks will appear here.</p>
           </div>
         ) : viewMode === "list" ? (
-          <div className="mx-auto max-w-5xl space-y-6">
+          <div className="w-full space-y-6">
             {groups
               .filter((group) => group.tasks.length > 0)
               .map(({ section, tasks }) => (
                 <section key={section.id} aria-label={section.title}>
-                  <div className="mb-2 flex items-center gap-2 px-3">
+                  <div className="mb-2 flex items-center gap-2 px-4 sm:px-6">
                     <span className="size-1.5 rounded-full bg-muted-foreground/50" aria-hidden="true" />
                     <h2 className="text-xs font-medium">{section.title}</h2>
                     <span className="text-[11px] tabular-nums text-muted-foreground">{tasks.length}</span>
@@ -126,9 +127,10 @@ export function TaskBoardPanel(props: TaskBoardPanelProps) {
                         layout="list"
                         assignmentCount={getTaskAssignments(task.path, activeWorkspace.board).length}
                         selected={selectedTaskKeys.includes(`${activeWorkspace.projectId}:${task.path}`)}
-                        selectionDisabled={isStartingThreads}
+                        isStartingThreads={isStartingThreads}
                         onToggleSelection={() => onToggleTaskSelection(activeWorkspace.projectId, task.path)}
                         onOpen={() => onOpenTask(activeWorkspace.projectId, task.path)}
+                        onStart={() => onStartTask(activeWorkspace.projectId, task.path)}
                         onToggleComplete={() =>
                           onToggleTaskComplete(
                             activeWorkspace.projectId,
@@ -203,13 +205,14 @@ export function TaskBoardPanel(props: TaskBoardPanelProps) {
                 {tasks.map((task) => (
                   <TaskItem
                     layout="board"
-                    selectionDisabled={isStartingThreads}
+                    isStartingThreads={isStartingThreads}
                     key={task.path}
                     assignmentCount={getTaskAssignments(task.path, activeWorkspace.board).length}
                     selected={selectedTaskKeys.includes(`${activeWorkspace.projectId}:${task.path}`)}
                     task={task}
                     onToggleSelection={() => onToggleTaskSelection(activeWorkspace.projectId, task.path)}
                     onOpen={() => onOpenTask(activeWorkspace.projectId, task.path)}
+                    onStart={() => onStartTask(activeWorkspace.projectId, task.path)}
                     onToggleComplete={() =>
                       onToggleTaskComplete(
                         activeWorkspace.projectId,

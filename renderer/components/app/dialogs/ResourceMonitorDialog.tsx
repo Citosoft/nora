@@ -123,10 +123,10 @@ function ResourceTrendCard({
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-[210px] overflow-hidden rounded-[7px] border border-border/70 bg-card/70">
+    <div className="min-h-[210px] overflow-hidden rounded-[7px] border border-border/70 bg-card">
       <div className="flex items-start justify-between gap-3 px-4 pt-4">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
             {icon}
             {title}
           </div>
@@ -200,7 +200,7 @@ export function ResourceMonitorDialog({
       >
         <DialogBody className="flex-none overflow-visible px-5 pt-0">
           {errorMessage ? (
-            <div className="mb-4 flex items-start gap-3 rounded-[6px] border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            <div className="mb-4 flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               <AlertTriangle className="mt-0.5 size-4 shrink-0" />
               <span>{errorMessage}</span>
             </div>
@@ -265,18 +265,18 @@ export function ResourceMonitorDialog({
                   </ResourceTrendCard>
 
                   <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-                    <div className="rounded-[7px] border border-border/70 bg-background/60 p-4">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Sessions</div>
+                    <div className="rounded-[7px] border border-border/70 bg-background p-4">
+                      <div className="text-xs font-medium text-muted-foreground">Sessions</div>
                       <div className="mt-2 text-2xl font-semibold text-foreground">{runningEntryCount}</div>
                       <div className="mt-1 text-xs text-muted-foreground">active rows</div>
                     </div>
-                    <div className="rounded-[7px] border border-border/70 bg-background/60 p-4">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Processes</div>
+                    <div className="rounded-[7px] border border-border/70 bg-background p-4">
+                      <div className="text-xs font-medium text-muted-foreground">Processes</div>
                       <div className="mt-2 text-2xl font-semibold text-foreground">{processCount}</div>
                       <div className="mt-1 text-xs text-muted-foreground">in tracked trees</div>
                     </div>
-                    <div className="rounded-[7px] border border-border/70 bg-background/60 p-4">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">App PID</div>
+                    <div className="rounded-[7px] border border-border/70 bg-background p-4">
+                      <div className="text-xs font-medium text-muted-foreground">App PID</div>
                       <div className="mt-2 text-2xl font-semibold text-foreground">{snapshot.appPid}</div>
                       <div className="mt-1 text-xs text-muted-foreground">root process</div>
                     </div>
@@ -291,15 +291,15 @@ export function ResourceMonitorDialog({
             </TabsContent>
 
             <TabsContent value="attribution" className="min-h-0">
-              <div className="flex min-h-0 flex-col overflow-hidden rounded-[7px] border border-border/70 bg-background/40">
-                <div className="flex items-center justify-between gap-3 border-b border-border/70 bg-card/70 px-4 py-3">
+              <div className="flex min-h-0 flex-col overflow-hidden rounded-[7px] border border-border/70 bg-background">
+                <div className="flex items-center justify-between gap-3 border-b border-border/70 bg-card px-4 py-3">
                   <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                     <Activity className="size-4 text-primary" />
                     Resource attribution
                   </div>
                   <div className="text-xs text-muted-foreground">{entries.length} tracked sessions</div>
                 </div>
-                <div className="grid grid-cols-[minmax(150px,1.2fr)_130px_110px_120px_120px_minmax(160px,1fr)] gap-4 border-b border-border/70 bg-muted/35 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                <div className="grid grid-cols-[minmax(150px,1.2fr)_130px_110px_120px_120px_minmax(160px,1fr)] gap-4 border-b border-border/70 bg-muted/35 px-4 py-2.5 text-xs font-medium text-muted-foreground">
                   <div>Name</div>
                   <div>Kind</div>
                   <div>PID</div>

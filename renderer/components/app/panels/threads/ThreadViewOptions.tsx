@@ -11,7 +11,7 @@ import type { ThreadFilterOption, ThreadViewOptionsProps } from "@/components/ap
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select } from "@/components/ui/select";
-import { useMemberThreadVisibility } from "@/components/app/hooks/useMemberThreadVisibility";
+import { useWorkThreadVisibility } from "@/components/app/hooks/useWorkThreadVisibility";
 
 const filters: readonly ThreadFilterOption[] = [
   { id: "all", label: "Recent" },
@@ -22,8 +22,8 @@ const filters: readonly ThreadFilterOption[] = [
 
 export function ThreadViewOptions({ canGroupByWorkspace, filter, sort, onSortChange, sourceFilter, onSourceFilterChange, grouping, onFilterChange, onGroupingChange }: ThreadViewOptionsProps) {
   const groupingOptions = availableThreadGroupings(canGroupByWorkspace);
-  const memberThreads = useMemberThreadVisibility();
-  const active = filter !== "all" || grouping !== "none" || sourceFilter !== "all" || sort !== "recent" || memberThreads.visibility !== "visible";
+  const workThreads = useWorkThreadVisibility();
+  const active = filter !== "all" || grouping !== "none" || sourceFilter !== "all" || sort !== "recent" || workThreads.visibility !== "visible";
   const filterLabel = filters.find((entry) => entry.id === filter)?.label ?? "Recent";
   const groupingLabel = groupingOptions.find((entry) => entry.id === grouping)?.label ?? "No grouping";
   const sourceLabel = threadSourceOptions.find((entry) => entry.id === sourceFilter)?.label ?? "All chats";
@@ -69,15 +69,15 @@ export function ThreadViewOptions({ canGroupByWorkspace, filter, sort, onSortCha
         <span className="text-xs text-muted-foreground">Sort by</span>
         <ThreadSortSelect sort={sort} onSortChange={onSortChange} />
         <span className="text-xs text-muted-foreground">Bot work</span>
-        <Select value={memberThreads.visibility} aria-label="Group members' threads" className="h-8 px-2 text-xs"
-          title="Each group member works in its own thread. Hidden threads still appear when they need you."
-          onChange={(event) => memberThreads.setVisibility(event.target.value === "hidden" ? "hidden" : "visible")}>
-          <option value="visible">Show group members' threads</option><option value="hidden">Hide group members' threads</option>
+        <Select value={workThreads.visibility} aria-label="Bots' work threads" className="h-8 px-2 text-xs"
+          title="Bots do the work behind each chat reply in their own threads. Hidden threads still appear when they need you."
+          onChange={(event) => workThreads.setVisibility(event.target.value === "hidden" ? "hidden" : "visible")}>
+          <option value="visible">Show work threads</option><option value="hidden">Hide work threads</option>
         </Select>
       </div>
       <div className="mt-3 border-t border-border/60 pt-2">
         <Button variant="ghost" className="h-7 w-full justify-start px-1 text-xs text-muted-foreground" disabled={!active}
-          onClick={() => { onFilterChange("all"); onGroupingChange("none"); onSourceFilterChange("all"); onSortChange("recent"); memberThreads.setVisibility("visible"); }}>Reset view</Button>
+          onClick={() => { onFilterChange("all"); onGroupingChange("none"); onSourceFilterChange("all"); onSortChange("recent"); workThreads.setVisibility("visible"); }}>Reset view</Button>
       </div>
     </PopoverContent>
   </Popover>;

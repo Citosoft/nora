@@ -1,3 +1,4 @@
+import { IssueDetailPanel } from "@/components/app/panels/forge-issues/IssueDetailPanel";
 import { splitForgeComments } from "@/components/app/logic/forgePanelDiff";
 import {
   formatForgeReviewLineLabel,
@@ -141,7 +142,7 @@ function ForgeWorkItemList({
 }) {
   if (!items.length) {
     return (
-      <div className="rounded-[6px] border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">
+      <div className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">
         {emptyLabel}
       </div>
     );
@@ -167,7 +168,7 @@ function ForgeWorkItemList({
     <div className="space-y-4">
       {groupedItems.map((group) => (
         <section key={group.monthKey} className="space-y-2">
-          <div className="px-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          <div className="px-1 text-xs font-medium text-muted-foreground">
             {group.monthLabel}
           </div>
           {group.items.map((item) => (
@@ -183,7 +184,7 @@ function ForgeWorkItemList({
                   onOpenUrl(item.webUrl);
                 }
               }}
-              className="w-full rounded-[6px] border border-border/50 bg-background/50 px-3 py-2 text-left transition hover:border-primary/40 hover:bg-accent/30"
+              className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-left transition hover:border-primary/40 hover:bg-accent/30"
             >
               <div className="whitespace-normal break-words text-sm font-medium text-foreground">#{item.number} {item.title}</div>
               <ForgeBranchSummary item={item} />
@@ -209,7 +210,7 @@ function ForgeWorkflowRunList({
 }) {
   if (!runs.length) {
     return (
-      <div className="rounded-[6px] border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">
+      <div className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">
         No recent {provider === "gitlab" ? "pipelines" : "workflow runs"}.
       </div>
     );
@@ -222,7 +223,7 @@ function ForgeWorkflowRunList({
           key={run.id}
           type="button"
           onClick={() => onOpenRun(run)}
-          className="w-full rounded-[6px] border border-border/50 bg-background/50 px-3 py-2 text-left transition hover:border-primary/40 hover:bg-accent/30"
+          className="w-full rounded-lg border border-border/50 bg-background px-3 py-2 text-left transition hover:border-primary/40 hover:bg-accent/30"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -265,7 +266,7 @@ export function ForgePanel(props: ForgePanelProps) {
     onRefreshDetail,
     onAction,
     onCommentSubmit,
-    onSpawnIssueAgent,
+    onStartIssueThread,
     onSpawnReviewAgent
   } = props;
   const repo = overview?.repo ?? null;
@@ -347,7 +348,7 @@ export function ForgePanel(props: ForgePanelProps) {
         onRefreshDetail={onRefreshDetail}
         onAction={onAction}
         onCommentSubmit={onCommentSubmit}
-        onSpawnIssueAgent={onSpawnIssueAgent}
+        onStartIssueThread={onStartIssueThread}
         onSpawnReviewAgent={onSpawnReviewAgent}
         repoFullName={repo?.fullName ?? null}
         repoProvider={provider}
@@ -356,7 +357,7 @@ export function ForgePanel(props: ForgePanelProps) {
   }
 
   return (
-      <div className="center-column-surface flex h-full min-h-0 flex-col bg-card/95">
+      <div className="center-column-surface flex h-full min-h-0 flex-col bg-card">
       <div className="border-b border-border/50 px-4 py-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -439,7 +440,7 @@ export function ForgePanel(props: ForgePanelProps) {
                     onOpenItem={onOpenItem}
                   />
                 ) : (
-                  <div className="rounded-[6px] border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">
+                  <div className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">
                     No GitLab remote detected for this project.
                   </div>
                 )}
@@ -464,7 +465,7 @@ export function ForgePanel(props: ForgePanelProps) {
               onOpenItem={onOpenItem}
             />
           ) : (
-            <div className="rounded-[6px] border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">
+            <div className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">
               No GitHub remote detected for this project.
             </div>
           )}
@@ -479,7 +480,7 @@ export function ForgePanel(props: ForgePanelProps) {
               onOpenItem={onOpenItem}
             />
           ) : (
-            <div className="rounded-[6px] border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">
+            <div className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">
               No {activeProviderTab === "gitlab" ? "GitLab" : "GitHub"} remote detected for this project.
             </div>
           )}
@@ -493,7 +494,7 @@ export function ForgePanel(props: ForgePanelProps) {
               onOpenRun={onOpenWorkflowRun}
             />
           ) : (
-            <div className="rounded-[6px] border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">
+            <div className="rounded-lg border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">
               No {activeProviderTab === "gitlab" ? "GitLab" : "GitHub"} remote detected for this project.
             </div>
           )}
@@ -503,7 +504,12 @@ export function ForgePanel(props: ForgePanelProps) {
   );
 }
 
-export function ForgeDetailPanel({
+export function ForgeDetailPanel(props: ForgeDetailPanelProps) {
+  if (props.detail?.kind === "issue") return <IssueDetailPanel key={props.detail.item.id} {...props} detail={props.detail} />;
+  return <ForgeReviewDetailPanel {...props} />;
+}
+
+function ForgeReviewDetailPanel({
   detail,
   detailLoading,
   detailErrorMessage,
@@ -517,7 +523,6 @@ export function ForgeDetailPanel({
   onRefreshDetail,
   onAction,
   onCommentSubmit,
-  onSpawnIssueAgent,
   onSpawnReviewAgent,
   repoFullName = null,
   repoProvider = "github"
@@ -577,7 +582,7 @@ export function ForgeDetailPanel({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          <div className="text-xs font-medium text-muted-foreground">
             Review comments
           </div>
           <div className="mt-1 text-xs text-muted-foreground">
@@ -604,15 +609,15 @@ export function ForgeDetailPanel({
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <div className="mr-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        <div className="mr-2 text-xs font-medium text-muted-foreground">
           Target
         </div>
-        <div className="flex rounded-[6px] border border-border/60 bg-background/60 p-0.5">
+        <div className="flex rounded-lg border border-border/60 bg-background p-0.5">
           <Button
             type="button"
             variant={reviewAgentTargetMode === "new-worktree" ? "secondary" : "ghost"}
             size="sm"
-            className="h-7 rounded-[4px] px-2.5 text-xs"
+            className="h-7 rounded-md px-2.5 text-xs"
             onClick={() => setReviewAgentTargetMode("new-worktree")}
           >
             New worktree
@@ -621,7 +626,7 @@ export function ForgeDetailPanel({
             type="button"
             variant={reviewAgentTargetMode === "current-branch" ? "secondary" : "ghost"}
             size="sm"
-            className="h-7 rounded-[4px] px-2.5 text-xs"
+            className="h-7 rounded-md px-2.5 text-xs"
             onClick={() => setReviewAgentTargetMode("current-branch")}
           >
             Checked-out branch
@@ -629,7 +634,7 @@ export function ForgeDetailPanel({
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <div className="mr-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        <div className="mr-2 text-xs font-medium text-muted-foreground">
           Send to agent
         </div>
         {availableTools.map((tool: AgentCatalogEntry) => (
@@ -648,8 +653,8 @@ export function ForgeDetailPanel({
             <AgentToolIcon
               toolId={tool.id}
               label={tool.label}
-              className="size-6 rounded-[4px] bg-transparent"
-              imageClassName="size-5 rounded-[4px]"
+              className="size-6 rounded-md bg-transparent"
+              imageClassName="size-5 rounded-md"
             />
           </Button>
         ))}
@@ -665,7 +670,7 @@ export function ForgeDetailPanel({
             <label
               key={comment.commentId}
               htmlFor={checkboxId}
-              className="flex cursor-pointer gap-3 rounded-[6px] border border-border/50 bg-background/60 p-3 transition hover:border-primary/40 hover:bg-accent/20"
+              className="flex cursor-pointer gap-3 rounded-lg border border-border/50 bg-background p-3 transition hover:border-primary/40 hover:bg-accent/20"
             >
               <input
                 id={checkboxId}
@@ -686,7 +691,7 @@ export function ForgeDetailPanel({
                   <span>{formatForgeReviewLineLabel(comment.oldLine, comment.newLine)}</span>
                   <span>{comment.author || "Unknown"}</span>
                 </div>
-                <div className="terminal-text mt-2 overflow-x-auto rounded-[4px] border border-border/40 bg-background/70 px-2 py-1 text-[11px] leading-5">
+                <div className="terminal-text mt-2 overflow-x-auto rounded-md border border-border/40 bg-background px-2 py-1 text-[11px] leading-5">
                   {comment.lineText || "(line context unavailable)"}
                 </div>
                 <div className="mt-2 whitespace-pre-wrap text-sm leading-5 text-foreground/85">
@@ -701,8 +706,8 @@ export function ForgeDetailPanel({
   ) : null;
 
   return (
-    <div className="center-column-surface flex h-full min-h-0 flex-col bg-card/95">
-      <div className="border-b border-border/50 bg-card/95">
+    <div className="center-column-surface flex h-full min-h-0 flex-col bg-card">
+      <div className="border-b border-border/50 bg-card">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/35 px-4 py-2.5">
           <div className="flex min-w-0 items-center gap-2">
             <Button variant="ghost" size="sm" className="h-8 px-2.5" onClick={onBackToList}>
@@ -710,7 +715,7 @@ export function ForgeDetailPanel({
               Back
             </Button>
             {detail ? (
-              <div className="flex min-w-0 items-center gap-2 rounded-[5px] border border-border/60 bg-background/60 px-2.5 py-1.5 text-xs text-muted-foreground">
+              <div className="flex min-w-0 items-center gap-2 rounded-[5px] border border-border/60 bg-background px-2.5 py-1.5 text-xs text-muted-foreground">
                 <ForgeProviderIcon provider={detailProvider} className="size-3.5 shrink-0" />
                 {detail.kind === "pull_request" ? <GitPullRequest className="size-3.5 shrink-0" /> : <MessageSquare className="size-3.5 shrink-0" />}
                 <span className="truncate">{detail.kind === "pull_request" ? pullRequestLabel : "Issue"}</span>
@@ -812,17 +817,17 @@ export function ForgeDetailPanel({
               </div>
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 {detail.item.author ? (
-                  <div className="inline-flex max-w-full items-center gap-1.5 rounded-[5px] border border-border/55 bg-background/55 px-2.5 py-1.5">
+                  <div className="inline-flex max-w-full items-center gap-1.5 rounded-[5px] border border-border/55 bg-background px-2.5 py-1.5">
                     <User className="size-3.5 shrink-0" />
                     <span className="truncate">{detail.item.author}</span>
                   </div>
                 ) : null}
-                <div className="inline-flex max-w-full items-center gap-1.5 rounded-[5px] border border-border/55 bg-background/55 px-2.5 py-1.5">
+                <div className="inline-flex max-w-full items-center gap-1.5 rounded-[5px] border border-border/55 bg-background px-2.5 py-1.5">
                   <CalendarClock className="size-3.5 shrink-0" />
                   <span className="truncate">{formatForgeUpdatedAt(detail.item.updatedAt)}</span>
                 </div>
                 {detail.kind === "pull_request" && detail.changes.length ? (
-                  <div className="inline-flex max-w-full items-center gap-1.5 rounded-[5px] border border-border/55 bg-background/55 px-2.5 py-1.5">
+                  <div className="inline-flex max-w-full items-center gap-1.5 rounded-[5px] border border-border/55 bg-background px-2.5 py-1.5">
                     <FileDiff className="size-3.5 shrink-0" />
                     <span>{detail.changes.length} file{detail.changes.length === 1 ? "" : "s"}</span>
                     <span className="text-emerald-600 dark:text-emerald-300">+{detail.changes.reduce((total, change) => total + change.additions, 0)}</span>
@@ -840,37 +845,7 @@ export function ForgeDetailPanel({
                   </div>
                 ) : null}
               </div>
-              {detail.kind === "issue" ? (
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <div className="mr-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                    Spawn fix agent
-                  </div>
-                  {availableTools.map((tool: AgentCatalogEntry) => (
-                    <Button
-                      key={tool.id}
-                      variant="ghost"
-                      size="icon"
-                      className="size-9"
-                      tooltip={`Spawn a new ${tool.label} agent for this issue`}
-                      aria-label={`Spawn a new ${tool.label} agent for this issue`}
-                      onClick={() => {
-                        void onSpawnIssueAgent(tool.id);
-                      }}
-                      disabled={detailLoading || actionLoading || commentLoading}
-                    >
-                      <AgentToolIcon
-                        toolId={tool.id}
-                        label={tool.label}
-                        className="size-6 rounded-[4px] bg-transparent"
-                        imageClassName="size-5 rounded-[4px]"
-                      />
-                    </Button>
-                  ))}
-                  {!availableTools.length ? (
-                    <div className="text-sm text-muted-foreground">No detected agent CLIs are available.</div>
-                  ) : null}
-                </div>
-              ) : null}
+
             </div>
           ) : (
             <div className="text-lg font-semibold leading-tight text-foreground">Forge item</div>
@@ -887,8 +862,8 @@ export function ForgeDetailPanel({
         ) : (
           <div className="space-y-4">
             {detail.labels.length ? (
-              <div className="rounded-[8px] border border-border/60 bg-card/70 p-4">
-                <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              <div className="rounded-lg border border-border/60 bg-card p-4">
+                <div className="mb-3 flex items-center gap-2 text-xs font-medium text-muted-foreground">
                   <Tags className="size-3.5" />
                   Labels
                 </div>
@@ -901,11 +876,11 @@ export function ForgeDetailPanel({
             ) : null}
 
             <div>
-              <div className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              <div className="mb-3 text-xs font-medium text-muted-foreground">
                 Description
               </div>
               {detail.body.trim() ? (
-                <MarkdownRenderer className="space-y-4 text-sm leading-6 text-foreground/90">
+                <MarkdownRenderer allowHtml className="space-y-4 text-sm leading-6 text-foreground/90">
                   {detail.body}
                 </MarkdownRenderer>
               ) : (
@@ -915,7 +890,7 @@ export function ForgeDetailPanel({
 
             {detail.kind === "pull_request" ? (
               <div>
-                <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                <div className="mb-3 flex items-center gap-2 text-xs font-medium text-muted-foreground">
                   <FileDiff className="size-3.5" />
                   Changes
                 </div>
@@ -941,11 +916,11 @@ export function ForgeDetailPanel({
               </div>
             ) : null}
 
-            <div className="rounded-[8px] border border-border/60 bg-card/70 p-4">
-              <div className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            <div className="rounded-lg border border-border/60 bg-card p-4">
+              <div className="mb-3 text-xs font-medium text-muted-foreground">
                 Comments
               </div>
-              <div className="mb-4 space-y-3 rounded-[6px] border border-border/50 bg-background/55 p-3">
+              <div className="mb-4 space-y-3 rounded-lg border border-border/50 bg-background p-3">
                 <Textarea
                   value={commentDraft}
                   onChange={(event) => setCommentDraft(event.target.value)}
@@ -975,7 +950,7 @@ export function ForgeDetailPanel({
               {topLevelComments.length ? (
                 <div className="space-y-3">
                   {topLevelComments.map((comment) => (
-                    <div key={comment.id} className="rounded-[6px] border border-border/50 bg-background/60 p-3">
+                    <div key={comment.id} className="rounded-lg border border-border/50 bg-background p-3">
                       <div className="mb-2 flex items-center justify-between gap-3 text-xs text-muted-foreground">
                         <div className="flex min-w-0 items-center gap-2">
                           {comment.authorAvatarUrl ? (
@@ -994,7 +969,7 @@ export function ForgeDetailPanel({
                         <span>{new Date(comment.createdAt).toLocaleString()}</span>
                       </div>
                       {comment.body.trim() ? (
-                        <MarkdownRenderer className="space-y-4 text-sm leading-6 text-foreground/90">
+                        <MarkdownRenderer allowHtml className="space-y-4 text-sm leading-6 text-foreground/90">
                           {comment.body}
                         </MarkdownRenderer>
                       ) : (

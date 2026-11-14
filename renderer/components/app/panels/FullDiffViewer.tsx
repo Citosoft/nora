@@ -40,7 +40,7 @@ export function FullDiffViewer({
               <div className="flex min-w-0 items-center justify-between gap-3">
                 <div className="truncate text-sm font-bold text-foreground" title={change.path}>{change.path}</div>
                 <div className="flex shrink-0 items-center gap-3 text-[11px] font-bold">
-                  <span className={cn("uppercase tracking-[0.12em]", changeTone(change.status))}>{change.status}</span>
+                  <span className={cn("font-medium", changeTone(change.status))}>{change.status}</span>
                   <span className="text-emerald-500">+{change.additions}</span>
                   <span className="text-destructive">-{change.deletions}</span>
                 </div>

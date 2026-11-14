@@ -1,3 +1,4 @@
+import type { CreateTaskDialogProps } from "@/components/app/types/taskCreation.types";
 import type { ChangesPanelTab } from "@/components/app/types/changesPanelTab.types";
 import type {
   AppView,
@@ -259,6 +260,7 @@ export type UseWorkspaceContentControllerArgs = {
 };
 
 export type UseWorkspaceContentControllerResult = {
+  createTaskDialog: CreateTaskDialogProps | null;
   taskEditorState: TaskEditorState | null;
   setTaskEditorState: Dispatch<SetStateAction<TaskEditorState | null>>;
   isCreatingSpec: boolean;

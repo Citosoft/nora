@@ -1,3 +1,5 @@
+import type { AiProvider, AiRuntimeTaskProvider, AiSimpleTaskProvider } from "@shared/types/ai.types";
+import type { MemoryReviewActivity, MemoryReviewRecord } from "@shared/types/bots/memoryReview.types";
 import type { ThreadModelDefault } from "@shared/types/personalization/threadModel.types";
 import type { NativeProvider } from "@shared/ipc/types/personalizationGateway.types";
 import type { ProviderBinding, WorkspaceRef } from "@shared/types/conversation/contracts.types";
@@ -92,3 +94,32 @@ export interface ProviderModelFieldsProps {
   /** Explains why the chosen provider cannot be used here, or null when it can. */
   unsupportedReason?(catalog: ProviderCatalog): string | null;
 }
+/** The model a signed-in runtime uses for a background task; null keeps the runtime's own default. */
+export interface RuntimeTaskModelSelectProps {
+  provider: AiRuntimeTaskProvider;
+  value: string | null;
+  onChange(model: string | null): void;
+  models?: readonly ProviderModel[];
+}
+export interface RuntimeTaskModelSettingProps extends Omit<RuntimeTaskModelSelectProps, "models"> {
+  title: string;
+  /** What the model is for; the row adds how runtimes authenticate. */
+  description: string;
+}
+export interface RuntimeTaskModelFieldsProps extends Omit<RuntimeTaskModelSelectProps, "models"> {
+  /** Catalogs are checkout-scoped; models are listed from the focused workspace's catalog. */
+  workspace: WorkspaceRef;
+  native: NativeProvider;
+}
+/** A background-task source as listed in a picker: runtimes show their logo, cloud and local a generic icon. */
+export interface TaskSourceOptionLabelProps { source: AiSimpleTaskProvider; label: string; }
+/** A cloud API provider (or one of its models) as listed in a picker, with the provider's logo. */
+export interface AiProviderOptionLabelProps { provider: AiProvider; label: string; }
+export interface MemoryReviewActivityPanelProps { state: MemoryReviewActivityState; }
+export interface MemoryReviewActivityState {
+  activity: MemoryReviewActivity | null;
+  loading: boolean;
+  error: string | null;
+  refresh(): void;
+}
+export interface MemoryReviewSourceLabelProps { record: MemoryReviewRecord; }

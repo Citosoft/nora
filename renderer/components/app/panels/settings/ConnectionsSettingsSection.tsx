@@ -29,10 +29,10 @@ export function ConnectionsSettingsSection() {
             return (
               <div
                 key={`${mount.remote}:${localMount || "nolocal"}`}
-                className="flex items-center gap-2 rounded-[6px] border border-border/60 bg-background/50 px-2 py-1.5"
+                className="flex items-center gap-2 rounded-lg border border-border/60 bg-background px-2 py-1.5"
               >
                 <span
-                  className="w-16 shrink-0 truncate rounded-[4px] border border-border/60 bg-background/60 px-1.5 py-0.5 text-center text-[11px] tabular-nums text-muted-foreground"
+                  className="w-16 shrink-0 truncate rounded-md border border-border/60 bg-background px-1.5 py-0.5 text-center text-[11px] tabular-nums text-muted-foreground"
                   title={localMount || "Ssh"}
                 >
                   {formatRemoteMountBadgeLabel(localMount)}
@@ -79,7 +79,7 @@ export function ConnectionsSettingsSection() {
           })}
         </div>
       ) : (
-        <div className="rounded-[6px] border border-border/60 bg-background/50 px-3 py-2 text-sm text-muted-foreground">
+        <div className="rounded-lg border border-border/60 bg-background px-3 py-2 text-sm text-muted-foreground">
           No active remote connections.
         </div>
       )}

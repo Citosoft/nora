@@ -23,7 +23,7 @@ export function ImagePreviewDialog({
             <img
               src={imageSrc}
               alt={title}
-              className="max-h-[calc(100vh-12rem)] max-w-full rounded-[6px] object-contain shadow-lg"
+              className="max-h-[calc(100vh-12rem)] max-w-full rounded-lg object-contain shadow-lg"
             />
           ) : null}
         </DialogBody>

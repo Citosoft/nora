@@ -1,3 +1,4 @@
+import { NORA_BOT_ID } from "@shared/bots/catalog";
 import { botAvatarStateForStatus } from "./botThreads";
 import type { EffectiveBot } from "@shared/types/bots/bots.types";
 import type { BotAvatarState } from "@/components/app/types/botAvatar.types";
@@ -5,7 +6,7 @@ import type { BotNavigationGroup, BotNavigationItem } from "@/components/app/typ
 import type { ThreadNavigationRow } from "@/components/app/types/thread-workspace/ports.types";
 
 const URGENCY: readonly BotAvatarState[] = ["waiting", "thinking", "failed", "idle"];
-export const NORA_ASSISTANT = { id: "nora", name: "Nora", role: "Your app assistant" } as const;
+export const NORA_ASSISTANT = { id: NORA_BOT_ID, name: "Nora", role: "Your app assistant" } as const;
 
 function aggregateState(threads: readonly ThreadNavigationRow[]): BotAvatarState {
   const states = new Set(threads.filter((row) => row.target.kind === "thread").map((row) => botAvatarStateForStatus(row.status)));
@@ -31,4 +32,9 @@ export function buildBotNavigation(bots: readonly EffectiveBot[], rows: readonly
     ...(local.length ? [{ id: "workspace" as const, label: workspaceName ? `In ${workspaceName}` : "This workspace", items: local }] : []),
     ...(global.length ? [{ id: "global" as const, label: "Everywhere", items: global }] : [])
   ];
+}
+
+/** Nora starts a new thread; any other bot opens its one chat. */
+export function botStartLabel(item: Pick<BotNavigationItem, "id" | "name">): string {
+  return item.id === NORA_ASSISTANT.id ? `New thread with ${item.name}` : `Message ${item.name}`;
 }

@@ -389,7 +389,7 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
   }, [monacoEditor, pathName, supportsWorkspaceFileLinkDrop]);
 
   return (
-    <div className="center-column-surface flex h-full min-h-0 flex-col bg-card/95">
+    <div className="center-column-surface flex h-full min-h-0 flex-col bg-card">
       <div className="border-b border-border/50 px-3 py-2">
         <div className="flex min-w-0 items-center justify-between gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-xs text-muted-foreground" title={pathName}>
@@ -408,7 +408,7 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
           </div>
           {!isLoading && isMarkdownFile && !isReadOnlyTab ? (
             <div
-              className="inline-flex shrink-0 items-center rounded-[4px] border border-border/60 bg-background/40 p-1"
+              className="inline-flex shrink-0 items-center rounded-md border border-border/60 bg-background p-1"
               role="tablist"
               aria-label="Markdown view"
             >
@@ -468,7 +468,7 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
                 className={cn(
                   "group flex min-w-0 max-w-[240px] items-center gap-1 rounded-t-[6px] border border-b-0 px-3 py-2 text-sm transition",
                   isActive
-                    ? "border-border bg-background/70 text-foreground"
+                    ? "border-border bg-background text-foreground"
                     : "border-transparent bg-muted/40 text-muted-foreground hover:bg-muted/60"
                 )}
               >
@@ -497,7 +497,7 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
       </div>
       ) : null}
       {errorMessage ? (
-        <div className="m-4 flex items-start gap-3 rounded-[6px] border border-destructive/35 bg-destructive/8 px-4 py-3 text-sm text-foreground">
+        <div className="m-4 flex items-start gap-3 rounded-lg border border-destructive/35 bg-destructive/8 px-4 py-3 text-sm text-foreground">
           <AlertCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
           <div className="min-w-0">
             <div className="font-medium">Editor error</div>
@@ -506,7 +506,7 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
         </div>
       ) : null}
       <div className="min-h-0 flex-1">
-        <div className="h-full min-h-0 overflow-hidden bg-card/95">
+        <div className="h-full min-h-0 overflow-hidden bg-card">
           {isLoading ? (
             <div className="flex h-full items-center justify-center gap-3 text-sm text-muted-foreground">
               <LoaderCircle className="size-4 animate-spin" />
@@ -520,7 +520,7 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
                 <img
                   src={imageDataUrl}
                   alt={pathName}
-                  className="max-h-full max-w-full rounded-[6px] object-contain shadow-lg"
+                  className="max-h-full max-w-full rounded-lg object-contain shadow-lg"
                 />
               </div>
             ) : (

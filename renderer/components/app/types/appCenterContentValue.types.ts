@@ -124,7 +124,7 @@ export type AppCenterContentValueArgs = {
   focusedForgeViewerTab: ForgeViewerTabState | null;
   handleOpenWorkspaceBrowser: (projectId: string, url?: string) => void;
   handleSelectAiChatProviderModel: UseAiModelCatalogResult["handleSelectAiChatProviderModel"];
-  handleSpawnForgeIssueAgent: (toolId: string) => Promise<void>;
+  handleStartForgeIssueThread: () => Promise<void>;
   handleSpawnForgeReviewAgent: (
     toolId: string,
     selections: ForgeReviewCommentSelection[],

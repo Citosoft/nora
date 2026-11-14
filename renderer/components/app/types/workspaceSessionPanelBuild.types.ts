@@ -72,7 +72,7 @@ export type WorkspaceSessionPanelOrchestrationDeps = {
   focusWorkspaceWithRecovery: (projectId: string) => Promise<AppState | null>;
   handleOpenWorkspaceBrowser: WorkspaceSessionPanelProps["onOpenWorkspaceBrowser"];
   handleSelectAiChatProviderModel: WorkspaceSessionPanelProps["onSelectAiChatProviderModel"];
-  handleSpawnForgeIssueAgent: WorkspaceSessionPanelProps["onSpawnIssueAgent"];
+  handleStartForgeIssueThread: WorkspaceSessionPanelProps["onStartIssueThread"];
   handleSpawnForgeReviewAgent: WorkspaceSessionPanelProps["onSpawnReviewAgent"];
   loadForgeWorkItemDetail: (
     kind: ForgeWorkItemKind,

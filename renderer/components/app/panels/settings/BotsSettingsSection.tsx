@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { SettingsSectionHeader } from "./settingsUi";
 import { BotList } from "./bots/BotList";
 import { BotEditorDialog } from "./bots/BotEditorDialog";
+import { MemorySettings } from "./bots/MemorySettings";
 import type { BotDefinition, BotScope } from "@shared/types/bots/bots.types";
 import type { BotEditorTarget } from "@/components/app/types/botEditor.types";
 
@@ -33,7 +34,7 @@ export function BotsSettingsSection() {
   };
   const edit = (bot: BotDefinition): void => open({ bot }, bot.scope);
   return <div className="max-w-4xl space-y-8">
-    <SettingsSectionHeader title="Bots" icon={Bot} description="Bots are teammates with their own role, instructions and model. Pick one under Talk to when you start a thread, or ask Nora, your built-in app assistant, to create one for you." />
+    <SettingsSectionHeader title="Bots" icon={Bot} description="Bots are teammates with their own role, instructions and model. Message one from the Bots sidebar, or ask Nora, your built-in app assistant, to create one for you." />
     <section aria-labelledby="bots-global" className="space-y-3">
       <div className="flex items-center justify-between gap-3"><div>
         <h2 id="bots-global" className="text-sm font-medium">Your bots</h2>
@@ -54,6 +55,7 @@ export function BotsSettingsSection() {
       <BotList bots={local} emptyText="This workspace has no bots of its own." onEdit={edit} />
       {shared?.problems.map((problem) => <p key={problem.file} role="alert" className="text-xs text-destructive"><code>{problem.file}</code>: {problem.message}</p>)}
     </section>}
+    <MemorySettings />
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     {editor && <BotEditorDialog key={editor.key} target={editor.target} workspace={workspace} defaultScope={editor.scope}
       takenIds={takenIds} onClose={() => setEditor(null)} />}

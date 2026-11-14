@@ -7,10 +7,11 @@ export function createDraftIntent(input: NativeDraftInput, nextId: () => string)
   let create: NativeDraftIntent["create"] = null;
   if (!input.conversationId) {
     if (!input.role) throw new Error("Choose your role before starting a thread.");
-    create = { kind: "create", commandId: nextId(), conversationId, title: input.text.trim().slice(0, 100),
-      ...(input.source ? { source: input.source } : {}), workspace: input.workspace.workspace, provider: input.provider, parentId: null,
-      // Bot threads carry the bot's guidance and groups their members' instead of the user's role.
-      ...(input.group ? { group: input.group } : input.botId ? { botId: input.botId } : { role: input.role }) };
+    const direct = input.direct;
+    create = { kind: "create", commandId: nextId(), conversationId, title: direct ? direct.title : input.text.trim().slice(0, 100),
+      ...(input.source ? { source: input.source } : {}), workspace: direct ? direct.home.workspace : input.workspace.workspace, provider: input.provider, parentId: null,
+      // Chats carry their bots' guidance (in their work threads) instead of the user's role.
+      ...(input.group ? { group: input.group } : direct ? { direct: direct.request } : { role: input.role }) };
   }
   return { create,
     submit: { kind: "submit", commandId: nextId(), conversationId, runId: nextId(), instruction: input.text.trim(),

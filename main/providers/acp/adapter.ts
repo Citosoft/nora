@@ -1,7 +1,7 @@
 import { conversationGuidance } from "@shared/conversations/guidance";
 import { createHash } from "node:crypto";
 import { acpNoraServers } from "./noraTools";
-import { joinGuidance, optionalRunContext } from "@main/nora-tools/endpoint";
+import { instructionWithTurnNotes, joinGuidance, optionalRunContext } from "@main/nora-tools/endpoint";
 import { homedir } from "node:os";
 import { methods } from "@agentclientprotocol/sdk";
 import type { NewSessionRequest, RequestPermissionRequest, RequestPermissionResponse, SessionNotification, ToolCall, ToolCallUpdate } from "@agentclientprotocol/sdk";
@@ -209,7 +209,8 @@ export class AcpAdapter implements ExecutionProvider {
     this.bySession.set(sessionId, turn);
     // ACP prompts have no turn id, so the attempt id identifies this native turn.
     emit({ ...base, eventId: "native-start", kind: "started", nativeConversationId: sessionId, nativeTurnId: run.attemptId });
-    const text = promptGuidance && guidance ? `${guidance}\n\n${run.instruction}` : run.instruction;
+    const instruction = instructionWithTurnNotes(run.instruction, runContext);
+    const text = promptGuidance && guidance ? `${guidance}\n\n${instruction}` : instruction;
     try {
       const response = await Promise.race([live.agent.request(methods.agent.session.prompt, { sessionId, prompt: [{ type: "text", text }] }),
         live.closed.then(() => { throw new Error(`${label} exited during the turn`); })]);

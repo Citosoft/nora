@@ -8,6 +8,7 @@ import type {
   AppState,
   CreateAgentPayload,
   CreateTerminalPayload,
+  CreateWorktreePayload,
   LocalTerminalState
 } from "../../appTypes";
 
@@ -30,6 +31,7 @@ export interface SessionBridge {
   clearAgentContext: (agentId: string) => Promise<AgentContextPreview>;
   clearAgentTerminal: (agentId: string) => Promise<AppState>;
   resizeAgentTerminal: (agentId: string, cols: number, rows: number) => Promise<void>;
+  createWorktree: (payload: CreateWorktreePayload) => Promise<AppState>;
   createTerminal: (payload: CreateTerminalPayload) => Promise<AppState>;
   renameTerminal: (sessionId: string, name: string) => Promise<AppState>;
   focusTerminal: (sessionId: string) => Promise<AppState>;

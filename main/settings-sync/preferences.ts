@@ -43,6 +43,7 @@ export function applySettings(settings: AppSettings, appearance: PortableAppeara
   if (values.toolOutputBudget !== undefined) threads.toolOutputBudget = values.toolOutputBudget;
   if (values.followUp !== undefined) threads.followUp = values.followUp;
   if (values.automaticTitles !== undefined) threads.automaticTitles = values.automaticTitles;
+  if (values.automaticMemory !== undefined) threads.automaticMemory = values.automaticMemory;
   if (values.settleAfterDays !== undefined) threads.settleAfterDays = values.settleAfterDays;
   if (values.claudeAutoCompactTokens !== undefined) threads.claudeAutoCompactTokens = values.claudeAutoCompactTokens;
   personalization.threads = threads;

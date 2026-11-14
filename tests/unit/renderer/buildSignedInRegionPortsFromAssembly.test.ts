@@ -19,7 +19,8 @@ test("buildSessionCenterSurfacePortsFromAssembly forwards session slices and cor
     core: { snapshot, resolvedTheme, openSettingsPage: (group) => { settingsGroup = group; } } as AppShellSignedInAssemblySources["core"],
     sessionSurface,
     centerTabs,
-    aiModels
+    aiModels,
+    forge: { forgeOverview: null, isLoadingForgeOverview: false, refreshForgeOverview: () => undefined }
   } as unknown as AppShellSignedInAssemblySources;
 
   const ports = buildSessionCenterSurfacePortsFromAssembly(assembly);
@@ -30,6 +31,10 @@ test("buildSessionCenterSurfacePortsFromAssembly forwards session slices and cor
   assert.strictEqual(ports.resolvedTheme, resolvedTheme);
   assert.strictEqual(ports.terminalThemeId, terminalThemeId);
   assert.strictEqual(ports.terminalFontId, terminalFontId);
+  assert.equal(ports.forgeItems.projectId, null);
+  assert.equal(ports.forgeItems.overview, null);
+  ports.forgeItems.openIntegrations();
+  assert.equal(settingsGroup, "integrations");
   ports.onOpenThreadSettings();
   assert.equal(settingsGroup, "threads");
 });

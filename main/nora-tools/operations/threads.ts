@@ -1,5 +1,6 @@
 import type { ConversationSummary } from "@shared/types/conversation/queries.types";
-import type { NoraThreadOperations, NoraThreadMessage } from "@main/types/nora-tools/noraTools.types";
+import type { Conversation } from "@shared/types/conversation/contracts.types";
+import type { NoraThreadOperations, NoraThreadMessage, NoraToolContext } from "@main/types/nora-tools/noraTools.types";
 import type { NoraToolOperationOptions } from "@main/types/nora-tools/operations.types";
 
 const MESSAGE_MAX_CHARS = 6000;
@@ -12,12 +13,19 @@ function threadStatus({ conversation, latestRun, pendingRequestCount, queuedCoun
   return latestRun ? latestRun.state.replace("-", " ") : "ready";
 }
 
+/** Nora sees every thread on its host; a bot sees only its own threads, so it can pick up its earlier work without reading other bots'. */
+function visibleTo(conversation: Conversation, { conversation: current, audience }: NoraToolContext): boolean {
+  if (conversation.workspace.environmentId !== current.workspace.environmentId) return false;
+  return audience === "nora" || (!!current.bot && conversation.bot?.botId === current.bot.botId);
+}
+
 export function createThreadOperations(options: NoraToolOperationOptions): NoraThreadOperations {
   return {
-    list(query, { conversation: current }) {
+    list(query, context) {
+      const current = context.conversation;
       const workspaces = new Map(options.boot().workspaces.map((entry) => [entry.id, entry.name]));
       return options.host.summaries()
-        .filter(({ conversation }) => conversation.workspace.environmentId === current.workspace.environmentId
+        .filter(({ conversation }) => visibleTo(conversation, context)
           && (query.allWorkspaces || conversation.workspace.projectId === current.workspace.projectId)
           && (query.includeSettled || !conversation.archivedAt))
         .sort((a, b) => b.conversation.updatedAt.localeCompare(a.conversation.updatedAt))
@@ -27,9 +35,9 @@ export function createThreadOperations(options: NoraToolOperationOptions): NoraT
           bot: summary.conversation.bot?.name ?? null, status: threadStatus(summary), updatedAt: summary.conversation.updatedAt,
           current: summary.conversation.id === current.id }));
     },
-    read(conversationId, limit, { conversation: current }) {
+    read(conversationId, limit, context) {
       const header = options.host.header(conversationId);
-      if (!header || header.conversation.workspace.environmentId !== current.workspace.environmentId) throw new Error(`No thread with id "${conversationId}". Call list_threads for the ids.`);
+      if (!header || !visibleTo(header.conversation, context)) throw new Error(`No thread with id "${conversationId}". Call list_threads for the ids.`);
       const page = options.host.conversationHistory({ conversationId, scope: "timeline", limit: HISTORY_PAGE });
       if (page.scope !== "timeline") throw new Error("This thread's history could not be read.");
       const messages = page.items.flatMap((item): NoraThreadMessage[] => item.kind === "message" && item.complete && item.text.trim()

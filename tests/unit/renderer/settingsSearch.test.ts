@@ -1,4 +1,5 @@
 import { searchSettings } from "@/components/app/logic/settingsSearch";
+import { SETTINGS_SEARCH_INDEX } from "@/components/app/constants/settingsSearchIndex";
 import type { SettingsSearchEntry } from "@/components/app/types/settingsSearch.types";
 import type { SettingsGroup } from "@/components/app/types/settings.types";
 import assert from "node:assert/strict";
@@ -16,6 +17,14 @@ const entries: SettingsSearchEntry[] = [
   { group: "terminal", title: "Default Shell", keywords: ["zsh"] },
   { group: "system", title: "Hardware Acceleration", keywords: ["gpu"] }
 ];
+
+test("role selection is discoverable in General by role and onboarding queries", () => {
+  const general = { value: "general", label: "General" } as const;
+  for (const query of ["work role", "change role", "onboarding", "personalization", "custom"]) {
+    const results = searchSettings([general], SETTINGS_SEARCH_INDEX, query);
+    assert.ok(results?.some((result) => result.entries.some((entry) => entry.title === "Work role")), query);
+  }
+});
 
 test("blank queries return null so the full navigation shows", () => {
   assert.equal(searchSettings(groups, entries, ""), null);

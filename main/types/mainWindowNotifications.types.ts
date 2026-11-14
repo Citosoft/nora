@@ -28,6 +28,7 @@ export interface MainWindowNotifications {
   notifyLocalTerminalChanged: (state: LocalTerminalState | null) => void;
   notifyRemoteMountOutput: (line: string) => void;
   notifyToolSkillInstallOutput: (payload: AgentSkillInstallOutputEvent) => void;
+  notifyWorkspaceTasksChanged: (projectId: string) => void;
   notifyWorkspaceLoadingProgress: (payload: { projectId: string; detail: string; command: string | null }) => void;
   notifyVercelRuntimeLogEvent: (payload: VercelRuntimeLogStreamEvent) => void;
   notifyAutoUpdateStatus: (payload: AutoUpdateStatus) => void;

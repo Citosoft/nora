@@ -1,6 +1,6 @@
 import { effectiveRole } from "@shared/personalization/profiles";
 import { findEffectiveBot } from "@shared/bots/catalog";
-import { GROUP_BINDING } from "@shared/bots/groups";
+import { DIRECT_BINDING, GROUP_BINDING } from "@shared/bots/chats";
 import type { NativeBoot } from "@shared/ipc/types/personalizationGateway.types";
 import type { ThreadDocument, ThreadLayout, OpenThreadDraft } from "@/components/app/types/thread-workspace/state.types";
 import type { ConversationSummary } from "@shared/types/conversation/queries.types";
@@ -16,15 +16,17 @@ export function createThreadDraft(boot: NativeBoot, input: OpenThreadDraft, id: 
   const role = effectiveRole(boot.personalization, workspace.id);
   if (!role) throw new Error("Choose your role before starting a thread.");
   const available = (botId: string): boolean => !!findEffectiveBot(boot.personalization.bots, workspace.id, boot.sharedBots, botId);
-  if (input.botId && !available(input.botId)) throw new Error("This bot is not available in this workspace.");
+  if (input.direct && !available(input.direct.botId)) throw new Error("This bot is not available in this workspace.");
   if (input.group && !input.group.botIds.every(available)) throw new Error("A member of this group is not available in this workspace.");
-  return { id, ...(input.source ? { source: input.source } : {}), workspaceId: workspace.id, target: { kind: "draft" }, role, ...(input.botId ? { botId: input.botId } : {}), ...(input.group ? { group: input.group } : {}),
-    text: input.text ?? "", provider: input.group ? GROUP_BINDING : input.provider ?? null, pending: null, updatedAt: now };
+  return { id, ...(input.source ? { source: input.source } : {}), workspaceId: workspace.id, target: { kind: "draft" }, role, ...(input.direct ? { direct: input.direct } : {}), ...(input.group ? { group: input.group } : {}),
+    text: input.text ?? "", provider: input.group ? GROUP_BINDING : input.direct ? DIRECT_BINDING : input.provider ?? null, pending: null, updatedAt: now };
 }
 
-export function openThreadDocument(summary: ConversationSummary, id: string): ThreadDocument {
+/** A direct chat follows the user: it opens in the focused workspace, wherever it is stored. */
+export function openThreadDocument(summary: ConversationSummary, id: string, focusedWorkspaceId: string | null): ThreadDocument {
   const { conversation } = summary;
-  return { id, ...(conversation.source ? { source: conversation.source } : {}), workspaceId: conversation.workspace.projectId, target: { kind: "thread", conversationId: conversation.id },
+  const workspaceId = conversation.direct && focusedWorkspaceId ? focusedWorkspaceId : conversation.workspace.projectId;
+  return { id, ...(conversation.source ? { source: conversation.source } : {}), workspaceId, target: { kind: "thread", conversationId: conversation.id },
     role: conversation.role?.selection ?? null, text: "", provider: conversation.provider, pending: null, updatedAt: conversation.updatedAt };
 }
 

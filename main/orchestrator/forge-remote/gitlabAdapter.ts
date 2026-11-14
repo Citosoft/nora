@@ -16,7 +16,7 @@ import type {
 import { limitForgeDiffForTransport } from "@shared/forgeDiff";
 import { randomUUID } from "node:crypto";
 import type { CountDiffLinesFn, ForgeProviderRemoteAdapter } from "../../types/forgeRemote.types";
-import { getJsonArray, getJsonObject, getNumber, getString, type JsonObject } from "../../jsonValue";
+import { getBoolean, getJsonArray, getJsonObject, getNumber, getString, type JsonObject } from "../../jsonValue";
 import { normalizeGitlabCommentBody } from "../forgeCommentFormatting";
 import { normalizeInlineCommentTarget, validateCommentBody, validatePullRequestInput } from "./common";
 
@@ -46,6 +46,7 @@ export function createGitlabForgeRemoteAdapter(countDiffLines: CountDiffLinesFn)
       number: getNumber(item.iid) ?? 0,
       title: getString(item.title) ?? "",
       state: getString(item.state) ?? "",
+      draft: getBoolean(item.draft) ?? getBoolean(item.work_in_progress) ?? false,
       author: getString(author?.username),
       sourceRepository,
       sourceBranch: getString(item.source_branch),

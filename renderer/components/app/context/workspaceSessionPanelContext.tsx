@@ -302,8 +302,8 @@ export const createWorkspaceSessionPanelValue = (d: WorkspaceSessionPanelBuildDe
   onForgeCommentSubmit: async (payload) => {
     await d.addForgeWorkItemComment(payload);
   },
-  onSpawnIssueAgent: async (toolId) => {
-    await d.handleSpawnForgeIssueAgent(toolId);
+  onStartIssueThread: async () => {
+    await d.handleStartForgeIssueThread();
   },
   onSpawnReviewAgent: async (toolId, selections, targetMode) => {
     await d.handleSpawnForgeReviewAgent(toolId, selections, targetMode);
@@ -490,7 +490,7 @@ export function WorkspaceSessionPanelProvider({
     onRefreshForgeItem: value.onRefreshForgeItem,
     onForgeAction: value.onForgeAction,
     onForgeCommentSubmit: value.onForgeCommentSubmit,
-    onSpawnIssueAgent: value.onSpawnIssueAgent,
+    onStartIssueThread: value.onStartIssueThread,
     onSpawnReviewAgent: value.onSpawnReviewAgent,
     onAddItemToView: value.onAddItemToView,
     onAddItemToSlot: value.onAddItemToSlot,

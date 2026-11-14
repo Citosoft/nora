@@ -1,3 +1,4 @@
+import { workspaceTasksChangedChannel } from "@shared/workspaceTaskEvents";
 import type { WorkspaceBridge, WorkspaceLoadingProgressPayload } from "@shared/ipc/types/workspaceGateway.types";
 
 import { invokeIpc } from "./invokeIpc";
@@ -5,6 +6,10 @@ import { subscribeToIpcEvent } from "./subscribeToIpcEvent";
 
 export function createWorkspaceBridge(): WorkspaceBridge {
   return {
+    onWorkspaceTasksChanged: (listener) =>
+      subscribeToIpcEvent<unknown>(workspaceTasksChangedChannel, (payload) => {
+        if (typeof payload === "string" && payload) listener(payload);
+      }),
     chooseProject: () => invokeIpc("app:choose-project"),
     chooseProjectAtPath: (defaultPath, title) => invokeIpc("app:choose-project-at-path", defaultPath, title),
     createProjectWorkspace: (payload) => invokeIpc("app:create-project-workspace", payload),

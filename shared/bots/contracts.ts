@@ -89,6 +89,21 @@ export const groupRequestSchema = z.object({
   writer: botIdSchema.nullable(),
   lead: botIdSchema.nullable().default(null)
 }).strict();
+/** A bot's direct-message chat; each task the bot takes on runs in its own work thread under the chat. */
+export const directSchema = z.object({
+  botId: botIdSchema,
+  name: z.string().min(1).max(BOT_NAME_MAX),
+  role: z.string().max(BOT_ROLE_MAX),
+  avatar: botAvatarSchema,
+  /** Global bots have one chat for every workspace; a workspace bot's chat only works in that workspace. */
+  scope: z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("global") }).strict(),
+    z.object({ kind: z.literal("workspace"), workspaceId: id }).strict()
+  ]),
+  /** Where new tasks start unless the message clearly belongs elsewhere; the chat's "Working in" choice. */
+  workspaceId: id
+}).strict();
+export const directRequestSchema = z.object({ botId: botIdSchema, workspaceId: id }).strict();
 export const botMemoryEntrySchema = z.object({
   id,
   botId: botIdSchema,
@@ -97,6 +112,8 @@ export const botMemoryEntrySchema = z.object({
   text: z.string().trim().min(1).max(BOT_MEMORY_TEXT_MAX),
   source: z.discriminatedUnion("kind", [
     z.object({ kind: z.literal("bot"), conversationId: id }).strict(),
+    /** Saved by the background review of a thread, not by the bot in its own turn. */
+    z.object({ kind: z.literal("review"), conversationId: id }).strict(),
     z.object({ kind: z.literal("user") }).strict()
   ]),
   createdAt: z.string().datetime(),

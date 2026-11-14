@@ -168,13 +168,6 @@ export const createWorkspaceSidebarValue = (d: WorkspaceSidebarBuildDeps): Works
         })
       );
     },
-    onOpenCreateWorktree: (projectId) => {
-      runInWorkspace(projectId, () =>
-        d.uiCommands.openNewThread({
-          projectId
-        })
-      );
-    },
     onLaunchQuickTerminalOnWorktree: (projectId, worktreeId) => {
       void d.launchTerminalInWorkspace(projectId, {
         ...createQuickTerminalPayload(null, d.terminalQuickLaunchDefaults),
@@ -437,7 +430,6 @@ export function WorkspaceSidebarProvider({
     onOpenWorkflowRunChangeRequest: value.onOpenWorkflowRunChangeRequest,
     onOpenCreateAgentOnWorktree: value.onOpenCreateAgentOnWorktree,
     onOpenCreateTerminalOnWorktree: value.onOpenCreateTerminalOnWorktree,
-    onOpenCreateWorktree: value.onOpenCreateWorktree,
     onLaunchQuickTerminalOnWorktree: value.onLaunchQuickTerminalOnWorktree,
     onCheckoutWorkspaceBranch: value.onCheckoutWorkspaceBranch,
     onLaunchWorktreeScript: value.onLaunchWorktreeScript,

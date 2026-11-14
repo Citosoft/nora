@@ -12,11 +12,11 @@ export const threadTargetSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("draft") }).strict(),
   z.object({ kind: z.literal("thread"), conversationId: id }).strict()
 ]);
-export const threadDocumentSchema = z.object({
+const threadDocumentObjectSchema = z.object({
   id, workspaceId: id, source: conversationSourceSchema.optional(), target: threadTargetSchema, role: roleSelectionSchema.nullable(),
-  /** The bot a new thread will run as; null or absent talks to Nora. */
-  botId: botIdSchema.nullable().optional(),
-  /** Members of a new group chat; a draft is either a bot thread, a group or a Nora thread. */
+  /** The bot a new direct chat is with; a draft is either a direct chat, a group or a Nora thread. */
+  direct: z.object({ botId: botIdSchema }).strict().optional(),
+  /** Members of a new group chat. */
   group: groupRequestSchema.optional(),
   threadReferences: z.array(threadReferenceSchema).max(THREAD_REFERENCE_LIMIT).optional(),
   attachments: z.array(z.object({ id, name: z.string().min(1).max(255), path: z.string().min(1).max(32768),
@@ -24,6 +24,15 @@ export const threadDocumentSchema = z.object({
   text: z.string().max(2_000_000), provider: providerBindingSchema.nullable(),
   pending: nativeDraftIntentSchema.nullable(), updatedAt: z.string().datetime()
 }).strict();
+/**
+ * Layouts saved before direct chats carry `botId` on drafts that would have started a full bot thread. Dropping it turns such a draft
+ * into a Nora draft instead of failing the whole saved layout.
+ */
+export const threadDocumentSchema = z.preprocess((value) => {
+  if (!value || typeof value !== "object" || !("botId" in value)) return value;
+  const { botId: _legacyBotId, ...rest } = value;
+  return rest;
+}, threadDocumentObjectSchema);
 export const threadLayoutSchema = z.object({ version: z.literal(1), environmentId: id,
   focusedWorkspaceId: id.nullable(), activeId: id.nullable(), documents: z.array(threadDocumentSchema).max(500),
   openIds: z.array(id).max(500), pinnedThreadIds: z.array(id).max(10_000)
@@ -47,7 +56,8 @@ export const threadLayoutSchema = z.object({ version: z.literal(1), environmentI
     const intent = document.pending;
     if ((document.target.kind === "draft" && !document.role)
       || (intent && document.target.kind === "thread" && (intent.create || intent.submit.conversationId !== document.target.conversationId))
-      || (intent && document.target.kind === "draft" && (!intent.create || intent.create.workspace.projectId !== document.workspaceId
+      // A direct chat is stored in its home workspace (Personal for a global bot), whichever workspace it was started from.
+      || (intent && document.target.kind === "draft" && (!intent.create || (!document.direct && intent.create.workspace.projectId !== document.workspaceId)
         || intent.create.workspace.environmentId !== layout.environmentId))) {
       context.addIssue({ code: "custom", message: "Pending instruction does not belong to its saved draft" });
     }

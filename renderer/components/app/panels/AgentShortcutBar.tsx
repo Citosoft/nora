@@ -34,8 +34,8 @@ export function AgentShortcutBar({
                 <AgentToolIcon
                   toolId={tool.id}
                   label={tool.label}
-                  className="size-6 rounded-[4px] bg-transparent"
-                  imageClassName="size-5 rounded-[4px]"
+                  className="size-6 rounded-md bg-transparent"
+                  imageClassName="size-5 rounded-md"
                 />
               </Button>
             ))}

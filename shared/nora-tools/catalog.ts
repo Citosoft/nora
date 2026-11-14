@@ -15,27 +15,35 @@ export const NORA_TOOLS = {
       + "Use it when the user @mentions a bot or when another bot's role fits the work. Bots cannot ask themselves, and chains of asks are limited."
   },
   remember: {
-    audience: ["bot"],
+    audience: ["nora", "bot"],
     title: "Remember something",
-    description: "Save a short, durable note for yourself (this bot), such as a user preference, a decision or a project fact. "
-      + "Notes appear in your instructions in later threads and the user can see and edit them. Do not store secrets."
+    description: "Save a short, durable note for yourself, such as a user preference, a decision or a project fact. "
+      + "To correct or merge a note you saved, pass its id as memory_id instead of adding a near-duplicate. "
+      + "Your newest notes are included in every later thread; older ones stay searchable with recall. The user can see and edit them. Do not store secrets."
   },
   recall: {
-    audience: ["bot"],
+    audience: ["nora", "bot"],
     title: "Search your notes",
-    description: "Search the notes you saved with remember, for this workspace and everywhere."
+    description: "Search the notes you saved with remember, for this workspace and everywhere, best match first, with each note's id. "
+      + "An empty query lists your newest notes."
   },
-  group_history: {
+  forget: {
+    audience: ["nora", "bot"],
+    title: "Forget a note",
+    description: "Delete one of the notes you saved, by its id, when it turns out wrong or out of date, or after you merged it into another. "
+      + "Notes the user wrote can only be changed by the user."
+  },
+  chat_history: {
     audience: ["member"],
-    title: "Read the group chat",
-    description: "Read earlier messages of the group chat you are answering in, newest last, with who wrote each one. "
+    title: "Read the chat",
+    description: "Read earlier messages of the group or direct chat you are answering in, newest last, with who wrote each one. "
       + "Your prompt only carries messages since you last spoke; use this when you need what was said before that."
   },
   create_bot: {
     audience: ["nora"],
     title: "Create a Nora bot",
     description: "Create a bot in Nora: a named teammate with a role, standing instructions, its own model and an animated avatar. "
-      + "It is saved immediately and appears in the Bots sidebar and the Talk to picker. Omit provider and model to use this thread's model "
+      + "It is saved immediately and appears in the Bots sidebar, ready to chat with. Omit provider and model to use this thread's model "
       + "(call list_models to see the alternatives). Write instructions in the second person, as guidance for the bot."
   },
   update_bot: {
@@ -72,30 +80,45 @@ export const NORA_TOOLS = {
     description: "List the installed providers (such as claude and codex) and the models each one offers, for choosing a bot's model."
   },
   list_threads: {
-    audience: ["nora"],
+    audience: ["nora", "bot"],
     title: "List Nora threads",
     description: "List threads in this workspace (or every workspace), newest first, with id, title, bot, status and last activity. "
-      + "Settled threads are left out unless you ask for them."
+      + "A bot sees only its own threads. Settled threads are left out unless you ask for them."
   },
   read_thread: {
-    audience: ["nora"],
+    audience: ["nora", "bot"],
     title: "Read a Nora thread",
-    description: "Read the latest messages of another Nora thread by id (from list_threads): what the user asked and the final answers, "
+    description: "Read the latest messages of another thread by id (from list_threads): what the user asked and the final answers, "
       + "without tool output. Use it to pick up context from earlier work."
   },
   list_tasks: {
-    audience: ["nora"],
+    audience: ["nora", "bot", "member"],
     title: "List workspace tasks",
-    description: "List the tasks on this workspace's task board, with their path, title and column (such as Todo, In Progress or Done)."
+    description: "List the tasks on this workspace's task board, with their stable id, path, title and column (such as Todo, In Progress or Done)."
   },
   create_task: {
-    audience: ["nora"],
+    audience: ["nora", "bot", "member"],
     title: "Create a workspace task",
     description: "Add a task to this workspace's task board, in the first column. It is saved as a Markdown file under .nora/tasks "
       + "with the title as its heading and your details as the body."
   },
+  read_task: {
+    audience: ["nora", "bot", "member"],
+    title: "Read a workspace task",
+    description: "Read a task's current details and status by its stable id from list_tasks or a task handoff."
+  },
+  start_task: {
+    audience: ["nora", "bot", "member"],
+    title: "Start a workspace task",
+    description: "Start or reopen a task by its stable id, marking it incomplete and moving it to In Progress. Safe to retry."
+  },
+  finish_task: {
+    audience: ["nora", "bot", "member"],
+    title: "Finish a workspace task",
+    description: "Mark a task complete by its stable id and move it to Done. Call only after the task's completion criteria and validation are satisfied. Safe to retry."
+  },
   move_task: {
-    audience: ["nora"],
+    audience: ["nora", "bot", "member"],
     title: "Move a workspace task",
     description: "Move a task to another column of this workspace's task board, by its path (from list_tasks) and the column's id or title."
   }

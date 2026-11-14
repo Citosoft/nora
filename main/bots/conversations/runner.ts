@@ -1,5 +1,5 @@
 import type { BotDefinition, BotSnapshot } from "@shared/types/bots/bots.types";
-import type { Conversation, ConversationRun, ProviderBinding } from "@shared/types/conversation/contracts.types";
+import type { Conversation, ConversationRun, ProviderBinding, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { BotAskInput, BotReply, BotRunnerDeps } from "@main/types/bots/conversations.types";
 
 const TERMINAL = new Set<ConversationRun["state"]>(["completed", "failed", "interrupted"]);
@@ -16,21 +16,25 @@ export function conversationChain(deps: BotRunnerDeps, conversation: Conversatio
   return chain;
 }
 
-async function bindingFor(deps: BotRunnerDeps, bot: BotDefinition, parent: Conversation): Promise<ProviderBinding> {
+async function bindingFor(deps: BotRunnerDeps, bot: BotDefinition, workspace: WorkspaceRef): Promise<ProviderBinding> {
   if (bot.binding.permissionPolicy) return { ...bot.binding, permissionPolicy: bot.binding.permissionPolicy };
-  const catalog = await deps.host.catalog(bot.binding.kind, bot.binding.instanceId, parent.workspace);
+  const catalog = await deps.host.catalog(bot.binding.kind, bot.binding.instanceId, workspace);
   const policy = catalog.status === "available" ? catalog.catalog.policies[0]?.id : undefined;
   if (!policy) throw new Error(`${bot.name}'s provider is unavailable${catalog.status === "unavailable" ? `: ${catalog.failure.message}` : "."}`);
   return { ...bot.binding, permissionPolicy: policy };
 }
 
-/** Finds the bot's unsettled child thread under `parent`, or creates one with the bot's own model and the given workspace access. */
+/** Creates a child thread of `parent` that runs as the bot, with the bot's own model, in the given workspace. */
+export async function createBotThread(deps: BotRunnerDeps, parent: Conversation, bot: BotDefinition, workspace: WorkspaceRef, title: string): Promise<string> {
+  const receipt = await deps.host.execute({ kind: "create", commandId: deps.nextId(), conversationId: deps.nextId(), title: title.slice(0, 100) || bot.name,
+    workspace, provider: await bindingFor(deps, bot, workspace), parentId: parent.id, botId: bot.id });
+  return receipt.conversationId;
+}
+
+/** Finds the bot's unsettled child thread under `parent`, or creates one in the parent's workspace with the given access. */
 export async function ensureBotThread(deps: BotRunnerDeps, parent: Conversation, bot: BotDefinition, access: "read" | "write", title: string): Promise<string> {
   const existing = deps.host.summaries().find(({ conversation }) => conversation.parentId === parent.id && conversation.bot?.botId === bot.id && !conversation.archivedAt);
-  if (existing) return existing.conversation.id;
-  const receipt = await deps.host.execute({ kind: "create", commandId: deps.nextId(), conversationId: deps.nextId(), title: title.slice(0, 100) || bot.name,
-    workspace: { ...parent.workspace, access }, provider: await bindingFor(deps, bot, parent), parentId: parent.id, botId: bot.id });
-  return receipt.conversationId;
+  return existing ? existing.conversation.id : createBotThread(deps, parent, bot, { ...parent.workspace, access }, title);
 }
 
 function finalAssistantText(deps: BotRunnerDeps, conversationId: string, runId: string): string | null {

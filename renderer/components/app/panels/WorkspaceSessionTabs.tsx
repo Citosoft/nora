@@ -63,7 +63,7 @@ export function WorkspaceSessionTabs({
   }, []);
 
   return (
-    <div ref={containerRef} className="workspace-shell-surface min-w-0 shrink-0 overflow-hidden border-b border-border/60 bg-background/70">
+    <div ref={containerRef} className="workspace-shell-surface min-w-0 shrink-0 overflow-hidden border-b border-border/60 bg-background">
       <div className="flex min-h-[46px] min-w-0 items-center gap-1 px-3 py-1.5">
         {visibleTabs.map((tab) => {
           const isActive = tab.id === activeTabId;
@@ -110,7 +110,7 @@ export function WorkspaceSessionTabs({
                   <span
                     role="button"
                     tabIndex={0}
-                    className="grid size-5 shrink-0 place-items-center rounded-[4px] text-muted-foreground transition hover:bg-accent/70 hover:text-foreground"
+                    className="grid size-5 shrink-0 place-items-center rounded-md text-muted-foreground transition hover:bg-accent/70 hover:text-foreground"
                     onClick={(event) => {
                       event.stopPropagation();
                       onClose(tab);

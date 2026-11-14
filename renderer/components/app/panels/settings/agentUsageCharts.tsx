@@ -324,7 +324,7 @@ export const AgentUsageTotalsRing = ({
         </ResponsiveContainer>
       </div>
       <div className="text-center">
-        <div className={`font-semibold uppercase tracking-wide text-muted-foreground ${compact ? "text-[8px]" : "text-[9px]"}`}>
+        <div className={`font-medium text-muted-foreground ${compact ? "text-[8px]" : "text-[9px]"}`}>
           Total
         </div>
         <div className={`font-semibold tabular-nums text-foreground ${compact ? "text-xs" : "text-sm"}`}>
@@ -441,7 +441,7 @@ export const AgentUsageWorktreeBarList = ({
 
   return (
     <div className="mt-4 w-full min-w-0">
-      <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">By worktree / folder</div>
+      <div className="mb-2 text-xs font-medium text-muted-foreground">By worktree / folder</div>
       <ResponsiveContainer width="100%" height={chartHeight}>
         <BarChart layout="horizontal" data={data} margin={{ top: 4, right: 12, left: 4, bottom: 4 }} barCategoryGap={10}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.45} horizontal={false} />

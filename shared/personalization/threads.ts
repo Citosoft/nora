@@ -3,7 +3,7 @@ import type { ThreadPreferences } from "@shared/types/personalization/threads.ty
 
 export const DEFAULT_THREAD_PREFERENCES: Readonly<ThreadPreferences> = {
   toolOutputBudget: "compact",
-  subagentModel: null, followUp: "queue", automaticTitles: true, settleAfterDays: null, claudeAutoCompactTokens: null
+  subagentModel: null, followUp: "queue", automaticTitles: true, automaticMemory: true, settleAfterDays: null, claudeAutoCompactTokens: null
 };
 
 export function threadPreferences(settings: Personalization): ThreadPreferences {
@@ -13,6 +13,7 @@ export function threadPreferences(settings: Personalization): ThreadPreferences 
     subagentModel: saved?.subagentModel ?? DEFAULT_THREAD_PREFERENCES.subagentModel,
     followUp: saved?.followUp ?? DEFAULT_THREAD_PREFERENCES.followUp,
     automaticTitles: saved?.automaticTitles ?? DEFAULT_THREAD_PREFERENCES.automaticTitles,
+    automaticMemory: saved?.automaticMemory ?? DEFAULT_THREAD_PREFERENCES.automaticMemory,
     settleAfterDays: saved?.settleAfterDays ?? DEFAULT_THREAD_PREFERENCES.settleAfterDays,
     claudeAutoCompactTokens: saved?.claudeAutoCompactTokens ?? DEFAULT_THREAD_PREFERENCES.claudeAutoCompactTokens
   };

@@ -20,7 +20,13 @@ export interface NativeAskBotCardProps {
   bot: { name: string; avatar: BotAvatar } | null;
   onOpenThread?: (conversationId: string) => void;
 }
-export interface NativeTimelineRow { key: string; entry: NativeTimelineEntry; timing: NativeTurnTimeProps | null; }
+/**
+ * What a running turn is doing when nothing else in the thread shows it: specific when the runtime says
+ * so (`thinking`, `starting`, `stopping`), or a light `waiting` phrase while the model is between steps.
+ */
+export interface NativeTurnActivity { kind: "starting" | "thinking" | "waiting" | "stopping"; label: string; }
+export interface NativeTurnActivityProps { activity: NativeTurnActivity; }
+export interface NativeTimelineRow { key: string; entry: NativeTimelineEntry; timing: NativeTurnTimeProps | null; activity: NativeTurnActivity | null; }
 export interface NativeToolHistorySummary { label: string; state: ToolState; count: number; failedCount: number; }
 export interface NativeApprovalProps {
   request: ApprovalRequest;

@@ -13,7 +13,7 @@ export function ModelUsage({ collapsed, tools, onInstallTool, onSwitchToolAccoun
   const usage = useModelUsage({ tools, onInstallTool, onSwitchToolAccount });
   return <Popover>
     <PopoverTrigger asChild>
-      <Button variant="ghost" size="icon" className="size-8 text-muted-foreground" aria-label="Open model usage" tooltip="Model usage"><Gauge className="size-4" aria-hidden="true" /></Button>
+      <Button variant="ghost" size="icon" className={`${collapsed ? "size-8" : "h-8 w-full min-w-0"} text-muted-foreground`} aria-label="Open model usage" tooltip="Model usage"><Gauge className="size-4" aria-hidden="true" /></Button>
     </PopoverTrigger>
     <PopoverContent side={collapsed ? "right" : "top"} align="start" className="model-usage-popover w-80 space-y-3" aria-label="Model usage">
       <div><p className="text-sm font-medium">Model usage</p><p className="mt-1 text-xs text-muted-foreground">Usage limits and accounts across your agents.</p></div>

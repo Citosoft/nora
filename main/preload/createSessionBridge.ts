@@ -22,6 +22,7 @@ export function createSessionBridge(): SessionBridge {
     clearAgentContext: (agentId) => invokeIpc("app:clear-agent-context", agentId),
     clearAgentTerminal: (agentId) => invokeIpc("app:clear-agent-terminal", agentId),
     resizeAgentTerminal: (agentId, cols, rows) => invokeIpc("app:resize-agent-terminal", agentId, cols, rows),
+    createWorktree: (payload) => invokeIpc("app:create-worktree", payload),
     createTerminal: (payload) => invokeIpc("app:create-terminal", payload),
     renameTerminal: (sessionId, name) => invokeIpc("app:rename-terminal", sessionId, name),
     focusTerminal: (sessionId) => invokeIpc("app:focus-terminal", sessionId),

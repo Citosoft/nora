@@ -99,7 +99,7 @@ export function AgentContextPicker({
       Loading agent context
     </div>
   ) : !pickerSources.length ? (
-    <p className={cn("text-sm text-muted-foreground", isFlush ? "py-10 text-center" : "rounded-[4px] border border-dashed border-border/60 bg-background/30 px-3 py-3")}>
+    <p className={cn("text-sm text-muted-foreground", isFlush ? "py-10 text-center" : "rounded-md border border-dashed border-border/60 bg-background px-3 py-3")}>
       {emptyMessage}
     </p>
   ) : (
@@ -108,7 +108,7 @@ export function AgentContextPicker({
         <div
           key={source.agentId}
           className={cn(
-            isFlush ? "space-y-2 border-b border-border/25 pb-5 last:border-b-0 last:pb-0" : "rounded-[4px] border border-border/60 bg-card/40"
+            isFlush ? "space-y-2 border-b border-border/25 pb-5 last:border-b-0 last:pb-0" : "rounded-md border border-border/60 bg-card"
           )}
         >
           <div className={cn(isFlush ? "px-0.5" : "border-b border-border/60 px-3 py-2")}>
@@ -150,12 +150,12 @@ export function AgentContextPicker({
                         : "border border-primary/50 bg-primary/10"
                       : isFlush
                         ? "hover:bg-muted/50"
-                        : "border border-border/60 bg-background/30 hover:bg-accent/40"
+                        : "border border-border/60 bg-background hover:bg-accent/40"
                   )}
                 >
                   <input
                     type="checkbox"
-                    className="form-control-surface mt-0.5 size-4 rounded-[4px] border"
+                    className="form-control-surface mt-0.5 size-4 rounded-md border"
                     checked={selected}
                     onChange={() => onChange(toggleAgentContextGroupSelection(selections, source.agentId, group))}
                   />
@@ -183,7 +183,7 @@ export function AgentContextPicker({
   return (
     <div
       className={cn(
-        isFlush ? "flex flex-col gap-3" : "rounded-[4px] border border-border/70 bg-background/30"
+        isFlush ? "flex flex-col gap-3" : "rounded-md border border-border/70 bg-background"
       )}
     >
       {header}

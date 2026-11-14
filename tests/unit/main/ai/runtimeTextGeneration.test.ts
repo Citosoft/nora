@@ -21,14 +21,15 @@ process.stdin.on('end', () => {
   console.log(JSON.stringify({ type: 'turn.completed' }));
 });
 `, { mode: 0o700 });
-  const text = await generateCodexText({ executable, cwd, environment: process.env, request: { system: "Only a title", user: "Synthetic prompt" } });
-  assert.equal(text, "Add runtime naming");
+  const output = await generateCodexText({ executable, cwd, environment: process.env, request: { system: "Only a title", user: "Synthetic prompt" }, model: "gpt-5-mini" });
+  assert.deepEqual(output, { text: "Add runtime naming", usage: null, model: "gpt-5-mini" });
   const captured = z.object({ args: z.array(z.string()), input: z.string(), cwd: z.string() }).parse(JSON.parse(await readFile(join(cwd, "request.json"), "utf8")));
   assert.match(captured.input, /Only a title\nDo not use tools/);
   assert.match(captured.input, /Synthetic prompt$/);
   assert.ok(!captured.args.includes("Synthetic prompt"));
   for (const flag of ["--ephemeral", "--ignore-user-config", "--ignore-rules"]) assert.ok(captured.args.includes(flag));
   assert.equal(captured.args[captured.args.indexOf("--sandbox") + 1], "read-only");
+  assert.equal(captured.args[captured.args.indexOf("--model") + 1], "gpt-5-mini");
 });
 
 test("aborted naming cancels the Codex subprocess", { skip: process.platform === "win32" }, async (t) => {
@@ -38,7 +39,7 @@ test("aborted naming cancels the Codex subprocess", { skip: process.platform ===
   await writeFile(executable, "#!/usr/bin/env node\nprocess.stdin.resume(); setTimeout(() => {}, 60000);\n", { mode: 0o700 });
   const controller = new AbortController();
   const result = generateCodexText({ executable, cwd, environment: process.env,
-    request: { system: "Name", user: "Synthetic", signal: controller.signal } });
+    request: { system: "Name", user: "Synthetic", signal: controller.signal }, model: null });
   controller.abort();
   await assert.rejects(result, /Codex text generation failed/);
 });

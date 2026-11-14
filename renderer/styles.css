@@ -291,6 +291,23 @@
     }
   }
 
+  @keyframes textShimmer {
+    from { background-position: 100% 0; }
+    to { background-position: -100% 0; }
+  }
+
+  /* Live "working" text: a highlight sweeps across muted text while a row is busy. */
+  @media (prefers-reduced-motion: no-preference) {
+    .text-shimmer {
+      background-image: linear-gradient(90deg, hsl(var(--muted-foreground)) 40%, hsl(var(--foreground)) 50%, hsl(var(--muted-foreground)) 60%);
+      background-size: 200% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: textShimmer 2s linear infinite;
+    }
+  }
+
   .button-default-surface {
     background-color: hsl(var(--button-default-bg));
     border-color: hsl(var(--button-default-border));

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildBotNavigation } from "@/components/app/logic/botNavigation";
-import { applyMemberThreadVisibility } from "@/components/app/logic/thread-workspace/navigation";
+import { applyWorkThreadVisibility } from "@/components/app/logic/thread-workspace/navigation";
 import type { ThreadNavigationRow, ThreadNavigationStatus } from "@/components/app/types/thread-workspace/ports.types";
 import { bot } from "../shared/bots/fixtures";
 
@@ -37,13 +37,13 @@ test("drafts never change a face, and search matches name or role including Nora
 });
 
 test("hidden member threads drop out of lists unless they need the user", () => {
-  const rows = [row("group", null, "Completed", "2026-11-03T00:00:00Z"), { ...row("quiet", "ada", "Completed", "2026-11-02T00:00:00Z"), groupMember: true },
-    { ...row("waiting", "rex", "Needs approval", "2026-11-01T00:00:00Z"), groupMember: true, attention: true }];
-  assert.deepEqual(applyMemberThreadVisibility(rows, "visible").map((entry) => entry.id), ["group", "quiet", "waiting"]);
-  assert.deepEqual(applyMemberThreadVisibility(rows, "hidden").map((entry) => entry.id), ["group", "waiting"]);
+  const rows = [row("group", null, "Completed", "2026-11-03T00:00:00Z"), { ...row("quiet", "ada", "Completed", "2026-11-02T00:00:00Z"), workThread: true },
+    { ...row("waiting", "rex", "Needs approval", "2026-11-01T00:00:00Z"), workThread: true, attention: true }];
+  assert.deepEqual(applyWorkThreadVisibility(rows, "visible").map((entry) => entry.id), ["group", "quiet", "waiting"]);
+  assert.deepEqual(applyWorkThreadVisibility(rows, "hidden").map((entry) => entry.id), ["group", "waiting"]);
 });
 
-test("bot info finds the bot's definition, provider label and the groups it belongs to; Nora has none", async () => {
+test("bot info finds the bot's definition, provider label and the groups it belongs to; Nora's has only its threads and notes", async () => {
   const { buildBotInfo } = await import("@/components/app/logic/botInfo");
   const ada = { bot: bot("ada"), origin: "global" as const, overrides: [] };
   const item = buildBotNavigation([ada], [], "", "Nora").flatMap((group) => group.items);
@@ -51,6 +51,8 @@ test("bot info finds the bot's definition, provider label and the groups it belo
   const rows = [{ ...row("old", null, "Completed", "2026-11-01T00:00:00Z"), group: [member] }, { ...row("new", null, "Completed", "2026-11-02T00:00:00Z"), group: [member] },
     { ...row("other", null, "Completed", "2026-11-03T00:00:00Z"), group: [{ ...member, botId: "rex" }] }];
   const info = buildBotInfo(item.find((entry) => entry.id === "ada"), [ada], rows, new Map([[ada.bot.binding.kind, "Claude"]]));
-  assert.deepEqual([info?.provider, info?.groups.map((entry) => entry.id)], ["Claude", ["new", "old"]]);
-  assert.equal(buildBotInfo(item.find((entry) => entry.id === "nora"), [ada], rows, new Map()), null);
+  assert.equal(info?.kind, "bot");
+  if (info?.kind === "bot") assert.deepEqual([info.provider, info.groups.map((entry) => entry.id)], ["Claude", ["new", "old"]]);
+  assert.equal(buildBotInfo(item.find((entry) => entry.id === "nora"), [ada], rows, new Map())?.kind, "nora");
+  assert.equal(buildBotInfo(undefined, [ada], rows, new Map()), null);
 });

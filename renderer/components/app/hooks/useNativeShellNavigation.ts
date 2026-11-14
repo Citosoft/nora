@@ -1,12 +1,14 @@
 import { useEffect, useRef } from "react";
 import { useNativeRuntimePorts } from "./useNativeRuntimePorts";
 import { useThreadWorkspaceSnapshot } from "./useThreadWorkspaceSnapshot";
+import { resolveThreadShellNavigation } from "@/components/app/logic/thread-workspace/shellNavigation";
 import type { NativeShellNavigationInput } from "@/components/app/types/thread-workspace/navigation.types";
 
 /** Coordinates native thread selection with the retained workspace/tool navigation. */
 export function useNativeShellNavigation({ projectId, focusWorkspace, showThread, onError }: NativeShellNavigationInput): void {
   const native = useNativeRuntimePorts();
   const state = useThreadWorkspaceSnapshot(native.store);
+  const focusRevision = useRef(state.focusRevision);
   const expectedProject = useRef<string | null>(null);
   const actions = useRef({ focusWorkspace, showThread, onError });
   actions.current = { focusWorkspace, showThread, onError };
@@ -25,13 +27,13 @@ export function useNativeShellNavigation({ projectId, focusWorkspace, showThread
     return () => { disposed = true; };
   }, [projectId, native.request, native.store]);
   useEffect(() => {
-    const document = state.layout.documents.find((entry) => entry.id === state.layout.activeId);
-    if (!document) return;
+    const navigation = resolveThreadShellNavigation(state, focusRevision.current);
+    focusRevision.current = state.focusRevision;
+    if (navigation.kind === "unchanged") return;
     actions.current.showThread();
-    const workspace = state.boot.workspaces.find((entry) => entry.id === document.workspaceId);
-    if (workspace?.shellProjectId && workspace.shellProjectId !== projectId) {
-      expectedProject.current = workspace.shellProjectId;
-      void actions.current.focusWorkspace(workspace.shellProjectId).catch(actions.current.onError);
+    if (navigation.projectId && navigation.projectId !== projectId) {
+      expectedProject.current = navigation.projectId;
+      void actions.current.focusWorkspace(navigation.projectId).catch(actions.current.onError);
     }
   }, [state.layout.activeId, state.focusRevision, native.store]);
 }

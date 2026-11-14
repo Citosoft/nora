@@ -47,3 +47,21 @@ test("group chats freeze their members, never write themselves, and need the coo
   assert.equal(created.workspace.access, "read");
   assert.equal(created.role, null);
 });
+
+test("direct chats are read-only, need the coordinator, and only change their working workspace within the bot's scope", (t) => {
+  const f = fixture(t);
+  const ada = bot("ada");
+  const descriptor = { botId: "ada", name: ada.name, role: ada.role, avatar: ada.avatar, scope: { kind: "global" as const }, workspaceId: "project" };
+  const nora = { kind: "nora" as const, instanceId: "direct", model: "direct", reasoning: null, permissionPolicy: "direct" };
+  const command = { ...create(undefined), provider: nora, direct: { botId: "ada", workspaceId: "project" } };
+  assert.throws(() => f.engine.execute({ ...command, provider }, { direct: descriptor }), /bot for this chat could not be resolved/);
+  assert.throws(() => f.engine.execute(command), /bot for this chat could not be resolved/);
+  assert.throws(() => f.engine.execute({ ...command, role: { id: "writing" } }, { direct: descriptor }), /cannot also be a group/);
+  assert.throws(() => f.engine.execute(command, { direct: { ...descriptor, scope: { kind: "workspace", workspaceId: "elsewhere" } } }), /own workspace/);
+  f.engine.execute(command, { direct: descriptor, role: { id: "developer" } });
+  const created = f.snapshot().conversation;
+  assert.deepEqual([created.direct, created.workspace.access, created.role], [descriptor, "read", null]);
+  f.engine.execute({ kind: "set-direct-workspace", commandId: "move", conversationId: created.id, workspaceId: "other" });
+  assert.equal(f.snapshot().conversation.direct?.workspaceId, "other");
+  assert.equal(f.snapshot().conversation.updatedAt, created.updatedAt, "choosing a workspace is not activity");
+});

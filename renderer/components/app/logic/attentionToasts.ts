@@ -5,9 +5,9 @@ import type { AttentionSource, AttentionToast, InlineQuestion } from "@/componen
 
 const INLINE_OPTIONS_MAX = 4;
 
-/** Threads with waiting requests other than the one on screen, which already shows its own request. */
-export function attentionSources(summaries: readonly ConversationSummary[], viewedConversationId: string | null): AttentionSource[] {
-  return summaries.filter(({ conversation, pendingRequestCount }) => pendingRequestCount > 0 && !conversation.archivedAt && conversation.id !== viewedConversationId)
+/** Unsettled threads with waiting requests among those `include` picks. */
+export function attentionSources(summaries: readonly ConversationSummary[], include: (summary: ConversationSummary) => boolean): AttentionSource[] {
+  return summaries.filter((summary) => summary.pendingRequestCount > 0 && !summary.conversation.archivedAt && include(summary))
     .map(({ conversation, pendingRequestCount, latestRun }) => ({ conversationId: conversation.id, revision: `${pendingRequestCount}:${latestRun?.updatedAt ?? ""}` }));
 }
 

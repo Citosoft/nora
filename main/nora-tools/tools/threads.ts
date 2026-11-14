@@ -14,7 +14,7 @@ export function registerThreadTools(server: McpServer, context: NoraToolContext,
     annotations: { readOnlyHint: true, openWorldHint: false }
   }, (input) => runTool(() => {
     const threads = deps.threads.list({ allWorkspaces: input.all_workspaces ?? false, includeSettled: input.include_settled ?? false, limit: input.limit ?? 30 }, context);
-    if (!threads.length) return "There are no threads here.";
+    if (!threads.length) return context.audience === "bot" ? "You have no other threads here." : "There are no threads here.";
     return threads.map((thread) => `- ${thread.title} (id ${thread.id})${thread.current ? " — this thread" : ""}; ${thread.bot ? `bot ${thread.bot}` : "Nora"}; `
       + `${thread.status}; ${thread.workspace}; last activity ${thread.updatedAt}`).join("\n");
   }));

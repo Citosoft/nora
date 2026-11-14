@@ -309,7 +309,7 @@ function SignedInAppRootContent({
   });
 
   const {
-    handleSpawnForgeIssueAgent,
+    handleStartForgeIssueThread,
     handleSpawnForgeReviewAgent,
     handleOpenProjectInIde
   } = useForgeActionHandlers({
@@ -727,7 +727,7 @@ function SignedInAppRootContent({
         forgeSliceInput: {
           integration: forgeIntegration,
           resolveGitlabForgeRepoOverride: props.centerTabs.resolveGitlabForgeRepoOverride,
-          handleSpawnForgeIssueAgent,
+          handleStartForgeIssueThread,
           handleSpawnForgeReviewAgent,
           focusedForgeViewerTab: layout.focusedForgeViewerTab
         },
@@ -859,7 +859,7 @@ function SignedInAppRootContent({
     content,
     forgeIntegration,
     props.centerTabs.resolveGitlabForgeRepoOverride,
-    handleSpawnForgeIssueAgent,
+    handleStartForgeIssueThread,
     handleSpawnForgeReviewAgent,
     layout.focusedForgeViewerTab,
     vercelIntegration,

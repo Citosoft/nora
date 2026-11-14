@@ -49,6 +49,15 @@ test("Claude reasoning and prose reconcile independently within a message", () =
   assert.deepEqual(frames.map((frame) => "text" in frame ? [frame.kind, frame.text, frame.complete] : []), [["text", "Answer", true], ["reasoning", "Reason", true]]);
 });
 
+test("Claude reports hidden thinking as in-progress reasoning and settles it without text", () => {
+  const stream = new ClaudeStreamNormalizer();
+  stream.accept(partial({ type: "message_start", message: message([]) }));
+  const started = stream.accept(partial({ type: "content_block_start", index: 0, content_block: { type: "redacted_thinking", data: "opaque" } }));
+  assert.deepEqual(started.map((frame) => "text" in frame ? [frame.kind, frame.text, frame.complete] : []), [["reasoning", "", false]]);
+  const frames = stream.accept(partial({ type: "message_stop" }));
+  assert.deepEqual(frames.map((frame) => "text" in frame ? [frame.kind, frame.text, frame.complete] : []), [["reasoning", "", true]]);
+});
+
 test("Claude preserves a rejected limit reset in the normalized failure", () => {
   const stream = new ClaudeStreamNormalizer();
   const seconds = Date.parse("2026-11-10T12:00:00Z") / 1000;

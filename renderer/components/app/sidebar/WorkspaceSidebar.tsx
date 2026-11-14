@@ -13,14 +13,12 @@ import { buildWorkspaceGroups } from "@/components/app/logic/workspaceGroups";
 import { ThreadNavigation } from "@/components/app/panels/threads/ThreadNavigation";
 import { WorkspaceUtilities } from "@/components/app/sidebar/WorkspaceUtilities";
 import { WorkspaceActions } from "@/components/app/sidebar/workspace-navigation/WorkspaceActions";
-import { WorkspaceShortcuts } from "@/components/app/sidebar/workspace-navigation/WorkspaceShortcuts";
 import { WorkspaceSwitcher } from "@/components/app/sidebar/workspace-navigation/WorkspaceSwitcher";
 import { WorkspaceStatusIndicator } from "@/components/app/sidebar/workspace-navigation/WorkspaceStatusIndicator";
 import { BotNavigation } from "@/components/app/panels/bots/BotNavigation";
 import { BotEditorDialog } from "@/components/app/panels/settings/bots/BotEditorDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { effectiveRole } from "@shared/personalization/profiles";
 
 export function WorkspaceSidebar() {
   const snapshot = useCanonicalAppSnapshot();
@@ -38,15 +36,19 @@ export function WorkspaceSidebar() {
   const workspaces = useMemo(() => buildWorkspaceGroups(snapshot, new Set(removingWorkspaceRoots)), [snapshot, removingWorkspaceRoots]);
   const workspace = workspaces.find((entry) => entry.project.id === snapshot?.project?.id);
   const nativeWorkspace = native.boot.workspaces.find((entry) => entry.shellProjectId === workspace?.project.id);
-  const role = nativeWorkspace ? effectiveRole(native.boot.personalization, nativeWorkspace.id) : native.boot.personalization.defaultRole;
   const mode = navigation.preferences.sidebarMode;
   // Each mode searches different things, so switching modes starts a fresh search.
   useEffect(() => setQuery(""), [mode]);
   const chooseWorkspace = (projectId: string) => { navigation.closeTool(); setQuery(""); setError(null); actions.onFocusWorkspace(projectId); };
-  const newThread = (botId?: string, group?: GroupRequest) => {
+  const newThread = (group?: GroupRequest) => {
     setError(null); navigation.closeTool();
-    void native.launch({ ...(workspace ? { projectId: workspace.project.id } : {}), ...(botId ? { botId } : {}), ...(group ? { group } : {}) })
+    void native.launch({ ...(workspace ? { projectId: workspace.project.id } : {}), ...(group ? { group } : {}) })
       .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "Thread could not be opened."));
+  };
+  const messageBot = (botId: string) => {
+    setError(null); navigation.closeTool();
+    if (!nativeWorkspace) { setError("Open a workspace to message its bots."); return; }
+    if (!native.store.openDirect(nativeWorkspace.id, botId)) setError(native.store.snapshot().error ?? "The chat could not be opened.");
   };
   const primary = mode === "bots" ? { label: "New bot", run: () => setBotEditor((current) => current + 1) } : { label: "New thread", run: () => newThread() };
   return <aside aria-label="Workspace navigation" className={`workspace-shell-surface flex h-full min-h-0 flex-col overflow-hidden ${collapsed ? "items-center" : ""}`}>
@@ -61,10 +63,9 @@ export function WorkspaceSidebar() {
       <Button variant="ghost" size={collapsed ? "icon" : "default"} className={collapsed ? "size-8" : "h-9 w-full justify-start px-2 text-sm font-normal"} onClick={primary.run} aria-label={primary.label} tooltip={collapsed ? primary.label : undefined}><Plus className="size-4 text-muted-foreground" aria-hidden="true" />{!collapsed && primary.label}</Button>
       {!collapsed && <div className="relative"><Search className="pointer-events-none absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" aria-hidden="true" /><Input type="search" className="h-8 rounded-md border-transparent bg-transparent pl-8 text-xs shadow-none hover:bg-muted/40 focus-visible:border-border" placeholder={mode === "bots" ? "Search bots…" : "Search threads…"} aria-label={mode === "bots" ? "Search bots" : "Search threads"} value={query} onChange={(event) => setQuery(event.target.value)} /></div>}
     </div>
-    {workspace && mode === "threads" && <WorkspaceShortcuts workspace={workspace} role={role} collapsed={collapsed} />}
     {!collapsed && (error || navigation.preferenceError) && <p role="alert" className="px-4 pb-3 text-xs text-destructive">{error ?? navigation.preferenceError}</p>}
     {mode === "bots" ? <BotNavigation workspaceId={nativeWorkspace?.id ?? null} workspaceName={nativeWorkspace?.name ?? workspace?.project.name ?? null} query={query} collapsed={collapsed}
-      onStart={(botId) => newThread(botId ?? undefined)} onNavigate={navigation.closeTool}
+      onStart={(botId) => botId ? messageBot(botId) : newThread()} onNavigate={navigation.closeTool}
       onShowThreads={() => navigation.setPreferences((current) => ({ ...current, sidebarMode: "threads" }))}
       onNewGroup={nativeWorkspace ? () => setGroupDialog(true) : undefined} />
     : collapsed ? <div className="min-h-0 flex-1" /> : <ThreadNavigation workspaceId={nativeWorkspace?.id ?? (workspace ? `unregistered:${workspace.project.id}` : null)} query={query} unified onNavigate={navigation.closeTool}
@@ -73,7 +74,7 @@ export function WorkspaceSidebar() {
       grouping={navigation.preferences.threadGrouping} onGroupingChange={(threadGrouping) => navigation.setPreferences((current) => ({ ...current, threadGrouping }))} />}
     <div className="w-full shrink-0"><WorkspaceUtilities collapsed={collapsed} /></div>
     {groupDialog && nativeWorkspace && <NewGroupDialog bots={effectiveBots(native.boot.personalization.bots, nativeWorkspace.id, native.boot.sharedBots)}
-      workspaceName={nativeWorkspace.name} onClose={() => setGroupDialog(false)} onCreate={(group) => { setGroupDialog(false); newThread(undefined, group); }} />}
+      workspaceName={nativeWorkspace.name} onClose={() => setGroupDialog(false)} onCreate={(group) => { setGroupDialog(false); newThread(group); }} />}
     {botEditor > 0 && <BotEditorDialog key={botEditor} target={null} workspace={nativeWorkspace ?? null}
       defaultScope={{ kind: "global" }}
       takenIds={knownBotIds(native.boot.personalization.bots, nativeWorkspace?.id ?? null, native.boot.sharedBots)} onClose={() => setBotEditor(0)} />}

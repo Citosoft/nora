@@ -58,16 +58,20 @@ export class ClaudeStreamNormalizer {
       const id = this.messageIds.get(key);
       if (!id || message.parent_tool_use_id) return [];
       if (event.type === "message_stop") {
+        // Reasoning settles even without visible text, so a hidden-thinking row stops reading as in progress.
         return (["text", "reasoning"] as const).flatMap((kind): ClaudeFrame[] => {
           const text = this.text(id, kind);
-          return text ? [{ kind, nativeId: id, eventId: `${message.uuid}:${kind}`, text, complete: true }] : [];
+          return text || (kind === "reasoning" && this.has(id, kind)) ? [{ kind, nativeId: id, eventId: `${message.uuid}:${kind}`, text, complete: true }] : [];
         });
       }
       if (event.type === "content_block_start") {
         this.indices.set(id, event.index);
-        if (event.content_block.type === "text" || event.content_block.type === "thinking") {
-          this.blocks.get(id)?.set(event.index, { kind: event.content_block.type === "text" ? "text" : "reasoning",
-            text: event.content_block.type === "text" ? event.content_block.text : event.content_block.thinking });
+        if (event.content_block.type === "text") this.blocks.get(id)?.set(event.index, { kind: "text", text: event.content_block.text });
+        // Report thinking as soon as it starts, even when its text is redacted or never streamed, so the
+        // thread can say the model is thinking instead of showing an unexplained gap.
+        if (event.content_block.type === "thinking" || event.content_block.type === "redacted_thinking") {
+          this.blocks.get(id)?.set(event.index, { kind: "reasoning", text: event.content_block.type === "thinking" ? event.content_block.thinking : "" });
+          return [{ kind: "reasoning", nativeId: id, eventId: message.uuid, text: this.text(id, "reasoning"), complete: false }];
         }
       }
       if (event.type === "content_block_delta") {
@@ -87,11 +91,11 @@ export class ClaudeStreamNormalizer {
       this.lastRequest = { usage: message.message.usage, model: message.message.model };
       const frames: ClaudeFrame[] = [];
       for (const [blockIndex, block] of message.message.content.entries()) {
-        if (block.type === "text" || block.type === "thinking") {
+        if (block.type === "text" || block.type === "thinking" || block.type === "redacted_thinking") {
           const kind = block.type === "text" ? "text" : "reasoning";
           const blocks = this.blocks.get(id) ?? new Map();
           const index = message.message.content.length > 1 ? blockIndex : this.indices.get(id) ?? blocks.size;
-          blocks.set(index, { kind, text: block.type === "text" ? block.text : block.thinking }); this.blocks.set(id, blocks);
+          blocks.set(index, { kind, text: block.type === "text" ? block.text : block.type === "thinking" ? block.thinking : "" }); this.blocks.set(id, blocks);
           if (kind === "text") this.lastMessageId = id;
           frames.push({ kind, nativeId: id, eventId: `${message.uuid}:${kind}:${index}`, text: this.text(id, kind),
             complete: message.message.stop_reason !== null && !message.aborted });
@@ -132,6 +136,9 @@ export class ClaudeStreamNormalizer {
     if (this.lastRequest && windowTokens) return claudeContextReading(this.lastRequest.usage, windowTokens);
     if (this.compaction) return claudeCompactedReading(this.compaction.postTokens, windowTokens);
     return undefined;
+  }
+  private has(id: string, kind: "text" | "reasoning"): boolean {
+    return [...(this.blocks.get(id)?.values() ?? [])].some((block) => block.kind === kind);
   }
   private text(id: string, kind: "text" | "reasoning"): string {
     return [...(this.blocks.get(id)?.entries() ?? [])].sort(([a], [b]) => a - b).flatMap(([, block]) => block.kind === kind ? [block.text] : []).join("");

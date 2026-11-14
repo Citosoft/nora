@@ -22,7 +22,8 @@ AgentSession,
 AgentSkillCatalog,
 AiProvider,
 AnalyticsRuntimeConfig,
-AppSettings,
+AiSimpleTaskSettings,
+  AppSettings,
 AppState,
 CreateAgentPayload,
 CreateTerminalPayload,
@@ -234,7 +235,6 @@ export type WorkspaceSidebarProps = {
   onOpenWorkflowRunChangeRequest: (projectId: string, worktreeId: string) => Promise<void>;
   onOpenCreateAgentOnWorktree: (projectId: string, worktreeId: string) => void;
   onOpenCreateTerminalOnWorktree: (projectId: string, worktreeId: string) => void;
-  onOpenCreateWorktree: (projectId: string) => void;
   onLaunchQuickTerminalOnWorktree: (projectId: string, worktreeId: string) => void;
   onCheckoutWorkspaceBranch: (projectId: string, branch: string) => Promise<AppState | null>;
   onLaunchWorktreeScript: (projectId: string, payload: CreateTerminalPayload) => void;
@@ -361,7 +361,7 @@ export type AppPreferences = {
   updateAiModel: (provider: AiProvider, model: string) => Promise<void>;
   updateVoiceSettings: (voice: AppSettings["voice"]) => Promise<void>;
   updateAiSimpleTaskSettings: (
-    settings: Pick<AppSettings["ai"], "simpleTaskProvider" | "localLlmModelId">
+    settings: AiSimpleTaskSettings
   ) => Promise<void>;
   relaunchApplication: () => Promise<void>;
 };

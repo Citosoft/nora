@@ -8,10 +8,11 @@ export type TaskItemProps = {
   task: WorkspaceTaskSummary;
   assignmentCount: number;
   selected: boolean;
-  selectionDisabled: boolean;
+  isStartingThreads: boolean;
   layout: "list" | "board";
   onToggleSelection: () => void;
   onOpen: () => void;
+  onStart: () => Promise<void>;
   onToggleComplete: () => Promise<void>;
   onDelete: () => Promise<void>;
   onDragStart?: (event: DragEvent<HTMLDivElement>) => void;

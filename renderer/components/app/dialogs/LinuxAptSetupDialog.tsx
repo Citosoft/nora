@@ -36,7 +36,7 @@ export function LinuxAptSetupDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="space-y-4">
-          <div className="rounded-[4px] border border-border/70 bg-background/60 p-4">
+          <div className="rounded-md border border-border/70 bg-background p-4">
             <div className="flex items-start gap-3">
               <CheckCircle2 className="mt-0.5 size-5 text-primary" />
               <div className="space-y-1 text-sm text-foreground">
@@ -47,7 +47,7 @@ export function LinuxAptSetupDialog({
           </div>
 
           {!status.pkexecAvailable ? (
-            <div className="rounded-[4px] border border-amber-500/25 bg-amber-500/10 p-4 text-sm text-foreground">
+            <div className="rounded-md border border-amber-500/25 bg-amber-500/10 p-4 text-sm text-foreground">
               <div className="flex items-start gap-3">
                 <AlertTriangle className="mt-0.5 size-5 text-amber-500" />
                 <div className="space-y-1">
@@ -61,13 +61,13 @@ export function LinuxAptSetupDialog({
           ) : null}
 
           {errorMessage ? (
-            <div className="rounded-[4px] border border-destructive/25 bg-destructive/5 p-4 text-sm text-foreground">
+            <div className="rounded-md border border-destructive/25 bg-destructive/5 p-4 text-sm text-foreground">
               <div className="font-medium text-destructive">Setup failed</div>
               <div className="mt-1 text-muted-foreground">{errorMessage}</div>
             </div>
           ) : null}
 
-          <div className="rounded-[4px] border border-border/70 bg-background/60 p-4">
+          <div className="rounded-md border border-border/70 bg-background p-4">
             <div className="flex items-center gap-2 text-sm font-medium text-foreground">
               <TerminalSquare className="size-4 text-primary" />
               <span>Manual setup commands</span>
@@ -76,7 +76,7 @@ export function LinuxAptSetupDialog({
               {status.manualCommands.map((command) => (
                 <code
                   key={command}
-                  className="block overflow-x-auto rounded-[4px] border border-border/70 bg-background px-3 py-2 text-xs text-foreground"
+                  className="block overflow-x-auto rounded-md border border-border/70 bg-background px-3 py-2 text-xs text-foreground"
                 >
                   {command}
                 </code>

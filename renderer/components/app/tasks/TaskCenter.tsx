@@ -6,7 +6,7 @@ import type { TaskBoardViewMode } from "@/components/app/types";
 import type { TaskCenterTaskReference } from "@/components/app/types/component.types";
 import type { WorkspaceSpecSummary, WorkspaceTaskBoard } from "@shared/appTypes";
 import { createDefaultWorkspaceTaskBoard } from "@shared/appTypes";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function TaskCenter() {
   const snapshot = useCanonicalAppSnapshot();
@@ -30,6 +30,7 @@ export function TaskCenter() {
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
   const [selectedTaskKeys, setSelectedTaskKeys] = useState<string[]>([]);
   const [isStartingThreads, setIsStartingThreads] = useState(false);
+  const startingThreadsRef = useRef(false);
 
   useEffect(() => {
     if (!snapshot) {
@@ -117,6 +118,20 @@ export function TaskCenter() {
     .map((key) => allOpenTaskReferences.find((task) => `${task.projectId}:${task.path}` === key) || null)
     .filter((task): task is TaskCenterTaskReference => task !== null);
 
+  const startTasks = async (tasks: TaskCenterTaskReference[]): Promise<void> => {
+    if (!tasks.length || startingThreadsRef.current) return;
+    startingThreadsRef.current = true;
+    setIsStartingThreads(true);
+    try {
+      await onStartTaskThreads(tasks);
+      const startedKeys = new Set(tasks.map((task) => `${task.projectId}:${task.path}`));
+      setSelectedTaskKeys((current) => current.filter((key) => !startedKeys.has(key)));
+    } finally {
+      startingThreadsRef.current = false;
+      setIsStartingThreads(false);
+    }
+  };
+
   if (!snapshot) {
     return null;
   }
@@ -137,17 +152,10 @@ export function TaskCenter() {
         })
       }
       onClearTaskSelection={() => setSelectedTaskKeys([])}
-      onStartSelectedThreads={async () => {
-        if (!selectedTasks.length || isStartingThreads) {
-          return;
-        }
-        setIsStartingThreads(true);
-        try {
-          await onStartTaskThreads(selectedTasks);
-          setSelectedTaskKeys([]);
-        } finally {
-          setIsStartingThreads(false);
-        }
+      onStartSelectedThreads={() => startTasks(selectedTasks)}
+      onStartTask={(projectId, taskPath) => {
+        const task = allOpenTaskReferences.find((entry) => entry.projectId === projectId && entry.path === taskPath);
+        return startTasks(task ? [task] : []);
       }}
       onOpenTask={onOpenTask}
       onCreateTask={onCreateTask}

@@ -8,7 +8,9 @@ const providerStrings = z.object({ openai: z.string(), google: z.string(), anthr
 const aiSettingsSchema = z.object({
   preferredProvider: z.enum(["openai", "google", "anthropic"]), apiKeys: providerStrings, modelByProvider: providerStrings,
   simpleTaskProvider: z.enum(["cloud", "local", "codex", "claude"]),
-  localLlmModelId: z.enum(["qwen2.5-0.5b-instruct", "smollm2-360m-instruct"])
+  localLlmModelId: z.enum(["qwen2.5-0.5b-instruct", "smollm2-360m-instruct"]),
+  runtimeModelByProvider: z.object({ codex: z.string().trim().min(1).max(512).nullable(), claude: z.string().trim().min(1).max(512).nullable() }).strict(),
+  memoryReview: z.object({ provider: z.enum(["codex", "claude", "cloud"]), runtimeModel: z.string().trim().min(1).max(512).nullable() }).strict()
 }).strict();
 const voiceSettingsSchema = z.object({ dictationProvider: z.enum(["openai", "localWhisper"]), localWhisperModelId: z.enum(["tiny.en", "base.en"]) }).strict();
 const quickLaunchSchema = z.object({ name: z.string(), target: z.enum(["session-default", "root"]) }).strict();

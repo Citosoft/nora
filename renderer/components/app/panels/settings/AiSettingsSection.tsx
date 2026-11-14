@@ -3,12 +3,16 @@ import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { useSettingsRuntime } from "@/components/app/hooks/useSettingsRuntime";
 import { formatAiModelReleasedLabel } from "@/components/app/logic/aiChatSelection";
 import { SettingRow, SettingsSectionHeader } from "@/components/app/panels/settings/settingsUi";
+import { RuntimeTaskModelSetting } from "@/components/app/panels/settings/RuntimeTaskModelSetting";
+import { TaskSourceOptionLabel } from "@/components/app/panels/settings/TaskSourceOptionLabel";
+import { AiProviderOptionLabel } from "@/components/app/panels/settings/AiProviderOptionLabel";
 import { AiProviderLogo } from "@/components/app/views/AiProviderLogo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import type {
   AiModelCatalogEntry,
+  AiSimpleTaskSettings,
   AiProvider,
   LocalAiModelStatus,
   LocalAiRuntimeStatus,
@@ -88,6 +92,12 @@ export function AiSettingsSection() {
   const activeProviderHasKey = appSettings.ai.apiKeys[activeProvider].trim().length > 0;
   const hasModelSelection = activeModelOptions.length > 0;
   const usesLocalSimpleTasks = appSettings.ai.simpleTaskProvider === "local";
+  /** The API key and model rows serve both simple tasks and memory reviews (chosen in Settings → Bots). */
+  const usesCloud = appSettings.ai.simpleTaskProvider === "cloud" || appSettings.ai.memoryReview.provider === "cloud";
+  const saveSimpleTasks = (patch: Partial<AiSimpleTaskSettings>): void => updateAiSimpleTaskSettings({
+    simpleTaskProvider: appSettings.ai.simpleTaskProvider, localLlmModelId: appSettings.ai.localLlmModelId,
+    runtimeModelByProvider: appSettings.ai.runtimeModelByProvider, memoryReview: appSettings.ai.memoryReview, ...patch
+  });
   const selectedLocalModelId = appSettings.ai.localLlmModelId;
   const isLocalModelInstalled = modelStatus?.state === "installed";
   const isLocalRuntimeInstalled = runtimeStatus?.state === "installed";
@@ -149,7 +159,7 @@ export function AiSettingsSection() {
     <div className="max-w-4xl">
       <SettingsSectionHeader
         title="AI"
-        description="Choose how Nora generates commit messages and thread names using signed-in runtimes, cloud API keys, or on-device models."
+        description="Choose how Nora generates commit messages, thread names and memory reviews using signed-in runtimes, cloud API keys, or on-device models."
         icon={Bot}
       />
 
@@ -160,25 +170,26 @@ export function AiSettingsSection() {
           <Select
             value={appSettings.ai.simpleTaskProvider}
             onChange={(event) =>
-              updateAiSimpleTaskSettings({
-                simpleTaskProvider: parseAiSimpleTaskProvider(event.target.value),
-                localLlmModelId: selectedLocalModelId
-              })}
+              saveSimpleTasks({ simpleTaskProvider: parseAiSimpleTaskProvider(event.target.value) })}
             aria-label="Simple AI task provider"
           >
-            <option value="codex">Codex runtime (existing sign-in)</option>
-            <option value="claude">Claude runtime (existing sign-in)</option>
-            <option value="cloud">Cloud API (BYOK)</option>
-            <option value="local">Local model</option>
+            <option value="codex"><TaskSourceOptionLabel source="codex" label="Codex runtime (existing sign-in)" /></option>
+            <option value="claude"><TaskSourceOptionLabel source="claude" label="Claude runtime (existing sign-in)" /></option>
+            <option value="cloud"><TaskSourceOptionLabel source="cloud" label="Cloud API (BYOK)" /></option>
+            <option value="local"><TaskSourceOptionLabel source="local" label="Local model" /></option>
           </Select>
         )}
       />
 
       {appSettings.ai.simpleTaskProvider === "codex" || appSettings.ai.simpleTaskProvider === "claude" ? (
-        <SettingRow
-          title="Provider Runtime"
-          control={null}
-          description="Uses the installed runtime and its existing authentication with the provider’s default model. Install and sign in to the selected runtime first. No API key is needed in Nora. Requests run separately from your coding threads."
+        <RuntimeTaskModelSetting
+          title="Runtime Model"
+          description="The model simple tasks use. A small, fast model keeps commit messages and thread names quick and cheap."
+          provider={appSettings.ai.simpleTaskProvider}
+          value={appSettings.ai.runtimeModelByProvider[appSettings.ai.simpleTaskProvider]}
+          onChange={(model) => saveSimpleTasks({
+            runtimeModelByProvider: { ...appSettings.ai.runtimeModelByProvider, [appSettings.ai.simpleTaskProvider]: model }
+          })}
         />
       ) : usesLocalSimpleTasks ? (
         <SettingRow
@@ -191,10 +202,7 @@ export function AiSettingsSection() {
                   className="min-w-0 flex-1"
                   value={selectedLocalModelId}
                   onChange={(event) =>
-                    updateAiSimpleTaskSettings({
-                      simpleTaskProvider: "local",
-                      localLlmModelId: parseLocalLlmModelId(event.target.value)
-                    })}
+                    saveSimpleTasks({ simpleTaskProvider: "local", localLlmModelId: parseLocalLlmModelId(event.target.value) })}
                   aria-label="Local model"
                 >
                   {LOCAL_LLM_MODELS.map((modelId) => (
@@ -233,7 +241,9 @@ export function AiSettingsSection() {
             </div>
           )}
         />
-      ) : (
+      ) : null}
+
+      {usesCloud ? (
         <>
           <SettingRow
             title="Preferred Provider"
@@ -246,7 +256,7 @@ export function AiSettingsSection() {
               >
                 {PROVIDERS.map((provider) => (
                   <option key={provider} value={provider}>
-                    {PROVIDER_LABELS[provider]}
+                    <AiProviderOptionLabel provider={provider} label={PROVIDER_LABELS[provider]} />
                   </option>
                 ))}
               </Select>
@@ -255,7 +265,7 @@ export function AiSettingsSection() {
 
           <SettingRow
             title="Generation Model"
-            description="Detected from your selected provider API key. Choose which model Nora should use for commit messages and thread names."
+            description="Detected from your selected provider API key. Choose which model Nora should use when a task uses the Cloud API."
             control={(
               <div className="space-y-2">
                 <div className="flex flex-row items-center gap-2">
@@ -275,7 +285,7 @@ export function AiSettingsSection() {
                           const dateLabel = formatAiModelReleasedLabel(entry.releasedAtMs);
                           return (
                             <option key={entry.id} value={entry.id}>
-                              {dateLabel ? `${entry.id} · ${dateLabel}` : entry.id}
+                              <AiProviderOptionLabel provider={activeProvider} label={dateLabel ? `${entry.id} · ${dateLabel}` : entry.id} />
                             </option>
                           );
                         })
@@ -342,7 +352,7 @@ export function AiSettingsSection() {
             )}
           />
         </>
-      )}
+      ) : null}
     </div>
   );
 }

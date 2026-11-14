@@ -63,7 +63,7 @@ export type ChangesPanelForgeSlice = {
   onRefreshForgeItem: () => void;
   onForgeAction: (action: ForgeWorkItemAction) => void;
   onForgeCommentSubmit: (payload: ForgeAddCommentPayload) => Promise<void>;
-  onSpawnIssueAgent: (toolId: string) => Promise<void>;
+  onStartIssueThread: () => Promise<void>;
   onSpawnReviewAgent: (
     toolId: string,
     selections: ForgeReviewCommentSelection[],

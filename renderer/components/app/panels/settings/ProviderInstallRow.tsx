@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 export function ProviderInstallRow({ tool, onInstall }: ProviderInstallRowProps) {
   const installing = tool.installStatus === "running";
   return <li className="flex items-center gap-4 border-b border-border/60 py-4 last:border-0">
-    <AgentToolIcon toolId={tool.id} label="" className="size-9 shrink-0" imageClassName="size-6 rounded-[4px]" />
+    <AgentToolIcon toolId={tool.id} label="" className="size-9 shrink-0" imageClassName="size-6 rounded-md" />
     <div className="min-w-0 flex-1">
       <div className="font-medium text-foreground">{tool.label}</div>
       <div role="status" className="text-sm text-muted-foreground">

@@ -16,7 +16,12 @@ import { createNoraToolOperations } from "@main/nora-tools/operations/index";
 import { createRunContextResolver } from "@main/nora-tools/runContext";
 import { GroupCoordinator } from "@main/bots/groups/coordinator";
 import { createGroupRouter } from "@main/bots/groups/router";
+import { DirectCoordinator } from "@main/bots/direct/coordinator";
+import { createDirectRouter } from "@main/bots/direct/router";
 import { openBotMemoryStore } from "@main/bots/memory/store";
+import { createMemoryReviewScheduler } from "@main/bots/memory/review/scheduler";
+import { openMemoryReviewLog } from "@main/bots/memory/review/log";
+import { generateMemoryReviewText } from "@main/ai/simpleTextGeneration";
 import { randomUUID } from "node:crypto";
 import type { BotConversationHost } from "@main/types/bots/conversations.types";
 import type { ExecutionHost } from "@main/execution/host";
@@ -77,20 +82,22 @@ export async function openNativeRuntime(options: NativeRuntimeOptions): Promise<
     onSettingsChanged: (settings) => { started(personalization).publish(); options.onSettingsChanged(settings); },
     boot: () => started(personalization).state(),
     saveBot: async (bot, previousScope) => { await started(personalization).request({ kind: "save-bot", bot, previousScope }); },
+    onTasksChanged: options.onTasksChanged,
     ...(options.tasks ? { tasks: options.tasks } : {})
   }), () => personalization?.publish());
   const runContext = createRunContextResolver(noraTools, memory);
   await bots.refresh(catalog.list());
+  const botIn = (workspaceId: string, botId: string) => findEffectiveBot(options.readSettings().personalization.bots, workspaceId, bots.list(), botId);
   host = await openLocalHost({ runContext, environmentId, databasePath: join(options.stateDirectory, "execution.sqlite"), gitExecutable: "git", instances,
     idleCompactionMode: () => options.readSettings().personalization.idleCompaction ?? "suggest",
     threadPreferences: readThreadPreferences,
     generateThreadName: (instruction, signal) => generateThreadName(options.readSettings().ai, instruction, signal),
     registrations: () => catalog.registrations(), roleForWorkspace: (id) => effectiveRole(options.readSettings().personalization, id),
-    botForWorkspace: (workspaceId, botId) => findEffectiveBot(options.readSettings().personalization.bots, workspaceId, bots.list(), botId),
+    botForWorkspace: botIn,
     onFailure: (failure) => console.error(`Native execution: ${failure.message}`) });
-  host.adoptProvider(new GroupCoordinator({ host: lazyHost, nextId: randomUUID, now,
-    bot: (workspaceId, botId) => findEffectiveBot(options.readSettings().personalization.bots, workspaceId, bots.list(), botId),
-    route: createGroupRouter(() => options.readSettings().ai) }));
+  host.adoptProvider(new GroupCoordinator({ host: lazyHost, nextId: randomUUID, now, bot: botIn, route: createGroupRouter(() => options.readSettings().ai) }));
+  host.adoptProvider(new DirectCoordinator({ host: lazyHost, nextId: randomUUID, now, bot: botIn, route: createDirectRouter(() => options.readSettings().ai),
+    workspaces: () => catalog.list().map((entry) => ({ id: entry.id, name: entry.name, workspace: entry.workspace })) }));
   personalization = new PersonalizationService({ read: options.readSettings,
     update: options.updateSettings }, catalog, { environmentId, providers, cursor: () => host.eventCursor(),
     refreshProviders: async () => {
@@ -104,7 +111,14 @@ export async function openNativeRuntime(options: NativeRuntimeOptions): Promise<
       const project = options.projects().find((entry) => entry.id === id && entry.location?.kind !== "ssh");
       return project ? { path: project.rootPath, name: project.name } : null;
     } });
+  const memoryReviewLog = openMemoryReviewLog(join(options.stateDirectory, "memory-reviews.sqlite"), { nextId: randomUUID, now: () => new Date() });
+  const memoryReview = createMemoryReviewScheduler({ host: lazyHost, memory, log: memoryReviewLog,
+    generate: (request) => generateMemoryReviewText(options.readSettings().ai, request),
+    source: () => { const { provider, runtimeModel } = options.readSettings().ai.memoryReview; return { provider, model: runtimeModel }; },
+    enabled: () => readThreadPreferences().automaticMemory,
+    onError: (error) => console.error("Background memory review failed", error) });
+  memoryReview.start();
   const openedHost = host;
-  return { host: openedHost, personalization, catalog, memory,
-    async shutdown() { await openedHost.shutdown(); await noraTools.close(); memory.close(); } };
+  return { host: openedHost, personalization, catalog, memory, memoryReviewLog,
+    async shutdown() { memoryReview.stop(); await openedHost.shutdown(); await noraTools.close(); memory.close(); memoryReviewLog.close(); } };
 }

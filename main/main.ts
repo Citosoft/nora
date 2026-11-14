@@ -166,6 +166,7 @@ const {
   notifyLocalTerminalChanged,
   notifyRemoteMountOutput,
   notifyToolSkillInstallOutput,
+  notifyWorkspaceTasksChanged,
   notifyWorkspaceLoadingProgress,
   notifyVercelRuntimeLogEvent,
   notifyAutoUpdateStatus,
@@ -467,7 +468,7 @@ function registerIpc(): void {
   registerWindowSettingsIpc({ ipc: ipcMain, port: windowSettingsPort, isAllowedSender });
   registerSettingsSyncIpc({ ipc: ipcMain, service: settingsSync, isAllowedSender });
   registerConversationIpc({ ipc: ipcMain, isAllowedSender, resolveHost: (environmentId) => environmentId === nativeRuntime.host.environmentId ? nativeRuntime.host : null });
-  registerBotMemoryIpc({ ipc: ipcMain, isAllowedSender, memory: nativeRuntime.memory });
+  registerBotMemoryIpc({ ipc: ipcMain, isAllowedSender, memory: nativeRuntime.memory, reviews: nativeRuntime.memoryReviewLog, now: () => new Date() });
   registerPersonalizationIpc({ ipc: ipcMain, isAllowedSender, service: nativeRuntime.personalization,
     notify: (state) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(personalizationChangedChannel, state); } });
   onAutoUpdateStatusChanged((status) => {
@@ -615,7 +616,11 @@ async function bootstrap(): Promise<void> {
     chooseFolder: async () => { const selection = await dialog.showOpenDialog({ properties: ["openDirectory"], title: "Add workspace" });
       const selectedPath = selection.canceled ? null : selection.filePaths[0]; return selectedPath ? { path: selectedPath, name: path.basename(selectedPath) } : null; },
     openFolder: async (selectedPath) => { const error = await shell.openPath(selectedPath); if (error) throw new Error(error); },
-    tasks: { list: (projectId) => services.workspace.listWorkspaceTasks(projectId), board: (projectId) => services.workspace.getWorkspaceTaskBoard(projectId),
+    onTasksChanged: notifyWorkspaceTasksChanged,
+    tasks: {
+      read: (projectId, path) => services.workspace.readWorkspaceFile({ projectId, path }),
+      move: async (projectId, fromPath, toPath) => { await services.workspace.moveWorkspaceFile({ projectId, fromPath, toPath }); },
+      list: (projectId) => services.workspace.listWorkspaceTasks(projectId), board: (projectId) => services.workspace.getWorkspaceTaskBoard(projectId),
       saveBoard: (projectId, board) => services.workspace.saveWorkspaceTaskBoard(projectId, board),
       create: (projectId, title, content) => services.workspace.createWorkspaceTaskFile(projectId, title, content) }
   });

@@ -2,24 +2,24 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { NoraToolContext, NoraToolDeps } from "@main/types/nora-tools/noraTools.types";
 import { registerAppTools } from "./app";
 import { registerBotTools, registerBotListTool } from "./bots";
-import { registerAskBotTool, registerGroupTools, registerMemoryTools } from "./conversation";
+import { registerAskBotTool, registerChatTools, registerMemoryTools } from "./conversation";
 import { registerTaskTools } from "./tasks";
 import { registerThreadTools } from "./threads";
 
 /**
- * Registers the tools for the calling thread's audience (see `audience` in the shared catalog). Nora threads manage the app;
- * bot threads talk to other bots and keep their own notes, and read the group chat they answer in.
+ * Registers the tools for the calling thread's audience (see `audience` in the shared catalog). Every agent thread manages tasks,
+ * keeps notes and reads past threads (a bot only its own); Nora threads also manage the app, and bots read the group or direct chat they answer in.
  */
 export function registerNoraTools(server: McpServer, context: NoraToolContext, deps: NoraToolDeps): void {
   registerAskBotTool(server, context, deps);
   registerBotListTool(server, context, deps);
+  registerTaskTools(server, context, deps);
+  registerMemoryTools(server, context, deps);
+  registerThreadTools(server, context, deps);
   if (context.audience === "bot") {
-    registerMemoryTools(server, context, deps);
-    if (context.group) registerGroupTools(server, context, deps);
+    if (context.chat) registerChatTools(server, context, deps);
     return;
   }
   registerBotTools(server, context, deps);
   registerAppTools(server, context, deps);
-  registerThreadTools(server, context, deps);
-  registerTaskTools(server, context, deps);
 }

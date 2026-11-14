@@ -1,3 +1,5 @@
+import { CreateTaskDialog } from "@/components/app/dialogs/CreateTaskDialog";
+import { useModalClusterPorts } from "@/components/app/hooks/useModalClusterPorts";
 import { useAppModalDialogs } from "@/components/app/context/appModalDialogsContext";
 import { AboutDialog as AppAboutDialog } from "@/components/app/dialogs/AboutDialog";
 import { AddWorkspaceDialog as AppAddWorkspaceDialog } from "@/components/app/dialogs/AddWorkspaceDialog";
@@ -19,9 +21,11 @@ import { WorkspaceTerminalPresetsDialog as AppWorkspaceTerminalPresetsDialog } f
 
 export const AppModalDialogs = () => {
   const d = useAppModalDialogs();
+  const { modalDialogs: { createTaskDialog } } = useModalClusterPorts();
 
   return (
     <>
+      {createTaskDialog && <CreateTaskDialog {...createTaskDialog} />}
       <AppErrorDialog {...d.error} />
       <AppOAuthDeviceCodeDialog {...d.oauthDevice} />
       <AppStartupDependenciesDialog {...d.startupDependencies} />

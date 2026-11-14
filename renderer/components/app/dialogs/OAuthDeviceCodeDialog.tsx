@@ -54,12 +54,12 @@ export function OAuthDeviceCodeDialog({
               </Dialog.Description>
             </DialogHeader>
             <DialogBody className="space-y-4">
-              <div className="rounded-[6px] border border-border/60 bg-card/50 px-3 py-3">
-                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Device code</div>
+              <div className="rounded-lg border border-border/60 bg-card px-3 py-3">
+                <div className="text-xs font-medium text-muted-foreground">Device code</div>
                 <div className="mt-1 font-mono text-lg font-semibold tracking-[0.08em] text-foreground">{userCode || "Unavailable"}</div>
               </div>
-              <div className="rounded-[6px] border border-border/60 bg-card/50 px-3 py-3">
-                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Verification URL</div>
+              <div className="rounded-lg border border-border/60 bg-card px-3 py-3">
+                <div className="text-xs font-medium text-muted-foreground">Verification URL</div>
                 <div className="mt-1 break-all text-sm text-foreground">{verificationUri || "Unavailable"}</div>
               </div>
             </DialogBody>

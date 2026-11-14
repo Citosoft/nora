@@ -24,6 +24,8 @@ export const threadPreferencesSchema = z.object({
   subagentModel: threadModelDefaultSchema.nullable(),
   followUp: z.enum(["queue", "steer"]),
   automaticTitles: z.boolean(),
+  /** Review finished threads in the background and keep what is worth remembering as Nora's or the bot's notes. */
+  automaticMemory: z.boolean(),
   settleAfterDays: z.number().int().min(1).max(365).nullable(),
   claudeAutoCompactTokens: z.number().int().min(100_000).max(1_000_000).nullable()
 }).strict();

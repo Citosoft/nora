@@ -169,7 +169,7 @@ export const TitleBarWorkspaceQuickSearch = ({
   }, [highlightedIndex, open, displayRows.length]);
 
   const titleBarSelectorSurfaceClass =
-    resolvedTheme === "light" ? "border-border bg-white" : "border-border/70 bg-background/70";
+    resolvedTheme === "light" ? "border-border bg-white" : "border-border/70 bg-background";
 
   const handleOpenChange = (next: boolean): void => {
     setOpen(next);
@@ -279,7 +279,7 @@ export const TitleBarWorkspaceQuickSearch = ({
             aria-modal="true"
             aria-label="Project search"
             className={cn(
-              "flex max-h-[min(560px,calc(100vh-6rem))] w-[min(640px,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-border/80 bg-popover text-popover-foreground shadow-2xl"
+              "flex max-h-[min(560px,calc(100vh-6rem))] w-[min(640px,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg border border-border/80 bg-popover text-popover-foreground shadow-2xl"
             )}
             onMouseDown={(event) => event.stopPropagation()}
           >
@@ -324,7 +324,7 @@ export const TitleBarWorkspaceQuickSearch = ({
                       const Icon = GROUP_ICONS[group];
                       return (
                         <div key={group} className="space-y-1">
-                          <div className="flex items-center gap-1.5 px-2 pt-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          <div className="flex items-center gap-1.5 px-2 pt-1 text-xs font-medium text-muted-foreground">
                             <Icon className="size-3.5 shrink-0 opacity-80" aria-hidden />
                             {GROUP_LABELS[group]}
                           </div>
@@ -384,7 +384,7 @@ export const TitleBarWorkspaceQuickSearch = ({
         type="button"
         onClick={() => handleOpenChange(true)}
         className={cn(
-          "flex h-8 w-full min-w-[12rem] max-w-md items-center gap-2 rounded-[6px] border py-1 pl-2.5 pr-2 text-left text-xs transition hover:bg-accent/40",
+          "flex h-8 w-full min-w-[12rem] max-w-md items-center gap-2 rounded-lg border py-1 pl-2.5 pr-2 text-left text-xs transition hover:bg-accent/40",
           titleBarSelectorSurfaceClass
         )}
         aria-label="Open project search"

@@ -5,6 +5,8 @@ useWorkspaceSessionPanelData
 } from "@/components/app/context/workspaceSessionPanelContext";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
 import { useNativeRuntimePorts } from "@/components/app/hooks/useNativeRuntimePorts";
+import { useWorkspaceNavigation } from "@/components/app/hooks/useWorkspaceNavigation";
+import { backFromForgeViewer } from "@/components/app/logic/forgeViewerNavigation";
 import { useThreadWorkspaceSnapshot } from "@/components/app/hooks/useThreadWorkspaceSnapshot";
 import { isAgentBusyAt } from "@/components/app/logic/agentBusy";
 import { performWorkspaceSessionTabClose } from "@/components/app/logic/performWorkspaceSessionTabClose";
@@ -63,6 +65,7 @@ function getTabOrderKey(tab: WorkspaceSessionTab): string {
 
 export function WorkspaceSessionPanel() {
   const native = useNativeRuntimePorts();
+  const { openTool } = useWorkspaceNavigation();
   const threadState = useThreadWorkspaceSnapshot(native.store);
   const {
     project,
@@ -131,7 +134,7 @@ export function WorkspaceSessionPanel() {
     onRefreshForgeItem,
     onForgeAction,
     onForgeCommentSubmit,
-    onSpawnIssueAgent,
+    onStartIssueThread,
     onSpawnReviewAgent,
     onFocusFileEditorTab,
     onCloseFileEditorTab,
@@ -360,15 +363,11 @@ export function WorkspaceSessionPanel() {
       commentLoading: forgeCommentLoading,
       onOpenUrl: onOpenForgeUrl,
       onOpenInViewer: null as (() => void) | null,
-      onBackToList: () => {
-        if (forgeViewerTab) {
-          onCloseForgeViewerTab(forgeViewerTab.id);
-        }
-      },
+      onBackToList: () => backFromForgeViewer({ tab: forgeViewerTab, openTool, closeViewer: onCloseForgeViewerTab }),
       onRefreshDetail: onRefreshForgeItem,
       onAction: onForgeAction,
       onCommentSubmit: onForgeCommentSubmit,
-      onSpawnIssueAgent: onSpawnIssueAgent,
+      onStartIssueThread: onStartIssueThread,
       onSpawnReviewAgent: onSpawnReviewAgent
     }),
     [
@@ -378,12 +377,13 @@ export function WorkspaceSessionPanel() {
       forgeDetailErrorMessage,
       forgeDetailLoading,
       forgeViewerTab,
+      openTool,
       onCloseForgeViewerTab,
       onForgeAction,
       onForgeCommentSubmit,
       onOpenForgeUrl,
       onRefreshForgeItem,
-      onSpawnIssueAgent,
+      onStartIssueThread,
       onSpawnReviewAgent
     ]
   );

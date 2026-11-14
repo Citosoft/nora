@@ -13,7 +13,7 @@ export function UsageDetails({ tool, usageInfo, isUsageLoading, isActionLoading,
   return <div className="space-y-3 border-t border-border/50 p-3">
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2">
-        <AgentToolIcon toolId={tool.id} label={tool.label} className="size-6 rounded-[4px]" imageClassName="size-4" />
+        <AgentToolIcon toolId={tool.id} label={tool.label} className="size-6 rounded-md" imageClassName="size-4" />
         <div className="text-sm font-medium text-foreground">{tool.label}</div>
       </div>
       {isUsageLoading ? <LoaderCircle className="size-3.5 animate-spin text-primary" /> : null}
@@ -121,7 +121,7 @@ export function UsageDetails({ tool, usageInfo, isUsageLoading, isActionLoading,
         </Button>
       ) : null}
     {error ? (
-      <div className="rounded-[6px] border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
+      <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
         {error}
       </div>
     ) : null}

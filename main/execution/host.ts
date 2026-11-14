@@ -21,7 +21,7 @@ import { DEFAULT_THREAD_PREFERENCES } from "@shared/personalization/threads";
 import { IdleSettlement } from "./idleSettlement";
 import { prepareProviderTransition } from "./provider-transition/prepare";
 import { snapshotBot } from "@shared/bots/snapshot";
-import type { BotSnapshot, GroupDescriptor, GroupRequest } from "@shared/types/bots/bots.types";
+import type { BotSnapshot, DirectDescriptor, DirectRequest, GroupDescriptor, GroupRequest } from "@shared/types/bots/bots.types";
 import { GROUP_HOP_LIMIT_DEFAULT } from "@shared/bots/contracts";
 
 /** The environment owner, independent of Electron windows, views and SSH connections. */
@@ -104,7 +104,9 @@ export class ExecutionHost {
     if (command.kind === "create") this.deps.providers.resolve(command.provider.kind, command.provider.instanceId);
     const bot = command.kind === "create" && command.botId ? this.resolveBot(command.workspace.projectId, command.botId) : undefined;
     const group = command.kind === "create" && command.group ? this.resolveGroup(command.workspace.projectId, command.group) : undefined;
-    const role = command.kind === "create" && !bot && !group ? command.role ?? this.deps.roleForWorkspace?.(command.workspace.projectId) : undefined;
+    const direct = command.kind === "create" && command.direct ? this.resolveDirect(command.direct) : undefined;
+    if (command.kind === "set-direct-workspace") this.assertDirectWorkspace(command.conversationId, command.workspaceId);
+    const role = command.kind === "create" && !bot && !group && !direct ? command.role ?? this.deps.roleForWorkspace?.(command.workspace.projectId) : undefined;
     const previousRuns = command.kind === "submit" && this.naming
       ? this.deps.store.history({ conversationId: command.conversationId, scope: "runs", limit: 1 }) : null;
     const firstInstruction = previousRuns?.scope === "runs" && previousRuns.runs.length === 0;
@@ -116,10 +118,11 @@ export class ExecutionHost {
     const provider = owner && preferences.followUp === "steer" && !(command.kind === "submit" && command.action)
       ? this.deps.providers.resolve(owner.provider.kind, owner.provider.instanceId) : null;
     const steerFollowUp = preferences.followUp === "steer" && !!provider?.capabilities.steering && !!provider.steer;
-    const receipt = this.engine.execute(command, { workspace, role, bot, group, externalTranscript, steerFollowUp, providerTransition });
+    const receipt = this.engine.execute(command, { workspace, role, bot, group, direct, externalTranscript, steerFollowUp, providerTransition });
     if (firstInstruction && command.kind === "submit" && preferences.automaticTitles && !command.action) {
       const conversation = this.deps.store.header(command.conversationId)?.conversation;
-      if (conversation) this.naming?.start(command.conversationId, conversation.title, command.instruction);
+      // A direct chat keeps its bot's name as its title.
+      if (conversation && !conversation.direct) this.naming?.start(command.conversationId, conversation.title, command.instruction);
     }
     this.schedule();
     return receipt;
@@ -138,6 +141,22 @@ export class ExecutionHost {
     if (request.writer && !request.botIds.includes(request.writer)) throw new ExecutionCommandError("invalid", "The group's writer must be one of its members.");
     if (request.lead && !request.botIds.includes(request.lead)) throw new ExecutionCommandError("invalid", "The group's lead must be one of its members.");
     return { members, writer: request.writer, lead: request.lead, hopLimit: GROUP_HOP_LIMIT_DEFAULT };
+  }
+  /** One chat per bot: a second create for the same bot is refused while its chat exists. */
+  private resolveDirect(request: DirectRequest): DirectDescriptor {
+    const bot = this.deps.botForWorkspace?.(request.workspaceId, request.botId);
+    if (!bot) throw new ExecutionCommandError("invalid", "This bot is no longer available in this workspace. Choose another bot or Nora.");
+    const scope = bot.scope.kind === "workspace" ? { kind: "workspace" as const, workspaceId: bot.scope.workspaceId } : { kind: "global" as const };
+    const existing = this.deps.store.summaries().find(({ conversation }) => conversation.direct?.botId === bot.id
+      && JSON.stringify(conversation.direct.scope) === JSON.stringify(scope));
+    if (existing) throw new ExecutionCommandError("conflict", `You already have a chat with ${bot.name}. Open it from Bots.`);
+    return { botId: bot.id, name: bot.name, role: bot.role, avatar: bot.avatar, scope, workspaceId: request.workspaceId };
+  }
+  private assertDirectWorkspace(conversationId: string, workspaceId: string): void {
+    const direct = this.deps.store.header(conversationId)?.conversation.direct;
+    if (direct && !this.deps.botForWorkspace?.(workspaceId, direct.botId)) {
+      throw new ExecutionCommandError("invalid", `${direct.name} is not available in that workspace.`);
+    }
   }
   header(conversationId: string): ConversationHeader | null { return this.deps.store.header(conversationId); }
   async reference(conversationId: string) {

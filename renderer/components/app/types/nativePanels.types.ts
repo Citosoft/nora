@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
+import type { ChatWorkThread } from "./chatPanels.types";
 import type { BotAvatarState } from "./botAvatar.types";
-import type { BotAvatar, BotDefinition, BotSnapshot, EffectiveBot, GroupMember } from "@shared/types/bots/bots.types";
+import type { BotAvatar, BotSnapshot } from "@shared/types/bots/bots.types";
 import type { ComposerAttachment } from "@shared/types/agentInput.types";
 import type { ConversationRun, TimelineItem, RuntimeRequest, RequestResponse, ProviderBinding, ConversationCommand, ExecutionFailure } from "@shared/types/conversation/contracts.types";
 import type { NativeBoot } from "@shared/ipc/types/personalizationGateway.types";
@@ -19,8 +19,6 @@ export type NativeMessageItem = Extract<TimelineItem, { kind: "message" }>;
 export interface NativeMessageProps {
   item: NativeMessageItem;
   onLinkClick?: MarkdownRendererLinkClickHandler;
-  /** Opens the thread where a group member wrote this reply; absent while member threads are hidden. */
-  onOpenAuthorThread?: (botId: string) => void;
 }
 export interface NativeMessageActionsProps {
   item: NativeMessageItem;
@@ -29,7 +27,6 @@ export interface NativeTimelineProps {
   items: readonly TimelineItem[];
   runs?: readonly ConversationRun[];
   onLinkClick?: MarkdownRendererLinkClickHandler;
-  onOpenAuthorThread?: NativeMessageProps["onOpenAuthorThread"];
   /** The thread's connector discovery, for connector sign-in cards. */
   connectors?: ThreadConnectorsState | null;
   /** Looks up a bot by the id or name an ask_bot call used, for its card's face. */
@@ -55,8 +52,8 @@ export interface NativeConversationPorts {
   removeThreadReference(referenceId: string): void;
   openThreadSettings?: () => void;
   openBotSettings?: () => void;
-  /** In a group chat, each member's own thread by bot id. */
-  memberThreads: ReadonlyMap<string, string>;
+  /** A chat's work threads, newest first; empty for ordinary threads. */
+  workThreads: readonly ChatWorkThread[];
   openThread(conversationId: string): void;
   visible: boolean;
   userDisplayName: string;
@@ -76,7 +73,6 @@ export interface NativeConversationPorts {
   execute(command: ConversationCommand): Promise<void>;
   compact(): Promise<void>;
   selectWorkspace(workspaceId: string): void;
-  selectBot(botId: string | null): void;
 }
 export interface NativeProviderPickerProps {
   allowChange?: boolean;
@@ -105,20 +101,10 @@ export interface QueuedInstructionRowProps extends Pick<NativeQueueProps, "conve
 }
 /** A starting binding for the model picker, such as a bot's saved model. */
 export type ProviderBindingSeed = Omit<ProviderBinding, "permissionPolicy"> & { permissionPolicy: string | null };
-export interface ThreadBotPickerProps {
-  bots: readonly EffectiveBot[];
-  /** The bot an existing thread runs as; shown read-only. */
-  current: BotSnapshot | null;
-  currentState: BotAvatarState;
-  selectedId: string | null;
+export interface ThreadBotBadgeProps {
+  bot: BotSnapshot;
+  state: BotAvatarState;
   modelOverride: boolean;
   /** Switches the thread back to its bot's saved model on the next send; absent while the thread is busy. */
   onUseBotModel?: () => void;
-  disabled: boolean;
-  onSelect(botId: string | null): void;
-  onManage?: () => void;
 }
-export interface ThreadBotGreetingProps { bot: Pick<BotDefinition, "name" | "role" | "avatar">; workspaceName: string; }
-export interface ThreadBotChoiceProps { selected: boolean; onSelect(): void; icon: ReactNode; name: string; detail: string; badge?: string | null; }
-export interface GroupMembersProps { members: readonly Pick<GroupMember, "botId" | "name" | "avatar">[]; writer: string | null; lead: string | null; }
-export interface NativeGroupGreetingProps { members: readonly Pick<GroupMember, "botId" | "name" | "avatar">[]; workspaceName: string; }
