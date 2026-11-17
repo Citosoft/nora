@@ -49,7 +49,7 @@ test("only selected entries are archived in full, independently of source change
   assert.equal(await fs.readFile(path.join(directory, "entry-2.md"), "utf8"), "Latest instruction");
   assert.deepEqual((await fs.readdir(directory)).sort(), ["entry-1.md", "entry-2.md", "index.md"]);
   const index = await fs.readFile(path.join(directory, "index.md"), "utf8");
-  assert.ok(index.includes(path.join(directory, "entry-1.md")));
+  assert.ok(index.includes(JSON.stringify(path.join(directory, "entry-1.md"))));
   assert.ok(!index.includes("private")); assert.ok(!prompt.includes("Unselected secret"));
   assert.ok(!prompt.includes("Full large selected history")); assert.ok(prompt.includes("Latest instruction"));
   assert.ok(Buffer.byteLength(prompt) <= HANDOFF_MAX_BYTES);

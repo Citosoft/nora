@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { ExecutionOwnership } from "@main/execution/ownership";
 import { ConversationEngine } from "@main/execution/engine";
@@ -32,7 +31,7 @@ test("ownership acquisition is compared atomically after liveness inspection", (
 test("schema version one upgrades transactionally without losing conversations or command receipts", (t) => {
   const f = fixture(t); f.create(); const receipt = f.submit();
   const snapshot = f.snapshot();
-  const database = new DatabaseSync(f.path);
+  const database = f.openDatabase();
   database.exec(`DROP TABLE conversation_requests; DROP TABLE conversation_items; DROP TABLE conversation_runs;
     DROP TABLE conversation_heads; DROP INDEX unfinished_effects; CREATE TABLE conversations (id TEXT PRIMARY KEY, json TEXT NOT NULL);
     DROP TABLE execution_lease; PRAGMA user_version = 1`);

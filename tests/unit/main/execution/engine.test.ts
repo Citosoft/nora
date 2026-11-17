@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { EffectWorker } from "@main/execution/effectWorker";
 import { ProviderRegistry } from "@main/execution/providerRegistry";
@@ -28,7 +27,7 @@ test("transaction rollback commits neither receipt, projection, outbox nor notif
   const cursor = f.store.cursor();
   const seen: ConversationEvent[] = [];
   f.engine.subscribe({ after: cursor, onEvent: (event) => seen.push(event), onError: (error) => { throw error; } });
-  const database = new DatabaseSync(f.path);
+  const database = f.openDatabase();
   database.exec("CREATE TRIGGER reject_effect BEFORE INSERT ON effects BEGIN SELECT RAISE(ABORT, 'injected failure'); END");
   assert.throws(() => f.submit(), /injected failure/);
   assert.equal(f.store.cursor(), cursor);
@@ -211,7 +210,7 @@ test("worker treats a throw after submission as uncertain and never retries the 
 test("SQLite migration is versioned and environment ownership cannot be silently changed", (t) => {
   const f = fixture(t);
   assert.throws(() => new SqliteExecutionStore(f.path, "remote"), /different environment/);
-  const database = new DatabaseSync(f.path);
+  const database = f.openDatabase();
   database.exec("PRAGMA user_version = 99"); database.close();
   assert.throws(() => new SqliteExecutionStore(f.path, "local"), /newer Nora/);
 });

@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { roleProfiles, snapshotRole, effectiveRole, roleTools } from "@shared/personalization/profiles";
 import { readPersonalization } from "@shared/personalization/settings";
@@ -53,12 +52,12 @@ test("v5 upgrade marks historical guidance unassigned without changing receipts 
   const f = fixture(t); f.create(); f.submit();
   const events = f.store.events(0, 200);
   const receipt = f.submit();
-  const database = new DatabaseSync(f.path);
+  const database = f.openDatabase();
   database.exec("UPDATE conversation_heads SET json = json_remove(json, '$.role'); PRAGMA user_version = 5");
   database.close(); f.restart();
   assert.equal(f.snapshot().conversation.role, null);
   assert.deepEqual(f.submit(), receipt);
   assert.deepEqual(f.store.events(0, 200), events);
-  const check = new DatabaseSync(f.path);
+  const check = f.openDatabase();
   assert.equal(check.prepare("PRAGMA user_version").get()?.user_version, 6); check.close();
 });

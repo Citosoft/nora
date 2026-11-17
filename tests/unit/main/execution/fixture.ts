@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import type { TestContext } from "node:test";
 import { ConversationEngine } from "@main/execution/engine";
 import { SqliteExecutionStore } from "@main/execution/sqliteStore";
@@ -22,7 +23,13 @@ export function fixture(t: TestContext) {
   // Domain tests isolate ownership; ownership integration has its own behavioral suite.
   const deps = () => ({ store, now: () => now, nextId: () => `id-${++sequence}`, assertOwnership() {} });
   let engine = new ConversationEngine(deps());
-  t.after(() => { store.close(); rmSync(directory, { recursive: true, force: true }); });
+  const databases: DatabaseSync[] = [];
+  // Raw handles close before removal: Windows cannot delete an open SQLite file.
+  const openDatabase = () => { const database = new DatabaseSync(path); databases.push(database); return database; };
+  t.after(() => {
+    for (const database of databases) if (database.isOpen) database.close();
+    store.close(); rmSync(directory, { recursive: true, force: true });
+  });
   const command = (input: ConversationCommand) => engine.execute(input);
   const create = (id = "conversation", checkoutId = id, binding = provider, role?: RoleSelection) => command({ kind: "create", commandId: `create-${id}`,
     conversationId: id, title: id, parentId: null, provider: binding,
@@ -40,7 +47,7 @@ export function fixture(t: TestContext) {
     assert.ok(run);
     engine.accept({ ...input, conversationId, runId, attemptId: run.attemptId });
   };
-  return { path, command, create, submit, snapshot, update, get engine() { return engine; }, get store() { return store; },
+  return { path, openDatabase, command, create, submit, snapshot, update, get engine() { return engine; }, get store() { return store; },
     setTime(value: string) { now = value; },
     restart() { store.close(); store = new SqliteExecutionStore(path, "local"); engine = new ConversationEngine(deps()); } };
 }

@@ -79,7 +79,9 @@ test("local composition owns storage before recovery, runs the native protocol f
 test("checkout inspection distinguishes unborn branches, detached HEAD, independent worktrees and plain folders", async (t) => {
   const directory = await realpath(await mkdtemp(join(tmpdir(), "nora-git-checkout-")));
   t.after(() => rm(directory, { recursive: true, force: true }));
-  const root = join(directory, "repo"); const worktree = join(directory, "isolated"); const plain = join(directory, "plain folder ");
+  const root = join(directory, "repo"); const worktree = join(directory, "isolated");
+  // The trailing space checks whitespace is preserved; Windows strips trailing spaces from folder names.
+  const plain = join(directory, process.platform === "win32" ? "plain folder" : "plain folder ");
   await mkdir(plain); await execFileAsync("git", ["init", "-b", "unborn", root]);
   const inspect = createCheckoutInspector("git");
   assert.deepEqual(await inspect(root), { rootPath: root, branch: "unborn", versionControl: "git" });

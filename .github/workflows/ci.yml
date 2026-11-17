@@ -11,8 +11,13 @@ permissions:
 
 jobs:
   unit-tests:
-    name: Unit Tests
-    runs-on: ubuntu-latest
+    name: Unit Tests (${{ matrix.os }})
+    # Release builds test on every platform, so pull requests must too.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Check out repository

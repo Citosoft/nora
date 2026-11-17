@@ -25,8 +25,10 @@ test("device state keeps a stable installation and writes atomic private snapsho
 });
 
 test("audit log validates entries, retains metadata only and returns newest first", async (t) => {
-  const directory = await mkdtemp(path.join(tmpdir(), "nora-remote-audit-")); t.after(() => rm(directory, { recursive: true, force: true }));
-  const audit = openRemoteAuditLog(path.join(directory, "audit.sqlite")); t.after(() => audit.close());
+  const directory = await mkdtemp(path.join(tmpdir(), "nora-remote-audit-"));
+  const audit = openRemoteAuditLog(path.join(directory, "audit.sqlite"));
+  // Close before removal: Windows cannot delete an open SQLite file.
+  t.after(async () => { audit.close(); await rm(directory, { recursive: true, force: true }); });
   for (const action of ["send-message", "cancel-task"] as const) audit.record({ at: "2026-11-16T10:00:00Z", action, conversationId: "c", targetId: "r", outcome: "accepted", code: null, userId: "owner", sessionId: "session" });
   assert.deepEqual((await audit.activity(1)).map((entry) => entry.action), ["cancel-task"]);
   assert.equal((await audit.activity(200)).length, 2);
