@@ -42,7 +42,12 @@ export async function budgetToolOutput(text: string, directory: string, maxBytes
   const temporary = join(directory, `${randomUUID()}.tmp`);
   try {
     await fs.writeFile(temporary, text, { flag: "wx", mode: 0o600 });
-    await fs.rename(temporary, path);
+    try { await fs.rename(temporary, path); }
+    catch (error) {
+      // The name is a content hash, so an existing file already holds these bytes. Windows rejects a rename
+      // onto a file that a concurrent identical write is replacing; that writer's result is just as good.
+      if (!(await fs.access(path).then(() => true, () => false))) throw error;
+    }
   } finally { await fs.rm(temporary, { force: true }); }
   return { text: excerpt, path, originalBytes };
 }
