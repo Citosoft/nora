@@ -4,35 +4,33 @@ import { createTaskBoardSection, deleteTaskBoardSection, moveTaskToBoardSection,
 import { TaskBoardPanel } from "@/components/app/panels/TaskBoardPanel";
 import type { TaskBoardViewMode } from "@/components/app/types";
 import type { TaskCenterTaskReference } from "@/components/app/types/component.types";
-import { isAgentToolAvailable } from "@shared/agentToolState";
 import type { WorkspaceSpecSummary, WorkspaceTaskBoard } from "@shared/appTypes";
 import { createDefaultWorkspaceTaskBoard } from "@shared/appTypes";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function TaskCenter() {
   const snapshot = useCanonicalAppSnapshot();
   const { taskCenterProps } = useAppMainCenterContent();
   const {
+    projectId,
     workspaceTasks,
     workspaceSpecs,
     workspaceTaskBoards,
     updateWorkspaceTaskBoard,
-    tools,
     onOpenTask,
     onCreateTask,
     onGenerateTasks,
     onToggleTaskComplete,
     onDeleteTask,
-    onSpawnAgentsForTasks,
+    onStartTaskThreads,
     generateTasksRequest,
     onClose
   } = taskCenterProps;
   const [viewMode, setViewMode] = useState<TaskBoardViewMode>("list");
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
   const [selectedTaskKeys, setSelectedTaskKeys] = useState<string[]>([]);
-  const [selectedToolId, setSelectedToolId] = useState("");
-  const [isSpawningAgents, setIsSpawningAgents] = useState(false);
-  const detectedTools = tools.filter((tool) => isAgentToolAvailable(tool));
+  const [isStartingThreads, setIsStartingThreads] = useState(false);
+  const startingThreadsRef = useRef(false);
 
   useEffect(() => {
     if (!snapshot) {
@@ -51,10 +49,6 @@ export function TaskCenter() {
       return snapshot.project?.id || snapshot.workspaces[0]?.project.id || null;
     });
   }, [snapshot]);
-
-  useEffect(() => {
-    setSelectedToolId((current) => current || detectedTools[0]?.id || "");
-  }, [detectedTools]);
 
   useEffect(() => {
     if (!generateTasksRequest) {
@@ -81,7 +75,7 @@ export function TaskCenter() {
         projectName: workspace.project.name,
         projectRootPath: workspace.project.rootPath
       }))
-  ].map((workspace) => ({
+  ].filter((workspace) => !projectId || workspace.projectId === projectId).map((workspace) => ({
     ...workspace,
     tasks: workspaceTasks[workspace.projectId]?.tasks ?? [],
     specs: workspaceSpecs[workspace.projectId]?.specs ?? [] as WorkspaceSpecSummary[],
@@ -124,6 +118,20 @@ export function TaskCenter() {
     .map((key) => allOpenTaskReferences.find((task) => `${task.projectId}:${task.path}` === key) || null)
     .filter((task): task is TaskCenterTaskReference => task !== null);
 
+  const startTasks = async (tasks: TaskCenterTaskReference[]): Promise<void> => {
+    if (!tasks.length || startingThreadsRef.current) return;
+    startingThreadsRef.current = true;
+    setIsStartingThreads(true);
+    try {
+      await onStartTaskThreads(tasks);
+      const startedKeys = new Set(tasks.map((task) => `${task.projectId}:${task.path}`));
+      setSelectedTaskKeys((current) => current.filter((key) => !startedKeys.has(key)));
+    } finally {
+      startingThreadsRef.current = false;
+      setIsStartingThreads(false);
+    }
+  };
+
   if (!snapshot) {
     return null;
   }
@@ -131,12 +139,10 @@ export function TaskCenter() {
   return (
     <TaskBoardPanel
       workspaces={workspaceEntries}
-      availableTools={detectedTools}
-      activeWorkspaceId={selectedWorkspaceId}
+      activeWorkspaceId={projectId ?? selectedWorkspaceId}
       viewMode={viewMode}
       selectedTaskKeys={selectedTaskKeys}
-      selectedToolId={selectedToolId}
-      isSpawningAgents={isSpawningAgents}
+      isStartingThreads={isStartingThreads}
       onViewModeChange={setViewMode}
       onSelectWorkspace={setSelectedWorkspaceId}
       onToggleTaskSelection={(projectId, taskPath) =>
@@ -146,18 +152,10 @@ export function TaskCenter() {
         })
       }
       onClearTaskSelection={() => setSelectedTaskKeys([])}
-      onSelectedToolChange={setSelectedToolId}
-      onSpawnSelectedAgents={async () => {
-        if (!selectedToolId || !selectedTasks.length || isSpawningAgents) {
-          return;
-        }
-        setIsSpawningAgents(true);
-        try {
-          await onSpawnAgentsForTasks(selectedToolId, selectedTasks);
-          setSelectedTaskKeys([]);
-        } finally {
-          setIsSpawningAgents(false);
-        }
+      onStartSelectedThreads={() => startTasks(selectedTasks)}
+      onStartTask={(projectId, taskPath) => {
+        const task = allOpenTaskReferences.find((entry) => entry.projectId === projectId && entry.path === taskPath);
+        return startTasks(task ? [task] : []);
       }}
       onOpenTask={onOpenTask}
       onCreateTask={onCreateTask}

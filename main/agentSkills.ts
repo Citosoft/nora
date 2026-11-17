@@ -1,3 +1,4 @@
+import { withSkillInstallSource } from "@main/helpers/bundledSkills";
 import type {
   AgentSkillCatalog,
   AgentSkillEntry,
@@ -731,11 +732,13 @@ export async function installAgentSkill(
     throw new Error("Enter a skill reference to install.");
   }
 
-  if (reporter) {
-    await runStreamedSkillsCommand(["add", "--yes", "--global", normalizedSkillReference], reporter);
-  } else {
-    await runSkillsCommand(["add", "--yes", "--global", normalizedSkillReference]);
-  }
+  await withSkillInstallSource(normalizedSkillReference, async (source) => {
+    if (reporter) {
+      await runStreamedSkillsCommand(["add", "--yes", "--global", source], reporter);
+    } else {
+      await runSkillsCommand(["add", "--yes", "--global", source]);
+    }
+  });
 
   return readAgentSkillCatalog(toolId);
 }

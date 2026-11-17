@@ -271,6 +271,12 @@ export interface SetWorkspaceUpstreamPayload {
   remoteBranch: string;
 }
 
+/** Points the Changes panel at the project checkout or one of its ready worktrees. */
+export interface SelectChangesCheckoutPayload {
+  projectId: string;
+  path: string;
+}
+
 export interface CheckoutWorkspaceBranchPayload {
   projectId: string;
   branch: string;

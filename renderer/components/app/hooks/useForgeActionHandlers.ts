@@ -1,14 +1,9 @@
-import { noraAgentClient } from "@/components/app/clients/noraAgentClient";
+import { useNativeRuntimePorts } from "./useNativeRuntimePorts";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
-import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
-import { formatForgeIssueInstruction } from "@/components/app/logic/appUtils";
+import { formatForgeIssueInstruction } from "@/components/app/logic/forge-items/issueReference";
 import {
-  buildForgeReviewFileInstruction,
   buildForgeReviewInstruction,
-  createForgeReviewHandoffRelativePath,
-  resolveForgeReviewHandoffDisplayPath
 } from "@/components/app/logic/forgeReviewHandoff";
-import { launchAgentWithInstruction } from "@/components/app/logic/launchAgentWithInstruction";
 import type { StatusBarContextValue } from "@/components/app/logic/statusBarContext";
 import type {
   ForgeReviewAgentTargetMode,
@@ -21,12 +16,8 @@ import { useCallback } from "react";
 export function useForgeActionHandlers({
   forgeWorkItemDetail,
   canOpenProjectInIde,
-  runWithStatus,
   statusBar,
-  updateSnapshotState,
-  safelyAndRefresh,
   captureError,
-  trackForgeIssueAgentCreation
 }: {
   forgeWorkItemDetail: ForgeWorkItemDetail | null;
   canOpenProjectInIde: boolean;
@@ -40,7 +31,7 @@ export function useForgeActionHandlers({
   captureError: (error: unknown) => void;
   trackForgeIssueAgentCreation: (payload: CreateAgentPayload) => void;
 }): {
-  handleSpawnForgeIssueAgent: (toolId: string) => Promise<void>;
+  handleStartForgeIssueThread: () => Promise<void>;
   handleSpawnForgeReviewAgent: (
     toolId: string,
     selections: ForgeReviewCommentSelection[],
@@ -49,135 +40,17 @@ export function useForgeActionHandlers({
   handleOpenProjectInIde: (ideId: string) => Promise<void>;
 } {
   const snapshot = useCanonicalAppSnapshot();
-  const handleSpawnForgeIssueAgent = useCallback(async (toolId: string): Promise<void> => {
-    if (!snapshot?.project || !forgeWorkItemDetail || forgeWorkItemDetail.kind !== "issue") {
-      return;
-    }
-
-    const instruction = formatForgeIssueInstruction(forgeWorkItemDetail);
-    const workspaceInstructionPath = snapshot.project.workspaceInstructionFile?.absolutePath ?? null;
-    const payload: CreateAgentPayload = {
-      toolId,
-      name: `Issue #${forgeWorkItemDetail.item.number}`,
-      task: `Work on issue #${forgeWorkItemDetail.item.number}: ${forgeWorkItemDetail.item.title}`,
-      commandOverride: "",
-      launchSource: "forge-issue",
-      mode: "write",
-      target: { kind: "new" }
-    };
-    try {
-      await launchAgentWithInstruction({
-        payload,
-        createAgent: (agentPayload) => runWithStatus("Creating agent", () => noraAgentClient.createAgent(agentPayload)),
-        instruction,
-        prompt: {
-          source: "forge-issue",
-          title: "Issue details",
-          contextSelections: payload.contextSelections ?? [],
-          workspacePaths: workspaceInstructionPath ? [{ path: workspaceInstructionPath, kind: "file" }] : [],
-          references: [
-            { kind: "workspace-path", label: "Issue URL", value: forgeWorkItemDetail.item.webUrl },
-            ...(workspaceInstructionPath
-              ? [{ kind: "workspace-path" as const, label: "Project instructions", value: workspaceInstructionPath }]
-              : [])
-          ]
-        },
-        handoffStatusMessage: "Sending issue details",
-        statusBar,
-        updateSnapshot: updateSnapshotState,
-        trackCreation: trackForgeIssueAgentCreation,
-        focusAgent: async (focusedAgentId: string) => {
-          await safelyAndRefresh(() => noraAgentClient.focusAgent(focusedAgentId));
-        }
-      });
-    } catch (error: unknown) {
-      captureError(error);
-    }
-  }, [
-    captureError,
-    forgeWorkItemDetail,
-    runWithStatus,
-    safelyAndRefresh,
-    snapshot?.project,
-    statusBar,
-    trackForgeIssueAgentCreation,
-    updateSnapshotState
-  ]);
-
-  const handleSpawnForgeReviewAgent = useCallback(async (
-    toolId: string,
-    selections: ForgeReviewCommentSelection[],
-    targetMode: ForgeReviewAgentTargetMode
-  ): Promise<void> => {
-    if (!snapshot?.project || !forgeWorkItemDetail || forgeWorkItemDetail.kind !== "pull_request" || !selections.length) {
-      return;
-    }
-
-    const fullInstruction = buildForgeReviewInstruction(forgeWorkItemDetail, selections);
-    if (!fullInstruction) {
-      return;
-    }
-
-    const handoffRelativePath = createForgeReviewHandoffRelativePath(forgeWorkItemDetail);
-    await noraWorkspaceClient.writeWorkspaceFile({
-      projectId: snapshot.project.id,
-      path: handoffRelativePath,
-      content: fullInstruction
-    });
-    const handoffDisplayPath = resolveForgeReviewHandoffDisplayPath(snapshot.project.rootPath, handoffRelativePath);
-    const instruction = buildForgeReviewFileInstruction({
-      detail: forgeWorkItemDetail,
-      handoffPath: handoffDisplayPath,
-      selectionCount: selections.length
-    });
-    const workspaceInstructionPath = snapshot.project.workspaceInstructionFile?.absolutePath ?? null;
-    const payload: CreateAgentPayload = {
-      toolId,
-      name: `MR #${forgeWorkItemDetail.item.number} review`,
-      task: `Address ${selections.length} review comment${selections.length === 1 ? "" : "s"} on MR #${forgeWorkItemDetail.item.number}: ${forgeWorkItemDetail.item.title}`,
-      commandOverride: "",
-      launchSource: "forge-review",
-      mode: "write",
-      target: targetMode === "current-branch" ? { kind: "root" } : { kind: "new" }
-    };
-    try {
-      await launchAgentWithInstruction({
-        payload,
-        createAgent: (agentPayload) => runWithStatus("Creating agent", () => noraAgentClient.createAgent(agentPayload)),
-        instruction,
-        prompt: {
-          source: "forge-review",
-          title: "Merge request review comments",
-          contextSelections: payload.contextSelections ?? [],
-          workspacePaths: workspaceInstructionPath ? [{ path: workspaceInstructionPath, kind: "file" }] : [],
-          references: [
-            { kind: "workspace-path", label: "Merge request URL", value: forgeWorkItemDetail.item.webUrl },
-            ...(workspaceInstructionPath
-              ? [{ kind: "workspace-path" as const, label: "Project instructions", value: workspaceInstructionPath }]
-              : [])
-          ]
-        },
-        handoffStatusMessage: "Sending review comments",
-        statusBar,
-        updateSnapshot: updateSnapshotState,
-        trackCreation: trackForgeIssueAgentCreation,
-        focusAgent: async (focusedAgentId: string) => {
-          await safelyAndRefresh(() => noraAgentClient.focusAgent(focusedAgentId));
-        }
-      });
-    } catch (error: unknown) {
-      captureError(error);
-    }
-  }, [
-    captureError,
-    forgeWorkItemDetail,
-    runWithStatus,
-    safelyAndRefresh,
-    snapshot?.project,
-    statusBar,
-    trackForgeIssueAgentCreation,
-    updateSnapshotState
-  ]);
+  const native = useNativeRuntimePorts();
+  const handleStartForgeIssueThread = useCallback(async (): Promise<void> => {
+    if (!snapshot?.project || forgeWorkItemDetail?.kind !== "issue") throw new Error("Open an issue in the active workspace before starting a fix thread.");
+    const id = await native.launch({ projectId: snapshot.project.id, text: formatForgeIssueInstruction(forgeWorkItemDetail), submit: true });
+    if (!id) throw new Error("The thread runtime is unavailable. Please try again.");
+  }, [native.launch, snapshot?.project, forgeWorkItemDetail]);
+  const handleSpawnForgeReviewAgent = useCallback(async (_toolId: string, selections: ForgeReviewCommentSelection[], _targetMode: ForgeReviewAgentTargetMode): Promise<void> => {
+    if (!snapshot?.project || forgeWorkItemDetail?.kind !== "pull_request" || !selections.length) return;
+    try { await native.launch({ projectId: snapshot.project.id, text: buildForgeReviewInstruction(forgeWorkItemDetail, selections) }); }
+    catch (cause) { captureError(cause); }
+  }, [native.launch, snapshot?.project, forgeWorkItemDetail, captureError]);
 
   const handleOpenProjectInIde = useCallback(async (ideId: string): Promise<void> => {
     if (!snapshot?.project || !canOpenProjectInIde) {
@@ -195,7 +68,7 @@ export function useForgeActionHandlers({
   }, [canOpenProjectInIde, captureError, snapshot?.project, statusBar]);
 
   return {
-    handleSpawnForgeIssueAgent,
+    handleStartForgeIssueThread,
     handleSpawnForgeReviewAgent,
     handleOpenProjectInIde
   };

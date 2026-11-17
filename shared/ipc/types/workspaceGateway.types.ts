@@ -1,5 +1,5 @@
+import type { WorkspaceDiscoveryResult } from "../../types/workspaceImport.types";
 import type {
-  AgentContextSelection,
   ArchiveExternalHarnessThreadPayload,
   AppState,
   CommitChangesPayload,
@@ -7,12 +7,9 @@ import type {
   CreateProjectWorkspaceResult,
   ConnectRemoteProjectPayload,
   CreateWorkspaceDirectoryPayload,
-  ExternalHarnessContextRef,
-  ExternalHarnessSessionSummary,
   GenerateCommitMessagePayload,
   GenerateCommitMessageResult,
   ImportBrowserImagePayload,
-  ImportedContextBundleSummary,
   NoraDetectableContextBundleSummary,
   TerminalPreset,
   WorkspaceFileRequest,
@@ -27,6 +24,7 @@ import type {
   WorkspaceTaskBoard,
   WorkspaceTaskSummary,
   CheckoutWorkspaceBranchPayload,
+  SelectChangesCheckoutPayload,
   WriteWorkspaceFilePayload
 } from "../../appTypes";
 import type { WorkspaceImageFileContent } from "../../types/workspaceFile.types";
@@ -38,6 +36,8 @@ export interface WorkspaceLoadingProgressPayload {
 }
 
 export interface WorkspaceBridge {
+  discoverWorkspaces: () => Promise<WorkspaceDiscoveryResult>;
+  onWorkspaceTasksChanged: (listener: (projectId: string) => void) => () => void;
   chooseProject: () => Promise<AppState>;
   chooseProjectAtPath: (defaultPath: string, title?: string) => Promise<AppState>;
   createProjectWorkspace: (payload: CreateProjectWorkspacePayload) => Promise<CreateProjectWorkspaceResult>;
@@ -67,6 +67,8 @@ export interface WorkspaceBridge {
   saveWorkspaceTerminalPresets: (projectId: string, presets: TerminalPreset[]) => Promise<AppState>;
   readWorkspaceFile: (payload: WorkspaceFileRequest) => Promise<string>;
   readWorkspaceImageFile: (payload: WorkspaceFileRequest) => Promise<WorkspaceImageFileContent>;
+  /** The project's own logo for its avatar, or null when none is detected. */
+  readWorkspaceLogo: (projectId: string) => Promise<WorkspaceImageFileContent | null>;
   /** Opens a document file (e.g. a PDF) Nora cannot render in the OS default app. */
   openWorkspaceFileExternally: (payload: WorkspaceFileRequest) => Promise<void>;
   writeWorkspaceFile: (payload: WriteWorkspaceFilePayload) => Promise<AppState>;
@@ -80,16 +82,7 @@ export interface WorkspaceBridge {
   }) => Promise<AppState>;
   deleteWorkspaceFile: (payload: WorkspaceFileRequest) => Promise<AppState>;
   searchWorkspaceFiles: (payload: WorkspaceSearchRequest) => Promise<WorkspaceSearchResult[]>;
-  listImportedContextBundles: (projectId: string, rootPath?: string) => Promise<ImportedContextBundleSummary[]>;
-  listExternalHarnessContextSessions: (
-    projectId: string,
-    rootPath?: string
-  ) => Promise<ExternalHarnessSessionSummary[]>;
   archiveExternalHarnessThread: (payload: ArchiveExternalHarnessThreadPayload) => Promise<void>;
-  composeExternalHarnessContextSelections: (
-    projectId: string,
-    ref: ExternalHarnessContextRef
-  ) => Promise<AgentContextSelection[]>;
   listNoraDetectableContextBundles: (
     projectId: string,
     sessionId: string,
@@ -119,6 +112,7 @@ export interface WorkspaceBridge {
     payload: { projectId: string; rootPath?: string }
   ) => Promise<WorkspaceGitStatusSummary>;
   checkoutWorkspaceBranch: (payload: CheckoutWorkspaceBranchPayload) => Promise<AppState>;
+  selectChangesCheckout: (payload: SelectChangesCheckoutPayload) => Promise<AppState>;
   setWorkspaceUpstream: (payload: SetWorkspaceUpstreamPayload) => Promise<WorkspaceGitStatusSummary>;
   selectChange: (pathName: string) => Promise<AppState>;
   discardChange: (pathName: string) => Promise<AppState>;

@@ -7,6 +7,7 @@ import type {
   SelectProps
 } from "@/components/ui/types/primitives.types";
 import { cn } from "@/lib/utils";
+import { menuItemClass, menuLabelClass, menuSurfaceClass } from "@/components/ui/menu-styles";
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
 import * as React from "react";
@@ -79,9 +80,9 @@ function SelectOptionItem({ option }: SelectOptionItemProps) {
     <SelectPrimitive.Item
       value={option.value === "" ? EMPTY_OPTION_VALUE : option.value}
       disabled={option.disabled}
-      className="relative flex cursor-default select-none items-center rounded-[5px] py-2 pl-8 pr-3 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
+      className={cn(menuItemClass, "pl-8 pr-3")}
     >
-      <SelectPrimitive.ItemIndicator className="absolute left-2 inline-flex items-center">
+      <SelectPrimitive.ItemIndicator className="absolute left-2 inline-flex items-center text-popover-foreground">
         <Check className="size-4" />
       </SelectPrimitive.ItemIndicator>
       <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
@@ -123,7 +124,7 @@ export function Select({
     >
         <SelectPrimitive.Trigger
           className={cn(
-            "form-control-surface flex h-10 w-full min-w-0 items-center justify-between overflow-hidden rounded-[5px] border px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+            "form-control-surface flex h-10 w-full min-w-0 items-center justify-between overflow-hidden rounded-md border px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
             className
           )}
         aria-label={props["aria-label"]}
@@ -144,17 +145,17 @@ export function Select({
           sideOffset={6}
           avoidCollisions
           collisionPadding={8}
-          className="z-[31000] min-w-[var(--radix-select-trigger-width)] max-h-[min(22rem,var(--radix-select-content-available-height))] overflow-hidden rounded-[7px] border border-border/70 bg-popover text-popover-foreground shadow-lg"
+          className={cn("z-[31000] min-w-[var(--radix-select-trigger-width)] max-h-[min(22rem,var(--radix-select-content-available-height))] overflow-hidden", menuSurfaceClass)}
         >
           <SelectPrimitive.ScrollUpButton className="grid place-items-center py-1 text-muted-foreground">
             <ChevronUp className="size-4" />
           </SelectPrimitive.ScrollUpButton>
-          <SelectPrimitive.Viewport className="max-h-[inherit] p-1">
+          <SelectPrimitive.Viewport className="max-h-[inherit]">
             {optionGroups.map((group) => group.label === null ? group.options.map((option) => (
               <SelectOptionItem key={`${option.value}:${String(option.label)}`} option={option} />
             )) : (
               <SelectPrimitive.Group key={group.id}>
-                <SelectPrimitive.Label className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">
+                <SelectPrimitive.Label className={menuLabelClass}>
                   {group.label}
                 </SelectPrimitive.Label>
                 {group.options.map((option) => (

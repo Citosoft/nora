@@ -62,11 +62,11 @@ test("buildClaudeUsageWindows orders session, all-models weekly, then scoped wee
   );
 
   assert.deepEqual(
-    windows.map(({ id, label, shortLabel, percentLeft }) => ({ id, label, shortLabel, percentLeft })),
+    windows.map(({ id, period, label, shortLabel, percentLeft }) => ({ id, period, label, shortLabel, percentLeft })),
     [
-      { id: "session", label: "Session", shortLabel: "S", percentLeft: 77 },
-      { id: "weekly", label: "Weekly", shortLabel: "W", percentLeft: 85 },
-      { id: "weekly:Sonnet", label: "Weekly · Sonnet", shortLabel: "W", percentLeft: 61 }
+      { id: "session", period: "session", label: "Session", shortLabel: "S", percentLeft: 77 },
+      { id: "weekly", period: "weekly", label: "Weekly", shortLabel: "W", percentLeft: 85 },
+      { id: "weekly:Sonnet", period: "weekly", label: "Weekly · Sonnet", shortLabel: "W", percentLeft: 61 }
     ]
   );
   assert.ok(windows[0].resetsLabel);

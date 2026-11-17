@@ -70,7 +70,7 @@ export type WorkspaceSidebarBuildDeps = Pick<
     AppUiCommands,
     | "clearBrowserAndForgeFocus"
     | "clearSessionTabFocus"
-    | "openCreateAgentDialog"
+    | "openNewThread"
     | "openCreateTerminalDialog"
     | "openResetWorkspacesDialog"
     | "openWorkspaceTerminalPresetsDialog"

@@ -1,5 +1,6 @@
 import { useOptionalSessionCenterPorts } from "@/components/app/context/sessionCenterPortsContext";
 import type { SessionCenterPorts } from "@/components/app/types/sessionCenterPorts.types";
+export { useOptionalSessionCenterPorts };
 
 export const useSessionCenterPorts = (): SessionCenterPorts => {
   const v = useOptionalSessionCenterPorts();

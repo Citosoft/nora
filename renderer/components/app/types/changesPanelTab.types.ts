@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 
-export type ChangesPanelTab = "git" | "files" | "context" | "forge" | "vercel";
+export type ChangesPanelTab = "git" | "files" | "memory" | "instructions" | "forge" | "vercel";
 
 export type ChangesPanelTabPresentation = {
   label: string;

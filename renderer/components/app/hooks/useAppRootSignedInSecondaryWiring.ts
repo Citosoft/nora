@@ -1,4 +1,4 @@
-import { getActiveWorktree } from "@/components/app/logic/appUtils";
+import { getChangesCheckoutBranch } from "@/components/app/logic/changesCheckoutOptions";
 import { formatShortcutKeys, SHORTCUT_DEFINITIONS } from "@/components/app/logic/keyboardShortcuts";
 import { setDefaultTerminalShell } from "@/components/app/logic/terminalShellPreferences";
 import type {
@@ -11,8 +11,6 @@ import { useMemo } from "react";
 
 export const useAppRootSignedInSecondaryWiring = ({
   uiStateDestroyAgentId,
-  focusedAgent,
-  focusedTerminal,
   isRemoteMountedWorkspace,
   workspaceTasks,
   workspaceSpecs,
@@ -28,9 +26,7 @@ export const useAppRootSignedInSecondaryWiring = ({
   workspaceFileTree
 }: UseAppRootSignedInSecondaryWiringArgs): UseAppRootSignedInSecondaryWiringResult => {
   const snapshot = useCanonicalAppSnapshot();
-  const activeWorktree = snapshot ? getActiveWorktree(snapshot) : null;
-  const activeBranch =
-    activeWorktree?.branch || focusedAgent?.branch || focusedTerminal?.branch || snapshot?.project?.baseBranch || "";
+  const activeBranch = snapshot ? getChangesCheckoutBranch(snapshot) : "";
   const parentRepoBranch =
     snapshot?.worktrees.find(
       (worktree) => worktree.path === snapshot.project?.rootPath || worktree.createdFromRef === "ROOT"
@@ -95,7 +91,6 @@ export const useAppRootSignedInSecondaryWiring = ({
   }, [snapshot, safely, captureError, normalizeSnapshot, workspaceFileTree, fileChangeCounts]);
 
   return {
-    activeWorktree,
     activeBranch,
     parentRepoBranch,
     agentPendingDestroy,

@@ -1,0 +1,230 @@
+import { externalSessionOriginSchema } from "./externalSessions";
+import { z } from "zod";
+import { providerKindSchema } from "@shared/providers/providerKinds";
+import { conversationReviewSchema } from "./review";
+import { roleSelectionSchema, roleSnapshotSchema } from "@shared/personalization/contracts";
+import { threadReferenceSchema } from "./references";
+import { mcpAppCallSchema } from "./mcpApp";
+import { botAuthorSchema, botIdSchema, botSnapshotSchema, groupRequestSchema, groupSchema, directSchema, directRequestSchema } from "@shared/bots/contracts";
+
+const id = z.string().min(1).max(512);
+const time = z.string().datetime();
+export const promptSuggestionSchema = z.string().trim().min(1).max(4000);
+export const providerBindingSchema = z.object({
+  kind: providerKindSchema,
+  instanceId: id,
+  model: id,
+  reasoning: z.string().nullable(),
+  permissionPolicy: id,
+  /** Default model for subagents the runtime spawns, for runtimes that accept one; absent uses the runtime's own default. */
+  subagentModel: id.optional()
+}).strict();
+export const workspaceRefSchema = z.object({
+  projectId: id,
+  environmentId: id,
+  checkoutId: id,
+  path: z.string().min(1),
+  branch: z.string(),
+  versionControl: z.enum(["git", "none"]).optional(),
+  access: z.enum(["read", "write"])
+}).strict();
+export const failureSchema = z.object({
+  code: z.enum(["authentication", "usage-limit", "provider", "host", "disconnected", "uncertain", "unsupported"]),
+  message: z.string().min(1),
+  retryable: z.boolean(),
+  resetsAt: z.string().datetime().optional()
+}).strict();
+export const usageSchema = z.object({
+  /** Total prompt tokens, including cache reads and writes. */
+  inputTokens: z.number().int().nonnegative(),
+  cachedInputTokens: z.number().int().nonnegative().optional(),
+  cacheCreationInputTokens: z.number().int().nonnegative().optional(),
+  outputTokens: z.number().int().nonnegative()
+}).strict();
+/** How full the native model context is, as reported by the runtime after its latest model request. */
+export const contextUsageSchema = z.object({
+  usedTokens: z.number().int().nonnegative(),
+  windowTokens: z.number().int().positive(),
+  /** Prompt tokens of the latest request, including cached ones. */
+  inputTokens: z.number().int().nonnegative(),
+  cachedInputTokens: z.number().int().nonnegative(),
+  /** Absent when the provider does not report cache writes separately. */
+  cacheCreationInputTokens: z.number().int().nonnegative().optional(),
+  outputTokens: z.number().int().nonnegative(),
+  /** Conservative expiry estimate from runtime-reported cache lifetime; absent when unknown. */
+  promptCacheExpiresAt: z.string().datetime().optional(),
+  autoCompactThreshold: z.number().int().positive().optional(),
+  updatedAt: z.string().datetime()
+}).strict();
+/** A run that asks the runtime to compact its context instead of delivering an instruction. */
+export const runActionSchema = z.literal("compact");
+/** The chat message a branch started from, saved when it was made so the branch can say where it came from after the chat moves on. */
+export const chatBranchOriginSchema = z.object({ itemId: id, role: z.enum(["user", "assistant"]), authorName: z.string().nullable(), excerpt: z.string().max(600), createdAt: time }).strict();
+/** A side chat off a bot or group chat: `from` is null for a blank branch. */
+export const chatBranchSchema = z.object({ from: chatBranchOriginSchema.nullable() }).strict();
+export const conversationSourceSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("task"), projectId: id, path: z.string().min(1) }).strict(),
+  z.object({ kind: z.literal("workflow"), projectId: id, runId: id, stageId: id }).strict()
+]);
+export const conversationSchema = z.object({
+  id,
+  origin: externalSessionOriginSchema.optional(),
+  source: conversationSourceSchema.optional(),
+  role: roleSnapshotSchema.nullable().optional(),
+  /** Set when the thread runs as a bot; such threads carry no role guidance. */
+  bot: botSnapshotSchema.optional(),
+  /** Set for a group chat; its members answer in child threads coordinated by Nora. */
+  group: groupSchema.optional(),
+  /** Set for a bot's direct-message chat; its tasks run in child work threads coordinated by Nora. */
+  direct: directSchema.optional(),
+  /** Set on a side chat the user branched off a bot or group chat; the chat never routes its own messages into it. */
+  chatBranch: chatBranchSchema.optional(),
+  title: z.string().min(1),
+  workspace: workspaceRefSchema,
+  provider: providerBindingSchema,
+  parentId: id.nullable(),
+  nativeConversationId: id.nullable(),
+  /** Retain a transition handoff until a provider confirms accepting its first turn. */
+  pendingHandoffRunId: id.optional(),
+  // Settled threads retain the existing persisted archive field so their saved history needs no migration.
+  archivedAt: time.nullable(),
+  /** Reopening restarts the automatic-settlement grace period without changing last activity. */
+  reopenedAt: time.optional(),
+  createdAt: time,
+  updatedAt: time,
+  queuePaused: z.boolean(),
+  /** Latest native context occupancy; null once compaction leaves it unknown, absent when never reported. */
+  context: contextUsageSchema.nullable().optional()
+}).strict();
+export const runSchema = z.object({
+  id,
+  conversationId: id,
+  instruction: z.string().trim().min(1),
+  provider: providerBindingSchema.optional(),
+  /** Saved once when continuing in a fresh provider session; never replay native tool state. */
+  handoff: z.object({ previousProvider: providerBindingSchema, previousNativeConversationId: id.nullable(), reference: threadReferenceSchema, context: z.string().max(16_000) }).strict().optional(),
+  action: runActionSchema.optional(),
+  /** A direct-chat message that must work in this workspace, whatever the chat's working workspace is; routine runs set it. */
+  workspaceId: id.optional(),
+  /** The user's own words when the instruction wraps them for a chat's work thread; chat views show this instead. */
+  chatText: z.string().trim().min(1).optional(),
+  /** Automatic compaction must be skipped if provider submission misses this deadline. */
+  compactionDeadline: time.optional(),
+  state: z.enum(["queued", "starting", "running", "awaiting-approval", "awaiting-input", "stopping", "completed", "failed", "interrupted", "recovering"]),
+  attemptId: id,
+  nativeTurnId: id.nullable(),
+  createdAt: time,
+  updatedAt: time,
+  // Older persisted turns can recover their start from the instruction timeline item.
+  startedAt: time.optional(),
+  steering: z.enum(["pending", "unconfirmed"]).optional(),
+  promptSuggestion: promptSuggestionSchema.optional(),
+  failure: failureSchema.nullable(),
+  usage: usageSchema.nullable(),
+  review: z.enum(["pending", "ready", "unavailable"])
+}).strict();
+const itemBase = { id, runId: id, createdAt: time };
+export const toolStateSchema = z.enum(["running", "completed", "failed", "declined", "interrupted", "unconfirmed"]);
+export const toolDetailsSchema = z.object({
+  category: z.enum(["command", "integration", "search", "file", "image", "agent", "wait", "other"]),
+  input: z.string().optional(), detail: z.string().optional(), parentId: z.string().optional(), patch: z.string().optional(),
+  durationMs: z.number().nonnegative().optional(), exitCode: z.number().int().optional(),
+  /** The skill this call used: `loaded` when the runtime reports loading it, `read` when its SKILL.md was read directly. */
+  skill: z.object({ name: z.string().min(1), evidence: z.enum(["loaded", "read"]) }).strict().optional(),
+  /** Set when the MCP server declared an interactive widget (MCP Apps) for this tool. */
+  app: mcpAppCallSchema.optional()
+}).strict();
+export const approvalDetailsSchema = z.object({
+  kind: z.enum(["command", "files", "network", "tool"]),
+  command: z.string().optional(), workingDirectory: z.string().optional(), reason: z.string().optional(),
+  paths: z.array(z.string()).optional(), target: z.string().optional(), input: z.string().optional()
+}).strict();
+export const timelineItemSchema = z.discriminatedUnion("kind", [
+  z.object({ ...itemBase, kind: z.literal("message"), role: z.enum(["user", "assistant"]), text: z.string(), complete: z.boolean(),
+    /** The bot that wrote an assistant message in a group or direct chat. */
+    author: botAuthorSchema.optional(),
+    /** The child thread that did the work behind a chat reply. */
+    workThreadId: id.optional(),
+    /** For a user message: the user's own words when the instruction wraps them; chat views show this instead of `text`. */
+    chatText: z.string().optional() }).strict(),
+  z.object({ ...itemBase, kind: z.literal("reasoning"), text: z.string(), complete: z.boolean() }).strict(),
+  z.object({ ...itemBase, kind: z.literal("tool"), label: z.string(), output: z.string(), state: toolStateSchema, details: toolDetailsSchema.optional() }).strict(),
+  z.object({ ...itemBase, kind: z.literal("milestone"), text: z.string() }).strict(),
+  z.object({ ...itemBase, kind: z.literal("plan"), steps: z.array(z.object({ text: z.string(), state: z.enum(["pending", "running", "completed"]) }).strict()) }).strict(),
+  /** A delegated agent run; tool items whose `details.parentId` equals `nativeId` are that agent's own activity. */
+  z.object({ ...itemBase, kind: z.literal("subagent"), label: z.string(), nativeId: id, state: toolStateSchema,
+    agentType: z.string().optional(), prompt: z.string().optional(), progress: z.string().optional(), result: z.string().optional(),
+    /** The model the agent ran on, or the one requested until the runtime reports it. */
+    model: z.string().optional(), effort: z.string().optional() }).strict(),
+  z.object({ ...itemBase, kind: z.literal("changes"), paths: z.array(z.string()), patches: z.record(z.string(), z.string().nullable()).optional(), attribution: z.enum(["turn", "workspace"]) }).strict(),
+  z.object({ ...itemBase, kind: z.literal("review"), result: conversationReviewSchema }).strict(),
+  /** The model asked the user to sign in to an MCP connector, named as the runtime reports it; connection state is read live, never stored. */
+  z.object({ ...itemBase, kind: z.literal("connector-sign-in"), server: z.string().min(1), reason: z.string().optional() }).strict()
+]);
+const requestBase = {
+  id, runId: id, attemptId: id, nativeId: id,
+  status: z.enum(["pending", "responding", "resolved", "expired"]),
+  createdAt: time, expiresAt: time,
+  title: z.string().min(1)
+};
+export const requestSchema = z.discriminatedUnion("kind", [
+  z.object({ ...requestBase, kind: z.literal("approval"), details: approvalDetailsSchema.optional(),
+    options: z.array(z.object({ id, label: z.string().min(1), intent: z.enum(["allow", "deny", "cancel"]).optional(),
+      scope: z.enum(["once", "session", "persistent"]).optional(), description: z.string().optional() }).strict()).min(1) }).strict(),
+  z.object({ ...requestBase, kind: z.literal("question"), questions: z.array(z.object({ id, text: z.string(), options: z.array(z.string()), multiple: z.boolean(), allowOther: z.boolean().optional() }).strict()).min(1) }).strict()
+]);
+export const requestResponseSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("approval"), optionId: id }).strict(),
+  z.object({ kind: z.literal("question"), answers: z.record(z.string(), z.array(z.string()).min(1)) }).strict()
+]);
+export const snapshotSchema = z.object({
+  schemaVersion: z.literal(1),
+  cursor: z.number().int().nonnegative(),
+  conversation: conversationSchema,
+  runs: z.array(runSchema),
+  items: z.array(timelineItemSchema),
+  requests: z.array(requestSchema)
+}).strict();
+
+const commandBase = { commandId: id, conversationId: id };
+export const createConversationCommandSchema = z.object({ ...commandBase, kind: z.literal("create"), title: z.string().trim().min(1), workspace: workspaceRefSchema, provider: providerBindingSchema, parentId: id.nullable(), role: roleSelectionSchema.optional(), botId: botIdSchema.optional(), chatBranch: chatBranchSchema.optional(), group: groupRequestSchema.optional(), direct: directRequestSchema.optional(), source: conversationSourceSchema.optional(), externalSessionId: id.optional() }).strict();
+export const submitConversationCommandSchema = z.object({ ...commandBase, kind: z.literal("submit"), runId: id, instruction: z.string().trim().min(1), action: runActionSchema.optional(), compactionDeadline: time.optional(),
+  /** Pins a direct-chat message to one workspace for this run only, leaving the chat's working workspace unchanged. */
+  workspaceId: id.optional(),
+  /** The user's own words when `instruction` wraps them; see the run's `chatText`. */
+  chatText: z.string().trim().min(1).optional(),
+  providerChange: z.object({ expected: providerBindingSchema, next: providerBindingSchema }).strict().optional() }).strict();
+export const conversationCommandSchema = z.discriminatedUnion("kind", [
+  createConversationCommandSchema,
+  submitConversationCommandSchema,
+  z.object({ ...commandBase, kind: z.literal("edit-queued"), runId: id, instruction: z.string().trim().min(1) }).strict(),
+  z.object({ ...commandBase, kind: z.literal("remove-queued"), runId: id }).strict(),
+  z.object({ ...commandBase, kind: z.literal("steer-queued"), runId: id, targetRunId: id }).strict(),
+  z.object({ ...commandBase, kind: z.literal("continue-queue") }).strict(),
+  z.object({ ...commandBase, kind: z.literal("interrupt"), runId: id }).strict(),
+  z.object({ ...commandBase, kind: z.literal("reconcile"), runId: id }).strict(),
+  z.object({ ...commandBase, kind: z.literal("respond"), requestId: id, response: requestResponseSchema }).strict(),
+  z.object({ ...commandBase, kind: z.literal("archive") }).strict(),
+  z.object({ ...commandBase, kind: z.literal("unarchive") }).strict(),
+  /** Retitles a thread, settled or not. */
+  z.object({ ...commandBase, kind: z.literal("rename"), title: z.string().trim().min(1).max(200) }).strict(),
+  /** Chooses where a direct chat starts new tasks. */
+  z.object({ ...commandBase, kind: z.literal("set-direct-workspace"), workspaceId: id }).strict()
+]);
+export const commandReceiptSchema = z.object({
+  commandId: id,
+  conversationId: id,
+  cursor: z.number().int().nonnegative(),
+  acceptedAt: time
+}).strict();
+export const eventPayloadSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("conversation"), conversation: conversationSchema }).strict(),
+  z.object({ kind: z.literal("run"), run: runSchema }).strict(),
+  z.object({ kind: z.literal("remove-run"), runId: id }).strict(),
+  z.object({ kind: z.literal("item"), item: timelineItemSchema }).strict(),
+  z.object({ kind: z.literal("request"), request: requestSchema }).strict()
+]);
+export const conversationEventSchema = z.object({
+  schemaVersion: z.literal(1), id, conversationId: id,
+  cursor: z.number().int().positive(), at: time, payload: eventPayloadSchema
+}).strict();

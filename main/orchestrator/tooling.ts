@@ -26,7 +26,6 @@ export function createToolingHelpers(deps: ToolingHelperDeps): ToolingHelpers {
         waitForExit: false
       })
     },
-    gemini: null,
     cursor: {
       buildExecution: (toolCommand, getShellExecution) => ({
         ...getShellExecution(`${escapeToolCommand(toolCommand)} logout && ${escapeToolCommand(toolCommand)} login`),
@@ -77,7 +76,6 @@ export function createToolingHelpers(deps: ToolingHelperDeps): ToolingHelpers {
       }));
     }
 
-    await deps.reconcileWorkspaceAgentsAfterCatalogRefresh();
   }
 
   async function refreshCatalog(options: RefreshCatalogOptions = {}): Promise<AppState> {
@@ -384,9 +382,15 @@ export function createToolingHelpers(deps: ToolingHelperDeps): ToolingHelpers {
     return deps.searchAgentSkills(toolId, query);
   }
 
+  /** Provider runtimes always run on this machine, so updates are checked against local detections. */
+  async function checkProviderUpdates() {
+    return deps.checkProviderUpdates(await deps.resolveLocalAgentCatalogDetections());
+  }
+
   return {
     refreshCatalog,
     scheduleCatalogRefresh,
+    checkProviderUpdates,
     installAgentTool,
     installToolSkill,
     removeToolSkill,

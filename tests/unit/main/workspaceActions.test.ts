@@ -1,4 +1,5 @@
 import { createDefaultWorkspaceSplitViewCollection, createDefaultWorkspaceTaskBoard } from "@shared/appTypes";
+import { createInitialState } from "@main/orchestrator/createAppInitialState";
 import { createWorkspaceActions, type WorkspaceActionsDependencies } from "@main/orchestrator/workspaceActions";
 import type { AppState, ProjectSummary, WorkspaceTaskBoard, WorkspaceSplitViewCollection } from "@shared/appTypes";
 import type { WorkspaceTarget } from "@main/types/internal.types";
@@ -49,7 +50,6 @@ function createWorkspaceActionsForTest(overrides: Partial<WorkspaceActionsDepend
     resolveLocalWorkspaceFilePath: async (_target, _projectId, filePath) => `${target.path}/${filePath}`,
     getWorkspaceImageMimeType: () => "image/png",
     listWorkspaceFilePaths: async () => [],
-    listImportedContextBundles: async () => [],
     listWorkspaceDirectories: async () => [],
     listWorkspaceSpecs: async () => [],
     listWorkspaceNotes: async () => [],
@@ -64,7 +64,6 @@ function createWorkspaceActionsForTest(overrides: Partial<WorkspaceActionsDepend
     listWorkspaceTaskPaths: async () => [],
     readWorkspaceSplitViewCollection: async () => workspaceSplitViewCollection,
     writeWorkspaceSplitViewCollection: async () => workspaceSplitViewCollection,
-    listArchivedExternalHarnessThreadKeys: async () => new Set(),
     archiveExternalHarnessThread: async () => undefined,
     saveProject: async () => undefined,
     ...overrides
@@ -90,6 +89,22 @@ test("checkoutWorkspaceBranch checks out the requested branch and refreshes stat
   await actions.checkoutWorkspaceBranch({ projectId: project.id, branch: "dev" });
 
   assert.deepEqual(calls, [["checkout", "dev"]]);
+  assert.equal(refreshCount, 1);
+});
+
+test("selectChangesCheckout points the open project's changes at the chosen checkout and refreshes", async () => {
+  let state: AppState = { ...createInitialState(), project, changesRoot: project.rootPath };
+  let refreshCount = 0;
+  const actions = createWorkspaceActionsForTest({
+    getSnapshot: () => state,
+    updateState: (updater) => { state = updater(state); },
+    refreshProjectState: async () => { refreshCount += 1; return state; }
+  });
+
+  await assert.rejects(actions.selectChangesCheckout({ projectId: "other", path: project.rootPath }), /Open this project/);
+  await actions.selectChangesCheckout({ projectId: project.id, path: project.rootPath });
+
+  assert.equal(state.changesRoot, project.rootPath);
   assert.equal(refreshCount, 1);
 });
 

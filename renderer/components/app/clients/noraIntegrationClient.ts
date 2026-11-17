@@ -1,5 +1,7 @@
 import type {
+  ChangeEntry,
   ForgeAddCommentPayload,
+  ForgeBranchChanges,
   ForgeBranchPullRequestStatus,
   ForgeCreatePullRequestPayload,
   ForgeOAuthProviderConfig,
@@ -21,6 +23,10 @@ export const noraIntegrationClient: IntegrationGateway = {
   getForgeOverview: (projectId: string, options: ForgeRequestOptions) => baseIntegrationClient.getForgeOverview(projectId, options),
   getForgeBranchPullRequestStatus: (projectId: string, branch: string, options: ForgeRequestOptions): Promise<ForgeBranchPullRequestStatus | null> =>
     baseIntegrationClient.getForgeBranchPullRequestStatus(projectId, branch, options),
+  getForgeBranchChanges: (projectId: string, checkoutPath: string, options: ForgeRequestOptions): Promise<ForgeBranchChanges | null> =>
+    baseIntegrationClient.getForgeBranchChanges(projectId, checkoutPath, options),
+  getForgeBranchDiff: (projectId: string, checkoutPath: string): Promise<ChangeEntry[] | null> =>
+    baseIntegrationClient.getForgeBranchDiff(projectId, checkoutPath),
   getForgeWorkItemDetail: (projectId: string, kind: ForgeWorkItemKind, number: number, options: ForgeRequestOptions) =>
     baseIntegrationClient.getForgeWorkItemDetail(projectId, kind, number, options),
   getForgeWorkflowRunDetail: (projectId: string, runId: number, options: ForgeRequestOptions) =>

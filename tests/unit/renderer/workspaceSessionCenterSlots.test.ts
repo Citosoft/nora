@@ -3,7 +3,7 @@ import {
   resolveActiveWorkspaceSessionCenterSlotId
 } from "@/components/app/logic/workspaceSessionCenterSlots";
 import { getDiffWorkspaceSessionTabId } from "@/components/app/logic/workspaceSessionTabs";
-import type { AiChatTabState, BrowserTabState, FileEditorTab, ForgeViewerTabState } from "@/components/app/types";
+import type { AiChatTabState, FileEditorTab, ForgeViewerTabState } from "@/components/app/types";
 import type { ChangeEntry } from "@shared/appTypes";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -28,16 +28,6 @@ const sampleFileTab: FileEditorTab = {
   isLoading: false,
   isSaving: false,
   errorMessage: null
-};
-
-const sampleBrowser: BrowserTabState = {
-  id: "browser-1",
-  projectId: "p1",
-  title: "Example",
-  history: ["https://example.com"],
-  historyIndex: 0,
-  faviconUrl: null,
-  status: "running"
 };
 
 const sampleAiChat: AiChatTabState = {
@@ -66,15 +56,13 @@ test("buildWorkspaceSessionCenterSlots orders synthetic and keyed slots", () => 
     selectedDiffChange: sampleChange,
     fileEditorTabCount: 1,
     forgeViewerTabCount: 1,
-    projectScopedAiChatTabs: [sampleAiChat],
-    projectScopedBrowserTabs: [sampleBrowser]
+    projectScopedAiChatTabs: [sampleAiChat]
   });
   const kinds = slots.map((s) => s.kind);
   assert.ok(kinds.includes("diff-file"));
   assert.ok(kinds.includes("file-editor"));
   assert.ok(kinds.includes("forge"));
   assert.ok(kinds.includes("ai-chat"));
-  assert.ok(kinds.includes("browser"));
   assert.equal(slots.find((s) => s.kind === "agent-terminal")?.id, "center:agent-terminal");
 });
 
@@ -87,12 +75,11 @@ test("resolveActiveWorkspaceSessionCenterSlotId prefers full diff over other sur
     activeFileEditorTab: sampleFileTab,
     forgeViewerTab: sampleForgeTab,
     aiChatTab: sampleAiChat,
-    browserTab: sampleBrowser
   });
   assert.equal(id, getDiffWorkspaceSessionTabId("__all_changes__"));
 });
 
-test("resolveActiveWorkspaceSessionCenterSlotId returns browser when focused", () => {
+test("resolveActiveWorkspaceSessionCenterSlotId returns the thread surface without an auxiliary selection", () => {
   const id = resolveActiveWorkspaceSessionCenterSlotId({
     activeWorkspaceContentTab: null,
     isDiffExpanded: false,
@@ -101,9 +88,8 @@ test("resolveActiveWorkspaceSessionCenterSlotId returns browser when focused", (
     activeFileEditorTab: null,
     forgeViewerTab: null,
     aiChatTab: null,
-    browserTab: sampleBrowser
   });
-  assert.equal(id, "browser-1");
+  assert.equal(id, "center:agent-terminal");
 });
 
 test("resolveActiveWorkspaceSessionCenterSlotId returns file editor surface when file tab is active", () => {
@@ -115,7 +101,6 @@ test("resolveActiveWorkspaceSessionCenterSlotId returns file editor surface when
     activeFileEditorTab: sampleFileTab,
     forgeViewerTab: null,
     aiChatTab: null,
-    browserTab: null
   });
   assert.equal(id, "center:file-editor");
 });

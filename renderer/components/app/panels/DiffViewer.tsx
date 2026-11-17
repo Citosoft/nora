@@ -40,7 +40,7 @@ export function DiffViewer({
       <div className="border-b border-border/50 px-4 py-3">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
               <FolderGit2 className="size-3.5" />
               {expanded ? "Expanded diff" : "Selected file"}
             </div>
@@ -49,7 +49,7 @@ export function DiffViewer({
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className={cn("shrink-0 text-xs font-semibold uppercase tracking-[0.12em]", changeTone(change.status))}>
+            <div className={cn("shrink-0 text-xs font-medium", changeTone(change.status))}>
               {change.status}
             </div>
             {expanded && onClose ? (

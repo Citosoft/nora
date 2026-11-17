@@ -81,16 +81,15 @@ export const assembleSignedInChromeShellComposeSlice = (s: SignedInChromeShellAs
       onOpenLinuxRelease: chromeShell.handleOpenLinuxRelease,
       onDismissLinuxUpdate: chromeShell.dismissLinuxUpdateNotice
     },
-    statusBarChrome: {
+    workspaceStatus: {
       entries: chromeShell.statusEntries,
       tools: core.snapshot.agentCatalog,
-      agentSkillCatalogs: core.snapshot.agentSkillCatalogs,
       activeWorkspaceBranch: gitBranches.activeBranch || null,
       activeWorkspaceWorktreeName,
       onInstallTool: chromeShell.installStatusBarTool,
-      onSwitchToolAccount: chromeShell.switchStatusBarToolAccount,
-      onOpenSkillsSettings: () => core.openSettingsPage("skills")
+      onSwitchToolAccount: chromeShell.switchStatusBarToolAccount
     },
+    updateIndicators: chromeShell.updateIndicators,
     settingsGroup: chromeShell.settingsGroup
   };
 };

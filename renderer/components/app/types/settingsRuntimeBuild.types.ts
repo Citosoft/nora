@@ -3,6 +3,7 @@ import type {
   AgentSkillSearchResult,
   AiProvider,
   AnalyticsRuntimeConfig,
+  AiSimpleTaskSettings,
   AppSettings,
   AppState,
   BrowserCookieProfileSummary,
@@ -63,6 +64,7 @@ export type BuildSettingsRuntimeValueDeps = {
   canPreviewMacTitleBarChrome: boolean;
   forceMacTitleBarPreview: boolean;
   updateForceMacTitleBarPreview: (enabled: boolean) => void;
+  updateLifecycle: (lifecycle: AppSettings["lifecycle"]) => Promise<void>;
   updateNotificationPreferences: (next: { agentCompletionNotificationsEnabled: boolean }) => Promise<void>;
   updateAnalyticsConsentStatus: (status: "granted" | "declined") => Promise<void>;
   analyticsAllowedInCurrentRun: boolean;
@@ -83,7 +85,7 @@ export type BuildSettingsRuntimeValueDeps = {
   updateAiModel: (provider: AiProvider, model: string) => Promise<void>;
   updateVoiceSettings: (voice: AppSettings["voice"]) => Promise<void>;
   updateAiSimpleTaskSettings: (
-    settings: Pick<AppSettings["ai"], "simpleTaskProvider" | "localLlmModelId">
+    settings: AiSimpleTaskSettings
   ) => Promise<void>;
   aiModelOptions: SettingsRuntimeValue["aiModelOptions"];
   aiModelLoading: SettingsRuntimeValue["aiModelLoading"];

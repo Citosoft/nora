@@ -1,5 +1,5 @@
+import type { BotSnapshot } from "./bots/bots.types";
 import type { AgentPromptSource } from "./agentContext.types";
-import type { AgentMode } from "./system.types";
 import type { WorktreeTarget } from "./session.types";
 import type { LoopOutputEvent } from "./loopOutput.types";
 
@@ -10,7 +10,15 @@ export interface LoopRoleDefinition {
   kind: LoopRoleKind;
   name: string;
   toolId: string;
+  /** Explicit provider instance; absent selects the installed instance for this kind. */
+  instanceId?: string | null;
+  /** Model id for the thread runtime, or null to select its default model. */
+  model: string | null;
   instructions: string;
+  /** Saved bot identity; resolved and frozen into run instructions at launch. */
+  botId?: string | null;
+  /** Earlier work stage to retry after a rejected or incomplete result; absent returns to stage 1. */
+  reworkStageId?: string | null;
 }
 
 export interface LoopLimits {
@@ -23,8 +31,9 @@ export interface LoopDefinition {
   id: string;
   projectId: string;
   name: string;
-  writer: LoopRoleDefinition;
-  reviewers: LoopRoleDefinition[];
+  /** Optional free-text summary of what the workflow is for; empty when unset. */
+  description: string;
+  stages: LoopRoleDefinition[];
   limits: LoopLimits;
   createdAt: string;
   updatedAt: string;
@@ -33,12 +42,10 @@ export interface LoopDefinition {
 export type LoopRunStatus = "preparing" | "running" | "pausing" | "paused" | "completed" | "cancelled";
 export type LoopRoleOutcome = "continue" | "complete" | "approve" | "changes_requested";
 
-export interface LoopRunRole {
+export interface LoopRunRole extends Omit<LoopRoleDefinition, "id"> {
   roleId: string;
-  kind: LoopRoleKind;
-  name: string;
-  toolId: string;
-  instructions: string;
+  botSnapshot?: BotSnapshot;
+  conversationId?: string;
 }
 
 export interface LoopRoleResult {
@@ -52,8 +59,7 @@ export interface LoopIteration {
   number: number;
   startedAt: string;
   completedAt: string | null;
-  writerResult: LoopRoleResult | null;
-  reviewerResults: LoopRoleResult[];
+  results: LoopRoleResult[];
 }
 
 export type LoopRunEventKind = "created" | "role_started" | "role_finished" | "paused" | "resumed" | "completed" | "cancelled" | "error";
@@ -116,8 +122,12 @@ export interface StartLoopRunPayload {
   launchSource?: AgentPromptSource;
 }
 
-export interface LoopManagedAgent {
-  agentId: string;
-  mode: AgentMode;
+export interface ReportLoopStagePayload {
+  projectId: string;
   runId: string;
+  roleId: string;
+  conversationId: string;
+  attemptId: string;
+  outcome: LoopRoleOutcome;
+  summary: string;
 }

@@ -1,3 +1,4 @@
+import type { SessionService } from "../../types/mainServices.types";
 import type { AgentContextEntry, AgentSession, AppState } from "@shared/appTypes";
 import type { SessionCreationHelpers } from "../../types/orchestratorSessionCreation.types";
 
@@ -16,6 +17,7 @@ type SessionLifecycleHelpers = ReturnType<
 
 export type SessionMainServiceDeps = {
   sessionCreation: SessionCreationHelpers;
+  createWorktree: SessionService["createWorktree"];
   localTerminal: LocalTerminalHelpers;
   sessionLifecycle: SessionLifecycleHelpers;
   getAgentTerminalActionDependencies: () => AgentTerminalActionDeps;

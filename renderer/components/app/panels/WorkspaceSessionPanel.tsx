@@ -1,44 +1,48 @@
 import { WorkspaceSessionProvider } from "@/components/app/context/workspaceSessionContext";
 import {
-  useWorkspaceSessionPanelActions,
-  useWorkspaceSessionPanelData
+useWorkspaceSessionPanelActions,
+useWorkspaceSessionPanelData
 } from "@/components/app/context/workspaceSessionPanelContext";
+import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
+import { useNativeRuntimePorts } from "@/components/app/hooks/useNativeRuntimePorts";
+import { useWorkspaceNavigation } from "@/components/app/hooks/useWorkspaceNavigation";
+import { backFromForgeViewer } from "@/components/app/logic/forgeViewerNavigation";
+import { useThreadWorkspaceSnapshot } from "@/components/app/hooks/useThreadWorkspaceSnapshot";
 import { isAgentBusyAt } from "@/components/app/logic/agentBusy";
-import { createQuickTerminalDialogDefaults, createQuickTerminalPayload } from "@/components/app/logic/terminalQuickLaunch";
+import { performWorkspaceSessionTabClose } from "@/components/app/logic/performWorkspaceSessionTabClose";
+import { createQuickTerminalDialogDefaults,createQuickTerminalPayload } from "@/components/app/logic/terminalQuickLaunch";
 import { resolvePreferredTerminalShellId } from "@/components/app/logic/terminalShellPreferences";
 import { isWorkspaceSpecMarkdownPath } from "@/components/app/logic/workspaceNoraPaths";
 import {
-  buildWorkspaceSessionCenterSlots,
-  resolveActiveWorkspaceSessionCenterSlotId
+buildWorkspaceSessionCenterSlots,
+resolveActiveWorkspaceSessionCenterSlotId
 } from "@/components/app/logic/workspaceSessionCenterSlots";
-import { performWorkspaceSessionTabClose } from "@/components/app/logic/performWorkspaceSessionTabClose";
 import {
-  getActiveWorkspaceSessionTabId,
-  getWorkspaceSessionTabId,
-  getWorkspaceSessionTabToFocusAfterClose,
-  getWorkspaceSessionTabs
-} from "@/components/app/logic/workspaceSessionTabs";
-import {
-  getAgentRenderSignature,
-  getBrowserTabsSignature,
-  getProjectScriptsSignature,
-  getTerminalRenderSignature,
-  getTerminalShellsSignature,
-  getToolsSignature,
-  getWorkspaceContextSignature
+getAgentRenderSignature,
+getBrowserTabsSignature,
+getProjectScriptsSignature,
+getTerminalShellsSignature,
+getToolsSignature,
+getWorkspaceContextSignature
 } from "@/components/app/logic/workspaceSessionSignatures";
-import { SessionTabPane, SessionTabStack } from "@/components/app/panels/SessionTabStack";
+import {
+getActiveWorkspaceSessionTabId,
+getWorkspaceSessionTabId,
+getWorkspaceSessionTabToFocusAfterClose,
+getWorkspaceSessionTabs
+} from "@/components/app/logic/workspaceSessionTabs";
+import { SessionTabPane,SessionTabStack } from "@/components/app/panels/SessionTabStack";
+import { buildThreadSessionTabs } from "@/components/app/logic/thread-workspace/sessionTabs";
 import { WorkspaceSessionCenterSlotContent } from "@/components/app/panels/WorkspaceSessionCenterSlotContent";
 import { WorkspaceSessionTabs } from "@/components/app/panels/WorkspaceSessionTabs";
 import { WorkspaceSessionToolbar } from "@/components/app/panels/WorkspaceSessionToolbar";
 import { WorkspaceSplitViewPanel } from "@/components/app/panels/WorkspaceSplitViewPanel";
-import type { CreateAgentDialogDefaults, CreateTerminalDialogDefaults } from "@/components/app/types";
+import type { CreateTerminalDialogDefaults } from "@/components/app/types";
 import type { FileEditorAgentSendTarget } from "@/components/app/types/fileEditor.types";
 import type { WorkspaceSessionTab } from "@/components/app/types/workflow.types";
 import type { CheckoutWorkspaceBranchPayload } from "@shared/appTypes";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
+import { useCallback,useEffect,useMemo,useRef,useState } from "react";
 
 function assertUnreachable(value: never): never {
   throw new Error(`Unhandled workspace session tab kind: ${String(value)}`);
@@ -60,11 +64,13 @@ function getTabOrderKey(tab: WorkspaceSessionTab): string {
 }
 
 export function WorkspaceSessionPanel() {
+  const native = useNativeRuntimePorts();
+  const { openTool } = useWorkspaceNavigation();
+  const threadState = useThreadWorkspaceSnapshot(native.store);
   const {
     project,
     workspace,
     agent,
-    terminal,
     browserTab,
     browserTabs,
     aiChatTab,
@@ -128,7 +134,7 @@ export function WorkspaceSessionPanel() {
     onRefreshForgeItem,
     onForgeAction,
     onForgeCommentSubmit,
-    onSpawnIssueAgent,
+    onStartIssueThread,
     onSpawnReviewAgent,
     onFocusFileEditorTab,
     onCloseFileEditorTab,
@@ -152,11 +158,6 @@ export function WorkspaceSessionPanel() {
   const stableProjectScripts = useMemo(() => projectScripts, [getProjectScriptsSignature(projectScripts)]);
   const stableTools = useMemo(() => tools, [getToolsSignature(tools)]);
   const stableBrowserTabs = useMemo(() => browserTabs, [getBrowserTabsSignature(browserTabs)]);
-  const projectScopedBrowserTabs = useMemo(
-    () =>
-      !project?.id ? stableBrowserTabs : stableBrowserTabs.filter((t) => t.projectId === project.id),
-    [project?.id, stableBrowserTabs]
-  );
   const projectScopedAiChatTabs = useMemo(
     () => (!project?.id ? aiChatTabs : aiChatTabs.filter((t) => t.projectId === project.id)),
     [aiChatTabs, project?.id]
@@ -232,7 +233,7 @@ export function WorkspaceSessionPanel() {
 
   const chooseProject = useCallback(() => chooseProjectRef.current(), []);
   const refreshCatalog = useCallback(() => refreshCatalogRef.current(), []);
-  const createInWorkspace = useCallback((defaults: CreateAgentDialogDefaults) => createInWorkspaceRef.current(defaults), []);
+  const createInWorkspace = useCallback((defaults: import("@/components/app/types/thread-workspace/runtime.types").ThreadLaunchInput) => createInWorkspaceRef.current(defaults), []);
   const openCreateTerminal = useCallback((defaults: CreateTerminalDialogDefaults) => openCreateTerminalRef.current(defaults), []);
   const openWorkspaceTerminalPresets = useCallback((projectId: string) => openWorkspaceTerminalPresetsRef.current(projectId), []);
   const openWorkspaceBrowser = useCallback((projectId: string, url?: string) => openWorkspaceBrowserRef.current(projectId, url), []);
@@ -261,11 +262,10 @@ export function WorkspaceSessionPanel() {
   const activeSpecEditorTab =
     activeFileEditorTab && isWorkspaceSpecMarkdownPath(activeFileEditorTab.path) ? activeFileEditorTab : null;
   const stableAgent = useMemo(() => agent, [getAgentRenderSignature(agent)]);
-  const stableTerminal = useMemo(() => terminal, [getTerminalRenderSignature(terminal)]);
   const expandedDiffPath = isDiffExpanded
     ? (isFullDiffExpanded ? "__all_changes__" : (selectedDiffChange ? selectedDiffChange.path : null))
     : null;
-  const sessionTabs = getWorkspaceSessionTabs(
+  const toolTabs = getWorkspaceSessionTabs(
     stableWorkspace,
     stableBrowserTabs,
     aiChatTabs,
@@ -275,6 +275,9 @@ export function WorkspaceSessionPanel() {
     expandedDiffPath,
     isFullDiffExpanded ? (snapshot?.changes.length ?? 0) : undefined
   );
+  const nativeWorkspaceId = threadState.boot.workspaces.find((entry) => entry.shellProjectId === workspace?.project.id)?.id;
+  const openDocuments = threadState.layout.documents.filter((entry) => entry.workspaceId === nativeWorkspaceId && threadState.layout.openIds.includes(entry.id));
+  const sessionTabs: WorkspaceSessionTab[] = [...buildThreadSessionTabs(threadState, openDocuments, nativeWorkspaceId ?? null), ...toolTabs.filter((entry) => entry.kind !== "agent" && entry.kind !== "ai-chat" && entry.kind !== "browser" && entry.kind !== "terminal")];
   const [closingTerminalTabIds, setClosingTerminalTabIds] = useState<string[]>([]);
   const sessionTabOrderRef = useRef<string[]>([]);
   useEffect(() => {
@@ -322,28 +325,23 @@ export function WorkspaceSessionPanel() {
       .filter((tab): tab is WorkspaceSessionTab => Boolean(tab));
   }, [visibleSessionTabs]);
   const preferredTerminalShellId = resolvePreferredTerminalShellId(stableTerminalShells);
-  const activeTabId = getActiveWorkspaceSessionTabId({
+  const activeToolTabId = getActiveWorkspaceSessionTabId({
     activeViewId: activeView?.id ?? null,
     activeWorkspaceContentTab,
     activeFileEditorPath: activeFileEditorTab?.path ?? null,
     expandedDiffPath,
     activeForgeViewerTabId: forgeViewerTab?.id ?? null,
     activeAiChatTabId: aiChatTab?.id ?? null,
-    activeBrowserTabId: browserTab?.id ?? null,
+    activeBrowserTabId: null,
     activeAgentId: agent?.id ?? null,
-    activeTerminalId: terminal?.id ?? null
+    activeTerminalId: null
   });
-  const fileEditorAgentSendTargets = useMemo((): FileEditorAgentSendTarget[] => {
-    if (!stableWorkspace) {
-      return [];
-    }
-    return stableWorkspace.agents
-      .filter((a) => a.status === "running")
-      .map((a) => ({
-        id: a.id,
-        label: a.name.trim() || a.toolLabel
-      }));
-  }, [stableWorkspace]);
+  const showNativeThread = !!threadState.layout.activeId && !activeWorkspaceContentTab && !forgeViewerTab && !activeView;
+  const activeTabId = showNativeThread ? threadState.layout.activeId : activeToolTabId;
+  const fileEditorAgentSendTargets = useMemo<FileEditorAgentSendTarget[]>(() => threadState.summaries
+    .filter((entry) => !entry.conversation.archivedAt && entry.conversation.workspace.projectId === nativeWorkspaceId)
+    .map((entry) => ({ id: entry.conversation.id, label: entry.conversation.title })), [threadState.summaries, nativeWorkspaceId]);
+
   const handleExitFileEditorForAgentHandoff = useCallback(() => {
     onSetActiveWorkspaceContentTab(null);
     onExitSplitView();
@@ -364,15 +362,11 @@ export function WorkspaceSessionPanel() {
       commentLoading: forgeCommentLoading,
       onOpenUrl: onOpenForgeUrl,
       onOpenInViewer: null as (() => void) | null,
-      onBackToList: () => {
-        if (forgeViewerTab) {
-          onCloseForgeViewerTab(forgeViewerTab.id);
-        }
-      },
+      onBackToList: () => backFromForgeViewer({ tab: forgeViewerTab, openTool, closeViewer: onCloseForgeViewerTab }),
       onRefreshDetail: onRefreshForgeItem,
       onAction: onForgeAction,
       onCommentSubmit: onForgeCommentSubmit,
-      onSpawnIssueAgent: onSpawnIssueAgent,
+      onStartIssueThread: onStartIssueThread,
       onSpawnReviewAgent: onSpawnReviewAgent
     }),
     [
@@ -382,12 +376,13 @@ export function WorkspaceSessionPanel() {
       forgeDetailErrorMessage,
       forgeDetailLoading,
       forgeViewerTab,
+      openTool,
       onCloseForgeViewerTab,
       onForgeAction,
       onForgeCommentSubmit,
       onOpenForgeUrl,
       onRefreshForgeItem,
-      onSpawnIssueAgent,
+      onStartIssueThread,
       onSpawnReviewAgent
     ]
   );
@@ -401,8 +396,7 @@ export function WorkspaceSessionPanel() {
         selectedDiffChange,
         fileEditorTabCount: fileEditorState?.tabs.length ?? 0,
         forgeViewerTabCount: forgeViewerTabs.length,
-        projectScopedAiChatTabs,
-        projectScopedBrowserTabs
+        projectScopedAiChatTabs
       }),
     [
       activeWorkspaceContentTab,
@@ -411,7 +405,6 @@ export function WorkspaceSessionPanel() {
       isDiffExpanded,
       isFullDiffExpanded,
       projectScopedAiChatTabs,
-      projectScopedBrowserTabs,
       selectedDiffChange
     ]
   );
@@ -426,7 +419,6 @@ export function WorkspaceSessionPanel() {
         activeFileEditorTab,
         forgeViewerTab,
         aiChatTab,
-        browserTab
       }),
     [
       activeFileEditorTab,
@@ -473,6 +465,8 @@ export function WorkspaceSessionPanel() {
     browserTabs: stableBrowserTabs
   };
   const handleSelectTab = (tab: WorkspaceSessionTab): void => {
+    if (tab.kind === "thread") { onExitSplitView(); onSetActiveWorkspaceContentTab(null); native.store.focusDocument(tab.id); return; }
+    native.store.deactivate();
     switch (tab.kind) {
       case "agent":
         onSetActiveWorkspaceContentTab(null);
@@ -530,6 +524,7 @@ export function WorkspaceSessionPanel() {
     };
 
     performWorkspaceSessionTabClose(tab, {
+      closeThread: (id) => native.store.closeDocument(id),
       closeAgent: (agentId) => {
         onDestroyRequest(agentId);
       },
@@ -657,7 +652,6 @@ export function WorkspaceSessionPanel() {
             onUpdateAiChatTabTitle={onUpdateAiChatTabTitle}
             onUpdateAiChatTabMessages={onUpdateAiChatTabMessages}
             stableAgent={stableAgent}
-            stableTerminal={stableTerminal}
           />
         </SessionTabPane>
       ))}
@@ -676,12 +670,12 @@ export function WorkspaceSessionPanel() {
             onSelect={handleSelectTab}
             onClose={handleCloseTab}
             onCloseMany={handleCloseTabs}
-            onCreateAgent={(toolId) => {
+            onCreateThread={() => {
               if (!workspace) {
                 return;
               }
               onExitSplitView();
-              onCreateInWorkspace({ toolId });
+              onCreateInWorkspace({});
             }}
             onCreateTerminalFromDefaults={() => {
               if (!workspace || !preferredTerminalShellId) {
@@ -704,13 +698,7 @@ export function WorkspaceSessionPanel() {
               onExitSplitView();
               onOpenWorkspaceBrowser(workspace.project.id);
             }}
-            onCreateAiChat={() => {
-              if (!workspace) {
-                return;
-              }
-              onExitSplitView();
-              onOpenAiChat(workspace.project.id);
-            }}
+
           />
         ) : null}
         {activeView ? (

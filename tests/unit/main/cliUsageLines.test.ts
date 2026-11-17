@@ -11,8 +11,8 @@ test("parseCliUsageLines reads Codex /status limit lines and the signed-in email
   ]);
 
   assert.deepEqual(windows, [
-    { id: "hourly", label: "Hourly", shortLabel: "H", percentLeft: 72, resetsLabel: "14:30" },
-    { id: "weekly", label: "Weekly", shortLabel: "W", percentLeft: 40, resetsLabel: "09:00 on 12 Oct" }
+    { id: "hourly", period: "session", label: "5-hour", shortLabel: "H", percentLeft: 72, resetsLabel: "14:30" },
+    { id: "weekly", period: "weekly", label: "Weekly", shortLabel: "W", percentLeft: 40, resetsLabel: "09:00 on 12 Oct" }
   ]);
   assert.equal(account, "dev@example.com");
 });
@@ -26,7 +26,7 @@ test("createToolUsageInfo appends window and notice lines to the transcript", ()
     status: "available",
     title: "Usage",
     lines: ["User: dev@example.com"],
-    windows: [{ id: "monthly", label: "Monthly", shortLabel: "M", percentLeft: 87, resetsLabel: "Sat 31 Oct 09:29" }],
+    windows: [{ id: "monthly", period: "monthly", label: "Monthly", shortLabel: "M", percentLeft: 87, resetsLabel: "Sat 31 Oct 09:29" }],
     notice: "Heads up",
     fetchedAt: "2026-10-07T00:00:00.000Z"
   });

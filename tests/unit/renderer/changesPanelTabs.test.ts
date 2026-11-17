@@ -20,13 +20,13 @@ function createProject(versionControl: ProjectSummary["versionControl"]): Projec
 }
 
 test("listAvailableChangesPanelTabs hides git-only tabs for plain folders", () => {
-  assert.deepEqual(listAvailableChangesPanelTabs(createProject("none")), ["files", "context"]);
-  assert.deepEqual(listAvailableChangesPanelTabs(createProject("git")), ["git", "files", "context", "vercel", "forge"]);
-  assert.deepEqual(listAvailableChangesPanelTabs(null), ["git", "files", "context", "vercel", "forge"]);
+  assert.deepEqual(listAvailableChangesPanelTabs(createProject("none")), ["files", "instructions", "memory"]);
+  assert.deepEqual(listAvailableChangesPanelTabs(createProject("git")), ["git", "files", "instructions", "memory", "vercel", "forge"]);
+  assert.deepEqual(listAvailableChangesPanelTabs(null), ["git", "files", "instructions", "memory", "vercel", "forge"]);
 });
 
 test("resolveAvailableChangesPanelTab falls back to Files for a hidden remembered tab", () => {
   const plainTabs = listAvailableChangesPanelTabs(createProject("none"));
   assert.equal(resolveAvailableChangesPanelTab("vercel", plainTabs), "files");
-  assert.equal(resolveAvailableChangesPanelTab("context", plainTabs), "context");
+  assert.equal(resolveAvailableChangesPanelTab("memory", plainTabs), "memory");
 });

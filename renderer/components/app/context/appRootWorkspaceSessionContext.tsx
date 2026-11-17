@@ -95,8 +95,6 @@ export function AppRootWorkspaceSessionProvider({
   });
   const derived = useAppRootSignedInSecondaryWiring({
     uiStateDestroyAgentId: uiState.destroyAgentId,
-    focusedAgent: layout.focusedAgent,
-    focusedTerminal: layout.focusedTerminal,
     isRemoteMountedWorkspace,
     workspaceTasks: resources.workspaceTasks,
     workspaceSpecs: resources.workspaceSpecs,
@@ -112,6 +110,7 @@ export function AppRootWorkspaceSessionProvider({
     workspaceFileTree: resources.workspaceFileTree
   });
   const {
+    createTaskDialog,
     taskEditorState,
     setTaskEditorState,
     isCreatingSpec,
@@ -136,9 +135,9 @@ export function AppRootWorkspaceSessionProvider({
     handleDeleteTask,
     handleDeleteSpec,
     handleDeleteNote,
-    handleSpawnTaskAgent,
-    handleSpawnAgentsForTasks,
-    generateWorkspaceTasksWithAgent,
+    handleStartTaskThread,
+    handleStartTaskThreads,
+    generateWorkspaceTasks,
     handleCreateAgentFromDialog
   } = useWorkspaceContentController({
     workspaceTasks: resources.workspaceTasks,
@@ -165,6 +164,7 @@ export function AppRootWorkspaceSessionProvider({
     trackAgentCreation
   });
   const content: UseWorkspaceContentControllerResult = {
+    createTaskDialog,
     taskEditorState,
     setTaskEditorState,
     isCreatingSpec,
@@ -189,9 +189,9 @@ export function AppRootWorkspaceSessionProvider({
     handleDeleteTask,
     handleDeleteSpec,
     handleDeleteNote,
-    handleSpawnTaskAgent,
-    handleSpawnAgentsForTasks,
-    generateWorkspaceTasksWithAgent,
+    handleStartTaskThread,
+    handleStartTaskThreads,
+    generateWorkspaceTasks,
     handleCreateAgentFromDialog
   };
   const fileMutations = useWorkspaceFileMutations({

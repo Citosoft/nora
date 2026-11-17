@@ -1,5 +1,5 @@
 import type { LocalLlmModelId } from "@shared/appTypes";
-import type { LocalTextGenerationRequest } from "@main/types/localTextGeneration.types";
+import type { TextGenerationRequest } from "@main/types/ai/textGeneration.types";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { getLocalAiModelStatus, getLocalLlmModelPath } from "./localAiModels";
@@ -13,7 +13,7 @@ const GENERATION_TIMEOUT_MS = 90_000;
 
 export async function generateLocalText(
   modelId: LocalLlmModelId,
-  request: LocalTextGenerationRequest,
+  request: TextGenerationRequest,
   maxOutputTokens = DEFAULT_MAX_OUTPUT_TOKENS
 ): Promise<string> {
   const status = await getLocalAiModelStatus(modelId);
@@ -39,6 +39,8 @@ export async function generateLocalText(
       maxBuffer: 1024 * 1024 * 4,
       encoding: "utf8",
       env: buildLocalLlamaRuntimeEnv(executablePath),
+      signal: request.signal,
+      killSignal: "SIGKILL",
       timeout: GENERATION_TIMEOUT_MS
     });
     const text = extractLlamaCliStdout(stdout);
@@ -58,7 +60,7 @@ export async function generateLocalText(
 function buildLlamaCliInvocation(
   executablePath: string,
   modelPath: string,
-  request: LocalTextGenerationRequest,
+  request: TextGenerationRequest,
   maxOutputTokens: number
 ): { executablePath: string; args: string[] } {
   return {

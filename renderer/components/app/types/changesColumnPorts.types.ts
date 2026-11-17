@@ -1,3 +1,5 @@
+import type { InstructionsWorkspace } from "@/components/app/types/workspaceInstructions.types";
+import type { NativeWorkspace } from "@shared/types/personalization/workspaces.types";
 import type {
   AppShellSignedInChangesFileHandlersSources,
   AppShellSignedInForgeSources,
@@ -9,6 +11,8 @@ import type { ChangesPanelSectionBuildDeps } from "@/components/app/types/change
 
 /** Read surface for the changes sidebar column (git / Forge / Vercel wiring). */
 export type ChangesColumnPorts = {
+  instructionsWorkspace: InstructionsWorkspace | null;
+  memoryWorkspace: NativeWorkspace | null;
   forge: AppShellSignedInForgeSources;
   forgeWorkItemMutators: AppShellSignedInForgeWorkItemMutatorSources;
   vercel: AppShellSignedInVercelSources;

@@ -2,6 +2,7 @@ node_modules/
 workspaces/
 dist/
 dist-tests/
+dist-native/
 .DS_Store
 out/
 .env

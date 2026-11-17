@@ -1,14 +1,12 @@
 import type {
-  AgentContextSelection,
   AppState,
   ExternalHarnessContextRef,
-  ExternalHarnessSessionSummary,
-  ImportedContextBundleSummary,
   ProjectSummary,
   ProjectVersionControl,
   TerminalPreset,
   WorkspaceGitStatusSummary,
   SetWorkspaceUpstreamPayload,
+  SelectChangesCheckoutPayload,
   WorkspaceNoteSummary,
   WorkspacePathStatResult,
   WorkspaceSearchRequest,
@@ -18,10 +16,12 @@ import type {
   WorkspaceTaskBoard,
   WorkspaceTaskSummary
 } from "@shared/appTypes";
+import { selectChangesCheckout } from "./changesCheckout";
 import { assertGitProject, isGitProject } from "@shared/projectVersionControl";
 import { createTaskDraft, deriveTaskTitle } from "@shared/taskDraft";
 import { resolveWorkspaceFileViewKind } from "@shared/workspaceFileViewKind";
 import type { WorkspaceImageFileContent } from "@shared/types/workspaceFile.types";
+import { pickWorkspaceLogoPaths } from "../helpers/workspaceLogo";
 import fs from "node:fs/promises";
 import { getProjectFile } from "../noraPaths";
 import type { WorkspaceTarget } from "../types/internal.types";
@@ -30,11 +30,6 @@ import {
   resolveGitTrackingBranch,
   setGitTrackingBranch
 } from "../helpers/gitTrackingBranch";
-import {
-  composeExternalHarnessContextSelections,
-  listExternalHarnessContextSessions,
-  resolveWorktreeIdForWorkspacePath
-} from "./harness-context/listExternalHarnessContextSessions";
 
 export type WorkspaceActionsDependencies = {
   resolveProjectSummaryById: (projectId: string) => Promise<ProjectSummary>;
@@ -54,7 +49,6 @@ export type WorkspaceActionsDependencies = {
   resolveLocalWorkspaceFilePath: (target: WorkspaceTarget, projectId: string, filePath: string) => Promise<string>;
   getWorkspaceImageMimeType: (filePath: string) => string;
   listWorkspaceFilePaths: (target: WorkspaceTarget, versionControl: ProjectVersionControl) => Promise<string[]>;
-  listImportedContextBundles: (target: WorkspaceTarget, projectId: string) => Promise<ImportedContextBundleSummary[]>;
   listWorkspaceDirectories: (target: WorkspaceTarget, versionControl: ProjectVersionControl) => Promise<string[]>;
   listWorkspaceSpecs: (target: WorkspaceTarget, projectId: string) => Promise<WorkspaceSpecSummary[]>;
   listWorkspaceNotes: (target: WorkspaceTarget, projectId: string) => Promise<WorkspaceNoteSummary[]>;
@@ -83,10 +77,12 @@ export type WorkspaceActionsDependencies = {
     projectId: string,
     collection: WorkspaceSplitViewCollection
   ) => Promise<WorkspaceSplitViewCollection>;
-  listArchivedExternalHarnessThreadKeys: (projectId: string) => Promise<Set<string>>;
   archiveExternalHarnessThread: (projectId: string, ref: ExternalHarnessContextRef, archivedAt: string) => Promise<void>;
   saveProject: (project: ProjectSummary) => Promise<void>;
 };
+
+/** Logos are shown at avatar size; anything larger is artwork, not an icon, and not worth sending over IPC. */
+const MAX_WORKSPACE_LOGO_BYTES = 512 * 1024;
 
 const EMPTY_WORKSPACE_GIT_STATUS_SUMMARY: WorkspaceGitStatusSummary = {
   branch: null,
@@ -124,6 +120,23 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
     };
   };
 
+  /** The project's own logo for its avatar, or null when none is found; never throws. */
+  const readWorkspaceLogo = async (projectId: string): Promise<WorkspaceImageFileContent | null> => {
+    try {
+      const project = await deps.resolveProjectSummaryById(projectId);
+      const target = deps.getProjectTarget(project);
+      for (const path of pickWorkspaceLogoPaths(await deps.listWorkspaceFilePaths(target, project.versionControl))) {
+        try {
+          const fileBuffer = await deps.readWorkspaceBinaryFile(target, project.id, path);
+          if (!fileBuffer.length || fileBuffer.length > MAX_WORKSPACE_LOGO_BYTES) continue;
+          const mimeType = deps.getWorkspaceImageMimeType(path);
+          return { mimeType, dataUrl: `data:${mimeType};base64,${fileBuffer.toString("base64")}` };
+        } catch { continue; }
+      }
+    } catch { /* An unavailable or remote-disconnected workspace simply keeps its initials. */ }
+    return null;
+  };
+
   const resolveWorkspaceFileForExternalOpen = async (payload: { projectId: string; path: string; rootPath?: string }): Promise<string> => {
     // Only document formats Nora cannot render may be handed to the OS, so this can never launch scripts or apps.
     if (resolveWorkspaceFileViewKind(payload.path) !== "external") {
@@ -143,54 +156,12 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
     return deps.listWorkspaceDirectories(deps.resolveWorkspaceFileTarget(project, rootPath), project.versionControl);
   };
 
-  const listImportedContextBundlesByProject = async (
-    projectId: string,
-    rootPath?: string
-  ): Promise<ImportedContextBundleSummary[]> => {
-    const project = await deps.resolveProjectSummaryById(projectId);
-    return deps.listImportedContextBundles(deps.resolveWorkspaceFileTarget(project, rootPath), project.id);
-  };
-
-  const listExternalHarnessContextSessionsByProject = async (
-    projectId: string,
-    rootPath?: string
-  ): Promise<ExternalHarnessSessionSummary[]> => {
-    const project = await deps.resolveProjectSummaryById(projectId);
-    const target = deps.resolveWorkspaceFileTarget(project, rootPath);
-    const snapshot = deps.getSnapshot();
-    const worktreeId =
-      resolveWorktreeIdForWorkspacePath(snapshot, project.id, target.path) ??
-      snapshot.worktrees.find((worktree) => worktree.projectId === project.id)?.id ??
-      "";
-    return listExternalHarnessContextSessions({
-      workspaceAbsolutePath: target.path,
-      projectId: project.id,
-      worktreeId,
-      agents: snapshot.agents,
-      agentCatalog: snapshot.agentCatalog,
-      archivedThreadKeys: await deps.listArchivedExternalHarnessThreadKeys(project.id),
-      isRemoteWorkspace: target.location?.kind === "ssh"
-    });
-  };
-
   const archiveExternalHarnessThreadByProject = async (
     projectId: string,
     ref: ExternalHarnessContextRef
   ): Promise<void> => {
     await deps.resolveProjectSummaryById(projectId);
     await deps.archiveExternalHarnessThread(projectId, ref, deps.nowIso());
-  };
-
-  const composeExternalHarnessContextSelectionsByProject = async (
-    projectId: string,
-    ref: ExternalHarnessContextRef
-  ): Promise<AgentContextSelection[]> => {
-    const snapshot = deps.getSnapshot();
-    const worktreeId =
-      resolveWorktreeIdForWorkspacePath(snapshot, projectId, ref.workspacePath) ??
-      snapshot.worktrees.find((worktree) => worktree.projectId === projectId)?.id ??
-      "";
-    return composeExternalHarnessContextSelections({ ref, projectId, worktreeId });
   };
 
   const listWorkspaceSpecsByProject = async (projectId: string): Promise<WorkspaceSpecSummary[]> => {
@@ -286,6 +257,14 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
     return deps.refreshProjectState();
   };
 
+  const selectChangesCheckoutForProject = async (payload: SelectChangesCheckoutPayload): Promise<AppState> => {
+    if (deps.getSnapshot().project?.id !== payload.projectId) {
+      throw new Error("Open this project before choosing which checkout to review.");
+    }
+    deps.updateState((currentState) => selectChangesCheckout(currentState, payload.path));
+    return deps.refreshProjectState();
+  };
+
   const setWorkspaceUpstream = async (payload: SetWorkspaceUpstreamPayload): Promise<WorkspaceGitStatusSummary> => {
     const project = await deps.resolveProjectSummaryById(payload.projectId);
     assertGitProject(project);
@@ -316,6 +295,28 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
     return deps.writeWorkspaceTaskBoard(deps.getProjectTarget(project), project.id, board);
   };
 
+  /** Writes a task file under `.nora/tasks` and places it on the board; returns its workspace-relative path. */
+  const writeWorkspaceTask = async (project: Awaited<ReturnType<typeof deps.resolveProjectSummaryById>>, title: string, content: string): Promise<string> => {
+    const slug = deps.slugify(title) || "task";
+    const taskPath = `.nora/tasks/${slug}-${Date.now().toString(36)}.md`;
+    const target = deps.getProjectTarget(project);
+    await deps.writeWorkspaceTextFile(target, project.id, taskPath, content);
+    const board = await deps.readWorkspaceTaskBoard(target, project.id);
+    await deps.writeWorkspaceTaskBoard(target, project.id, deps.addTaskToWorkspaceTaskBoard(board, taskPath), [
+      ...(await deps.listWorkspaceTaskPaths(target, project.id)),
+      taskPath
+    ]);
+    return taskPath;
+  };
+
+  const createWorkspaceTaskFile = async (projectId: string, title: string, content: string): Promise<string> => {
+    const project = await deps.resolveProjectSummaryById(projectId);
+    if (!title.trim()) throw new Error("Task title cannot be empty.");
+    const taskPath = await writeWorkspaceTask(project, title.trim(), content);
+    await deps.refreshWorkspaceSummaries("createWorkspaceTaskFile");
+    return taskPath;
+  };
+
   const createWorkspaceTask = async (projectId: string, taskDescription: string): Promise<AppState> => {
     const project = await deps.resolveProjectSummaryById(projectId);
     const trimmedDescription = taskDescription.trim();
@@ -324,16 +325,7 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
     }
 
     const title = deriveTaskTitle(createTaskDraft(trimmedDescription), trimmedDescription);
-    const slug = deps.slugify(title) || "task";
-    const taskPath = `.nora/tasks/${slug}-${Date.now().toString(36)}.md`;
-    const target = deps.getProjectTarget(project);
-
-    await deps.writeWorkspaceTextFile(target, project.id, taskPath, createTaskDraft(title));
-    const board = await deps.readWorkspaceTaskBoard(target, project.id);
-    await deps.writeWorkspaceTaskBoard(target, project.id, deps.addTaskToWorkspaceTaskBoard(board, taskPath), [
-      ...(await deps.listWorkspaceTaskPaths(target, project.id)),
-      taskPath
-    ]);
+    const taskPath = await writeWorkspaceTask(project, title, createTaskDraft(title));
 
     if (deps.getSnapshot().project?.id === project.id) {
       deps.setState({
@@ -390,12 +382,10 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
     readWorkspaceFile,
     resolveWorkspaceStatePath,
     readWorkspaceImageFile,
+    readWorkspaceLogo,
     resolveWorkspaceFileForExternalOpen,
     listWorkspaceFiles,
-    listImportedContextBundlesByProject,
-    listExternalHarnessContextSessionsByProject,
     archiveExternalHarnessThreadByProject,
-    composeExternalHarnessContextSelectionsByProject,
     listWorkspaceDirectoriesByProject,
     listWorkspaceSpecsByProject,
     listWorkspaceNotesByProject,
@@ -403,11 +393,13 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
     statWorkspacePathByProject,
     getWorkspaceGitStatusSummary,
     checkoutWorkspaceBranch,
+    selectChangesCheckout: selectChangesCheckoutForProject,
     setWorkspaceUpstream,
     listWorkspaceTasksByProject,
     getWorkspaceTaskBoard,
     saveWorkspaceTaskBoard,
     createWorkspaceTask,
+    createWorkspaceTaskFile,
     getWorkspaceSplitViews,
     saveWorkspaceSplitViews,
     saveWorkspaceTerminalPresets

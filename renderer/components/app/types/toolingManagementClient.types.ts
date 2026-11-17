@@ -3,6 +3,7 @@ import type { ToolingGateway } from "@shared/ipc/types/toolingGateway.types";
 export type ToolingManagementGatewayDeps = Pick<
   ToolingGateway,
   | "refreshCatalog"
+  | "checkProviderUpdates"
   | "installTool"
   | "removeTool"
   | "switchToolAccount"
@@ -13,6 +14,7 @@ export type ToolingManagementGatewayDeps = Pick<
 
 export interface ToolingManagementClient {
   refreshToolCatalog(): ReturnType<ToolingGateway["refreshCatalog"]>;
+  checkProviderUpdates: ToolingGateway["checkProviderUpdates"];
   installManagedTool: ToolingGateway["installTool"];
   removeManagedTool: ToolingGateway["removeTool"];
   switchManagedToolAccount(toolId: string): ReturnType<ToolingGateway["switchToolAccount"]>;

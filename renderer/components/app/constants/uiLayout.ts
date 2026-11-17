@@ -1,6 +1,8 @@
 /** Default and bounds for workbench sidebars (workspace tree, changes panel). */
 
 export const COLLAPSED_SIDEBAR_WIDTH = 52;
+/** The Threads/Bots mode strip on the sidebar's outer edge; it stays visible when the sidebar collapses. */
+export const SIDEBAR_MODE_STRIP_WIDTH = 52;
 
 export const DEFAULT_WORKSPACE_SIDEBAR_WIDTH = 320;
 export const DEFAULT_CHANGES_SIDEBAR_WIDTH = 440;

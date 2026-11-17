@@ -1,4 +1,4 @@
-import { COLLAPSED_SIDEBAR_WIDTH } from "@/components/app/constants/uiLayout";
+import { COLLAPSED_SIDEBAR_WIDTH, SIDEBAR_MODE_STRIP_WIDTH } from "@/components/app/constants/uiLayout";
 import { useAppShellLayoutSlice } from "@/components/app/context/appShellBuildContexts";
 import { AppSignedInWorkspaceViewProvider } from "@/components/app/context/appSignedInWorkspaceViewContext";
 import { useAppCenterContentValue } from "@/components/app/hooks/useAppCenterContentValue";
@@ -24,9 +24,7 @@ export function useSignedInWorkspaceViewMount(): ReactElement | null {
       return null;
     }
 
-    const workspaceTrack = layout.isWorkspaceSidebarCollapsed
-      ? `${COLLAPSED_SIDEBAR_WIDTH}px`
-      : `${layout.workspaceSidebarWidth}px`;
+    const workspaceTrack = `${SIDEBAR_MODE_STRIP_WIDTH + (layout.isWorkspaceSidebarCollapsed ? COLLAPSED_SIDEBAR_WIDTH : layout.workspaceSidebarWidth)}px`;
     // A collapsed changes sidebar is fully hidden; the title bar toggle reopens it.
     const changesTrack =
       layout.hasActiveWorkspace && !layout.isChangesSidebarCollapsed ? `${layout.changesSidebarWidth}px` : "0px";

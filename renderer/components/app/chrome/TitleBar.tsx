@@ -1,95 +1,21 @@
-import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
-import { APP_DOCS_URL } from "@shared/appMeta";
+import { TitleBarControls } from "@/components/app/chrome/TitleBarControls";
 import { TitleBarWorkspaceQuickSearch } from "@/components/app/chrome/TitleBarWorkspaceQuickSearch";
 import { AppMark } from "@/components/app/shared/AppMark";
-import { IdeBadge } from "@/components/app/shared/IdeBadge";
 import type { TitleBarProps } from "@/components/app/types/component.types";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuSub } from "@/components/ui/dropdown-menu";
+import { menuItemDescriptionClass } from "@/components/ui/menu-styles";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { Activity, BookOpen, Bot, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, Code2, Compass, Copy, FolderGit2, Globe, History, Keyboard, Minus, Moon, PanelBottom, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, RefreshCcw, Settings, Square, Sun, TerminalSquare, Wrench, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Code2, FolderGit2, Globe, History, MessageSquarePlus, PanelBottom, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, RefreshCcw, TerminalSquare, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-
-function TitleBarControls({
-  useMacTitleBarChrome,
-  isMaximized,
-  iconToneClass
-}: {
-  useMacTitleBarChrome: boolean;
-  isMaximized: boolean;
-  iconToneClass: string;
-}) {
-  if (useMacTitleBarChrome) {
-    return (
-      <div className="app-no-drag flex items-center gap-2 px-3">
-        <button
-          type="button"
-          onClick={() => void noraSystemClient.closeWindow()}
-          aria-label="Close window"
-          className="size-3 rounded-full bg-[#ff5f57] transition hover:brightness-95"
-        />
-        <button
-          type="button"
-          onClick={() => void noraSystemClient.minimizeWindow()}
-          aria-label="Minimize window"
-          className="size-3 rounded-full bg-[#febc2e] transition hover:brightness-95"
-        />
-        <button
-          type="button"
-          onClick={() => void noraSystemClient.toggleMaximizeWindow()}
-          aria-label={isMaximized ? "Restore window" : "Maximize window"}
-          className="size-3 rounded-full bg-[#28c840] transition hover:brightness-95"
-        />
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <button
-        type="button"
-        className={`grid h-8 w-10 shrink-0 place-items-center self-center ${iconToneClass} transition hover:bg-accent hover:text-foreground`}
-        onClick={() => void noraSystemClient.minimizeWindow()}
-        aria-label="Minimize window"
-      >
-        <Minus className="size-3.5" />
-      </button>
-      <button
-        type="button"
-        className={`grid h-8 w-10 shrink-0 place-items-center self-center ${iconToneClass} transition hover:bg-accent hover:text-foreground`}
-        onClick={() => void noraSystemClient.toggleMaximizeWindow()}
-        aria-label={isMaximized ? "Restore window" : "Maximize window"}
-      >
-        {isMaximized ? <Copy className="size-3.5" /> : <Square className="size-3.5" />}
-      </button>
-      <button
-        type="button"
-        className={`grid h-8 w-10 shrink-0 place-items-center self-center ${iconToneClass} transition hover:bg-destructive/80 hover:text-destructive-foreground`}
-        onClick={() => void noraSystemClient.closeWindow()}
-        aria-label="Close window"
-      >
-        <X className="size-3.5" />
-      </button>
-    </>
-  );
-}
 
 export function TitleBar({
   windowUiState,
   useMacTitleBarChrome,
   resolvedTheme,
-  onToggleTheme,
-  onOpenSettings,
-  settingsActive,
-  onOpenKeyboardShortcuts,
-  onOpenAbout,
-  onSubmitIssue,
   canOpenProjectInIde,
-  installedIdes,
-  isLoadingInstalledIdes,
   preferredIde,
-  defaultIdeId,
   onOpenProjectInIde,
   isWorkspaceSidebarCollapsed,
   sidebarsSwapped,
@@ -110,13 +36,9 @@ export function TitleBar({
   onFocusLocalTerminalDock,
   onFocusPreviousSessionTab,
   onFocusNextSessionTab,
-  onOpenStartupDependencies,
-  onOpenResourceMonitor,
-  onOpenOnboarding,
   splitViewSelection,
   workspaceQuickSearch
 }: TitleBarProps) {
-  const [showRecentWorkspaceList, setShowRecentWorkspaceList] = useState(false);
   const titleBarRef = useRef<HTMLDivElement | null>(null);
   const leftControlsRef = useRef<HTMLDivElement | null>(null);
   const rightControlsRef = useRef<HTMLDivElement | null>(null);
@@ -158,9 +80,6 @@ export function TitleBar({
   const shouldHideSplitViewCreateButton = isCompactTitleBar;
   const showCustomTitleMenus = !useMacTitleBarChrome;
 
-  const sortedIdes = preferredIde
-    ? [preferredIde, ...installedIdes.filter((ide) => ide.id !== preferredIde.id)]
-    : installedIdes;
   const dedupedRecentWorkspaces = useMemo(() => {
     const seenRootPaths = new Set<string>();
     return recentWorkspaces.filter((project) => {
@@ -172,13 +91,13 @@ export function TitleBar({
     });
   }, [recentWorkspaces]);
   const titleBarIconToneClass = resolvedTheme === "light" ? "text-slate-700" : "text-muted-foreground";
-  const titleBarSelectorSurfaceClass = resolvedTheme === "light" ? "border-slate-300 bg-white" : "border-border/70 bg-background/70";
+  const titleBarSelectorSurfaceClass = resolvedTheme === "light" ? "border-border bg-white" : "border-border/70 bg-background";
 
   return (
     <div
       ref={titleBarRef}
       className={[
-        "workspace-shell-surface app-drag relative flex h-12 min-h-12 max-h-12 shrink-0 items-center overflow-hidden border-b border-border/60 bg-background/70 py-1.5",
+        "workspace-shell-surface workspace-chrome-surface app-drag relative flex h-12 min-h-12 max-h-12 shrink-0 items-center overflow-hidden border-b border-border/60 bg-background py-1.5",
         useMacTitleBarChrome ? "pl-0" : "pl-1.5"
       ].join(" ")}
     >
@@ -186,17 +105,12 @@ export function TitleBar({
         {useMacTitleBarChrome ? (
           <TitleBarControls useMacTitleBarChrome isMaximized={windowUiState.isMaximized} iconToneClass={titleBarIconToneClass} />
         ) : null}
-        <button
-          type="button"
-          className="app-no-drag flex items-center gap-2 rounded-[4px] px-1 py-0.5 text-left transition hover:bg-accent/60"
-          onClick={onOpenAbout}
-          aria-label="Open about dialog"
-        >
+        <div className="flex items-center gap-2 px-1 py-0.5">
           <AppMark className="size-[18px] shrink-0 text-primary" />
-        </button>
+        </div>
         <button
           type="button"
-          className={`app-no-drag grid h-8 w-8 place-items-center rounded-[4px] ${titleBarIconToneClass} transition hover:bg-accent/60 hover:text-foreground`}
+          className={`app-no-drag grid h-8 w-8 place-items-center rounded-md ${titleBarIconToneClass} transition hover:bg-accent/60 hover:text-foreground`}
           onClick={sidebarsSwapped ? onToggleChangesSidebar : onToggleWorkspaceSidebar}
           aria-label={
             sidebarsSwapped
@@ -233,11 +147,11 @@ export function TitleBar({
           <>
             <DropdownMenu
               align="start"
-              widthClassName="w-72 titlebar-dropdown-menu"
+              widthClassName="w-72"
               trigger={(
                 <button
                   type="button"
-                  className={`app-no-drag flex h-8 items-center gap-1 rounded-[4px] px-2 text-xs font-medium ${titleBarIconToneClass} transition hover:bg-accent/60 hover:text-foreground`}
+                  className={`app-no-drag flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium ${titleBarIconToneClass} transition hover:bg-accent/60 hover:text-foreground`}
                   aria-label="Open File menu"
                 >
                   <span>File</span>
@@ -247,15 +161,15 @@ export function TitleBar({
             >
               <DropdownMenuItem onSelect={onAddWorkspace}>
                 <Plus className="size-4" />
-                <span>Add Project</span>
+                <span>Add workspace</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={onAddRemoteWorkspace}>
                 <Globe className="size-4" />
-                <span>Add Remote Project</span>
+                <span>Add remote workspace</span>
               </DropdownMenuItem>
               {hasActiveWorkspace ? (
                 <>
-                  <div className="my-1 h-px bg-border/70" />
+                  <DropdownMenuSeparator />
                   {canOpenProjectInIde && preferredIde ? (
                     <DropdownMenuItem onSelect={() => onOpenProjectInIde(preferredIde.id)}>
                       <Code2 className="size-4" />
@@ -264,63 +178,53 @@ export function TitleBar({
                   ) : null}
                   <DropdownMenuItem onSelect={onCreateTerminal}>
                     <TerminalSquare className="size-4" />
-                    <span>New Terminal</span>
+                    <span>New terminal</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={onCreateAgent}>
-                    <Bot className="size-4" />
-                    <span>New Agent</span>
+                    <MessageSquarePlus className="size-4" />
+                    <span>New thread</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={onCreateBrowser}>
                     <Globe className="size-4" />
-                    <span>New Browser</span>
+                    <span>New browser</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={onRefreshWorkspace}>
                     <RefreshCcw className="size-4" />
-                    <span>Refresh Project</span>
+                    <span>Refresh workspace</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onSelect={onCloseWorkspace}>
                     <X className="size-4" />
-                    <span>Close Project</span>
+                    <span>Close workspace</span>
                   </DropdownMenuItem>
                 </>
               ) : null}
-              <div className="my-1 h-px bg-border/70" />
-              <button
-                type="button"
-                className="flex w-full items-center gap-2 rounded-[6px] px-3 py-2 text-left text-[12px] text-popover-foreground transition hover:bg-accent/60"
-                onClick={() => setShowRecentWorkspaceList((current) => !current)}
-                aria-label="Toggle recent project list"
-              >
-                <History className="size-4" />
-                <span>Add Recent</span>
-                {showRecentWorkspaceList ? <ChevronDown className="ml-auto size-4" /> : <ChevronRight className="ml-auto size-4" />}
-              </button>
-              {showRecentWorkspaceList ? (
-                dedupedRecentWorkspaces.length ? (
+              <DropdownMenuSeparator />
+              <DropdownMenuSub label="Open recent" icon={<History className="size-4" />}>
+                {dedupedRecentWorkspaces.length ? (
                   dedupedRecentWorkspaces.map((project) => (
                     <DropdownMenuItem
                       key={project.rootPath}
                       onSelect={() => onOpenRecentWorkspace(project.rootPath, project.name)}
                     >
-                      <FolderGit2 className="size-4 shrink-0" />
-                      <div className="min-w-0">
-                        <div className="truncate text-xs font-medium">{project.name}</div>
-                        <div className="truncate text-[11px] text-muted-foreground">{project.rootPath}</div>
-                      </div>
+                      <FolderGit2 className="size-4" />
+                      <span className="min-w-0">
+                        <span className="block truncate">{project.name}</span>
+                        <span className={cn("block", menuItemDescriptionClass)}>{project.rootPath}</span>
+                      </span>
                     </DropdownMenuItem>
                   ))
                 ) : (
-                  <div className="px-3 py-2 text-[11px] text-muted-foreground">No recent projects.</div>
-                )
-              ) : null}
+                  <DropdownMenuLabel>No recent workspaces</DropdownMenuLabel>
+                )}
+              </DropdownMenuSub>
             </DropdownMenu>
             <DropdownMenu
               align="start"
-              widthClassName="w-64 titlebar-dropdown-menu"
+              widthClassName="w-64"
               trigger={(
                 <button
                   type="button"
-                  className={`app-no-drag flex h-8 items-center gap-1 rounded-[4px] px-2 text-xs font-medium ${titleBarIconToneClass} transition hover:bg-accent/60 hover:text-foreground`}
+                  className={`app-no-drag flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium ${titleBarIconToneClass} transition hover:bg-accent/60 hover:text-foreground`}
                   aria-label="Open View menu"
                 >
                   <span>View</span>
@@ -330,71 +234,28 @@ export function TitleBar({
             >
               <DropdownMenuItem onSelect={onToggleWorkspaceSidebar}>
                 <PanelLeftClose className="size-4" />
-                <span>Toggle Projects Sidebar</span>
+                <span>Toggle workspace sidebar</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={onToggleChangesSidebar}>
                 <PanelRightClose className="size-4" />
-                <span>Toggle Changes Sidebar</span>
+                <span>Toggle changes sidebar</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={onToggleLocalTerminalDock}>
                 <PanelBottom className="size-4" />
-                <span>Toggle Local Terminal Dock</span>
+                <span>Toggle terminal dock</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={onFocusLocalTerminalDock}>
                 <TerminalSquare className="size-4" />
-                <span>Focus Local Terminal Dock</span>
+                <span>Focus terminal dock</span>
               </DropdownMenuItem>
-              <div className="my-1 h-px bg-border/70" />
+              <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={onFocusPreviousSessionTab}>
                 <ChevronLeft className="size-4" />
-                <span>Previous Session Tab</span>
+                <span>Previous tab</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={onFocusNextSessionTab}>
                 <ChevronRight className="size-4" />
-                <span>Next Session Tab</span>
-              </DropdownMenuItem>
-            </DropdownMenu>
-            <DropdownMenu
-              align="start"
-              widthClassName="w-56 titlebar-dropdown-menu"
-              trigger={(
-                <button
-                  type="button"
-                  className={`app-no-drag flex h-8 items-center gap-1 rounded-[4px] px-2 text-xs font-medium ${titleBarIconToneClass} transition hover:bg-accent/60 hover:text-foreground`}
-                  aria-label="Open Help menu"
-                >
-                  <span>Help</span>
-                  <ChevronDown className="size-3.5" />
-                </button>
-              )}
-            >
-              <DropdownMenuItem onSelect={() => void noraSystemClient.openExternalUrl(APP_DOCS_URL)}>
-                <BookOpen className="size-4" />
-                <span>Documentation</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={onOpenKeyboardShortcuts}>
-                <Keyboard className="size-4" />
-                <span>Keyboard Shortcuts</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={onOpenStartupDependencies}>
-                <Wrench className="size-4" />
-                <span>Startup Dependencies</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={onOpenResourceMonitor}>
-                <Activity className="size-4" />
-                <span>Resource Monitor</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={onOpenOnboarding}>
-                <Compass className="size-4" />
-                <span>Open Onboarding</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={onSubmitIssue}>
-                <CircleHelp className="size-4" />
-                <span>Submit Issue</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={onOpenAbout}>
-                <AppMark className="size-4 text-primary" />
-                <span>About</span>
+                <span>Next tab</span>
               </DropdownMenuItem>
             </DropdownMenu>
           </>
@@ -462,67 +323,6 @@ export function TitleBar({
               ) : null}
             </div>
           ) : null}
-          {canOpenProjectInIde && isLoadingInstalledIdes ? (
-            <button
-              type="button"
-              className={`flex h-8 items-center gap-2 rounded-[4px] border px-3 text-xs text-foreground opacity-60 ${titleBarSelectorSurfaceClass}`}
-              aria-label="Detecting installed IDEs"
-              disabled
-            >
-              <Code2 className="size-3.5 text-primary" />
-              <span>Finding IDEs</span>
-              <ChevronDown className={`size-3.5 ${titleBarIconToneClass}`} />
-            </button>
-          ) : null}
-          {canOpenProjectInIde && !isLoadingInstalledIdes && installedIdes.length > 0 ? (
-            <div className="flex items-center">
-              <button
-                type="button"
-                className={cn(
-                  "flex h-8 items-center gap-2 rounded-l-[4px] border border-r-0 px-3 text-xs text-foreground transition hover:bg-accent/60",
-                  isCompactTitleBar ? "max-w-[160px]" : "max-w-[220px]",
-                  titleBarSelectorSurfaceClass
-                )}
-                aria-label={preferredIde ? `Open current project in ${preferredIde.name}` : "Open current project in an IDE"}
-                onClick={() => {
-                  if (preferredIde) {
-                    onOpenProjectInIde(preferredIde.id);
-                  }
-                }}
-              >
-                {preferredIde ? <IdeBadge ide={preferredIde} /> : <Code2 className="size-3.5 text-primary" />}
-                <span className="truncate">{preferredIde ? preferredIde.name : "Open in IDE"}</span>
-              </button>
-              <DropdownMenu
-                align="end"
-                widthClassName="w-64 titlebar-dropdown-menu"
-                trigger={(
-                  <button
-                    type="button"
-                    className={`flex h-8 items-center rounded-r-[4px] border px-2 text-xs text-foreground transition hover:bg-accent/60 ${titleBarSelectorSurfaceClass}`}
-                    aria-label="Choose IDE"
-                  >
-                    <ChevronDown className={`size-3.5 ${titleBarIconToneClass}`} />
-                  </button>
-                )}
-              >
-                {sortedIdes.map((ide) => (
-                  <DropdownMenuItem
-                    key={ide.id}
-                    onSelect={() => onOpenProjectInIde(ide.id)}
-                  >
-                    <IdeBadge ide={ide} />
-                    <span className="truncate">{ide.name}</span>
-                    {defaultIdeId === ide.id ? (
-                      <span className="ml-auto rounded-[4px] bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-primary">
-                        Default
-                      </span>
-                    ) : null}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenu>
-            </div>
-          ) : null}
         </div>
         <button
           type="button"
@@ -558,61 +358,6 @@ export function TitleBar({
           ) : (
             <PanelRightClose className="size-3.5" />
           )}
-        </button>
-        <button
-          type="button"
-          className={`grid h-8 w-11 shrink-0 place-items-center ${titleBarIconToneClass} transition hover:bg-accent hover:text-foreground`}
-          onClick={onOpenKeyboardShortcuts}
-          aria-label="Open keyboard shortcuts"
-        >
-          <Keyboard className="size-3.5" />
-        </button>
-        <DropdownMenu
-          align="end"
-          widthClassName="w-52 titlebar-dropdown-menu"
-          trigger={(
-            <button
-              type="button"
-              className={`grid h-8 w-11 shrink-0 place-items-center ${titleBarIconToneClass} transition hover:bg-accent hover:text-foreground`}
-              aria-label="Open support menu"
-            >
-              <CircleHelp className="size-3.5" />
-            </button>
-          )}
-        >
-          <DropdownMenuItem onSelect={() => void noraSystemClient.openExternalUrl(APP_DOCS_URL)}>
-            <BookOpen className="size-4" />
-            <span>Documentation</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={onOpenOnboarding}>
-            <Compass className="size-4" />
-            <span>Open Onboarding</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={onSubmitIssue}>
-            <CircleHelp className="size-4" />
-            <span>Submit Issue</span>
-          </DropdownMenuItem>
-        </DropdownMenu>
-        <button
-          type="button"
-          className={`grid h-8 w-11 shrink-0 place-items-center ${titleBarIconToneClass} transition hover:bg-accent hover:text-foreground`}
-          onClick={onToggleTheme}
-          aria-label={`Switch to ${resolvedTheme === "dark" ? "light" : "dark"} theme`}
-        >
-          {resolvedTheme === "dark" ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
-        </button>
-        <button
-          type="button"
-          className={[
-            "grid h-8 w-11 shrink-0 place-items-center transition",
-            settingsActive
-              ? "bg-accent text-foreground"
-              : `${titleBarIconToneClass} hover:bg-accent hover:text-foreground`
-          ].join(" ")}
-          onClick={onOpenSettings}
-          aria-label="Open settings"
-        >
-          <Settings className="size-3.5" />
         </button>
         {!useMacTitleBarChrome ? (
           <TitleBarControls useMacTitleBarChrome={false} isMaximized={windowUiState.isMaximized} iconToneClass={titleBarIconToneClass} />

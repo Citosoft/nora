@@ -1,0 +1,22 @@
+node_modules/
+dist/
+web-build/
+.expo/
+expo-env.d.ts
+.env
+.env*.local
+*.tsbuildinfo
+.metro-health-check*
+npm-debug.*
+.DS_Store
+/ios
+/android
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+
+# npm cache accidentally created by `npm --cache --fetch-retries=0` (missing cache path)
+/--fetch-retries=*/

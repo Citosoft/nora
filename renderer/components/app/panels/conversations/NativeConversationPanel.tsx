@@ -1,0 +1,199 @@
+import type { ComposerEditorHandle } from "@/components/app/types/composerEditor.types";
+import { executionFailureMessage } from "@/components/app/logic/executionFailureMessage";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowUp, ArrowDown, Settings, Square } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { NativeComposerAttachments } from "./NativeComposerAttachments";
+import { NativeThreadReferences } from "./NativeThreadReferences";
+import { NativeComposerConnectors } from "./NativeComposerConnectors";
+import { connectorSubjectOf } from "@shared/connectors/access";
+import { buildConnectorAccessChoices } from "@/components/app/logic/connectorAccess";
+import { NativeThreadReferenceChips } from "./NativeThreadReferenceChips";
+import { useComposerAttachments } from "@/components/app/hooks/useComposerAttachments";
+import { NativeComposerInput } from "./NativeComposerInput";
+import { selectPromptSuggestion } from "@/components/app/logic/promptSuggestion";
+import { useNativeConversationPorts } from "@/components/app/hooks/useNativeConversationPorts";
+import { useNativeConversation } from "@/components/app/hooks/useNativeConversation";
+import { useThreadInsights } from "@/components/app/hooks/useThreadInsights";
+import { useThreadLinks } from "@/components/app/hooks/useThreadLinks";
+import { useThreadConnectors } from "@/components/app/hooks/useThreadConnectors";
+import { threadConnectorsTarget } from "@/components/app/logic/threadConnectors";
+import { useThreadSkills } from "@/components/app/hooks/useThreadSkills";
+import { useOnceVisible } from "@/components/app/hooks/useOnceVisible";
+import { useTranscriptFollow } from "@/components/app/hooks/useTranscriptFollow";
+import { useMcpAppHost } from "@/components/app/hooks/useMcpAppHost";
+import { useConnectorSignInRefresh } from "@/components/app/hooks/useConnectorSignInRefresh";
+import { roleProfile } from "@shared/personalization/profiles";
+import { getGreetingFirstName } from "@/components/app/logic/thread-workspace/greeting";
+import { ThreadWorkspacePicker } from "../threads/ThreadWorkspacePicker";
+import { ThreadCheckoutPicker } from "../threads/ThreadCheckoutPicker";
+import { NativeProviderPicker } from "./NativeProviderPicker";
+import { NativeTimeline } from "./NativeTimeline";
+import { NativeRequestStack } from "./NativeRequestStack";
+import { NativeQueue } from "./NativeQueue";
+import type { ProviderCapabilities } from "@shared/types/provider/capabilities.types";
+import type { TimelineItem } from "@shared/types/conversation/contracts.types";
+import { ThreadInsightsPanel } from "./ThreadInsightsPanel";
+import { ThreadContextUsage } from "./ThreadContextUsage";
+import { nativeProviderLabel } from "@/components/app/logic/nativeProviderLabel";
+import { threadPreferences } from "@shared/personalization/threads";
+import { effectiveBots } from "@shared/bots/catalog";
+import { botModelRevertSeed, isBotModelOverride } from "@/components/app/logic/botThreads";
+import { botConversationState } from "@/components/app/logic/botConversationState";
+import { ThreadBotBadge } from "../threads/ThreadBotBadge";
+import { BotAvatar } from "@/components/app/shared/BotAvatar";
+
+const NO_ITEMS: readonly TimelineItem[] = [];
+
+export function NativeConversationPanel() {
+  const ports = useNativeConversationPorts();
+  const { client, document, workspace, runtime, setText, setBinding, submit, execute } = ports;
+  const issueSource = useMemo(() => {
+    const projectId = workspace.shellProjectId;
+    const forge = ports.threadForge;
+    return projectId && workspace.workspace.versionControl !== "none" && forge && ports.visible
+      ? { projectId, read: () => forge.readIssues(projectId) } : undefined;
+  }, [workspace.shellProjectId, workspace.workspace.versionControl, ports.threadForge, ports.visible]);
+  const conversationId = document.target.kind === "thread" ? document.target.conversationId : null;
+  const { view, error: loadError, older, reload } = useNativeConversation({ client, conversationId });
+  const composer = useRef<ComposerEditorHandle>(null);
+  const [insightsExpanded, setInsightsExpanded] = useState(true);
+  const [capabilities, setCapabilities] = useState<ProviderCapabilities | null>(null);
+  const header = view?.header;
+  const transcript = useTranscriptFollow(view?.items);
+  const onLinkClick = useThreadLinks(header?.conversation.workspace.path ?? workspace.workspace.path);
+  const insights = useThreadInsights({ header, items: view?.items ?? [], workspace, hasOlderHistory: !!view?.nextBefore, forge: ports.threadForge });
+  const providerLabel = header ? nativeProviderLabel(ports.state.providers, header.conversation.provider) : null;
+  // Restored tabs stay mounted while hidden; each discovery starts a provider runtime, so only shown threads discover.
+  const discover = useOnceVisible(ports.visible);
+  // Drafts discover too, so the composer shows the runtime's connectors before the first message.
+  const connectorTarget = threadConnectorsTarget(header?.conversation ?? null,
+    { provider: document.provider ?? null, readyBinding: runtime.readyBinding, workspace: workspace.workspace });
+  const connectorProviderLabel = connectorTarget ? nativeProviderLabel(ports.state.providers, connectorTarget.provider) : null;
+  const connectors = useThreadConnectors(client, discover && connectorTarget && connectorProviderLabel !== null
+    ? { conversation: connectorTarget, providerLabel: connectorProviderLabel } : null);
+  const skills = useThreadSkills(client, discover && header ? { conversation: header.conversation, items: view?.items ?? NO_ITEMS } : null);
+  useConnectorSignInRefresh(header?.conversation.id ?? null, view?.items ?? NO_ITEMS, connectors);
+  const active = header?.activeRuns[0];
+  const executionFailure = active ? active.failure : ports.latestFailure;
+  const bots = useMemo(() => effectiveBots(ports.state.personalization.bots, workspace.id, ports.state.sharedBots),
+    [ports.state.personalization.bots, ports.state.sharedBots, workspace.id]);
+  const currentBot = header?.conversation.bot ?? null;
+  // The same subject main uses for the run: an existing thread's, or the workspace a draft will be created in.
+  const connectorSubject = useMemo(() => connectorSubjectOf(header?.conversation ?? { workspace: workspace.workspace }),
+    [header?.conversation, workspace.workspace]);
+  const connectorChoices = useMemo(() => buildConnectorAccessChoices(ports.state), [ports.state]);
+  // "Use the bot's model": reopen the model picker set to the bot's saved model; the next send switches with the usual handoff.
+  const [botModelRevert, setBotModelRevert] = useState(0);
+  const threadProvider = header?.conversation.provider ?? null;
+  const threadProviderKey = JSON.stringify(threadProvider);
+  useEffect(() => { setBotModelRevert(0); }, [threadProviderKey]);
+  const canChangeModel = !!header && !header.activeRuns.length && !header.queuedRuns.length && !header.pendingRequests.length && !runtime.busy && !document.pending && !header.conversation.archivedAt;
+  const botModelSeed = currentBot && threadProvider ? botModelRevertSeed(currentBot, threadProvider) : null;
+  const { openThread } = ports;
+  const resolveBot = useMemo(() => (nameOrId: string) => {
+    const wanted = nameOrId.trim().toLocaleLowerCase();
+    const found = bots.find(({ bot }) => bot.id === wanted) ?? bots.find(({ bot }) => bot.name.toLocaleLowerCase() === wanted);
+    return found ? { name: found.bot.name, avatar: found.bot.avatar } : null;
+  }, [bots]);
+  // Nora threads suggest the workspace's bots, which Nora asks with ask_bot. Bot threads suggest none.
+  const mentionOptions = useMemo(() => !currentBot ? bots.map(({ bot }) => ({ id: bot.id, name: bot.name, detail: bot.role || undefined,
+    icon: <BotAvatar avatar={bot.avatar} size={20} /> })) : undefined, [currentBot, bots]);
+  const role = header?.conversation.role?.selection ?? document.role;
+  const profile = role && !currentBot ? roleProfile(role) : null;
+  const firstName = getGreetingFirstName(ports.userDisplayName);
+  const pending = document.pending;
+  const busy = runtime.busy;
+  const settled = !!header?.conversation.archivedAt;
+  const attachments = document.attachments ?? [];
+  const attachmentInput = useComposerAttachments({ attachments, disabled: !!pending || settled || busy, onAdd: ports.addAttachments });
+  const references = document.threadReferences ?? [];
+  const hasContent = !!document.text.trim() || attachments.length > 0 || references.length > 0;
+  const canSend = !attachmentInput.saving && !busy && !settled && (!conversationId || !!header)
+    && (!!pending || (!!runtime.readyBinding && hasContent));
+  const showStop = !attachmentInput.saving && !!active && active.state !== "recovering" && !pending && !hasContent;
+  const steerFollowUp = threadPreferences(ports.state.personalization).followUp === "steer" && !!capabilities?.steering
+    && active?.state === "running" && !active.action && !header?.pendingRequests.length;
+  const sendLabel = pending ? "Retry saved instruction" : active ? steerFollowUp ? "Steer instruction" : "Queue instruction" : "Send instruction";
+  const stopLabel = active?.state === "stopping" ? "Stopping turn" : "Stop turn";
+  const actionLabel = showStop ? stopLabel : busy ? "Sending instruction" : sendLabel;
+  const chooseStarter = (text: string): void => { setText(text); composer.current?.focus(); };
+  const mcpApps = useMcpAppHost(client, header ? { id: header.conversation.id, environmentId: header.conversation.workspace.environmentId } : null, chooseStarter);
+  return <section className={cn("thread-conversation flex min-h-0 min-w-0 flex-1 flex-col", !conversationId && "justify-center pb-[12vh]")} aria-label={conversationId ? "Thread" : "New thread"}
+    data-thread-insights={header ? insightsExpanded ? "expanded" : "collapsed" : undefined}>
+    {/* A new thread sizes the transcript to its greeting so the composer sits directly beneath it. */}
+    <div className={cn("relative flex min-h-0 flex-col", conversationId ? "flex-1" : "flex-initial")}>
+    {header && providerLabel !== null && <ThreadInsightsPanel header={header} providerLabel={providerLabel} connectors={connectors} skills={skills} changes={insights.changes} subagents={insights.subagents} branch={insights.branch} expanded={insightsExpanded} busy={busy}
+      canSettle={!active && !header.queuedRuns.length} hasOlderHistory={!!view?.nextBefore}
+      onToggle={() => setInsightsExpanded((current) => !current)} onLoadHistory={() => void older()}
+      onSettleChange={() => void execute({ kind: settled ? "unarchive" : "archive", commandId: crypto.randomUUID(), conversationId: header.conversation.id })} />}
+    <div className={cn("thread-transcript min-h-0 overflow-y-auto overscroll-contain px-5 py-7", conversationId ? "flex-1" : "flex-initial")} ref={transcript.ref}
+      onWheel={transcript.onWheel} onScroll={transcript.onScroll}>
+      <div className="mx-auto max-w-[800px] space-y-5 text-[15px]">
+        {loadError && <div role="alert"><p>{loadError}</p><Button onClick={reload}>Reload thread</Button></div>}
+        {view?.nextBefore && <Button variant="ghost" onClick={() => void older()}>Load older messages</Button>}
+        {conversationId && !view && !loadError && <p className="text-muted-foreground">Loading thread…</p>}
+        {view && <NativeTimeline items={view.items} runs={view.runHistory.runs} onLinkClick={onLinkClick} connectors={connectors}
+          resolveBot={resolveBot} onOpenThread={openThread} mcpApps={mcpApps} />}
+        {!conversationId && <div className="mx-auto flex w-full flex-col items-center gap-7 pb-2 text-center">
+          <div className="space-y-3"><p className="text-xs font-medium text-muted-foreground">{profile?.label ?? "Your workspace"}</p>
+            <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">What would you like to work on in <span className="text-primary">{workspace.name}</span>{firstName && <>, <span className="whitespace-nowrap text-primary">{firstName}</span></>}?</h1></div>
+          <div className="flex flex-wrap justify-center gap-2">{profile?.starters.map((starter) => <Button key={starter} variant="outline" className="h-auto max-w-full rounded-full px-4 py-2 text-left font-normal whitespace-normal"
+            disabled={!!pending} onClick={() => chooseStarter(starter)}>{starter}</Button>)}</div>
+        </div>}
+      </div>
+    </div>
+    </div>
+    {transcript.newActivity && <Button variant="secondary" size="sm" className="mx-auto mb-3 rounded-full" onClick={transcript.jumpToLatest}><ArrowDown className="size-3.5" aria-hidden="true" />Jump to latest</Button>}
+    <div className="thread-composer">
+    <div className="mx-auto w-full max-w-[848px] space-y-3 px-4 pb-5 sm:px-6">
+      {header && <NativeRequestStack key={header.conversation.id} requests={header.pendingRequests} busy={busy} visible={ports.visible} onRespond={(requestId, response) => execute({ kind: "respond", commandId: crypto.randomUUID(), conversationId: header.conversation.id, requestId, response })} />}
+      {active?.state === "recovering" && <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void execute({ kind: "reconcile", commandId: crypto.randomUUID(), conversationId: active.conversationId, runId: active.id })}>Check native status</Button>}
+      {(runtime.error || ports.storageError || executionFailure || pending) && <p role="alert" className="text-sm text-destructive">{runtime.error ?? ports.storageError ?? (executionFailure ? executionFailureMessage(executionFailure) : "Delivery is unconfirmed. Retry checks the same saved instruction.")}</p>}
+      <div>
+      {header && <NativeQueue conversationId={header.conversation.id} runs={header.queuedRuns} paused={header.conversation.queuePaused} busy={busy} execute={execute}
+        steerTarget={capabilities?.steering && active?.state === "running" && active.nativeTurnId && !header.pendingRequests.length && !header.queuedRuns.some((run) => run.steering === "pending") ? active.id : null} />}
+      <form className="relative space-y-2 rounded-lg border bg-card p-3 shadow-sm focus-within:ring-1 focus-within:ring-ring/30" onSubmit={(event) => { event.preventDefault(); if (canSend) void submit(); }}
+        onDragOver={(event) => { if (event.dataTransfer.types.includes("Files")) { event.preventDefault(); event.dataTransfer.dropEffect = pending || settled || busy || attachmentInput.saving ? "none" : "copy"; } }}
+        onDrop={(event) => { if (event.dataTransfer.files.length) { event.preventDefault(); void attachmentInput.addFiles(Array.from(event.dataTransfer.files)); } }}>
+        <NativeComposerInput inputRef={composer} value={pending?.submit.instruction ?? document.text} disabled={!!pending || settled}
+          trailingAction={ports.openThreadSettings ? <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 z-10 size-7 text-muted-foreground"
+            aria-label="Open thread settings" tooltip="Thread settings" onClick={ports.openThreadSettings}><Settings className="size-4" aria-hidden="true" /></Button> : undefined}
+          placeholder={settled ? "Reopen this settled thread to continue" : active ? "Queue your next instruction…" : "Ask, plan, or start something…"}
+          suggestion={hasContent || attachmentInput.saving || busy || pending || loadError || runtime.error ? null : selectPromptSuggestion(view, capabilities)}
+          onFiles={(files) => void attachmentInput.addFiles(files)} onChange={setText} onSubmit={() => { if (canSend) void submit(); }} mentions={mentionOptions} issueSource={issueSource} />
+        <NativeComposerAttachments attachments={attachments} disabled={!!pending || settled || busy} saving={attachmentInput.saving}
+          error={attachmentInput.error} onFiles={(files) => void attachmentInput.addFiles(files)} onRemove={ports.removeAttachment}
+          trailingAction={<>
+            <NativeThreadReferences references={references} choices={ports.referenceChoices} disabled={!!pending || settled || busy || attachmentInput.saving}
+              onAttach={ports.addThreadReference} />
+            {/* Group and direct chats run on Nora's coordinators, which get no connectors. */}
+            {!header?.conversation.group && !header?.conversation.direct && <NativeComposerConnectors disabled={settled} subject={connectorSubject} accessChoices={connectorChoices} providerConnectors={connectors} />}
+          </>} />
+        <NativeThreadReferenceChips references={references} disabled={!!pending || settled || busy || attachmentInput.saving} onRemove={ports.removeThreadReference} />
+        <div className="flex flex-wrap items-center gap-1 border-t pt-2">
+          {header && currentBot && <ThreadBotBadge bot={currentBot} state={botConversationState(header, view?.items ?? NO_ITEMS, executionFailure)}
+            modelOverride={isBotModelOverride(currentBot, header.conversation.provider)}
+            onUseBotModel={canChangeModel && botModelSeed && !botModelRevert ? () => setBotModelRevert((value) => value + 1) : undefined} />}
+          <ThreadWorkspacePicker workspace={workspace} workspaces={ports.state.workspaces} disabled={!!conversationId || !!pending || busy} onSelect={ports.selectWorkspace} />
+          <ThreadCheckoutPicker workspace={ports.baseWorkspace} selectedCheckoutId={workspace.workspace.checkoutId} disabled={!!conversationId || !!pending || busy}
+            onSelect={ports.selectCheckout} onCreateWorktree={ports.createWorktree} />
+          <span className="ml-auto truncate px-2 text-xs text-muted-foreground" title={workspace.workspace.environmentId}>{workspace.workspace.environmentId}</span>
+        </div>
+        <div className="flex items-end justify-between gap-3">
+          <div className="min-w-0 flex-1"><NativeProviderPicker key={`${workspace.id}:${workspace.workspace.checkoutId}:${threadProviderKey}:${botModelRevert}`} state={ports.state} workspace={workspace} client={client}
+            allowChange={canChangeModel} startEditing={botModelRevert > 0}
+            initial={botModelRevert && botModelSeed ? botModelSeed : document.provider} locked={header?.conversation.provider ?? (conversationId ? document.provider : pending?.create?.provider) ?? null} onBinding={setBinding} onCapabilities={setCapabilities} /></div>
+          <ThreadContextUsage header={header ?? null} capabilities={capabilities} ready={!busy && !pending && !settled} compact={ports.compact} client={client} />
+          <Button type={showStop ? "button" : "submit"} size={pending ? "sm" : "icon"} className="shrink-0 rounded-md" disabled={showStop ? busy || active?.state === "stopping" : !canSend}
+            onClick={showStop && active ? () => void execute({ kind: "interrupt", commandId: crypto.randomUUID(), conversationId: active.conversationId, runId: active.id }) : undefined}
+            aria-label={actionLabel}>
+            {showStop ? <Square className="size-3.5 fill-current" aria-hidden="true" /> : pending ? "Retry saved instruction" : <ArrowUp className="size-4" aria-hidden="true" />}</Button>
+        </div>
+      </form>
+      </div>
+    </div>
+    </div>
+  </section>;
+}

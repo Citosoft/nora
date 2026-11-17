@@ -8,3 +8,5 @@ export type UseAgentAttentionArgs = {
 export type UseAgentAttentionResult = {
   agentsNeedingAttention: Record<string, boolean>;
 };
+
+export interface AgentAttentionPreviousState { isBusy: boolean; status: AgentSession["status"]; }

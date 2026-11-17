@@ -25,7 +25,7 @@ export function AiProviderLogo({
   return (
     <div
       className={cn(
-        "inline-flex size-4 shrink-0 items-center justify-center overflow-hidden rounded-[4px] bg-background/70 ring-1 ring-border/50",
+        "inline-flex size-4 shrink-0 items-center justify-center overflow-hidden rounded-md bg-background ring-1 ring-border/50",
         className
       )}
     >

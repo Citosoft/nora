@@ -34,7 +34,7 @@ export function groupBrowserAnnotationsByUrl(annotations: BrowserAnnotation[]): 
   return grouped;
 }
 
-function formatElementLabel(target: BrowserElementTarget): string {
+export function formatBrowserElementLabel(target: BrowserElementTarget): string {
   const tag = target.tagName.toLowerCase();
   const id = target.attributes.id?.trim();
   if (id) {
@@ -76,7 +76,7 @@ export function buildBrowserReviewPrompt(annotations: BrowserAnnotation[]): stri
       sections.push("");
     }
 
-    sections.push(`### ${formatElementLabel(annotation.target)}`);
+    sections.push(`### ${formatBrowserElementLabel(annotation.target)}`);
     sections.push(`Selector: \`${annotation.target.selector}\``);
     if (annotation.target.textPreview.trim()) {
       sections.push(`Text: ${annotation.target.textPreview.trim()}`);

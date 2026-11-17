@@ -31,7 +31,7 @@ export type PreparedLoopRunWorktree = {
 
 export type PrepareLoopRunWorktreeInput = {
   payload: StartLoopRunPayload;
-  writerToolId: string;
-  writerName: string;
+  toolId: string;
+  name: string;
   onProgress?: (message: string) => Promise<void>;
 };

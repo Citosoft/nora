@@ -1,5 +1,7 @@
 import { App } from "@/App";
 import { AppErrorBoundary } from "@/components/app/views/AppErrorBoundary";
+import { AccountProvider } from "@/components/app/views/account/AccountProvider";
+import type { AccountConfig } from "@shared/types/account/account.types";
 import { PostHogProvider } from "@posthog/react";
 import "@xterm/xterm/css/xterm.css";
 import posthog from "posthog-js";
@@ -17,9 +19,11 @@ if (!rootElement) {
   throw new Error("Missing #app root");
 }
 
-createRoot(rootElement).render(
+const root = createRoot(rootElement);
+const render = (config: AccountConfig): void => root.render(
   <StrictMode>
     <AppErrorBoundary>
+      <AccountProvider config={config}>
       {posthogToken ? (
         <PostHogProvider client={posthog}>
           <App />
@@ -27,6 +31,8 @@ createRoot(rootElement).render(
       ) : (
         <App />
       )}
+      </AccountProvider>
     </AppErrorBoundary>
   </StrictMode>
 );
+void window.noraAccount.config().then(render).catch(() => render({ publishableKey: "" }));

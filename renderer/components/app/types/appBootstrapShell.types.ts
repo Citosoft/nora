@@ -6,5 +6,6 @@ export type AppBootstrapShellProps = {
   titleBar: ReactElement;
   topBanners: ReactElement;
   mainContent: ReactNode;
-  footer: ReactElement;
+  activity: ReactNode;
+  appTools: ReactNode;
 };

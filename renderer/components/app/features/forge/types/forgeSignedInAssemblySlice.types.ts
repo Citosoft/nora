@@ -7,7 +7,7 @@ import type { ForgeWorkItemSummary } from "@shared/appTypes";
 export type ForgeSignedInAssemblySliceInput = {
   integration: UseForgeIntegrationResult;
   resolveGitlabForgeRepoOverride: (item: ForgeWorkItemSummary) => { host: string; fullName: string } | null;
-  handleSpawnForgeIssueAgent: (toolId: string) => Promise<void>;
+  handleStartForgeIssueThread: () => Promise<void>;
   handleSpawnForgeReviewAgent: AppShellSignedInForgeSources["handleSpawnForgeReviewAgent"];
   focusedForgeViewerTab: ForgeViewerTabState | null;
 };

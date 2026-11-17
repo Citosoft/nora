@@ -1,6 +1,8 @@
 import type {
   AppState,
+  ChangeEntry,
   ForgeAddCommentPayload,
+  ForgeBranchChanges,
   ForgeBranchPullRequestStatus,
   ForgeCreatePullRequestPayload,
   ForgeOverview,
@@ -14,6 +16,7 @@ import type {
   ProjectSummary
 } from "@shared/appTypes";
 import type { WorkspaceTarget } from "./internal.types";
+import type { GitBranchChanges } from "./gitBranchChanges.types";
 
 export interface ForgeHelperDeps {
   resolveProjectSummaryById: (projectId: string) => Promise<ProjectSummary>;
@@ -69,6 +72,10 @@ export interface ForgeHelperDeps {
   hasRemoteBranchForTarget: (target: WorkspaceTarget, branch: string) => Promise<boolean>;
   pushWorkspaceChanges: (target: WorkspaceTarget) => Promise<void>;
   readCurrentBranch: (target: WorkspaceTarget) => Promise<string>;
+  /** Resolves a checkout path to the project root or one of its worktrees, rejecting anything else. */
+  resolveProjectCheckout: (project: ProjectSummary, checkoutPath: string) => Promise<WorkspaceTarget>;
+  readBranchChanges: (target: WorkspaceTarget) => Promise<GitBranchChanges | null>;
+  readBranchDiff: (target: WorkspaceTarget) => Promise<ChangeEntry[] | null>;
 }
 
 export interface ForgeHelpers {
@@ -78,6 +85,12 @@ export interface ForgeHelpers {
     branch: string,
     options: ForgeRequestOptions
   ) => Promise<ForgeBranchPullRequestStatus | null>;
+  getForgeBranchChanges: (
+    projectId: string,
+    checkoutPath: string,
+    options: ForgeRequestOptions
+  ) => Promise<ForgeBranchChanges | null>;
+  getForgeBranchDiff: (projectId: string, checkoutPath: string) => Promise<ChangeEntry[] | null>;
   getForgeWorkItemDetail: (
     projectId: string,
     kind: ForgeWorkItemKind,

@@ -1,4 +1,7 @@
 import {
+  readStoredUiLayout,
+  readStoredPersonalWorkspaceIntroDismissed,
+  dismissStoredPersonalWorkspaceIntro,
   readStoredOnboardingCompleted,
   writeStoredOnboardingCompleted
 } from "@/components/app/logic/appPersistence";
@@ -32,6 +35,30 @@ function installWindowMock(storage: LocalStorageMock): void {
     value: { localStorage: storage }
   });
 }
+
+test("sidebar layout restores Memory and replaces the retired Context tab with Files", () => {
+  const storage = new LocalStorageMock();
+  installWindowMock(storage);
+  storage.setItem("nora-ui-layout", JSON.stringify({ activeChangesPanelTab: "memory" }));
+  assert.equal(readStoredUiLayout().activeChangesPanelTab, "memory");
+  storage.setItem("nora-ui-layout", JSON.stringify({ activeChangesPanelTab: "instructions" }));
+  assert.equal(readStoredUiLayout().activeChangesPanelTab, "instructions");
+  storage.setItem("nora-ui-layout", JSON.stringify({ activeChangesPanelTab: "context" }));
+  assert.equal(readStoredUiLayout().activeChangesPanelTab, "files");
+});
+
+test("personal workspace introduction stays pending until explicitly dismissed and survives reloads", () => {
+  const storage = new LocalStorageMock();
+  installWindowMock(storage);
+  assert.equal(readStoredPersonalWorkspaceIntroDismissed(), false);
+  writeStoredOnboardingCompleted(true);
+  assert.equal(readStoredPersonalWorkspaceIntroDismissed(), false);
+  dismissStoredPersonalWorkspaceIntro();
+  installWindowMock(storage);
+  assert.equal(readStoredPersonalWorkspaceIntroDismissed(), true);
+  writeStoredOnboardingCompleted(false);
+  assert.equal(readStoredPersonalWorkspaceIntroDismissed(), true);
+});
 
 test("readStoredOnboardingCompleted defaults to false", () => {
   const storage = new LocalStorageMock();

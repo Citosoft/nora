@@ -24,7 +24,7 @@ export function AnalyticsConsentDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="space-y-4">
-          <div className="rounded-[4px] border border-border/70 bg-background/60 p-4">
+          <div className="rounded-md border border-border/70 bg-background p-4">
             <div className="flex items-start gap-3">
               <BarChart3 className="mt-0.5 size-5 text-primary" />
               <div className="space-y-1 text-sm text-foreground">

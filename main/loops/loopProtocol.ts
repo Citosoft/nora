@@ -1,47 +1,26 @@
-import type { LoopDefinition, LoopIteration, LoopRoleOutcome, LoopRunRole } from "@shared/appTypes";
+import type { LoopDefinition, LoopIteration, LoopRunRole } from "@shared/appTypes";
 import { buildLoopRunGoalPromptSection, type LoopRunGoal } from "@shared/loopRunGoal";
-import type { ParsedLoopResult } from "@main/types/loopRunner.types";
 
-const RESULT_PATTERN = /<nora-loop-result\s+token="([^"]+)"\s+outcome="(continue|complete|approve|changes_requested)">([\s\S]*?)<\/nora-loop-result>/g;
-const MAX_SUMMARY_LENGTH = 20_000;
-
-function stripAnsi(value: string): string {
-  return value.replace(/\u001b\[[0-9;?]*[ -/]*[@-~]/g, "");
-}
-
-export function parseLoopResult(output: string, token: string): ParsedLoopResult | null {
-  const normalized = stripAnsi(output);
-  let match: RegExpExecArray | null;
-  let result: ParsedLoopResult | null = null;
-  RESULT_PATTERN.lastIndex = 0;
-  while ((match = RESULT_PATTERN.exec(normalized))) {
-    if (match[1] !== token) {
-      continue;
-    }
-    result = {
-      outcome: match[2] as LoopRoleOutcome,
-      summary: match[3].trim().slice(0, MAX_SUMMARY_LENGTH)
-    };
-  }
-  return result;
+function describeWorkflow(definition: LoopDefinition, intro: string): string {
+  return definition.description ? `${intro}\nWorkflow purpose: ${definition.description}` : intro;
 }
 
 function renderProtocol(role: LoopRunRole, token: string): string {
   const outcomes = role.kind === "writer" ? "continue|complete" : "approve|changes_requested";
   return [
-    "When this turn is finished, emit exactly one result block using this token:",
-    `<nora-loop-result token="${token}" outcome="${outcomes}">`,
-    "Concise summary of work or review feedback",
-    "</nora-loop-result>",
-    "Do not reuse markers from earlier turns."
+    "When this stage is finished, call the Nora MCP tool report_workflow_stage exactly once with:",
+    `attempt_id: "${token}"`,
+    `outcome: one of ${outcomes}`,
+    "summary: a concise description of your work or actionable review feedback.",
+    "After the tool acknowledges the report, finish this turn. Do not report a different attempt or write result tags in your response."
   ].join("\n");
 }
 
 function aggregateFeedback(iteration: LoopIteration | undefined): string {
-  if (!iteration?.reviewerResults.length) {
-    return "No reviewer feedback is available from the previous iteration.";
+  if (!iteration?.results.length) {
+    return "No stage feedback is available from the previous iteration.";
   }
-  return iteration.reviewerResults
+  return iteration.results
     .map((result) => `- ${result.outcome}: ${result.summary || "No summary provided."}`)
     .join("\n");
 }
@@ -54,12 +33,12 @@ export function buildWriterPrompt(
   token: string
 ): string {
   return [
-    `You are the writer role in the workflow "${definition.name}".`,
+    describeWorkflow(definition, `You are a work stage in the workflow "${definition.name}".`),
     buildLoopRunGoalPromptSection(goal),
-    `Role instructions:\n${role.instructions}`,
-    iteration ? `Reviewer feedback from the previous iteration:\n${aggregateFeedback(iteration)}` : "This is the first iteration.",
+    `Stage "${role.name}" instructions:\n${role.instructions}`,
+    iteration ? `Stage results from the previous iteration:\n${aggregateFeedback(iteration)}` : "This is the first iteration.",
     "Inspect the current repository state, make the next coherent implementation advance, and run appropriate verification.",
-    "Return complete only when the run goal is fully satisfied; otherwise return continue.",
+    "Return complete when your assigned stage is fully satisfied; otherwise return continue.",
     renderProtocol(role, token)
   ].join("\n\n");
 }
@@ -68,16 +47,30 @@ export function buildReviewerPrompt(
   definition: LoopDefinition,
   role: LoopRunRole,
   goal: LoopRunGoal,
-  writerSummary: string,
+  earlierResults: string,
   token: string
 ): string {
   return [
-    `You are a read-only reviewer in the workflow "${definition.name}".`,
+    describeWorkflow(definition, `You are a read-only reviewer in the workflow "${definition.name}".`),
     buildLoopRunGoalPromptSection(goal),
-    `Role instructions:\n${role.instructions}`,
-    `Writer summary:\n${writerSummary || "No summary provided."}`,
+    `Stage "${role.name}" instructions:\n${role.instructions}`,
+    `Earlier stage results:\n${earlierResults || "No summary provided."}`,
     "Inspect the shared worktree and verify the implementation. Do not edit files.",
     "Return approve only when no actionable issue remains; otherwise return changes_requested with concrete feedback.",
     renderProtocol(role, token)
   ].join("\n\n");
+}
+
+/** Every stage sees the ordered handoff, including feedback from earlier reviewers. */
+export function buildStagePrompt(definition: LoopDefinition, role: LoopRunRole, goal: LoopRunGoal,
+  previous: LoopIteration | undefined, current: LoopIteration, token: string): string {
+  const handoff = current.results.map((result) => {
+    const stage = definition.stages.find((entry) => entry.id === result.roleId);
+    return `${stage?.name ?? result.roleId} (${result.outcome}): ${result.summary}`;
+  }).join("\n\n");
+  if (role.kind === "reviewer") {
+    const prompt = buildReviewerPrompt(definition, role, goal, handoff, token);
+    return previous ? `${prompt}\n\nPrevious pass results:\n${aggregateFeedback(previous)}` : prompt;
+  }
+  return `${buildWriterPrompt(definition, role, goal, previous, token)}\n\nEarlier stages in this pass:\n${handoff || "This is the first stage."}`;
 }

@@ -1,3 +1,4 @@
+import { workspaceTasksChangedChannel } from "@shared/workspaceTaskEvents";
 import type { WorkspaceBridge, WorkspaceLoadingProgressPayload } from "@shared/ipc/types/workspaceGateway.types";
 
 import { invokeIpc } from "./invokeIpc";
@@ -5,6 +6,11 @@ import { subscribeToIpcEvent } from "./subscribeToIpcEvent";
 
 export function createWorkspaceBridge(): WorkspaceBridge {
   return {
+    discoverWorkspaces: () => invokeIpc("app:discover-workspaces"),
+    onWorkspaceTasksChanged: (listener) =>
+      subscribeToIpcEvent<unknown>(workspaceTasksChangedChannel, (payload) => {
+        if (typeof payload === "string" && payload) listener(payload);
+      }),
     chooseProject: () => invokeIpc("app:choose-project"),
     chooseProjectAtPath: (defaultPath, title) => invokeIpc("app:choose-project-at-path", defaultPath, title),
     createProjectWorkspace: (payload) => invokeIpc("app:create-project-workspace", payload),
@@ -31,6 +37,7 @@ export function createWorkspaceBridge(): WorkspaceBridge {
     saveWorkspaceTerminalPresets: (projectId, presets) => invokeIpc("app:save-workspace-terminal-presets", projectId, presets),
     readWorkspaceFile: (payload) => invokeIpc("app:read-workspace-file", payload),
     readWorkspaceImageFile: (payload) => invokeIpc("app:read-workspace-image-file", payload),
+    readWorkspaceLogo: (projectId) => invokeIpc("app:read-workspace-logo", projectId),
     openWorkspaceFileExternally: (payload) => invokeIpc("app:open-workspace-file-externally", payload),
     writeWorkspaceFile: (payload) => invokeIpc("app:write-workspace-file", payload),
     createWorkspaceDirectory: (payload) => invokeIpc("app:create-workspace-directory", payload),
@@ -38,14 +45,8 @@ export function createWorkspaceBridge(): WorkspaceBridge {
     moveWorkspaceFile: (payload) => invokeIpc("app:move-workspace-file", payload),
     deleteWorkspaceFile: (payload) => invokeIpc("app:delete-workspace-file", payload),
     searchWorkspaceFiles: (payload) => invokeIpc("app:search-workspace-files", payload),
-    listImportedContextBundles: (projectId, rootPath) =>
-      invokeIpc("app:list-imported-context-bundles", projectId, rootPath),
-    listExternalHarnessContextSessions: (projectId, rootPath) =>
-      invokeIpc("app:list-external-harness-context-sessions", projectId, rootPath),
     archiveExternalHarnessThread: (payload) =>
       invokeIpc("app:archive-external-harness-thread", payload),
-    composeExternalHarnessContextSelections: (projectId, ref) =>
-      invokeIpc("app:compose-external-harness-context-selections", projectId, ref),
     listNoraDetectableContextBundles: (projectId, sessionId, worktreeId) =>
       invokeIpc("app:list-nora-detectable-context-bundles", projectId, sessionId, worktreeId),
     importNoraDetectableContextBundle: (payload) =>
@@ -57,6 +58,7 @@ export function createWorkspaceBridge(): WorkspaceBridge {
     statWorkspacePath: (payload) => invokeIpc("app:stat-workspace-path", payload),
     getWorkspaceGitStatusSummary: (payload) => invokeIpc("app:get-workspace-git-status-summary", payload),
     checkoutWorkspaceBranch: (payload) => invokeIpc("app:checkout-workspace-branch", payload),
+    selectChangesCheckout: (payload) => invokeIpc("app:select-changes-checkout", payload),
     setWorkspaceUpstream: (payload) => invokeIpc("app:set-workspace-upstream", payload),
     selectChange: (pathName) => invokeIpc("app:select-change", pathName),
     discardChange: (pathName) => invokeIpc("app:discard-change", pathName),

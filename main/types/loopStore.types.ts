@@ -9,3 +9,7 @@ export interface LoopStore {
   saveRun: (run: LoopRun) => Promise<void>;
   deleteRun: (projectId: string, runId: string) => Promise<void>;
 }
+
+export interface LoopStoreDeps {
+  resolveStatePath: (projectId: string, relativePath: string) => Promise<string>;
+}

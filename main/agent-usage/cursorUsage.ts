@@ -29,6 +29,7 @@ export const parseCursorPeriodUsage = (payload: unknown): CursorPeriodUsage | nu
 
 export const buildCursorUsageWindows = (usage: CursorPeriodUsage, now: Date): ToolUsageWindow[] => [{
   id: "monthly",
+  period: "monthly",
   label: "Monthly",
   shortLabel: "M",
   percentLeft: clampPercent(100 - usage.totalPercentUsed),

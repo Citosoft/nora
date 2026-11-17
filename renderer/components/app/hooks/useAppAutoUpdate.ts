@@ -1,6 +1,7 @@
+import { buildAppUpdateDetails } from "@/components/app/logic/appUpdateDetails";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import type { UseAppAutoUpdateArgs, UseAppAutoUpdateResult } from "@/components/app/types/appHooks.types";
-import type { AppToastDownloadProgress } from "@/components/app/types/appToast.types";
+import type { AppToast, AppToastDownloadProgress } from "@/components/app/types/appToast.types";
 import type { AutoUpdateStatus, ForgeOAuthDevicePrompt } from "@shared/appTypes";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -64,13 +65,17 @@ export const useAppAutoUpdate = ({
     setIsInstallingDownloadedUpdate(false);
   }, [autoUpdateStatus?.kind]);
 
-  const handleInstallDownloadedUpdate = useCallback((): void => {
+  const handleAppUpdate = useCallback((): void => {
+    if (autoUpdateStatus?.kind === "available") {
+      void noraSystemClient.downloadAppUpdate().catch(captureError);
+      return;
+    }
     setIsInstallingDownloadedUpdate(true);
     void noraSystemClient.installDownloadedUpdate().catch((error: unknown) => {
       setIsInstallingDownloadedUpdate(false);
       captureError(error);
     });
-  }, [captureError]);
+  }, [autoUpdateStatus?.kind, captureError]);
 
   const dismissAutoUpdateToast = useCallback((): void => {
     if (autoUpdateToastIdRef.current !== null) {
@@ -103,6 +108,36 @@ export const useAppAutoUpdate = ({
     }
 
     const latestVersionLabel = resolveLatestVersionLabel(autoUpdateStatus);
+    const releaseDetails = buildAppUpdateDetails(autoUpdateStatus);
+    const details = releaseDetails ? {
+      ...releaseDetails,
+      onLinkClick: (url: string): void => {
+        void noraSystemClient.openExternalUrl(url).catch(captureError);
+      }
+    } : undefined;
+    const publishToast = (content: Omit<AppToast, "id">): void => {
+      const payload = { durationMs: undefined, dismissLabel: undefined, ...content, details };
+      if (autoUpdateToastIdRef.current === null) {
+        autoUpdateToastIdRef.current = showToast(payload);
+      } else {
+        updateToast(autoUpdateToastIdRef.current, payload);
+      }
+    };
+
+    if (kind === "available") {
+      const payload = {
+        variant: "info" as const,
+        title: "Nora update available",
+        durationMs: Infinity,
+        dismissLabel: "Later",
+        description: `${latestVersionLabel} is available. Download it now to install on your next restart.`,
+        downloadProgress: undefined,
+        primaryAction: { label: "Download update", onClick: handleAppUpdate },
+        onDismissed: handleAutoUpdateToastDismissed
+      };
+      publishToast(payload);
+      return;
+    }
 
     if (kind === "downloading") {
       const downloadProgress: AppToastDownloadProgress =
@@ -119,11 +154,7 @@ export const useAppAutoUpdate = ({
         onDismissed: handleAutoUpdateToastDismissed
       };
 
-      if (autoUpdateToastIdRef.current === null) {
-        autoUpdateToastIdRef.current = showToast(payload);
-      } else {
-        updateToast(autoUpdateToastIdRef.current, payload);
-      }
+      publishToast(payload);
       return;
     }
 
@@ -131,22 +162,18 @@ export const useAppAutoUpdate = ({
       const payload = {
         variant: "info" as const,
         title: "Update ready to install",
-        description: `${latestVersionLabel} has been downloaded and is ready to install.`,
+        description: `${latestVersionLabel} has been downloaded and will install on your next restart.`,
         downloadProgress: undefined,
         primaryAction: {
           label: "Restart to install",
-          onClick: handleInstallDownloadedUpdate,
+          onClick: handleAppUpdate,
           disabled: isInstallingDownloadedUpdate,
           pending: isInstallingDownloadedUpdate
         },
         onDismissed: handleAutoUpdateToastDismissed
       };
 
-      if (autoUpdateToastIdRef.current === null) {
-        autoUpdateToastIdRef.current = showToast(payload);
-      } else {
-        updateToast(autoUpdateToastIdRef.current, payload);
-      }
+      publishToast(payload);
       return;
     }
 
@@ -160,17 +187,14 @@ export const useAppAutoUpdate = ({
         onDismissed: handleAutoUpdateToastDismissed
       };
 
-      if (autoUpdateToastIdRef.current === null) {
-        autoUpdateToastIdRef.current = showToast(payload);
-      } else {
-        updateToast(autoUpdateToastIdRef.current, payload);
-      }
+      publishToast(payload);
     }
   }, [
     autoUpdateStatus,
+    captureError,
     dismissAutoUpdateToast,
     handleAutoUpdateToastDismissed,
-    handleInstallDownloadedUpdate,
+    handleAppUpdate,
     isInstallingDownloadedUpdate,
     showToast,
     updateToast
@@ -181,6 +205,6 @@ export const useAppAutoUpdate = ({
     isInstallingDownloadedUpdate,
     forgeOAuthDevicePrompt,
     setForgeOAuthDevicePrompt,
-    handleInstallDownloadedUpdate
+    handleAppUpdate
   };
 };

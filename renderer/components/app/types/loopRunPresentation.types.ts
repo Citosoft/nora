@@ -78,6 +78,7 @@ export interface WorkflowRunStatusIconProps {
 
 export interface WorkflowRunProgressProps {
   stages: LoopRunStage[];
+  onOpenThread(conversationId: string): void;
 }
 
 export interface WorkflowRunOutputProps {

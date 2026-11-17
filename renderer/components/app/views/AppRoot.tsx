@@ -1,8 +1,8 @@
+import { archiveLegacyChatTabs } from "@/components/app/logic/thread-workspace/archiveChats";
 import { AppRootShellStateProvider } from "@/components/app/context/appRootShellStateContext";
 import { AppRootStateProvider } from "@/components/app/context/appRootStateContext";
 import {
   hasStoredUiLayout,
-  readStoredAiChatTabsState,
   readStoredBrowserTabsState,
   readStoredForgeViewerTabsState,
   readStoredWorkspaceContentState
@@ -15,7 +15,7 @@ import type { ReactElement } from "react";
 export function AppRoot(): ReactElement {
   const hasPersistedUiLayout = hasStoredUiLayout();
   const storedBrowserTabsState = readStoredBrowserTabsState();
-  const storedAiChatTabsState = readStoredAiChatTabsState();
+  const legacyChatsArchived = archiveLegacyChatTabs(localStorage, new Date().toISOString());
   const storedForgeViewerTabsState = readStoredForgeViewerTabsState();
   const storedWorkspaceContentState = readStoredWorkspaceContentState();
   const shouldApplyFirstLoadCollapsedPanels = !hasPersistedUiLayout;
@@ -23,8 +23,9 @@ export function AppRoot(): ReactElement {
     ...appRootInitialUiState,
     browserTabs: storedBrowserTabsState.tabs,
     focusedBrowserTabId: storedBrowserTabsState.focusedTabId,
-    aiChatTabs: storedAiChatTabsState.tabs,
-    focusedAiChatTabId: storedAiChatTabsState.focusedTabId,
+    aiChatTabs: [],
+    focusedAiChatTabId: null,
+    activeErrorMessage: legacyChatsArchived ? null : "Previous chat history could not be archived. Its original storage is preserved. Free storage and restart Nora to retry.",
     forgeViewerTabs: storedForgeViewerTabsState.tabs,
     focusedForgeViewerTabId: storedForgeViewerTabsState.focusedTabId
   };

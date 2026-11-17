@@ -1,4 +1,4 @@
-import type { LoopRun } from "@shared/appTypes";
+import type { LoopDefinition, LoopRun } from "@shared/appTypes";
 import type { LoopBridge } from "@shared/ipc/types/loopGateway.types";
 import { invokeIpc } from "./invokeIpc";
 import { subscribeToIpcEvent } from "./subscribeToIpcEvent";
@@ -16,6 +16,7 @@ export function createLoopBridge(): LoopBridge {
     resumeLoopRun: (projectId, runId) => invokeIpc("app:resume-loop-run", projectId, runId),
     cancelLoopRun: (projectId, runId) => invokeIpc("app:cancel-loop-run", projectId, runId),
     onLoopRunChanged: (listener) => subscribeToIpcEvent<LoopRun>("loop-run:changed", listener),
+    onLoopDefinitionChanged: (listener) => subscribeToIpcEvent<LoopDefinition>("loop-definition:changed", listener),
     onLoopRunOutput: (listener) => subscribeToIpcEvent<import("@shared/ipc/types/loopGateway.types").LoopRunOutputUpdate>("loop-run:output", listener)
   };
 }

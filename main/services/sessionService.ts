@@ -5,6 +5,7 @@ type SessionServiceDeps = SessionService;
 export function createSessionService(deps: SessionServiceDeps): SessionService {
   return {
     createAgent: deps.createAgent,
+    createWorktree: deps.createWorktree,
     createTerminal: deps.createTerminal,
     renameTerminal: deps.renameTerminal,
     openLocalTerminal: deps.openLocalTerminal,

@@ -1,5 +1,6 @@
 import { noraIntegrationClient } from "@/components/app/clients/noraIntegrationClient";
-import { getActiveWorktree, normalizeForgeCreatePullRequestError } from "@/components/app/logic/appUtils";
+import { normalizeForgeCreatePullRequestError } from "@/components/app/logic/appUtils";
+import { getChangesCheckoutBranch } from "@/components/app/logic/changesCheckoutOptions";
 import type { UseForgeIntegrationArgs, UseForgeIntegrationResult } from "@/components/app/types/appHooks.types";
 import type {
   ForgeAddCommentPayload,
@@ -37,15 +38,7 @@ export function useForgeIntegration({
   const [isPerformingForgeWorkItemAction, setIsPerformingForgeWorkItemAction] = useState(false);
   const [isPostingForgeWorkItemComment, setIsPostingForgeWorkItemComment] = useState(false);
   const forgeWorkItemRepoOverrideRef = useRef<{ host: string; fullName: string } | null>(null);
-  const activeBranch = (() => {
-    if (!snapshot) {
-      return "";
-    }
-    const activeWorktree = getActiveWorktree(snapshot);
-    const focusedAgent = snapshot.agents.find((agent) => agent.id === snapshot.focusedAgentId) ?? null;
-    const focusedTerminal = snapshot.terminals.find((terminal) => terminal.id === snapshot.focusedTerminalId) ?? null;
-    return activeWorktree?.branch || focusedAgent?.branch || focusedTerminal?.branch || snapshot.project?.baseBranch || "";
-  })();
+  const activeBranch = snapshot ? getChangesCheckoutBranch(snapshot) : "";
 
   const setForgeWorkItemRepoOverrideValue = useCallback((next: { host: string; fullName: string } | null): void => {
     const current = forgeWorkItemRepoOverrideRef.current;

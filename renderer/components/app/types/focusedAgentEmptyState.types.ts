@@ -1,10 +1,10 @@
 import type {
-  CreateAgentDialogDefaults,
-  CreateTerminalDialogDefaults,
-  BrowserTabState,
-  WindowUiState
+BrowserTabState,
+CreateTerminalDialogDefaults,
+WindowUiState
 } from "@/components/app/types";
-import type { AgentCatalogEntry, AppState, TerminalShellOption, WorkspaceScriptLauncher, WorkspaceSummary } from "@shared/appTypes";
+import type { AgentCatalogEntry,AppState,TerminalShellOption,WorkspaceScriptLauncher,WorkspaceSummary } from "@shared/appTypes";
+import type { ThreadLaunchInput } from "./thread-workspace/runtime.types";
 
 export type FocusedAgentDetectedPortRow = {
   projectId: string;
@@ -46,7 +46,7 @@ export type FocusedAgentWorkspaceHomeProps = {
   onFocusTerminal: (terminalId: string) => void;
   onFocusBrowserTab: (tabId: string) => void;
   onOpenWorkspaceBrowser: (projectId: string, url?: string) => void;
-  onCreateInWorkspace: (defaults: CreateAgentDialogDefaults) => void;
+  onCreateInWorkspace: (defaults: ThreadLaunchInput) => void;
   onOpenAiChat: (projectId: string) => void;
   onOpenWorkspaceTerminalPresets: (projectId: string) => void;
   onOpenCreateTerminal: (defaults: CreateTerminalDialogDefaults) => void;

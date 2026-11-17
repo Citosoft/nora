@@ -6,6 +6,9 @@ export interface LoopLimitsDraft {
   roleTimeoutMinutes: number;
 }
 
+/** Guardrails a new workflow starts with, wherever it is created. */
+export const DEFAULT_LOOP_LIMITS_DRAFT: Readonly<LoopLimitsDraft> = { maxIterations: 10, maxDurationMinutes: 240, roleTimeoutMinutes: 30 };
+
 export function buildLoopLimitsFromDraft(draft: LoopLimitsDraft): LoopLimits {
   return {
     maxIterations: draft.maxIterations,

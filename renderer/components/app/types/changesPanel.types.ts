@@ -1,30 +1,31 @@
-import type { CreateAgentDialogDefaults, ResolvedTheme } from "@/components/app/types";
+import type { ResolvedTheme } from "@/components/app/types";
 import type { ChangesPanelTab } from "@/components/app/types/changesPanelTab.types";
 import type {
-  ForgeReviewAgentTargetMode,
-  ForgeReviewCommentSelection
+ForgeReviewAgentTargetMode,
+ForgeReviewCommentSelection
 } from "@/components/app/types/forgeReviewHandoff.types";
+import type { ThreadLaunchInput } from "@/components/app/types/thread-workspace/runtime.types";
 import type { OpenWorkspaceFileEditorOptions } from "@/components/app/types/workflow.types";
 import type {
-  AgentCatalogEntry,
-  AppState,
-  ChangeEntry,
-  ForgeAddCommentPayload,
-  ForgeBranchPullRequestStatus,
-  ForgeOverview,
-  ForgeWorkItemAction,
-  ForgeWorkflowRunSummary,
-  ForgeWorkItemDetail,
-  ForgeWorkItemKind,
-  ForgeWorkItemSummary,
-  GenerateCommitMessageResult,
-  VercelDeploymentSummary,
-  VercelProjectSummary
+AgentCatalogEntry,
+AppState,
+ChangeEntry,
+ForgeAddCommentPayload,
+ForgeBranchPullRequestStatus,
+ForgeOverview,
+ForgeWorkflowRunSummary,
+ForgeWorkItemAction,
+ForgeWorkItemDetail,
+ForgeWorkItemKind,
+ForgeWorkItemSummary,
+GenerateCommitMessageResult,
+VercelDeploymentSummary,
+VercelProjectSummary
 } from "@shared/appTypes";
 
 export type ChangesPanelWorkspaceSlice = {
   tools: AgentCatalogEntry[];
-  onOpenCreateAgentDialog: (defaults?: CreateAgentDialogDefaults | null) => void;
+  onOpenCreateAgentDialog: (defaults?: ThreadLaunchInput | null) => void;
 };
 
 export type ChangesPanelFilesSlice = {
@@ -62,7 +63,7 @@ export type ChangesPanelForgeSlice = {
   onRefreshForgeItem: () => void;
   onForgeAction: (action: ForgeWorkItemAction) => void;
   onForgeCommentSubmit: (payload: ForgeAddCommentPayload) => Promise<void>;
-  onSpawnIssueAgent: (toolId: string) => Promise<void>;
+  onStartIssueThread: () => Promise<void>;
   onSpawnReviewAgent: (
     toolId: string,
     selections: ForgeReviewCommentSelection[],
@@ -111,6 +112,7 @@ export type ChangesPanelChromeSlice = {
   onPullChanges: () => Promise<AppState | null>;
   onPushChanges: () => Promise<AppState | null>;
   onCheckoutWorkspaceBranch: (branch: string) => Promise<AppState | null>;
+  onSelectChangesCheckout: (path: string) => Promise<AppState | null>;
   onEditChange: (pathName: string) => void;
   onInspectCommit: (hash: string) => Promise<AppState | null>;
   onClearCommitInspection: () => Promise<AppState | null>;
@@ -137,5 +139,5 @@ export type ChangesPanelSectionProps = {
   vercel: ChangesPanelVercelSlice;
   chrome: ChangesPanelChromeSlice;
   fileHandlers: ChangesPanelSectionFileHandlers;
-  openCreateAgentDialog: (defaults?: CreateAgentDialogDefaults | null) => void;
+  openNewThread: (defaults?: ThreadLaunchInput | null) => void;
 };

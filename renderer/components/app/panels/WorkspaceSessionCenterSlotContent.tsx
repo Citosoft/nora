@@ -1,16 +1,15 @@
+import { useWorkspaceNavigation } from "@/components/app/hooks/useWorkspaceNavigation";
 import type { AiChatReasoningLevel, AiChatMessage, FileEditorTab, ResolvedTheme } from "@/components/app/types";
 import type { FileEditorAgentSendTarget } from "@/components/app/types/fileEditor.types";
 import type { OpenWorkspaceFileEditorOptions } from "@/components/app/types/workflow.types";
 import type { ForgeDetailPanelProps } from "@/components/app/types/panel.types";
 import type { WorkspaceSessionCenterSlot } from "@/components/app/types/workspaceSessionCenterSlots.types";
-import { AiChatPanel } from "@/components/app/panels/AiChatPanel";
-import { BrowserTabPanel } from "@/components/app/panels/BrowserTabPanel";
 import { DiffViewer } from "@/components/app/panels/DiffViewer";
 import { FileEditorPanel } from "@/components/app/panels/FileEditorPanel";
-import { FocusedAgentPanel } from "@/components/app/panels/FocusedAgentPanel";
+import { ThreadWorkspaceCenter } from "@/components/app/panels/threads/ThreadWorkspaceCenter";
 import { ForgeDetailPanel } from "@/components/app/panels/ForgePanel";
 import { ForgeWorkflowRunPanel } from "@/components/app/panels/ForgeWorkflowRunPanel";
-import { FullDiffViewer } from "@/components/app/panels/FullDiffViewer";
+import { CenterFullDiff } from "@/components/app/panels/CenterFullDiff";
 import type { ForgeViewerTabState } from "@/components/app/types";
 import type { ChangeEntry } from "@shared/appTypes";
 import type {
@@ -20,7 +19,6 @@ import type {
   AiProvider,
   AiSettings,
   ForgeOverview,
-  TerminalSession
 } from "@shared/appTypes";
 
 export type WorkspaceSessionCenterSlotContentProps = {
@@ -48,7 +46,7 @@ export type WorkspaceSessionCenterSlotContentProps = {
     | "onRefreshDetail"
     | "onAction"
     | "onCommentSubmit"
-    | "onSpawnIssueAgent"
+    | "onStartIssueThread"
     | "onSpawnReviewAgent"
   >;
   stableTools: AgentCatalogEntry[];
@@ -62,15 +60,16 @@ export type WorkspaceSessionCenterSlotContentProps = {
   onUpdateAiChatTabTitle: (tabId: string, title: string) => void;
   onUpdateAiChatTabMessages: (tabId: string, updater: (current: AiChatMessage[]) => AiChatMessage[]) => void;
   stableAgent: AgentSession | null;
-  stableTerminal: TerminalSession | null;
 };
 
 export function WorkspaceSessionCenterSlotContent(props: WorkspaceSessionCenterSlotContentProps) {
   const { slot } = props;
+  const { route } = useWorkspaceNavigation();
+
 
   switch (slot.kind) {
     case "diff-full":
-      return <FullDiffViewer changes={props.snapshotChanges} resolvedTheme={props.resolvedTheme} />;
+      return <CenterFullDiff snapshotChanges={props.snapshotChanges} resolvedTheme={props.resolvedTheme} />;
     case "diff-file":
       return (
         <DiffViewer
@@ -81,6 +80,7 @@ export function WorkspaceSessionCenterSlotContent(props: WorkspaceSessionCenterS
         />
       );
     case "file-editor": {
+      if (route?.tool === "documents") return null;
       const specTab = props.activeSpecEditorTab;
       return (
         <FileEditorPanel
@@ -122,28 +122,10 @@ export function WorkspaceSessionCenterSlotContent(props: WorkspaceSessionCenterS
           repoProvider={props.forgeOverview?.repo?.provider ?? "github"}
         />
       );
-    case "ai-chat": {
-      const chatTab = slot.payload.tab;
-      return (
-        <AiChatPanel
-          tabId={chatTab.id}
-          reasoningMode={chatTab.reasoningMode}
-          messages={chatTab.messages}
-          onReasoningModeChange={(mode) => props.onUpdateAiChatTabReasoningMode(chatTab.id, mode)}
-          onSetChatTitle={(title) => props.onUpdateAiChatTabTitle(chatTab.id, title)}
-          onMessagesChange={(nextMessages) => props.onUpdateAiChatTabMessages(chatTab.id, () => nextMessages)}
-          aiSettings={props.aiSettings}
-          aiModelOptions={props.aiModelOptions}
-          aiModelLoading={props.aiModelLoading}
-          onSelectAiChatProviderModel={props.onSelectAiChatProviderModel}
-          onOpenAiSettings={props.onOpenAiSettings}
-        />
-      );
-    }
-    case "browser":
-      return <BrowserTabPanel tab={slot.payload.tab} />;
+    case "ai-chat":
+      return <div className="p-6 text-sm text-muted-foreground">This conversation belongs to archived chat history.</div>;
     case "agent-terminal":
-      return <FocusedAgentPanel agent={props.stableAgent} terminal={props.stableTerminal} />;
+      return <ThreadWorkspaceCenter />;
     default: {
       const _exhaustive: never = slot;
       return _exhaustive;

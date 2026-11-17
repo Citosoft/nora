@@ -1,10 +1,8 @@
 import type {
-  AgentContextSelection,
   AppState,
   ExternalHarnessContextRef,
-  ExternalHarnessSessionSummary,
-  ImportedContextBundleSummary,
   SetWorkspaceUpstreamPayload,
+  SelectChangesCheckoutPayload,
   TerminalPreset,
   WorkspaceGitStatusSummary,
   WorkspaceNoteSummary,
@@ -34,6 +32,10 @@ export abstract class WorkspaceActionsApiBase {
     return this.getWorkspaceActions().readWorkspaceImageFile(payload);
   }
 
+  async readWorkspaceLogo(projectId: string): Promise<WorkspaceImageFileContent | null> {
+    return this.getWorkspaceActions().readWorkspaceLogo(projectId);
+  }
+
   async listWorkspaceFiles(projectId: string, rootPath?: string): Promise<string[]> {
     return this.getWorkspaceActions().listWorkspaceFiles(projectId, rootPath);
   }
@@ -54,29 +56,11 @@ export abstract class WorkspaceActionsApiBase {
     return this.getWorkspaceActions().searchWorkspaceFilesByProject(payload);
   }
 
-  async listImportedContextBundles(projectId: string, rootPath?: string): Promise<ImportedContextBundleSummary[]> {
-    return this.getWorkspaceActions().listImportedContextBundlesByProject(projectId, rootPath);
-  }
-
-  async listExternalHarnessContextSessions(
-    projectId: string,
-    rootPath?: string
-  ): Promise<ExternalHarnessSessionSummary[]> {
-    return this.getWorkspaceActions().listExternalHarnessContextSessionsByProject(projectId, rootPath);
-  }
-
   async archiveExternalHarnessThread(
     projectId: string,
     ref: ExternalHarnessContextRef
   ): Promise<void> {
     return this.getWorkspaceActions().archiveExternalHarnessThreadByProject(projectId, ref);
-  }
-
-  async composeExternalHarnessContextSelections(
-    projectId: string,
-    ref: ExternalHarnessContextRef
-  ): Promise<AgentContextSelection[]> {
-    return this.getWorkspaceActions().composeExternalHarnessContextSelectionsByProject(projectId, ref);
   }
 
   async statWorkspacePath(payload: { projectId: string; path: string; rootPath?: string }): Promise<WorkspacePathStatResult> {
@@ -93,6 +77,10 @@ export abstract class WorkspaceActionsApiBase {
     rootPath?: string;
   }): Promise<AppState> {
     return this.getWorkspaceActions().checkoutWorkspaceBranch(payload);
+  }
+
+  async selectChangesCheckout(payload: SelectChangesCheckoutPayload): Promise<AppState> {
+    return this.getWorkspaceActions().selectChangesCheckout(payload);
   }
 
   async setWorkspaceUpstream(payload: SetWorkspaceUpstreamPayload): Promise<WorkspaceGitStatusSummary> {
@@ -113,6 +101,10 @@ export abstract class WorkspaceActionsApiBase {
 
   async createWorkspaceTask(projectId: string, taskDescription: string): Promise<AppState> {
     return this.getWorkspaceActions().createWorkspaceTask(projectId, taskDescription);
+  }
+
+  async createWorkspaceTaskFile(projectId: string, title: string, content: string): Promise<string> {
+    return this.getWorkspaceActions().createWorkspaceTaskFile(projectId, title, content);
   }
 
   async getWorkspaceSplitViews(projectId: string): Promise<WorkspaceSplitViewCollection> {

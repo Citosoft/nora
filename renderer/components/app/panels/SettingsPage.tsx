@@ -1,11 +1,14 @@
+import { RemoteAccessSettingsSection } from "@/components/app/panels/settings/RemoteAccessSettingsSection";
 import { useSettingRowReveal } from "@/components/app/hooks/useSettingRowReveal";
-import { useSettingsRuntime } from "@/components/app/hooks/useSettingsRuntime";
 import { AiSettingsSection } from "@/components/app/panels/settings/AiSettingsSection";
 import { AppearanceSettingsSection } from "@/components/app/panels/settings/AppearanceSettingsSection";
 import { BrowserSettingsSection } from "@/components/app/panels/settings/BrowserSettingsSection";
 import { CliSettingsSection } from "@/components/app/panels/settings/CliSettingsSection";
+import { ThreadsSettingsSection } from "@/components/app/panels/settings/ThreadsSettingsSection";
+import { BotsSettingsSection } from "@/components/app/panels/settings/BotsSettingsSection";
 import { DevSettingsSection } from "@/components/app/panels/settings/DevSettingsSection";
 import { GeneralSettingsSection } from "@/components/app/panels/settings/GeneralSettingsSection";
+import { McpServersSettingsSection } from "@/components/app/panels/settings/McpServersSettingsSection";
 import { IntegrationsSettingsSection } from "@/components/app/panels/settings/IntegrationsSettingsSection";
 import { PrivacySettingsSection } from "@/components/app/panels/settings/PrivacySettingsSection";
 import { SkillsSettingsSection } from "@/components/app/panels/settings/SkillsSettingsSection";
@@ -15,15 +18,13 @@ import { AgentUsageStatsSection } from "@/components/app/panels/settings/AgentUs
 import { VoiceSettingsSection } from "@/components/app/panels/settings/VoiceSettingsSection";
 import { WorkbenchSettingsSection } from "@/components/app/panels/settings/WorkbenchSettingsSection";
 import { SettingsSidebar } from "@/components/app/panels/settings/SettingsSidebar";
+import { ConnectionsSettingsSection } from "@/components/app/panels/settings/ConnectionsSettingsSection";
 import type { SettingsGroup, SettingsPageProps } from "@/components/app/types/component.types";
 import type { SettingRowRevealTarget, SettingsSearchEntry } from "@/components/app/types/settingsSearch.types";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { ArrowLeft } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export function SettingsPage({ initialGroup }: SettingsPageProps) {
-  const { closeSettingsPage } = useSettingsRuntime();
   const [group, setGroup] = useState<SettingsGroup>(initialGroup ?? "appearance");
   const previousInitialGroupRef = useRef<SettingsGroup | undefined>(initialGroup);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -44,13 +45,6 @@ export function SettingsPage({ initialGroup }: SettingsPageProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-white dark:bg-background">
-      <div className="border-b border-border/60 px-8 py-4">
-        <Button variant="outline" onClick={closeSettingsPage}>
-          <ArrowLeft className="size-4" aria-hidden="true" />
-          Back
-        </Button>
-      </div>
-
       <Tabs
         value={group}
         onValueChange={(value: string) => setGroup(value as SettingsGroup)}
@@ -84,6 +78,18 @@ export function SettingsPage({ initialGroup }: SettingsPageProps) {
             <CliSettingsSection />
           </TabsContent>
 
+          <TabsContent value="threads" className="mt-0">
+            <ThreadsSettingsSection />
+          </TabsContent>
+
+          <TabsContent value="bots" className="mt-0">
+            <BotsSettingsSection />
+          </TabsContent>
+
+          <TabsContent value="mcp" className="mt-0">
+            <McpServersSettingsSection />
+          </TabsContent>
+
           <TabsContent value="agentUsage" className="mt-0">
             <AgentUsageStatsSection />
           </TabsContent>
@@ -94,6 +100,10 @@ export function SettingsPage({ initialGroup }: SettingsPageProps) {
 
           <TabsContent value="integrations" className="mt-0">
             <IntegrationsSettingsSection />
+          </TabsContent>
+          <TabsContent value="remoteAccess" className="mt-0"><RemoteAccessSettingsSection /></TabsContent>
+          <TabsContent value="connections" className="mt-0">
+            <ConnectionsSettingsSection />
           </TabsContent>
 
           <TabsContent value="ai" className="mt-0">

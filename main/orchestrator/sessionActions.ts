@@ -1,6 +1,7 @@
 import type { AppState, CommitChangesPayload } from "@shared/appTypes";
 import { assertGitProject } from "@shared/projectVersionControl";
 import type { WorkspaceTarget } from "../types/internal.types";
+import { getActiveChangesRoot } from "./changesCheckout";
 
 type SessionActionsDependencies = {
   getSnapshot: () => AppState;
@@ -16,24 +17,6 @@ type SessionActionsDependencies = {
   writeAgentSessionInput: (agentId: string, input: string) => void;
   delay: (ms: number) => Promise<void>;
 };
-
-export function getActiveChangesRoot(state: AppState): string {
-  const focusedAgent = state.agents.find((agent) => agent.id === state.focusedAgentId);
-  if (focusedAgent?.workspace) {
-    return state.worktrees.find((worktree) => worktree.id === focusedAgent.worktreeId)?.path || focusedAgent.workspace;
-  }
-
-  const focusedTerminal = state.terminals.find((terminal) => terminal.id === state.focusedTerminalId);
-  if (focusedTerminal?.workspace) {
-    return state.worktrees.find((worktree) => worktree.id === focusedTerminal.worktreeId)?.path ||
-      state.project?.rootPath ||
-      focusedTerminal.workspace;
-  }
-
-  const currentSession = state.sessions.find((session) => session.id === state.currentSessionId);
-  const focusedWorktree = state.worktrees.find((worktree) => worktree.id === currentSession?.focusedWorktreeId);
-  return focusedWorktree?.path || state.project?.rootPath || process.cwd();
-}
 
 export async function commitChangesWithValidation(
   deps: SessionActionsDependencies,

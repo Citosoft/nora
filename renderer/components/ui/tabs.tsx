@@ -40,7 +40,8 @@ const TabsContent = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <TabsPrimitive.Content
     ref={ref}
-    className={cn("mt-0 focus-visible:outline-none", className)}
+    // Radix keeps an inactive panel's wrapper with `hidden`, which a layout class like `flex` would override.
+    className={cn("mt-0 focus-visible:outline-none data-[state=inactive]:hidden", className)}
     {...props}
   />
 ));

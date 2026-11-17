@@ -1,7 +1,9 @@
-import type { DropdownMenuItemProps, DropdownMenuProps } from "@/components/ui/types/primitives.types";
+import type { DropdownMenuContextValue, DropdownMenuGroupProps, DropdownMenuItemProps, DropdownMenuProps, DropdownMenuSubProps, MenuLabelProps } from "@/components/ui/types/primitives.types";
+import { menuItemClass, menuItemDestructiveClass, menuItemDisabledClass, menuLabelClass, menuSeparatorClass, menuSurfaceClass } from "@/components/ui/menu-styles";
 import { cn } from "@/lib/utils";
 import * as React from "react";
-import { useEffect, useRef, useState } from "react";
+import { ChevronRight } from "lucide-react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 export function DropdownMenu({
@@ -13,6 +15,8 @@ export function DropdownMenu({
   const triggerRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
+  const [openSubId, setOpenSubId] = useState<string | null>(null);
+  const layerId = useId();
   const [position, setPosition] = useState<{ top: number; left: number; maxHeight: number } | null>(null);
 
   useEffect(() => {
@@ -47,7 +51,10 @@ export function DropdownMenu({
         return;
       }
 
-      if (!triggerRef.current?.contains(target) && !contentRef.current?.contains(target)) {
+      // Submenus render in their own portals, so they are matched by layer instead of DOM containment.
+      const element = target instanceof Element ? target : target.parentElement;
+      const inSubmenu = element?.closest(`[data-dropdown-layer="${CSS.escape(layerId)}"]`) != null;
+      if (!triggerRef.current?.contains(target) && !contentRef.current?.contains(target) && !inSubmenu) {
         setOpen(false);
       }
     };
@@ -69,7 +76,11 @@ export function DropdownMenu({
       window.removeEventListener("pointerdown", handlePointerDown);
       window.removeEventListener("keydown", handleEscape);
     };
-  }, [align, open]);
+  }, [align, layerId, open]);
+
+  useEffect(() => {
+    if (!open) setOpenSubId(null);
+  }, [open]);
 
   useEffect(() => {
     if (!open || !position || !contentRef.current) {
@@ -117,7 +128,8 @@ export function DropdownMenu({
             <div
               ref={contentRef}
               className={cn(
-                "fixed z-[9999] overflow-y-auto rounded-[7px] border border-border/70 bg-popover/95 p-1 shadow-xl backdrop-blur",
+                "fixed z-[9999] overflow-y-auto",
+                menuSurfaceClass,
                 widthClassName
               )}
               style={{
@@ -128,7 +140,7 @@ export function DropdownMenu({
               }}
               onClick={(event) => event.stopPropagation()}
             >
-              <DropdownMenuContext.Provider value={{ close: () => setOpen(false) }}>
+              <DropdownMenuContext.Provider value={{ close: () => setOpen(false), layerId, openSubId, setOpenSubId }}>
                 {children}
               </DropdownMenuContext.Provider>
             </div>,
@@ -139,7 +151,7 @@ export function DropdownMenu({
   );
 }
 
-const DropdownMenuContext = React.createContext<{ close: () => void } | null>(null);
+const DropdownMenuContext = React.createContext<DropdownMenuContextValue | null>(null);
 
 export function DropdownMenuItem({
   children,
@@ -154,12 +166,13 @@ export function DropdownMenuItem({
     <button
       type="button"
       className={cn(
-        "flex w-full items-center gap-2 rounded-[6px] px-3 py-2 text-left text-[12px] transition hover:bg-accent/60",
-        destructive ? "text-destructive" : "text-popover-foreground",
-        disabled ? "cursor-not-allowed opacity-50 hover:bg-transparent" : "",
+        menuItemClass,
+        destructive && menuItemDestructiveClass,
+        disabled && menuItemDisabledClass,
         className
       )}
       disabled={disabled}
+      onMouseEnter={() => context?.setOpenSubId(null)}
       onClick={() => {
         if (disabled) {
           return;
@@ -170,5 +183,113 @@ export function DropdownMenuItem({
     >
       {children}
     </button>
+  );
+}
+
+export function DropdownMenuLabel({ children }: MenuLabelProps) {
+  return <div aria-hidden="true" className={menuLabelClass}>{children}</div>;
+}
+
+export function DropdownMenuSeparator() {
+  return <div role="separator" className={menuSeparatorClass} />;
+}
+
+/** Labelled section; a top-level group draws a separator above itself unless it opens the menu. */
+export function DropdownMenuGroup({ label, children, nested = false }: DropdownMenuGroupProps) {
+  return (
+    <div role="group" aria-label={label}>
+      {!nested && <div role="separator" className={cn(menuSeparatorClass, "[:first-child>&]:hidden")} />}
+      <DropdownMenuLabel>{label}</DropdownMenuLabel>
+      {children}
+    </div>
+  );
+}
+
+const submenuGap = 4;
+const submenuViewportPadding = 16;
+
+/** Item that pops out a nested menu to the side on hover, click or ArrowRight. */
+export function DropdownMenuSub({ label, icon, children, disabled = false }: DropdownMenuSubProps) {
+  const context = React.useContext(DropdownMenuContext);
+  const subId = useId();
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+  const open = context?.openSubId === subId;
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setPosition(null);
+      return;
+    }
+    const rect = triggerRef.current?.getBoundingClientRect();
+    const panel = panelRef.current;
+    if (!rect || !panel) {
+      return;
+    }
+    const fitsRight = rect.right + submenuGap + panel.offsetWidth <= window.innerWidth - submenuViewportPadding;
+    const left = fitsRight ? rect.right + submenuGap : Math.max(submenuViewportPadding, rect.left - submenuGap - panel.offsetWidth);
+    const bottomLimit = window.innerHeight - submenuViewportPadding - panel.offsetHeight;
+    setPosition({ left, top: Math.max(submenuViewportPadding, Math.min(rect.top - submenuGap, bottomLimit)) });
+  }, [open]);
+
+  const setOpen = (next: boolean) => context?.setOpenSubId(next ? subId : null);
+  const focusFirstItem = () => requestAnimationFrame(() => panelRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus());
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        disabled={disabled}
+        className={cn(menuItemClass, open && "bg-accent/70 [&>svg]:text-popover-foreground", disabled && menuItemDisabledClass)}
+        onMouseEnter={() => { if (!disabled) setOpen(true); }}
+        onClick={() => setOpen(true)}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowRight" && !disabled) {
+            event.preventDefault();
+            setOpen(true);
+            focusFirstItem();
+          }
+        }}
+      >
+        {icon}
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+        <ChevronRight className="!size-3.5 opacity-70" aria-hidden="true" />
+      </button>
+      {open && context
+        ? createPortal(
+            <div
+              ref={panelRef}
+              role="menu"
+              aria-label={label}
+              data-dropdown-layer={context.layerId}
+              className={cn("fixed z-[10000] w-56 overflow-y-auto", menuSurfaceClass)}
+              style={{
+                top: position?.top ?? 0,
+                left: position?.left ?? 0,
+                maxHeight: window.innerHeight - submenuViewportPadding * 2,
+                visibility: position ? undefined : "hidden"
+              }}
+              onClick={(event) => event.stopPropagation()}
+              onKeyDown={(event) => {
+                if (event.key === "ArrowLeft") {
+                  event.preventDefault();
+                  setOpen(false);
+                  triggerRef.current?.focus();
+                }
+              }}
+            >
+              {/* Hovering this submenu's own items must not reset it, so only opening another submenu is forwarded. */}
+              <DropdownMenuContext.Provider value={{ ...context, setOpenSubId: (id) => { if (id !== null) context.setOpenSubId(id); } }}>
+                {children}
+              </DropdownMenuContext.Provider>
+            </div>,
+            document.body
+          )
+        : null}
+    </>
   );
 }

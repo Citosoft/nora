@@ -35,11 +35,11 @@ export function ProjectScaffoldCompactTile({
         onClick={onClick}
         aria-label={ariaLabel}
         className={[
-          "flex h-20 w-full items-center gap-3 rounded-[6px] border px-3 py-3 text-left transition hover:border-primary/40 hover:bg-accent/30",
-          selected ? "border-primary/60 bg-primary/10" : "border-border/70 bg-background/40"
+          "flex h-20 w-full items-center gap-3 rounded-lg border px-3 py-3 text-left transition hover:border-primary/40 hover:bg-accent/30",
+          selected ? "border-primary/60 bg-primary/10" : "border-border/70 bg-background"
         ].join(" ")}
       >
-        <div className="grid size-9 shrink-0 place-items-center rounded-[5px] border border-border/70 bg-background/70">
+        <div className="grid size-9 shrink-0 place-items-center rounded-[5px] border border-border/70 bg-background">
           {logoUrl && !logoFailed ? (
             <ProductIcon
               sourceUrl={logoUrl}

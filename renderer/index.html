@@ -25,6 +25,12 @@
   </head>
   <body class="bg-background text-foreground">
     <div id="app"></div>
-    <script src="./bundle.js"></script>
+    <script>
+      if (!new URLSearchParams(location.search).has("nora-storage-migration")) {
+        const script = document.createElement("script");
+        script.src = "./bundle.js";
+        document.body.appendChild(script);
+      }
+    </script>
   </body>
   </html>

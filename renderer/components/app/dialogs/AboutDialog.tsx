@@ -19,6 +19,7 @@ import { Github, Star } from "lucide-react";
 type RepositoryStarStatus = "loading" | "starred" | "unstarred" | "unavailable";
 
 const AUTO_UPDATE_TEST_ACTIONS: Array<{ target: AutoUpdateTestTarget; label: string }> = [
+  { target: "available", label: "Update available" },
   { target: "checking", label: "Checking" },
   { target: "downloading", label: "Downloading" },
   { target: "downloaded", label: "Ready to install" },

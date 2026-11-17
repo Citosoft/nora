@@ -113,7 +113,7 @@ async function* readCodexRolloutLines(filePath: string): AsyncGenerator<string> 
   }
 }
 
-async function readCodexRolloutSummary(filePath: string): Promise<CodexRolloutSummary> {
+export async function readCodexRolloutSummary(filePath: string): Promise<CodexRolloutSummary> {
   const cached = rolloutSummaryCache.get(filePath);
   if (cached) {
     return cached;

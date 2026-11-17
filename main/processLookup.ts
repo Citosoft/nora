@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import { promisify } from "node:util";
 import { buildProcessEnv } from "./processEnv";
+import type { AgentExecutablePathCandidate } from "./types/internal.types";
 
 const execFileAsync = promisify(execFile);
 let resolvedWindowsPathPromise: Promise<string | null> | null = null;
@@ -83,4 +84,26 @@ export async function findExecutableOnPath(candidates: string[], isWindows: bool
   }
 
   return null;
+}
+
+/** Expands an agent's known install locations for this platform (home and Windows profile variables). */
+export function resolveExecutablePathCandidates(candidates: AgentExecutablePathCandidate[]): string[] {
+  const platform = process.platform;
+  const homeDir = process.env.HOME || process.env.USERPROFILE || "";
+  const userProfileDir = process.env.USERPROFILE || "";
+  const localAppDataDir = process.env.LOCALAPPDATA || "";
+  const appDataDir = process.env.APPDATA || "";
+
+  return candidates
+    .filter((candidate) => !candidate.platforms || candidate.platforms.includes(platform))
+    .map((candidate) =>
+      candidate.path
+        .replace(/^~(?=$|[\\/])/, homeDir)
+        .replace(/\$HOME(?=$|[\\/])/g, homeDir)
+        .replace(/%USERPROFILE%/gi, userProfileDir)
+        .replace(/%LOCALAPPDATA%/gi, localAppDataDir)
+        .replace(/%APPDATA%/gi, appDataDir)
+    )
+    .map((candidate) => candidate.trim())
+    .filter(Boolean);
 }

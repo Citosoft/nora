@@ -5,10 +5,8 @@ import test from "node:test";
 const expectedAgentIds = [
   "codex",
   "claude",
-  "gemini",
   "pi",
   "cursor",
-  "aider",
   "goose",
   "qwen",
   "opencode",
@@ -16,20 +14,14 @@ const expectedAgentIds = [
   "grok",
   "copilot",
   "cline",
-  "continue",
-  "codebuff",
   "amp",
   "kilo",
   "kiro",
-  "crush",
   "aug",
   "autohand",
   "droid",
   "kimi",
-  "mistral-vibe",
-  "rovo",
-  "hermes",
-  "openclaw"
+  "mistral-vibe"
 ];
 
 test("agent catalog includes common CLI coding agents", () => {
@@ -68,18 +60,13 @@ test("agent definitions expose footer management capabilities only where support
     usageDashboardUrl: null,
     supportsAccountSwitch: true
   });
-  assert.deepEqual(capabilitiesByTool.get("gemini"), {
-    supportsUsageStatus: false,
-    usageDashboardUrl: "https://aistudio.google.com/usage",
-    supportsAccountSwitch: false
-  });
   assert.deepEqual(capabilitiesByTool.get("cursor"), {
     supportsUsageStatus: true,
     usageDashboardUrl: "https://www.cursor.com/dashboard",
     supportsAccountSwitch: true
   });
 
-  for (const toolId of expectedAgentIds.filter((id) => !["codex", "claude", "gemini", "cursor"].includes(id))) {
+  for (const toolId of expectedAgentIds.filter((id) => !["codex", "claude", "cursor"].includes(id))) {
     assert.deepEqual(capabilitiesByTool.get(toolId), {
       supportsUsageStatus: false,
       usageDashboardUrl: null,

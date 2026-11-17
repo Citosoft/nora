@@ -3,14 +3,13 @@ import { buildDiffAnnotationKey, canAnnotateDiffLine } from "@/components/app/lo
 import { parseDiffLines } from "@/components/app/logic/forgePanelDiff";
 import { diffLineClass } from "@/components/app/logic/utils";
 import {
-  diffReviewAnnotatedLineClass,
-  diffReviewCommentAccentClass,
-  diffReviewCommentBodyClass,
-  diffReviewCommentLabelClass,
-  diffReviewCommentSurfaceClass,
-  diffReviewComposerSurfaceClass,
-  diffReviewComposerTextareaClass
-} from "@/components/app/panels/diff-annotation/diffAnnotationUi";
+  reviewRemoveButtonClass,
+  reviewCommentBodyClass,
+  reviewCommentLabelClass,
+  reviewCommentSurfaceClass,
+  reviewComposerSurfaceClass,
+  reviewComposerTextareaClass
+} from "@/components/app/logic/reviewStyles";
 import type { ResolvedTheme } from "@/components/app/types";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -55,18 +54,19 @@ const InlineComposer = ({ onSave, onCancel, disabled = false }: InlineComposerPr
   };
 
   return (
-    <div className={diffReviewComposerSurfaceClass}>
+    <div className={cn("mt-1 space-y-3 p-3", reviewComposerSurfaceClass)}>
       <div className="flex items-center gap-1.5">
-        <MessageSquarePlus className="size-3.5 text-primary" />
-        <span className={diffReviewCommentLabelClass}>Add review</span>
+        <MessageSquarePlus className="size-3.5 text-muted-foreground" aria-hidden="true" />
+        <span className={reviewCommentLabelClass}>Add review</span>
       </div>
       <Textarea
         ref={textareaRef}
         value={draft}
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={handleKeyDown}
+        aria-label="Inline review comment"
         placeholder="Write an inline comment"
-        className={diffReviewComposerTextareaClass}
+        className={reviewComposerTextareaClass}
         disabled={disabled}
       />
       <div className="flex items-center justify-end gap-2">
@@ -98,20 +98,19 @@ const AnnotationCard = ({
   body: string;
   onRemove: () => void;
 }) => (
-  <div className={cn("group/note relative mt-1", diffReviewCommentSurfaceClass)}>
-    <div className={diffReviewCommentAccentClass} aria-hidden="true" />
-    <div className="flex items-start gap-2 px-3 py-2.5 pl-3.5">
+  <div className={cn("group/review relative mt-1", reviewCommentSurfaceClass)}>
+    <div className="flex items-start gap-2 px-3 py-2.5">
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex items-center gap-1.5">
-          <MessageSquarePlus className="size-3.5 text-primary" />
-          <span className={diffReviewCommentLabelClass}>Review</span>
+          <MessageSquarePlus className="size-3.5 text-muted-foreground" aria-hidden="true" />
+          <span className={reviewCommentLabelClass}>Review</span>
         </div>
-        <p className={diffReviewCommentBodyClass}>{body || "(empty)"}</p>
+        <p className={reviewCommentBodyClass}>{body || "(empty)"}</p>
       </div>
       <Button
         variant="ghost"
         size="icon"
-        className="size-5 shrink-0 opacity-0 transition group-hover/note:opacity-100"
+        className={reviewRemoveButtonClass}
         onClick={onRemove}
         aria-label="Remove inline comment"
       >
@@ -156,7 +155,7 @@ export function AnnotatedDiffLines({ diff, filePath, resolvedTheme, className }:
               <div
                 className={cn(
                   "min-w-0 flex-1 whitespace-pre-wrap break-words px-2 font-mono text-[12px] leading-6",
-                  lineAnnotations.length > 0 && diffReviewAnnotatedLineClass,
+                  lineAnnotations.length > 0 && "ring-1 ring-inset ring-primary/25",
                   diffLineClass(line.text, resolvedTheme)
                 )}
               >
@@ -167,7 +166,7 @@ export function AnnotatedDiffLines({ diff, filePath, resolvedTheme, className }:
                   variant="ghost"
                   size="icon"
                   className={cn(
-                    "size-5 shrink-0 opacity-0 transition group-hover:opacity-100",
+                    "size-5 shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100",
                     isComposerOpen && "opacity-100",
                     lineAnnotations.length > 0 && "text-primary opacity-100"
                   )}

@@ -39,6 +39,7 @@ test("buildCursorUsageWindows reports one monthly window with percent left", () 
   assert.ok(usage);
   const [window] = buildCursorUsageWindows(usage, new Date(1790985113170));
   assert.equal(window.id, "monthly");
+  assert.equal(window.period, "monthly");
   assert.equal(window.shortLabel, "M");
   assert.equal(window.percentLeft, 87);
   assert.ok(window.resetsLabel);

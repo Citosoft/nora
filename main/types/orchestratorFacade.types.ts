@@ -8,5 +8,4 @@ export interface OrchestratorFacade {
   onAgentTerminalData: (listener: (sessionId: string, data: string) => void) => () => void;
   initialize: () => Promise<AppState>;
   prepareLoopRunWorktree: (input: PrepareLoopRunWorktreeInput) => Promise<PreparedLoopRunWorktree>;
-  resolveLoopToolLaunch: (toolId: string) => { detectedCommand: string; env: Record<string, string> };
 }

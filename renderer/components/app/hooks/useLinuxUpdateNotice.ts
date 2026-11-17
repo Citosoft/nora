@@ -31,6 +31,7 @@ export function useLinuxUpdateNotice(): UseLinuxUpdateNoticeResult {
 
   return {
     linuxUpdateStatus: isDismissed ? null : linuxUpdateStatus,
+    availableLinuxUpdate: linuxUpdateStatus,
     dismissLinuxUpdateNotice: () => setIsDismissed(true)
   };
 }

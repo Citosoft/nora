@@ -88,7 +88,7 @@ export function TerminalPresetsSettingsSection({
     <div className="space-y-4">
       <div
         {...settingAnchorAttributes("Terminal presets")}
-        className={`rounded-[6px] border border-border/60 bg-card/40 p-4 ${settingRevealHighlightClassName}`}
+        className={`rounded-lg border border-border/60 bg-card p-4 ${settingRevealHighlightClassName}`}
       >
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -116,8 +116,8 @@ export function TerminalPresetsSettingsSection({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-[6px] border border-border/60 bg-background/30">
-        <div className="grid grid-cols-[minmax(0,1fr)_150px_minmax(0,1fr)_minmax(0,1.5fr)_160px] border-b border-border/60 bg-card/50 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+      <div className="overflow-hidden rounded-lg border border-border/60 bg-background">
+        <div className="grid grid-cols-[minmax(0,1fr)_150px_minmax(0,1fr)_minmax(0,1.5fr)_160px] border-b border-border/60 bg-card px-4 py-3 text-xs font-medium text-muted-foreground">
           <div>Name</div>
           <div>Shell</div>
           <div>Directory</div>
@@ -205,10 +205,10 @@ export function TerminalPresetsSettingsSection({
                             setDraggedCommandIndex(null);
                           }}
                           className={[
-                            "flex min-w-0 items-center gap-1 rounded-[4px] border px-2 py-1 text-xs text-foreground",
+                            "flex min-w-0 items-center gap-1 rounded-md border px-2 py-1 text-xs text-foreground",
                             draggedCommandIndex === commandIndex
                               ? "border-primary/50 bg-primary/10"
-                              : "border-border/60 bg-card/40"
+                              : "border-border/60 bg-card"
                           ].join(" ")}
                         >
                           <span

@@ -1,3 +1,4 @@
+import { projectAppState } from "@/components/app/logic/projectAppState";
 import { applyAppDomainEvents } from "@/components/app/logic/applyAppDomainEvents";
 import { canonicalizeAppStateFromMain } from "@/components/app/logic/canonicalizeAppState";
 import { hydrateAppDomainState } from "@/components/app/logic/hydrateAppDomainState";
@@ -161,4 +162,27 @@ test("canonicalizeAppStateFromMain is idempotent", () => {
   const s = createSnapshot();
   const once = canonicalizeAppStateFromMain(s);
   assert.deepEqual(canonicalizeAppStateFromMain(once), once);
+});
+
+
+test("snapshot ingress and root consumers share a single domain projection", () => {
+  const raw = createSnapshot();
+  const expected = hydrateAppDomainState(raw);
+  const canonical = canonicalizeAppStateFromMain(raw);
+  const first = projectAppState(raw);
+  assert.deepEqual(first.domainState, expected);
+  assert.equal(first.snapshot, canonical);
+  assert.equal(projectAppState(raw), first);
+  assert.equal(projectAppState(canonical), first);
+  assert.equal(canonicalizeAppStateFromMain(canonical), canonical);
+});
+
+test("a new background snapshot refreshes the projection without changing the cached snapshot", () => {
+  const raw = createSnapshot();
+  const first = projectAppState(raw);
+  const next = projectAppState({ ...raw, errorMessage: "New background result" });
+  assert.notEqual(next, first);
+  assert.equal(next.domainState.error.message, "New background result");
+  assert.equal(first.domainState.error.message, raw.errorMessage);
+  assert.equal(projectAppState(raw), first);
 });

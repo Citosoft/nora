@@ -99,7 +99,7 @@ export function useWorkspaceLifecycleActions({
 
   const handleRemoveWorkspace = useCallback(async (projectRoot: string): Promise<void> => {
     setRemovingWorkspaceRoots((current) => (current.includes(projectRoot) ? current : [...current, projectRoot]));
-    const statusId = statusBar.beginStatus("Removing project", true);
+    const statusId = statusBar.beginStatus("Removing workspace", true);
 
     try {
       await safely(() => noraWorkspaceManagementClient.removeWorkspace(projectRoot));

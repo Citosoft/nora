@@ -13,9 +13,9 @@ export const WorkspaceSessionLoadingOverlay = ({
 
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/88 px-8 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-[6px] border border-border/70 bg-card/95 p-6 shadow-2xl">
+      <div className="w-full max-w-lg rounded-lg border border-border/70 bg-card p-6 shadow-2xl">
         <div className="flex items-start gap-4">
-          <div className="mt-0.5 rounded-[4px] border border-border/70 bg-background/70 p-2 text-primary">
+          <div className="mt-0.5 rounded-md border border-border/70 bg-background p-2 text-primary">
             {appClosingState ? (
               <LoaderCircle className="size-5 animate-spin" />
             ) : workspaceLoading?.kind === "ssh" ? (
@@ -39,12 +39,12 @@ export const WorkspaceSessionLoadingOverlay = ({
                 ? "The app will exit once running agents have finished shutting down."
                 : workspaceLoading?.targetLabel || "Opening the selected repository..."}
             </div>
-            <div className="mt-4 rounded-[4px] border border-border/60 bg-background/60 px-3 py-2 text-sm text-foreground">
+            <div className="mt-4 rounded-md border border-border/60 bg-background px-3 py-2 text-sm text-foreground">
               {appClosingState?.detail || workspaceLoading?.detail || "Waiting for the project to finish loading..."}
             </div>
             {appClosingState?.command || workspaceLoading?.command ? (
-              <div className="mt-3 rounded-[4px] border border-border/60 bg-background/60 px-3 py-2">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              <div className="mt-3 rounded-md border border-border/60 bg-background px-3 py-2">
+                <div className="text-xs font-medium text-muted-foreground">
                   {appClosingState ? "Shutdown step" : "Current command"}
                 </div>
                 <div className="mt-1 break-all font-mono text-xs text-foreground">
@@ -60,7 +60,7 @@ export const WorkspaceSessionLoadingOverlay = ({
                 <button
                   type="button"
                   onClick={onDismissWorkspaceLoading}
-                  className="shrink-0 rounded-[4px] border border-border/70 px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-background/70"
+                  className="shrink-0 rounded-md border border-border/70 px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-background"
                 >
                   Dismiss
                 </button>

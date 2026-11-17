@@ -8,8 +8,8 @@ import type {
 
 function buildWorktreePayload(input: PrepareLoopRunWorktreeInput): CreateAgentPayload {
   return {
-    toolId: input.writerToolId,
-    name: input.writerName,
+    toolId: input.toolId,
+    name: input.name,
     task: "Workflow run workspace",
     commandOverride: "",
     mode: "write",
@@ -36,7 +36,7 @@ export async function prepareLoopRunWorktree(
   const { session, worktree, createdWorktree } = await deps.resolveWorktreeForSpawn(
     project,
     payload,
-    input.writerName,
+    input.name,
     async (pendingSession, pendingWorktree) => {
       await input.onProgress?.(`Creating worktree ${pendingWorktree.branch}…`);
       deps.updateState((currentState) => {

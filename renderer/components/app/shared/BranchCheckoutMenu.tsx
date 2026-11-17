@@ -21,7 +21,7 @@ export function BranchCheckoutMenu({
         <Button
           variant="outline"
           className={cn(
-            "h-7 max-w-[180px] shrink-0 gap-1.5 rounded-[4px] border-border/60 bg-background/60 px-2 py-1 text-[11px] font-medium text-foreground",
+            "h-7 max-w-[180px] shrink-0 gap-1.5 rounded-md border-border/60 bg-background px-2 py-1 text-[11px] font-medium text-foreground",
             triggerClassName
           )}
           disabled={blockedReason !== null || isCheckingOut}

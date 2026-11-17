@@ -1,3 +1,4 @@
+import { canGenerateSimpleText } from "@shared/ai/settings";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
 import { noraWorkspaceManagementClient } from "@/components/app/clients/noraWorkspaceManagementClient";
@@ -64,7 +65,7 @@ export const buildChangesPanelSectionProps = (
         void d.performForgeWorkItemAction(action);
       },
       onForgeCommentSubmit: (payload) => d.addForgeWorkItemComment(payload),
-      onSpawnIssueAgent: (toolId) => d.handleSpawnForgeIssueAgent(toolId),
+      onStartIssueThread: () => d.handleStartForgeIssueThread(),
       onSpawnReviewAgent: (toolId, selections, targetMode) => d.handleSpawnForgeReviewAgent(toolId, selections, targetMode),
       onOpenCreatePullRequest: () => d.setIsCreatePullRequestDialogOpen(true)
     },
@@ -119,17 +120,9 @@ export const buildChangesPanelSectionProps = (
         d.setActiveWorkspaceContentTab("diff");
       },
       onDiscardChange: (pathName) => d.safely(() => noraWorkspaceClient.discardChange(pathName)),
-      onOpenFullDiff: () => {
-        d.setTaskEditorState(null);
-        d.setIsTaskBoardOpen(false);
-        d.setIsCenterFullDiffExpanded(true);
-        d.setIsCenterDiffExpanded(true);
-        d.setActiveWorkspaceContentTab("diff");
-      },
+      onOpenFullDiff: d.openWorkspaceFullDiff,
       onCommitChanges: (message, paths) => d.safely(() => noraWorkspaceClient.commitChanges(message, paths)),
-      canGenerateAiCommitMessage:
-        d.appSettingsAi.simpleTaskProvider === "local" ||
-        Object.values(d.appSettingsAi.apiKeys).some((apiKey) => apiKey.trim().length > 0),
+      canGenerateAiCommitMessage: canGenerateSimpleText(d.appSettingsAi),
       onGenerateCommitMessage: async (paths) => {
         try {
           return await noraWorkspaceClient.generateCommitMessage({ paths });
@@ -150,6 +143,10 @@ export const buildChangesPanelSectionProps = (
               })
             )
           : Promise.resolve(null),
+      onSelectChangesCheckout: (path) =>
+        snapshot.project
+          ? d.safely(() => noraWorkspaceClient.selectChangesCheckout({ projectId: snapshot.project!.id, path }))
+          : Promise.resolve(null),
       onEditChange: (pathName) => {
         void d.openFileEditor(pathName, {
           rootPath: snapshot.changesRoot || snapshot.project?.rootPath || null
@@ -159,6 +156,6 @@ export const buildChangesPanelSectionProps = (
       onClearCommitInspection: () => d.safely(() => noraWorkspaceClient.clearCommitInspection())
     },
     fileHandlers: d.fileHandlers,
-    openCreateAgentDialog: d.openCreateAgentDialog
+    openNewThread: d.openNewThread
   };
 };

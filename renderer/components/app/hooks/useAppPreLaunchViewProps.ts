@@ -76,8 +76,8 @@ type UseAppPreLaunchViewPropsArgs = {
   installOnboardingTool: (toolId: string) => Promise<void>;
   setOnboardingToolEnabled: (toolId: string, enabled: boolean) => Promise<void>;
   completeOnboarding: () => void;
-  loadingFooter: ReactElement;
-  onboardingFooter: ReactElement;
+  loadingActivity: ReactElement;
+  onboardingActivity: ReactElement;
   handleChooseLocalWorkspace: () => Promise<void>;
   normalizeSnapshot: (next: AppState) => AppState;
   dismissWorkspaceLoading: () => void;
@@ -147,8 +147,8 @@ export function useAppPreLaunchViewProps(args: UseAppPreLaunchViewPropsArgs): {
     installOnboardingTool,
     setOnboardingToolEnabled,
     completeOnboarding,
-    loadingFooter,
-    onboardingFooter,
+    loadingActivity,
+    onboardingActivity,
     handleChooseLocalWorkspace,
     normalizeSnapshot,
     dismissWorkspaceLoading,
@@ -222,6 +222,7 @@ export function useAppPreLaunchViewProps(args: UseAppPreLaunchViewPropsArgs): {
       }),
       loadingOnboardingDialogProps: buildOnboardingDialogProps({
         mode: "loading",
+        safely,
         snapshot: null,
         effectiveStartupDependencyReport,
         isStartupDependencyDialogBusy,
@@ -255,6 +256,7 @@ export function useAppPreLaunchViewProps(args: UseAppPreLaunchViewPropsArgs): {
       onboardingOnboardingDialogProps: snapshot
         ? buildOnboardingDialogProps({
             mode: "onboarding",
+            safely,
             snapshot,
             effectiveStartupDependencyReport,
             isStartupDependencyDialogBusy,
@@ -300,8 +302,8 @@ export function useAppPreLaunchViewProps(args: UseAppPreLaunchViewPropsArgs): {
         clearSimulatedMissingDependencies,
         reloadStartupDependencyReport
       }),
-      loadingFooter,
-      onboardingFooter,
+      loadingActivity,
+      onboardingActivity,
       addWorkspaceDialogProps: buildPreLaunchAddWorkspaceDialogProps({
         uiState,
         uiCommands,
@@ -366,9 +368,9 @@ export function useAppPreLaunchViewProps(args: UseAppPreLaunchViewPropsArgs): {
     isStartupDependencyDialogBusy,
     keyboardShortcutActions,
     linuxUpdateStatus,
-    loadingFooter,
+    loadingActivity,
     normalizeSnapshot,
-    onboardingFooter,
+    onboardingActivity,
     openAddWorkspaceModal,
     openStartupDependenciesDialog,
     openOnboardingFlow,

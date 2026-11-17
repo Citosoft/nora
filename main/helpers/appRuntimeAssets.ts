@@ -39,3 +39,14 @@ export function applyMacDockIcon(icon: NativeImage): void {
     app.dock.setIcon(icon);
   }
 }
+
+export function applyLinuxDesktopIdentity(): void {
+  if (process.platform !== "linux") {
+    return;
+  }
+
+  const desktopId = app.isPackaged ? "nora" : "nora-dev";
+  // Electron reads CHROME_DESKTOP for the Wayland app ID; X11 uses the class switch.
+  process.env.CHROME_DESKTOP = `${desktopId}.desktop`;
+  app.commandLine.appendSwitch("class", desktopId);
+}

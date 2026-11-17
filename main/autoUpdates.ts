@@ -1,6 +1,8 @@
+import type { AppShutdown } from "@main/types/appShutdown.types";
 import type { AutoUpdateStatus, AutoUpdateTestSupport, AutoUpdateTestTarget } from "@shared/appTypes";
 import { app, autoUpdater } from "electron";
-import { UpdateSourceType, updateElectronApp } from "update-electron-app";
+import { createAppUpdateConsent } from "./helpers/appUpdateConsent";
+import { getReleaseVersionStatus } from "./linuxUpdates";
 import { PUBLIC_RELEASE_REPOSITORY } from "./updateRepository";
 
 const AUTO_UPDATE_PLATFORMS = new Set<NodeJS.Platform>(["win32", "darwin"]);
@@ -12,6 +14,7 @@ let autoUpdateStatus: AutoUpdateStatus = {
   reason: "Automatic updates are only enabled for packaged Windows and macOS builds."
 };
 let autoUpdateSimulationEnabled = false;
+let releaseCheckTimer: NodeJS.Timeout | null = null;
 let installSimulationTimer: NodeJS.Timeout | null = null;
 
 const autoUpdateLogger = {
@@ -50,6 +53,21 @@ function notifyAutoUpdateListeners(): void {
 function setAutoUpdateStatus(status: AutoUpdateStatus): void {
   autoUpdateStatus = status;
   notifyAutoUpdateListeners();
+}
+
+const updateConsent = createAppUpdateConsent({
+  getStatus: () => autoUpdateStatus,
+  setStatus: setAutoUpdateStatus,
+  checkRelease: getReleaseVersionStatus,
+  startDownload: () => {
+    if (isSimulationActive()) return;
+    if (!isAutoUpdateSupported()) throw new Error("App updates are unavailable in this build.");
+    autoUpdater.checkForUpdates();
+  }
+});
+
+export function downloadAppUpdate(): void {
+  updateConsent.download();
 }
 
 function getLastKnownLatestVersion(): string | null {
@@ -110,6 +128,12 @@ function createSimulatedStatus(target: AutoUpdateTestTarget): AutoUpdateStatus {
         kind: "idle",
         currentVersion,
         latestVersion: null
+      };
+    case "available":
+      return {
+        kind: "available", currentVersion, latestVersion,
+        releaseNotes: "### Features\n\n- Preview what’s new before downloading an update.\n\n### Fixes\n\n- Keep app updates optional until you choose to download.",
+        releaseUrl: `https://github.com/${PUBLIC_RELEASE_REPOSITORY}/releases/latest`
       };
     case "checking":
       return {
@@ -186,7 +210,7 @@ export function simulateAutoUpdateStatus(target: AutoUpdateTestTarget): AutoUpda
   return nextStatus;
 }
 
-export function installDownloadedUpdate(): void {
+export function installDownloadedUpdate(requestQuit: AppShutdown["request"]): Promise<boolean> | void {
   if (autoUpdateStatus.kind !== "downloaded") {
     throw new Error("No downloaded update is ready to install.");
   }
@@ -210,7 +234,7 @@ export function installDownloadedUpdate(): void {
     return;
   }
 
-  autoUpdater.quitAndInstall();
+  return requestQuit("update", () => autoUpdater.quitAndInstall());
 }
 
 export function initializeAutoUpdates(): void {
@@ -256,7 +280,8 @@ export function initializeAutoUpdates(): void {
         kind: "downloading",
         currentVersion: app.getVersion(),
         latestVersion: getLastKnownLatestVersion(),
-        releaseNotes: null
+        releaseNotes: "releaseNotes" in autoUpdateStatus ? autoUpdateStatus.releaseNotes ?? null : null,
+        releaseUrl: "releaseUrl" in autoUpdateStatus ? autoUpdateStatus.releaseUrl : undefined
       });
     });
 
@@ -315,7 +340,10 @@ export function initializeAutoUpdates(): void {
         kind: "downloaded",
         currentVersion: app.getVersion(),
         latestVersion: normalizeLatestVersion(releaseName) ?? getLastKnownLatestVersion(),
-        releaseNotes: typeof releaseNotes === "string" ? releaseNotes : null
+        releaseNotes: typeof releaseNotes === "string" && releaseNotes.trim()
+          ? releaseNotes
+          : ("releaseNotes" in autoUpdateStatus ? autoUpdateStatus.releaseNotes ?? null : null),
+        releaseUrl: "releaseUrl" in autoUpdateStatus ? autoUpdateStatus.releaseUrl : undefined
       });
     });
 
@@ -339,15 +367,18 @@ export function initializeAutoUpdates(): void {
       });
     });
 
-    updateElectronApp({
-      updateSource: {
-        type: UpdateSourceType.ElectronPublicUpdateService,
-        repo: PUBLIC_RELEASE_REPOSITORY
-      },
-      updateInterval: "30 minutes",
-      logger: autoUpdateLogger,
-      notifyUser: false
+    const formatSegment = process.windowsStore ? "/msix" : "";
+    autoUpdater.setFeedURL({
+      url: `https://update.electronjs.org/${PUBLIC_RELEASE_REPOSITORY}/${process.platform}-${process.arch}${formatSegment}/${app.getVersion()}`
     });
+    // Only metadata is polled. The native updater runs once per explicit download request.
+    const check = (): void => {
+      if (!isSimulationActive()) void updateConsent.check().catch(autoUpdateLogger.error);
+    };
+    if (releaseCheckTimer) clearInterval(releaseCheckTimer);
+    check();
+    releaseCheckTimer = setInterval(check, 30 * 60 * 1000);
+    releaseCheckTimer.unref();
   } catch (error) {
     console.error("Failed to initialize auto updates.", error);
     setAutoUpdateStatus({

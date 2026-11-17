@@ -4,7 +4,7 @@ import type { AppShellSignedInForgeSources } from "@/components/app/types/appShe
 export const buildForgeSignedInAssemblySlice = ({
   integration,
   resolveGitlabForgeRepoOverride,
-  handleSpawnForgeIssueAgent,
+  handleStartForgeIssueThread,
   handleSpawnForgeReviewAgent,
   focusedForgeViewerTab
 }: ForgeSignedInAssemblySliceInput): AppShellSignedInForgeSources => {
@@ -23,7 +23,7 @@ export const buildForgeSignedInAssemblySlice = ({
     performForgeWorkItemAction: f.performForgeWorkItemAction,
     refreshForgeOverview: f.refreshForgeOverview,
     resolveGitlabForgeRepoOverride,
-    handleSpawnForgeIssueAgent,
+    handleStartForgeIssueThread,
     handleSpawnForgeReviewAgent,
     focusedForgeViewerTab,
     handleCreateForgePullRequest: f.handleCreateForgePullRequest

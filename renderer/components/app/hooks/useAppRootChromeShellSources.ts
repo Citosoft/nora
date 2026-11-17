@@ -27,6 +27,7 @@ export function useAppRootChromeShellSources({
   dismissLinuxUpdateNotice,
   statusEntries,
   installStatusBarTool,
+  updateIndicators,
   switchStatusBarToolAccount,
   toggleSettingsPage,
   openStartupDependenciesDialog,
@@ -43,6 +44,7 @@ export function useAppRootChromeShellSources({
   sidebarsSwapped,
   setIsChangesSidebarCollapsed,
   setIsWorkspaceSidebarCollapsed,
+  isLocalTerminalDockCollapsed,
   setIsLocalTerminalDockCollapsed,
   settingsGroup
 }: UseAppRootChromeShellSourcesArgs): UseAppRootChromeShellSourcesResult {
@@ -69,6 +71,7 @@ export function useAppRootChromeShellSources({
     dismissLinuxUpdateNotice,
     statusEntries,
     installStatusBarTool,
+    updateIndicators,
     switchStatusBarToolAccount,
     toggleSettingsPage,
     openStartupDependenciesDialog,
@@ -85,6 +88,7 @@ export function useAppRootChromeShellSources({
     sidebarsSwapped,
     setIsChangesSidebarCollapsed,
     setIsWorkspaceSidebarCollapsed,
+    isLocalTerminalDockCollapsed,
     setIsLocalTerminalDockCollapsed,
     settingsGroup
   }), [
@@ -110,6 +114,7 @@ export function useAppRootChromeShellSources({
     dismissLinuxUpdateNotice,
     statusEntries,
     installStatusBarTool,
+    updateIndicators,
     switchStatusBarToolAccount,
     toggleSettingsPage,
     openStartupDependenciesDialog,
@@ -126,6 +131,7 @@ export function useAppRootChromeShellSources({
     sidebarsSwapped,
     setIsChangesSidebarCollapsed,
     setIsWorkspaceSidebarCollapsed,
+    isLocalTerminalDockCollapsed,
     setIsLocalTerminalDockCollapsed,
     settingsGroup
   ]);
