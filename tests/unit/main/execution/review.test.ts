@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { EffectWorker } from "@main/execution/effectWorker";
 import { ProviderRegistry } from "@main/execution/providerRegistry";
@@ -44,8 +43,8 @@ test("review publication, run projection and effect retirement roll back togethe
   f.update({ kind: "finished", eventId: "done", status: "completed", failure: null, usage: null });
   const effect = f.engine.claimEffect(["review"]); assert.ok(effect);
   const cursor = f.store.cursor();
-  const database = new DatabaseSync(f.path);
-  t.after(() => database.close());
+  const database = f.openDatabase();
+ 
   database.exec("CREATE TRIGGER reject_review BEFORE UPDATE ON effects BEGIN SELECT RAISE(ABORT, 'review failure'); END");
   const result = { status: "ready" as const, scope: "workspace" as const, paths: [] };
   assert.throws(() => f.engine.finishReview(effect.id, result), /review failure/);
@@ -84,7 +83,7 @@ test("providers cannot fabricate host review evidence", (t) => {
 test("Schema v3 upgrade preserves execution history and finalizes historical pending reviews as unavailable", (t) => {
   const f = fixture(t); f.create(); f.submit();
   f.update({ kind: "finished", eventId: "done", status: "completed", failure: null, usage: null });
-  const database = new DatabaseSync(f.path);
+  const database = f.openDatabase();
   database.exec("DELETE FROM effects WHERE json_extract(json, '$.action.kind') = 'review'; PRAGMA user_version = 3");
   const before = f.snapshot(); const cursor = f.store.cursor();
   f.restart();

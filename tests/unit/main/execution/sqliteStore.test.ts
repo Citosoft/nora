@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { SqliteExecutionStore } from "@main/execution/sqliteStore";
 import type { TimelineItem } from "@shared/types/conversation/contracts.types";
@@ -78,7 +77,7 @@ test("version two snapshot migration preserves journal identities, projections, 
   const before = f.snapshot(); const events = f.store.events(0, 200); const effects = f.store.effects();
   f.store.claimOwnership({ id: "preserved-owner", processId: 42 }, null);
   f.store.close();
-  const legacy = new DatabaseSync(f.path);
+  const legacy = f.openDatabase();
   legacy.exec(`DROP TABLE conversation_requests; DROP TABLE conversation_items; DROP TABLE conversation_runs;
     DROP TABLE conversation_heads; DROP INDEX unfinished_effects; CREATE TABLE conversations (id TEXT PRIMARY KEY, json TEXT NOT NULL);
     PRAGMA user_version = 2`);
@@ -92,7 +91,7 @@ test("version two snapshot migration preserves journal identities, projections, 
 
 test("an unreadable legacy projection rolls the complete schema upgrade back without dropping source data", (t) => {
   const f = fixture(t); f.store.close();
-  const legacy = new DatabaseSync(f.path);
+  const legacy = f.openDatabase();
   legacy.exec(`DROP TABLE conversation_requests; DROP TABLE conversation_items; DROP TABLE conversation_runs;
     DROP TABLE conversation_heads; DROP INDEX unfinished_effects; CREATE TABLE conversations (id TEXT PRIMARY KEY, json TEXT NOT NULL);
     INSERT INTO conversations VALUES ('broken', '{'); PRAGMA user_version = 2`);

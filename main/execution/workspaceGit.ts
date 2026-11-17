@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import type { CheckoutInspection } from "@main/types/execution/workspace.types";
 import { isNotGitRepository, runWorkspaceGit } from "./gitProcess";
 
@@ -6,7 +7,8 @@ export function createCheckoutInspector(executable: string): (path: string) => P
   return async (path) => {
     const run = (args: string[]) => runWorkspaceGit(executable, path, args);
     let rootPath: string;
-    try { rootPath = (await run(["rev-parse", "--show-toplevel"])).stdout.replace(/\r?\n$/, ""); }
+    // Git prints forward slashes on Windows; resolve to the native form every other workspace path uses.
+    try { rootPath = resolve((await run(["rev-parse", "--show-toplevel"])).stdout.replace(/\r?\n$/, "")); }
     catch (error) {
       if (isNotGitRepository(error)) return { rootPath: path, branch: "", versionControl: "none" };
       throw error;

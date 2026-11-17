@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { EffectWorker } from "@main/execution/effectWorker";
 import { ProviderRegistry } from "@main/execution/providerRegistry";
@@ -90,7 +89,7 @@ test("cancelling during baseline capture never submits the instruction", async (
 
 test("checkpoint transaction failure prevents provider submission and preserves the unsent evidence boundary", async (t) => {
   const f = fixture(t); f.create(); f.submit(); let starts = 0;
-  const database = new DatabaseSync(f.path); t.after(() => database.close());
+  const database = f.openDatabase();
   database.exec("CREATE TRIGGER reject_checkpoint BEFORE INSERT ON turn_checkpoints BEGIN SELECT RAISE(ABORT, 'checkpoint failure'); END");
   const worker = new EffectWorker(f.engine, registry(async () => { starts++; }), undefined, undefined, undefined,
     { async capture() { return { status: "ready", snapshot: snapshot({}) }; }, async compare() { assert.fail("No turn started"); } });

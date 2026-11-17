@@ -1,4 +1,6 @@
-import path from "node:path";
+import { posix as path } from "node:path";
+
+// XDG autostart paths are always POSIX, whatever platform builds or tests them.
 
 /** Passed by every login item so a login launch can be told apart from the user opening Nora. */
 export const HIDDEN_LAUNCH_ARG = "--hidden";

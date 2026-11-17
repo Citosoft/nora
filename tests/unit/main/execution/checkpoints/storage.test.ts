@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { fixture } from "../fixture";
 import { snapshot } from "./fixture";
@@ -14,7 +13,7 @@ test("checkpoint bytes are deduplicated across files and captures, verified on r
   const review = f.engine.claimEffect(["review"]); assert.ok(review);
   assert.throws(() => f.engine.finishEffect(review.id), /must be finalized/);
   f.engine.recordCheckpoint(review.id, "final", baseline);
-  const database = new DatabaseSync(f.path); t.after(() => database.close());
+  const database = f.openDatabase();
   assert.equal(database.prepare("SELECT count(*) AS count FROM checkpoint_blobs").get()?.count, 1);
   const manifest = database.prepare("SELECT json FROM turn_checkpoints").get()?.json;
   assert.equal(typeof manifest, "string"); assert.equal(String(manifest).includes("content"), false);
@@ -43,7 +42,7 @@ test("live token updates and checkout admission do not hydrate saved file conten
 test("schema v4 upgrades preserve history/receipts and create empty private checkpoint storage", (t) => {
   const f = fixture(t); f.create(); const receipt = f.submit(); const before = f.snapshot();
   const events = f.store.events(0, 200); f.store.close();
-  const database = new DatabaseSync(f.path); t.after(() => database.close());
+  const database = f.openDatabase();
   database.exec("DROP TABLE turn_checkpoints; DROP TABLE checkpoint_blobs; PRAGMA user_version = 4");
   f.restart();
   assert.equal(database.prepare("PRAGMA user_version").get()?.user_version, 6);
@@ -59,7 +58,7 @@ test("failed final capture persistence rolls back new blobs and leaves native ou
   f.update({ kind: "finished", eventId: "done", status: "completed", failure: null, usage: null });
   const review = f.engine.claimEffect(["review"]); assert.ok(review);
   const saved = f.store.checkpoint("conversation", "run");
-  const database = new DatabaseSync(f.path); t.after(() => database.close());
+  const database = f.openDatabase();
   database.exec("CREATE TRIGGER reject_final BEFORE UPDATE ON turn_checkpoints BEGIN SELECT RAISE(ABORT, 'final capture failure'); END");
   assert.throws(() => f.engine.recordCheckpoint(review.id, "final", { status: "ready", snapshot: snapshot({ "note.md": "After\n" }) }), /final capture failure/);
   assert.deepEqual(f.store.checkpoint("conversation", "run"), saved);

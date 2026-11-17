@@ -24,7 +24,7 @@ export function windowsLoginItemSettings(execPath: string, openAtLogin: boolean)
 
 /** One adaptor over macOS/Windows login items and Linux XDG autostart. Development builds are never registered. */
 export function createLoginItemAdapter(deps: LoginItemAdapterDeps): LoginItemAdapter {
-  const autostartFile = (): string => path.join(linuxAutostartDirectory(deps.env, deps.homeDirectory), LINUX_AUTOSTART_FILE_NAME);
+  const autostartFile = (): string => path.posix.join(linuxAutostartDirectory(deps.env, deps.homeDirectory), LINUX_AUTOSTART_FILE_NAME);
 
   return {
     async apply(openAtLogin) {
@@ -43,7 +43,7 @@ export function createLoginItemAdapter(deps: LoginItemAdapterDeps): LoginItemAda
             await deps.fs.removeFile(file);
             return;
           }
-          await deps.fs.mkdir(path.dirname(file));
+          await deps.fs.mkdir(path.posix.dirname(file));
           await deps.fs.writeFile(file, linuxAutostartEntry(linuxLaunchExecutable(deps.env, deps.execPath)));
           return;
         }
