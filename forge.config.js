@@ -97,7 +97,9 @@ module.exports = {
   packagerConfig: {
     protocols: [{ name: "Nora account", schemes: ["nora-account"] }],
     // Separate deployables (mobile/web app, remote Worker) with their own node_modules; never part of the desktop bundle.
-    ignore: [/^\/apps(\/|$)/],
+    // The Claude Agent SDK's per-platform native CLI packages (~300 MB each) are never used: Nora always runs the
+    // user's installed `claude` via `pathToClaudeCodeExecutable`, so the SDK never resolves its bundled binary.
+    ignore: [/^\/apps(\/|$)/, /^\/node_modules\/@anthropic-ai\/claude-agent-sdk-[^/]+(\/|$)/],
     asar: {
       unpack: "**/node_modules/node-pty/prebuilds/**"
     },
