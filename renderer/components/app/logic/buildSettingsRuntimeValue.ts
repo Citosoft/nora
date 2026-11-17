@@ -102,6 +102,7 @@ export const buildSettingsRuntimeValue = (d: BuildSettingsRuntimeValueDeps): Set
   canPreviewMacTitleBarChrome: d.canPreviewMacTitleBarChrome,
   forceMacTitleBarPreview: d.forceMacTitleBarPreview,
   updateForceMacTitleBarPreview: d.updateForceMacTitleBarPreview,
+  updateLifecycle: d.updateLifecycle,
   updateAgentCompletionNotifications: (agentCompletionNotificationsEnabled) => {
     void d.updateNotificationPreferences({
       agentCompletionNotificationsEnabled

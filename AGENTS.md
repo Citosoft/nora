@@ -14,7 +14,7 @@ This file defines the engineering rules for working in this repository. Follow t
 
 - **Finish refactors in full in the same change.** Do not migrate part of a pattern and defer the rest to a later pass. Partial refactors leave the repo in an inconsistent state (mixed APIs, duplicate sources of truth, and unclear conventions) and make reviews and debugging harder.
 - **No “phase 2” split across the codebase.** If the work is too large for one deliverable, split at the *task or PR* level with a clear boundary—not by leaving some modules on the old pattern and some on the new one until someone follows up.
-- **Exit criteria:** when you start a structural refactor, complete it through call sites, types, tests, and any related docs in that change. The result should typecheck, tests should pass, and there should be no temporary dual paths or shims you intend to remove “soon.”
+- **Exit criteria:** when you start a structural refactor, complete it through call sites, types, tests, and any related docs in that change. The result should typecheck, the tests covering the refactored code should pass, and there should be no temporary dual paths or shims you intend to remove “soon.”
 
 ## TypeScript Rules
 
@@ -54,6 +54,7 @@ This file defines the engineering rules for working in this repository. Follow t
 - Move non-trivial transformation logic out of components into typed helpers or hooks.
 - Do not let `renderer/App.tsx` accumulate repeated workflow orchestration. If a launch, handoff, persistence, or coordination sequence is reused across features, extract it into a dedicated helper or hook with a narrow interface.
 - Reuse UI primitives and shared patterns instead of re-implementing similar controls.
+- **Bot identity:** whenever bots are listed or selected (including lists, menus, pickers, chips, and workflow assignments), show each bot’s configured avatar beside its name using the shared `BotAvatar` component. Preserve the avatar in the selected value. Do not substitute provider logos, initials, or generic icons for an available bot’s avatar.
 - Prefer proven UI libraries and primitives where possible, especially Radix-based components, instead of building custom controls from scratch.
 - Only build custom UI primitives when the existing library options genuinely do not fit the requirement or would create a worse result.
 - Keep props minimal and well named. Prefer passing shaped data rather than many primitive flags.
@@ -131,9 +132,11 @@ These rules apply to **first-party** source under `main/`, `renderer/`, `shared/
 
 ## Quality Bar
 
-- Verify every non-trivial change. Use builds, tests, and targeted manual validation as appropriate to the scope of the work.
+- Verify every non-trivial change, scaled to its scope. By default, typecheck the affected projects and run only the unit tests covering the code you touched; do not run the full `npm run test:unit` suite after every change. To run specific tests, compile once (`node scripts/cleanUnitTests.mjs && npx tsc -p tsconfig.unit.json && npx tsc-alias -p tsconfig.unit.json && cp package.json dist-tests/`) and then run `node --test dist-tests/tests/unit/<path>.test.js`.
+- Run the full unit suite only when asked, before a commit, PR or release, or when a change reaches widely across shared contracts or cross-cutting infrastructure. Some integration-style tests are timing-sensitive under full-suite load; if one fails, rerun it on its own before treating it as a regression.
 - Write tests for business logic and behavioral flows when practical, then implement or adjust feature code against those tests.
 - Do not require unit tests for React component rendering details; prioritize coverage for domain logic, state transitions, parsing, and user-visible behaviors.
+- Do not add or run renderer component, rendering, snapshot, browser, or end-to-end tests unless explicitly requested. For UI changes, default to typechecking and relevant existing unit tests for underlying logic.
 - Add regression coverage for bugs where practical, especially when the failure mode is well understood and likely to recur.
 - If you touch an area that is already messy, improve it while you are there. Do not layer new complexity onto a weak structure without attempting to simplify it.
 - Prefer deleting obsolete code over leaving dead paths, duplicate logic, or outdated branches behind.

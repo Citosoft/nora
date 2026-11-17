@@ -1,4 +1,4 @@
-import { StatusBar as AppStatusBar } from "@/components/app/chrome/StatusBar";
+import { ActivityNotice } from "@/components/app/chrome/ActivityNotice";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { noraTerminalClient } from "@/components/app/clients/noraTerminalClient";
 import { AppRootDialogsProvider, useAppRootDialogs } from "@/components/app/context/appRootDialogsContext";
@@ -18,6 +18,8 @@ import { useAppPreferences } from "@/components/app/hooks/useAppPreferences";
 import { useAppRootShellFrame } from "@/components/app/hooks/useAppRootShellFrame";
 import { useAppRootSnapshotCommands } from "@/components/app/hooks/useAppRootSnapshotCommands";
 import { useAppToolInstallFlows } from "@/components/app/hooks/useAppToolInstallFlows";
+import { useProviderUpdateToasts } from "@/components/app/hooks/useProviderUpdateToasts";
+import { noraToolingManagementClient } from "@/components/app/clients/noraToolingManagementClient";
 import { useAppUiCommands } from "@/components/app/hooks/useAppUiCommands";
 import { useBrowserTabs } from "@/components/app/hooks/useBrowserTabs";
 import { useKeyboardShortcuts } from "@/components/app/hooks/useKeyboardShortcuts";
@@ -39,9 +41,8 @@ import type { CreateTerminalPayload } from "@shared/appTypes";
 import type { FileEditorState } from "@/components/app/types";
 import type { ShortcutActionMap } from "@/components/app/types/workflow.types";
 import { AppPreLaunchView } from "@/components/app/views/AppPreLaunchView";
-import { AppToastStack } from "@/components/app/views/AppToastStack";
+import { AppToastRegions } from "@/components/app/views/AppToastRegions";
 import { SignedInAppRoot } from "@/components/app/views/SignedInAppRoot";
-import { ToastProvider, ToastViewport } from "@/components/ui/toast";
 import { useCallback, useMemo, useRef, useState, type Dispatch, type ReactElement, type SetStateAction } from "react";
 
 export function AppRootRuntime({ storedWorkspaceContentState }: AppRootRuntimeProps): ReactElement {
@@ -292,7 +293,7 @@ function AppRootRuntimeContent({
       snapshot,
       uiCommands: {
         openAddWorkspaceDialog: uiCommands.openAddWorkspaceDialog,
-        openCreateAgentDialog: uiCommands.openCreateAgentDialog,
+        openNewThread: uiCommands.openNewThread,
         openCreateTerminalDialog: uiCommands.openCreateTerminalDialog,
         openKeyboardShortcutsDialog: uiCommands.openKeyboardShortcutsDialog,
         openWorkspaceSwitcherDialog: uiCommands.openWorkspaceSwitcherDialog,
@@ -331,7 +332,7 @@ function AppRootRuntimeContent({
     setWorkspaceQuickSearchRequestId,
     snapshot,
     uiCommands.openAddWorkspaceDialog,
-    uiCommands.openCreateAgentDialog,
+    uiCommands.openNewThread,
     uiCommands.openCreateTerminalDialog,
     uiCommands.openKeyboardShortcutsDialog,
     uiCommands.openWorkspaceSwitcherDialog,
@@ -355,17 +356,14 @@ function AppRootRuntimeContent({
     showToast,
     captureError
   });
-  const loadingFooter = <AppStatusBar entries={statusEntries} />;
-  const onboardingFooter = (
-    <AppStatusBar
-      entries={statusEntries}
-      tools={snapshot?.agentCatalog ?? []}
-      agentSkillCatalogs={snapshot?.agentSkillCatalogs ?? []}
-      onInstallTool={toolInstallFlows.installStatusBarTool}
-      onSwitchToolAccount={toolInstallFlows.switchStatusBarToolAccount}
-      onOpenSkillsSettings={() => navigation.openSettingsPage("skills")}
-    />
-  );
+  const providerUpdates = useProviderUpdateToasts({
+    checkProviderUpdates: noraToolingManagementClient.checkProviderUpdates,
+    showToast,
+    dismissToast,
+    updateProvider: toolInstallFlows.updateProviderTool
+  });
+  const loadingActivity = <ActivityNotice entries={statusEntries} />;
+  const onboardingActivity = <ActivityNotice entries={statusEntries} />;
   const { shouldRenderPreLaunch, preLaunchViewProps } = useAppPreLaunchViewProps({
     isOnboardingOpen: dialogs.isOnboardingOpen,
     statusBar,
@@ -418,8 +416,8 @@ function AppRootRuntimeContent({
     installOnboardingTool: toolInstallFlows.installOnboardingTool,
     setOnboardingToolEnabled: toolInstallFlows.setOnboardingToolEnabled,
     completeOnboarding: dialogs.completeOnboarding,
-    loadingFooter,
-    onboardingFooter,
+    loadingActivity,
+    onboardingActivity,
     handleChooseLocalWorkspace: workspaceLifecycle.handleChooseLocalWorkspace,
     normalizeSnapshot,
     dismissWorkspaceLoading: workspaceLoading.dismissWorkspaceLoading,
@@ -496,12 +494,11 @@ function AppRootRuntimeContent({
 
   if (shouldRenderPreLaunch) {
     return (
-      <ToastProvider swipeDirection="right">
+      <>
         <PreLaunchKeyboardShortcutsRegistrar actions={preLaunchKeyboardShortcutActions} />
         {preRender}
-        <AppToastStack toasts={toasts} onDismiss={dismissToast} />
-        <ToastViewport />
-      </ToastProvider>
+        <AppToastRegions toasts={toasts} onDismiss={dismissToast} />
+      </>
     );
   }
 
@@ -517,6 +514,7 @@ function AppRootRuntimeContent({
       autoUpdate={autoUpdate}
       aiModels={aiModels}
       toolInstallFlows={toolInstallFlows}
+      providerUpdates={providerUpdates}
       navigation={navigation}
       browserTabs={browserTabs}
       centerTabs={centerTabs}

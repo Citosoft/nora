@@ -1,0 +1,35 @@
+const { app } = require('electron');
+const assert = require('node:assert/strict');
+const { createFixtureHost } = require('./ui/fixtureHost.cjs');
+let host;
+(async () => {
+  host = await createFixtureHost('tests/ui/OAuthDeviceCodeHarness.tsx');
+  const { evaluate, wait, click, byText, window } = host;
+  const deviceDialog = '[role="dialog"][aria-labelledby]';
+  await wait('!!document.querySelector("#connect")');
+  await click('#connect');
+  await wait('document.body.textContent.includes("Copy Code")');
+  await byText('Copy Code');
+  await wait('document.getElementById("copied").textContent === "ABCD-1234"');
+  await wait('document.body.textContent.includes("Copied")');
+  await byText('Open Verification Page');
+  assert.equal(await evaluate('document.getElementById("verification-url").textContent'), 'https://github.com/login/device');
+  assert.equal(await evaluate('document.activeElement.closest("[role=dialog]").textContent.includes("GitHub Device Login")'), true);
+  assert.equal(await evaluate('!!document.getElementById(document.activeElement.closest("[role=dialog]").getAttribute("aria-describedby"))'), true);
+  window.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' });
+  window.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' });
+  await wait('!document.body.textContent.includes("Copy Code")');
+  assert.equal(await evaluate(`document.querySelectorAll('${deviceDialog}').length`), 1);
+  await click('#connect');
+  await wait('document.body.textContent.includes("Copy Code")');
+  await byText('Done');
+  await wait('!document.body.textContent.includes("Copy Code")');
+  await click('#connect');
+  await wait('document.body.textContent.includes("Copy Code")');
+  await click('[aria-label="Close dialog"]');
+  await wait('!document.body.textContent.includes("Copy Code")');
+  assert.equal(await evaluate('!!document.querySelector("#connect")'), true);
+  console.log('PASS: device login over Settings supports copy, verification link, keyboard focus, Escape, Done and close without dismissing Settings.');
+})().then(async () => { await host?.close(); app.exit(0); }).catch(async error => {
+  console.error(error); await host?.close(); app.exit(1);
+});

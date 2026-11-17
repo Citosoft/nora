@@ -21,9 +21,10 @@ export function useBrowserTabs({
   const openWorkspaceBrowser = useCallback((projectId: string, url?: string): void => {
     setUiState((current) => {
       const normalizedUrl = (url ?? "about:blank").trim() || "about:blank";
-      const existingTab = current.browserTabs.find((tab) =>
-        tab.projectId === projectId && (tab.history[tab.historyIndex] ?? "about:blank") === normalizedUrl
-      ) ?? null;
+      const workspaceTabs = current.browserTabs.filter((tab) => tab.projectId === projectId);
+      const existingTab = url === undefined
+        ? workspaceTabs.find((tab) => tab.id === current.focusedBrowserTabId) ?? workspaceTabs.at(-1) ?? null
+        : workspaceTabs.find((tab) => (tab.history[tab.historyIndex] ?? "about:blank") === normalizedUrl) ?? null;
       if (existingTab) {
         return {
           ...current,
@@ -38,6 +39,9 @@ export function useBrowserTabs({
         focusedBrowserTabId: nextTab.id
       };
     });
+    setUiState((current) => ({ ...current, workspaceToolRequest: {
+      projectId, tool: "browser", revision: (current.workspaceToolRequest?.revision ?? 0) + 1
+    } }));
     onShowBrowser();
   }, [onShowBrowser, setUiState]);
 

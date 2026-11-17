@@ -18,6 +18,7 @@ export interface LoopBridge {
   resumeLoopRun: (projectId: string, runId: string) => Promise<LoopRun>;
   cancelLoopRun: (projectId: string, runId: string) => Promise<LoopRun>;
   onLoopRunChanged: (listener: (run: LoopRun) => void) => () => void;
+  onLoopDefinitionChanged: (listener: (definition: LoopDefinition) => void) => () => void;
   onLoopRunOutput: (listener: (payload: LoopRunOutputUpdate) => void) => () => void;
 }
 

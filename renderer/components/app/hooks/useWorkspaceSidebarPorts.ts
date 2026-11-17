@@ -1,5 +1,6 @@
 import { useOptionalWorkspaceSidebarPorts } from "@/components/app/context/workspaceSidebarPortsContext";
 import type { WorkspaceSidebarPorts } from "@/components/app/types/workspaceSidebarPorts.types";
+export { useOptionalWorkspaceSidebarPorts };
 
 export const useWorkspaceSidebarPorts = (): WorkspaceSidebarPorts => {
   const v = useOptionalWorkspaceSidebarPorts();

@@ -1,3 +1,4 @@
+import { reviewCommentSurfaceClass, reviewComposerSurfaceClass } from "@/components/app/logic/reviewStyles";
 import { formatDiffPreview, getInlineCommentKey, parseDiffLines } from "@/components/app/logic/forgePanelDiff";
 import { formatForgeReviewLineLabel } from "@/components/app/logic/forgeReviewHandoff";
 import { resolveMonacoLanguageId } from "@/components/app/logic/fileEditorMonaco";
@@ -35,7 +36,7 @@ export function ForgeChangedFile({
   };
 
   return (
-    <div id={`forge-change-${change.id}`} className="overflow-hidden rounded-[6px] border border-border/50 bg-background/55">
+    <div id={`forge-change-${change.id}`} className="overflow-hidden rounded-lg border border-border/50 bg-background">
       <button
         type="button"
         className="flex w-full items-start gap-2 px-3 py-2 text-left text-xs text-muted-foreground transition hover:bg-accent/30"
@@ -53,7 +54,7 @@ export function ForgeChangedFile({
         </div>
       ) : null}
       {expanded ? (
-        <div className="terminal-text overflow-x-auto whitespace-pre border-t border-border/50 bg-background/70 p-2 text-[11px] leading-5">
+        <div className="terminal-text overflow-x-auto whitespace-pre border-t border-border/50 bg-background p-2 text-[11px] leading-5">
           {lines.map((line) => {
             const inlineKey = getInlineCommentKey(change.path, line.oldLine, line.newLine);
             const inlineComments = commentsByLine.get(inlineKey) ?? [];
@@ -71,7 +72,7 @@ export function ForgeChangedFile({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="mt-0.5 size-6 rounded-[4px] border border-transparent bg-background/80 opacity-0 shadow-sm transition hover:border-primary/30 hover:bg-primary/10 group-hover:opacity-100"
+                      className="mt-0.5 size-6 rounded-md border border-transparent bg-background/80 opacity-0 shadow-sm transition hover:border-border hover:bg-accent group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
                       onClick={() => {
                         setInlineComposerTarget({
                           key: inlineKey,
@@ -88,16 +89,16 @@ export function ForgeChangedFile({
                   ) : null}
                 </div>
                 {inlineComments.length ? (
-                  <div className="ml-[4.5rem] mt-2 space-y-3 border-l-2 border-primary/70 pl-3">
+                  <div className="ml-[4.5rem] mt-2 space-y-3 border-l border-border/60 pl-3">
                     {inlineComments.map((comment) => (
-                      <div key={comment.id} className="whitespace-normal rounded-[6px] border border-primary/25 bg-primary/5 p-3 font-sans text-xs shadow-sm shadow-primary/5">
+                      <div key={comment.id} className={cn("whitespace-normal p-3 font-sans text-xs", reviewCommentSurfaceClass)}>
                         <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
                           <MessageSquare className="size-3.5 text-primary" aria-hidden />
                           <span className="font-medium text-foreground">{comment.author || "Unknown"}</span>
                           <span>{new Date(comment.createdAt).toLocaleString()}</span>
                         </div>
                         {comment.body.trim() ? (
-                          <MarkdownRenderer className="space-y-2 text-[13px] leading-5 text-foreground/90">{comment.body}</MarkdownRenderer>
+                          <MarkdownRenderer allowHtml className="space-y-2 text-[13px] leading-5 text-foreground/90">{comment.body}</MarkdownRenderer>
                         ) : (
                           <div className="text-sm text-muted-foreground">No comment body provided.</div>
                         )}
@@ -106,30 +107,30 @@ export function ForgeChangedFile({
                   </div>
                 ) : null}
                 {inlineComposerTarget?.key === inlineKey ? (
-                  <div className="ml-[4.5rem] mt-2 overflow-hidden rounded-[6px] border border-primary/35 bg-background/95 shadow-lg shadow-primary/10">
-                    <div className="flex items-center justify-between gap-3 border-b border-border/45 bg-primary/5 px-3 py-2">
+                  <div className={cn("ml-[4.5rem] mt-2", reviewComposerSurfaceClass)}>
+                    <div className="flex items-center justify-between gap-3 border-b border-border/60 bg-muted/30 px-3 py-2">
                       <div className="min-w-0">
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">Inline review</div>
+                        <div className="text-xs font-medium text-muted-foreground">Inline review</div>
                         <div className="mt-0.5 truncate font-sans text-xs text-muted-foreground">
                           <span className="font-mono text-foreground/85">{inlineComposerTarget.path}</span>
                           <span className="px-1.5">·</span>
                           <span>{formatForgeReviewLineLabel(inlineComposerTarget.oldLine, inlineComposerTarget.newLine)}</span>
                         </div>
                       </div>
-                      <Button variant="ghost" size="icon" className="size-7 shrink-0 rounded-[4px]" onClick={closeComposer} disabled={commentLoading} aria-label="Cancel inline comment">
+                      <Button variant="ghost" size="icon" className="size-7 shrink-0 rounded-md" onClick={closeComposer} disabled={commentLoading} aria-label="Cancel inline comment">
                         <X className="size-3.5" />
                       </Button>
                     </div>
                     <div className="space-y-2 p-3">
-                      <Textarea value={inlineCommentDraft} onChange={(event) => setInlineCommentDraft(event.target.value)} placeholder="Leave a review comment on this line" className="min-h-24 resize-y border-border/60 bg-card/80 text-sm leading-5 focus-visible:ring-primary/40" disabled={commentLoading} />
+                      <Textarea value={inlineCommentDraft} onChange={(event) => setInlineCommentDraft(event.target.value)} aria-label="Pull request review comment" placeholder="Leave a review comment on this line" className="min-h-24 resize-y text-sm leading-5" disabled={commentLoading} />
                       <div className="flex items-center justify-between gap-3">
                         <div className="font-sans text-[11px] text-muted-foreground">Posts as a review comment on the pull request diff.</div>
                         <div className="flex shrink-0 items-center gap-2">
-                          <Button variant="ghost" size="sm" className="h-8 rounded-[4px]" onClick={closeComposer} disabled={commentLoading}>Cancel</Button>
+                          <Button variant="ghost" size="sm" className="h-8 rounded-md" onClick={closeComposer} disabled={commentLoading}>Cancel</Button>
                           <Button
                             variant="default"
                             size="sm"
-                            className="h-8 rounded-[4px]"
+                            className="h-8 rounded-md"
                             disabled={!inlineCommentDraft.trim() || commentLoading}
                             onClick={() => {
                               const body = inlineCommentDraft.trim();

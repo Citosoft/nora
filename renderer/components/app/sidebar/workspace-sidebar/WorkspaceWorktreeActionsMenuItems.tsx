@@ -2,8 +2,8 @@ import { createScriptTerminalDefaults, formatWorkspaceScriptActionLabel } from "
 import { canRemoveWorkspaceWorktree } from "@/components/app/logic/worktreeRemoval";
 import type { WorkspaceWorktreeActionsMenuItemsProps } from "@/components/app/types/workspaceSidebarWorktreeActionsMenu.types";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { Bot, Copy, ExternalLink, FolderOpen, GitBranch, TerminalSquare, Trash2 } from "lucide-react";
+import { DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub } from "@/components/ui/dropdown-menu";
+import { Copy, ExternalLink, FolderOpen, GitBranch, MessageSquarePlus, Play, TerminalSquare, Trash2 } from "lucide-react";
 
 export const WorkspaceWorktreeActionsMenuItems = ({
   workspace,
@@ -36,7 +36,7 @@ export const WorkspaceWorktreeActionsMenuItems = ({
         onSelect={() => onSelectWithClose(onFocusWorktree)}
       >
         <GitBranch className="size-4" />
-        Focus worktree
+        Review worktree changes
       </DropdownMenuItem>
       <DropdownMenuItem
         disabled={!isActionable}
@@ -44,8 +44,8 @@ export const WorkspaceWorktreeActionsMenuItems = ({
           onSelectWithClose(() => onOpenCreateAgentOnWorktree(workspace.project.id, worktree.id))
         }
       >
-        <Bot className="size-4" />
-        New agent
+        <MessageSquarePlus className="size-4" />
+        New thread
       </DropdownMenuItem>
       <DropdownMenuItem
         disabled={!isActionable || !preferredShellId}
@@ -66,10 +66,7 @@ export const WorkspaceWorktreeActionsMenuItems = ({
         New terminal
       </DropdownMenuItem>
       {worktree.scripts.length ? (
-        <>
-          <div className="px-3 pb-1 pt-1.5">
-            <div className="border-t border-border/60 pt-2 text-[12px] font-medium text-muted-foreground">Scripts</div>
-          </div>
+        <DropdownMenuSub label="Run script" icon={<Play className="size-4" />} disabled={!isActionable || !preferredShellId}>
           {worktree.scripts.map((script) => (
             <DropdownMenuItem
               key={script.id}
@@ -88,11 +85,11 @@ export const WorkspaceWorktreeActionsMenuItems = ({
                 })
               }
             >
-              <TerminalSquare className="ml-4 size-4" />
+              <Play className="size-4" />
               <span className="truncate">{formatWorkspaceScriptActionLabel(script)}</span>
             </DropdownMenuItem>
           ))}
-        </>
+        </DropdownMenuSub>
       ) : null}
       {pullRequestWebUrl ? (
         <DropdownMenuItem
@@ -127,9 +124,7 @@ export const WorkspaceWorktreeActionsMenuItems = ({
       )}
       {!isRootWorktree ? (
         <>
-          <div className="px-3 pb-1 pt-1.5">
-            <div className="border-t border-border/60 pt-2" />
-          </div>
+          <DropdownMenuSeparator />
           <DropdownMenuItem
             destructive
             disabled={!canRemoveWorktree}

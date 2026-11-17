@@ -1,24 +1,23 @@
 import type {
-  LoopDefinition,
   LoopIteration,
   LoopOutputEvent,
   LoopOutputEventPayload,
-  LoopRoleResult,
   LoopRun,
   LoopRunEvent,
   LoopRunRole,
   SaveLoopDefinitionPayload,
   StartLoopRunPayload
 } from "@shared/appTypes";
-import { buildLoopHeadlessShellCommand, assertLoopHeadlessToolSupported } from "@shared/loopHeadlessLaunch";
+import { assertLoopReviewer, loopReworkResults } from "@shared/loopStages";
+import { createLoopPersistence } from "./runPersistence";
 import { normalizeLoopRunGoal, resolveLoopRunGoalAttachmentPath, type LoopRunGoal } from "@shared/loopRunGoal";
 import { resolveLoopRunLimits } from "@shared/loopLimits";
 import { isLoopRunDeletable } from "@shared/loopRunLifecycle";
-import type { LoopRunner, LoopRunnerDeps, ParsedLoopResult } from "@main/types/loopRunner.types";
+import type { LoopRunner, LoopRunnerDeps, LoopStageResult, ResolvedLoopStage, LoopStageReport } from "@main/types/loopRunner.types";
 import type { PrepareLoopRunWorktreeInput } from "@main/types/prepareLoopRunWorktree.types";
+import { resolveLoopStages } from "./resolveLoopStages";
 import { normalizeLoopDefinition } from "./loopValidation";
-import { buildReviewerPrompt, buildWriterPrompt, parseLoopResult } from "./loopProtocol";
-import { createLoopOutputNormalizer } from "./output/createLoopOutputNormalizer";
+import { buildStagePrompt } from "./loopProtocol";
 
 const MAX_OUTPUT_LOG_CHARS = 500_000;
 const MAX_OUTPUT_EVENTS = 2_000;
@@ -62,58 +61,14 @@ function withUniqueRunBranch(payload: StartLoopRunPayload, runId: string): Start
 
 export function createLoopRunner(deps: LoopRunnerDeps): LoopRunner {
   const activeRuns = new Map<string, Promise<void>>();
+  const stageReports = new Map<string, LoopStageReport>();
   const activeTurns = new Map<string, { abort: () => void }>();
-  const pendingRunWrites = new Map<string, Promise<void>>();
+  const preparingRuns = new Map<string, AbortController>();
+  const rescheduleRuns = new Set<string>();
   let disposed = false;
-
-  function queueRunWrite(run: LoopRun, outputOnly: boolean): Promise<void> {
-    const snapshot = structuredClone(run);
-    const previous = pendingRunWrites.get(run.id) ?? Promise.resolve();
-    const pending = previous.then(async () => {
-      if (outputOnly) {
-        const latest = await deps.store.getRun(snapshot.projectId, snapshot.id);
-        if (!latest) {
-          return;
-        }
-        await deps.store.saveRun({
-          ...latest,
-          outputLog: snapshot.outputLog,
-          outputEvents: snapshot.outputEvents
-        });
-        return;
-      }
-      await deps.store.saveRun(snapshot);
-    });
-    pendingRunWrites.set(run.id, pending);
-    void pending.catch(() => undefined);
-    return pending;
-  }
-
-  async function flushRunWrites(runId: string): Promise<void> {
-    await pendingRunWrites.get(runId);
-  }
-
-  async function persist(run: LoopRun): Promise<LoopRun> {
-    const bounded = { ...run, events: run.events.slice(-500) };
-    await queueRunWrite(bounded, false);
-    deps.notifyRunChanged(bounded);
-    return bounded;
-  }
-
-  async function updateRun(run: LoopRun, partial: Partial<LoopRun>): Promise<LoopRun> {
-    await flushRunWrites(run.id);
-    const latest = await deps.store.getRun(run.projectId, run.id);
-    const base = latest ?? run;
-    const controlStatus = base.status === "cancelled" || base.status === "paused" || base.status === "pausing"
-      ? base.status
-      : undefined;
-    return persist({
-      ...base,
-      ...partial,
-      ...(partial.status === undefined && controlStatus ? { status: controlStatus } : {}),
-      updatedAt: deps.nowIso()
-    });
-  }
+  const persistence = createLoopPersistence(deps);
+  const persist = persistence.save;
+  const updateRun = persistence.update;
 
   async function pauseWithError(run: LoopRun, message: string): Promise<LoopRun> {
     return updateRun(run, {
@@ -127,7 +82,7 @@ export function createLoopRunner(deps: LoopRunnerDeps): LoopRunner {
 
   async function recoverOrphanedRun(run: LoopRun): Promise<LoopRun> {
     const wasActive = run.status === "preparing" || run.status === "running" || run.status === "pausing";
-    if (!wasActive || activeRuns.has(run.id)) {
+    if (!wasActive || (activeRuns.has(run.id) || preparingRuns.has(run.id))) {
       return run;
     }
     return updateRun(run, {
@@ -181,34 +136,15 @@ export function createLoopRunner(deps: LoopRunnerDeps): LoopRunner {
     return `${prompt}\n\nAttached run goal file:\n${absolutePath}`;
   }
 
-  async function runHeadlessTurn(run: LoopRun, role: LoopRunRole, prompt: string, token: string): Promise<ParsedLoopResult> {
-    if (!run.worktreePath) {
-      throw new Error("Workflow worktree path is missing.");
-    }
-
-    assertLoopHeadlessToolSupported(role.toolId, role.name);
-    const tool = deps.resolveLoopTool(role.toolId);
+  async function runThreadTurn(run: LoopRun, role: LoopRunRole, prompt: string, token: string): Promise<LoopStageResult> {
+    if (!role.conversationId) throw new Error(`${role.name}'s workflow thread is missing.`);
+    const deadline = run.startedAt ? Date.parse(run.startedAt) + run.limits.maxDurationMs : 0;
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) throw new Error("The workflow reached its total duration limit.");
     const resolvedPrompt = await appendGoalContext(run, prompt.replaceAll("__NORA_LOOP_TOKEN__", token));
-    const command = buildLoopHeadlessShellCommand({
-      toolId: role.toolId,
-      roleKind: role.kind,
-      detectedCommand: tool.detectedCommand,
-      prompt: resolvedPrompt,
-      workspacePath: run.worktreePath
-    });
     const iteration = run.iterations.at(-1)?.number ?? 1;
     const turnId = deps.randomId();
-    const normalizer = createLoopOutputNormalizer({
-      turnId,
-      roleId: role.roleId,
-      roleName: role.name,
-      roleKind: role.kind,
-      toolId: role.toolId,
-      iteration,
-      token,
-      nowIso: deps.nowIso,
-      randomId: deps.randomId
-    });
+    let streamedOutput = false;
     let liveRun = emitOutput(run, "", [outputEvent(role, turnId, iteration, {
       kind: "turn",
       phase: "started",
@@ -219,36 +155,32 @@ export function createLoopRunner(deps: LoopRunnerDeps): LoopRunner {
     run.outputEvents = liveRun.outputEvents;
     await persist(liveRun);
 
-    const execution = deps.headlessExecutor.execute({
-      command,
-      cwd: run.worktreePath,
-      env: tool.env,
-      timeoutMs: run.limits.roleTimeoutMs,
-      onOutput: (chunk) => {
-        liveRun = emitOutput(liveRun, chunk, normalizer.push(chunk));
-        run.outputLog = liveRun.outputLog;
-        run.outputEvents = liveRun.outputEvents;
-        void queueRunWrite(liveRun, true);
-      }
-    });
-    activeTurns.set(run.id, { abort: execution.abort });
-
+    const controller = new AbortController();
+    activeTurns.set(run.id, { abort: () => controller.abort() });
     try {
       const controlRun = await deps.store.getRun(run.projectId, run.id);
-      if (controlRun?.status === "pausing" || controlRun?.status === "cancelled") {
-        execution.abort();
-      }
-      const result = await execution.result;
-      const normalizedEvents = normalizer.finish(result.output);
+      if (disposed || controlRun?.status !== "running") throw new Error("Workflow execution was stopped.");
+      const budget = deadline - Date.now();
+      if (budget <= 0) throw new Error("The workflow reached its total duration limit.");
+      const result = await deps.runtime.execute({
+        conversationId: role.conversationId, prompt: resolvedPrompt,
+        timeoutMs: Math.min(run.limits.roleTimeoutMs, budget), signal: controller.signal,
+        onOutput: (chunk) => {
+          streamedOutput = true;
+          liveRun = emitOutput(liveRun, chunk, [outputEvent(role, turnId, iteration, { kind: "message", markdown: chunk })]);
+          run.outputLog = liveRun.outputLog;
+          run.outputEvents = liveRun.outputEvents;
+          void persistence.output(liveRun).catch(() => controller.abort());
+        }
+      });
+      const normalizedEvents = !streamedOutput && result.output ? [outputEvent(role, turnId, iteration, { kind: "message", markdown: result.output })] : [];
       const turnFinished = outputEvent(role, turnId, iteration, {
         kind: "turn",
         phase: "finished",
-        exitCode: result.exitCode,
-        aborted: result.aborted
+        exitCode: null,
+        aborted: result.status === "interrupted" || result.status === "timed-out"
       });
-      const diagnostic = result.aborted
-        ? `\n[${role.name} stopped]\n`
-        : `\n[${role.name} exited with code ${result.exitCode ?? "unknown"}]\n`;
+      const diagnostic = `\n[${role.name} thread ${result.status}]\n`;
       liveRun = emitOutput(liveRun, diagnostic, [...normalizedEvents, turnFinished]);
       run.outputLog = liveRun.outputLog;
       run.outputEvents = liveRun.outputEvents;
@@ -257,21 +189,23 @@ export function createLoopRunner(deps: LoopRunnerDeps): LoopRunner {
         outputEvents: liveRun.outputEvents
       });
 
-      if (result.aborted) {
-        throw new Error("Workflow agent turn was interrupted.");
+      if (liveRun.status !== "running") throw new Error("Workflow execution was stopped.");
+      if (result.status !== "completed") throw new Error(result.failure ?? `${role.name}'s thread ${result.status}.`);
+      if (run.startedAt && Date.now() >= Date.parse(run.startedAt) + run.limits.maxDurationMs) {
+        throw new Error("The workflow reached its total duration limit.");
       }
 
-      const parsed = parseLoopResult(normalizer.getProtocolText() || result.output, token);
-      if (!parsed) {
-        throw new Error(`${role.name} finished without a valid workflow result marker.`);
-      }
+      const parsed = stageReports.get(run.id)?.result;
+      if (!parsed) throw new Error(`${role.name} finished without reporting its result through report_workflow_stage.`);
+      liveRun = emitOutput(liveRun, "", [outputEvent(role, turnId, iteration, { kind: "result", token, ...parsed })]);
+      await updateRun(liveRun, { outputLog: liveRun.outputLog, outputEvents: liveRun.outputEvents });
       return parsed;
     } finally {
       activeTurns.delete(run.id);
     }
   }
 
-  async function waitForResult(run: LoopRun, role: LoopRunRole, prompt: string): Promise<ParsedLoopResult> {
+  async function waitForResult(run: LoopRun, role: LoopRunRole, prompt: string): Promise<LoopStageResult> {
     const token = deps.randomId();
     const liveRun = await updateRun(run, {
       activeRoleId: role.roleId,
@@ -285,27 +219,14 @@ export function createLoopRunner(deps: LoopRunnerDeps): LoopRunner {
     run.outputLog = liveRun.outputLog;
     run.outputEvents = liveRun.outputEvents;
 
-    const parsed = await runHeadlessTurn(liveRun, role, prompt, token);
-    return parsed;
+    if (liveRun.status !== "running") throw new Error("Workflow execution was stopped.");
+    stageReports.set(run.id, { attemptId: token, result: null });
+    try { return await runThreadTurn(liveRun, role, prompt, token); }
+    finally { stageReports.delete(run.id); }
   }
 
-  function buildRoles(definition: LoopDefinition): LoopRunRole[] {
-    return [
-      {
-        roleId: definition.writer.id,
-        kind: definition.writer.kind,
-        name: definition.writer.name,
-        toolId: definition.writer.toolId,
-        instructions: definition.writer.instructions
-      },
-      ...definition.reviewers.map((reviewer) => ({
-        roleId: reviewer.id,
-        kind: reviewer.kind,
-        name: reviewer.name,
-        toolId: reviewer.toolId,
-        instructions: reviewer.instructions
-      }))
-    ];
+  function buildRoles(stages: readonly ResolvedLoopStage[]): LoopRunRole[] {
+    return stages.map(({ id, ...stage }) => ({ ...stage, roleId: id }));
   }
 
   async function execute(runId: string, projectId: string): Promise<void> {
@@ -319,85 +240,51 @@ export function createLoopRunner(deps: LoopRunnerDeps): LoopRunner {
           run = await pauseWithError(run, "The workflow reached its total duration limit.");
           break;
         }
-        if (run.iterations.length >= run.limits.maxIterations) {
+        const unfinished = run.iterations.at(-1)?.completedAt === null ? run.iterations.at(-1) : undefined;
+        if (!unfinished && run.iterations.length >= run.limits.maxIterations) {
           run = await pauseWithError(run, "The workflow reached its iteration limit.");
           break;
         }
 
-        const iteration: LoopIteration = {
+        const iteration: LoopIteration = unfinished ?? {
           number: run.iterations.length + 1,
           startedAt: deps.nowIso(),
           completedAt: null,
-          writerResult: null,
-          reviewerResults: []
+          results: loopReworkResults(run.roles, run.iterations.at(-1))
         };
-        run = await updateRun(run, { iterations: [...run.iterations, iteration] });
-
-        const writer = run.roles.find((role) => role.kind === "writer");
-        if (!writer) {
-          throw new Error("Workflow writer is missing.");
-        }
+        if (!unfinished) run = await updateRun(run, { iterations: [...run.iterations, iteration] });
 
         const previous = run.iterations.length > 1 ? run.iterations.at(-2) : undefined;
-        const writerParsed = await waitForResult(
-          run,
-          writer,
-          buildWriterPrompt(run.definition, writer, runGoal(run), previous, "__NORA_LOOP_TOKEN__")
-        );
-        const writerResult: LoopRoleResult = {
-          roleId: writer.roleId,
-          outcome: writerParsed.outcome,
-          summary: writerParsed.summary,
-          completedAt: deps.nowIso()
-        };
-        iteration.writerResult = writerResult;
-        run = await updateRun(run, {
-          activeRoleId: null,
-          activeToken: null,
-          iterations: [...run.iterations.slice(0, -1), iteration],
-          events: [...run.events, event(deps, "role_finished", `${writer.name}: ${writerParsed.outcome}.`, writer.roleId, iteration.number)]
-        });
-
-        if (run.status !== "running") {
-          if (run.status === "pausing") {
-            run = await updateRun(run, {
-              status: "paused",
-              stopReason: "Paused by user.",
-              events: [...run.events, event(deps, "paused", "Workflow paused.", null, iteration.number)]
-            });
+        let needsRework = iteration.results.some((result) => result.outcome === "continue" || result.outcome === "changes_requested");
+        for (const stage of run.roles) {
+          if (needsRework || run.status !== "running") break;
+          if (iteration.results.some((result) => result.roleId === stage.roleId)) continue;
+          if (run.startedAt && Date.now() - Date.parse(run.startedAt) >= run.limits.maxDurationMs) {
+            throw new Error("The workflow reached its total duration limit.");
           }
-          break;
-        }
-
-        for (const reviewer of run.roles.filter((role) => role.kind === "reviewer")) {
-          const parsed = await waitForResult(
-            run,
-            reviewer,
-            buildReviewerPrompt(run.definition, reviewer, runGoal(run), writerParsed.summary, "__NORA_LOOP_TOKEN__")
-          );
-          iteration.reviewerResults.push({
-            roleId: reviewer.roleId,
-            outcome: parsed.outcome,
-            summary: parsed.summary,
-            completedAt: deps.nowIso()
-          });
+          const parsed = await waitForResult(run, stage,
+            buildStagePrompt(run.definition, stage, runGoal(run), previous, iteration, "__NORA_LOOP_TOKEN__"));
+          const allowed = stage.kind === "writer"
+            ? parsed.outcome === "complete" || parsed.outcome === "continue"
+            : parsed.outcome === "approve" || parsed.outcome === "changes_requested";
+          if (!allowed) throw new Error(`${stage.name} returned an invalid outcome for its stage type.`);
+          needsRework = parsed.outcome === "continue" || parsed.outcome === "changes_requested";
+          iteration.results.push({ roleId: stage.roleId, outcome: parsed.outcome,
+            summary: parsed.summary, completedAt: deps.nowIso() });
           run = await updateRun(run, {
-            activeRoleId: null,
-            activeToken: null,
+            activeRoleId: null, activeToken: null,
             iterations: [...run.iterations.slice(0, -1), iteration],
-            events: [...run.events, event(deps, "role_finished", `${reviewer.name}: ${parsed.outcome}.`, reviewer.roleId, iteration.number)]
+            events: [...run.events, event(deps, "role_finished", `${stage.name}: ${parsed.outcome}.`, stage.roleId, iteration.number)]
           });
-          if (run.status !== "running") {
-            break;
-          }
         }
 
-        iteration.completedAt = deps.nowIso();
-        const approved = iteration.reviewerResults.every((result) => result.outcome === "approve");
-        if (writerParsed.outcome === "complete" && approved) {
+        if (needsRework || iteration.results.length === run.roles.length) iteration.completedAt = deps.nowIso();
+        const approved = iteration.results.length === run.roles.length
+          && iteration.results.every((result) => result.outcome === "complete" || result.outcome === "approve");
+        if (run.status === "running" && approved) {
           run = await updateRun(run, {
             status: "completed",
-            stopReason: "Writer completed and all reviewers approved.",
+            stopReason: "All workflow stages completed successfully.",
             completedAt: deps.nowIso(),
             iterations: [...run.iterations.slice(0, -1), iteration],
             events: [...run.events, event(deps, "completed", "Workflow completed.", null, iteration.number)]
@@ -432,26 +319,51 @@ export function createLoopRunner(deps: LoopRunnerDeps): LoopRunner {
             latest.iterations.at(-1)?.number ?? null
           )]
         });
-      } else if (latest && latest.status !== "cancelled" && latest.status !== "completed") {
+      } else if (latest?.status === "running" || latest?.status === "preparing") {
         await pauseWithError(latest, error instanceof Error ? error.message : String(error));
       }
-    } finally {
-      activeRuns.delete(runId);
     }
   }
 
   function schedule(run: LoopRun): void {
-    if (activeRuns.has(run.id)) {
-      return;
-    }
-    activeRuns.set(run.id, execute(run.id, run.projectId));
+    if (disposed || run.status !== "running") return;
+    if (activeRuns.has(run.id)) { rescheduleRuns.add(run.id); return; }
+    const pending = execute(run.id, run.projectId).finally(async () => {
+      activeRuns.delete(run.id);
+      if (rescheduleRuns.delete(run.id)) {
+        const latest = await deps.store.getRun(run.projectId, run.id);
+        if (latest) schedule(latest);
+      }
+    });
+    activeRuns.set(run.id, pending);
+    void pending.catch(() => undefined);
   }
 
   return {
+    async reportStage(input) {
+      const pending = stageReports.get(input.runId);
+      const run = await deps.store.getRun(input.projectId, input.runId);
+      const role = run?.roles.find((entry) => entry.roleId === input.roleId);
+      if (!pending || !run || run.status !== "running" || run.activeRoleId !== input.roleId || pending.attemptId !== input.attemptId
+        || run.activeToken !== input.attemptId || role?.conversationId !== input.conversationId) {
+        throw new Error("This stage attempt is no longer active, or the report belongs to another workflow thread.");
+      }
+      if (run.startedAt && Date.now() >= Date.parse(run.startedAt) + run.limits.maxDurationMs) throw new Error("The workflow reached its total duration limit.");
+      const valid = role.kind === "writer" ? input.outcome === "complete" || input.outcome === "continue"
+        : input.outcome === "approve" || input.outcome === "changes_requested";
+      if (!valid) throw new Error(`${role.name} returned an invalid outcome for its stage type.`);
+      const summary = input.summary.trim();
+      if (!summary || summary.length > 20_000) throw new Error("Stage summaries must contain 1 to 20000 characters.");
+      if (pending.result && (pending.result.outcome !== input.outcome || pending.result.summary !== summary)) {
+        throw new Error("This attempt already reported a different result.");
+      }
+      pending.result = { outcome: input.outcome, summary };
+    },
     listDefinitions: (projectId) => deps.store.listDefinitions(projectId),
     async saveDefinition(payload: SaveLoopDefinitionPayload) {
       const definition = normalizeLoopDefinition(payload, deps.nowIso());
       await deps.store.saveDefinition(definition);
+      deps.notifyDefinitionChanged(definition);
       return definition;
     },
     deleteDefinition: (projectId, definitionId) => deps.store.deleteDefinition(projectId, definitionId),
@@ -473,13 +385,15 @@ export function createLoopRunner(deps: LoopRunnerDeps): LoopRunner {
       await deps.store.deleteRun(projectId, runId);
     },
     async startRun(payload: StartLoopRunPayload) {
-      const definition = (await deps.store.listDefinitions(payload.projectId)).find((item) => item.id === payload.definitionId);
-      if (!definition) {
+      const savedDefinition = (await deps.store.listDefinitions(payload.projectId)).find((item) => item.id === payload.definitionId);
+      if (!savedDefinition) {
         throw new Error("Workflow could not be found.");
       }
+      const resolved = resolveLoopStages(savedDefinition.stages, payload.projectId, deps.resolveBot);
+      const definition = structuredClone(savedDefinition);
 
-      for (const role of [definition.writer, ...definition.reviewers]) {
-        assertLoopHeadlessToolSupported(role.toolId, role.name);
+      for (const role of resolved) {
+        if (role.kind === "reviewer") assertLoopReviewer(role.toolId, role.name);
       }
 
       const goal = normalizeLoopRunGoal(payload);
@@ -501,7 +415,7 @@ export function createLoopRunner(deps: LoopRunnerDeps): LoopRunner {
         worktreePath: null,
         outputLog: "",
         outputEvents: [],
-        roles: buildRoles(definition),
+        roles: buildRoles(resolved),
         iterations: [],
         events: [event(deps, "created", "Workflow run created.", null, null)],
         activeRoleId: null,
@@ -511,16 +425,17 @@ export function createLoopRunner(deps: LoopRunnerDeps): LoopRunner {
         updatedAt: deps.nowIso(),
         completedAt: null
       };
-      await persist(run);
-
+      const preparation = new AbortController();
+      preparingRuns.set(run.id, preparation);
       try {
+        await persist(run);
         const prepInput: PrepareLoopRunWorktreeInput = {
           payload: withUniqueRunBranch(payload, run.id),
-          writerToolId: definition.writer.toolId,
-          writerName: definition.writer.name,
+          toolId: definition.stages[0].toolId,
+          name: definition.stages[0].name,
           onProgress: async (message) => {
-            const writer = run.roles.find((role) => role.kind === "writer") ?? run.roles[0];
-            const progressEvents = writer ? [outputEvent(writer, `prepare-${run.id}`, 0, {
+            const firstStage = run.roles[0];
+            const progressEvents = firstStage ? [outputEvent(firstStage, `prepare-${run.id}`, 0, {
               kind: "notice",
               tone: "info",
               message
@@ -536,16 +451,18 @@ export function createLoopRunner(deps: LoopRunnerDeps): LoopRunner {
           worktreePath: prepared.worktreePath,
           outputLog: run.outputLog,
           outputEvents: run.outputEvents,
-          status: "running",
           startedAt: deps.nowIso(),
           stopReason: null,
-          events: [...run.events, event(deps, "resumed", "Workflow execution started in headless mode.", null, null)]
+          events: [...run.events, event(deps, "resumed", "Workflow threads prepared.", null, null)]
         });
+        if (preparation.signal.aborted || run.status !== "preparing") return run;
+        const roles = await deps.runtime.prepare(run, preparation.signal);
+        run = await updateRun(run, { roles, status: preparation.signal.aborted ? "cancelled" : "running" });
         schedule(run);
         return run;
       } catch (error) {
         return pauseWithError(run, error instanceof Error ? error.message : String(error));
-      }
+      } finally { preparingRuns.delete(run.id); }
     },
     async pauseRun(projectId, runId) {
       const run = await deps.store.getRun(projectId, runId);
@@ -583,7 +500,14 @@ export function createLoopRunner(deps: LoopRunnerDeps): LoopRunner {
       if (!run.worktreePath) {
         throw new Error("Workflow worktree is missing. Start a new workflow run instead of resuming this one.");
       }
+      const preparation = new AbortController();
+      preparingRuns.set(run.id, preparation);
+      let roles: LoopRunRole[];
+      try { roles = await deps.runtime.prepare(run, preparation.signal); }
+      finally { preparingRuns.delete(run.id); }
+      if (preparation.signal.aborted) return await deps.store.getRun(projectId, runId) ?? run;
       const resumed = await updateRun(run, {
+        roles,
         status: "running",
         stopReason: null,
         events: [...run.events, event(deps, "resumed", "Workflow resumed.", null, run.iterations.at(-1)?.number ?? null)]
@@ -596,9 +520,8 @@ export function createLoopRunner(deps: LoopRunnerDeps): LoopRunner {
       if (!run) {
         throw new Error("Workflow run could not be found.");
       }
-      activeTurns.get(runId)?.abort();
-      activeTurns.delete(runId);
-      return updateRun(run, {
+      preparingRuns.get(runId)?.abort();
+      const cancelled = await updateRun(run, {
         status: "cancelled",
         stopReason: "Cancelled by user.",
         activeRoleId: null,
@@ -606,9 +529,8 @@ export function createLoopRunner(deps: LoopRunnerDeps): LoopRunner {
         completedAt: deps.nowIso(),
         events: [...run.events, event(deps, "cancelled", "Workflow cancelled.", null, run.iterations.at(-1)?.number ?? null)]
       });
-    },
-    async getActiveRunForAgent(_agentId) {
-      return null;
+      activeTurns.get(runId)?.abort();
+      return cancelled;
     },
     dispose() {
       disposed = true;
@@ -616,7 +538,10 @@ export function createLoopRunner(deps: LoopRunnerDeps): LoopRunner {
         turn.abort();
       }
       activeTurns.clear();
-      pendingRunWrites.clear();
+      for (const preparation of preparingRuns.values()) preparation.abort();
+      preparingRuns.clear();
+      rescheduleRuns.clear();
+      stageReports.clear();
     }
   };
 }

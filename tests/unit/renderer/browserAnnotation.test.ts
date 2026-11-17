@@ -1,6 +1,7 @@
 import {
   buildBrowserAnnotationKey,
   buildBrowserReviewPrompt,
+  formatBrowserElementLabel,
   groupBrowserAnnotationsByUrl,
   sortBrowserAnnotations
 } from "@/components/app/logic/browserAnnotation";
@@ -18,6 +19,13 @@ const sampleTarget = {
   htmlSnippet: '<button class="submit">Submit form</button>',
   attributes: { class: "submit" }
 };
+
+test("element labels share readable identifiers across browser comments and review prompts", () => {
+  assert.equal(formatBrowserElementLabel({ ...sampleTarget, attributes: { id: " submit ", class: "primary" } }), "button#submit");
+  assert.equal(formatBrowserElementLabel({ ...sampleTarget, attributes: { "data-testid": "send", class: "primary" } }), 'button[data-testid="send"]');
+  assert.equal(formatBrowserElementLabel({ ...sampleTarget, attributes: { class: "primary large" } }), "button.primary");
+  assert.equal(formatBrowserElementLabel({ ...sampleTarget, attributes: {} }), "button");
+});
 
 test("buildBrowserAnnotationKey combines page url and selector", () => {
   assert.equal(

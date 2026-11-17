@@ -1,16 +1,14 @@
 import type {
-  AgentContextSelection,
   AppState,
   CommitChangesPayload,
   CreateWorkspaceDirectoryPayload,
   ExternalHarnessContextRef,
-  ExternalHarnessSessionSummary,
-  ImportedContextBundleSummary,
   NoraDetectableContextBundleSummary,
   TerminalPreset,
   WorkspaceFileRequest,
   WorkspaceGitStatusSummary,
   CheckoutWorkspaceBranchPayload,
+  SelectChangesCheckoutPayload,
   SetWorkspaceUpstreamPayload,
   WorkspaceNoteSummary,
   WorkspacePathStatResult,
@@ -68,6 +66,9 @@ export class WorkspaceMainService implements WorkspaceService {
   readWorkspaceImageFile = (payload: WorkspaceFileRequest): Promise<WorkspaceImageFileContent> =>
     this.actions().readWorkspaceImageFile(payload);
 
+  readWorkspaceLogo = (projectId: string): Promise<WorkspaceImageFileContent | null> =>
+    this.actions().readWorkspaceLogo(projectId);
+
   resolveWorkspaceFileForExternalOpen = (payload: WorkspaceFileRequest): Promise<string> =>
     this.actions().resolveWorkspaceFileForExternalOpen(payload);
 
@@ -86,24 +87,10 @@ export class WorkspaceMainService implements WorkspaceService {
   searchWorkspaceFiles = (payload: WorkspaceSearchRequest): Promise<WorkspaceSearchResult[]> =>
     this.actions().searchWorkspaceFilesByProject(payload);
 
-  listImportedContextBundles = (projectId: string, rootPath?: string): Promise<ImportedContextBundleSummary[]> =>
-    this.actions().listImportedContextBundlesByProject(projectId, rootPath);
-
-  listExternalHarnessContextSessions = (
-    projectId: string,
-    rootPath?: string
-  ): Promise<ExternalHarnessSessionSummary[]> =>
-    this.actions().listExternalHarnessContextSessionsByProject(projectId, rootPath);
-
   archiveExternalHarnessThread = (
     projectId: string,
     ref: ExternalHarnessContextRef
   ): Promise<void> => this.actions().archiveExternalHarnessThreadByProject(projectId, ref);
-
-  composeExternalHarnessContextSelections = (
-    projectId: string,
-    ref: ExternalHarnessContextRef
-  ): Promise<AgentContextSelection[]> => this.actions().composeExternalHarnessContextSelectionsByProject(projectId, ref);
 
   listNoraDetectableContextBundles = (
     projectId: string,
@@ -145,6 +132,9 @@ export class WorkspaceMainService implements WorkspaceService {
   checkoutWorkspaceBranch = (payload: CheckoutWorkspaceBranchPayload): Promise<AppState> =>
     this.actions().checkoutWorkspaceBranch(payload);
 
+  selectChangesCheckout = (payload: SelectChangesCheckoutPayload): Promise<AppState> =>
+    this.actions().selectChangesCheckout(payload);
+
   setWorkspaceUpstream = (payload: SetWorkspaceUpstreamPayload): Promise<WorkspaceGitStatusSummary> =>
     this.actions().setWorkspaceUpstream(payload);
 
@@ -159,6 +149,9 @@ export class WorkspaceMainService implements WorkspaceService {
 
   createWorkspaceTask = (projectId: string, taskDescription: string): Promise<AppState> =>
     this.actions().createWorkspaceTask(projectId, taskDescription);
+
+  createWorkspaceTaskFile = (projectId: string, title: string, content: string): Promise<string> =>
+    this.actions().createWorkspaceTaskFile(projectId, title, content);
 
   getWorkspaceSplitViews = (projectId: string): Promise<WorkspaceSplitViewCollection> =>
     this.actions().getWorkspaceSplitViews(projectId);

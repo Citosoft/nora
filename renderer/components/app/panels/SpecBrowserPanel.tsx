@@ -18,9 +18,9 @@ export function SpecBrowserPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
-      <div className="workspace-shell-surface border-b border-border/60 px-6 py-3">
+      <div className="workspace-shell-surface workspace-chrome-surface border-b border-border/60 px-4 py-3">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
             <ScrollText className="size-4 shrink-0" />
             Spec Center
           </div>
@@ -32,12 +32,12 @@ export function SpecBrowserPanel({
           <Badge variant="outline">{totalSpecCount} specs</Badge>
         </div>
       </div>
-      <ScrollArea className="workspace-centers-content-surface h-full bg-background px-6 py-5">
+      <ScrollArea className="workspace-centers-content-surface h-full bg-background px-4 py-4">
         <div className="space-y-5">
-          <Card className="border-primary/20 bg-primary/5 !shadow-none">
+          <Card className="border-border/60 bg-muted/30 !shadow-none">
             <div className="px-5 py-4">
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 rounded-[4px] border border-primary/20 bg-background/80 p-2 text-primary">
+                <div className="mt-0.5 rounded-md border border-border/60 bg-background p-2 text-muted-foreground">
                   <Info className="size-4" />
                 </div>
                 <div className="min-w-0">
@@ -83,7 +83,7 @@ export function SpecBrowserPanel({
                       {workspace.specs.map((spec) => (
                         <div
                           key={spec.path}
-                          className="flex items-center gap-3 rounded-[4px] border border-border/60 bg-background/30 px-3 py-3"
+                          className="flex items-center gap-3 rounded-md border border-border/60 bg-background px-3 py-3"
                         >
                           <button
                             type="button"
@@ -117,7 +117,7 @@ export function SpecBrowserPanel({
                       ))}
                     </div>
                   ) : (
-                    <div className="rounded-[4px] border border-dashed border-border/70 bg-background/40 px-4 py-6 text-sm text-muted-foreground">
+                    <div className="rounded-md border border-dashed border-border/70 bg-background px-4 py-6 text-sm text-muted-foreground">
                       No specs yet for this project.
                     </div>
                   )}
@@ -125,7 +125,7 @@ export function SpecBrowserPanel({
               </Card>
             ))
           ) : (
-            <div className="rounded-[4px] border border-dashed border-border/70 bg-background/40 px-6 py-8 text-sm text-muted-foreground">
+            <div className="rounded-md border border-dashed border-border/70 bg-background px-6 py-8 text-sm text-muted-foreground">
               Add a repository to start organizing specs by project.
             </div>
           )}

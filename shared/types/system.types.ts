@@ -2,6 +2,7 @@ import type { AiSettings } from "./ai.types";
 import type { AnalyticsConsentStatus } from "./analytics.types";
 import type { FileEditorThemeId } from "./fileEditorTheme.types";
 import type { VoiceSettings } from "./voice.types";
+import type { Personalization } from "./personalization/roles.types";
 
 export type Screen = "project-selector" | "workspace";
 
@@ -50,11 +51,15 @@ export interface ToolUsageDetail {
   value: string;
 }
 
+/** The reset cadence of a usage window: the rolling ~5-hour session, the weekly cap, or a billing month. */
+export type ToolUsagePeriod = "session" | "weekly" | "monthly";
+
 /** One rate-limit or billing window, normalized in main so the renderer never parses provider output. */
 export interface ToolUsageWindow {
   id: string;
+  period: ToolUsagePeriod;
   label: string;
-  /** One-or-two letter tag for the compact footer readout (e.g. "S", "W", "M"). */
+  /** One-or-two letter tag for the compact usage readout (e.g. "S", "W", "M"). */
   shortLabel: string;
   percentLeft: number;
   resetsLabel: string | null;
@@ -63,7 +68,7 @@ export interface ToolUsageWindow {
 export interface ToolUsageInfo {
   status: "available" | "unavailable" | "error";
   title: string;
-  /** Primary windows first; the footer readout shows the first two. */
+  /** Primary windows first; the sidebar readout shows the first two. */
   windows: ToolUsageWindow[];
   account: string | null;
   /** Plain-text transcript of what was read, for the tool details panel. */
@@ -93,9 +98,17 @@ export type ReleaseVersionStatus =
       currentVersion: string;
       latestVersion: string;
       releaseUrl: string;
+      releaseNotes?: string | null;
     };
 
 export type AutoUpdateStatus =
+  | {
+      kind: "available";
+      currentVersion: string;
+      latestVersion: string;
+      releaseNotes?: string | null;
+      releaseUrl?: string;
+    }
   | {
       kind: "unsupported";
       currentVersion: string;
@@ -111,6 +124,7 @@ export type AutoUpdateStatus =
       currentVersion: string;
       latestVersion: string | null;
       releaseNotes: string | null;
+      releaseUrl?: string;
       /** 0–100 from the updater; omitted until the first `download-progress` event. */
       downloadProgressPercent?: number;
     }
@@ -119,6 +133,7 @@ export type AutoUpdateStatus =
       currentVersion: string;
       latestVersion: string | null;
       releaseNotes: string | null;
+      releaseUrl?: string;
     }
   | {
       kind: "installing";
@@ -133,6 +148,7 @@ export type AutoUpdateStatus =
     };
 
 export type AutoUpdateTestTarget =
+  | "available"
   | "idle"
   | "checking"
   | "downloading"
@@ -261,7 +277,16 @@ export type AgentLaunchTargetPreference =
   | "branch-existing"
   | "branch-new";
 
+/** How the desktop app behaves around its window and the OS session. Device-local: never synced between computers. */
+export interface DesktopLifecycleSettings {
+  /** Closing the window hides Nora to the tray/menu bar instead of stopping it. Remote access forces this on. */
+  keepRunningInBackground: boolean;
+  launchAtLogin: boolean;
+}
+
 export interface AppSettings {
+  personalization: Personalization;
+  lifecycle: DesktopLifecycleSettings;
   hardwareAccelerationEnabled: boolean;
   workspaceStateStorageMode: WorkspaceStateStorageMode;
   defaultAgentLaunchTarget: AgentLaunchTargetPreference;
@@ -284,6 +309,8 @@ export interface AppSettings {
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
+  personalization: { defaultRole: null, workspaceRoles: {} },
+  lifecycle: { keepRunningInBackground: false, launchAtLogin: false },
   hardwareAccelerationEnabled: true,
   workspaceStateStorageMode: "repo",
   defaultAgentLaunchTarget: "new",
@@ -317,7 +344,9 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
       anthropic: "claude-3-5-haiku-latest"
     },
     simpleTaskProvider: "cloud",
-    localLlmModelId: "qwen2.5-0.5b-instruct"
+    localLlmModelId: "qwen2.5-0.5b-instruct",
+    runtimeModelByProvider: { codex: null, claude: null },
+    memoryReview: { provider: "claude", runtimeModel: null }
   },
   voice: {
     dictationProvider: "openai",

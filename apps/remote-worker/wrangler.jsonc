@@ -1,0 +1,40 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "nora-remote-api",
+  "account_id": "bcf26a0cdce511fff7788d11c64b70c9",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": false,
+  "preview_urls": false,
+  // Served only on the control-plane custom domain. Wrangler creates the DNS record and certificate on deploy;
+  // the withnora.run zone must be on the same Cloudflare account.
+  "routes": [{ "pattern": "remote-api.withnora.run", "custom_domain": true }],
+
+  // The shared contract lives outside this package (../../shared). `@shared/*` resolves through tsconfig.json
+  // `paths`, which esbuild honours. `zod` is pinned to this package's own copy so files under ../../shared never pick
+  // up the repository root's node_modules.
+  "alias": {
+    "zod": "./node_modules/zod/index.js"
+  },
+
+  // Non-secret Nora production configuration (Clerk production instance ins_3MFhhZGe1LmR41OjGHvNlQltG2K). Secrets are uploaded separately and must never be added here.
+  // First-level runtime hostnames use the zone’s existing Universal SSL coverage; no nested wildcard is needed.
+  "vars": {
+    "CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsud2l0aG5vcmEucnVuJA",
+    "CLOUDFLARE_ACCOUNT_ID": "bcf26a0cdce511fff7788d11c64b70c9",
+    "CLOUDFLARE_ZONE_ID": "2b780fc07b259dd9cf87577e3a17950c",
+    "RUNTIME_HOSTNAME_SUFFIX": "withnora.run",
+    "MAX_RUNTIMES_PER_USER": "3",
+    "ALLOWED_ORIGINS": "https://app.withnora.run"
+  },
+
+  // Workers Rate Limiting bindings, keyed by verified Clerk user ID. `namespace_id` must be a positive integer
+  // string unique within the account; `period` must be 10 or 60 seconds. Counters are per Cloudflare location and
+  // eventually consistent, so treat these as abuse protection, not exact accounting.
+  "ratelimits": [
+    { "name": "GENERAL_RATE_LIMITER", "namespace_id": "4101", "simple": { "limit": 60, "period": 60 } },
+    { "name": "PROVISION_RATE_LIMITER", "namespace_id": "4102", "simple": { "limit": 6, "period": 60 } }
+  ],
+
+  "observability": { "enabled": true }
+}

@@ -1,0 +1,38 @@
+import type { BotSnapshot } from "@shared/types/bots/bots.types";
+import type { ChatBranch } from "@shared/types/conversation/contracts.types";
+import type { CommandReceipt, ConversationCommand, ProviderBinding, WorkspaceRef } from "@shared/types/conversation/contracts.types";
+import type { ConversationHeader, ConversationHistoryPage, ConversationSummary, HistoryQuery } from "@shared/types/conversation/queries.types";
+import type { ProviderCatalogResult } from "@shared/types/provider/catalog.types";
+import type { EventSubscription } from "@main/types/execution/engine.types";
+
+/** The narrow slice of the execution host that bot-to-bot work needs. */
+export interface BotConversationHost {
+  execute(command: ConversationCommand, frozenBot?: BotSnapshot): Promise<CommandReceipt>;
+  header(conversationId: string): ConversationHeader | null;
+  summaries(): ConversationSummary[];
+  conversationHistory(query: HistoryQuery): ConversationHistoryPage;
+  subscribe(subscription: EventSubscription): () => void;
+  eventCursor(): number;
+  catalog(kind: ProviderBinding["kind"], instanceId: string, workspace: WorkspaceRef): Promise<ProviderCatalogResult>;
+}
+export interface BotRunnerDeps { host: BotConversationHost; nextId(): string; }
+export interface BotThreadOptions { chatBranch?: ChatBranch; ids?: { commandId: string; conversationId: string }; }
+export interface BotReply {
+  conversationId: string;
+  status: "completed" | "failed" | "interrupted" | "timed-out";
+  /** The run's final assistant message, when it wrote one. */
+  text: string | null;
+  failure: string | null;
+}
+export interface BotAskInput {
+  conversationId: string;
+  instruction: string;
+  signal: AbortSignal;
+  timeoutMs: number;
+  /** Pins a direct-chat message to one workspace for this run only. */
+  workspaceId?: string;
+  /** The user's own words behind `instruction`, shown in place of it when the thread is viewed as a chat. */
+  chatText?: string;
+  /** Called once if the bot stops to wait for the user (an approval or question in its thread). */
+  onWaiting?(): void;
+}

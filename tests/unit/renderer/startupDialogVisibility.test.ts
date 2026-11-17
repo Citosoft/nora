@@ -1,9 +1,23 @@
 import {
+  shouldOpenPersonalWorkspaceIntro,
   shouldOpenAnalyticsConsentDialog,
   shouldRenderLoadingOnboardingDialog
 } from "@/components/app/logic/startupDialogVisibility";
 import assert from "node:assert/strict";
 import test from "node:test";
+
+test("personal workspace introduction waits for Personal and other startup prompts", () => {
+  assert.equal(shouldOpenPersonalWorkspaceIntro(undefined, false, false), false);
+  assert.equal(shouldOpenPersonalWorkspaceIntro("folder", false, false), false);
+  assert.equal(shouldOpenPersonalWorkspaceIntro("repository", false, false), false);
+  assert.equal(shouldOpenPersonalWorkspaceIntro("personal", false, true), false);
+  assert.equal(shouldOpenPersonalWorkspaceIntro("personal", false, false), true);
+});
+
+test("dismissed personal workspace introduction never opens again", () => {
+  assert.equal(shouldOpenPersonalWorkspaceIntro("personal", true, false), false);
+  assert.equal(shouldOpenPersonalWorkspaceIntro("personal", true, true), false);
+});
 
 test("analytics consent stays closed until app settings finish loading", () => {
   assert.equal(shouldOpenAnalyticsConsentDialog(false, "unknown", false), false);

@@ -5,6 +5,7 @@ import type {
   AppState,
   CreateAgentPayload,
   CreateTerminalPayload,
+  CreateWorktreePayload,
   LocalTerminalState
 } from "@shared/appTypes";
 import type { SessionService } from "../../types/mainServices.types";
@@ -33,6 +34,8 @@ export class SessionMainService implements SessionService {
   constructor(private readonly d: SessionMainServiceDeps) {}
 
   createAgent = (payload: CreateAgentPayload): Promise<AppState> => this.d.sessionCreation.createAgent(payload);
+
+  createWorktree = (payload: CreateWorktreePayload): Promise<AppState> => this.d.createWorktree(payload);
 
   createTerminal = (payload: CreateTerminalPayload): Promise<AppState> =>
     this.d.sessionCreation.createTerminal(payload);

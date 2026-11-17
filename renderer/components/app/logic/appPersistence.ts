@@ -19,7 +19,7 @@ import type {
   ThemeMode,
   UiFontId
 } from "@/components/app/types";
-import { isUiFontId } from "@/components/app/logic/appUiFonts";
+import { DEFAULT_UI_FONT_ID, isUiFontId } from "@/components/app/logic/appUiFonts";
 import { isAiChatReasoningLevel } from "@/components/app/types";
 import { clampRounded } from "@shared/math";
 
@@ -29,7 +29,6 @@ const TERMINAL_THEME_STORAGE_KEY = "nora-terminal-theme";
 const TERMINAL_FONT_STORAGE_KEY = "nora-terminal-font";
 const UI_FONT_STORAGE_KEY = "nora-ui-font";
 const DEFAULT_IDE_STORAGE_KEY = "nora-default-ide";
-const USER_DISPLAY_NAME_STORAGE_KEY = "nora-user-display-name";
 const UI_LAYOUT_STORAGE_KEY = "nora-ui-layout";
 const GITHUB_TOKEN_STORAGE_KEY = "nora-github-token";
 const GITLAB_TOKEN_STORAGE_KEY = "nora-gitlab-token";
@@ -45,6 +44,7 @@ const AI_CHAT_TABS_STORAGE_KEY = "nora-ai-chat-tabs";
 const FORGE_VIEWER_TABS_STORAGE_KEY = "nora-forge-viewer-tabs";
 const WORKSPACE_CONTENT_STORAGE_KEY = "nora-workspace-content";
 const ONBOARDING_COMPLETED_STORAGE_KEY = "nora-onboarding-completed";
+const PERSONAL_WORKSPACE_INTRO_DISMISSED_STORAGE_KEY = "nora-personal-workspace-intro-dismissed";
 const FORCE_MAC_TITLE_BAR_PREVIEW_STORAGE_KEY = "nora-force-mac-title-bar-preview";
 const STARTUP_DEPENDENCIES_DISMISSED_STORAGE_KEY = "nora-startup-dependencies-dismissed";
 
@@ -60,7 +60,7 @@ const DEFAULT_UI_LAYOUT: StoredUiLayout = {
   isCliSectionCollapsed: true,
   isSkillsSectionCollapsed: true,
   isSpecsSectionCollapsed: true,
-  isLocalTerminalDockCollapsed: false,
+  isLocalTerminalDockCollapsed: true,
   localTerminalDockHeight: 280
 };
 
@@ -276,11 +276,12 @@ export function readStoredUiLayout(): StoredUiLayout {
       changesSidebarWidth: clampChangesSidebarWidth(parsed.changesSidebarWidth),
       activeChangesPanelTab:
         parsed.activeChangesPanelTab === "files" ||
-        parsed.activeChangesPanelTab === "context" ||
+        parsed.activeChangesPanelTab === "memory" ||
+        parsed.activeChangesPanelTab === "instructions" ||
         parsed.activeChangesPanelTab === "forge" ||
         parsed.activeChangesPanelTab === "vercel"
           ? parsed.activeChangesPanelTab
-          : "git",
+          : String(parsed.activeChangesPanelTab) === "context" ? "files" : "git",
       collapsedWorkspaceIds:
         parsed.collapsedWorkspaceIds && typeof parsed.collapsedWorkspaceIds === "object"
           ? parsed.collapsedWorkspaceIds
@@ -289,7 +290,7 @@ export function readStoredUiLayout(): StoredUiLayout {
       isCliSectionCollapsed: parsed.isCliSectionCollapsed === true,
       isSkillsSectionCollapsed: parsed.isSkillsSectionCollapsed === true,
       isSpecsSectionCollapsed: parsed.isSpecsSectionCollapsed === true,
-      isLocalTerminalDockCollapsed: parsed.isLocalTerminalDockCollapsed === true,
+      isLocalTerminalDockCollapsed: parsed.isLocalTerminalDockCollapsed !== false,
       localTerminalDockHeight: clampLocalTerminalDockHeight(parsed.localTerminalDockHeight)
     };
   } catch {
@@ -323,10 +324,6 @@ export function readStoredTerminalFontId(): TerminalFontId {
 export function readStoredDefaultIdeId(): string | null {
   const stored = window.localStorage.getItem(DEFAULT_IDE_STORAGE_KEY);
   return stored && stored.trim().length > 0 ? stored : null;
-}
-
-export function readStoredUserDisplayName(): string {
-  return window.localStorage.getItem(USER_DISPLAY_NAME_STORAGE_KEY) || "";
 }
 
 export function readStoredGithubToken(): string {
@@ -533,13 +530,21 @@ export function readStoredOnboardingCompleted(): boolean {
   return window.localStorage.getItem(ONBOARDING_COMPLETED_STORAGE_KEY) === "true";
 }
 
+export function readStoredPersonalWorkspaceIntroDismissed(): boolean {
+  return window.localStorage.getItem(PERSONAL_WORKSPACE_INTRO_DISMISSED_STORAGE_KEY) === "true";
+}
+
+export function dismissStoredPersonalWorkspaceIntro(): void {
+  window.localStorage.setItem(PERSONAL_WORKSPACE_INTRO_DISMISSED_STORAGE_KEY, "true");
+}
+
 export function readStoredForceMacTitleBarPreview(): boolean {
   return window.localStorage.getItem(FORCE_MAC_TITLE_BAR_PREVIEW_STORAGE_KEY) === "true";
 }
 
 export function readStoredUiFontId(): UiFontId {
   const stored = window.localStorage.getItem(UI_FONT_STORAGE_KEY);
-  return stored && isUiFontId(stored) ? stored : "inter";
+  return stored && isUiFontId(stored) ? stored : DEFAULT_UI_FONT_ID;
 }
 
 export function readStoredStartupDependenciesDismissed(): boolean {
@@ -576,16 +581,6 @@ export function writeStoredDefaultIdeId(ideId: string | null): void {
     return;
   }
   window.localStorage.removeItem(DEFAULT_IDE_STORAGE_KEY);
-}
-
-export function writeStoredUserDisplayName(displayName: string): void {
-  const normalized = displayName.trim();
-  if (normalized) {
-    window.localStorage.setItem(USER_DISPLAY_NAME_STORAGE_KEY, normalized);
-    return;
-  }
-
-  window.localStorage.removeItem(USER_DISPLAY_NAME_STORAGE_KEY);
 }
 
 export function writeStoredGithubToken(token: string): void {

@@ -1,3 +1,4 @@
+import { useNativeShellNavigation } from "@/components/app/hooks/useNativeShellNavigation";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { noraToolingClient } from "@/components/app/clients/noraToolingClient";
 import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClient";
@@ -12,6 +13,7 @@ import { useAppRootState } from "@/components/app/context/appRootStateContext";
 import { useAgentAttention } from "@/components/app/hooks/useAgentAttention";
 import { useAgentCreationAnalytics } from "@/components/app/hooks/useAgentCreationAnalytics";
 import { useAppRootChromeShellSources } from "@/components/app/hooks/useAppRootChromeShellSources";
+import { useUpdateIndicators } from "@/components/app/hooks/useUpdateIndicators";
 import { useAppRootForgeViewerWorkItemDetailEffect } from "@/components/app/hooks/useAppRootForgeViewerWorkItemDetailEffect";
 import { useAppRootModalExtrasSources } from "@/components/app/hooks/useAppRootModalExtrasSources";
 import { useAppRootSettingsRuntimeAssemblyInput } from "@/components/app/hooks/useAppRootSettingsRuntimeAssemblyInput";
@@ -35,7 +37,6 @@ import type { SignedInAppRootProps } from "@/components/app/types/signedInAppRoo
 import type { AppRootSignedInProviderSlicesWiringInput } from "@/components/app/types/appRootSignedInProviderSlicesWiring.types";
 import { AppRootOrchestratedTree } from "@/components/app/views/AppRootOrchestratedTree";
 import { SignedInShellComposition } from "@/components/app/views/signedInShellComposition";
-import { ToastProvider } from "@/components/ui/toast";
 import { useCallback, useMemo, useRef, type ReactElement } from "react";
 
 export function SignedInAppRoot(props: SignedInAppRootProps): ReactElement | null {
@@ -135,6 +136,13 @@ function SignedInAppRootContent({
     derived,
     mainSurface
   } = useAppRootWorkspaceSession();
+  useNativeShellNavigation({ projectId: snapshot?.project?.id ?? null, focusWorkspace: props.workspaceLoading.focusWorkspaceWithRecovery,
+    onError: props.captureError, showThread: () => {
+      setActiveView("main"); setActiveWorkspaceContentTab(null);
+      layout.workspaceSessionViews.setActiveViewId(null);
+      content.setTaskEditorState(null); content.setIsTaskBoardOpen(false); content.setIsSpecBrowserOpen(false); content.setIsNoteBrowserOpen(false);
+      props.uiCommands.clearSessionTabFocus();
+    } });
   const canPreviewMacTitleBarChrome = !__NORA_IS_PRODUCTION__ && props.bootstrap.windowUiState.platform !== "darwin";
   const useMacTitleBarChrome =
     props.bootstrap.windowUiState.platform === "darwin" ||
@@ -177,7 +185,7 @@ function SignedInAppRootContent({
         snapshot,
         uiCommands: {
           openAddWorkspaceDialog: props.uiCommands.openAddWorkspaceDialog,
-          openCreateAgentDialog: props.uiCommands.openCreateAgentDialog,
+          openNewThread: props.uiCommands.openNewThread,
           openCreateTerminalDialog: props.uiCommands.openCreateTerminalDialog,
           openKeyboardShortcutsDialog: props.uiCommands.openKeyboardShortcutsDialog,
           openWorkspaceSwitcherDialog: props.uiCommands.openWorkspaceSwitcherDialog,
@@ -223,7 +231,7 @@ function SignedInAppRootContent({
       setIsWorkspaceSidebarCollapsed,
       setWorkspaceQuickSearchRequestId,
       props.uiCommands.openAddWorkspaceDialog,
-      props.uiCommands.openCreateAgentDialog,
+      props.uiCommands.openNewThread,
       props.uiCommands.openCreateTerminalDialog,
       props.uiCommands.openKeyboardShortcutsDialog,
       props.uiCommands.openWorkspaceSwitcherDialog,
@@ -301,7 +309,7 @@ function SignedInAppRootContent({
   });
 
   const {
-    handleSpawnForgeIssueAgent,
+    handleStartForgeIssueThread,
     handleSpawnForgeReviewAgent,
     handleOpenProjectInIde
   } = useForgeActionHandlers({
@@ -342,7 +350,9 @@ function SignedInAppRootContent({
         ].find((project) => project.id === uiState.workspaceTerminalPresetsProjectId) ?? null
       : null;
 
+  const updateIndicators = useUpdateIndicators(props.providerUpdates, props.autoUpdate, props.linuxUpdateNotice, props.captureError);
   const chromeShellSources = useAppRootChromeShellSources({
+    updateIndicators,
     keyboardShortcutActions,
     workspaceQuickSearchSource: derived.workspaceQuickSearchSource,
     workspaceQuickSearchRequestId,
@@ -381,6 +391,7 @@ function SignedInAppRootContent({
     sidebarsSwapped,
     setIsChangesSidebarCollapsed,
     setIsWorkspaceSidebarCollapsed,
+    isLocalTerminalDockCollapsed,
     setIsLocalTerminalDockCollapsed,
     settingsGroup
   });
@@ -508,6 +519,7 @@ function SignedInAppRootContent({
     canPreviewMacTitleBarChrome,
     forceMacTitleBarPreview: props.preferences.forceMacTitleBarPreview,
     updateForceMacTitleBarPreview: props.preferences.updateForceMacTitleBarPreview,
+    updateLifecycle: props.preferences.updateLifecycle,
     updateNotificationPreferences: props.preferences.updateNotificationPreferences,
     updateAnalyticsConsentStatus: props.preferences.updateAnalyticsConsentStatus,
     analyticsAllowedInCurrentRun: dialogs.analyticsRuntimeConfig?.analyticsAllowedInCurrentRun ?? __NORA_IS_PRODUCTION__,
@@ -716,7 +728,7 @@ function SignedInAppRootContent({
         forgeSliceInput: {
           integration: forgeIntegration,
           resolveGitlabForgeRepoOverride: props.centerTabs.resolveGitlabForgeRepoOverride,
-          handleSpawnForgeIssueAgent,
+          handleStartForgeIssueThread,
           handleSpawnForgeReviewAgent,
           focusedForgeViewerTab: layout.focusedForgeViewerTab
         },
@@ -789,7 +801,7 @@ function SignedInAppRootContent({
           },
           openFileEditor: sessionActions.openFileEditor,
           openForgeViewer: props.centerTabs.openForgeViewer,
-          openCreateAgentDialog: props.uiCommands.openCreateAgentDialog
+          openNewThread: props.uiCommands.openNewThread
         },
         chromeShell: chromeShellSources
       },
@@ -848,7 +860,7 @@ function SignedInAppRootContent({
     content,
     forgeIntegration,
     props.centerTabs.resolveGitlabForgeRepoOverride,
-    handleSpawnForgeIssueAgent,
+    handleStartForgeIssueThread,
     handleSpawnForgeReviewAgent,
     layout.focusedForgeViewerTab,
     vercelIntegration,
@@ -928,13 +940,11 @@ function SignedInAppRootContent({
   }
 
   return (
-    <ToastProvider swipeDirection="right">
-      <SignedInShellComposition
-        signedIn={signedIn}
-        shellFrameValue={{ statusBar: props.shellFrame.statusBar, toasts: props.shellFrame.toasts, dismissToast: props.shellFrame.dismissToast }}
-      >
-        <AppRootOrchestratedTree />
-      </SignedInShellComposition>
-    </ToastProvider>
+    <SignedInShellComposition
+      signedIn={signedIn}
+      shellFrameValue={{ statusBar: props.shellFrame.statusBar, toasts: props.shellFrame.toasts, dismissToast: props.shellFrame.dismissToast }}
+    >
+      <AppRootOrchestratedTree />
+    </SignedInShellComposition>
   );
 }

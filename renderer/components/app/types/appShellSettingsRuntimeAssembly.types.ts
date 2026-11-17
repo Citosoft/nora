@@ -54,6 +54,7 @@ export type AppShellSettingsRuntimeAssemblyInput = {
     | "canPreviewMacTitleBarChrome"
     | "forceMacTitleBarPreview"
     | "updateForceMacTitleBarPreview"
+    | "updateLifecycle"
     | "updateNotificationPreferences"
     | "updateAnalyticsConsentStatus"
     | "analyticsAllowedInCurrentRun"

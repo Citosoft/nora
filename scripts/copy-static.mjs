@@ -17,3 +17,9 @@ await cp("renderer/product-icons", "dist/renderer/product-icons", { recursive: t
 await cp("renderer/fonts/Inter-Variable.woff2", "dist/renderer/fonts/Inter-Variable.woff2");
 await cp("renderer/fonts/Geist-Variable.woff2", "dist/renderer/fonts/Geist-Variable.woff2");
 await cp("THIRD_PARTY_NOTICES.md", "dist/renderer/THIRD_PARTY_NOTICES.md");
+
+await cp("skills", "dist/skills", { recursive: true });
+
+for (const name of ["tray.png", "tray@2x.png", "trayTemplate.png", "trayTemplate@2x.png"]) {
+  await cp(`renderer/${name}`, `dist/renderer/${name}`);
+}

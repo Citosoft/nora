@@ -14,6 +14,8 @@ import type {
   ToolUsageInfo
 } from "@shared/appTypes";
 import type { RefreshCatalogOptions } from "../types/agentDetectionCache.types";
+import type { CheckProviderUpdates } from "./providerUpdates.types";
+import type { ProviderUpdateNotice } from "@shared/types/provider/update.types";
 
 export interface ToolingHelperDeps {
   nowIso: () => string;
@@ -53,7 +55,7 @@ export interface ToolingHelperDeps {
   setToolConfigs: (configs: Record<string, AgentToolConfig>) => void;
   getCliToolStatus: (tool: AgentCatalogEntry) => Promise<ToolUsageInfo | null>;
   searchAgentSkills: (toolId: string, query: string) => Promise<AgentSkillSearchResult>;
-  reconcileWorkspaceAgentsAfterCatalogRefresh: () => Promise<void>;
+  checkProviderUpdates: CheckProviderUpdates;
 }
 
 export interface ToolAccountSwitchExecution {
@@ -83,4 +85,5 @@ export interface ToolingHelpers {
   getToolUsage: (toolId: string) => Promise<ToolUsageInfo | null>;
   switchToolAccount: (toolId: string) => Promise<void>;
   searchToolSkills: (toolId: string, query: string) => Promise<AgentSkillSearchResult>;
+  checkProviderUpdates: () => Promise<ProviderUpdateNotice[]>;
 }

@@ -1,3 +1,4 @@
+import { parseAiSimpleTaskProvider, parseMemoryReviewSettings, parseRuntimeModelByProvider } from "@shared/ai/settings";
 import {
   DEFAULT_APP_SETTINGS,
   type AiSettings,
@@ -6,12 +7,12 @@ import {
   type TerminalQuickLaunchDefaults,
   type VoiceSettings
 } from "@shared/appTypes";
-import { safeStorage } from "electron";
+import { safeStorageSecretCodec } from "@main/helpers/secretEncryption";
 import fsPromises from "node:fs/promises";
 import path from "node:path";
 import { isNodeError } from "./nodeErrors";
-
-const ENCRYPTED_SECRET_PREFIX = "enc:v1:";
+import { readPersonalization } from "@shared/personalization/settings";
+import { parseDesktopLifecycleSettings } from "@shared/desktop-lifecycle/settings";
 
 export class AppSettingsStore {
   constructor(private readonly filePath: string) {}
@@ -47,6 +48,8 @@ function parseAppSettings(raw: string): AppSettings {
     const decryptedAiSettings = parseAiSettings(candidate.ai);
     const voiceSettings = parseVoiceSettings(candidate.voice);
     return {
+      personalization: readPersonalization(candidate.personalization),
+      lifecycle: parseDesktopLifecycleSettings(candidate.lifecycle),
       hardwareAccelerationEnabled: candidate.hardwareAccelerationEnabled !== false,
       workspaceStateStorageMode:
         candidate.workspaceStateStorageMode === "home" || candidate.workspaceStateStorageMode === "repo"
@@ -137,9 +140,9 @@ function parseAiSettings(candidate: AppSettings["ai"] | undefined): AiSettings {
   const rawApiKeys = parsedSettings.apiKeys;
   const apiKeys = rawApiKeys && typeof rawApiKeys === "object"
     ? {
-        openai: decryptSecretIfNeeded(typeof rawApiKeys.openai === "string" ? rawApiKeys.openai : ""),
-        google: decryptSecretIfNeeded(typeof rawApiKeys.google === "string" ? rawApiKeys.google : ""),
-        anthropic: decryptSecretIfNeeded(typeof rawApiKeys.anthropic === "string" ? rawApiKeys.anthropic : "")
+        openai: safeStorageSecretCodec.decrypt(typeof rawApiKeys.openai === "string" ? rawApiKeys.openai : ""),
+        google: safeStorageSecretCodec.decrypt(typeof rawApiKeys.google === "string" ? rawApiKeys.google : ""),
+        anthropic: safeStorageSecretCodec.decrypt(typeof rawApiKeys.anthropic === "string" ? rawApiKeys.anthropic : "")
       }
     : DEFAULT_APP_SETTINGS.ai.apiKeys;
 
@@ -158,10 +161,7 @@ function parseAiSettings(candidate: AppSettings["ai"] | undefined): AiSettings {
       }
     : DEFAULT_APP_SETTINGS.ai.modelByProvider;
 
-  const simpleTaskProvider =
-    parsedSettings.simpleTaskProvider === "cloud" || parsedSettings.simpleTaskProvider === "local"
-      ? parsedSettings.simpleTaskProvider
-      : DEFAULT_APP_SETTINGS.ai.simpleTaskProvider;
+  const simpleTaskProvider = parseAiSimpleTaskProvider(parsedSettings.simpleTaskProvider);
   const localLlmModelId =
     parsedSettings.localLlmModelId === "qwen2.5-0.5b-instruct" || parsedSettings.localLlmModelId === "smollm2-360m-instruct"
       ? parsedSettings.localLlmModelId
@@ -172,7 +172,9 @@ function parseAiSettings(candidate: AppSettings["ai"] | undefined): AiSettings {
     apiKeys,
     modelByProvider,
     simpleTaskProvider,
-    localLlmModelId
+    localLlmModelId,
+    runtimeModelByProvider: parseRuntimeModelByProvider(parsedSettings.runtimeModelByProvider),
+    memoryReview: parseMemoryReviewSettings(parsedSettings.memoryReview, simpleTaskProvider)
   };
 }
 
@@ -182,37 +184,12 @@ function redactAndEncryptSecrets(settings: AppSettings): AppSettings {
     ai: {
       ...settings.ai,
       apiKeys: {
-        openai: encryptSecretIfAvailable(settings.ai.apiKeys.openai),
-        google: encryptSecretIfAvailable(settings.ai.apiKeys.google),
-        anthropic: encryptSecretIfAvailable(settings.ai.apiKeys.anthropic)
+        openai: safeStorageSecretCodec.encrypt(settings.ai.apiKeys.openai),
+        google: safeStorageSecretCodec.encrypt(settings.ai.apiKeys.google),
+        anthropic: safeStorageSecretCodec.encrypt(settings.ai.apiKeys.anthropic)
       }
     }
   };
-}
-
-function encryptSecretIfAvailable(secret: string): string {
-  if (!secret || !safeStorage.isEncryptionAvailable()) {
-    return secret;
-  }
-  return `${ENCRYPTED_SECRET_PREFIX}${safeStorage.encryptString(secret).toString("base64")}`;
-}
-
-function decryptSecretIfNeeded(secret: string): string {
-  if (!secret.startsWith(ENCRYPTED_SECRET_PREFIX)) {
-    return secret;
-  }
-  if (!safeStorage.isEncryptionAvailable()) {
-    return "";
-  }
-  const encoded = secret.slice(ENCRYPTED_SECRET_PREFIX.length);
-  if (!encoded) {
-    return "";
-  }
-  try {
-    return safeStorage.decryptString(Buffer.from(encoded, "base64"));
-  } catch {
-    return "";
-  }
 }
 
 function parseTerminalQuickLaunchDefaults(

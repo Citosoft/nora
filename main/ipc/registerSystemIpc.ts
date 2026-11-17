@@ -1,3 +1,4 @@
+import type { AppShutdown } from "@main/types/appShutdown.types";
 import { importChromeBrowserDataToSession, listChromeCookieProfiles } from "@main/browserDataImport";
 import { getInstalledIdes, openProjectInIde } from "@main/ideIntegration";
 import { getLinuxAptSetupStatus, installLinuxAptUpdates } from "@main/linuxAptUpdates";
@@ -37,6 +38,7 @@ import { app, clipboard, ipcMain, session, shell } from "electron";
 import {
   getAutoUpdateStatus,
   getAutoUpdateTestSupport,
+  downloadAppUpdate,
   installDownloadedUpdate,
   simulateAutoUpdateStatus
 } from "@main/autoUpdates";
@@ -47,6 +49,7 @@ import { checkAppRepositoryStarred, starAppRepository } from "@main/githubReposi
 import { sampleAppResourceUsage } from "@main/resource-monitor/processResourceSampler";
 
 interface RegisterSystemIpcDeps {
+  requestQuit: AppShutdown["request"];
   parseAllowedExternalUrl: (value: string) => URL;
   showProjectPicker: () => Promise<AppState>;
   showProjectPickerAtPath: (defaultPath: string, title?: string) => Promise<AppState>;
@@ -54,7 +57,7 @@ interface RegisterSystemIpcDeps {
   openLocalTerminal: () => Promise<{ id: string }>;
   sendTerminalInput: (sessionId: string, input: string) => Promise<void>;
   getAppSettings: () => AppSettings;
-  saveAppSettings: (nextSettings: AppSettings) => Promise<AppSettings>;
+  saveAppSettings: (nextSettings: AppSettings, baseline: AppSettings) => Promise<AppSettings>;
   showAgentCompletionNotification: (payload: AgentCompletionNotificationPayload) => Promise<void>;
   analyticsRuntimeConfig: AnalyticsRuntimeConfig;
   getSnapshot: () => AppState;
@@ -62,6 +65,7 @@ interface RegisterSystemIpcDeps {
 }
 
 export function registerSystemIpc({
+  requestQuit,
   parseAllowedExternalUrl,
   showProjectPicker,
   showProjectPickerAtPath,
@@ -136,8 +140,9 @@ export function registerSystemIpc({
   ipcMain.handle("app:simulate-auto-update-status", (_event, target: AutoUpdateTestTarget): AutoUpdateStatus =>
     simulateAutoUpdateStatus(target)
   );
+  ipcMain.handle("app:download-app-update", () => downloadAppUpdate());
   ipcMain.handle("app:install-downloaded-update", () => {
-    installDownloadedUpdate();
+    return installDownloadedUpdate(requestQuit);
   });
   ipcMain.handle("app:get-latest-release-assets", (): Promise<LatestReleaseAssetsResult> => getLatestReleaseAssets());
   ipcMain.handle(
@@ -159,7 +164,7 @@ export function registerSystemIpc({
   ipcMain.handle("app:reveal-file-in-folder", (_event, filePath: string) => {
     shell.showItemInFolder(filePath);
   });
-  ipcMain.handle("app:save-app-settings", (_event, nextSettings: AppSettings) => saveAppSettings(nextSettings));
+  ipcMain.handle("app:save-app-settings", (_event, nextSettings: AppSettings, baseline: AppSettings) => saveAppSettings(nextSettings, baseline));
   ipcMain.handle("app:show-agent-completion-notification", (_event, payload: AgentCompletionNotificationPayload) =>
     showAgentCompletionNotification(payload)
   );
@@ -180,10 +185,10 @@ export function registerSystemIpc({
       relaunchArgs.push("--disable-gpu");
     }
 
-    app.relaunch({
-      args: relaunchArgs
+    return requestQuit("relaunch", () => {
+      app.relaunch({ args: relaunchArgs });
+      app.quit();
     });
-    app.quit();
   });
   ipcMain.handle("app:open-external-url", (_event, url: string) => {
     const parsed = parseAllowedExternalUrl(url);

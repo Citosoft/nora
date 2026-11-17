@@ -29,6 +29,7 @@ export type ThemeMode = "system" | "light" | "dark";
 export type ResolvedTheme = "light" | "dark";
 
 export type UiFontId =
+  | "system"
   | "inter"
   | "geist"
   | "manrope"
@@ -214,6 +215,7 @@ export type StoredUiLayout = {
 };
 
 export type UiState = {
+  workspaceToolRequest: import("@/components/app/types/workspaceNavigation.types").WorkspaceToolRequest | null;
   snapshot: AppState | null;
   activeErrorMessage: string | null;
   showAddWorkspaceModal: boolean;

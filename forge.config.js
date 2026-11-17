@@ -95,6 +95,9 @@ module.exports = {
     ignoreModules: ["node-pty"]
   },
   packagerConfig: {
+    protocols: [{ name: "Nora account", schemes: ["nora-account"] }],
+    // Separate deployables (mobile/web app, remote Worker) with their own node_modules; never part of the desktop bundle.
+    ignore: [/^\/apps(\/|$)/],
     asar: {
       unpack: "**/node_modules/node-pty/prebuilds/**"
     },
@@ -143,7 +146,10 @@ module.exports = {
     }),
     new MakerDeb({
       options: {
-        bin: "Nora"
+        bin: "Nora",
+        mimeType: ["x-scheme-handler/nora-account"],
+        icon: iconPngPath,
+        categories: ["Development", "IDE"]
       }
     }, ["linux"]),
     new MakerDMG(

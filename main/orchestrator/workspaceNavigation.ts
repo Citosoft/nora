@@ -54,9 +54,7 @@ export function createWorkspaceNavigationHelpers(deps: WorkspaceNavigationDeps):
   }
 
   async function selectProject(projectRoot: string) {
-    return deps.openProject(await resolveProjectTarget(projectRoot), {
-      focusedAgentMode: "first-agent"
-    });
+    return deps.openProject(await resolveProjectTarget(projectRoot));
   }
 
   async function focusWorkspace(projectId: string) {
@@ -70,9 +68,7 @@ export function createWorkspaceNavigationHelpers(deps: WorkspaceNavigationDeps):
       return deps.refreshProjectState();
     }
 
-    return deps.openProject(await resolveProjectTargetById(projectId), {
-      focusedAgentMode: "none"
-    });
+    return deps.openProject(await resolveProjectTargetById(projectId));
   }
 
   async function openDirectSshProject(payload: {
@@ -102,9 +98,6 @@ export function createWorkspaceNavigationHelpers(deps: WorkspaceNavigationDeps):
           remotePath: resolved.remotePath.trim() || ".",
           alias: payload.alias || null
         }
-      },
-      {
-        focusedAgentMode: "none"
       }
     );
   }

@@ -1,4 +1,21 @@
+import { createDesktopRemoteAccess } from "./remote-access/desktop";
+import { registerRemoteAccessIpc } from "./ipc/registerRemoteAccessIpc";
+import { remoteAccessChangedChannel } from "@shared/remote-access/gateway";
+import { createDesktopLifecycle } from "./helpers/desktop-lifecycle/desktopLifecycle";
+import { createLoginItemAdapter } from "./helpers/desktop-lifecycle/loginItem";
+import { createElectronTrayFactory } from "./helpers/desktop-lifecycle/electronTray";
+import { countActiveWork } from "./helpers/desktop-lifecycle/activeWork";
+import { createQuitConfirmation } from "./helpers/desktop-lifecycle/quitConfirmation";
+import { showElectronQuitPrompt } from "./helpers/desktop-lifecycle/electronQuitPrompt";
+import type { RemoteAccessService } from "./types/remote-access/service.types";
+import { mkdir, writeFile, rm } from "node:fs/promises";
+import os from "node:os";
+import { findEffectiveBot } from "@shared/bots/catalog";
+import { registerWindowSettingsIpc } from "./ipc/registerWindowSettingsIpc";
+import { createWindowSettingsPort } from "./helpers/windowSettingsPort";
+import { WINDOW_SETTINGS_CHANNELS } from "@shared/nora-tools/windowSettings";
 import { APP_SHORT_NAME } from "@shared/appMeta";
+import { isGitProject } from "@shared/projectVersionControl";
 import { APP_RUNTIME_SETTINGS } from "@shared/constants/appRuntimeSettings";
 import type {
   AnalyticsRuntimeConfig,
@@ -9,7 +26,31 @@ import type {
 } from "@shared/appTypes";
 import { randomUUID } from "node:crypto";
 import { DEFAULT_APP_SETTINGS } from "@shared/appTypes";
-import { app, BrowserWindow, session } from "electron";
+import { app, BrowserWindow, session, dialog, ipcMain, shell } from "electron";
+import { openNativeRuntime } from "./helpers/nativeRuntime";
+import { withMainOwnedSettings } from "./helpers/mainOwnedSettings";
+import { createWindowStartup } from "./helpers/windowStartup";
+import { createAccountRuntime } from "./account/runtime";
+import { ACCOUNT_SCHEME } from "./account/assets";
+import { createMcpAppFrames } from "./helpers/mcpAppFrames";
+import { registerAccountIpc } from "./ipc/registerAccountIpc";
+import { registerSettingsSyncIpc } from "./ipc/registerSettingsSyncIpc";
+import { createSettingsSyncService } from "./settings-sync/service";
+import { createSettingsUpdates } from "./helpers/settingsUpdates";
+import { SYNC_CHANNELS } from "@shared/settings-sync/contracts";
+import { createAppShutdown } from "./helpers/appShutdown";
+import { registerConversationIpc } from "./ipc/registerConversationIpc";
+import { registerPersonalizationIpc } from "./ipc/registerPersonalizationIpc";
+import { registerBotMemoryIpc } from "./ipc/registerBotMemoryIpc";
+import { registerBotRoutineIpc } from "./ipc/registerBotRoutineIpc";
+import { registerConnectorIpc } from "./ipc/registerConnectorIpc";
+import { connectorsChangedChannel } from "@shared/connectors/gateway";
+import { registerChatBranchIpc } from "./ipc/registerChatBranchIpc";
+import { registerDirectContextIpc } from "./ipc/registerDirectContextIpc";
+import { botRoutinesChangedChannel } from "@shared/bots/routines/gateway";
+import { startDesktopAttention } from "./attention/desktop";
+import { personalizationChangedChannel } from "@shared/personalization/gateway";
+import type { NativeRuntime } from "./types/native-runtime/runtime.types";
 import path from "node:path";
 import { AppSettingsStore } from "./appSettingsStore";
 import {
@@ -18,8 +59,8 @@ import {
 } from "./autoUpdates";
 import { resolveHardwareAccelerationEnabledAtStartup } from "./hardwareAcceleration";
 import { parseLaunchCommand } from "./launchCommand";
-import { getAppSettingsPath, getProjectsIndexPath, getRecentProjectsPath, getSessionsIndexPath, getToolConfigPath } from "./noraPaths";
-import { applyMacDockIcon as applyMacDockIconHelper, getAppIcon as getAppIconHelper, pathIsWithinAnyMount } from "./helpers/appRuntimeAssets";
+import { getAppSettingsPath, getProjectsIndexPath, getRecentProjectsPath, getSessionsIndexPath, getToolConfigPath, getStateDir, getNoraRoot } from "./noraPaths";
+import { applyLinuxDesktopIdentity, applyMacDockIcon as applyMacDockIconHelper, getAppIcon as getAppIconHelper, pathIsWithinAnyMount } from "./helpers/appRuntimeAssets";
 import { getImportedImageTargetPath } from "./helpers/browserImageImport";
 import { createLaunchCommandQueueController } from "./helpers/launchCommandQueue";
 import { createMainWindowNotifications } from "./helpers/mainWindowNotifications";
@@ -62,17 +103,69 @@ import { unmountRemoteWorkspace } from "./remoteMounts";
 import type { MainServices } from "./services/mainServices";
 import { createLoopStore } from "./loops/loopStore";
 import { createLoopRunner } from "./loops/loopRunner";
-import { createLoopHeadlessExecutor } from "./loops/loopHeadlessExecutor";
+import { createLoopThreadRuntime } from "./loops/threadRuntime";
 import type { LoopRunner } from "./types/loopRunner.types";
+import { createWorktreeCheckoutSync, readyWorktreePaths } from "./helpers/worktreeCheckoutSync";
 
 let mainWindow: BrowserWindow | null = null;
 let orchestrator: OrchestratorFacade;
 let services: MainServices;
+let nativeRuntime: NativeRuntime;
 let loopRunner: LoopRunner;
+let remoteAccess: RemoteAccessService | null = null;
 let stopRendererWatcher: (() => void) | null = null;
 let isClosingMainWindow = false;
+const windowStartup = createWindowStartup({
+  hasWindow: () => !!mainWindow && !mainWindow.isDestroyed(),
+  createWindow,
+  showWindow: focusMainWindow
+});
+const desktopLifecycle = createDesktopLifecycle({
+  platform: process.platform,
+  readSettings: () => appSettings.lifecycle,
+  getRemoteAccess: () => remoteAccess,
+  getMainWindow: () => mainWindow,
+  showMainWindow: () => windowStartup.activate(),
+  quit: () => app.quit(),
+  createTray: createElectronTrayFactory(path.join(__dirname, "..", "renderer"), process.platform),
+  loginItem: createLoginItemAdapter({ platform: process.platform, app,
+    fs: { mkdir: async (directory) => { await mkdir(directory, { recursive: true }); },
+      writeFile: async (file, content) => { await writeFile(file, content, { mode: 0o600 }); },
+      removeFile: async (file) => { await rm(file, { force: true }); } },
+    env: process.env, homeDirectory: os.homedir(), execPath: process.execPath, argv: process.argv,
+    log: console.error }),
+  log: console.error
+});
+const appShutdown = createAppShutdown({
+  confirmQuit: createQuitConfirmation({
+    countActiveWork: () => countActiveWork({ conversations: nativeRuntime?.host.summaries() ?? [],
+      agents: services?.snapshot.getSnapshot().agents ?? [] }),
+    showPrompt: (prompt) => showElectronQuitPrompt(prompt, mainWindow), log: console.error
+  }),
+  shutdown: async () => {
+    desktopLifecycle.dispose();
+    await remoteAccess?.shutdown();
+    await settingsSync.dispose();
+    accountRuntime.dispose();
+    loopRunner?.dispose();
+    stopDesktopAttention?.();
+    await nativeRuntime?.shutdown();
+    if (mainWindow) await shutdownMainWindow();
+  },
+  quit: () => app.quit(),
+  onFailure: (message) => console.error("Nora shutdown failed:", message)
+});
 const appSettingsStore = new AppSettingsStore(getAppSettingsPath());
 let appSettings: AppSettings = DEFAULT_APP_SETTINGS;
+let stopDesktopAttention: (() => void) | null = null;
+const windowSettingsPort = createWindowSettingsPort({ send(request) {
+  if (!mainWindow || mainWindow.isDestroyed()) throw new Error("Open Nora to change window preferences.");
+  mainWindow.webContents.send(WINDOW_SETTINGS_CHANNELS.request, request);
+} });
+const settingsUpdates = createSettingsUpdates({ read: () => appSettings,
+  save: async (next) => { appSettings = await appSettingsStore.save(next); return appSettings; },
+  onSaved: () => { settingsSync.localChanged(); desktopLifecycle.settingsChanged(); }
+});
 const workspaceLoadingTimingByProject = new Map<string, { startedAt: number; lastStepAt: number }>();
 const SQUIRREL_WINDOW_LIFETIME_MS = APP_RUNTIME_SETTINGS.main.squirrelWindowLifetimeMs;
 const STATE_BROADCAST_INTERVAL_MS = APP_RUNTIME_SETTINGS.main.stateBroadcastIntervalMs;
@@ -121,6 +214,7 @@ const {
   notifyLocalTerminalChanged,
   notifyRemoteMountOutput,
   notifyToolSkillInstallOutput,
+  notifyWorkspaceTasksChanged,
   notifyWorkspaceLoadingProgress,
   notifyVercelRuntimeLogEvent,
   notifyAutoUpdateStatus,
@@ -257,6 +351,21 @@ loadEnvFile(process.cwd());
 
 const shouldExitForSquirrelLifecycle = handleSquirrelLifecycle(SQUIRREL_WINDOW_LIFETIME_MS);
 const hasSingleInstanceLock = shouldExitForSquirrelLifecycle ? false : app.requestSingleInstanceLock();
+const mcpAppFrames = createMcpAppFrames(ACCOUNT_SCHEME);
+const accountRuntime = createAccountRuntime({
+  configPath: path.join(__dirname, "..", "runtime", "account-config.json"),
+  rendererDirectory: path.join(__dirname, "..", "renderer"),
+  mainWindow: () => mainWindow,
+  onSessionChanged: () => { settingsSync.sessionChanged(); remoteAccess?.sessionChanged(); },
+  hostedFrames: (url) => mcpAppFrames.respond(url)
+});
+const settingsSync = createSettingsSyncService({ path: path.join(getStateDir(), "settings-sync.json"),
+  client: accountRuntime.cloud, session: accountRuntime.session, readSettings: () => appSettings,
+  updateSettings: settingsUpdates.update, providers: () => nativeRuntime.personalization.state().providers,
+  onSettingsApplied: () => nativeRuntime.personalization.publish(),
+  notify: (state) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(SYNC_CHANNELS.changed, state); },
+  applied: (input) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(SYNC_CHANNELS.applied, input); }
+});
 
 if (!shouldExitForSquirrelLifecycle && !hasSingleInstanceLock) {
   app.quit();
@@ -273,6 +382,7 @@ if (!shouldExitForSquirrelLifecycle && !hardwareAccelerationEnabledAtStartup) {
 
 if (!shouldExitForSquirrelLifecycle) {
   app.setName(APP_SHORT_NAME);
+  applyLinuxDesktopIdentity();
 }
 
 if (!shouldExitForSquirrelLifecycle) {
@@ -292,7 +402,9 @@ function getWindowState(): { isMaximized: boolean; platform: NodeJS.Platform } {
 }
 
 function createWindow(): void {
+  const startHidden = desktopLifecycle.takeStartHidden();
   mainWindow = new BrowserWindow({
+    show: !startHidden,
     width: 1480,
     height: 980,
     minWidth: 1180,
@@ -337,9 +449,12 @@ function createWindow(): void {
     isClosing: () => isClosingMainWindow,
     quit: () => app.quit()
   });
-  mainWindow.maximize();
+  if (!startHidden) mainWindow.maximize();
 
-  void mainWindow.loadFile(path.join(__dirname, "..", "renderer", "index.html"));
+  void accountRuntime.load(mainWindow).catch((error: unknown) => {
+    console.error("Nora's renderer could not load:", error);
+    dialog.showErrorBox("Nora could not open", "Your local settings could not be restored. Restart Nora to try again.");
+  });
 
   if (process.env.NORA_DEV_WATCH === "1") {
     stopRendererWatcher?.();
@@ -352,7 +467,7 @@ function createWindow(): void {
     }
 
     event.preventDefault();
-    void shutdownMainWindow();
+    if (appShutdown.isQuitting() || !desktopLifecycle.retainWindowOnClose()) void shutdownMainWindow();
   });
 
   mainWindow.on("closed", () => {
@@ -360,6 +475,7 @@ function createWindow(): void {
     stopRendererWatcher = null;
     isClosingMainWindow = false;
     mainWindow = null;
+    if (desktopLifecycle.shouldQuitWhenWindowsClosed()) app.quit();
   });
 }
 
@@ -368,7 +484,6 @@ function focusMainWindow(): void {
 }
 
 async function shutdownMainWindow(): Promise<void> {
-  loopRunner?.dispose();
   await shutdownMainWindowHelper({
     getMainWindow: () => mainWindow,
     getIsClosing: () => isClosingMainWindow,
@@ -398,6 +513,22 @@ async function withSnapshot(action: () => Promise<AppState>): Promise<AppState> 
 }
 
 function registerIpc(): void {
+  const isAllowedSender = (event: import("./types/execution/gateway.types").ConversationInvocation): boolean =>
+    !!mainWindow && !mainWindow.isDestroyed() && event.sender.id === mainWindow.webContents.id
+      && event.senderFrame === mainWindow.webContents.mainFrame && event.senderFrame.url === mainWindow.webContents.getURL();
+  if (remoteAccess) registerRemoteAccessIpc({ ipc: ipcMain, service: remoteAccess, isAllowedSender });
+  registerAccountIpc({ ipc: ipcMain, runtime: accountRuntime, isAllowedSender });
+  registerWindowSettingsIpc({ ipc: ipcMain, port: windowSettingsPort, isAllowedSender });
+  registerSettingsSyncIpc({ ipc: ipcMain, service: settingsSync, isAllowedSender });
+  registerConversationIpc({ ipc: ipcMain, isAllowedSender, mcpAppFrames, resolveHost: (environmentId) => environmentId === nativeRuntime.host.environmentId ? nativeRuntime.host : null });
+  registerBotMemoryIpc({ ipc: ipcMain, isAllowedSender, memory: nativeRuntime.memory, reviews: nativeRuntime.memoryReviewLog, now: () => new Date() });
+  registerBotRoutineIpc({ ipc: ipcMain, isAllowedSender, routines: nativeRuntime.routines });
+  registerConnectorIpc({ ipc: ipcMain, isAllowedSender, connectors: nativeRuntime.connectors });
+  registerChatBranchIpc({ ipc: ipcMain, isAllowedSender, start: (request) => nativeRuntime.startBranch(request),
+    name: (message) => nativeRuntime.nameBranch(message) });
+  registerDirectContextIpc({ ipc: ipcMain, isAllowedSender, preview: (request) => nativeRuntime.previewDirectContext(request) });
+  registerPersonalizationIpc({ ipc: ipcMain, isAllowedSender, service: nativeRuntime.personalization,
+    notify: (state) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(personalizationChangedChannel, state); } });
   onAutoUpdateStatusChanged((status) => {
     notifyAutoUpdateStatus(status);
   });
@@ -429,11 +560,7 @@ function registerIpc(): void {
     notifyVercelRuntimeLogEvent
   });
 
-  registerSessionIpc({
-    services,
-    withSnapshot,
-    loopRunner
-  });
+  registerSessionIpc({ services, withSnapshot });
 
   registerLoopIpc({ loopRunner });
 
@@ -447,10 +574,8 @@ function registerIpc(): void {
     openLocalTerminal: () => services.session.openLocalTerminal(),
     sendTerminalInput: (sessionId, input) => services.session.sendTerminalInput(sessionId, input),
     getAppSettings: () => appSettings,
-    saveAppSettings: async (nextSettings) => {
-      appSettings = await appSettingsStore.save(nextSettings);
-      return appSettings;
-    },
+    requestQuit: appShutdown.request,
+    saveAppSettings: (nextSettings, baseline) => settingsUpdates.update((current) => withMainOwnedSettings(current, nextSettings, baseline)),
     showAgentCompletionNotification,
     analyticsRuntimeConfig,
     getSnapshot: () => services.snapshot.getSnapshot(),
@@ -508,12 +633,16 @@ async function bootstrap(): Promise<void> {
   });
   loopRunner = createLoopRunner({
     store: loopStore,
+    resolveBot: (projectId, botId) => {
+      const boot = nativeRuntime.personalization.state();
+      const workspaceId = boot.workspaces.find((entry) => entry.shellProjectId === projectId)?.id;
+      return workspaceId ? findEffectiveBot(boot.personalization.bots, workspaceId, boot.sharedBots, botId) : null;
+    },
     nowIso: () => new Date().toISOString(),
     randomId: () => randomUUID(),
-    getSnapshot: () => services.snapshot.getSnapshot(),
     prepareWorktree: (input) => orchestrator.prepareLoopRunWorktree(input),
-    resolveLoopTool: (toolId) => orchestrator.resolveLoopToolLaunch(toolId),
-    headlessExecutor: createLoopHeadlessExecutor(),
+    runtime: createLoopThreadRuntime({ host: () => nativeRuntime.host, boot: () => nativeRuntime.personalization.state(),
+      registerCheckouts: (projectId, paths) => nativeRuntime.catalog.setProjectCheckouts(projectId, paths), nextId: randomUUID }),
     notifyRunChanged: (run) => {
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send("loop-run:changed", run);
@@ -524,19 +653,74 @@ async function bootstrap(): Promise<void> {
         mainWindow.webContents.send("loop-run:output", payload);
       }
     },
+    notifyDefinitionChanged: (definition) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send("loop-definition:changed", definition);
+      }
+    },
     resolveWorkspaceStatePath: (projectId, relativePath) =>
       services.workspace.resolveWorkspaceStatePath({ projectId, path: relativePath })
   });
+  // Threads can run in any of a project's worktrees; the native catalog learns them once the runtime is up.
+  const syncWorktreeCheckouts = createWorktreeCheckoutSync({
+    sync: (projectId) => nativeRuntime.personalization.syncCheckouts(projectId),
+    onError: (error) => console.error("Could not register worktree checkouts for threads", error)
+  });
   orchestrator.onStateChanged((snapshot) => {
     scheduleStateChanged(snapshot);
+    if (nativeRuntime) syncWorktreeCheckouts(snapshot);
   });
   orchestrator.onAgentTerminalData((sessionId, data) => {
     notifyTerminalData(sessionId, data);
   });
-  registerIpc();
-  createWindow();
-
   const initialSnapshot = await orchestrator.initialize();
+  nativeRuntime = await openNativeRuntime({ stateDirectory: getStateDir(), personalDirectory: path.join(getNoraRoot(), "Personal"),
+    readSettings: () => appSettings, updateSettings: settingsUpdates.update,
+    windowSettings: windowSettingsPort, settingsSync,
+    onSettingsChanged: (settings) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("app:settings-changed", settings); },
+    projects: () => {
+      const state = services.snapshot.getSnapshot();
+      return [...new Map([...(state.project ? [state.project] : []), ...state.workspaces.map((entry) => entry.project)].map((project) => [project.id, project])).values()];
+    },
+    projectCheckouts: (projectId) => readyWorktreePaths(services.snapshot.getSnapshot(), projectId),
+    activateWorkspace: async (selectedPath) => { await services.workspace.selectProject(selectedPath); },
+    chooseFolder: async () => { const selection = await dialog.showOpenDialog({ properties: ["openDirectory"], title: "Add workspace" });
+      const selectedPath = selection.canceled ? null : selection.filePaths[0]; return selectedPath ? { path: selectedPath, name: path.basename(selectedPath) } : null; },
+    openFolder: async (selectedPath) => { const error = await shell.openPath(selectedPath); if (error) throw new Error(error); },
+    onTasksChanged: notifyWorkspaceTasksChanged,
+    onRoutinesChanged: (botId) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(botRoutinesChangedChannel, { botId }); },
+    openExternal: (url) => shell.openExternal(url),
+    onConnectorsChanged: (connectors) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(connectorsChangedChannel, connectors); },
+    tasks: {
+      read: (projectId, path) => services.workspace.readWorkspaceFile({ projectId, path }),
+      move: async (projectId, fromPath, toPath) => { await services.workspace.moveWorkspaceFile({ projectId, fromPath, toPath }); },
+      list: (projectId) => services.workspace.listWorkspaceTasks(projectId), board: (projectId) => services.workspace.getWorkspaceTaskBoard(projectId),
+      saveBoard: (projectId, board) => services.workspace.saveWorkspaceTaskBoard(projectId, board),
+      create: (projectId, title, content) => services.workspace.createWorkspaceTaskFile(projectId, title, content) },
+    workflows: {
+      runner: loopRunner,
+      // Runs prepare against the project open in the window, in a new worktree when it is a Git repository.
+      runPlacement: (projectId) => {
+        const project = services.snapshot.getSnapshot().project;
+        if (project?.id !== projectId) return "unavailable";
+        return isGitProject(project) ? "worktree" : "project-folder";
+      }
+    }
+  });
+  remoteAccess = createDesktopRemoteAccess({ directory: getStateDir(), runtimeVersion: app.getVersion(), name: os.hostname(),
+    account: accountRuntime, host: nativeRuntime.host, boot: () => nativeRuntime.personalization.state(),
+    onChanged: (view) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(remoteAccessChangedChannel, view); }
+  });
+  desktopLifecycle.attachRemoteAccess(remoteAccess);
+  await remoteAccess.start();
+  syncWorktreeCheckouts(services.snapshot.getSnapshot());
+  registerIpc();
+  stopDesktopAttention = startDesktopAttention({ host: nativeRuntime.host, getMainWindow: () => mainWindow, getAppIcon, focusMainWindow,
+    notificationsEnabled: () => appSettings.agentCompletionNotificationsEnabled });
+  await settingsSync.initialize();
+  accountRuntime.initialize();
+  desktopLifecycle.start();
+  windowStartup.start();
   notifyStateChanged(initialSnapshot);
   setLastBroadcastSnapshot(initialSnapshot);
   notifyWindowStateChanged();
@@ -546,7 +730,7 @@ async function bootstrap(): Promise<void> {
 
 if (!shouldExitForSquirrelLifecycle && hasSingleInstanceLock) {
   app.on("second-instance", (_event, argv, workingDirectory) => {
-    focusMainWindow();
+    windowStartup.activate();
     enqueueParsedLaunchCommand(argv, workingDirectory || process.cwd());
   });
 
@@ -555,13 +739,11 @@ if (!shouldExitForSquirrelLifecycle && hasSingleInstanceLock) {
 }
 
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
+  if (desktopLifecycle.shouldQuitWhenWindowsClosed()) app.quit();
 });
 
+app.on("before-quit", (event) => appShutdown.beforeQuit(event));
+
 app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
+  if (!appShutdown.isQuitting()) windowStartup.activate();
 });

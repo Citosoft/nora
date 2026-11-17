@@ -1,3 +1,4 @@
+import type { CreateTaskDialogProps } from "@/components/app/types/taskCreation.types";
 import type { ChangesPanelTab } from "@/components/app/types/changesPanelTab.types";
 import type {
   AppView,
@@ -157,7 +158,7 @@ export type UseAppAutoUpdateResult = {
   isInstallingDownloadedUpdate: boolean;
   forgeOAuthDevicePrompt: ForgeOAuthDevicePrompt | null;
   setForgeOAuthDevicePrompt: Dispatch<SetStateAction<ForgeOAuthDevicePrompt | null>>;
-  handleInstallDownloadedUpdate: () => void;
+  handleAppUpdate: () => void;
 };
 
 export type UseVercelIntegrationArgs = {
@@ -259,6 +260,7 @@ export type UseWorkspaceContentControllerArgs = {
 };
 
 export type UseWorkspaceContentControllerResult = {
+  createTaskDialog: CreateTaskDialogProps | null;
   taskEditorState: TaskEditorState | null;
   setTaskEditorState: Dispatch<SetStateAction<TaskEditorState | null>>;
   isCreatingSpec: boolean;
@@ -293,8 +295,8 @@ export type UseWorkspaceContentControllerResult = {
   handleDeleteTask: (projectId: string, pathName: string) => Promise<void>;
   handleDeleteSpec: (projectId: string, pathName: string) => Promise<void>;
   handleDeleteNote: (projectId: string, pathName: string) => Promise<void>;
-  handleSpawnTaskAgent: (toolId: string) => Promise<void>;
-  handleSpawnAgentsForTasks: (toolId: string, tasks: TaskCenterTaskReference[]) => Promise<void>;
-  generateWorkspaceTasksWithAgent: (projectId: string, toolId: string, brief: string | null, specPath: string | null) => Promise<void>;
+  handleStartTaskThread: () => Promise<void>;
+  handleStartTaskThreads: (tasks: TaskCenterTaskReference[]) => Promise<void>;
+  generateWorkspaceTasks: (projectId: string, brief: string | null, specPath: string | null) => Promise<void>;
   handleCreateAgentFromDialog: (payload: CreateAgentPayload, taskPath: string | null) => Promise<void>;
 };

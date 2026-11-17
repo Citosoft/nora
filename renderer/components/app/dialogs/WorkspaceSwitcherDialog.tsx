@@ -95,7 +95,7 @@ export function WorkspaceSwitcherDialog({
             Use <span className="font-medium text-foreground">Up</span> and <span className="font-medium text-foreground">Down</span> to choose a project, then press <span className="font-medium text-foreground">Enter</span>.
           </div>
           {sortedWorkspaces.length ? (
-            <div className="overflow-hidden rounded-[6px] border border-border/60 bg-background/30">
+            <div className="overflow-hidden rounded-lg border border-border/60 bg-background">
               {sortedWorkspaces.map((workspace, index) => {
                 const isSelected = index === selectedIndex;
                 const isActive = workspace.project.id === activeWorkspaceId;
@@ -114,7 +114,7 @@ export function WorkspaceSwitcherDialog({
                       onOpenChange(false);
                     }}
                   >
-                    <div className="grid size-9 shrink-0 place-items-center rounded-[6px] border border-border/60 bg-background/60 text-primary">
+                    <div className="grid size-9 shrink-0 place-items-center rounded-lg border border-border/60 bg-background text-primary">
                       <FolderGit2 className="size-4" />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -137,7 +137,7 @@ export function WorkspaceSwitcherDialog({
               })}
             </div>
           ) : (
-            <div className="rounded-[6px] border border-dashed border-border/70 bg-background/20 px-4 py-6 text-sm text-muted-foreground">
+            <div className="rounded-lg border border-dashed border-border/70 bg-background px-4 py-6 text-sm text-muted-foreground">
               No projects available.
             </div>
           )}

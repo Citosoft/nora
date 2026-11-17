@@ -7,16 +7,6 @@ import type {
 } from "../types/orchestratorSessionLifecycle.types";
 
 export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps): SessionLifecycleHelpers {
-  function getAttachedSessionRoot(
-    worktrees: WorktreeRecord[],
-    session: Pick<AgentSession | TerminalSession, "worktreeId" | "workspace"> | null
-  ): string | null {
-    if (!session) {
-      return null;
-    }
-    return worktrees.find((worktree) => worktree.id === session.worktreeId)?.path || session.workspace || null;
-  }
-
   async function focusAgent(agentId: string): Promise<AppState> {
     const snapshot = deps.getSnapshot();
     const agent = snapshot.agents.find((item) => item.id === agentId);
@@ -89,7 +79,6 @@ export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps):
       currentSessionId: worktree.sessionId,
       focusedAgentId: null,
       focusedTerminalId: null,
-      changesRoot: worktree.path,
       errorMessage: null
     }));
 
@@ -259,10 +248,6 @@ export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps):
       agents: currentState.agents.filter((item) => item.id !== agentId),
       worktrees: nextWorktrees,
       focusedAgentId: nextFocusedAgentId,
-      changesRoot:
-        getAttachedSessionRoot(nextWorktrees, remainingAgents.find((item) => item.id === nextFocusedAgentId) || null) ||
-        currentState.project?.rootPath ||
-        null,
       errorMessage: null
     }));
 
@@ -306,11 +291,6 @@ export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps):
       terminals: currentState.terminals.filter((item) => item.id !== terminalId),
       worktrees: nextWorktrees,
       focusedTerminalId: nextFocusedTerminalId,
-      changesRoot:
-        getAttachedSessionRoot(nextWorktrees, remainingTerminals.find((item) => item.id === nextFocusedTerminalId) || null) ||
-        getAttachedSessionRoot(nextWorktrees, currentState.agents.find((item) => item.id === currentState.focusedAgentId) || null) ||
-        currentState.project?.rootPath ||
-        null,
       errorMessage: null
     }));
 
@@ -440,15 +420,10 @@ export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps):
         lastUsedAt: deps.nowIso()
       };
     });
-    const wasFocusedWorktree =
-      state.sessions.find((session) => session.id === state.currentSessionId)?.focusedWorktreeId === worktreeId ||
-      state.changesRoot === worktree.path;
-
     deps.updateState((currentState) => ({
       ...currentState,
       sessions: nextSessions,
       worktrees: nextWorktrees,
-      changesRoot: wasFocusedWorktree ? currentState.project?.rootPath ?? null : currentState.changesRoot,
       errorMessage: null
     }));
 

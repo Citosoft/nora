@@ -1,5 +1,5 @@
-import { createAiChatTab } from "@/components/app/logic/aiChatTabs";
-import { writeStoredAiChatTabsState, writeStoredForgeViewerTabsState } from "@/components/app/logic/appPersistence";
+import { useNativeRuntimePorts } from "./useNativeRuntimePorts";
+import { writeStoredForgeViewerTabsState } from "@/components/app/logic/appPersistence";
 import { createForgeViewerTab } from "@/components/app/logic/forgeViewerTabs";
 import type { AiChatMessage, AiChatReasoningLevel } from "@/components/app/types";
 import type {
@@ -11,8 +11,6 @@ import type { ForgeWorkItemSummary } from "@shared/appTypes";
 import { useCallback, useEffect } from "react";
 
 export function useAppCenterTabs({
-  aiChatTabs,
-  focusedAiChatTabId,
   forgeViewerTabs,
   focusedForgeViewerTabId,
   setUiState,
@@ -20,12 +18,7 @@ export function useAppCenterTabs({
   openWorkspaceBrowser,
   gitlabHost
 }: UseAppCenterTabsArgs): UseAppCenterTabsResult {
-  useEffect(() => {
-    writeStoredAiChatTabsState({
-      tabs: aiChatTabs,
-      focusedTabId: focusedAiChatTabId
-    });
-  }, [aiChatTabs, focusedAiChatTabId]);
+  const native = useNativeRuntimePorts();
 
   useEffect(() => {
     writeStoredForgeViewerTabsState({
@@ -104,18 +97,9 @@ export function useAppCenterTabs({
   }, [openWorkspaceBrowser, setUiState]);
 
   const openAiChat = useCallback((projectId: string): void => {
-    setUiState((current) => {
-      const nextTab = createAiChatTab(projectId);
-      return {
-        ...current,
-        aiChatTabs: [...current.aiChatTabs, nextTab],
-        focusedBrowserTabId: null,
-        focusedForgeViewerTabId: null,
-        focusedAiChatTabId: nextTab.id
-      };
-    });
     setActiveView("main");
-  }, [setActiveView, setUiState]);
+    void native.launch({ projectId }).catch((cause: unknown) => setUiState((current) => ({ ...current, activeErrorMessage: cause instanceof Error ? cause.message : "Thread could not be opened." })));
+  }, [native.launch, setActiveView, setUiState]);
 
   const focusAiChatTab = useCallback((tabId: string): void => {
     setUiState((current) => ({

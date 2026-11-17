@@ -1,16 +1,15 @@
+import { parseCreateWorktreePayload } from "@shared/worktreeCreation";
 import type { AppState, CreateAgentPayload, CreateTerminalPayload } from "@shared/appTypes";
 import { ipcMain } from "electron";
 import type { MainServices } from "@main/services/mainServices";
-import type { LoopRunner } from "@main/types/loopRunner.types";
 import { normalizeCreateAgentPayload, validateCreateAgentPayload } from "@main/helpers/ipcValidation";
 
 interface RegisterSessionIpcDeps {
   services: MainServices;
   withSnapshot: (action: () => Promise<AppState>) => Promise<AppState>;
-  loopRunner?: LoopRunner;
 }
 
-export function registerSessionIpc({ services, withSnapshot, loopRunner }: RegisterSessionIpcDeps): void {
+export function registerSessionIpc({ services, withSnapshot }: RegisterSessionIpcDeps): void {
   ipcMain.handle("app:clear-agent-context", (_event, agentId: string) =>
     services.session.clearAgentContext(agentId)
   );
@@ -30,6 +29,9 @@ export function registerSessionIpc({ services, withSnapshot, loopRunner }: Regis
       return services.session.createAgent(normalized);
     })
   );
+  ipcMain.handle("app:create-worktree", (_event, payload: unknown) =>
+    withSnapshot(() => services.session.createWorktree(parseCreateWorktreePayload(payload)))
+  );
   ipcMain.handle("app:create-terminal", (_event, payload: CreateTerminalPayload) =>
     withSnapshot(() => services.session.createTerminal(payload))
   );
@@ -43,9 +45,6 @@ export function registerSessionIpc({ services, withSnapshot, loopRunner }: Regis
     withSnapshot(() => services.session.sendAgentInput(agentId, input))
   );
   ipcMain.handle("app:send-agent-prompt", async (_event, agentId: string, input) => {
-    if (input?.source !== "loop" && await loopRunner?.getActiveRunForAgent(agentId)) {
-      throw new Error("This agent is managed by an active workflow. Pause or cancel the workflow before sending manual prompts.");
-    }
     return services.session.sendAgentPrompt(agentId, input);
   });
   ipcMain.handle("app:send-agent-terminal-input", (_event, agentId: string, input: string) =>

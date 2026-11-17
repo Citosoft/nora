@@ -4,12 +4,9 @@ import type {
   AppState,
   AppStateDelta,
   ChangeEntry,
-  ForgeWorkItemComment,
-  ForgeWorkItemDetail,
   TerminalSession,
   VercelProjectSummary,
   WorkspaceSummary,
-  WorktreeRecord
 } from "@shared/appTypes";
 import { isPathWithinComparableRoot, normalizeComparablePath } from "@shared/pathComparison";
 
@@ -35,19 +32,6 @@ export function joinWorkspacePath(rootPath: string, relativePath: string): strin
   return `${normalizedRoot}${separator}${normalizedRelative}`;
 }
 
-export function formatTaskFileInstruction(taskPath: string): string {
-  const label = taskPath.split(/[\\/]/).pop() || "task.md";
-  const completionInstruction = formatTaskCompletionInstruction(taskPath);
-  return [
-    `Read the task details from [${label}](${taskPath}). Use that file as the source of truth, then start the task.`,
-    completionInstruction
-  ].filter(Boolean).join("\n\n");
-}
-
-export function resolveTaskInstructionPath(projectRootPath: string, taskPath: string): string {
-  return joinWorkspacePath(projectRootPath, taskPath);
-}
-
 export function resolveCompletedTaskPath(taskPath: string): string {
   return replaceTaskPathSegment(taskPath, "/.nora/tasks/", "/.nora/tasks/completed/");
 }
@@ -60,79 +44,12 @@ export function resolveTaskCompletionTogglePath(taskPath: string, completed: boo
   return completed ? resolveIncompleteTaskPath(taskPath) : resolveCompletedTaskPath(taskPath);
 }
 
-function formatTaskCompletionInstruction(taskPath: string): string | null {
-  const completedTaskPath = resolveCompletedTaskInstructionPath(taskPath);
-  if (!completedTaskPath || completedTaskPath === taskPath) {
-    return null;
-  }
-
-  return [
-    "When you consider the task complete, mark it as completed by moving the task file.",
-    `Current task file: ${taskPath}`,
-    `Completed task file path: ${completedTaskPath}`,
-    "Update the task file at that completed path as part of wrapping up the work."
-  ].join("\n");
-}
-
-function resolveCompletedTaskInstructionPath(taskPath: string): string | null {
-  const normalized = taskPath.replace(/\\/g, "/");
-  if (!normalized.includes("/.nora/tasks/")) {
-    return null;
-  }
-  if (normalized.includes("/.nora/tasks/completed/")) {
-    return taskPath;
-  }
-  return resolveCompletedTaskPath(taskPath);
-}
-
 function replaceTaskPathSegment(taskPath: string, fromSegment: string, toSegment: string): string {
   const normalized = taskPath.replace(/\\/g, "/");
   const nextNormalized = normalized.includes(fromSegment)
     ? normalized.replace(fromSegment, toSegment)
     : normalized;
   return taskPath.includes("\\") ? nextNormalized.replace(/\//g, "\\") : nextNormalized;
-}
-
-export function summarizeForgeIssueComments(comments: ForgeWorkItemComment[]): string[] {
-  const informativeComments = comments
-    .map((comment) => ({
-      author: comment.author || "Unknown",
-      body: comment.body.trim().replace(/\s+/g, " "),
-      createdAt: comment.createdAt
-    }))
-    .filter((comment) => comment.body.length >= 24)
-    .filter((comment) => !/^\+1[.!]*$/i.test(comment.body))
-    .filter((comment) => !/^same here[.!]*$/i.test(comment.body))
-    .filter((comment) => !/^(thanks|thank you)[.!]*$/i.test(comment.body))
-    .filter((comment) => !/\b(bot|pipeline|ci|build)\b/i.test(comment.body))
-    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
-    .slice(0, 5);
-
-  return informativeComments.map((comment) => {
-    const compactBody = comment.body.length > 220 ? `${comment.body.slice(0, 217)}...` : comment.body;
-    return `- ${comment.author}: ${compactBody}`;
-  });
-}
-
-export function formatForgeIssueInstruction(detail: ForgeWorkItemDetail): string {
-  const commentSummary = summarizeForgeIssueComments(detail.comments);
-  const summary = [
-    `Fix this issue: #${detail.item.number} ${detail.item.title}`,
-    "",
-    `Source: ${detail.item.webUrl}`,
-    detail.item.author ? `Opened by: ${detail.item.author}` : "",
-    `Current state: ${detail.item.state}`,
-    `Last updated: ${detail.item.updatedAt}`,
-    detail.labels.length ? `Labels: ${detail.labels.join(", ")}` : "",
-    "",
-    "Issue description:",
-    detail.body.trim() || "No description provided.",
-    commentSummary.length ? "" : null,
-    commentSummary.length ? "Recent discussion:" : null,
-    ...commentSummary
-  ].filter(Boolean).join("\n");
-
-  return `${summary}\n\nReview the issue carefully, inspect the codebase, make the necessary fix, and validate the result before reporting back.`;
 }
 
 export function normalizeForgeCreatePullRequestError(error: unknown): string {
@@ -305,21 +222,6 @@ export function getWorkspaceSwitcherEntries(snapshot: AppState): WorkspaceSummar
       ? currentWorkspaceSummary
       : workspace
   );
-}
-
-export function getActiveWorktree(snapshot: AppState): WorktreeRecord | null {
-  const focusedAgent = getFocusedAgent(snapshot);
-  if (focusedAgent) {
-    return snapshot.worktrees.find((worktree) => worktree.id === focusedAgent.worktreeId) ?? null;
-  }
-
-  const focusedTerminal = getFocusedTerminal(snapshot);
-  if (focusedTerminal) {
-    return snapshot.worktrees.find((worktree) => worktree.id === focusedTerminal.worktreeId) ?? null;
-  }
-
-  const currentSession = snapshot.sessions.find((session) => session.id === snapshot.currentSessionId) ?? null;
-  return snapshot.worktrees.find((worktree) => worktree.id === currentSession?.focusedWorktreeId) ?? null;
 }
 
 export function getSelectedChange(snapshot: AppState): ChangeEntry | null {

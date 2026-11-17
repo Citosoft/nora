@@ -23,8 +23,8 @@ export type AppPreLaunchViewProps = {
   loadingOnboardingDialogProps: OnboardingDialogProps;
   onboardingOnboardingDialogProps: OnboardingDialogProps | null;
   startupDependenciesDialogProps: StartupDependenciesDialogProps;
-  loadingFooter: ReactElement;
-  onboardingFooter: ReactElement;
+  loadingActivity: ReactElement;
+  onboardingActivity: ReactElement;
   addWorkspaceDialogProps: AddWorkspaceDialogProps;
   remoteWorkspaceDialogProps: RemoteWorkspaceDialogProps;
   keyboardShortcutsDialogProps: KeyboardShortcutsDialogProps;

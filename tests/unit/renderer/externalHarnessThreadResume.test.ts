@@ -70,13 +70,6 @@ test("buildExternalHarnessThreadResumeCommand builds known harness resume comman
   );
   assert.equal(
     buildExternalHarnessThreadResumeCommand(
-      createThread({ toolId: "gemini", conversationId: "gemini-session" }),
-      createTool({ id: "gemini", detectedCommand: "gemini", launchCommand: "gemini" })
-    ),
-    "gemini --resume gemini-session"
-  );
-  assert.equal(
-    buildExternalHarnessThreadResumeCommand(
       createThread({ toolId: "cursor", conversationId: "cursor-session" }),
       createTool({ id: "cursor", detectedCommand: "cursor-agent", launchCommand: "cursor-agent" })
     ),

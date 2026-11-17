@@ -2,7 +2,6 @@ import type { ExternalHarnessDiscoveryAdapter } from "../../types/externalHarnes
 import { discoverClaudeExternalHarnessCandidates } from "./claudeAdapter";
 import { discoverCodexExternalHarnessCandidates } from "./codexAdapter";
 import { discoverCursorExternalHarnessCandidates } from "./cursorAdapter";
-import { discoverGeminiExternalHarnessCandidates } from "./geminiAdapter";
 
 export const externalHarnessDiscoveryAdapters: readonly ExternalHarnessDiscoveryAdapter[] = [
   {
@@ -12,10 +11,6 @@ export const externalHarnessDiscoveryAdapters: readonly ExternalHarnessDiscovery
   {
     toolId: "claude",
     discoverExternalHarnessCandidates: discoverClaudeExternalHarnessCandidates
-  },
-  {
-    toolId: "gemini",
-    discoverExternalHarnessCandidates: discoverGeminiExternalHarnessCandidates
   },
   {
     toolId: "cursor",

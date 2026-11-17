@@ -2,7 +2,7 @@ import { noraAppClient } from "@/components/app/clients/noraAppClient";
 import { noraIntegrationClient } from "@/components/app/clients/noraIntegrationClient";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { applyStateDelta, normalizeSnapshot } from "@/components/app/logic/appUtils";
-import type { WindowUiState } from "@/components/app/types";
+import { useWindowUiState } from "@/components/app/hooks/useWindowUiState";
 import type { UseAppBootstrapArgs, UseAppBootstrapResult } from "@/components/app/types/component.types";
 import type { ForgeOAuthProviderConfig, InstalledIde } from "@shared/appTypes";
 import { useEffect, useState } from "react";
@@ -11,7 +11,7 @@ export function useAppBootstrap({
   setUiState,
   initialWindowUiState
 }: UseAppBootstrapArgs): UseAppBootstrapResult {
-  const [windowUiState, setWindowUiState] = useState<WindowUiState>(initialWindowUiState);
+  const windowUiState = useWindowUiState(initialWindowUiState);
   const [installedIdes, setInstalledIdes] = useState<InstalledIde[]>([]);
   const [isLoadingInstalledIdes, setIsLoadingInstalledIdes] = useState(true);
   const [forgeOAuthProviders, setForgeOAuthProviders] = useState<ForgeOAuthProviderConfig[]>([]);
@@ -128,25 +128,6 @@ export function useAppBootstrap({
 
     return () => {
       mounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-
-    noraSystemClient.getWindowState().then((state) => {
-      if (mounted) {
-        setWindowUiState(state);
-      }
-    });
-
-    const unsubscribe = noraSystemClient.onWindowStateChanged((state) => {
-      setWindowUiState(state);
-    });
-
-    return () => {
-      mounted = false;
-      unsubscribe();
     };
   }, []);
 

@@ -98,7 +98,7 @@ export function CreatePullRequestDialog({
   const branchWarning = selectedSourceBranch && selectedBaseBranch && selectedSourceBranch === selectedBaseBranch
     ? "Choose a different base branch. The source and base branch cannot be the same."
     : null;
-  const routingCardClassName = "rounded-[8px] border border-border/70 bg-muted/30 p-4";
+  const routingCardClassName = "rounded-lg border border-border/70 bg-muted/30 p-4";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -114,24 +114,24 @@ export function CreatePullRequestDialog({
       >
         <DialogBody className="space-y-5">
           {errorMessage ? (
-            <div className="rounded-[6px] border border-destructive/35 bg-destructive/10 px-3 py-2 text-sm text-foreground">
+            <div className="rounded-lg border border-destructive/35 bg-destructive/10 px-3 py-2 text-sm text-foreground">
               {errorMessage}
             </div>
           ) : null}
           {branchWarning ? (
-            <div className="rounded-[6px] border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm text-foreground">
+            <div className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm text-foreground">
               {branchWarning}
             </div>
           ) : null}
           <div className={routingCardClassName}>
-            <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            <div className="mb-3 flex items-center gap-2 text-xs font-medium text-muted-foreground">
               <GitBranch className="size-3.5 shrink-0" />
               <span>{providerLabel} branch routing</span>
             </div>
             <div className="grid gap-x-3 gap-y-2 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:grid-rows-[auto_auto]">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Source</span>
+              <span className="text-xs font-medium text-muted-foreground">Source</span>
               <div className="hidden md:block" />
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Base</span>
+              <span className="text-xs font-medium text-muted-foreground">Base</span>
               <div className="relative">
                 <GitBranch className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-primary" />
                 <Select
@@ -181,8 +181,8 @@ export function CreatePullRequestDialog({
             </div>
           </Field>
           <Field label="Description">
-            <div className="rounded-[8px] border border-border/70 bg-background/70">
-              <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            <div className="rounded-lg border border-border/70 bg-background">
+              <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2 text-xs font-medium text-muted-foreground">
                 <MessageSquare className="size-3.5" />
                 Review context
               </div>

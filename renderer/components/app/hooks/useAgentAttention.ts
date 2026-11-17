@@ -1,19 +1,16 @@
-import { isAgentBusyAt } from "@/components/app/logic/agentBusy";
-import type { UseAgentAttentionArgs, UseAgentAttentionResult } from "@/components/app/types/attention.types";
+import { isAgentBusyAt, nextAgentBusyDelay } from "@/components/app/logic/agentBusy";
+import type { AgentAttentionPreviousState, UseAgentAttentionArgs, UseAgentAttentionResult } from "@/components/app/types/attention.types";
 import type { AgentSession } from "@shared/appTypes";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
 import { useEffect, useRef, useState } from "react";
-
-const ATTENTION_POLL_INTERVAL_MS = 250;
 
 export function useAgentAttention({
   focusedAgentId,
   onAgentCompletion
 }: UseAgentAttentionArgs): UseAgentAttentionResult {
   const snapshot = useCanonicalAppSnapshot();
-  const [now, setNow] = useState(() => Date.now());
   const [agentsNeedingAttention, setAgentsNeedingAttention] = useState<Record<string, boolean>>({});
-  const previousAgentStatesRef = useRef<Record<string, { isBusy: boolean; status: AgentSession["status"] }>>({});
+  const previousAgentStatesRef = useRef<Record<string, AgentAttentionPreviousState>>({});
   const onAgentCompletionRef = useRef(onAgentCompletion);
 
   useEffect(() => {
@@ -21,76 +18,74 @@ export function useAgentAttention({
   }, [onAgentCompletion]);
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      setNow(Date.now());
-    }, ATTENTION_POLL_INTERVAL_MS);
-
-    return () => {
-      window.clearInterval(timer);
-    };
-  }, []);
-
-  useEffect(() => {
     if (!snapshot) {
       previousAgentStatesRef.current = {};
-      setAgentsNeedingAttention({});
+      setAgentsNeedingAttention((current) => Object.keys(current).length ? {} : current);
       return;
     }
 
-    const completionEvents: AgentSession[] = [];
-    const nextAgentStates: Record<string, { isBusy: boolean; status: AgentSession["status"] }> = {};
+    let timer: number | undefined;
+    const update = (): void => {
+      const now = Date.now();
+      const completionEvents: AgentSession[] = [];
+      const nextAgentStates: Record<string, AgentAttentionPreviousState> = {};
 
-    for (const agent of snapshot.agents) {
-      const currentBusy = isAgentBusyAt(agent, now);
-      const previous = previousAgentStatesRef.current[agent.id];
-      const settledAfterBusy = previous?.isBusy === true && !currentBusy;
-      const isMeaningfulCompletion = settledAfterBusy && (previous.status === "running" || agent.status !== "running");
+      for (const agent of snapshot.agents) {
+        const currentBusy = isAgentBusyAt(agent, now);
+        const previous = previousAgentStatesRef.current[agent.id];
+        const settledAfterBusy = previous?.isBusy === true && !currentBusy;
+        const isMeaningfulCompletion = settledAfterBusy && (previous.status === "running" || agent.status !== "running");
 
-      nextAgentStates[agent.id] = {
-        isBusy: currentBusy,
-        status: agent.status
-      };
+        nextAgentStates[agent.id] = {
+          isBusy: currentBusy,
+          status: agent.status
+        };
 
-      if (isMeaningfulCompletion && agent.id !== focusedAgentId) {
-        completionEvents.push(agent);
-      }
-    }
-
-    setAgentsNeedingAttention((current) => {
-      const next: Record<string, boolean> = {};
-      const validAgentIds = new Set(snapshot.agents.map((agent) => agent.id));
-
-      for (const [agentId, needsAttention] of Object.entries(current)) {
-        if (needsAttention && validAgentIds.has(agentId) && agentId !== focusedAgentId) {
-          next[agentId] = true;
+        if (isMeaningfulCompletion && agent.id !== focusedAgentId) {
+          completionEvents.push(agent);
         }
       }
 
-      for (const agent of completionEvents) {
-        next[agent.id] = true;
-      }
+      setAgentsNeedingAttention((current) => {
+        const next: Record<string, boolean> = {};
+        const validAgentIds = new Set(snapshot.agents.map((agent) => agent.id));
 
-      const currentKeys = Object.keys(current);
-      const nextKeys = Object.keys(next);
-      if (
-        currentKeys.length === nextKeys.length &&
-        nextKeys.every((agentId) => current[agentId] === next[agentId])
-      ) {
-        return current;
-      }
+        for (const [agentId, needsAttention] of Object.entries(current)) {
+          if (needsAttention && validAgentIds.has(agentId) && agentId !== focusedAgentId) {
+            next[agentId] = true;
+          }
+        }
 
-      return next;
-    });
+        for (const agent of completionEvents) {
+          next[agent.id] = true;
+        }
 
-    previousAgentStatesRef.current = nextAgentStates;
+        const currentKeys = Object.keys(current);
+        const nextKeys = Object.keys(next);
+        if (
+          currentKeys.length === nextKeys.length &&
+          nextKeys.every((agentId) => current[agentId] === next[agentId])
+        ) {
+          return current;
+        }
 
-    const notifyAgentCompletion = onAgentCompletionRef.current;
-    if (notifyAgentCompletion) {
-      completionEvents.forEach((agent) => {
-        void notifyAgentCompletion(agent);
+        return next;
       });
-    }
-  }, [focusedAgentId, now, snapshot]);
+
+      previousAgentStatesRef.current = nextAgentStates;
+
+      const notifyAgentCompletion = onAgentCompletionRef.current;
+      if (notifyAgentCompletion) {
+        completionEvents.forEach((agent) => {
+          void notifyAgentCompletion(agent);
+        });
+      }
+      const delay = nextAgentBusyDelay(snapshot.agents, now);
+      if (delay !== null) timer = window.setTimeout(update, delay);
+    };
+    update();
+    return () => { if (timer !== undefined) window.clearTimeout(timer); };
+  }, [focusedAgentId, snapshot]);
 
   return { agentsNeedingAttention };
 }

@@ -1,7 +1,8 @@
+import { discoverWorkspaces } from "@main/workspace-import/discovery";
+import { workspaceHistorySources } from "@main/workspace-import/historySources";
 import { listProviderModels } from "@main/ai/providerModels";
 import type { MainServices } from "@main/services/mainServices";
 import type {
-  AgentContextSelection,
   ArchiveExternalHarnessThreadPayload,
   AppSettings,
   AppState,
@@ -9,16 +10,14 @@ import type {
   CreateProjectWorkspacePayload,
   CreateProjectWorkspaceResult,
   CreateWorkspaceDirectoryPayload,
-  ExternalHarnessContextRef,
-  ExternalHarnessSessionSummary,
   GenerateCommitMessagePayload,
   GenerateCommitMessageResult,
   ImportBrowserImagePayload,
-  ImportedContextBundleSummary,
   ListAiModelsPayload,
   ListAiModelsResult,
   NoraDetectableContextBundleSummary,
   SetWorkspaceUpstreamPayload,
+  SelectChangesCheckoutPayload,
   TerminalPreset,
   WorkspaceFileRequest,
   WorkspaceNoteSummary,
@@ -29,7 +28,8 @@ import type {
   WriteWorkspaceFilePayload
 } from "@shared/appTypes";
 import type { WorkspaceImageFileContent } from "@shared/types/workspaceFile.types";
-import { ipcMain } from "electron";
+import { app, ipcMain } from "electron";
+import { prepareContextHandoff } from "@main/helpers/contextHandoff";
 import { generateCommitMessageFromChanges } from "@main/ai/commitMessageGenerator";
 import { openPathWithDefaultApp } from "@main/helpers/openPathWithDefaultApp";
 
@@ -54,6 +54,11 @@ export function registerWorkspaceIpc({
   validateWriteWorkspaceFilePayload,
   createProjectWorkspace
 }: RegisterWorkspaceIpcDeps): void {
+  ipcMain.handle("app:discover-workspaces", () => discoverWorkspaces(
+    workspaceHistorySources,
+    services.snapshot.getSnapshot().workspaces.filter((workspace) => workspace.project.location?.kind !== "ssh")
+      .map((workspace) => workspace.project.rootPath)
+  ));
   ipcMain.handle("app:get-snapshot", () => compactStateForRenderer(services.snapshot.getSnapshot()));
   ipcMain.handle("app:get-agent-terminal-buffer", (_event, agentId: string) =>
     services.snapshot.getAgentTerminalBuffer(agentId)
@@ -70,6 +75,10 @@ export function registerWorkspaceIpc({
   ipcMain.handle("app:get-agent-context-state", (_event, agentId: string) =>
     services.snapshot.getAgentContextState(agentId)
   );
+  ipcMain.handle("app:prepare-agent-context-handoff", (_event, selections: unknown) =>
+    prepareContextHandoff(selections, { storageRoot: app.getPath("userData"),
+      readSource: (agentId) => services.snapshot.getAgentContextState(agentId) })
+  );
   ipcMain.handle("app:create-project-workspace", (_event, payload: CreateProjectWorkspacePayload) =>
     createProjectWorkspace(payload)
   );
@@ -77,19 +86,9 @@ export function registerWorkspaceIpc({
     services.snapshot.listWorkspaceAgentContextSources(projectId, excludeAgentId)
   );
   ipcMain.handle(
-    "app:list-external-harness-context-sessions",
-    (_event, projectId: string, rootPath?: string): Promise<ExternalHarnessSessionSummary[]> =>
-      services.workspace.listExternalHarnessContextSessions(projectId, rootPath)
-  );
-  ipcMain.handle(
     "app:archive-external-harness-thread",
     (_event, payload: ArchiveExternalHarnessThreadPayload): Promise<void> =>
       services.workspace.archiveExternalHarnessThread(payload.projectId, payload.ref)
-  );
-  ipcMain.handle(
-    "app:compose-external-harness-context-selections",
-    (_event, projectId: string, ref: ExternalHarnessContextRef): Promise<AgentContextSelection[]> =>
-      services.workspace.composeExternalHarnessContextSelections(projectId, ref)
   );
   ipcMain.handle("app:read-workspace-file", (_event, payload: WorkspaceFileRequest) =>
     services.workspace.readWorkspaceFile(payload)
@@ -99,6 +98,9 @@ export function registerWorkspaceIpc({
   );
   ipcMain.handle("app:read-workspace-image-file", (_event, payload: WorkspaceFileRequest): Promise<WorkspaceImageFileContent> =>
     services.workspace.readWorkspaceImageFile(payload)
+  );
+  ipcMain.handle("app:read-workspace-logo", (_event, projectId: string): Promise<WorkspaceImageFileContent | null> =>
+    services.workspace.readWorkspaceLogo(projectId)
   );
   ipcMain.handle("app:open-workspace-file-externally", async (_event, payload: WorkspaceFileRequest): Promise<void> =>
     openPathWithDefaultApp(await services.workspace.resolveWorkspaceFileForExternalOpen(payload))
@@ -117,11 +119,6 @@ export function registerWorkspaceIpc({
   );
   ipcMain.handle("app:search-workspace-files", (_event, payload: WorkspaceSearchRequest) =>
     services.workspace.searchWorkspaceFiles(payload)
-  );
-  ipcMain.handle(
-    "app:list-imported-context-bundles",
-    (_event, projectId: string, rootPath?: string): Promise<ImportedContextBundleSummary[]> =>
-      services.workspace.listImportedContextBundles(projectId, rootPath)
   );
   ipcMain.handle(
     "app:list-nora-detectable-context-bundles",
@@ -160,6 +157,10 @@ export function registerWorkspaceIpc({
     "app:checkout-workspace-branch",
     (_event, payload: import("@shared/appTypes").CheckoutWorkspaceBranchPayload) =>
       services.workspace.checkoutWorkspaceBranch(payload)
+  );
+  ipcMain.handle(
+    "app:select-changes-checkout",
+    (_event, payload: SelectChangesCheckoutPayload) => services.workspace.selectChangesCheckout(payload)
   );
   ipcMain.handle(
     "app:set-workspace-upstream",

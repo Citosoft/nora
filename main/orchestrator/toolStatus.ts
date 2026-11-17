@@ -81,25 +81,6 @@ async function readCodexAuthHints(): Promise<AuthHintReadResult> {
   }
 }
 
-async function readGeminiAuthHints(): Promise<string[]> {
-  const accountsPath = path.join(os.homedir(), ".gemini", "google_accounts.json");
-  try {
-    console.log("[nora main] gemini auth hint read start", { accountsPath });
-    const raw = await fs.readFile(accountsPath, "utf8");
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    const active = asString(parsed.active);
-    const hints = active ? [`User: ${active}`] : [];
-    console.log("[nora main] gemini auth hint read success", {
-      accountsPath,
-      hintCount: hints.length
-    });
-    return hints;
-  } catch {
-    console.warn("[nora main] gemini auth hint read failed", { accountsPath });
-    return [];
-  }
-}
-
 async function readClaudeAuthHints(env: NodeJS.ProcessEnv): Promise<string[]> {
   // Claude Code keeps `.claude.json` inside its config root only when CLAUDE_CONFIG_DIR is set.
   const configPath = env.CLAUDE_CONFIG_DIR?.trim()
@@ -134,9 +115,6 @@ export function createToolStatusHelpers(deps: ToolStatusHelperDeps): ToolStatusH
     if (toolId === "codex") {
       return { title: "Codex CLI Usage", args: [] };
     }
-    if (toolId === "gemini") {
-      return { title: "Gemini CLI Status", args: ["--version"] };
-    }
     if (toolId === "claude") {
       return { title: "Claude Code Usage", args: [] };
     }
@@ -149,9 +127,6 @@ export function createToolStatusHelpers(deps: ToolStatusHelperDeps): ToolStatusH
   async function getAuthHints(toolId: string): Promise<string[]> {
     if (toolId === "codex") {
       return (await readCodexAuthHints()).hints;
-    }
-    if (toolId === "gemini") {
-      return readGeminiAuthHints();
     }
     if (toolId === "claude") {
       return readClaudeAuthHints(getClaudeEnv());

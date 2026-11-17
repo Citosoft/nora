@@ -1,5 +1,6 @@
-import { noraAgentClient } from "@/components/app/clients/noraAgentClient";
-import { handoffPromptToAgent, sendPromptToAgent } from "@/components/app/logic/agentHandoff";
+import { useNativeRuntimePorts } from "./useNativeRuntimePorts";
+import { useThreadWorkspaceSnapshot } from "./useThreadWorkspaceSnapshot";
+import { handoffThread } from "@/components/app/logic/thread-workspace/handoff";
 import {
   buildBrowserAnnotationKey,
   buildBrowserReviewPrompt,
@@ -10,14 +11,13 @@ import {
   readStoredBrowserAnnotationsForScope,
   writeStoredBrowserAnnotationsForScope
 } from "@/components/app/logic/browserAnnotationPersistence";
-import { launchAgent } from "@/components/app/logic/launchAgentWithInstruction";
 import type {
   BrowserAnnotationComposerTarget,
   UseBrowserAnnotationsStateArgs,
   UseBrowserAnnotationsStateResult
 } from "@/components/app/types/browserAnnotationContext.types";
 import { isAgentToolAvailable } from "@shared/agentToolState";
-import type { AgentContextReference, BrowserAnnotation, BrowserElementTarget, CreateAgentPayload } from "@shared/appTypes";
+import type { AgentContextReference, BrowserAnnotation, BrowserElementTarget } from "@shared/appTypes";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 export function useBrowserAnnotationsState({
@@ -26,10 +26,10 @@ export function useBrowserAnnotationsState({
   currentUrl,
   pageTitle,
   workspaceInstructionPath,
-  agents,
   tools,
-  onFocusAgent
 }: UseBrowserAnnotationsStateArgs): UseBrowserAnnotationsStateResult {
+  const native = useNativeRuntimePorts();
+  const threads = useThreadWorkspaceSnapshot(native.store);
   const storageScopeKey = useMemo(
     () => buildBrowserAnnotationStorageKey(projectId, browserTabId),
     [browserTabId, projectId]
@@ -40,17 +40,9 @@ export function useBrowserAnnotationsState({
   const [isSendingReview, setIsSendingReview] = useState(false);
 
   const availableTools = useMemo(() => tools.filter((tool) => isAgentToolAvailable(tool)), [tools]);
-  const runningAgentTargets = useMemo(
-    () =>
-      agents
-        .filter((agent) => agent.status === "running")
-        .map((agent) => ({
-          id: agent.id,
-          label: agent.name.trim() || agent.toolLabel,
-          toolLabel: agent.toolLabel
-        })),
-    [agents]
-  );
+  const runningAgentTargets = useMemo(() => threads.summaries.filter((entry) => !entry.conversation.archivedAt
+    && native.boot.workspaces.some((workspace) => workspace.shellProjectId === projectId && workspace.id === entry.conversation.workspace.projectId))
+    .map((entry) => ({ id: entry.conversation.id, label: entry.conversation.title, toolLabel: entry.conversation.provider.kind })), [threads.summaries, native.boot.workspaces, projectId]);
 
   const persistAnnotations = useCallback(
     (nextAnnotations: BrowserAnnotation[]) => {
@@ -182,20 +174,19 @@ export function useBrowserAnnotationsState({
 
       setIsSendingReview(true);
       try {
-        await sendPromptToAgent(agentId, prompt, () => undefined);
+        await handoffThread(native.store, agentId, prompt.text);
         setAnnotations([]);
         setComposerTarget(null);
         persistAnnotations([]);
-        onFocusAgent(agentId);
       } finally {
         setIsSendingReview(false);
       }
     },
-    [annotations.length, buildReviewPromptSubmission, isSendingReview, onFocusAgent, persistAnnotations]
+    [annotations.length, buildReviewPromptSubmission, isSendingReview, native.store, native.launch, projectId, persistAnnotations]
   );
 
   const spawnReviewAgent = useCallback(
-    async (toolId: string) => {
+    async (_toolId: string) => {
       if (!annotations.length || isSendingReview) {
         return;
       }
@@ -205,43 +196,19 @@ export function useBrowserAnnotationsState({
         return;
       }
 
-      const payload: CreateAgentPayload = {
-        toolId,
-        name: "Browser Review",
-        task: "Review and act on browser inspect comments from the attached prompt.",
-        commandOverride: "",
-        launchSource: "browser-inspect",
-        mode: "read",
-        target: { kind: "session-default" }
-      };
 
       setIsSendingReview(true);
       try {
-        const launchResult = await launchAgent({
-          payload,
-          createAgent: noraAgentClient.createAgent
-        });
-        if (!launchResult) {
-          return;
-        }
-
-        await handoffPromptToAgent({
-          agentId: launchResult.agentId,
-          prompt,
-          updateSnapshot: () => {},
-          focusAgent: async (focusedAgentId: string) => {
-            onFocusAgent(focusedAgentId);
-          }
-        });
+        const documentId = await native.launch({ projectId, text: prompt.text });
+        if (!documentId) return;
         setAnnotations([]);
         setComposerTarget(null);
         persistAnnotations([]);
-        onFocusAgent(launchResult.agentId);
       } finally {
         setIsSendingReview(false);
       }
     },
-    [annotations.length, buildReviewPromptSubmission, isSendingReview, onFocusAgent, persistAnnotations]
+    [annotations.length, buildReviewPromptSubmission, isSendingReview, native.store, native.launch, projectId, persistAnnotations]
   );
 
   return {

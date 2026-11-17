@@ -12,5 +12,6 @@ export const noraLoopClient: LoopBridge = {
   resumeLoopRun: (projectId, runId) => window.nora.resumeLoopRun(projectId, runId),
   cancelLoopRun: (projectId, runId) => window.nora.cancelLoopRun(projectId, runId),
   onLoopRunChanged: (listener) => window.nora.onLoopRunChanged(listener),
+  onLoopDefinitionChanged: (listener) => window.nora.onLoopDefinitionChanged(listener),
   onLoopRunOutput: (listener) => window.nora.onLoopRunOutput(listener)
 };

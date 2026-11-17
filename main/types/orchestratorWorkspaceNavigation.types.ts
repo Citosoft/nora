@@ -5,10 +5,7 @@ export interface WorkspaceNavigationDeps {
   getSnapshot: () => AppState;
   updateState: (updater: (state: AppState) => AppState) => void;
   refreshProjectState: () => Promise<AppState>;
-  openProject: (
-    projectTarget: WorkspaceTarget,
-    options: { focusedAgentMode: "first-agent" | "none" }
-  ) => Promise<AppState>;
+  openProject: (projectTarget: WorkspaceTarget) => Promise<AppState>;
   getProjectTarget: (project: ProjectSummary) => WorkspaceTarget;
   loadIndexedProjects: () => Promise<ProjectSummary[]>;
   resolveRemotePayload: (payload: {

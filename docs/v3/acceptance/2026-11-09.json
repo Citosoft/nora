@@ -1,0 +1,305 @@
+{
+  "date": "2026-11-09",
+  "scope": "local isolated acceptance; not complete production acceptance",
+  "codexProtocolVersion": "0.167.0",
+  "protocolSchemaSha256": {
+    "v2/ModelListResponse.json": "2fb387a2ed258fc74258828ea342d68f89ce4e8e22cd0329ca59d2b423f9108b",
+    "v2/TurnStartParams.json": "4e25cd48986f73e600d9949a055ddb994a75b4a38790e935274646f0fece00ad",
+    "v2/ThreadStartParams.json": "e9c6d3cc18d049bfbc0249add3808fb8e5a27e1a0b5a423767aafbc3859a9428"
+  },
+  "claudeConstraint": "Owner reports account usage limit; authenticated Claude inference not attempted. The isolated SDK profile has no API key.",
+  "runs": {
+    "codex-lifecycle": {
+      "provider": "codex",
+      "scenario": "lifecycle",
+      "runtime": "codex-cli 0.167.0",
+      "model": "gpt-6.1-sol",
+      "checkedAt": "2026-11-09T21:57:45.230Z",
+      "checks": [
+        {
+          "name": "catalog",
+          "status": "passed",
+          "detail": "authentication-present"
+        },
+        {
+          "name": "start",
+          "status": "passed",
+          "detail": "completed"
+        },
+        {
+          "name": "follow-up",
+          "status": "passed",
+          "detail": "completed"
+        },
+        {
+          "name": "native-follow-up",
+          "status": "passed",
+          "detail": "same-native-session-and-recalled-context"
+        },
+        {
+          "name": "edit",
+          "status": "passed",
+          "detail": "completed"
+        },
+        {
+          "name": "real-edit-checkpoints",
+          "status": "passed",
+          "detail": "saved-before-after-patch"
+        },
+        {
+          "name": "native-approval",
+          "status": "unverified",
+          "detail": "runtime-did-not-request-approval"
+        },
+        {
+          "name": "streaming",
+          "status": "passed",
+          "detail": "partial-assistant-items"
+        },
+        {
+          "name": "native-usage",
+          "status": "passed",
+          "detail": "normalized-native-token-counts"
+        },
+        {
+          "name": "exact-native-turn-read",
+          "status": "passed",
+          "detail": "read-only-no-resubmission"
+        },
+        {
+          "name": "restart-resume",
+          "status": "passed",
+          "detail": "completed"
+        },
+        {
+          "name": "restart-native-identity",
+          "status": "passed",
+          "detail": "persisted-native-identity"
+        },
+        {
+          "name": "restart-context",
+          "status": "passed",
+          "detail": "recalled-first-exchange"
+        },
+        {
+          "name": "native-interrupt",
+          "status": "passed",
+          "detail": "interrupted"
+        },
+        {
+          "name": "native-question",
+          "status": "unverified",
+          "detail": "not-induced-in-this-run"
+        },
+        {
+          "name": "usage-limit",
+          "status": "unverified",
+          "detail": "quota-not-deliberately-exhausted"
+        },
+        {
+          "name": "lost-owner-recovery",
+          "status": "unverified",
+          "detail": "requires-separate-process-loss-scenario"
+        }
+      ],
+      "workspaceRemoved": true
+    },
+    "codex-approval": {
+      "provider": "codex",
+      "scenario": "approval",
+      "runtime": "codex-cli 0.167.0",
+      "model": "gpt-6.1-sol",
+      "checkedAt": "2026-11-09T21:53:40.592Z",
+      "checks": [
+        {
+          "name": "catalog",
+          "status": "passed",
+          "detail": "authentication-present"
+        },
+        {
+          "name": "edit",
+          "status": "passed",
+          "detail": "completed"
+        },
+        {
+          "name": "real-edit-checkpoints",
+          "status": "passed",
+          "detail": "saved-before-after-patch"
+        },
+        {
+          "name": "native-approval",
+          "status": "passed",
+          "detail": "confirmed-response"
+        }
+      ],
+      "workspaceRemoved": true
+    },
+    "codex-question-default": {
+      "provider": "codex",
+      "scenario": "question",
+      "runtime": "codex-cli 0.167.0",
+      "model": "gpt-6.1-sol",
+      "checkedAt": "2026-11-09T21:54:46.852Z",
+      "checks": [
+        {
+          "name": "catalog",
+          "status": "passed",
+          "detail": "authentication-present"
+        },
+        {
+          "name": "question",
+          "status": "passed",
+          "detail": "completed"
+        },
+        {
+          "name": "native-question",
+          "status": "unverified",
+          "detail": "tool-not-requested-by-runtime"
+        }
+      ],
+      "workspaceRemoved": true
+    },
+    "codex-question-experimental": {
+      "provider": "codex",
+      "scenario": "question",
+      "runtime": "codex-cli 0.167.0",
+      "model": "gpt-6.1-sol",
+      "checkedAt": "2026-11-09T21:57:41.355Z",
+      "checks": [
+        {
+          "name": "catalog",
+          "status": "passed",
+          "detail": "authentication-present"
+        },
+        {
+          "name": "question",
+          "status": "passed",
+          "detail": "completed"
+        },
+        {
+          "name": "native-question",
+          "status": "passed",
+          "detail": "native-answer-confirmed-with-experimental-default-mode-flag"
+        }
+      ],
+      "workspaceRemoved": true
+    },
+    "codex-signed-out": {
+      "provider": "codex",
+      "scenario": "signed-out",
+      "runtime": "codex-cli 0.167.0",
+      "model": "gpt-6.1-sol",
+      "checkedAt": "2026-11-09T21:55:00.659Z",
+      "checks": [
+        {
+          "name": "catalog",
+          "status": "passed",
+          "detail": "authentication-required"
+        },
+        {
+          "name": "signed-out",
+          "status": "passed",
+          "detail": "authentication-rejected-before-native-thread"
+        }
+      ],
+      "workspaceRemoved": true
+    },
+    "claude-isolated-readiness": {
+      "provider": "claude",
+      "scenario": "lifecycle",
+      "runtime": "2.1.302 (Claude Code)",
+      "model": "default",
+      "checkedAt": "2026-11-09T21:54:48.477Z",
+      "checks": [
+        {
+          "name": "catalog",
+          "status": "passed",
+          "detail": "authentication-unknown"
+        },
+        {
+          "name": "authenticated-lifecycle",
+          "status": "unverified",
+          "detail": "ANTHROPIC_API_KEY-not-configured"
+        }
+      ],
+      "workspaceRemoved": true
+    },
+    "codex-host-crash": {
+      "outcome": "passed",
+      "provider": "codex",
+      "scenario": "host-crash",
+      "runtime": "codex-cli 0.167.0",
+      "model": "gpt-6.1-sol",
+      "checkedAt": "2026-11-09T22:25:40.232Z",
+      "checks": [
+        {
+          "name": "host-crash",
+          "status": "passed",
+          "detail": "host-SIGKILL-after-native-acceptance-before-turn-id-delivery"
+        },
+        {
+          "name": "recovery-preserves-native-identity",
+          "status": "passed",
+          "detail": "same-conversation-run-attempt-and-native-binding"
+        },
+        {
+          "name": "no-blind-resubmission",
+          "status": "passed",
+          "detail": "one-total-native-turn-start-before-and-after-recovery"
+        },
+        {
+          "name": "queued-intent-and-receipts",
+          "status": "passed",
+          "detail": "queued-message-and-original-command-receipts-preserved"
+        },
+        {
+          "name": "checkpoint-boundary",
+          "status": "passed",
+          "detail": "baseline-retained-attribution-invalidated-and-queue-never-captured"
+        }
+      ],
+      "workspaceRemoved": true
+    },
+    "codex-provider-crash": {
+      "outcome": "passed",
+      "provider": "codex",
+      "scenario": "provider-crash",
+      "runtime": "codex-cli 0.167.0",
+      "model": "gpt-6.1-sol",
+      "checkedAt": "2026-11-09T22:26:48.201Z",
+      "checks": [
+        {
+          "name": "provider-crash",
+          "status": "passed",
+          "detail": "provider-group-SIGKILL-with-unanswered-native-approval"
+        },
+        {
+          "name": "recovery-preserves-native-identity",
+          "status": "passed",
+          "detail": "same-conversation-run-attempt-and-native-binding"
+        },
+        {
+          "name": "no-blind-resubmission",
+          "status": "passed",
+          "detail": "one-total-native-turn-start-before-and-after-recovery"
+        },
+        {
+          "name": "queued-intent-and-receipts",
+          "status": "passed",
+          "detail": "queued-message-and-original-command-receipts-preserved"
+        },
+        {
+          "name": "expired-approval",
+          "status": "passed",
+          "detail": "stale-response-rejected-without-native-delivery"
+        },
+        {
+          "name": "checkpoint-boundary",
+          "status": "passed",
+          "detail": "baseline-retained-attribution-invalidated-and-queue-never-captured"
+        }
+      ],
+      "workspaceRemoved": true
+    }
+  }
+}

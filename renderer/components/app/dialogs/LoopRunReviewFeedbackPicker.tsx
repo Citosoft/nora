@@ -96,7 +96,7 @@ export function LoopRunReviewFeedbackPicker({ reviewFeedback }: LoopRunReviewFee
                 <label
                   key={comment.commentId}
                   htmlFor={checkboxId}
-                  className="flex cursor-pointer gap-3 rounded-md border border-border/50 bg-background/70 p-3 transition hover:border-primary/40 hover:bg-accent/20"
+                  className="flex cursor-pointer gap-3 rounded-md border border-border/50 bg-background p-3 transition hover:border-primary/40 hover:bg-accent/20"
                 >
                   <input
                     id={checkboxId}
@@ -111,7 +111,7 @@ export function LoopRunReviewFeedbackPicker({ reviewFeedback }: LoopRunReviewFee
                       <span>{formatForgeReviewLineLabel(comment.oldLine, comment.newLine)}</span>
                       <span>{comment.author || "Unknown"}</span>
                     </div>
-                    <div className="terminal-text mt-2 overflow-x-auto rounded-[4px] border border-border/40 bg-background/70 px-2 py-1 text-[11px] leading-5">
+                    <div className="terminal-text mt-2 overflow-x-auto rounded-md border border-border/40 bg-background px-2 py-1 text-[11px] leading-5">
                       {comment.lineText || "(line context unavailable)"}
                     </div>
                     <div className="mt-2 whitespace-pre-wrap text-sm leading-5 text-foreground/85">

@@ -1,4 +1,4 @@
-import { buildLoopRunOutput, buildLoopRunStages, loopRunEventStatus, parseLoopRunOutput } from "@/components/app/logic/loopRunPresentation";
+import { buildLoopRunOutput, buildLoopRunStages, isLoopRunActive, loopRunEventStatus, loopRunStageStatus, loopRunStatusLabel, parseLoopRunOutput } from "@/components/app/logic/loopRunPresentation";
 import type { LoopRun } from "@shared/appTypes";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -12,8 +12,9 @@ function createRun(overrides: Partial<LoopRun> = {}): LoopRun {
       id: "workflow-1",
       projectId: "project-1",
       name: "Implementation",
-      writer: { id: "writer", kind: "writer", name: "Writer", toolId: "codex", instructions: "Implement" },
-      reviewers: [{ id: "reviewer", kind: "reviewer", name: "Reviewer", toolId: "claude", instructions: "Review" }],
+      description: "",
+      stages: [{ id: "writer", kind: "writer", name: "Writer", toolId: "codex", model: null, instructions: "Implement" }, { id: "reviewer", kind: "reviewer", name: "Reviewer", toolId: "claude", model: null, instructions: "Review" }],
+
       limits: { maxIterations: 5, maxDurationMs: 60_000, roleTimeoutMs: 10_000 },
       createdAt: "2026-06-10T10:00:00.000Z",
       updatedAt: "2026-06-10T10:00:00.000Z"
@@ -31,10 +32,10 @@ function createRun(overrides: Partial<LoopRun> = {}): LoopRun {
     outputLog: "",
     outputEvents: [],
     roles: [
-      { roleId: "writer", kind: "writer", name: "Writer", toolId: "codex", instructions: "Implement" },
-      { roleId: "reviewer", kind: "reviewer", name: "Reviewer", toolId: "claude", instructions: "Review" }
+      { roleId: "writer", kind: "writer", name: "Writer", toolId: "codex", model: null, instructions: "Implement" },
+      { roleId: "reviewer", kind: "reviewer", name: "Reviewer", toolId: "claude", model: null, instructions: "Review" }
     ],
-    iterations: [{ number: 1, startedAt: "2026-06-10T10:00:01.000Z", completedAt: null, writerResult: null, reviewerResults: [] }],
+    iterations: [{ number: 1, startedAt: "2026-06-10T10:00:01.000Z", completedAt: null, results: [] }],
     events: [],
     activeRoleId: "writer",
     activeToken: "token-1",
@@ -159,4 +160,18 @@ test("loopRunEventStatus only spins for the latest active milestone", () => {
   assert.equal(loopRunEventStatus("role_started", false, "running"), "complete");
   assert.equal(loopRunEventStatus("role_started", true, "completed"), "complete");
   assert.equal(loopRunEventStatus("resumed", true, "paused"), "complete");
+});
+
+test("maps run lifecycle statuses onto stage icons, activity, and labels", () => {
+  assert.deepEqual(
+    (["preparing", "running", "pausing", "paused", "completed", "cancelled"] as const).map((status) => [loopRunStageStatus(status), isLoopRunActive(status), loopRunStatusLabel(status)]),
+    [
+      ["active", true, "Preparing"],
+      ["active", true, "Running"],
+      ["active", true, "Pausing"],
+      ["paused", false, "Paused"],
+      ["complete", false, "Completed"],
+      ["cancelled", false, "Cancelled"]
+    ]
+  );
 });

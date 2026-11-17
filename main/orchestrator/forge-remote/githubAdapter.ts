@@ -43,6 +43,7 @@ export function createGithubForgeRemoteAdapter(countDiffLines: CountDiffLinesFn)
       number: getNumber(item.number) ?? 0,
       title: getString(item.title) ?? "",
       state: getString(item.state) ?? "",
+      draft: getBoolean(item.draft) === true,
       author: getString(user?.login),
       sourceRepository: null,
       sourceBranch: getString(head?.ref),

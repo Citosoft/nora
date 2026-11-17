@@ -6,6 +6,7 @@ export function NoteCenter() {
   const snapshot = useCanonicalAppSnapshot();
   const { noteCenterProps } = useAppMainCenterContent();
   const {
+    projectId,
     workspaceNotes,
     isCreatingNote,
     onOpenNote,
@@ -33,7 +34,7 @@ export function NoteCenter() {
         projectName: workspace.project.name,
         projectRootPath: workspace.project.rootPath
       }))
-  ].map((workspace) => ({
+  ].filter((workspace) => !projectId || workspace.projectId === projectId).map((workspace) => ({
     ...workspace,
     notes: workspaceNotes[workspace.projectId]?.notes ?? [],
     isLoading: workspaceNotes[workspace.projectId]?.isLoading ?? false,

@@ -1,5 +1,5 @@
 import type {
-  AgentContextSelection,
+  ChangeEntry,
   AgentContextSourceSummary,
   AgentContextState,
   AgentContextPreview,
@@ -11,10 +11,11 @@ import type {
   CommitChangesPayload,
   CreateAgentPayload,
   CreateTerminalPayload,
+  CreateWorktreePayload,
   CreateWorkspaceDirectoryPayload,
   ExternalHarnessContextRef,
-  ExternalHarnessSessionSummary,
   ForgeAddCommentPayload,
+  ForgeBranchChanges,
   ForgeBranchPullRequestStatus,
   ForgeCreatePullRequestPayload,
   ForgeOverview,
@@ -38,8 +39,8 @@ import type {
   WorkspaceFileRequest,
   WorkspaceGitStatusSummary,
   CheckoutWorkspaceBranchPayload,
+  SelectChangesCheckoutPayload,
   SetWorkspaceUpstreamPayload,
-  ImportedContextBundleSummary,
   NoraDetectableContextBundleSummary,
   WorkspaceNoteSummary,
   WorkspacePathStatResult,
@@ -85,6 +86,8 @@ export interface WorkspaceService {
   readWorkspaceImageFile: (
     payload: WorkspaceFileRequest
   ) => Promise<WorkspaceImageFileContent>;
+  /** The project's own logo file, detected from its file listing, for workspace avatars. */
+  readWorkspaceLogo: (projectId: string) => Promise<WorkspaceImageFileContent | null>;
   /** Local path of a document file (temp copy for SSH workspaces) for opening in the OS default app. */
   resolveWorkspaceFileForExternalOpen: (payload: WorkspaceFileRequest) => Promise<string>;
   listWorkspaceFiles: (
@@ -100,22 +103,10 @@ export interface WorkspaceService {
   searchWorkspaceFiles: (
     payload: WorkspaceSearchRequest
   ) => Promise<WorkspaceSearchResult[]>;
-  listImportedContextBundles: (
-    projectId: string,
-    rootPath?: string
-  ) => Promise<ImportedContextBundleSummary[]>;
-  listExternalHarnessContextSessions: (
-    projectId: string,
-    rootPath?: string
-  ) => Promise<ExternalHarnessSessionSummary[]>;
   archiveExternalHarnessThread: (
     projectId: string,
     ref: ExternalHarnessContextRef
   ) => Promise<void>;
-  composeExternalHarnessContextSelections: (
-    projectId: string,
-    ref: ExternalHarnessContextRef
-  ) => Promise<AgentContextSelection[]>;
   listNoraDetectableContextBundles: (
     projectId: string,
     sessionId: string,
@@ -146,6 +137,7 @@ export interface WorkspaceService {
     rootPath?: string;
   }) => Promise<WorkspaceGitStatusSummary>;
   checkoutWorkspaceBranch: (payload: CheckoutWorkspaceBranchPayload) => Promise<AppState>;
+  selectChangesCheckout: (payload: SelectChangesCheckoutPayload) => Promise<AppState>;
   setWorkspaceUpstream: (payload: SetWorkspaceUpstreamPayload) => Promise<WorkspaceGitStatusSummary>;
   listWorkspaceTasks: (projectId: string) => Promise<WorkspaceTaskSummary[]>;
   getWorkspaceTaskBoard: (projectId: string) => Promise<WorkspaceTaskBoard>;
@@ -157,6 +149,8 @@ export interface WorkspaceService {
     projectId: string,
     taskDescription: string
   ) => Promise<AppState>;
+  /** Creates a task with the given Markdown content and returns its workspace-relative path. */
+  createWorkspaceTaskFile: (projectId: string, title: string, content: string) => Promise<string>;
   getWorkspaceSplitViews: (projectId: string) => Promise<WorkspaceSplitViewCollection>;
   saveWorkspaceSplitViews: (
     projectId: string,
@@ -184,6 +178,7 @@ export interface WorkspaceService {
 
 export interface SessionService {
   createAgent: (payload: CreateAgentPayload) => Promise<AppState>;
+  createWorktree: (payload: CreateWorktreePayload) => Promise<AppState>;
   createTerminal: (payload: CreateTerminalPayload) => Promise<AppState>;
   renameTerminal: (sessionId: string, name: string) => Promise<AppState>;
   openLocalTerminal: (shellId?: string) => Promise<LocalTerminalState>;
@@ -239,6 +234,7 @@ export interface ToolingService {
   saveToolConfig: (payload: SaveToolConfigPayload) => Promise<AppState>;
   getToolUsage: (toolId: string) => Promise<ToolUsageInfo | null>;
   switchToolAccount: (toolId: string) => Promise<void>;
+  checkProviderUpdates: () => Promise<import("@shared/types/provider/update.types").ProviderUpdateNotice[]>;
 }
 
 export interface ForgeService {
@@ -251,6 +247,12 @@ export interface ForgeService {
     branch: string,
     options: ForgeRequestOptions
   ) => Promise<ForgeBranchPullRequestStatus | null>;
+  getForgeBranchChanges: (
+    projectId: string,
+    checkoutPath: string,
+    options: ForgeRequestOptions
+  ) => Promise<ForgeBranchChanges | null>;
+  getForgeBranchDiff: (projectId: string, checkoutPath: string) => Promise<ChangeEntry[] | null>;
   getForgeWorkItemDetail: (
     projectId: string,
     kind: ForgeWorkItemKind,

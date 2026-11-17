@@ -25,7 +25,7 @@ export const assembleSignedInWorkspaceSidebarBuild = (
     uiCommands: {
       clearBrowserAndForgeFocus: core.uiCommands.clearBrowserAndForgeFocus,
       clearSessionTabFocus: core.uiCommands.clearSessionTabFocus,
-      openCreateAgentDialog: core.uiCommands.openCreateAgentDialog,
+      openNewThread: core.uiCommands.openNewThread,
       openCreateTerminalDialog: core.uiCommands.openCreateTerminalDialog,
       openResetWorkspacesDialog: core.uiCommands.openResetWorkspacesDialog,
       openWorkspaceTerminalPresetsDialog: core.uiCommands.openWorkspaceTerminalPresetsDialog,

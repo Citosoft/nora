@@ -1,33 +1,12 @@
-import { groupBrowserAnnotationsByUrl } from "@/components/app/logic/browserAnnotation";
-import {
-  browserReviewCommentAccentClass,
-  browserReviewCommentRowBodyClass,
-  browserReviewCommentRowClass,
-  browserReviewCommentSurfaceClass
-} from "@/components/app/panels/browser-annotation/browserAnnotationUi";
-import type { UseBrowserAnnotationsStateResult } from "@/components/app/types/browserAnnotationContext.types";
+import { formatBrowserElementLabel, groupBrowserAnnotationsByUrl } from "@/components/app/logic/browserAnnotation";
+import { reviewRemoveButtonClass, reviewCommentBodyClass, reviewCommentRowClass } from "@/components/app/logic/reviewStyles";
+import type { BrowserReviewTrayProps } from "@/components/app/types/browserAnnotationContext.types";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronRight, LoaderCircle, MessageSquare, Trash2, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-
-type BrowserReviewTrayProps = {
-  reviewState: Pick<
-    UseBrowserAnnotationsStateResult,
-    | "annotations"
-    | "annotationCount"
-    | "isSendingReview"
-    | "removeAnnotation"
-    | "clearAnnotations"
-    | "sendReviewToAgent"
-    | "spawnReviewAgent"
-    | "runningAgentTargets"
-    | "availableTools"
-  >;
-};
+import { useEffect, useId, useMemo, useState } from "react";
 
 export function BrowserReviewTray({ reviewState }: BrowserReviewTrayProps) {
   const {
@@ -41,6 +20,7 @@ export function BrowserReviewTray({ reviewState }: BrowserReviewTrayProps) {
     runningAgentTargets,
     availableTools
   } = reviewState;
+  const contentId = useId();
   const [isExpanded, setIsExpanded] = useState(true);
   const [selectedAgentId, setSelectedAgentId] = useState("");
   const [sendError, setSendError] = useState<string | null>(null);
@@ -78,13 +58,13 @@ export function BrowserReviewTray({ reviewState }: BrowserReviewTrayProps) {
   };
 
   return (
-    <div className="shrink-0 border-t border-border/50 bg-card/95">
-      <div className="border-b border-border/40 px-4 py-2.5">
+    <div className="workspace-shell-surface min-h-0 shrink-0 border-t border-border/70">
+      <div className="px-3 py-2">
         <div className="flex items-center gap-2">
-          <div className="flex min-w-0 flex-1 items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          <div className="flex min-w-0 flex-1 items-center gap-2 text-xs font-medium text-foreground">
             <MessageSquare className="size-3.5 shrink-0" />
             <span className="whitespace-nowrap">Browser review</span>
-            <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-semibold normal-case tracking-normal">
+            <Badge variant="secondary" className="h-5 px-1.5 text-[11px]">
               {annotationCount}
             </Badge>
           </div>
@@ -92,8 +72,10 @@ export function BrowserReviewTray({ reviewState }: BrowserReviewTrayProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="size-6"
+              className="size-7 text-muted-foreground"
               onClick={() => setIsExpanded((current) => !current)}
+              aria-expanded={isExpanded}
+              aria-controls={contentId}
               aria-label={isExpanded ? "Collapse browser review section" : "Expand browser review section"}
             >
               {isExpanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
@@ -101,7 +83,7 @@ export function BrowserReviewTray({ reviewState }: BrowserReviewTrayProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="size-6 text-muted-foreground hover:text-destructive"
+              className="size-7 text-muted-foreground hover:text-destructive"
               onClick={clearAnnotations}
               aria-label="Clear all browser comments"
             >
@@ -112,34 +94,34 @@ export function BrowserReviewTray({ reviewState }: BrowserReviewTrayProps) {
       </div>
 
       {isExpanded ? (
-        <div className="space-y-2 px-3 py-2">
-          <div className="max-h-52 space-y-2 overflow-auto">
+        <div id={contentId} className="space-y-3 border-t border-border/60 px-3 py-3">
+          <div className="max-h-52 space-y-3 overflow-y-auto">
             {[...groupedAnnotations.entries()].map(([pageUrl, pageAnnotations]) => (
-              <div key={pageUrl} className="rounded-[6px] border border-border/50 bg-background/55 p-2">
-                <div className="mb-1 truncate text-[11px] font-medium text-muted-foreground" title={pageUrl}>
+              <div key={pageUrl} className="space-y-2">
+                <div className="truncate px-1 text-xs font-medium text-muted-foreground" title={pageUrl}>
                   {pageAnnotations[0]?.target.pageTitle || pageUrl}
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   {pageAnnotations.map((annotation) => {
-                    const elementLabel = annotation.target.tagName.toLowerCase();
+                    const elementLabel = formatBrowserElementLabel(annotation.target);
                     return (
                       <div
                         key={annotation.id}
-                        className={cn("overflow-hidden", browserReviewCommentSurfaceClass, browserReviewCommentRowClass)}
+                        className={reviewCommentRowClass}
                         title={annotation.body}
                       >
-                        <div className={browserReviewCommentAccentClass} aria-hidden="true" />
                         <Badge
                           variant="outline"
-                          className="h-5 shrink-0 border-primary/30 bg-background/70 px-1.5 font-mono text-[10px] text-primary"
+                          title={elementLabel}
+                          className="mt-0.5 max-w-[40%] shrink-0 truncate border-border/60 px-1.5 font-mono text-[11px] text-muted-foreground"
                         >
                           {elementLabel}
                         </Badge>
-                        <p className={browserReviewCommentRowBodyClass}>{annotation.body}</p>
+                        <p className={reviewCommentBodyClass}>{annotation.body}</p>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="size-7 shrink-0 opacity-0 transition group-hover/review:opacity-100"
+                          className={reviewRemoveButtonClass}
                           onClick={() => removeAnnotation(annotation.id)}
                           aria-label="Remove browser comment"
                         >
@@ -153,11 +135,11 @@ export function BrowserReviewTray({ reviewState }: BrowserReviewTrayProps) {
             ))}
           </div>
 
-          <div className="rounded-[6px] border border-border/50 bg-background/55 p-2">
-            {sendError ? <div className="mb-2 text-xs text-destructive">{sendError}</div> : null}
+          <div className="space-y-2 border-t border-border/60 pt-3">
+            {sendError ? <div role="alert" className="text-xs text-destructive">{sendError}</div> : null}
             {!runningAgentTargets.length ? (
               <div className="space-y-2">
-                <p className="text-xs leading-none text-muted-foreground">
+                <p className="text-xs leading-relaxed text-muted-foreground">
                   Spawn a new agent with this browser review collection.
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -166,11 +148,11 @@ export function BrowserReviewTray({ reviewState }: BrowserReviewTrayProps) {
                       key={tool.id}
                       variant="outline"
                       size="sm"
-                      className="h-7 gap-1.5 px-2.5 text-[11px] font-semibold"
+                      className="h-8 gap-1.5 px-2.5 text-xs font-medium"
                       disabled={isSendingReview}
                       onClick={() => void spawnReviewAgent(tool.id)}
                     >
-                      {isSendingReview ? <LoaderCircle className="size-3.5 animate-spin" /> : null}
+                      {isSendingReview ? <LoaderCircle className="size-3.5 motion-safe:animate-spin" /> : null}
                       <AgentToolIcon
                         toolId={tool.id}
                         label={tool.label}
@@ -187,7 +169,8 @@ export function BrowserReviewTray({ reviewState }: BrowserReviewTrayProps) {
                 <Select
                   value={selectedAgentId}
                   onChange={(event) => setSelectedAgentId(event.target.value)}
-                  className="h-7 min-w-0 flex-1 bg-background/60 text-[11px]"
+                  aria-label="Agent to receive browser review"
+                  className="h-8 min-w-0 flex-1 text-xs"
                   disabled={isSendingReview}
                 >
                   {runningAgentTargets.map((agent) => (
@@ -199,13 +182,13 @@ export function BrowserReviewTray({ reviewState }: BrowserReviewTrayProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-7 shrink-0 px-2.5 text-[11px] font-semibold"
+                  className="h-8 shrink-0 px-2.5 text-xs font-medium"
                   disabled={!selectedAgentId || isSendingReview}
                   onClick={() => void handleSendReview()}
                 >
                   {isSendingReview ? (
                     <>
-                      <LoaderCircle className="size-3.5 animate-spin" />
+                      <LoaderCircle className="size-3.5 motion-safe:animate-spin" />
                       Sending
                     </>
                   ) : (

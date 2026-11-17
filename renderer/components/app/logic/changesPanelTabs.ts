@@ -2,7 +2,7 @@ import type { ChangesPanelTab } from "@/components/app/types/changesPanelTab.typ
 import type { ProjectSummary } from "@shared/appTypes";
 import { isGitProject } from "@shared/projectVersionControl";
 
-const CHANGES_PANEL_TABS: readonly ChangesPanelTab[] = ["git", "files", "context", "vercel", "forge"];
+const CHANGES_PANEL_TABS: readonly ChangesPanelTab[] = ["git", "files", "instructions", "memory", "vercel", "forge"];
 // Vercel matches deployments to the project through its git remote, so it is git-only too.
 const GIT_ONLY_CHANGES_PANEL_TABS: ReadonlySet<ChangesPanelTab> = new Set(["git", "forge", "vercel"]);
 

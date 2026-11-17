@@ -146,9 +146,7 @@ export function buildLoopRunOutput({ events, legacyOutput }: BuildLoopRunOutputI
 
 function resultForRole(iteration: LoopIteration | undefined, role: LoopRunRole): boolean {
   if (!iteration) return false;
-  return role.kind === "writer"
-    ? iteration.writerResult?.roleId === role.roleId
-    : iteration.reviewerResults.some((result) => result.roleId === role.roleId);
+  return iteration.results.some((result) => result.roleId === role.roleId);
 }
 
 function roleStageStatus(run: LoopRun, role: LoopRunRole, iteration: LoopIteration | undefined): LoopRunStageStatus {
@@ -174,7 +172,7 @@ export function buildLoopRunStages(run: LoopRun): LoopRunStage[] {
   const roleStages = run.roles.map((role): LoopRunStage => ({
     id: role.roleId,
     title: role.name,
-    description: role.kind === "writer" ? "Implementing the workflow goal" : "Reviewing the current implementation",
+    description: role.kind === "writer" ? "Working on the assigned stage" : "Reviewing the current implementation",
     status: roleStageStatus(run, role, iteration),
     role
   }));
@@ -212,7 +210,7 @@ export function loopRunEventStatus(
     case "created":
     case "resumed":
     case "role_started":
-      return isLatest && (runStatus === "preparing" || runStatus === "running" || runStatus === "pausing")
+      return isLatest && isLoopRunActive(runStatus)
         ? "active"
         : "complete";
     case "role_finished":
@@ -234,7 +232,7 @@ export function loopRunStatusCopy(run: LoopRun): { title: string; description: s
     case "running": {
       const activeRole = run.roles.find((role) => role.roleId === run.activeRoleId);
       return activeRole
-        ? { title: `${activeRole.name} is working`, description: activeRole.kind === "writer" ? "Implementing the current workflow iteration." : "Reviewing the writer's latest result." }
+        ? { title: `${activeRole.name} is working`, description: activeRole.kind === "writer" ? "Implementing the current workflow iteration." : "Reviewing earlier stage results." }
         : { title: "Workflow is running", description: "The next agent is being prepared." };
     }
     case "pausing":
@@ -245,5 +243,36 @@ export function loopRunStatusCopy(run: LoopRun): { title: string; description: s
       return { title: "Workflow completed", description: run.stopReason ?? "All workflow stages have finished." };
     case "cancelled":
       return { title: "Workflow cancelled", description: run.stopReason ?? "The run was stopped before completion." };
+  }
+}
+
+/** Maps a run's lifecycle status onto the stage icon vocabulary shared by run rows and the monitor. */
+export function loopRunStageStatus(status: LoopRunStatus): LoopRunStageStatus {
+  switch (status) {
+    case "preparing":
+    case "running":
+    case "pausing":
+      return "active";
+    case "paused":
+      return "paused";
+    case "completed":
+      return "complete";
+    case "cancelled":
+      return "cancelled";
+  }
+}
+
+export function isLoopRunActive(status: LoopRunStatus): boolean {
+  return loopRunStageStatus(status) === "active";
+}
+
+export function loopRunStatusLabel(status: LoopRunStatus): string {
+  switch (status) {
+    case "preparing": return "Preparing";
+    case "running": return "Running";
+    case "pausing": return "Pausing";
+    case "paused": return "Paused";
+    case "completed": return "Completed";
+    case "cancelled": return "Cancelled";
   }
 }

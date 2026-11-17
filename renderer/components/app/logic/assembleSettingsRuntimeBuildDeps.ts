@@ -78,6 +78,7 @@ export const buildAppShellSettingsRuntimeAssemblyInputFromDeps = (
     canPreviewMacTitleBarChrome: deps.canPreviewMacTitleBarChrome,
     forceMacTitleBarPreview: deps.forceMacTitleBarPreview,
     updateForceMacTitleBarPreview: deps.updateForceMacTitleBarPreview,
+    updateLifecycle: deps.updateLifecycle,
     updateNotificationPreferences: deps.updateNotificationPreferences,
     updateAnalyticsConsentStatus: deps.updateAnalyticsConsentStatus,
     analyticsAllowedInCurrentRun: deps.analyticsAllowedInCurrentRun,

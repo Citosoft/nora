@@ -1,3 +1,5 @@
+import { useAgentWindowSettings } from "@/components/app/hooks/useAgentWindowSettings";
+import { normalizeAppSettings } from "@/components/app/logic/normalizeAppSettings";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import {
   readStoredAccentColor,
@@ -12,7 +14,6 @@ import {
   readStoredTerminalThemeId,
   readStoredThemeMode,
   readStoredUiFontId,
-  readStoredUserDisplayName,
   readStoredVercelAccountLabel,
   readStoredVercelToken,
   readStoredVercelWorkspaceLinks,
@@ -27,11 +28,15 @@ import {
   writeStoredTerminalThemeId,
   writeStoredThemeMode,
   writeStoredUiFontId,
-  writeStoredUserDisplayName,
   writeStoredVercelToken,
   writeStoredVercelWorkspaceLinks
 } from "@/components/app/logic/appPersistence";
-import { applyAccentColor, applyTheme, applyUiFont, resolveThemeMode } from "@/components/app/logic/appTheme";
+import { applyTheme, applyUiFont } from "@/components/app/logic/appTheme";
+import { DEFAULT_UI_FONT_ID } from "@/components/app/logic/appUiFonts";
+import { readUserDisplayName, writeUserDisplayName } from "@/components/app/logic/userDisplayName";
+import { useUserDisplayName } from "@/components/app/hooks/useUserDisplayName";
+import { useSyncedAppearance } from "@/components/app/hooks/useSyncedAppearance";
+import { mergeAppPreferences } from "@/components/app/logic/account/syncedPreferences";
 import type {
   AccentColor,
   ResolvedTheme,
@@ -42,66 +47,18 @@ import type {
   UiFontId
 } from "@/components/app/types";
 import type { AppPreferences } from "@/components/app/types/component.types";
-import { DEFAULT_APP_SETTINGS, type AiProvider, type AppSettings } from "@shared/appTypes";
+import { DEFAULT_APP_SETTINGS, type AiProvider, type AiSimpleTaskSettings, type AppSettings } from "@shared/appTypes";
 import { useEffect, useRef, useState } from "react";
-
-function normalizeAppSettings(candidate: AppSettings): AppSettings {
-  const preferredProvider =
-    candidate.ai?.preferredProvider === "openai" ||
-    candidate.ai?.preferredProvider === "google" ||
-    candidate.ai?.preferredProvider === "anthropic"
-      ? candidate.ai.preferredProvider
-      : DEFAULT_APP_SETTINGS.ai.preferredProvider;
-
-  return {
-    ...DEFAULT_APP_SETTINGS,
-    ...candidate,
-    terminalQuickLaunchDefaults: {
-      ...DEFAULT_APP_SETTINGS.terminalQuickLaunchDefaults,
-      ...candidate.terminalQuickLaunchDefaults
-    },
-    terminalPresets: Array.isArray(candidate.terminalPresets) ? candidate.terminalPresets : DEFAULT_APP_SETTINGS.terminalPresets,
-    ai: {
-      preferredProvider,
-      apiKeys: {
-        ...DEFAULT_APP_SETTINGS.ai.apiKeys,
-        ...(candidate.ai?.apiKeys ?? {})
-      },
-      modelByProvider: {
-        ...DEFAULT_APP_SETTINGS.ai.modelByProvider,
-        ...(candidate.ai?.modelByProvider ?? {})
-      },
-      simpleTaskProvider:
-        candidate.ai?.simpleTaskProvider === "cloud" || candidate.ai?.simpleTaskProvider === "local"
-          ? candidate.ai.simpleTaskProvider
-          : DEFAULT_APP_SETTINGS.ai.simpleTaskProvider,
-      localLlmModelId:
-        candidate.ai?.localLlmModelId === "qwen2.5-0.5b-instruct" || candidate.ai?.localLlmModelId === "smollm2-360m-instruct"
-          ? candidate.ai.localLlmModelId
-          : DEFAULT_APP_SETTINGS.ai.localLlmModelId
-    },
-    voice: {
-      dictationProvider:
-        candidate.voice?.dictationProvider === "openai" || candidate.voice?.dictationProvider === "localWhisper"
-          ? candidate.voice.dictationProvider
-          : DEFAULT_APP_SETTINGS.voice.dictationProvider,
-      localWhisperModelId:
-        candidate.voice?.localWhisperModelId === "tiny.en" || candidate.voice?.localWhisperModelId === "base.en"
-          ? candidate.voice.localWhisperModelId
-          : DEFAULT_APP_SETTINGS.voice.localWhisperModelId
-    }
-  };
-}
 
 export function useAppPreferences(): AppPreferences {
   const [themeMode, setThemeMode] = useState<ThemeMode>("system");
   const [accentColor, setAccentColor] = useState<AccentColor>("silver");
   const [terminalThemeId, setTerminalThemeId] = useState<TerminalThemeId>("app");
   const [terminalFontId, setTerminalFontId] = useState<TerminalFontId>("ibm-plex-mono");
-  const [uiFontId, setUiFontId] = useState<UiFontId>("inter");
+  const [uiFontId, setUiFontId] = useState<UiFontId>(DEFAULT_UI_FONT_ID);
   const [defaultIdeId, setDefaultIdeId] = useState<string | null>(null);
   const [forceMacTitleBarPreview, setForceMacTitleBarPreview] = useState(false);
-  const [userDisplayName, setUserDisplayName] = useState("");
+  const userDisplayName = useUserDisplayName();
   const [githubToken, setGithubToken] = useState("");
   const [gitlabToken, setGitlabToken] = useState("");
   const [gitlabHost, setGitlabHost] = useState("");
@@ -116,6 +73,25 @@ export function useAppPreferences(): AppPreferences {
   const appSettingsRef = useRef(appSettings);
   const appSettingsSaveChainRef = useRef<Promise<void>>(Promise.resolve());
   const appSettingsSaveVersionRef = useRef(0);
+  useEffect(() => noraSystemClient.onAppSettingsChanged((settings) => {
+    appSettingsRef.current = settings;
+    setAppSettings(settings);
+  }), []);
+  const [appearanceLoaded, setAppearanceLoaded] = useState(false);
+  useSyncedAppearance({ loaded: appearanceLoaded && isAppSettingsLoaded,
+    appearance: { themeMode, accentColor, terminalThemeId, terminalFontId, uiFontId, userDisplayName },
+    apply(next) {
+      writeStoredThemeMode(next.themeMode); writeStoredAccentColor(next.accentColor); writeStoredTerminalThemeId(next.terminalThemeId);
+      writeStoredTerminalFontId(next.terminalFontId); writeStoredUiFontId(next.uiFontId); writeUserDisplayName(next.userDisplayName);
+      setThemeMode(next.themeMode); setAccentColor(next.accentColor); setTerminalThemeId(next.terminalThemeId);
+      setTerminalFontId(next.terminalFontId); setUiFontId(next.uiFontId);
+      setResolvedTheme(applyTheme(next.themeMode, next.accentColor)); applyUiFont(next.uiFontId);
+    },
+    applySettings(values, expected) {
+      const next = mergeAppPreferences(appSettingsRef.current, values, expected);
+      appSettingsRef.current = next; setAppSettings(next);
+    }
+  });
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
@@ -126,7 +102,6 @@ export function useAppPreferences(): AppPreferences {
     const storedUiFontId = readStoredUiFontId();
     const storedDefaultIdeId = readStoredDefaultIdeId();
     const storedForceMacTitleBarPreview = readStoredForceMacTitleBarPreview();
-    const storedUserDisplayName = readStoredUserDisplayName();
     const storedGithubToken = readStoredGithubToken();
     const storedGitlabToken = readStoredGitlabToken();
     const storedGitlabHost = readStoredGitlabHost();
@@ -143,7 +118,6 @@ export function useAppPreferences(): AppPreferences {
     setUiFontId(storedUiFontId);
     setDefaultIdeId(storedDefaultIdeId);
     setForceMacTitleBarPreview(storedForceMacTitleBarPreview);
-    setUserDisplayName(storedUserDisplayName);
     setGithubToken(storedGithubToken);
     setGitlabToken(storedGitlabToken);
     setGitlabHost(storedGitlabHost);
@@ -154,6 +128,7 @@ export function useAppPreferences(): AppPreferences {
     setVercelAccountLabel(storedVercelAccountLabel);
     setResolvedTheme(applyTheme(storedMode, storedAccentColor));
     applyUiFont(storedUiFontId);
+    setAppearanceLoaded(true);
 
     const handleSystemThemeChange = () => {
       setResolvedTheme(applyTheme(readStoredThemeMode(), readStoredAccentColor()));
@@ -166,18 +141,17 @@ export function useAppPreferences(): AppPreferences {
   }, []);
 
   useEffect(() => {
-    if (readStoredUserDisplayName().trim()) {
+    if (readUserDisplayName()) {
       return;
     }
 
     noraSystemClient.getDetectedUserIdentity().then((identity) => {
       const nextDisplayName = identity.displayName?.trim() || "";
-      if (!nextDisplayName) {
+      if (!nextDisplayName || readUserDisplayName()) {
         return;
       }
 
-      writeStoredUserDisplayName(nextDisplayName);
-      setUserDisplayName(nextDisplayName);
+      writeUserDisplayName(nextDisplayName);
     }).catch(() => undefined);
   }, []);
 
@@ -205,13 +179,13 @@ export function useAppPreferences(): AppPreferences {
   const updateThemeMode = (nextMode: ThemeMode) => {
     writeStoredThemeMode(nextMode);
     setThemeMode(nextMode);
-    setResolvedTheme(applyTheme(nextMode, accentColor));
+    setResolvedTheme(applyTheme(nextMode, readStoredAccentColor()));
   };
 
   const updateAccentColor = (nextAccentColor: AccentColor) => {
     writeStoredAccentColor(nextAccentColor);
     setAccentColor(nextAccentColor);
-    applyAccentColor(nextAccentColor, resolveThemeMode(themeMode, resolvedTheme));
+    setResolvedTheme(applyTheme(readStoredThemeMode(), nextAccentColor));
   };
 
   const updateTerminalTheme = (nextThemeId: TerminalThemeId) => {
@@ -240,10 +214,7 @@ export function useAppPreferences(): AppPreferences {
     setForceMacTitleBarPreview(enabled);
   };
 
-  const updateUserDisplayName = (nextDisplayName: string) => {
-    writeStoredUserDisplayName(nextDisplayName);
-    setUserDisplayName(nextDisplayName.trim());
-  };
+  const updateUserDisplayName = writeUserDisplayName;
 
   const updateGithubToken = (nextToken: string) => {
     writeStoredGithubToken(nextToken);
@@ -286,14 +257,15 @@ export function useAppPreferences(): AppPreferences {
   };
 
   const saveAppSettings = async (updater: (current: AppSettings) => AppSettings) => {
-    const nextSettings = normalizeAppSettings(updater(appSettingsRef.current));
+    const baseline = appSettingsRef.current;
+    const nextSettings = normalizeAppSettings(updater(baseline));
     appSettingsRef.current = nextSettings;
     setAppSettings(nextSettings);
 
     const saveVersion = ++appSettingsSaveVersionRef.current;
     const saveTask = appSettingsSaveChainRef.current
       .catch(() => undefined)
-      .then(() => noraSystemClient.saveAppSettings(nextSettings));
+      .then(() => noraSystemClient.saveAppSettings(nextSettings, baseline));
     appSettingsSaveChainRef.current = saveTask.then(() => undefined, () => undefined);
     const savedSettings = normalizeAppSettings(await saveTask);
 
@@ -371,6 +343,10 @@ export function useAppPreferences(): AppPreferences {
       ...current,
       ...nextBrowserSettings
     }));
+  };
+
+  const updateLifecycle = async (lifecycle: AppSettings["lifecycle"]) => {
+    await saveAppSettings((current) => ({ ...current, lifecycle }));
   };
 
   const updateNotificationPreferences = async (
@@ -454,7 +430,7 @@ export function useAppPreferences(): AppPreferences {
   };
 
   const updateAiSimpleTaskSettings = async (
-    settings: Pick<AppSettings["ai"], "simpleTaskProvider" | "localLlmModelId">
+    settings: AiSimpleTaskSettings
   ) => {
     await saveAppSettings((current) => ({
       ...current,
@@ -470,6 +446,15 @@ export function useAppPreferences(): AppPreferences {
       hardwareAccelerationEnabled: appSettingsRef.current.hardwareAccelerationEnabled
     });
   };
+
+  useAgentWindowSettings({
+    themeMode: updateThemeMode, accentColor: updateAccentColor, terminalThemeId: updateTerminalTheme,
+    terminalFontId: updateTerminalFont, uiFontId: updateUiFont, userDisplayName: updateUserDisplayName,
+    defaultIdeId: updateDefaultIde, forceMacTitleBarPreview: updateForceMacTitleBarPreview,
+    githubToken: updateGithubToken, gitlabToken: updateGitlabToken, gitlabHost: updateGitlabHost, vercelToken: updateVercelToken,
+    githubAccountLabel: updateGithubAccountLabel, gitlabAccountLabel: updateGitlabAccountLabel,
+    vercelAccountLabel: updateVercelAccountLabel, vercelWorkspaceLinks: updateVercelWorkspaceLinks
+  });
 
   return {
     themeMode,
@@ -516,6 +501,7 @@ export function useAppPreferences(): AppPreferences {
     updateLinuxAptSetupPromptDismissed,
     updateSplitViewPreferences,
     updateBrowserPreferences,
+    updateLifecycle,
     updateNotificationPreferences,
     updateAnalyticsConsentStatus,
     updateTerminalPresets,

@@ -1,264 +1,140 @@
-import { createLoopRunner } from "@main/loops/loopRunner";
-import type { LoopStore } from "@main/types/loopStore.types";
-import type { LoopHeadlessExecutionResult } from "@shared/types/loopHeadlessLaunch.types";
-import type { AppState, LoopDefinition, LoopRun } from "@shared/appTypes";
 import assert from "node:assert/strict";
 import test from "node:test";
+import { loopFixture, until, workflowResult, stage, definition } from "./fixture";
 
-const definition: LoopDefinition = {
-  id: "loop-1", projectId: "project-1", name: "Delivery",
-  writer: { id: "writer", kind: "writer", name: "Writer", toolId: "codex", instructions: "Implement and verify." },
-  reviewers: [], limits: { maxIterations: 2, maxDurationMs: 3_600_000, roleTimeoutMs: 60_000 },
-  createdAt: "2026-06-09T00:00:00.000Z", updatedAt: "2026-06-09T00:00:00.000Z"
-};
+const prepared = { worktreePath: "/tmp/workflow", worktreeId: "tree", sessionId: "session" };
 
-test("loop runner completes when the headless writer returns a matching completion marker", async () => {
-  const definitions = new Map([[definition.id, definition]]);
-  const runs = new Map<string, LoopRun>();
-  const requestedBranches: string[] = [];
-  const store: LoopStore = {
-    listDefinitions: async () => [...definitions.values()],
-    saveDefinition: async (value) => { definitions.set(value.id, value); },
-    deleteDefinition: async (_projectId, id) => { definitions.delete(id); },
-    listRuns: async () => [...runs.values()],
-    getRun: async (_projectId, id) => runs.get(id) ?? null,
-    saveRun: async (value) => {
-      if (value.status === "preparing" && value.outputLog.includes("Creating worktree")) {
-        await new Promise<void>((resolve) => setTimeout(resolve, 40));
-      }
-      runs.set(value.id, structuredClone(value));
-    },
-    deleteRun: async (_projectId, id) => { runs.delete(id); }
-  };
-  let id = 0;
-  const runner = createLoopRunner({
-    store,
-    nowIso: () => new Date().toISOString(),
-    randomId: () => `id-${++id}`,
-    getSnapshot: (): AppState => ({
-      screen: "workspace",
-      project: {
-        id: "project-1",
-        name: "Demo",
-        rootPath: "/tmp/project",
-        baseBranch: "main",
-        gitCommonDir: ".git",
-        versionControl: "git",
-        framework: null,
-        platform: "local",
-        createdAt: "2026-06-09T00:00:00.000Z",
-        updatedAt: "2026-06-09T00:00:00.000Z",
-        lastOpenedAt: "2026-06-09T00:00:00.000Z",
-        location: { kind: "local" }
-      },
-      projectBranches: [],
-      currentSessionId: null,
-      sessions: [],
-      worktrees: [],
-      workspaces: [],
-      recentProjects: [],
-      focusedAgentId: null,
-      focusedTerminalId: null,
-      selectedChangePath: null,
-      selectedCommitHash: null,
-      selectedCommit: null,
-      changesRoot: null,
-      changes: [],
-      commitHistory: [],
-      activeRemoteMounts: [],
-      projectScripts: [],
-      defaultWorktreePrepareCommand: null,
-      agents: [],
-      terminals: [],
-      terminalShells: [],
-      agentCatalog: [],
-      agentSkillCatalogs: [],
-      errorMessage: null
-    }),
-    prepareWorktree: async ({ onProgress, payload }) => {
-      requestedBranches.push(`${payload.worktreeBranch?.prefix}/${payload.worktreeBranch?.name}`);
-      await onProgress?.("Creating worktree loop/delivery…");
-      return {
-        sessionId: "session-1",
-        worktreeId: "worktree-1",
-        worktreePath: "/tmp/worktree"
-      };
-    },
-    resolveLoopTool: () => ({ detectedCommand: "codex", env: {} }),
-    headlessExecutor: {
-      execute: ({ command, onOutput }) => {
-        const token = command.match(/token=\\?"([^"\\]+)\\?"/)?.[1];
-        assert.ok(token, "Expected the headless command to include the workflow result token.");
-        onOutput("Running headless turn…\n");
-        return {
-          abort: () => {},
-          result: Promise.resolve({
-            output: `<nora-loop-result token="${token}" outcome="complete">done</nora-loop-result>`,
-            exitCode: 0,
-            aborted: false
-          })
-        };
-      }
-    },
-    notifyRunChanged: () => {},
-    notifyRunOutput: () => {},
-    resolveWorkspaceStatePath: async (_projectId, relativePath) => `/tmp/worktree/${relativePath}`
-  });
-
-  await store.saveRun({
-    id: "orphaned-run",
-    projectId: "project-1",
-    definitionId: definition.id,
-    definition,
-    objective: "Recover me",
-    specPath: null,
-    taskPath: null,
-    handoffPath: null,
-    limits: definition.limits,
-    status: "running",
-    stopReason: null,
-    sessionId: "session-old",
-    worktreeId: "worktree-old",
-    worktreePath: "/tmp/old-worktree",
-    outputLog: "",
-    outputEvents: [],
-    roles: [],
-    iterations: [],
-    events: [],
-    activeRoleId: null,
-    activeToken: null,
-    createdAt: definition.createdAt,
-    startedAt: definition.createdAt,
-    updatedAt: definition.updatedAt,
-    completedAt: null
-  });
-  const recovered = await runner.getRun("project-1", "orphaned-run");
-  assert.equal(recovered?.status, "paused");
-  assert.match(recovered?.stopReason ?? "", /closed/);
-
-  const started = await runner.startRun({
-    projectId: "project-1",
-    definitionId: definition.id,
-    objective: "Ship feature",
-    target: { kind: "new" },
-    worktreeBranch: { prefix: "loop", name: "Delivery" }
-  });
-  const deadline = Date.now() + 3_000;
-  let completed: LoopRun | null = null;
-  while (Date.now() < deadline) {
-    completed = await store.getRun("project-1", started.id);
-    if (completed?.status === "completed") {
-      break;
-    }
-    await new Promise<void>((resolve) => setTimeout(resolve, 20));
-  }
-  assert.equal(completed?.status, "completed");
-  assert.equal(completed?.outputEvents.some((event) => event.kind === "result"), true);
-  assert.equal(completed?.iterations[0]?.writerResult?.outcome, "complete");
-  assert.equal(requestedBranches[0], `loop/Delivery-${started.id.slice(0, 8)}`);
-  assert.match(completed?.outputLog ?? "", /Creating worktree/);
-  assert.match(completed?.outputLog ?? "", /headless/i);
-  if (!completed) {
-    assert.fail("Expected the loop run to complete.");
-  }
-  await store.saveRun({ ...completed, status: "running" });
-  await assert.rejects(
-    runner.deleteRun("project-1", started.id),
-    /Pause or cancel/
-  );
-  await store.saveRun(completed);
-  await runner.deleteRun("project-1", started.id);
-  assert.equal(await store.getRun("project-1", started.id), null);
-
-  const repeated = await runner.startRun({
-    projectId: "project-1",
-    definitionId: definition.id,
-    objective: "Ship feature again",
-    target: { kind: "new" },
-    worktreeBranch: { prefix: "loop", name: "Delivery" }
-  });
-  const repeatedDeadline = Date.now() + 3_000;
-  while (Date.now() < repeatedDeadline) {
-    const current = await store.getRun("project-1", repeated.id);
-    if (current?.status === "completed") {
-      break;
-    }
-    await new Promise<void>((resolve) => setTimeout(resolve, 20));
-  }
-  assert.equal(requestedBranches.length, 2);
-  assert.notEqual(requestedBranches[0], requestedBranches[1]);
-  runner.dispose();
+test("workflow stages execute in threads, retain output and broadcast saved definitions", async (t) => {
+  const f = loopFixture(); t.after(() => f.runner.dispose());
+  const run = await f.start();
+  await until(() => f.runs.get(run.id)?.status === "completed");
+  assert.ok(f.runs.get(run.id)?.roles[0].conversationId);
+  assert.ok(f.runs.get(run.id)?.outputEvents.some((event) => event.kind === "result"));
+  const next = await f.start();
+  await until(() => f.runs.get(next.id)?.status === "completed");
+  assert.notEqual(f.branches[0], f.branches[1]);
+  const saved = await f.runner.saveDefinition({ projectId: "project", definition: { ...f.definition, name: "Renamed" } });
+  assert.deepEqual(f.broadcasts, [saved]);
 });
 
-test("pausing aborts the active agent turn and settles the run as paused", async () => {
-  const runs = new Map<string, LoopRun>();
-  const store: LoopStore = {
-    listDefinitions: async () => [definition],
-    saveDefinition: async () => undefined,
-    deleteDefinition: async () => undefined,
-    listRuns: async () => [...runs.values()],
-    getRun: async (_projectId, id) => runs.get(id) ?? null,
-    saveRun: async (value) => { runs.set(value.id, structuredClone(value)); },
-    deleteRun: async (_projectId, id) => { runs.delete(id); }
-  };
-  let id = 0;
-  let aborted = false;
-  let resolveExecution: ((value: LoopHeadlessExecutionResult) => void) | null = null;
-  const executionResult = new Promise<LoopHeadlessExecutionResult>((resolve) => {
-    resolveExecution = resolve;
-  });
-  const runner = createLoopRunner({
-    store,
-    nowIso: () => new Date().toISOString(),
-    randomId: () => `pause-id-${++id}`,
-    getSnapshot: () => { throw new Error("Unused in loop runner test."); },
-    prepareWorktree: async () => ({
-      sessionId: "session-1",
-      worktreeId: "worktree-1",
-      worktreePath: "/tmp/worktree"
-    }),
-    resolveLoopTool: () => ({ detectedCommand: "codex", env: {} }),
-    headlessExecutor: {
-      execute: () => ({
-        abort: () => {
-          aborted = true;
-          resolveExecution?.({ output: "partial output", exitCode: null, aborted: true });
-        },
-        result: executionResult
-      })
-    },
-    notifyRunChanged: () => undefined,
-    notifyRunOutput: () => undefined,
-    resolveWorkspaceStatePath: async (_projectId, relativePath) => `/tmp/worktree/${relativePath}`
-  });
+test("polling a live setup does not report an orphaned workflow", async (t) => {
+  let release = () => {};
+  const waiting = new Promise<void>((resolve) => { release = resolve; });
+  const f = loopFixture({ prepareWorktree: async () => { await waiting; return prepared; } });
+  t.after(() => f.runner.dispose());
+  const starting = f.start();
+  await until(() => f.runs.size > 0);
+  const id = [...f.runs.keys()][0];
+  assert.equal((await f.runner.getRun("project", id))?.status, "preparing");
+  assert.equal((await f.runner.listRuns("project"))[0].status, "preparing");
+  release(); await starting;
+  await until(() => f.runs.get(id)?.status === "completed");
+});
 
-  const started = await runner.startRun({
-    projectId: "project-1",
-    definitionId: definition.id,
-    objective: "Pause this run",
-    target: { kind: "new" }
+for (const phase of ["checkout", "threads"] as const) {
+  test(`cancelling during ${phase} preparation never launches a stage`, async (t) => {
+    let release = () => {}, preparing = false, turns = 0;
+    const waiting = new Promise<void>((resolve) => { release = resolve; });
+    const f = loopFixture({
+      prepareWorktree: async () => { if (phase === "checkout") { preparing = true; await waiting; } return prepared; },
+      prepare: async (run) => { if (phase === "threads") { preparing = true; await waiting; } return run.roles; },
+      execute: async () => { turns++; throw new Error("Must never execute"); }
+    });
+    t.after(() => f.runner.dispose());
+    const starting = f.start(); await until(() => preparing);
+    const id = [...f.runs.keys()][0];
+    assert.equal((await f.runner.cancelRun("project", id)).status, "cancelled");
+    release(); await starting;
+    assert.equal(f.runs.get(id)?.status, "cancelled");
+    assert.equal(turns, 0);
+    assert.equal(f.runs.get(id)?.activeRoleId, null);
   });
-  const activeDeadline = Date.now() + 1_000;
-  while (Date.now() < activeDeadline) {
-    const current = await store.getRun("project-1", started.id);
-    if (current?.activeRoleId === "writer") break;
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
-  }
+}
 
-  const pauseRequested = await runner.pauseRun("project-1", started.id);
-  assert.equal(pauseRequested.status, "pausing");
-  const pausedDeadline = Date.now() + 1_000;
-  let paused: LoopRun | null = null;
-  while (Date.now() < pausedDeadline) {
-    paused = await store.getRun("project-1", started.id);
-    if (paused?.status === "paused") break;
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
-  }
+for (const status of ["failed", "interrupted", "timed-out"] as const) {
+  test(`a ${status} thread cannot complete a stage even with a recorded stage result`, async (t) => {
+    const f = loopFixture({ execute: async ({ prompt }) => ({ status, ...workflowResult(prompt), failure: "Runtime did not succeed" }) });
+    t.after(() => f.runner.dispose());
+    const run = await f.start(); await until(() => f.runs.get(run.id)?.status === "paused");
+    assert.equal(f.runs.get(run.id)?.iterations[0].results.length, 0);
+    assert.match(f.runs.get(run.id)?.stopReason ?? "", /Runtime did not succeed/);
+  });
+}
 
-  assert.equal(aborted, true);
-  assert.equal(paused?.status, "paused");
-  assert.equal(paused?.activeRoleId, null);
-  assert.equal(paused?.events.at(-1)?.kind, "paused");
-  assert.match(paused?.outputLog ?? "", /Writer stopped/);
-  runner.dispose();
+test("turn deadlines are bounded by the remaining total runtime", async (t) => {
+  let timeout = 0;
+  const f = loopFixture({ execute: async ({ prompt, timeoutMs }) => {
+    timeout = timeoutMs; return { status: "completed", ...workflowResult(prompt), failure: null };
+  } }); t.after(() => f.runner.dispose());
+  const run = await f.start(); await until(() => f.runs.get(run.id)?.status === "completed");
+  assert.ok(timeout > 0 && timeout <= 300_000);
+  assert.ok(timeout < f.definition.limits.roleTimeoutMs);
+});
+
+test("a result returned after the total deadline cannot complete a run", async (t) => {
+  const f = loopFixture({ nowIso: () => new Date(Date.now() - 299_950).toISOString(), execute: async ({ prompt }) => {
+    await new Promise<void>((resolve) => setTimeout(resolve, 75));
+    return { status: "completed", ...workflowResult(prompt), failure: null };
+  } }); t.after(() => f.runner.dispose());
+  const run = await f.start(); await until(() => f.runs.get(run.id)?.status === "paused");
+  assert.match(f.runs.get(run.id)?.stopReason ?? "", /duration limit/);
+});
+
+test("pausing an intermediate thread resumes there without repeating accepted stages", async (t) => {
+  let calls = 0, aborted = false;
+  const f = loopFixture({ definition: definition([stage("implement"), stage("qa"), stage("review", "reviewer")]),
+    execute: async ({ prompt, signal }) => {
+      calls++;
+      if (calls === 2) {
+        await new Promise<void>((resolve) => { signal.addEventListener("abort", () => { aborted = true; resolve(); }, { once: true }); if (signal.aborted) resolve(); });
+        return { status: "interrupted", output: "", failure: null };
+      }
+      return { status: "completed", ...workflowResult(prompt, calls === 4 ? "approve" : "complete"), failure: null };
+    } }); t.after(() => f.runner.dispose());
+  const run = await f.start(); await until(() => calls === 2);
+  await f.runner.pauseRun("project", run.id); await until(() => f.runs.get(run.id)?.status === "paused");
+  assert.ok(aborted);
+  await f.runner.resumeRun("project", run.id); await until(() => f.runs.get(run.id)?.status === "completed");
+  assert.equal(calls, 4);
+  assert.equal(f.runs.get(run.id)?.iterations.length, 1);
+  assert.equal((await f.runner.cancelRun("project", run.id)).status, "completed");
+});
+
+test("deleting a live run is refused and deleting a stopped run succeeds", async (t) => {
+  const f = loopFixture(); t.after(() => f.runner.dispose());
+  const run = await f.start(); await until(() => f.runs.get(run.id)?.status === "completed");
+  await f.store.saveRun({ ...f.runs.get(run.id)!, status: "running" });
+  await assert.rejects(f.runner.deleteRun("project", run.id), /Pause or cancel/);
+  await f.store.saveRun({ ...f.runs.get(run.id)!, status: "paused" });
+  await f.runner.deleteRun("project", run.id);
+  assert.equal(f.runs.get(run.id), undefined);
+});
+
+test("stage reports are scoped to the active thread and attempt and cannot advance before native completion", async (t) => {
+  let finish = () => {};
+  let entered = false;
+  const pending = new Promise<void>((resolve) => { finish = resolve; });
+  const f = loopFixture({ execute: async () => { entered = true; await pending; return { status: "completed", output: "Done", failure: null }; } });
+  t.after(() => f.runner.dispose());
+  const run = await f.start(); await until(() => entered);
+  const live = f.runs.get(run.id); assert.ok(live?.activeToken && live.activeRoleId && live.roles[0].conversationId);
+  const report = { projectId: live.projectId, runId: live.id, roleId: live.activeRoleId, conversationId: live.roles[0].conversationId,
+    attemptId: live.activeToken, outcome: "complete" as const, summary: "Verified" };
+  await assert.rejects(f.runner.reportStage({ ...report, attemptId: "stale" }), /no longer active/);
+  await assert.rejects(f.runner.reportStage({ ...report, conversationId: "other-thread" }), /another workflow thread/);
+  await assert.rejects(f.runner.reportStage({ ...report, outcome: "approve" }), /invalid outcome/);
+  await f.runner.reportStage(report);
+  await f.runner.reportStage(report);
+  await assert.rejects(f.runner.reportStage({ ...report, summary: "Different result" }), /already reported/);
+  assert.equal(f.runs.get(run.id)?.status, "running");
+  assert.equal(f.runs.get(run.id)?.iterations[0].results.length, 0);
+  finish(); await until(() => f.runs.get(run.id)?.status === "completed");
+  await assert.rejects(f.runner.reportStage(report), /no longer active/);
+});
+
+test("text result tags cannot finish a stage without its MCP report", async (t) => {
+  const f = loopFixture({ execute: async () => ({ status: "completed", output: '<nora-loop-result outcome="complete">done</nora-loop-result>', failure: null }) });
+  t.after(() => f.runner.dispose()); const run = await f.start();
+  await until(() => f.runs.get(run.id)?.status === "paused");
+  assert.match(f.runs.get(run.id)?.stopReason ?? "", /report_workflow_stage/);
 });

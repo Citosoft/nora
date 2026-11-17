@@ -1,5 +1,7 @@
 import * as ContextMenuPrimitive from "@radix-ui/react-context-menu";
 import type { ReactNode } from "react";
+import { menuItemClass, menuItemDestructiveClass, menuLabelClass, menuSeparatorClass, menuSurfaceClass } from "@/components/ui/menu-styles";
+import type { MenuLabelProps } from "@/components/ui/types/primitives.types";
 import { cn } from "@/lib/utils";
 
 export type ContextMenuProps = {
@@ -35,7 +37,8 @@ export function ContextMenuContent({
     <ContextMenuPrimitive.Portal>
       <ContextMenuPrimitive.Content
         className={cn(
-          "z-[10020] min-w-52 overflow-hidden rounded-[7px] border border-border/70 bg-popover/95 p-1 text-popover-foreground shadow-xl backdrop-blur",
+          "z-[10020] min-w-52 overflow-hidden",
+          menuSurfaceClass,
           className
         )}
       >
@@ -65,14 +68,20 @@ export function ContextMenuItem({
       disabled={disabled}
       onSelect={onSelect}
       className={cn(
-        "relative flex w-full select-none items-center gap-2 rounded-[6px] px-3 py-2 text-left text-[12px] outline-none transition",
-        "data-[highlighted]:bg-accent/60 data-[highlighted]:text-popover-foreground",
-        "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-        destructive ? "text-destructive data-[highlighted]:text-destructive" : "text-popover-foreground",
+        menuItemClass,
+        destructive && menuItemDestructiveClass,
         className
       )}
     >
       {children}
     </ContextMenuPrimitive.Item>
   );
+}
+
+export function ContextMenuLabel({ children }: MenuLabelProps) {
+  return <ContextMenuPrimitive.Label className={menuLabelClass}>{children}</ContextMenuPrimitive.Label>;
+}
+
+export function ContextMenuSeparator() {
+  return <ContextMenuPrimitive.Separator className={menuSeparatorClass} />;
 }

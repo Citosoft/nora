@@ -10,6 +10,7 @@ type ToolingServiceDeps = {
   saveToolConfig: ToolingService["saveToolConfig"];
   getToolUsage: ToolingService["getToolUsage"];
   switchToolAccount: ToolingService["switchToolAccount"];
+  checkProviderUpdates: ToolingService["checkProviderUpdates"];
 };
 
 export function createToolingService(deps: ToolingServiceDeps): ToolingService {
@@ -22,6 +23,7 @@ export function createToolingService(deps: ToolingServiceDeps): ToolingService {
     removeToolSkill: deps.removeToolSkill,
     saveToolConfig: deps.saveToolConfig,
     getToolUsage: deps.getToolUsage,
-    switchToolAccount: deps.switchToolAccount
+    switchToolAccount: deps.switchToolAccount,
+    checkProviderUpdates: deps.checkProviderUpdates
   };
 }

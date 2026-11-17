@@ -1,5 +1,4 @@
 import { Field } from "@/components/app/shared/Field";
-import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import type { GenerateTasksDialogProps } from "@/components/app/types/component.types";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,40 +11,37 @@ import {
 } from "@/components/ui/dialog";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { isAgentToolAvailable } from "@shared/agentToolState";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 export function GenerateTasksDialog({
   open,
   workspaces,
-  tools,
   defaultWorkspaceId,
-  defaultToolId,
   defaultSpecPath = null,
   onOpenChange,
   onSubmit
 }: GenerateTasksDialogProps) {
-  const detectedTools = useMemo(() => tools.filter((tool) => isAgentToolAvailable(tool)), [tools]);
   const [projectId, setProjectId] = useState("");
-  const [toolId, setToolId] = useState("");
   const [brief, setBrief] = useState("");
   const [selectedSpecPath, setSelectedSpecPath] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const initialProjectId = defaultWorkspaceId || workspaces[0]?.projectId || "";
 
   useEffect(() => {
     if (!open) {
       return;
     }
 
-    setProjectId(defaultWorkspaceId || workspaces[0]?.projectId || "");
-    setToolId(defaultToolId || detectedTools[0]?.id || "");
+    setProjectId(initialProjectId);
     setBrief("");
     setSelectedSpecPath(defaultSpecPath || "");
     setIsSubmitting(false);
-  }, [defaultSpecPath, open, defaultToolId, defaultWorkspaceId, detectedTools, workspaces]);
+    setError(null);
+  }, [defaultSpecPath, open, initialProjectId]);
 
   const selectedWorkspace = workspaces.find((workspace) => workspace.projectId === projectId) || null;
-  const canSubmit = !!projectId && !!toolId && (!!brief.trim() || !!selectedSpecPath) && !isSubmitting;
+  const canSubmit = !!selectedWorkspace && (!!brief.trim() || !!selectedSpecPath) && !isSubmitting;
 
   useEffect(() => {
     if (!selectedWorkspace) {
@@ -62,16 +58,31 @@ export function GenerateTasksDialog({
   }, [selectedSpecPath, selectedWorkspace]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent onClose={() => onOpenChange(false)} headerTitle="Generate tasks">
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!isSubmitting) onOpenChange(next);
+      }}
+    >
+      <DialogContent
+        onClose={() => {
+          if (!isSubmitting) onOpenChange(false);
+        }}
+        headerTitle="Generate tasks"
+      >
         <DialogHeader>
           <DialogDescription>
-            Launch an agent to plan the work, then write task files into `.nora/tasks/` for the selected project.
+            Start a planning thread from a brief or spec. Review the plan and follow its progress in your workspace.
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="space-y-4">
           <Field label="Project">
-            <Select value={projectId} onChange={(event) => setProjectId(event.target.value)}>
+            <Select
+              aria-label="Project"
+              disabled={isSubmitting}
+              value={projectId}
+              onChange={(event) => setProjectId(event.target.value)}
+            >
               {workspaces.map((workspace) => (
                 <option key={workspace.projectId} value={workspace.projectId}>
                   {workspace.projectName}
@@ -79,30 +90,13 @@ export function GenerateTasksDialog({
               ))}
             </Select>
           </Field>
-          <Field label="Agent CLI">
-            <Select value={toolId} onChange={(event) => setToolId(event.target.value)} disabled={!detectedTools.length}>
-              {detectedTools.map((tool) => (
-                <option key={tool.id} value={tool.id}>
-                  <span className="flex min-w-0 items-center gap-2">
-                    <AgentToolIcon
-                      toolId={tool.id}
-                      label={tool.label}
-                      className="size-5 shrink-0 rounded-sm"
-                      imageClassName="size-4 rounded-sm"
-                    />
-                    <span className="min-w-0 truncate">{tool.label}</span>
-                  </span>
-                </option>
-              ))}
-            </Select>
-          </Field>
-          {selectedWorkspace ? (
-            <div className="rounded-[4px] border border-border/70 bg-background/30 px-4 py-3 text-sm text-muted-foreground">
-              Task files will be created in `{selectedWorkspace.projectRootPath}/.nora/tasks/`.
-            </div>
-          ) : null}
           <Field label="Spec">
-            <Select value={selectedSpecPath} onChange={(event) => setSelectedSpecPath(event.target.value)}>
+            <Select
+              aria-label="Spec"
+              disabled={isSubmitting}
+              value={selectedSpecPath}
+              onChange={(event) => setSelectedSpecPath(event.target.value)}
+            >
               <option value="">No spec</option>
               {(selectedWorkspace?.specs ?? []).map((spec) => (
                 <option key={spec.path} value={spec.path}>
@@ -113,12 +107,23 @@ export function GenerateTasksDialog({
           </Field>
           <Field label="Planning brief">
             <Textarea
+              aria-label="Planning brief"
+              disabled={isSubmitting}
               value={brief}
               onChange={(event) => setBrief(event.target.value)}
-              placeholder={selectedSpecPath ? "Optional extra instructions for the selected spec." : "Describe what needs to be broken down into actionable tasks."}
+              placeholder={
+                selectedSpecPath
+                  ? "Optional extra instructions for the selected spec."
+                  : "Describe what needs to be broken down into actionable tasks."
+              }
               className="min-h-32"
             />
           </Field>
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
         </DialogBody>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
@@ -130,18 +135,22 @@ export function GenerateTasksDialog({
                 return;
               }
               setIsSubmitting(true);
+              setError(null);
               void onSubmit({
                 projectId,
-                toolId,
                 brief: brief.trim() || null,
                 specPath: selectedSpecPath || null
-              }).finally(() => {
-                setIsSubmitting(false);
-              });
+              })
+                .catch((cause: unknown) => {
+                  setError(cause instanceof Error ? cause.message : "Unable to start the planning thread.");
+                })
+                .finally(() => {
+                  setIsSubmitting(false);
+                });
             }}
             disabled={!canSubmit}
           >
-            Generate tasks
+            {isSubmitting ? "Starting thread…" : "Start planning thread"}
           </Button>
         </DialogFooter>
       </DialogContent>

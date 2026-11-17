@@ -1,12 +1,14 @@
 import type {
   AgentContextSourceSummary,
   AgentContextState,
+  AgentContextSelection,
   AgentContextPreview,
   AgentPromptDispatchResult,
   AgentPromptSubmission,
   AppState,
   CreateAgentPayload,
   CreateTerminalPayload,
+  CreateWorktreePayload,
   LocalTerminalState
 } from "../../appTypes";
 
@@ -21,6 +23,7 @@ export interface SessionBridge {
   getAgentTerminalBuffer: (agentId: string) => Promise<string>;
   getAgentContextPreview: (agentId: string) => Promise<AgentContextPreview>;
   getAgentContextState: (agentId: string) => Promise<AgentContextState>;
+  prepareAgentContextHandoff: (selections: AgentContextSelection[]) => Promise<string>;
   listWorkspaceAgentContextSources: (
     projectId: string,
     excludeAgentId?: string
@@ -28,6 +31,7 @@ export interface SessionBridge {
   clearAgentContext: (agentId: string) => Promise<AgentContextPreview>;
   clearAgentTerminal: (agentId: string) => Promise<AppState>;
   resizeAgentTerminal: (agentId: string, cols: number, rows: number) => Promise<void>;
+  createWorktree: (payload: CreateWorktreePayload) => Promise<AppState>;
   createTerminal: (payload: CreateTerminalPayload) => Promise<AppState>;
   renameTerminal: (sessionId: string, name: string) => Promise<AppState>;
   focusTerminal: (sessionId: string) => Promise<AppState>;

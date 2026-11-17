@@ -1,0 +1,11 @@
+import type { ExecuteConversationRequest, ReadConversationRequest, UnwatchConversationRequest, WatchConversationRequest } from "@shared/ipc/types/conversationGateway.types";
+
+import type { McpRequest } from "@shared/types/provider/mcp.types";
+import type { McpAppRequest } from "@shared/types/provider/mcpApp.types";
+import type { ProviderAccountRequest } from "@shared/types/provider/account.types";
+import type { SkillsRequest } from "@shared/types/provider/skills.types";
+
+export interface ConversationTransport {
+  invoke(channel: string, payload: McpRequest | McpAppRequest | ProviderAccountRequest | SkillsRequest | ExecuteConversationRequest | ReadConversationRequest | WatchConversationRequest | UnwatchConversationRequest): Promise<unknown>;
+  onCursor(listener: (payload: unknown) => void): () => void;
+}

@@ -130,7 +130,7 @@ export function IntegrationsSettingsSection() {
                   <div className="text-sm leading-6 text-muted-foreground">
                     Open your GitLab user settings and create a personal access token, then paste it into this field.
                   </div>
-                  <div className="rounded-[6px] border border-border/60 bg-background/60 px-3 py-2 text-xs text-muted-foreground">
+                  <div className="rounded-lg border border-border/60 bg-background px-3 py-2 text-xs text-muted-foreground">
                     Suggested scope: `api` (for merge requests, issues, comments, and workflow metadata).
                   </div>
                   <Button
@@ -192,7 +192,7 @@ export function IntegrationsSettingsSection() {
                   <div className="text-sm leading-6 text-muted-foreground">
                     Open your Vercel account settings, create a personal access token, then paste it into this field.
                   </div>
-                  <div className="rounded-[6px] border border-border/60 bg-background/60 px-3 py-2 text-xs text-muted-foreground">
+                  <div className="rounded-lg border border-border/60 bg-background px-3 py-2 text-xs text-muted-foreground">
                     Suggested path: Vercel dashboard → Settings → Tokens
                   </div>
                   <Button

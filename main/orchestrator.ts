@@ -1,3 +1,4 @@
+import { createWorkspaceWorktree } from "./orchestrator/createWorkspaceWorktree";
 import type {
   AgentContextPreview,
   AgentSession,
@@ -53,7 +54,7 @@ import { slugify } from "./orchestrator/slug";
 import { detectLocalUrlFromOutput, didReturnToShellPrompt } from "./orchestrator/terminalOutputDetect";
 import { delay, futureIso, nowIso } from "./orchestrator/time";
 import { createPersistenceHelpers } from "./orchestrator/persistence";
-import { reconcileWorkspaceAgentsAfterCatalogRefresh } from "./orchestrator/agentCatalogReconciliation";
+import { archiveLegacySessions } from "./helpers/archiveLegacySessions";
 import { createProjectOpenHelpers } from "./orchestrator/projectOpen";
 import { createRuntimeHelpers } from "./orchestrator/runtime";
 import { resolveAgentSessionTitle, resolveAgentSessionTitles } from "./orchestrator/agentSessionTitles";
@@ -72,11 +73,11 @@ import {
 } from "./orchestrator/shell";
 import {
   commitChangesWithValidation,
-  getActiveChangesRoot,
   pullChangesWithValidation,
   pushChangesWithValidation,
   stopAllAgents as stopAllAgentsAction
 } from "./orchestrator/sessionActions";
+import { getActiveChangesRoot } from "./orchestrator/changesCheckout";
 import { createWorkspaceActions } from "./orchestrator/workspaceActions";
 import {
   createCachedAgentTerminalActionsDependencies,
@@ -94,8 +95,10 @@ import { OrchestratorLifecycleService } from "./orchestrator/orchestratorLifecyc
 import {
   getProjectTarget as getProjectTargetForSummary,
   getWorktreeTarget as getWorktreeTargetForSummary,
+  resolveProjectCheckoutTarget,
   resolveWorkspaceFileTarget as resolveWorkspaceFileTargetFromState
 } from "./orchestrator/workspacePathResolution";
+import { readGitBranchChanges, readGitBranchDiff } from "./orchestrator/gitBranchChanges";
 import {
   resolveTerminalShellFromList
 } from "./orchestrator/runtimeFacade";
@@ -126,6 +129,9 @@ import { OrchestratorWorkspaceReadSurface } from "./orchestrator/workspaceReadSu
 import { createTerminalStateHelpers } from "./orchestrator/terminalState";
 import { TerminalMutationFacade } from "./orchestrator/terminalMutationFacade";
 import { createToolingHelpers } from "./orchestrator/tooling";
+import { createProviderUpdateChecker } from "./provider-updates/checkProviderUpdates";
+import { readCliVersion } from "./provider-updates/cliVersion";
+import { createNpmLatestVersionReader } from "./provider-updates/npmRegistry";
 import { getClaudeUsageStatus } from "./agent-usage/claudeUsageStatus";
 import { getCursorUsageStatus } from "./agent-usage/cursorUsageStatus";
 import { createToolStatusHelpers } from "./orchestrator/toolStatus";
@@ -168,7 +174,6 @@ import {
   listWorkspaceSpecs,
   listWorkspaceTaskPaths,
   listWorkspaceTasks,
-  listImportedContextBundles,
   listWorkspaceFilePaths,
   moveWorkspaceFile,
   performForgeWorkItemActionForRepo,
@@ -286,7 +291,7 @@ export class Orchestrator implements OrchestratorFacade {
         this.stateGateway.updateState(updater);
       },
       refreshProjectState: () => this.refreshProjectState(),
-      openProject: (projectTarget, openOptions) => this.openProject(projectTarget, openOptions),
+      openProject: (projectTarget) => this.openProject(projectTarget),
       getProjectTarget: (project) => this.getProjectTarget(project),
       loadIndexedProjects: () => this.projectIndexStore.load(),
       resolveRemotePayload
@@ -513,20 +518,14 @@ export class Orchestrator implements OrchestratorFacade {
       },
       loadStatesForProject: (projectId) => this.sessionIndexStore.loadStatesForProject(projectId),
       createInitialSessionState: (project) => this.worktreeHelpers.createInitialSessionState(project),
-      getRestorableAgents: (agents) => this.persistenceHelpers.getRestorableAgents(agents),
+      archiveLegacySessions,
       getRestorableTerminals: (terminals) => this.persistenceHelpers.getRestorableTerminals(terminals),
       getLiveTerminalSnapshots: () => this.sessionRuntime.getLiveTerminalSnapshots(),
       getProjectTarget: (project) => this.getProjectTarget(project),
       updateState: (updater) => {
         this.stateGateway.updateState(updater);
       },
-      updateAgent: (agentId, partial) => this.terminalMutationFacade.updateAgent(agentId, partial),
-      buildResumeCommand,
-      normalizeAgentLaunchCommand,
-      resetAgentTranscript: (agent) => this.terminalMutationFacade.resetAgentTranscript(agent),
       getWorktreeTarget: (project, worktree) => this.getWorktreeTarget(project, worktree),
-      getToolEnv: (toolId) => this.toolingRuntimeService.getToolEnv(toolId),
-      spawnAgentPty: (agentId, command, target, toolEnv) => this.runtimeHelpers.spawnAgentPty(agentId, command, target, toolEnv),
       hasRuntimeSession: (sessionId) => this.sessionRuntime.hasRuntimeSession(sessionId),
       resetTerminalTranscript: (terminal) => this.terminalMutationFacade.resetTerminalTranscript(terminal),
       resolveTerminalShell: (shellId) =>
@@ -622,19 +621,12 @@ export class Orchestrator implements OrchestratorFacade {
       },
       getCliToolStatus: (tool) => this.toolStatusHelpers.getCliToolStatus(tool) as Promise<ToolUsageInfo>,
       searchAgentSkills: (toolId, query) => searchAgentSkills(toolId, query),
-      reconcileWorkspaceAgentsAfterCatalogRefresh: () =>
-        reconcileWorkspaceAgentsAfterCatalogRefresh({
-          nowIso,
-          getSnapshot: () => this.getSnapshot(),
-          updateAgent: (agentId, partial) => this.terminalMutationFacade.updateAgent(agentId, partial),
-          hasRuntimeSession: (sessionId) => this.sessionRuntime.hasRuntimeSession(sessionId),
-          buildResumeCommand,
-          normalizeAgentLaunchCommand,
-          resetAgentTranscript: (agent) => this.terminalMutationFacade.resetAgentTranscript(agent),
-          getWorktreeTarget: (project, worktree) => this.getWorktreeTarget(project, worktree),
-          getToolEnv: (toolId) => this.toolingRuntimeService.getToolEnv(toolId),
-          spawnAgentPty: (agentId, command, target, toolEnv) => this.runtimeHelpers.spawnAgentPty(agentId, command, target, toolEnv)
-        })
+      checkProviderUpdates: createProviderUpdateChecker({
+        definitions: AGENT_DEFINITIONS,
+        readInstalledVersion: readCliVersion,
+        fetchLatestVersion: createNpmLatestVersionReader()
+      })
+
     });
     this.toolingMainService = new ToolingMainService(this.toolingHelpers);
     this.forgeHelpers = createForgeHelpers({
@@ -668,7 +660,10 @@ export class Orchestrator implements OrchestratorFacade {
         }
       },
       pushWorkspaceChanges,
-      readCurrentBranch
+      readCurrentBranch,
+      resolveProjectCheckout: (project, checkoutPath) => resolveProjectCheckoutTarget(project, checkoutPath, execGit),
+      readBranchChanges: (target) => readGitBranchChanges(target, execGit),
+      readBranchDiff: (target) => readGitBranchDiff(target, execGit)
     });
     this.forgeMainService = new ForgeMainService(this.forgeHelpers);
     this.localTerminalHelpers = createLocalTerminalHelpers({
@@ -713,8 +708,7 @@ export class Orchestrator implements OrchestratorFacade {
         const buildLaunchCommand = (command: string): string =>
           buildAgentLaunchCommand(tool.id, command, {
             initialPrompt: payload.initialPrompt,
-            initialPromptDelivery: payload.initialPromptDelivery,
-            startupTrustMode: payload.startupTrustMode
+            initialPromptDelivery: payload.initialPromptDelivery
           });
         const commandOverride = payload.commandOverride.trim();
         if (commandOverride) {
@@ -879,6 +873,17 @@ export class Orchestrator implements OrchestratorFacade {
       pushChanges: () => pushChangesWithValidation(this.createSessionActionsDependencies())
     });
     this.sessionMainService = new SessionMainService({
+      createWorktree: (payload) => createWorkspaceWorktree(payload, {
+        worktrees: this.worktreeHelpers,
+        getSnapshot: () => this.getSnapshot(),
+        validateBranch: async (project, branch) => {
+          try { await execGit(this.getProjectTarget(project), ["check-ref-format", "--branch", branch]); }
+          catch { throw new Error("Enter a valid new Git branch name, such as feature/my-worktree."); }
+        },
+        updateState: (update) => { this.stateGateway.updateState(update); },
+        persistWorkspaceState: (state) => this.persistenceHelpers.persistWorkspaceState(state),
+        refreshProjectState: () => this.refreshProjectState()
+      }),
       sessionCreation: this.sessionCreationHelpers,
       localTerminal: this.localTerminalHelpers,
       sessionLifecycle: this.sessionLifecycleHelpers,
@@ -1004,13 +1009,8 @@ export class Orchestrator implements OrchestratorFacade {
     return this.workspaceNavigationHelpers.resolveProjectSummaryById(projectId);
   }
 
-  private async openProject(
-    projectTarget: WorkspaceTarget,
-    options: {
-      focusedAgentMode: "first-agent" | "none";
-    }
-  ): Promise<AppState> {
-    return this.projectOpenHelpers.openProject(projectTarget, options);
+  private async openProject(projectTarget: WorkspaceTarget): Promise<AppState> {
+    return this.projectOpenHelpers.openProject(projectTarget);
   }
 
   async closeProject(): Promise<AppState> {
@@ -1189,7 +1189,6 @@ export class Orchestrator implements OrchestratorFacade {
       readWorkspaceBinaryFile,
       getWorkspaceImageMimeType,
       listWorkspaceFilePaths,
-      listImportedContextBundles,
       listWorkspaceDirectories,
       listWorkspaceSpecs,
       listWorkspaceNotes,
@@ -1204,8 +1203,6 @@ export class Orchestrator implements OrchestratorFacade {
       listWorkspaceTaskPaths,
       readWorkspaceSplitViewCollection,
       writeWorkspaceSplitViewCollection,
-      listArchivedExternalHarnessThreadKeys: (projectId: string) =>
-        new ExternalHarnessThreadArchiveStore(getExternalHarnessThreadArchiveFile(projectId)).listKeys(),
       archiveExternalHarnessThread: (projectId, ref, archivedAt) =>
         new ExternalHarnessThreadArchiveStore(getExternalHarnessThreadArchiveFile(projectId)).archive(ref, archivedAt),
       saveProject: async (project: ProjectSummary) => {
@@ -1332,25 +1329,6 @@ export class Orchestrator implements OrchestratorFacade {
     );
   }
 
-  resolveLoopToolLaunch(toolId: string): { detectedCommand: string; env: Record<string, string> } {
-    const tool = this.getSnapshot().agentCatalog.find((entry) => entry.id === toolId);
-    if (!tool) {
-      throw new Error(`Unknown agent tool: ${toolId}`);
-    }
-    if (!tool.enabled) {
-      throw new Error(`${tool.label} is disabled in settings.`);
-    }
-    const detectedCommand = tool.detectedCommand?.trim() || tool.detectedPath?.trim();
-    if (!detectedCommand) {
-      throw new Error(`${tool.label} is not installed yet.`);
-    }
-    const command = /\s/.test(detectedCommand) && !detectedCommand.startsWith("\"")
-      ? `"${detectedCommand}"`
-      : detectedCommand;
-    return {
-      detectedCommand: normalizeAgentLaunchCommand(tool.id, command),
-      env: this.toolingRuntimeService.getToolEnv(tool.id)
-    };
-  }
+
 
 }

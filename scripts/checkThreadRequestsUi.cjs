@@ -1,0 +1,22 @@
+const { app } = require('electron');
+const assert = require('node:assert/strict');
+const { createFixtureHost } = require('./ui/fixtureHost.cjs');
+let host;
+(async () => {
+  host = await createFixtureHost('tests/ui/ThreadRequestsHarness.tsx');
+  const { wait, evaluate, click, window } = host;
+  const icon = 'svg[aria-label="PR / MR #42 \u00b7 Open"]';
+  await wait(`!!document.querySelector(${JSON.stringify(icon)})`);
+  assert.equal(await evaluate(`document.querySelector(${JSON.stringify(icon)}).getBoundingClientRect().left>document.querySelector('[aria-label="PR threads"] button span').getBoundingClientRect().left`), true);
+  await click('#running');
+  await wait(`!!document.querySelector('svg[aria-label="Working"]')`);
+  assert.equal(await evaluate(`!!document.querySelector(${JSON.stringify(icon)})`), true, 'PR remains beside activity');
+  assert.ok(await evaluate(`document.querySelector('[aria-label="PR threads"] button').getBoundingClientRect().height<=40`));
+  const point = await evaluate(`(()=>{const r=document.querySelector(${JSON.stringify(icon)}).getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()`);
+  window.webContents.sendInputEvent({ type: 'mouseMove', ...point });
+  await wait(`!![...document.querySelectorAll('.pointer-events-none.fixed')].find(e=>e.textContent.includes('PR / MR #42 \u00b7 Open'))`);
+  await click('#unlink');
+  await wait(`!document.querySelector(${JSON.stringify(icon)})`);
+  assert.equal(await evaluate(`!!document.querySelector('svg[aria-label="Working"]')`), true);
+  console.log('PASS: linked PR icon, number/state tooltip, activity coexistence, compact row and refresh clearing.');
+})().then(async () => { await host?.close(); app.exit(0); }).catch(async error => { console.error(error); await host?.close(); app.exit(1); });

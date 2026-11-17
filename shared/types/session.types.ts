@@ -292,7 +292,6 @@ export interface CreateAgentPayload {
   contextSelections?: import("./agentContext.types").AgentContextSelection[];
   launchSource?: import("./agentContext.types").AgentPromptSource;
   initialPromptDelivery?: import("../agentStartupCapabilities").AgentInitialPromptDelivery;
-  startupTrustMode?: import("../agentStartupCapabilities").AgentStartupTrustMode;
   resumeSessionId?: string | null;
   resumeCommand?: string | null;
   branchCheckout?: {

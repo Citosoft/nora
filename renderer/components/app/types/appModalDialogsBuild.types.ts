@@ -1,3 +1,4 @@
+import type { CreateTaskDialogProps } from "@/components/app/types/taskCreation.types";
 import type { AppUiCommands } from "@/components/app/hooks/useAppUiCommands";
 import type { AppView, UiState, WindowUiState, WorkspaceTasksState } from "@/components/app/types";
 import type {
@@ -20,6 +21,7 @@ import type { Dispatch, SetStateAction } from "react";
 export type AppModalDialogsLinuxAptSetupStatus = Extract<LinuxAptSetupStatus, { kind: "missing" }> | null;
 
 export type AppModalDialogsBuildDeps = {
+  createTaskDialog: CreateTaskDialogProps | null;
   uiState: UiState;
   snapshot: AppState;
   workspaceTasks: WorkspaceTasksState;

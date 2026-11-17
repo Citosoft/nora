@@ -1,3 +1,4 @@
+import { IssueDetailPanel } from "@/components/app/panels/forge-issues/IssueDetailPanel";
 import { splitForgeComments } from "@/components/app/logic/forgePanelDiff";
 import {
   formatForgeReviewLineLabel,
@@ -14,8 +15,11 @@ import { ForgeProviderIcon } from "@/components/app/views/ForgeProviderIcon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SidebarIconAction } from "@/components/app/panels/changes-panel/SidebarIconAction";
+import { SidebarTabBar } from "@/components/app/panels/changes-panel/SidebarTabBar";
+import type { SidebarTabItem } from "@/components/app/types/changesPanelSections.types";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { isAgentToolAvailable } from "@shared/agentToolState";
 import type {
   AgentCatalogEntry,
@@ -24,8 +28,8 @@ import type {
   ForgeWorkItemKind,
   ForgeWorkItemSummary
 } from "@shared/appTypes";
-import { Activity, ArrowLeft, CalendarClock, ExternalLink, FileDiff, GitBranch, GitMerge, GitPullRequest, ListTree, MessageSquare, RefreshCcw, Tags, User } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Activity, ArrowLeft, CircleDot, CalendarClock, ExternalLink, FileDiff, GitBranch, GitMerge, GitPullRequest, ListTree, MessageSquare, RefreshCcw, Tags, User } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 type ForgeListTab = "pull_requests" | "issues" | "actions";
 type ForgeProviderTab = "github" | "gitlab";
@@ -126,6 +130,15 @@ function formatForgeUpdatedAt(value: string): string {
   return date.toLocaleString();
 }
 
+function ForgeEmptyState({ children }: { children: ReactNode }) {
+  return <p className="px-2 py-6 text-center text-xs text-muted-foreground">{children}</p>;
+}
+
+function formatForgeShortDate(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+}
+
 function ForgeWorkItemList({
   items,
   kind,
@@ -140,11 +153,7 @@ function ForgeWorkItemList({
   onOpenUrl?: (url: string) => void;
 }) {
   if (!items.length) {
-    return (
-      <div className="rounded-[6px] border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">
-        {emptyLabel}
-      </div>
-    );
+    return <ForgeEmptyState>{emptyLabel}</ForgeEmptyState>;
   }
 
   const monthFormatter = new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" });
@@ -162,36 +171,46 @@ function ForgeWorkItemList({
     groups.push({ monthKey, monthLabel, items: [item] });
     return groups;
   }, []);
+  const ItemIcon = kind === "issue" ? CircleDot : GitPullRequest;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {groupedItems.map((group) => (
-        <section key={group.monthKey} className="space-y-2">
-          <div className="px-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            {group.monthLabel}
-          </div>
-          {group.items.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => {
-                if (kind && onOpenItem) {
-                  onOpenItem(kind, item);
-                  return;
-                }
-                if (onOpenUrl) {
-                  onOpenUrl(item.webUrl);
-                }
-              }}
-              className="w-full rounded-[6px] border border-border/50 bg-background/50 px-3 py-2 text-left transition hover:border-primary/40 hover:bg-accent/30"
-            >
-              <div className="whitespace-normal break-words text-sm font-medium text-foreground">#{item.number} {item.title}</div>
-              <ForgeBranchSummary item={item} />
-              <div className="mt-1 text-xs text-muted-foreground">
-                {[item.sourceRepository, item.author || "Unknown", item.state, new Date(item.updatedAt).toLocaleString()].filter(Boolean).join(" · ")}
-              </div>
-            </button>
-          ))}
+        <section key={group.monthKey} aria-label={group.monthLabel}>
+          <h4 className="px-2 pb-1 text-[11px] font-medium text-muted-foreground">{group.monthLabel}</h4>
+          {group.items.map((item) => {
+            const branches = item.sourceBranch || item.targetBranch ? `${item.sourceBranch || "?"} → ${item.targetBranch || "?"}` : null;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  if (kind && onOpenItem) {
+                    onOpenItem(kind, item);
+                    return;
+                  }
+                  onOpenUrl?.(item.webUrl);
+                }}
+                title={[`#${item.number} ${item.title}`, branches, `${item.author || "Unknown"} · ${item.state} · ${formatForgeUpdatedAt(item.updatedAt)}`].filter(Boolean).join("\n")}
+                className="flex w-full min-w-0 items-start gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg bg-muted/70 text-muted-foreground">
+                  <ItemIcon className="size-3.5" aria-hidden="true" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="line-clamp-2 text-[12.5px] leading-snug">
+                    <span className="text-muted-foreground">#{item.number}</span> {item.title}
+                  </span>
+                  <span className="block truncate text-[11px] text-muted-foreground">
+                    {[branches ?? item.sourceRepository, item.author || "Unknown", formatForgeShortDate(item.updatedAt)].filter(Boolean).join(" · ")}
+                  </span>
+                </span>
+                {item.state.toLowerCase() !== "open" && item.state.toLowerCase() !== "opened" ? (
+                  <Badge variant={getForgeStateBadgeVariant(item.state)} className="mt-0.5 shrink-0 capitalize">{item.draft ? "draft" : item.state}</Badge>
+                ) : item.draft ? <Badge variant="warning" className="mt-0.5 shrink-0">draft</Badge> : null}
+              </button>
+            );
+          })}
         </section>
       ))}
     </div>
@@ -208,37 +227,34 @@ function ForgeWorkflowRunList({
   onOpenRun: (run: ForgeWorkflowRunSummary) => void;
 }) {
   if (!runs.length) {
-    return (
-      <div className="rounded-[6px] border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">
-        No recent {provider === "gitlab" ? "pipelines" : "workflow runs"}.
-      </div>
-    );
+    return <ForgeEmptyState>No recent {provider === "gitlab" ? "pipelines" : "workflow runs"}.</ForgeEmptyState>;
   }
 
   return (
-    <div className="space-y-2">
+    <div>
       {runs.map((run) => (
         <button
           key={run.id}
           type="button"
           onClick={() => onOpenRun(run)}
-          className="w-full rounded-[6px] border border-border/50 bg-background/50 px-3 py-2 text-left transition hover:border-primary/40 hover:bg-accent/30"
+          className="flex w-full min-w-0 items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="whitespace-normal break-words text-sm font-medium text-foreground">{run.name}</div>
-              <div className="mt-1 text-xs text-muted-foreground">
-                {[run.branch, run.event, new Date(run.updatedAt).toLocaleString()].filter(Boolean).join(" · ")}
-              </div>
-            </div>
-            {isWorkflowRunActive(run) ? (
-              <ActiveWorkflowRunBadge label={getWorkflowRunLabel(run).replace(/_/g, " ")} />
-            ) : (
-              <Badge variant={getWorkflowRunBadgeVariant(run)} className="shrink-0 self-center capitalize">
-                {getWorkflowRunLabel(run).replace(/_/g, " ")}
-              </Badge>
-            )}
-          </div>
+          <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-muted/70 text-muted-foreground">
+            <Activity className="size-3.5" aria-hidden="true" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[12.5px]">{run.name}</span>
+            <span className="block truncate text-[11px] text-muted-foreground">
+              {[run.branch, run.event, formatForgeShortDate(run.updatedAt)].filter(Boolean).join(" · ")}
+            </span>
+          </span>
+          {isWorkflowRunActive(run) ? (
+            <ActiveWorkflowRunBadge label={getWorkflowRunLabel(run).replace(/_/g, " ")} />
+          ) : (
+            <Badge variant={getWorkflowRunBadgeVariant(run)} className="shrink-0 capitalize">
+              {getWorkflowRunLabel(run).replace(/_/g, " ")}
+            </Badge>
+          )}
         </button>
       ))}
     </div>
@@ -265,7 +281,7 @@ export function ForgePanel(props: ForgePanelProps) {
     onRefreshDetail,
     onAction,
     onCommentSubmit,
-    onSpawnIssueAgent,
+    onStartIssueThread,
     onSpawnReviewAgent
   } = props;
   const repo = overview?.repo ?? null;
@@ -277,7 +293,7 @@ export function ForgePanel(props: ForgePanelProps) {
   const gitlabUserMergeRequests = overview?.gitlabUserMergeRequests ?? [];
   const gitlabUserMergeRequestsErrorMessage = overview?.gitlabUserMergeRequestsErrorMessage ?? null;
   const prLabel = activeProviderTab === "gitlab" ? "Merge Requests" : "Pull Requests";
-  const prTabLabel = activeProviderTab === "gitlab" ? "MRs" : "Pull Requests";
+  const prTabLabel = activeProviderTab === "gitlab" ? "MRs" : "PRs";
   const issueLabel = "Issues";
   const runsTabLabel = activeProviderTab === "gitlab" ? "Pipelines" : "Actions";
 
@@ -347,7 +363,7 @@ export function ForgePanel(props: ForgePanelProps) {
         onRefreshDetail={onRefreshDetail}
         onAction={onAction}
         onCommentSubmit={onCommentSubmit}
-        onSpawnIssueAgent={onSpawnIssueAgent}
+        onStartIssueThread={onStartIssueThread}
         onSpawnReviewAgent={onSpawnReviewAgent}
         repoFullName={repo?.fullName ?? null}
         repoProvider={provider}
@@ -355,83 +371,58 @@ export function ForgePanel(props: ForgePanelProps) {
     );
   }
 
+  const listTabs: SidebarTabItem<ForgeListTab>[] = [
+    { id: "pull_requests", label: prTabLabel, Icon: GitPullRequest },
+    { id: "issues", label: issueLabel, Icon: CircleDot },
+    { id: "actions", label: runsTabLabel, Icon: Activity }
+  ];
+
   return (
-      <div className="center-column-surface flex h-full min-h-0 flex-col bg-card/95">
-      <div className="border-b border-border/50 px-4 py-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              {repo ? <ForgeProviderIcon provider={repo.provider} className="size-4 shrink-0" /> : null}
-              <span className="truncate">{repo?.fullName || "Forge"}</span>
-            </div>
-            <div className="mt-1 text-xs text-muted-foreground">{repo ? `${repo.provider} · ${repo.host}` : "Loading forge data"}</div>
-          </div>
-          <div className="flex items-center gap-2">
-            {repo ? (
-              <Button variant="outline" size="sm" onClick={() => onOpenUrl(repo.webUrl)}>
-                <ExternalLink className="size-4" />
-                Open
-              </Button>
-            ) : null}
-            <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading}>
-              <RefreshCcw className="size-4" />
-              Refresh
-            </Button>
-          </div>
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex min-w-0 items-center gap-2 px-4 pb-2">
+        <div className="min-w-0 flex-1">
+          <p className="flex min-w-0 items-center gap-1.5 text-[12.5px] font-medium">
+            {repo ? <ForgeProviderIcon provider={repo.provider} className="size-3.5 shrink-0" /> : null}
+            <span className="truncate">{repo?.fullName || "No repository detected"}</span>
+          </p>
+          <p className="truncate text-[11px] text-muted-foreground">{repo ? repo.host : isLoading ? "Loading forge data…" : "Add a GitHub or GitLab remote to see activity."}</p>
         </div>
-        {overview?.errorMessage ? <div className="mt-2 text-xs text-destructive">{overview.errorMessage}</div> : null}
+        {(["github", "gitlab"] as const).map((entry) => (
+          <SidebarIconAction
+            key={entry}
+            label={entry === "github" ? "Show GitHub" : "Show GitLab"}
+            icon={<ForgeProviderIcon provider={entry} className="size-3.5" />}
+            pressed={activeProviderTab === entry}
+            onClick={() => setActiveProviderTab(entry)}
+          />
+        ))}
+        {repo ? <SidebarIconAction label="Open repository" icon={<ExternalLink className="size-3.5" aria-hidden="true" />} onClick={() => onOpenUrl(repo.webUrl)} /> : null}
+        <SidebarIconAction label="Refresh" icon={<RefreshCcw className={cn("size-3.5", isLoading && "animate-spin")} aria-hidden="true" />} disabled={isLoading} onClick={onRefresh} />
       </div>
+      {overview?.errorMessage ? <p className="px-4 pb-2 text-xs text-destructive">{overview.errorMessage}</p> : null}
 
-      <div className="border-b border-border/40 px-4 py-3">
-        <Tabs
-          value={activeProviderTab}
-          onValueChange={(value) => setActiveProviderTab(value as ForgeProviderTab)}
-          className="w-full"
-        >
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="github" className="justify-center">
-              <ForgeProviderIcon provider="github" className="size-3.5" />
-              <span>GitHub</span>
-            </TabsTrigger>
-            <TabsTrigger value="gitlab" className="justify-center">
-              <ForgeProviderIcon provider="gitlab" className="size-3.5" />
-              <span>GitLab</span>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
+      <SidebarTabBar<ForgeListTab> ariaLabel="Forge lists" items={listTabs} active={activeListTab} onChange={setActiveListTab} />
 
-      <Tabs value={activeListTab} onValueChange={(value) => setActiveListTab(value as ForgeListTab)} className="flex min-h-0 flex-1 flex-col">
-        <div className="border-b border-border/40 px-4 py-3">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="pull_requests" className="justify-center">
-              <GitPullRequest className="size-3.5" />
-              <span>{prTabLabel}</span>
-            </TabsTrigger>
-            <TabsTrigger value="issues" className="justify-center">
-              <MessageSquare className="size-3.5" />
-              <span>{issueLabel}</span>
-            </TabsTrigger>
-            <TabsTrigger value="actions" className="justify-center">
-              <Activity className="size-3.5" />
-              <span>{runsTabLabel}</span>
-            </TabsTrigger>
-          </TabsList>
-        </div>
-
-        <TabsContent value="pull_requests" className="min-h-0 flex-1 overflow-y-auto p-4">
-          {activeProviderTab === "gitlab" ? (
-            <Tabs
-              value={activeMergeRequestScopeTab}
-              onValueChange={(value) => setActiveMergeRequestScopeTab(value as ForgeMergeRequestScopeTab)}
-              className="flex min-h-0 flex-1 flex-col"
-            >
-              <TabsList className="mb-3 grid w-full grid-cols-2">
-                <TabsTrigger value="project" className="justify-center">This project</TabsTrigger>
-                <TabsTrigger value="global" className="justify-center">Global</TabsTrigger>
-              </TabsList>
-              <TabsContent value="project" className="min-h-0 flex-1">
-                {activeProviderHasDetectedRepo ? (
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
+        {activeListTab === "pull_requests" ? (
+          activeProviderTab === "gitlab" ? (
+            <div className="space-y-2">
+              <div className="flex gap-1 px-2">
+                {(["project", "global"] as const).map((scope) => (
+                  <Button
+                    key={scope}
+                    variant="ghost"
+                    size="sm"
+                    aria-pressed={activeMergeRequestScopeTab === scope}
+                    className={cn("h-6 px-2 text-[11px] font-normal text-muted-foreground", activeMergeRequestScopeTab === scope && "bg-secondary text-foreground")}
+                    onClick={() => setActiveMergeRequestScopeTab(scope)}
+                  >
+                    {scope === "project" ? "This project" : "Assigned to me"}
+                  </Button>
+                ))}
+              </div>
+              {activeMergeRequestScopeTab === "project" ? (
+                activeProviderHasDetectedRepo ? (
                   <ForgeWorkItemList
                     items={overview?.pullRequests ?? []}
                     kind="pull_request"
@@ -439,23 +430,20 @@ export function ForgePanel(props: ForgePanelProps) {
                     onOpenItem={onOpenItem}
                   />
                 ) : (
-                  <div className="rounded-[6px] border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">
-                    No GitLab remote detected for this project.
-                  </div>
-                )}
-              </TabsContent>
-              <TabsContent value="global" className="min-h-0 flex-1">
-                <ForgeWorkItemList
-                  items={gitlabUserMergeRequests}
-                  emptyLabel="No open merge requests for your GitLab user."
-                  kind="pull_request"
-                  onOpenItem={onOpenItem}
-                />
-                {gitlabUserMergeRequestsErrorMessage ? (
-                  <div className="mt-3 text-xs text-destructive">{gitlabUserMergeRequestsErrorMessage}</div>
-                ) : null}
-              </TabsContent>
-            </Tabs>
+                  <ForgeEmptyState>No GitLab remote detected for this project.</ForgeEmptyState>
+                )
+              ) : (
+                <>
+                  <ForgeWorkItemList
+                    items={gitlabUserMergeRequests}
+                    emptyLabel="No open merge requests for your GitLab user."
+                    kind="pull_request"
+                    onOpenItem={onOpenItem}
+                  />
+                  {gitlabUserMergeRequestsErrorMessage ? <p className="px-2 text-xs text-destructive">{gitlabUserMergeRequestsErrorMessage}</p> : null}
+                </>
+              )}
+            </div>
           ) : activeProviderHasDetectedRepo ? (
             <ForgeWorkItemList
               items={overview?.pullRequests ?? []}
@@ -464,46 +452,30 @@ export function ForgePanel(props: ForgePanelProps) {
               onOpenItem={onOpenItem}
             />
           ) : (
-            <div className="rounded-[6px] border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">
-              No GitHub remote detected for this project.
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="issues" className="min-h-0 flex-1 overflow-y-auto p-4">
-          {activeProviderHasDetectedRepo ? (
-            <ForgeWorkItemList
-              items={overview?.issues ?? []}
-              kind="issue"
-              emptyLabel="No open issues."
-              onOpenItem={onOpenItem}
-            />
+            <ForgeEmptyState>No GitHub remote detected for this project.</ForgeEmptyState>
+          )
+        ) : activeListTab === "issues" ? (
+          activeProviderHasDetectedRepo ? (
+            <ForgeWorkItemList items={overview?.issues ?? []} kind="issue" emptyLabel="No open issues." onOpenItem={onOpenItem} />
           ) : (
-            <div className="rounded-[6px] border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">
-              No {activeProviderTab === "gitlab" ? "GitLab" : "GitHub"} remote detected for this project.
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="actions" className="min-h-0 flex-1 overflow-y-auto p-4">
-          {activeProviderHasDetectedRepo ? (
-            <ForgeWorkflowRunList
-              provider={provider}
-              runs={overview?.workflowRuns ?? []}
-              onOpenRun={onOpenWorkflowRun}
-            />
-          ) : (
-            <div className="rounded-[6px] border border-dashed border-border/60 px-3 py-4 text-sm text-muted-foreground">
-              No {activeProviderTab === "gitlab" ? "GitLab" : "GitHub"} remote detected for this project.
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+            <ForgeEmptyState>No {activeProviderTab === "gitlab" ? "GitLab" : "GitHub"} remote detected for this project.</ForgeEmptyState>
+          )
+        ) : activeProviderHasDetectedRepo ? (
+          <ForgeWorkflowRunList provider={provider} runs={overview?.workflowRuns ?? []} onOpenRun={onOpenWorkflowRun} />
+        ) : (
+          <ForgeEmptyState>No {activeProviderTab === "gitlab" ? "GitLab" : "GitHub"} remote detected for this project.</ForgeEmptyState>
+        )}
+      </div>
     </div>
   );
 }
 
-export function ForgeDetailPanel({
+export function ForgeDetailPanel(props: ForgeDetailPanelProps) {
+  if (props.detail?.kind === "issue") return <IssueDetailPanel key={props.detail.item.id} {...props} detail={props.detail} />;
+  return <ForgeReviewDetailPanel {...props} />;
+}
+
+function ForgeReviewDetailPanel({
   detail,
   detailLoading,
   detailErrorMessage,
@@ -517,7 +489,6 @@ export function ForgeDetailPanel({
   onRefreshDetail,
   onAction,
   onCommentSubmit,
-  onSpawnIssueAgent,
   onSpawnReviewAgent,
   repoFullName = null,
   repoProvider = "github"
@@ -577,7 +548,7 @@ export function ForgeDetailPanel({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          <div className="text-xs font-medium text-muted-foreground">
             Review comments
           </div>
           <div className="mt-1 text-xs text-muted-foreground">
@@ -604,15 +575,15 @@ export function ForgeDetailPanel({
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <div className="mr-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        <div className="mr-2 text-xs font-medium text-muted-foreground">
           Target
         </div>
-        <div className="flex rounded-[6px] border border-border/60 bg-background/60 p-0.5">
+        <div className="flex rounded-lg border border-border/60 bg-background p-0.5">
           <Button
             type="button"
             variant={reviewAgentTargetMode === "new-worktree" ? "secondary" : "ghost"}
             size="sm"
-            className="h-7 rounded-[4px] px-2.5 text-xs"
+            className="h-7 rounded-md px-2.5 text-xs"
             onClick={() => setReviewAgentTargetMode("new-worktree")}
           >
             New worktree
@@ -621,7 +592,7 @@ export function ForgeDetailPanel({
             type="button"
             variant={reviewAgentTargetMode === "current-branch" ? "secondary" : "ghost"}
             size="sm"
-            className="h-7 rounded-[4px] px-2.5 text-xs"
+            className="h-7 rounded-md px-2.5 text-xs"
             onClick={() => setReviewAgentTargetMode("current-branch")}
           >
             Checked-out branch
@@ -629,7 +600,7 @@ export function ForgeDetailPanel({
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <div className="mr-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        <div className="mr-2 text-xs font-medium text-muted-foreground">
           Send to agent
         </div>
         {availableTools.map((tool: AgentCatalogEntry) => (
@@ -648,8 +619,8 @@ export function ForgeDetailPanel({
             <AgentToolIcon
               toolId={tool.id}
               label={tool.label}
-              className="size-6 rounded-[4px] bg-transparent"
-              imageClassName="size-5 rounded-[4px]"
+              className="size-6 rounded-md bg-transparent"
+              imageClassName="size-5 rounded-md"
             />
           </Button>
         ))}
@@ -665,7 +636,7 @@ export function ForgeDetailPanel({
             <label
               key={comment.commentId}
               htmlFor={checkboxId}
-              className="flex cursor-pointer gap-3 rounded-[6px] border border-border/50 bg-background/60 p-3 transition hover:border-primary/40 hover:bg-accent/20"
+              className="flex cursor-pointer gap-3 rounded-lg border border-border/50 bg-background p-3 transition hover:border-primary/40 hover:bg-accent/20"
             >
               <input
                 id={checkboxId}
@@ -686,7 +657,7 @@ export function ForgeDetailPanel({
                   <span>{formatForgeReviewLineLabel(comment.oldLine, comment.newLine)}</span>
                   <span>{comment.author || "Unknown"}</span>
                 </div>
-                <div className="terminal-text mt-2 overflow-x-auto rounded-[4px] border border-border/40 bg-background/70 px-2 py-1 text-[11px] leading-5">
+                <div className="terminal-text mt-2 overflow-x-auto rounded-md border border-border/40 bg-background px-2 py-1 text-[11px] leading-5">
                   {comment.lineText || "(line context unavailable)"}
                 </div>
                 <div className="mt-2 whitespace-pre-wrap text-sm leading-5 text-foreground/85">
@@ -701,8 +672,8 @@ export function ForgeDetailPanel({
   ) : null;
 
   return (
-    <div className="center-column-surface flex h-full min-h-0 flex-col bg-card/95">
-      <div className="border-b border-border/50 bg-card/95">
+    <div className="center-column-surface flex h-full min-h-0 flex-col bg-card">
+      <div className="border-b border-border/50 bg-card">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/35 px-4 py-2.5">
           <div className="flex min-w-0 items-center gap-2">
             <Button variant="ghost" size="sm" className="h-8 px-2.5" onClick={onBackToList}>
@@ -710,7 +681,7 @@ export function ForgeDetailPanel({
               Back
             </Button>
             {detail ? (
-              <div className="flex min-w-0 items-center gap-2 rounded-[5px] border border-border/60 bg-background/60 px-2.5 py-1.5 text-xs text-muted-foreground">
+              <div className="flex min-w-0 items-center gap-2 rounded-[5px] border border-border/60 bg-background px-2.5 py-1.5 text-xs text-muted-foreground">
                 <ForgeProviderIcon provider={detailProvider} className="size-3.5 shrink-0" />
                 {detail.kind === "pull_request" ? <GitPullRequest className="size-3.5 shrink-0" /> : <MessageSquare className="size-3.5 shrink-0" />}
                 <span className="truncate">{detail.kind === "pull_request" ? pullRequestLabel : "Issue"}</span>
@@ -812,17 +783,17 @@ export function ForgeDetailPanel({
               </div>
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 {detail.item.author ? (
-                  <div className="inline-flex max-w-full items-center gap-1.5 rounded-[5px] border border-border/55 bg-background/55 px-2.5 py-1.5">
+                  <div className="inline-flex max-w-full items-center gap-1.5 rounded-[5px] border border-border/55 bg-background px-2.5 py-1.5">
                     <User className="size-3.5 shrink-0" />
                     <span className="truncate">{detail.item.author}</span>
                   </div>
                 ) : null}
-                <div className="inline-flex max-w-full items-center gap-1.5 rounded-[5px] border border-border/55 bg-background/55 px-2.5 py-1.5">
+                <div className="inline-flex max-w-full items-center gap-1.5 rounded-[5px] border border-border/55 bg-background px-2.5 py-1.5">
                   <CalendarClock className="size-3.5 shrink-0" />
                   <span className="truncate">{formatForgeUpdatedAt(detail.item.updatedAt)}</span>
                 </div>
                 {detail.kind === "pull_request" && detail.changes.length ? (
-                  <div className="inline-flex max-w-full items-center gap-1.5 rounded-[5px] border border-border/55 bg-background/55 px-2.5 py-1.5">
+                  <div className="inline-flex max-w-full items-center gap-1.5 rounded-[5px] border border-border/55 bg-background px-2.5 py-1.5">
                     <FileDiff className="size-3.5 shrink-0" />
                     <span>{detail.changes.length} file{detail.changes.length === 1 ? "" : "s"}</span>
                     <span className="text-emerald-600 dark:text-emerald-300">+{detail.changes.reduce((total, change) => total + change.additions, 0)}</span>
@@ -840,37 +811,7 @@ export function ForgeDetailPanel({
                   </div>
                 ) : null}
               </div>
-              {detail.kind === "issue" ? (
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <div className="mr-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                    Spawn fix agent
-                  </div>
-                  {availableTools.map((tool: AgentCatalogEntry) => (
-                    <Button
-                      key={tool.id}
-                      variant="ghost"
-                      size="icon"
-                      className="size-9"
-                      tooltip={`Spawn a new ${tool.label} agent for this issue`}
-                      aria-label={`Spawn a new ${tool.label} agent for this issue`}
-                      onClick={() => {
-                        void onSpawnIssueAgent(tool.id);
-                      }}
-                      disabled={detailLoading || actionLoading || commentLoading}
-                    >
-                      <AgentToolIcon
-                        toolId={tool.id}
-                        label={tool.label}
-                        className="size-6 rounded-[4px] bg-transparent"
-                        imageClassName="size-5 rounded-[4px]"
-                      />
-                    </Button>
-                  ))}
-                  {!availableTools.length ? (
-                    <div className="text-sm text-muted-foreground">No detected agent CLIs are available.</div>
-                  ) : null}
-                </div>
-              ) : null}
+
             </div>
           ) : (
             <div className="text-lg font-semibold leading-tight text-foreground">Forge item</div>
@@ -887,8 +828,8 @@ export function ForgeDetailPanel({
         ) : (
           <div className="space-y-4">
             {detail.labels.length ? (
-              <div className="rounded-[8px] border border-border/60 bg-card/70 p-4">
-                <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              <div className="rounded-lg border border-border/60 bg-card p-4">
+                <div className="mb-3 flex items-center gap-2 text-xs font-medium text-muted-foreground">
                   <Tags className="size-3.5" />
                   Labels
                 </div>
@@ -901,11 +842,11 @@ export function ForgeDetailPanel({
             ) : null}
 
             <div>
-              <div className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              <div className="mb-3 text-xs font-medium text-muted-foreground">
                 Description
               </div>
               {detail.body.trim() ? (
-                <MarkdownRenderer className="space-y-4 text-sm leading-6 text-foreground/90">
+                <MarkdownRenderer allowHtml className="space-y-4 text-sm leading-6 text-foreground/90">
                   {detail.body}
                 </MarkdownRenderer>
               ) : (
@@ -915,7 +856,7 @@ export function ForgeDetailPanel({
 
             {detail.kind === "pull_request" ? (
               <div>
-                <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                <div className="mb-3 flex items-center gap-2 text-xs font-medium text-muted-foreground">
                   <FileDiff className="size-3.5" />
                   Changes
                 </div>
@@ -941,11 +882,11 @@ export function ForgeDetailPanel({
               </div>
             ) : null}
 
-            <div className="rounded-[8px] border border-border/60 bg-card/70 p-4">
-              <div className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            <div className="rounded-lg border border-border/60 bg-card p-4">
+              <div className="mb-3 text-xs font-medium text-muted-foreground">
                 Comments
               </div>
-              <div className="mb-4 space-y-3 rounded-[6px] border border-border/50 bg-background/55 p-3">
+              <div className="mb-4 space-y-3 rounded-lg border border-border/50 bg-background p-3">
                 <Textarea
                   value={commentDraft}
                   onChange={(event) => setCommentDraft(event.target.value)}
@@ -975,7 +916,7 @@ export function ForgeDetailPanel({
               {topLevelComments.length ? (
                 <div className="space-y-3">
                   {topLevelComments.map((comment) => (
-                    <div key={comment.id} className="rounded-[6px] border border-border/50 bg-background/60 p-3">
+                    <div key={comment.id} className="rounded-lg border border-border/50 bg-background p-3">
                       <div className="mb-2 flex items-center justify-between gap-3 text-xs text-muted-foreground">
                         <div className="flex min-w-0 items-center gap-2">
                           {comment.authorAvatarUrl ? (
@@ -994,7 +935,7 @@ export function ForgeDetailPanel({
                         <span>{new Date(comment.createdAt).toLocaleString()}</span>
                       </div>
                       {comment.body.trim() ? (
-                        <MarkdownRenderer className="space-y-4 text-sm leading-6 text-foreground/90">
+                        <MarkdownRenderer allowHtml className="space-y-4 text-sm leading-6 text-foreground/90">
                           {comment.body}
                         </MarkdownRenderer>
                       ) : (

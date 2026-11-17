@@ -32,11 +32,18 @@ export function useWorkspaceLoops(projectId: string): UseWorkspaceLoopsResult {
 
   useEffect(() => {
     void refresh();
-    return noraLoopClient.onLoopRunChanged((run) => {
+    const stopRuns = noraLoopClient.onLoopRunChanged((run) => {
       if (run.projectId === projectId) {
         setRuns((current) => upsertById(current, run));
       }
     });
+    // Nora's tools can save workflows too, so saved definitions arrive here as well as from the designer.
+    const stopDefinitions = noraLoopClient.onLoopDefinitionChanged((definition) => {
+      if (definition.projectId === projectId) {
+        setDefinitions((current) => upsertById(current, definition));
+      }
+    });
+    return () => { stopRuns(); stopDefinitions(); };
   }, [projectId, refresh]);
 
   return {
@@ -47,8 +54,13 @@ export function useWorkspaceLoops(projectId: string): UseWorkspaceLoopsResult {
     refresh,
     upsertDefinition: (definition) => setDefinitions((current) => upsertById(current, definition)),
     removeDefinition: async (definitionId) => {
-      await noraLoopClient.deleteLoopDefinition(projectId, definitionId);
-      setDefinitions((current) => current.filter((definition) => definition.id !== definitionId));
+      try {
+        await noraLoopClient.deleteLoopDefinition(projectId, definitionId);
+        setDefinitions((current) => current.filter((definition) => definition.id !== definitionId));
+        setErrorMessage(null);
+      } catch (error) {
+        setErrorMessage(error instanceof Error ? error.message : "Unable to delete the workflow definition.");
+      }
     },
     upsertRun: (run) => setRuns((current) => upsertById(current, run)),
     removeRun: async (runId) => {

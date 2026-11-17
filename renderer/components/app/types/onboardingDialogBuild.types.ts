@@ -33,4 +33,5 @@ export type BuildOnboardingDialogPropsDeps = {
   setOnboardingToolEnabled: (toolId: string, enabled: boolean) => Promise<void>;
   openAddWorkspaceModal: () => Promise<AppState | null>;
   completeOnboarding: () => void;
+  safely: (action: () => Promise<AppState>) => Promise<AppState | null>;
 };

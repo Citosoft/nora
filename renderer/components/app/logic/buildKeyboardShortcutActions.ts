@@ -276,7 +276,7 @@ export const buildKeyboardShortcutActions = (d: KeyboardShortcutActionsBuildDeps
       }
 
       d.setActiveView("main");
-      d.uiCommands.openCreateAgentDialog();
+      d.uiCommands.openNewThread();
     },
     "focus-previous-session-tab": () => {
       focusAdjacentWorkspaceSessionTab(-1);

@@ -6,5 +6,3 @@ export const WORKTREE_BRANCH_PREFIX_OPTIONS = [
   { value: "hotfix", label: "Hotfix" },
   { value: "docs", label: "Docs" }
 ] as const;
-
-export const DEFAULT_LOOP_WORKTREE_BRANCH_PREFIX = "loop";

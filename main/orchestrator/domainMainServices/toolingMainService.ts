@@ -32,4 +32,6 @@ export class ToolingMainService implements ToolingService {
   getToolUsage = (toolId: string) => this.helpers.getToolUsage(toolId);
 
   switchToolAccount = (toolId: string) => this.helpers.switchToolAccount(toolId);
+
+  checkProviderUpdates = () => this.helpers.checkProviderUpdates();
 }

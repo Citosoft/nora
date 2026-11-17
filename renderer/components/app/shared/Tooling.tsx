@@ -1,4 +1,4 @@
-import { noraToolingClient } from "@/components/app/clients/noraToolingClient";
+import { useToolUsage } from "@/components/app/hooks/useToolUsage";
 import { productFaviconUrl } from "@/components/app/logic/productIcon";
 import { formatInstallLogText, stripTerminalControlSequences } from "@/components/app/logic/terminalLogText";
 import { formatTimestamp, statusVariant } from "@/components/app/logic/utils";
@@ -30,14 +30,11 @@ export function toolLogoUrl(toolId: string): string {
     claude: "anthropic.com",
     gemini: "gemini.google.com",
     cursor: "cursor.com",
-    aider: "aider.chat",
     goose: "goose-docs.ai",
     qwen: "qwenlm.github.io",
     opencode: "opencode.ai",
     copilot: "github.com",
-    continue: "continue.dev",
     amp: "ampcode.com",
-    crush: "charm.land",
     chatgpt: "chatgpt.com",
     perplexity: "perplexity.ai",
     grok: "grok.com",
@@ -48,13 +45,9 @@ export function toolLogoUrl(toolId: string): string {
     aug: "augmentcode.com",
     autohand: "autohand.ai",
     cline: "cline.bot",
-    codebuff: "codebuff.com",
     droid: "docs.factory.ai",
     kimi: "kimi.com",
-    "mistral-vibe": "mistral.ai",
-    rovo: "atlassian.com",
-    hermes: "nousresearch.com",
-    openclaw: "openclaw.ai"
+    "mistral-vibe": "mistral.ai"
   };
 
   const domain = domainByTool[toolId] ?? "example.com";
@@ -118,7 +111,7 @@ export function AgentToolIcon({
   const localIconColor = localIcon?.color ?? "default";
 
   return (
-    <div className={cn("grid place-items-center overflow-hidden rounded-[4px] bg-background/60", className)}>
+    <div className={cn("grid place-items-center overflow-hidden rounded-md bg-background", className)}>
       {LocalIcon ? (
         <LocalIcon
           color={localIconColor}
@@ -133,7 +126,7 @@ export function AgentToolIcon({
           aria-hidden="true"
         />
       )}
-      <span className="sr-only">{label}</span>
+      {label ? <span className="sr-only">{label}</span> : null}
     </div>
   );
 }
@@ -163,7 +156,7 @@ export function FrameworkIcon({
   });
 
   const icon = (
-    <div className={cn("grid place-items-center overflow-hidden rounded-[4px] bg-background/60", className)}>
+    <div className={cn("grid place-items-center overflow-hidden rounded-md bg-background", className)}>
       {iconMode === "framework-logo" ? (
         <ProductIcon
           sourceUrl={framework.logoUrl}
@@ -233,7 +226,7 @@ export function WorkspaceProjectIcon({
 
   if (iconMode === "project-favicon" && normalizedFaviconUrl) {
     return (
-      <div className={cn("grid place-items-center overflow-hidden rounded-[4px] bg-background/60", className)}>
+      <div className={cn("grid place-items-center overflow-hidden rounded-md bg-background", className)}>
         <img
           src={normalizedFaviconUrl}
           alt=""
@@ -248,7 +241,7 @@ export function WorkspaceProjectIcon({
 
   if (iconMode === "framework-logo" && framework && frameworkLogoUrl) {
     const icon = (
-      <div className={cn("grid place-items-center overflow-hidden rounded-[4px] bg-background/60", className)}>
+      <div className={cn("grid place-items-center overflow-hidden rounded-md bg-background", className)}>
         <ProductIcon
           sourceUrl={frameworkLogoUrl}
           alt=""
@@ -276,7 +269,7 @@ export function WorkspaceProjectIcon({
   }
 
   return (
-    <div className={cn("grid place-items-center overflow-hidden rounded-[4px] bg-background/60", className)}>
+    <div className={cn("grid place-items-center overflow-hidden rounded-md bg-background", className)}>
       <FolderGit2 className={cn("text-muted-foreground", fallbackIconClassName ?? imageClassName)} aria-hidden="true" />
       <span className="sr-only">{label}</span>
     </div>
@@ -296,7 +289,7 @@ export function ToolListItem({
     <button
       type="button"
       className={cn(
-        "flex w-full items-center gap-3 rounded-[4px] px-3 py-2 text-left transition",
+        "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition",
         active ? "bg-primary/10 text-foreground" : "hover:bg-accent/50"
       )}
       onClick={onClick}
@@ -338,41 +331,15 @@ export const ToolPopover = forwardRef<HTMLDivElement, {
   allowRemoval = true,
   centered = false
 }, ref) {
-  const [usageInfo, setUsageInfo] = useState<ToolUsageInfo | null>(null);
-  const [usageStatus, setUsageStatus] = useState<"idle" | "loading">("idle");
-
-  useEffect(() => {
-    let cancelled = false;
-    setUsageStatus("loading");
-
-    noraToolingClient.getToolUsage(tool.id).then((nextUsage) => {
-      if (!cancelled) {
-        setUsageInfo(nextUsage);
-        setUsageStatus("idle");
-      }
-    }).catch((error: unknown) => {
-      if (!cancelled) {
-        setUsageInfo({
-          status: "error",
-          title: "Usage Lookup Failed",
-          windows: [],
-          account: null,
-          lines: [error instanceof Error ? error.message : "Unknown error"],
-          fetchedAt: new Date().toISOString()
-        });
-        setUsageStatus("idle");
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [tool]);
+  const { entry: usage } = useToolUsage(tool.id);
+  const usageInfo: ToolUsageInfo | null = usage?.error
+    ? { status: "error", title: "Usage Lookup Failed", windows: [], account: null, lines: [usage.error], fetchedAt: new Date(usage.loadedAt ?? Date.now()).toISOString() }
+    : usage?.info ?? null;
 
   return (
     <div
       ref={ref}
-      className="fixed z-[60] max-h-[min(88vh,860px)] w-[min(92vw,980px)] overflow-auto rounded-[4px] border border-border/70 bg-popover/95 p-4 shadow-2xl backdrop-blur"
+      className="fixed z-[60] max-h-[min(88vh,860px)] w-[min(92vw,980px)] overflow-auto rounded-md border border-border/70 bg-popover/95 p-4 shadow-2xl backdrop-blur"
       style={centered ? {
         top: "50%",
         left: "50%",
@@ -384,8 +351,8 @@ export const ToolPopover = forwardRef<HTMLDivElement, {
           <AgentToolIcon
             toolId={tool.id}
             label={tool.label}
-            className="size-10 bg-background/70"
-            imageClassName="size-6 rounded-[4px]"
+            className="size-10 bg-background"
+            imageClassName="size-6 rounded-md"
           />
           <div>
             <div className="font-medium">{tool.label}</div>
@@ -394,7 +361,7 @@ export const ToolPopover = forwardRef<HTMLDivElement, {
         </div>
         <button
           type="button"
-          className="rounded-[4px] p-1 text-muted-foreground transition hover:bg-accent hover:text-foreground"
+          className="rounded-md p-1 text-muted-foreground transition hover:bg-accent hover:text-foreground"
           onClick={onClose}
           aria-label="Close agent details"
         >
@@ -413,7 +380,7 @@ export const ToolPopover = forwardRef<HTMLDivElement, {
 
       {tool.usageNotes.length ? (
         <div className="mt-4 space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Usage</div>
+          <div className="text-xs font-medium text-muted-foreground">Usage</div>
           <div className="space-y-2 text-sm text-muted-foreground">
             {tool.usageNotes.map((note) => (
               <div key={note}>{note}</div>
@@ -424,18 +391,18 @@ export const ToolPopover = forwardRef<HTMLDivElement, {
 
       <div className="mt-4 space-y-2">
         <div className="flex items-center justify-between">
-          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Usage</div>
-          {usageStatus === "loading" ? (
+          <div className="text-xs font-medium text-muted-foreground">Usage</div>
+          {usage?.loading ? (
             <div className="text-xs text-muted-foreground">Loading...</div>
           ) : null}
         </div>
         {usageInfo ? (
-          <div className="rounded-[4px] border border-border/60 bg-background/35 p-3">
+          <div className="rounded-md border border-border/60 bg-background/35 p-3">
             <div className="font-medium">{usageInfo.title}</div>
             {usageInfo.rawOutput ? (
               <TerminalTranscript output={usageInfo.rawOutput} />
             ) : (
-              <div className="mt-2 max-h-56 overflow-auto rounded-[4px] border border-border/40 bg-background/30 p-2 text-sm text-muted-foreground">
+              <div className="mt-2 max-h-56 overflow-auto rounded-md border border-border/40 bg-background p-2 text-sm text-muted-foreground">
                 <div className="space-y-1">
                   {usageInfo.lines.map((line) => (
                     <div key={line}>{line}</div>
@@ -495,13 +462,13 @@ export const ToolPopover = forwardRef<HTMLDivElement, {
       ) : null}
 
       {tool.detected && !allowRemoval ? (
-        <div className="mt-4 rounded-[4px] border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-foreground">
+        <div className="mt-4 rounded-md border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-foreground">
           Installed. You can enable or disable this CLI from onboarding.
         </div>
       ) : null}
 
       {tool.installLog.length ? (
-        <pre className="terminal-text mt-4 max-h-44 overflow-auto rounded-[4px] border border-border/60 bg-black/30 p-3 text-xs leading-6 text-muted-foreground">
+        <pre className="terminal-text mt-4 max-h-44 overflow-auto rounded-md border border-border/60 bg-background p-3 text-xs leading-6 text-muted-foreground">
           {formatInstallLogText(tool.installLog)}
         </pre>
       ) : null}
@@ -515,7 +482,7 @@ function TerminalTranscript({ output }: { output: string }) {
     .replace(/\r/g, "\n");
 
   return (
-    <div className="mt-2 max-h-[28rem] overflow-auto rounded-[4px] border border-border/40 bg-black/85 p-2">
+    <div className="mt-2 max-h-[28rem] overflow-auto rounded-md border border-border/40 bg-black/85 p-2">
       <pre className="terminal-text w-max min-w-full whitespace-pre text-xs leading-5 text-slate-200">
         {cleaned}
       </pre>

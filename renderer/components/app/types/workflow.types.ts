@@ -1,49 +1,51 @@
 import type {
-  AccentColor,
-  AiChatTabState,
-  BrowserTabState,
-  CreateAgentDialogDefaults,
-  CreateTerminalDialogDefaults,
-  FileEditorTab,
-  FileEditorState,
-  ResolvedTheme,
-  UiFontId,
-  StoredVercelWorkspaceLinks,
-  TerminalFontId,
-  TerminalThemeId,
-  ThemeMode,
-  UiState,
-  WindowUiState,
-  WorkspaceLoadingState
+AccentColor,
+AiChatTabState,
+BrowserTabState,
+CreateTerminalDialogDefaults,
+FileEditorState,
+FileEditorTab,
+ResolvedTheme,
+StoredVercelWorkspaceLinks,
+TerminalFontId,
+TerminalThemeId,
+ThemeMode,
+UiFontId,
+UiState,
+WindowUiState,
+WorkspaceLoadingState
 } from "@/components/app/types";
+import type { ThreadLaunchInput } from "@/components/app/types/thread-workspace/runtime.types";
+import type { ChatParticipants } from "@/components/app/types/chatPanels.types";
 import type {
-  AgentCatalogEntry,
-  AgentSession,
-  AgentSkillCatalog,
-  AiProvider,
-  AnalyticsRuntimeConfig,
+AgentCatalogEntry,
+AgentSession,
+AgentSkillCatalog,
+AiProvider,
+AnalyticsRuntimeConfig,
+AiSimpleTaskSettings,
   AppSettings,
-  AppState,
-  CreateAgentPayload,
-  CreateTerminalPayload,
-  ExternalHarnessContextRef,
-  ForgeOAuthProviderConfig,
-  ForgeProvider,
-  InstalledIde,
-  LinuxAptSetupStatus,
-  LinuxUpdateStatus,
-  TerminalSession,
-  WorkspaceNoteSummary,
-  WorkspaceSpecSummary,
-  WorkspaceSplitView,
-  WorkspaceSplitViewCollection,
-  WorkspaceSplitViewTile,
-  WorkspaceSummary,
-  WorkspaceTaskBoard,
-  WorkspaceTaskBoardSection,
-  WorkspaceTaskSummary
+AppState,
+CreateAgentPayload,
+CreateTerminalPayload,
+ExternalHarnessContextRef,
+ForgeOAuthProviderConfig,
+ForgeProvider,
+InstalledIde,
+LinuxAptSetupStatus,
+LinuxUpdateStatus,
+TerminalSession,
+WorkspaceNoteSummary,
+WorkspaceSpecSummary,
+WorkspaceSplitView,
+WorkspaceSplitViewCollection,
+WorkspaceSplitViewTile,
+WorkspaceSummary,
+WorkspaceTaskBoard,
+WorkspaceTaskBoardSection,
+WorkspaceTaskSummary
 } from "@shared/appTypes";
-import type { Dispatch, SetStateAction, SVGProps } from "react";
+import type { Dispatch,SetStateAction,SVGProps } from "react";
 
 export type ForgeProviderIconProps = SVGProps<SVGSVGElement> & {
   provider: ForgeProvider;
@@ -219,7 +221,7 @@ export type WorkspaceSidebarProps = {
   onRefresh: () => void;
   onRefreshCatalog: () => void;
   onResetWorkspaces: () => void;
-  onOpenCreateAgent: (defaults?: CreateAgentDialogDefaults) => void;
+  onOpenCreateAgent: (defaults?: ThreadLaunchInput) => void;
   onOpenCreateTerminal: (defaults: CreateTerminalDialogDefaults) => void;
   onResumeThread: (projectId: string, payload: CreateAgentPayload) => Promise<void>;
   onQuickLaunchAgent: (projectId: string) => void;
@@ -234,7 +236,6 @@ export type WorkspaceSidebarProps = {
   onOpenWorkflowRunChangeRequest: (projectId: string, worktreeId: string) => Promise<void>;
   onOpenCreateAgentOnWorktree: (projectId: string, worktreeId: string) => void;
   onOpenCreateTerminalOnWorktree: (projectId: string, worktreeId: string) => void;
-  onOpenCreateWorktree: (projectId: string) => void;
   onLaunchQuickTerminalOnWorktree: (projectId: string, worktreeId: string) => void;
   onCheckoutWorkspaceBranch: (projectId: string, branch: string) => Promise<AppState | null>;
   onLaunchWorktreeScript: (projectId: string, payload: CreateTerminalPayload) => void;
@@ -352,6 +353,7 @@ export type AppPreferences = {
   updateBrowserPreferences: (
     nextBrowserSettings: Partial<Pick<AppSettings, "openInternalBrowserOnNewPortDetection" | "browserDataImportPromptSeen">>
   ) => Promise<void>;
+  updateLifecycle: (lifecycle: AppSettings["lifecycle"]) => Promise<void>;
   updateNotificationPreferences: (nextNotificationSettings: Pick<AppSettings, "agentCompletionNotificationsEnabled">) => Promise<void>;
   updateAnalyticsConsentStatus: (status: AppSettings["analyticsConsentStatus"]) => Promise<void>;
   updateTerminalPresets: (presets: AppSettings["terminalPresets"]) => Promise<void>;
@@ -361,7 +363,7 @@ export type AppPreferences = {
   updateAiModel: (provider: AiProvider, model: string) => Promise<void>;
   updateVoiceSettings: (voice: AppSettings["voice"]) => Promise<void>;
   updateAiSimpleTaskSettings: (
-    settings: Pick<AppSettings["ai"], "simpleTaskProvider" | "localLlmModelId">
+    settings: AiSimpleTaskSettings
   ) => Promise<void>;
   relaunchApplication: () => Promise<void>;
 };
@@ -423,7 +425,10 @@ export type UseLinuxAptSetupPromptResult = {
 };
 
 export type UseLinuxUpdateNoticeResult = {
+  /** The banner's update; `null` once the banner is dismissed. */
   linuxUpdateStatus: Extract<LinuxUpdateStatus, { kind: "available" }> | null;
+  /** The available update regardless of banner dismissal, for persistent indicators. */
+  availableLinuxUpdate: Extract<LinuxUpdateStatus, { kind: "available" }> | null;
   dismissLinuxUpdateNotice: () => void;
 };
 
@@ -455,6 +460,7 @@ export type UseWorkspaceSessionViewsArgs = {
 };
 
 export type WorkspaceSessionTab =
+  | { id: string; kind: "thread"; name: string; status: "running" | "idle" | "error"; participants: ChatParticipants | null }
   | {
       id: string;
       kind: "agent";

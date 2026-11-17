@@ -9,6 +9,7 @@ export const NORA_APP_CLIENT_METHODS = [
 ] as const satisfies readonly (keyof AppGateway)[];
 
 export const NORA_WORKSPACE_CLIENT_METHODS = [
+  "discoverWorkspaces",
   "chooseProject",
   "focusWorkspace",
   "chooseProjectAtPath",
@@ -35,6 +36,7 @@ export const NORA_WORKSPACE_CLIENT_METHODS = [
   "saveWorkspaceTerminalPresets",
   "readWorkspaceFile",
   "readWorkspaceImageFile",
+  "readWorkspaceLogo",
   "openWorkspaceFileExternally",
   "writeWorkspaceFile",
   "createWorkspaceDirectory",
@@ -42,10 +44,7 @@ export const NORA_WORKSPACE_CLIENT_METHODS = [
   "moveWorkspaceFile",
   "deleteWorkspaceFile",
   "searchWorkspaceFiles",
-  "listImportedContextBundles",
-  "listExternalHarnessContextSessions",
   "archiveExternalHarnessThread",
-  "composeExternalHarnessContextSelections",
   "listNoraDetectableContextBundles",
   "importNoraDetectableContextBundle",
   "readNoraDetectableContextBundle",
@@ -53,6 +52,7 @@ export const NORA_WORKSPACE_CLIENT_METHODS = [
   "statWorkspacePath",
   "getWorkspaceGitStatusSummary",
   "checkoutWorkspaceBranch",
+  "selectChangesCheckout",
   "setWorkspaceUpstream",
   "selectChange",
   "discardChange",
@@ -62,6 +62,7 @@ export const NORA_WORKSPACE_CLIENT_METHODS = [
   "generateCommitMessage",
   "pullChanges",
   "pushChanges",
+  "onWorkspaceTasksChanged",
   "onWorkspaceLoadingProgress"
 ] as const satisfies readonly (keyof NoraBridge)[];
 
@@ -76,6 +77,7 @@ export const NORA_AGENT_CLIENT_METHODS = [
   "getAgentTerminalBuffer",
   "getAgentContextPreview",
   "getAgentContextState",
+  "prepareAgentContextHandoff",
   "listWorkspaceAgentContextSources",
   "clearAgentContext",
   "clearAgentTerminal",
@@ -105,6 +107,7 @@ export const NORA_TERMINAL_CLIENT_METHODS = [
 ] as const satisfies readonly (keyof NoraBridge)[];
 
 export const NORA_SESSION_CLIENT_METHODS = [
+  "createWorktree",
   ...NORA_AGENT_CLIENT_METHODS,
   ...NORA_TERMINAL_CLIENT_METHODS
 ] as const satisfies readonly (keyof NoraBridge)[];
@@ -114,6 +117,8 @@ export const NORA_INTEGRATION_CLIENT_METHODS = [
   "startForgeOAuth",
   "getForgeOverview",
   "getForgeBranchPullRequestStatus",
+  "getForgeBranchChanges",
+  "getForgeBranchDiff",
   "getForgeWorkItemDetail",
   "getForgeWorkflowRunDetail",
   "performForgeWorkItemAction",
@@ -129,6 +134,7 @@ export const NORA_INTEGRATION_CLIENT_METHODS = [
 
 export const NORA_TOOLING_CLIENT_METHODS = [
   "refreshCatalog",
+  "checkProviderUpdates",
   "installTool",
   "removeTool",
   "searchToolSkills",
@@ -151,6 +157,9 @@ export const NORA_SYSTEM_CLIENT_METHODS = [
   "onWindowStateChanged",
   "getDetectedUserIdentity",
   "getAppSettings",
+  "onAppSettingsChanged",
+  "onWindowSettingsRequest",
+  "replyWindowSettings",
   "saveAppSettings",
   "relaunchApplication",
   "getAnalyticsRuntimeConfig",
@@ -165,6 +174,7 @@ export const NORA_SYSTEM_CLIENT_METHODS = [
   "getAutoUpdateStatus",
   "getAutoUpdateTestSupport",
   "simulateAutoUpdateStatus",
+  "downloadAppUpdate",
   "installDownloadedUpdate",
   "getLatestReleaseAssets",
   "downloadReleaseAsset",
@@ -190,6 +200,8 @@ export const NORA_SYSTEM_CLIENT_METHODS = [
   "installLocalAiRuntime",
   "transcribeVoiceInput",
   "savePastedImage",
+  "saveComposerAttachment",
+  "readComposerAttachmentThumbnail",
   "showAgentCompletionNotification",
   "onAppClosingProgress",
   "logAnalytics",

@@ -20,6 +20,32 @@ export type DropdownMenuItemProps = {
   onSelect?: () => void;
 };
 
+export type MenuLabelProps = {
+  children: ReactNode;
+};
+
+export type DropdownMenuSubProps = {
+  label: string;
+  icon?: ReactNode;
+  children: ReactNode;
+  disabled?: boolean;
+};
+
+/** Shared by a dropdown and its submenus; `layerId` marks every surface that belongs to one open menu. */
+export type DropdownMenuContextValue = {
+  close: () => void;
+  layerId: string;
+  openSubId: string | null;
+  setOpenSubId: (id: string | null) => void;
+};
+
+export type DropdownMenuGroupProps = {
+  label: string;
+  children: ReactNode;
+  /** Nested groups indent under their parent instead of drawing a divider. */
+  nested?: boolean;
+};
+
 export interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "children"> {
   children?: React.ReactNode;
 }

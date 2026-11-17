@@ -6,15 +6,13 @@ import type {
 } from "@/components/app/types";
 import type { WorkspaceRuntimeValue } from "@/components/app/types/workspaceRuntime.types";
 import type { WorkspaceQuickSearchSource } from "@/components/app/types/titlebarWorkspaceSearch.types";
-import type { AgentSession, AppState, InstalledIde, TerminalSession, WorktreeRecord } from "@shared/appTypes";
+import type { AgentSession, AppState, InstalledIde } from "@shared/appTypes";
 import type { Dispatch, SetStateAction } from "react";
 
 import type { useWorkspaceAggregates } from "@/components/app/hooks/useWorkspaceAggregates";
 
 export type UseAppRootSignedInSecondaryWiringArgs = {
   uiStateDestroyAgentId: string | null;
-  focusedAgent: AgentSession | null;
-  focusedTerminal: TerminalSession | null;
   isRemoteMountedWorkspace: boolean;
   workspaceTasks: WorkspaceTasksState;
   workspaceSpecs: WorkspaceSpecsState;
@@ -33,7 +31,6 @@ export type UseAppRootSignedInSecondaryWiringArgs = {
 export type WorkspaceAggregatesResult = ReturnType<typeof useWorkspaceAggregates>;
 
 export type UseAppRootSignedInSecondaryWiringResult = {
-  activeWorktree: WorktreeRecord | null;
   activeBranch: string;
   parentRepoBranch: string;
   agentPendingDestroy: AgentSession | null;

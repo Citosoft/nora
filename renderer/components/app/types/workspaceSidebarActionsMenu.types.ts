@@ -18,5 +18,7 @@ export type WorkspaceWorkspaceActionsMenuItemsProps = {
   onOpenWorkspaceTerminalPresets: (projectId: string) => void;
   onCreateTask: (projectId: string) => void;
   onCreateSpec: (projectId: string) => void;
-  onRemoveProject: (rootPath: string) => void;
+  onCreateNote: (projectId: string) => void;
+  /** Present only for git workspaces, which can have worktrees. */
+  onCreateWorktree?: () => void;
 };

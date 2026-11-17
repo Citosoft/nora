@@ -1,0 +1,62 @@
+const { app } = require('electron');
+const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const { join } = require('node:path');
+const { createFixtureHost } = require('./ui/fixtureHost.cjs');
+let host;
+(async () => {
+  host = await createFixtureHost('tests/ui/NativeQueueHarness.tsx');
+  const { evaluate, wait, click, window, pause } = host;
+  const queue = 'section[aria-label="Queued instructions"]';
+  await wait(`document.querySelectorAll('${queue} li').length===3`);
+  assert.equal(await evaluate(`document.querySelector('${queue}').getBoundingClientRect().height<160`), true);
+  assert.equal(await evaluate(`document.querySelectorAll('${queue} textarea').length`), 0);
+  assert.equal(await evaluate(`(()=>{const queue=document.querySelector('${queue}').getBoundingClientRect();const composer=document.querySelector('textarea[aria-label="Chat input"]').closest('form').getBoundingClientRect();return queue.width<composer.width && queue.left>composer.left && Math.abs(queue.bottom-composer.top)<2})()`), true);
+  if (process.env.NORA_UI_EVIDENCE_DIR) {
+    await fs.mkdir(process.env.NORA_UI_EVIDENCE_DIR, { recursive: true });
+    for (const theme of ['light', 'dark']) {
+      await evaluate(`document.documentElement.classList.toggle('dark','${theme}'==='dark');document.documentElement.dataset.theme='${theme}'`); await pause(50);
+      await fs.writeFile(join(process.env.NORA_UI_EVIDENCE_DIR, `queue-${theme}.png`), (await window.webContents.capturePage()).toPNG());
+    }
+  }
+  await click('button[aria-label="Edit queued message 1"]');
+  assert.equal(await evaluate('document.activeElement.getAttribute("aria-label")'), 'Queued message 1 text');
+  assert.equal(await evaluate('!!document.querySelector("form form")'), false);
+  await evaluate(`document.querySelector('textarea[aria-label="Queued message 1 text"]').select()`);
+  window.webContents.insertText('Check only the changed files');
+  await click('#fail');
+  await click('button[aria-label="Save queued message 1"]');
+  await wait('!!document.querySelector("[role=alert]")');
+  assert.equal(await evaluate('document.querySelector(\'textarea[aria-label="Queued message 1 text"]\').value'), 'Check only the changed files');
+  await click('#fail');
+  await click('button[aria-label="Save queued message 1"]');
+  await wait('!document.querySelector(\'textarea[aria-label="Queued message 1 text"]\')');
+  assert.equal(await evaluate('document.querySelector(\'button[aria-label="Edit queued message 1"]\').textContent'), 'Check only the changed files');
+  await click('button[aria-label="Edit queued message 2"]');
+  window.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' });
+  window.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' });
+  await wait('document.activeElement.getAttribute("aria-label")==="Edit queued message 2"');
+  await click('#busy');
+  assert.equal(await evaluate(`Array.from(document.querySelectorAll('${queue} button')).every(button=>button.disabled)`), true);
+  await click('#busy');
+  await click('button[aria-label="Remove queued message 2"]');
+  await wait(`document.querySelectorAll('${queue} li').length===2`);
+  await click('#pause');
+  await wait(`document.querySelector('${queue}').textContent.includes('Paused')`);
+  await click(`${queue} h2 + button`);
+  await wait(`!document.querySelector('${queue}').textContent.includes('Paused')`);
+  await click('button[aria-label="Remove queued message 1"]');
+  await wait(`document.querySelectorAll('${queue} li').length===1`);
+  await click('button[aria-label="Remove queued message 1"]');
+  await wait(`!document.querySelector('${queue}')`);
+  await click('#reset');
+  assert.equal(await evaluate(`!!document.querySelector('button[aria-label="Steer queued message 1"]')`), false);
+  await click('#steering');
+  await click('button[aria-label="Steer queued message 2"]');
+  await wait(`document.querySelectorAll('${queue} li').length===2`);
+  const steered = JSON.parse(await evaluate('document.getElementById("last-command").textContent'));
+  assert.equal(steered.kind, 'steer-queued'); assert.equal(steered.runId, 'queued-1'); assert.equal(steered.targetRunId, 'active');
+  await click('#steering');
+  assert.equal(await evaluate(`!!document.querySelector('button[aria-label="Steer queued message 1"]')`), false);
+  console.log('PASS: compact stacked queue, edit/save/failure retry, Escape focus, busy controls, removal, resume and empty state.');
+})().then(async () => { await host?.close(); app.exit(0); }).catch(async error => { console.error(error); await host?.close(); app.exit(1); });

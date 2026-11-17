@@ -17,6 +17,12 @@ export class ForgeMainService implements ForgeService {
   getForgeBranchPullRequestStatus = (projectId: string, branch: string, options: ForgeRequestOptions) =>
     this.helpers.getForgeBranchPullRequestStatus(projectId, branch, options);
 
+  getForgeBranchChanges = (projectId: string, checkoutPath: string, options: ForgeRequestOptions) =>
+    this.helpers.getForgeBranchChanges(projectId, checkoutPath, options);
+
+  getForgeBranchDiff = (projectId: string, checkoutPath: string) =>
+    this.helpers.getForgeBranchDiff(projectId, checkoutPath);
+
   getForgeWorkItemDetail = (projectId: string, kind: ForgeWorkItemKind, number: number, options: ForgeRequestOptions) =>
     this.helpers.getForgeWorkItemDetail(projectId, kind, number, options);
 

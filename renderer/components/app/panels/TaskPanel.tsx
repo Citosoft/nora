@@ -1,13 +1,11 @@
 import { useAppMainCenterContent } from "@/components/app/context/appMainCenterContentContext";
 import { MarkdownRenderer } from "@/components/app/shared/MarkdownRenderer";
-import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Editor from "@monaco-editor/react";
-import { isAgentToolAvailable } from "@shared/agentToolState";
 import { CheckCircle2, CopyPlus, Eye, FileText, LoaderCircle, PencilLine, RotateCcw, Save, Sparkles, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 export function TaskPanel() {
   const { taskPanelProps } = useAppMainCenterContent();
@@ -29,16 +27,14 @@ export function TaskPanel() {
     isSaving,
     errorMessage,
     resolvedTheme,
-    tools,
     onChange,
     onSave,
     onRevert,
     onClose,
-    onSpawnAgent,
+    onStartThread,
     onDuplicateToNew
   } = taskPanelProps;
   const [mode, setMode] = useState<"preview" | "edit">("preview");
-  const availableTools = useMemo(() => tools.filter((tool) => isAgentToolAvailable(tool)), [tools]);
   const isDirty = content !== savedContent;
   const isBusy = isCreating || isLoading || isSaving;
 
@@ -64,11 +60,11 @@ export function TaskPanel() {
   }, [isBusy, onSave]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background/10">
+    <div className="flex h-full min-h-0 flex-col bg-background">
       <div className="border-b border-border/50 px-4 py-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
               <FileText className="size-3.5" />
               {completed ? "Completed task" : "Project task"}
             </div>
@@ -134,9 +130,9 @@ export function TaskPanel() {
         </div>
       </div>
 
-      <div className="border-b border-border/50 bg-background/40 px-4 py-3">
+      <div className="border-b border-border/50 bg-background px-4 py-3">
         {completed ? (
-          <div className="flex items-start gap-3 rounded-[6px] border border-emerald-500/25 bg-emerald-500/8 px-4 py-3 text-sm">
+          <div className="flex items-start gap-3 rounded-lg border border-emerald-500/25 bg-emerald-500/8 px-4 py-3 text-sm">
             <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" />
             <div className="min-w-0">
               <div className="font-medium text-foreground">This task is completed.</div>
@@ -153,38 +149,16 @@ export function TaskPanel() {
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-2">
-            <div className="mr-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              <Sparkles className="size-3.5" />
-              Spawn new worktree agent
-            </div>
-            {availableTools.map((tool) => (
-              <Button
-                key={tool.id}
-                variant="outline"
-                size="icon"
-                className="size-9"
-                tooltip={`Spawn a new ${tool.label} agent on a new worktree for this task`}
-                aria-label={`Spawn a new ${tool.label} agent on a new worktree for this task`}
-                onClick={() => onSpawnAgent(tool.id)}
-                disabled={isBusy}
-              >
-                <AgentToolIcon
-                  toolId={tool.id}
-                  label={tool.label}
-                  className="size-6 rounded-[4px] bg-transparent"
-                  imageClassName="size-5 rounded-[4px]"
-                />
-              </Button>
-            ))}
-            {!availableTools.length ? (
-              <div className="text-sm text-muted-foreground">No detected agent CLIs are available.</div>
-            ) : null}
+            <Button variant="outline" size="sm" onClick={onStartThread} disabled={isBusy}>
+              <Sparkles className="size-3.5" />Start thread
+            </Button>
+            <span className="text-xs text-muted-foreground">Work on this task in a new thread.</span>
           </div>
         )}
       </div>
 
       {errorMessage ? (
-        <div className="mx-4 mt-4 rounded-[6px] border border-destructive/35 bg-destructive/8 px-4 py-3 text-sm text-foreground">
+        <div className="mx-4 mt-4 rounded-lg border border-destructive/35 bg-destructive/8 px-4 py-3 text-sm text-foreground">
           {errorMessage}
         </div>
       ) : null}
@@ -208,7 +182,7 @@ export function TaskPanel() {
             </TabsList>
           </div>
           <TabsContent value="preview" className="min-h-0 flex-1">
-            <div className="h-full min-h-0 overflow-auto rounded-[6px] border border-border/60 bg-background px-6 py-5">
+            <div className="h-full min-h-0 overflow-auto rounded-lg border border-border/60 bg-background px-6 py-5">
               {isLoading ? (
                 <div className="flex h-full items-center justify-center gap-3 text-sm text-muted-foreground">
                   <LoaderCircle className="size-4 animate-spin" />
@@ -217,7 +191,7 @@ export function TaskPanel() {
               ) : (
                 <div className="space-y-3">
                   {isCreating ? (
-                    <div className="inline-flex items-center gap-2 rounded-[6px] border border-primary/25 bg-primary/8 px-3 py-2 text-xs text-muted-foreground">
+                    <div className="inline-flex items-center gap-2 rounded-lg border border-primary/25 bg-primary/8 px-3 py-2 text-xs text-muted-foreground">
                       <LoaderCircle className="size-3.5 animate-spin text-primary" />
                       Creating task file...
                     </div>
@@ -232,7 +206,7 @@ export function TaskPanel() {
             </div>
           </TabsContent>
           <TabsContent value="edit" className="min-h-0 flex-1">
-            <div className="h-full min-h-0 overflow-hidden rounded-[6px] border border-border/60 bg-background">
+            <div className="h-full min-h-0 overflow-hidden rounded-lg border border-border/60 bg-background">
               {isLoading ? (
                 <div className="flex h-full items-center justify-center gap-3 text-sm text-muted-foreground">
                   <LoaderCircle className="size-4 animate-spin" />

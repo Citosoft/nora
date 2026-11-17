@@ -6,6 +6,7 @@ export function SpecCenter() {
   const snapshot = useCanonicalAppSnapshot();
   const { specCenterProps } = useAppMainCenterContent();
   const {
+    projectId,
     workspaceSpecs,
     isCreatingSpec,
     onOpenSpec,
@@ -34,7 +35,7 @@ export function SpecCenter() {
         projectName: workspace.project.name,
         projectRootPath: workspace.project.rootPath
       }))
-  ].map((workspace) => ({
+  ].filter((workspace) => !projectId || workspace.projectId === projectId).map((workspace) => ({
     ...workspace,
     specs: workspaceSpecs[workspace.projectId]?.specs ?? [],
     isLoading: workspaceSpecs[workspace.projectId]?.isLoading ?? false,

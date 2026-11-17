@@ -21,3 +21,5 @@ export * from "./types/session.types";
 export * from "./types/system.types";
 export * from "./types/voice.types";
 export * from "./types/workspace.types";
+
+export type { CreateWorktreePayload } from "./types/worktreeCreation.types";

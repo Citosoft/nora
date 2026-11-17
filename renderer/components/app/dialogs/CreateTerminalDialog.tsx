@@ -138,7 +138,7 @@ export function CreateTerminalDialog({
               ))}
             </Select>
           </Field>
-          <div className="rounded-[4px] border border-border/70 bg-background/30 px-4 py-3 text-sm text-muted-foreground">
+          <div className="rounded-md border border-border/70 bg-background px-4 py-3 text-sm text-muted-foreground">
             <div className="font-medium text-foreground">{formState.launchConfig.label}</div>
             {formState.launchConfig.command ? (
               <div className="mt-1 font-mono text-xs">{formState.launchConfig.command}</div>

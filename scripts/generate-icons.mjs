@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 
@@ -91,3 +91,13 @@ await writeFile(
       }))
   )
 );
+
+// Reuse the icon's foreground glyph without its opaque tile for the system menu bar.
+const iconSvg = await readFile(svgPath, "utf8");
+const glyph = iconSvg.match(/<g fill="#F4F8F5">([\s\S]*?)<\/g>/)?.[1];
+if (!glyph) throw new Error("The app icon foreground glyph could not be found.");
+const template = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="192 232 640 544"><g fill="black">${glyph}</g></svg>`);
+for (const [suffix, size] of [["", 20], ["@2x", 40]]) {
+  await sharp(template).resize(size, size, { fit: "contain" }).png().toFile(path.join(rendererDir, `trayTemplate${suffix}.png`));
+  await source.clone().resize(size, size).png().toFile(path.join(rendererDir, `tray${suffix}.png`));
+}

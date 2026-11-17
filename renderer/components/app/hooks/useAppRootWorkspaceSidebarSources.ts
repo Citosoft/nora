@@ -98,7 +98,7 @@ export function useAppRootWorkspaceSidebarSources({
       uiCommands: {
         clearBrowserAndForgeFocus: uiCommands.clearBrowserAndForgeFocus,
         clearSessionTabFocus: uiCommands.clearSessionTabFocus,
-        openCreateAgentDialog: uiCommands.openCreateAgentDialog,
+        openNewThread: uiCommands.openNewThread,
         openCreateTerminalDialog: uiCommands.openCreateTerminalDialog,
         openResetWorkspacesDialog: uiCommands.openResetWorkspacesDialog,
         openWorkspaceTerminalPresetsDialog: uiCommands.openWorkspaceTerminalPresetsDialog,

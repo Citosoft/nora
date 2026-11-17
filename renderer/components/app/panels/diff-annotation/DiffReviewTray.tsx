@@ -2,17 +2,15 @@ import { useDiffAnnotations } from "@/components/app/context/diffAnnotationConte
 import { useChangesPanelWorkspace } from "@/components/app/context/changesPanelContext";
 import { groupDiffAnnotationsByPath } from "@/components/app/logic/diffAnnotation";
 import {
-  diffReviewCommentAccentClass,
-  diffReviewCommentRowBodyClass,
-  diffReviewCommentRowClass,
-  diffReviewCommentSurfaceClass
-} from "@/components/app/panels/diff-annotation/diffAnnotationUi";
+  reviewRemoveButtonClass,
+  reviewCommentBodyClass,
+  reviewCommentRowClass
+} from "@/components/app/logic/reviewStyles";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronRight, LoaderCircle, MessageSquare, Trash2, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 
 export function DiffReviewTray() {
   const {
@@ -26,6 +24,7 @@ export function DiffReviewTray() {
     runningAgentTargets
   } = useDiffAnnotations();
   const { onOpenCreateAgentDialog } = useChangesPanelWorkspace();
+  const contentId = useId();
   const [isExpanded, setIsExpanded] = useState(true);
   const [selectedAgentId, setSelectedAgentId] = useState("");
   const [sendError, setSendError] = useState<string | null>(null);
@@ -63,13 +62,13 @@ export function DiffReviewTray() {
   };
 
   return (
-    <div className="shrink-0 border-t border-border/50 bg-card/95">
-      <div className="border-b border-border/40 px-4 py-2.5">
+    <div className="workspace-shell-surface min-h-0 shrink-0 border-t border-border/70">
+      <div className="px-3 py-2">
         <div className="flex items-center gap-2">
-          <div className="flex min-w-0 flex-1 items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          <div className="flex min-w-0 flex-1 items-center gap-2 text-xs font-medium text-foreground">
             <MessageSquare className="size-3.5 shrink-0" />
             <span className="whitespace-nowrap">Diff review</span>
-            <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-semibold normal-case tracking-normal">
+            <Badge variant="secondary" className="h-5 px-1.5 text-[11px]">
               {annotationCount}
             </Badge>
           </div>
@@ -77,8 +76,10 @@ export function DiffReviewTray() {
             <Button
               variant="ghost"
               size="icon"
-              className="size-6"
+              className="size-7 text-muted-foreground"
               onClick={() => setIsExpanded((current) => !current)}
+              aria-expanded={isExpanded}
+              aria-controls={contentId}
               aria-label={isExpanded ? "Collapse diff review section" : "Expand diff review section"}
             >
               {isExpanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
@@ -86,7 +87,7 @@ export function DiffReviewTray() {
             <Button
               variant="ghost"
               size="icon"
-              className="size-6 text-muted-foreground hover:text-destructive"
+              className="size-7 text-muted-foreground hover:text-destructive"
               onClick={clearAnnotations}
               aria-label="Clear all inline comments"
             >
@@ -97,14 +98,14 @@ export function DiffReviewTray() {
       </div>
 
       {isExpanded ? (
-        <div className="space-y-2 px-3 py-2">
-          <div className="max-h-52 space-y-2 overflow-auto">
+        <div id={contentId} className="space-y-3 border-t border-border/60 px-3 py-3">
+          <div className="max-h-52 space-y-3 overflow-y-auto">
             {[...groupedAnnotations.entries()].map(([path, pathAnnotations]) => (
-              <div key={path} className="rounded-[6px] border border-border/50 bg-background/55 p-2">
-                <div className="mb-1 truncate text-[11px] font-medium text-muted-foreground" title={path}>
+              <div key={path} className="space-y-2">
+                <div className="truncate px-1 text-xs font-medium text-muted-foreground" title={path}>
                   {path}
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   {pathAnnotations.map((annotation) => {
                     const lineLabel =
                       annotation.target.newLine !== null
@@ -115,21 +116,20 @@ export function DiffReviewTray() {
                     return (
                       <div
                         key={annotation.id}
-                        className={cn("overflow-hidden", diffReviewCommentSurfaceClass, diffReviewCommentRowClass)}
+                        className={reviewCommentRowClass}
                         title={annotation.body}
                       >
-                        <div className={diffReviewCommentAccentClass} aria-hidden="true" />
                         <Badge
                           variant="outline"
-                          className="h-5 shrink-0 border-primary/30 bg-background/70 px-1.5 font-mono text-[10px] text-primary"
+                          className="mt-0.5 h-5 shrink-0 border-border/60 px-1.5 font-mono text-[11px] text-muted-foreground"
                         >
                           {lineLabel}
                         </Badge>
-                        <p className={diffReviewCommentRowBodyClass}>{annotation.body}</p>
+                        <p className={reviewCommentBodyClass}>{annotation.body}</p>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="size-7 shrink-0 opacity-0 transition group-hover/review:opacity-100"
+                          className={reviewRemoveButtonClass}
                           onClick={() => removeAnnotation(annotation.id)}
                           aria-label="Remove inline comment"
                         >
@@ -143,8 +143,8 @@ export function DiffReviewTray() {
             ))}
           </div>
 
-          <div className="rounded-[6px] border border-border/50 bg-background/55 p-2">
-            {sendError ? <div className="mb-2 text-xs text-destructive">{sendError}</div> : null}
+          <div className="space-y-2 border-t border-border/60 pt-3">
+            {sendError ? <div role="alert" className="text-xs text-destructive">{sendError}</div> : null}
             {!runningAgentTargets.length ? (
               <div className="flex min-w-0 items-center gap-2">
                 <p
@@ -156,7 +156,7 @@ export function DiffReviewTray() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-7 shrink-0 px-2.5 text-[11px] font-semibold"
+                  className="h-8 shrink-0 px-2.5 text-xs font-medium"
                   onClick={() => onOpenCreateAgentDialog()}
                 >
                   New agent
@@ -167,7 +167,8 @@ export function DiffReviewTray() {
                 <Select
                   value={selectedAgentId}
                   onChange={(event) => setSelectedAgentId(event.target.value)}
-                  className="h-7 min-w-0 flex-1 bg-background/60 text-[11px]"
+                  aria-label="Agent to receive diff review"
+                  className="h-8 min-w-0 flex-1 text-xs"
                   disabled={isSendingReview}
                 >
                   {runningAgentTargets.map((agent) => (
@@ -179,13 +180,13 @@ export function DiffReviewTray() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-7 shrink-0 px-2.5 text-[11px] font-semibold"
+                  className="h-8 shrink-0 px-2.5 text-xs font-medium"
                   disabled={!selectedAgentId || isSendingReview}
                   onClick={() => void handleSendReview()}
                 >
                   {isSendingReview ? (
                     <>
-                      <LoaderCircle className="size-3.5 animate-spin" />
+                      <LoaderCircle className="size-3.5 motion-safe:animate-spin" />
                       Sending
                     </>
                   ) : (
@@ -207,7 +208,7 @@ export function DiffReviewCountBadge({ count }: { count: number }) {
   }
 
   return (
-    <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-semibold normal-case tracking-normal">
+    <Badge variant="secondary" className="h-5 px-1.5 text-[11px]">
       {count} comment{count === 1 ? "" : "s"}
     </Badge>
   );

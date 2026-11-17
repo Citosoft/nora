@@ -78,6 +78,7 @@ function createDeps(args: {
   writeAgentContextBundle?: SessionMainServiceDeps["writeAgentContextBundle"];
 }): SessionMainServiceDeps {
   return {
+    createWorktree: async () => { throw new Error("not used"); },
     sessionCreation: {
       createAgent: async () => {
         throw new Error("not used");

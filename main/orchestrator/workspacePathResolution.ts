@@ -1,7 +1,7 @@
 import type { ProjectSummary, WorktreeRecord } from "@shared/appTypes";
 import fs from "node:fs";
 import path from "node:path";
-import type { WorkspaceTarget } from "../types/internal.types";
+import type { WorkspaceGitExec, WorkspaceTarget } from "../types/internal.types";
 import { normalizeLocalPath } from "./gitWorkspaceCommandUtils";
 
 function normalizeSshWorkspaceRoot(value: string): string {
@@ -68,3 +68,34 @@ export function resolveWorkspaceFileTarget(
   return getWorktreeTarget(project, worktree);
 }
 
+/** Worktree roots from `git worktree list --porcelain`, main checkout first. */
+export function parseWorktreePaths(output: string): string[] {
+  return output
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith("worktree "))
+    .map((line) => line.slice("worktree ".length).trim())
+    .filter(Boolean);
+}
+
+/**
+ * Renderer-supplied checkout paths are hints: only the project root or one of its Git worktrees
+ * may be read from or pushed, so a request can never reach an unrelated folder.
+ */
+export async function resolveProjectCheckoutTarget(
+  project: ProjectSummary,
+  checkoutPath: string,
+  execGit: WorkspaceGitExec
+): Promise<WorkspaceTarget> {
+  const root = getProjectTarget(project);
+  if (workspaceRootsEqualForProject(checkoutPath, project.rootPath, project)) {
+    return root;
+  }
+  const { stdout } = await execGit(root, ["worktree", "list", "--porcelain"]);
+  const worktreePath = parseWorktreePaths(stdout).find((candidate) =>
+    workspaceRootsEqualForProject(candidate, checkoutPath, project)
+  );
+  if (!worktreePath) {
+    throw new Error("This checkout is not part of the selected repository.");
+  }
+  return { path: worktreePath, location: project.location };
+}

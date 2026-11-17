@@ -1,0 +1,82 @@
+const { app } = require('electron');
+const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const { join } = require('node:path');
+const { createFixtureHost } = require('./ui/fixtureHost.cjs');
+let host;
+(async () => {
+  host = await createFixtureHost('tests/ui/NativeRequestStackHarness.tsx');
+  const { evaluate, wait, click, window, pause } = host;
+  const stack = '[role="dialog"]';
+  // Simulate provider events independently of the modal's blocked background UI.
+  const simulate = id => evaluate(`document.getElementById(${JSON.stringify(id)}).click()`);
+  const card = 'section[aria-label="Agent request"]';
+  const allow = card + ' button[aria-label="Allow once"]';
+  await wait(`!!document.querySelector('${card}')`);
+  const height = await evaluate(`document.querySelector('${stack}').getBoundingClientRect().height`);
+  await evaluate(`document.getElementById('transcript').scrollTop=200`);
+  const scroll = await evaluate(`document.getElementById('transcript').scrollTop`);
+  await simulate('burst');
+  await wait(`document.querySelector('${stack} [role=status]').textContent.includes('23 requests')`);
+  assert.equal(await evaluate(`document.querySelectorAll('${card}').length`), 1);
+  assert.equal(await evaluate(`document.querySelector('${stack}').getBoundingClientRect().height`), height, 'Burst adds no card height');
+  assert.equal(await evaluate(`document.querySelector('${card} h2').textContent`), 'Allow command 1?');
+  assert.equal(await evaluate(`document.documentElement.scrollHeight<=innerHeight`), true, 'Page does not overflow');
+  assert.equal(await evaluate(`document.querySelector('[aria-label="Message Nora"]').getBoundingClientRect().bottom<innerHeight`), true);
+  await simulate('fail');
+  await click(allow);
+  await wait(`!!document.querySelector('[role=alert]')`);
+  assert.equal(await evaluate(`document.querySelector('${card} h2').textContent`), 'Allow command 1?');
+  assert.equal(await evaluate(`document.getElementById('responses').textContent`), '[]');
+  await simulate('fail');
+  await evaluate(`document.querySelector('${allow}').focus()`);
+  window.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Space' });
+  window.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Space' });
+  await wait(`document.querySelector('${card}').textContent.includes('Delivering response')`);
+  assert.equal(await evaluate(`document.querySelector('${card} h2').textContent`), 'Allow command 1?');
+  assert.equal(await evaluate(`[...document.querySelectorAll('${card} button')].every(button=>button.disabled)`), true);
+  await wait(`document.querySelector('${card} h2').textContent==='Allow command 2?'`);
+  assert.equal(await evaluate(`document.activeElement===document.querySelector('${stack}')`), true, 'Focus follows the next card');
+  assert.equal(await evaluate(`document.getElementById('transcript').scrollTop`), scroll, 'Chat scroll position is preserved');
+  assert.deepEqual(JSON.parse(await evaluate(`document.getElementById('responses').textContent`)), [{ requestId: 'request-1', response: { kind: 'approval', optionId: 'allow' } }]);
+  if (process.env.NORA_UI_EVIDENCE_DIR) {
+    await fs.mkdir(process.env.NORA_UI_EVIDENCE_DIR, { recursive: true });
+    for (const theme of ['light', 'dark']) {
+      await evaluate(`document.documentElement.classList.toggle('dark','${theme}'==='dark');document.documentElement.dataset.theme='${theme}'`);
+      await pause(100);
+      await fs.writeFile(join(process.env.NORA_UI_EVIDENCE_DIR, `request-stack-${theme}.png`), (await window.webContents.capturePage()).toPNG());
+    }
+  }
+  await click(card + ' button[aria-label="Decline"]');
+  await wait(`document.querySelector('${card} h2').textContent==='Allow command 3?'`);
+  const responses = JSON.parse(await evaluate(`document.getElementById('responses').textContent`));
+  assert.equal(responses[1].requestId, 'request-2');
+  assert.equal(responses[1].response.optionId, 'deny');
+  await simulate('expire');
+  await wait(`document.querySelector('${card} h2').textContent==='Allow command 4?'`);
+  await click('[aria-label="Review approval later"]');
+  await wait(`!document.querySelector('${stack}')`);
+  assert.equal(await evaluate(`document.getElementById('responses').textContent`), JSON.stringify(responses), 'Dismissal does not respond');
+  await host.byText('Review approval· 20 requests pending');
+  await wait(`!!document.querySelector('${stack}')`);
+  window.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' });
+  window.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' });
+  await wait(`!document.querySelector('${stack}')`);
+  await host.byText('Review approval· 20 requests pending');
+  await wait(`!!document.querySelector('${stack}')`);
+  await simulate('hide');
+  await wait(`!document.querySelector('${stack}')`);
+  await simulate('show');
+  await wait(`!!document.querySelector('${stack}')`);
+  await simulate('clear');
+  await wait(`!document.querySelector('${stack}')`);
+  window.setSize(420, 720);
+  await simulate('burst');
+  await wait(`!!document.querySelector('${stack}')`);
+  assert.equal(await evaluate(`document.documentElement.scrollHeight<=innerHeight`), true, 'Narrow viewport keeps actions and composer visible');
+  console.log('PASS: floating dialog stack, fixed height, retry, delivery lock, sequential allow/deny, focus, scroll preservation, dismissal/reopening, hidden threads, expiration and narrow viewport.');
+})().then(async () => { await host?.close(); app.exit(0); }).catch(async error => {
+  console.error(error);
+  if (host) console.error(await host.evaluate('document.body.innerText').catch(() => 'Renderer unavailable'));
+  await host?.close(); app.exit(1);
+});

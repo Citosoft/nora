@@ -1,6 +1,7 @@
 import type { UiState, WindowUiState } from "@/components/app/types";
 
 export const appRootInitialUiState: UiState = {
+  workspaceToolRequest: null,
   snapshot: null,
   activeErrorMessage: null,
   showAddWorkspaceModal: false,

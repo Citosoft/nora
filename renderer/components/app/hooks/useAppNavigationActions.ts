@@ -1,3 +1,4 @@
+import { useNativeRuntimePorts } from "./useNativeRuntimePorts";
 import { createQuickTerminalDialogDefaults } from "@/components/app/logic/terminalQuickLaunch";
 import type { AppView, UiState } from "@/components/app/types";
 import type { SettingsGroup } from "@/components/app/types/settings.types";
@@ -31,6 +32,7 @@ export function useAppNavigationActions({
   openCreateAgentModal: () => void;
   openWorkspaceBrowserFromTitleBar: () => void;
 } {
+  const native = useNativeRuntimePorts();
   const openSettingsPage = useCallback((group: SettingsGroup = "appearance") => {
     setSettingsGroup(group);
     setActiveView("settings");
@@ -70,17 +72,11 @@ export function useAppNavigationActions({
   }, [defaultTerminalShellId, setActiveView, setUiState, snapshotProjectId, terminalQuickLaunchDefaults]);
 
   const openCreateAgentModal = useCallback((): void => {
-    if (!snapshotProjectId) {
-      return;
-    }
-
     setActiveView("main");
-    setUiState((current) => ({
-      ...current,
-      showCreateAgentModal: true,
-      createAgentDefaults: null
-    }));
-  }, [setActiveView, setUiState, snapshotProjectId]);
+    void native.launch({ ...(snapshotProjectId ? { projectId: snapshotProjectId } : {}) }).catch((cause: unknown) => {
+      setUiState((current) => ({ ...current, activeErrorMessage: cause instanceof Error ? cause.message : "Thread could not be opened." }));
+    });
+  }, [native.launch, setActiveView, setUiState, snapshotProjectId]);
 
   const openWorkspaceBrowserFromTitleBar = useCallback((): void => {
     if (!snapshotProjectId) {

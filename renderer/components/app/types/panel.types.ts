@@ -1,69 +1,69 @@
 import type {
-  AiChatMessage,
-  AiChatReasoningLevel,
-  AiChatTabState,
-  BrowserTabState,
-  CreateAgentDialogDefaults,
-  CreateTerminalDialogDefaults,
-  FileEditorState,
-  FileEditorTab,
-  ForgeViewerTabState,
-  ResolvedTheme,
-  TaskBoardViewMode,
-  TerminalFontId,
-  TerminalSubmission,
-  TerminalThemeId,
-  WindowUiState,
-  WorkspaceNotesState,
-  WorkspaceSpecsState,
-  WorkspaceTaskBoardsState,
-  WorkspaceTasksState
+AiChatMessage,
+AiChatReasoningLevel,
+AiChatTabState,
+BrowserTabState,
+CreateTerminalDialogDefaults,
+FileEditorState,
+FileEditorTab,
+ForgeViewerTabState,
+ResolvedTheme,
+TaskBoardViewMode,
+TerminalFontId,
+TerminalSubmission,
+TerminalThemeId,
+WindowUiState,
+WorkspaceNotesState,
+WorkspaceSpecsState,
+WorkspaceTaskBoardsState,
+WorkspaceTasksState
 } from "@/components/app/types";
-import type {
-  ForgeReviewAgentTargetMode,
-  ForgeReviewCommentSelection
-} from "@/components/app/types/forgeReviewHandoff.types";
 import type { FileEditorAgentSendTarget } from "@/components/app/types/fileEditor.types";
 import type {
-  OpenWorkspaceFileEditorOptions,
-  TaskCenterTaskReference,
-  WorkspaceSessionTab
+ForgeReviewAgentTargetMode,
+ForgeReviewCommentSelection
+} from "@/components/app/types/forgeReviewHandoff.types";
+import type { ThreadLaunchInput } from "@/components/app/types/thread-workspace/runtime.types";
+import type {
+OpenWorkspaceFileEditorOptions,
+TaskCenterTaskReference,
+WorkspaceSessionTab
 } from "@/components/app/types/workflow.types";
 import type {
-  AgentCatalogEntry,
-  AgentSession,
-  AiModelCatalogEntry,
-  AiProvider,
-  AiSettings,
-  AppSettings,
-  AppState,
-  ChangeEntry,
-  CheckoutWorkspaceBranchPayload,
-  CreateTerminalPayload,
-  ForgeAddCommentPayload,
-  ForgeOverview,
-  ForgeWorkItemAction,
-  ForgeWorkflowRunSummary,
-  ForgeWorkItemDetail,
-  ForgeWorkItemKind,
-  ForgeWorkItemSummary,
-  LocalTerminalState,
-  TerminalSession,
-  TerminalShellOption,
-  VercelDeploymentSummary,
-  VercelProjectSummary,
-  WorkspaceNoteSummary,
-  WorkspaceScriptLauncher,
-  WorkspaceSearchResult,
-  WorkspaceSpecSummary,
-  WorkspaceSplitView,
-  WorkspaceSplitViewCollection,
-  WorkspaceSplitViewItemReference,
-  WorkspaceSummary,
-  WorkspaceTaskBoard,
-  WorkspaceTaskSummary
+AgentCatalogEntry,
+AgentSession,
+AiModelCatalogEntry,
+AiProvider,
+AiSettings,
+AppSettings,
+AppState,
+ChangeEntry,
+CheckoutWorkspaceBranchPayload,
+CreateTerminalPayload,
+ForgeAddCommentPayload,
+ForgeOverview,
+ForgeWorkflowRunSummary,
+ForgeWorkItemAction,
+ForgeWorkItemDetail,
+ForgeWorkItemKind,
+ForgeWorkItemSummary,
+LocalTerminalState,
+TerminalSession,
+TerminalShellOption,
+VercelDeploymentSummary,
+VercelProjectSummary,
+WorkspaceNoteSummary,
+WorkspaceScriptLauncher,
+WorkspaceSearchResult,
+WorkspaceSpecSummary,
+WorkspaceSplitView,
+WorkspaceSplitViewCollection,
+WorkspaceSplitViewItemReference,
+WorkspaceSummary,
+WorkspaceTaskBoard,
+WorkspaceTaskSummary
 } from "@shared/appTypes";
-import type { Dispatch, ReactNode, SetStateAction } from "react";
+import type { Dispatch,ReactNode,SetStateAction } from "react";
 
 export type AgentContextCardProps = {
   state: import("@shared/appTypes").AgentContextState | null;
@@ -161,7 +161,7 @@ export type ForgePanelProps = {
   onRefreshDetail: () => void;
   onAction: (action: ForgeWorkItemAction) => void;
   onCommentSubmit: (payload: ForgeAddCommentPayload) => Promise<void>;
-  onSpawnIssueAgent: (toolId: string) => Promise<void>;
+  onStartIssueThread: () => Promise<void>;
   onSpawnReviewAgent: (
     toolId: string,
     selections: ForgeReviewCommentSelection[],
@@ -184,7 +184,7 @@ export type ForgeDetailPanelProps = Pick<
   | "onRefreshDetail"
   | "onAction"
   | "onCommentSubmit"
-  | "onSpawnIssueAgent"
+  | "onStartIssueThread"
   | "onSpawnReviewAgent"
 > & {
   repoFullName?: string | null;
@@ -267,21 +267,19 @@ export type TaskBoardWorkspaceEntry = {
 
 export type TaskBoardPanelProps = {
   workspaces: TaskBoardWorkspaceEntry[];
-  availableTools: AgentCatalogEntry[];
   activeWorkspaceId: string | null;
   viewMode: TaskBoardViewMode;
   selectedTaskKeys: string[];
-  selectedToolId: string;
-  isSpawningAgents: boolean;
+  isStartingThreads: boolean;
   onViewModeChange: (nextMode: TaskBoardViewMode) => void;
   onSelectWorkspace: (projectId: string) => void;
   onToggleTaskSelection: (projectId: string, taskPath: string) => void;
   onClearTaskSelection: () => void;
-  onSelectedToolChange: (toolId: string) => void;
-  onSpawnSelectedAgents: () => Promise<void>;
+  onStartSelectedThreads: () => Promise<void>;
+  onStartTask: (projectId: string, taskPath: string) => Promise<void>;
   onOpenTask: (projectId: string, taskPath: string) => void;
   onCreateTask: (projectId: string) => void;
-  onGenerateTasks: (projectId: string, toolId: string, brief: string | null, specPath: string | null) => Promise<void>;
+  onGenerateTasks: (projectId: string, brief: string | null, specPath: string | null) => Promise<void>;
   onToggleTaskComplete: (projectId: string, fromPath: string, toPath: string) => Promise<void>;
   onDeleteTask: (projectId: string, taskPath: string) => Promise<void>;
   onMoveTask: (projectId: string, taskPath: string, sectionId: string) => Promise<void>;
@@ -318,12 +316,11 @@ export type TaskPanelProps = {
   isSaving: boolean;
   errorMessage: string | null;
   resolvedTheme: ResolvedTheme;
-  tools: AgentCatalogEntry[];
   onChange: (value: string) => void;
   onSave: () => void;
   onRevert: () => void;
   onClose: () => void;
-  onSpawnAgent: (toolId: string) => void;
+  onStartThread: () => void;
   onDuplicateToNew: () => void;
 };
 
@@ -415,7 +412,7 @@ export type WorkspaceSessionPanelProps = {
   activeGridRows: WorkspaceSplitView["gridRows"];
   onChooseProject: () => Promise<AppState | null>;
   onRefreshCatalog: () => Promise<AppState | null>;
-  onCreateInWorkspace: (defaults: CreateAgentDialogDefaults) => void;
+  onCreateInWorkspace: (defaults: ThreadLaunchInput) => void;
   onLaunchTerminalFromDefaults: (payload: CreateTerminalPayload) => void;
   onOpenCreateTerminal: (defaults: CreateTerminalDialogDefaults) => void;
   onOpenWorkspaceTerminalPresets: (projectId: string) => void;
@@ -471,7 +468,7 @@ export type WorkspaceSessionPanelProps = {
   onRefreshForgeItem: () => void;
   onForgeAction: (action: ForgeWorkItemAction) => void;
   onForgeCommentSubmit: (payload: ForgeAddCommentPayload) => Promise<void>;
-  onSpawnIssueAgent: (toolId: string) => Promise<void>;
+  onStartIssueThread: () => Promise<void>;
   onSpawnReviewAgent: (
     toolId: string,
     selections: ForgeReviewCommentSelection[],
@@ -493,11 +490,10 @@ export type WorkspaceSessionTabsProps = {
   onSelect: (tab: WorkspaceSessionTab) => void;
   onClose: (tab: WorkspaceSessionTab) => void;
   onCloseMany: (tabs: WorkspaceSessionTab[]) => void;
-  onCreateAgent: (toolId: string) => void;
+  onCreateThread: () => void;
   onCreateTerminalFromDefaults: () => void;
   onCreateTerminal: () => void;
   onCreateBrowser: () => void;
-  onCreateAiChat: () => void;
 };
 
 export type WorkspaceSessionToolbarProps = {
@@ -517,6 +513,7 @@ export type WorkspaceSplitViewPanelProps = {
 };
 
 export type SpecCenterProps = {
+  projectId?: string;
   workspaceSpecs: WorkspaceSpecsState;
   isCreatingSpec: boolean;
   onOpenSpec: (projectId: string, path: string) => void;
@@ -527,6 +524,7 @@ export type SpecCenterProps = {
 };
 
 export type NoteCenterProps = {
+  projectId?: string;
   workspaceNotes: WorkspaceNotesState;
   isCreatingNote: boolean;
   onOpenNote: (projectId: string, path: string) => void;
@@ -536,17 +534,17 @@ export type NoteCenterProps = {
 };
 
 export type TaskCenterProps = {
+  projectId?: string;
   workspaceTasks: WorkspaceTasksState;
   workspaceSpecs: WorkspaceSpecsState;
   workspaceTaskBoards: WorkspaceTaskBoardsState;
   updateWorkspaceTaskBoard: (projectId: string, updater: (currentBoard: WorkspaceTaskBoard) => WorkspaceTaskBoard) => Promise<WorkspaceTaskBoard>;
-  tools: AgentCatalogEntry[];
   onOpenTask: (projectId: string, path: string) => void;
   onCreateTask: (projectId: string) => void;
-  onGenerateTasks: (projectId: string, toolId: string, brief: string | null, specPath: string | null) => Promise<void>;
+  onGenerateTasks: (projectId: string, brief: string | null, specPath: string | null) => Promise<void>;
   onToggleTaskComplete: (projectId: string, fromPath: string, toPath: string) => Promise<void>;
   onDeleteTask: (projectId: string, path: string) => Promise<void>;
-  onSpawnAgentsForTasks: (toolId: string, tasks: TaskCenterTaskReference[]) => Promise<void>;
+  onStartTaskThreads: (tasks: TaskCenterTaskReference[]) => Promise<void>;
   generateTasksRequest: { projectId: string; specPath: string; nonce: number } | null;
   onClose: () => void;
 };
