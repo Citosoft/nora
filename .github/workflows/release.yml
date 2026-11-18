@@ -122,6 +122,8 @@ jobs:
       - name: Make distributables
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          NORA_CLERK_PUBLISHABLE_KEY: ${{ secrets.NORA_CLERK_PUBLISHABLE_KEY }}
+          NORA_REQUIRE_ACCOUNT_CONFIG: "1"
           NORA_GITHUB_CLIENT_ID: ${{ secrets.NORA_GITHUB_CLIENT_ID }}
           NORA_MAC_CODESIGN_IDENTITY: ${{ secrets.NORA_MAC_CODESIGN_IDENTITY }}
           NORA_MAC_DMG_CODESIGN_IDENTITY: ${{ secrets.NORA_MAC_CODESIGN_IDENTITY }}
