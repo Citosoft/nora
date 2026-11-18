@@ -57,6 +57,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # node-pty has no Linux prebuild, so npm ci compiles it against the runner's glibc, which moves with each
+      # ubuntu-latest image. Recompiling in Debian 11 (glibc 2.31) keeps the .deb loadable on older distributions.
+      - name: Rebuild node-pty against glibc 2.31
+        if: runner.os == 'Linux'
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "${PWD}:/work" -w /work node:22-bullseye \
+            npm rebuild node-pty --foreground-scripts
+
       - name: Check Nora bridge usage
         run: npm run check:nora-bridge-usage
 
@@ -138,6 +146,10 @@ jobs:
           VITE_PUBLIC_POSTHOG_PROJECT_TOKEN: ${{ secrets.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN }}
           VITE_PUBLIC_POSTHOG_HOST: ${{ secrets.VITE_PUBLIC_POSTHOG_HOST }}
         run: ${{ matrix.make_command }}
+
+      - name: Check Linux binaries support glibc 2.31
+        if: runner.os == 'Linux'
+        run: node scripts/release/check-linux-glibc.mjs out/Nora-linux-x64 31
 
       - name: Notarize and staple macOS DMG
         if: runner.os == 'macOS'
