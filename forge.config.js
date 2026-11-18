@@ -101,7 +101,9 @@ module.exports = {
     // user's installed `claude` via `pathToClaudeCodeExecutable`, so the SDK never resolves its bundled binary.
     ignore: [/^\/apps(\/|$)/, /^\/node_modules\/@anthropic-ai\/claude-agent-sdk-[^/]+(\/|$)/],
     asar: {
-      unpack: "**/node_modules/node-pty/prebuilds/**"
+      // The auto-unpack plugin only unpacks `*.node` addons. sharp's addon dlopens libvips from the separate
+      // `@img/sharp-libvips-*` package (no `.node` file), which the OS loader cannot read from inside the asar.
+      unpack: "{**/node_modules/node-pty/prebuilds/**,**/node_modules/@img/**}"
     },
     name: "Nora",
     executableName: "Nora",
