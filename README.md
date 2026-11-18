@@ -9,96 +9,64 @@
 
 # Nora
 
-Nora is a desktop workspace for running and coordinating coding agents locally with isolated git worktrees, live terminals, and integrated provider workflows.
+**Your AI team. Bots and agents, working side by side.**
 
-Built with Electron, React, TypeScript, and Tailwind CSS.
+Nora is a calm desktop workspace for working alongside your AI team. It runs Claude, Codex and ACP agents natively, and lets you shape them into bots with names, faces, roles and memory. Start a thread with an agent or a bot, bring more in to work it together, and keep all of it in one app.
 
-Documentation: [withnora.run/docs](https://withnora.run/docs)
+Free during the beta. Nora 2.0 runs on macOS, Windows and Linux.
+
+**[Download Nora](https://www.withnora.run/download)**
 
 [![CI](https://github.com/Citosoft/nora/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Citosoft/nora/actions/workflows/ci.yml)
 [![Release](https://github.com/Citosoft/nora/actions/workflows/release.yml/badge.svg)](https://github.com/Citosoft/nora/actions/workflows/release.yml)
 [![Latest release](https://img.shields.io/github/v/release/Citosoft/nora?sort=semver&logo=github)](https://github.com/Citosoft/nora/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Citosoft/nora/blob/main/package.json)
 
-## Functionality
+## Native Claude, Codex and ACP agents
 
-Nora provides a full local multi-agent workflow.
+Claude runs through the Claude Agent SDK. Codex runs through the Codex app server. Installed ACP agents, such as Cursor, OpenCode, Grok, Goose, Kimi and Google Antigravity, run as native thread providers, with their own models, modes, approvals and sign-in.
 
-### Shell And Navigation
+A thread keeps the work, not just the chat: the conversation, the workspace, branch and host, the agent and model, and the changes it reviewed. Settle a finished thread to clear it from view and reopen it later. Nora can also pick up Claude Code and Codex conversations you started outside the app.
 
-- App chrome with title bar, status bar, auto-update banners, and platform-specific startup messaging
-- Workspace quick search, switcher flows, and workspace selection screens
-- Workspace sidebar with session grouping, workspace actions, all-agent views, and remote mount visibility
-- Split-view workspace layout with adjustable panels and shell-level port wiring
-- Modal and dialog system for onboarding, setup, confirmations, errors, and keyboard shortcut help
-- Remote workspace visibility and mount handling
-- Auto-update support with desktop banners and platform-specific notices
+Terminals stay available for commands you run yourself. Threads use real checkouts and branches, and can open in your editor.
 
-### Workspace And Sessions
+## Bots with memory
 
-- Workspace/session orchestration with per-session git worktrees under `.nora/worktrees/`
-- Workspace creation, loading, refresh, reset, and missing-workspace recovery flows
-- Remote workspace connection and management
-- Workspace resource and port tracking so running services are visible alongside the session
-- Session lifecycle controls for creation, launch, focus, close, destroy, resume, and terminal presets
-- Session loading overlays, busy indicators, and safe close warnings
-- Session tabs, session toolbars, and focused-agent session details
-- Terminal preset support and quick-launch terminal creation
+A bot is a teammate you set up once: a name, a role, standing instructions, a provider and model, and an animated face whose eyes show what it is doing. Message a bot directly, or ask Nora to create one. Twelve templates, such as Code reviewer, Researcher and Planner, open the editor already filled in.
 
-### Agent Execution
+Bots can live everywhere or in one workspace. A workspace bot can be kept private, or shared with collaborators as a file in `.nora/bots`.
 
-- PTY-backed agent terminals with live output streaming and stdin input
-- Parallel session handling so multiple agents can run simultaneously
-- Terminal docks, quick-launch terminal creation, and terminal shell preferences
-- Agent creation, launch, attention, and handoff flows
-- Agent roles, skills, and launch-context selection
-- Agent context cards, imported shared-context bundles, and cross-agent context sharing for multi-agent collaboration
-- Voice input support in the focused-agent composer through local transcription
-- Browser-driven agent interactions and browser-image/file attachment support
+Bots and Nora keep notes that carry from one thread to the next. You can read, add, edit and delete those notes. Memory stays on your machine and is never written to your repository.
 
-### Chat And AI
+## Group chats
 
-- Built-in AI chat surface with transcript, composer, provider/model selection, reasoning controls, and tool-activity summaries
-- AI model catalog access and provider options for supported chat backends
-- Tool-aware AI chat workflows that surface model activity alongside conversation context
+Start a group chat with two to six bots. Mention the member who should answer, ask everyone at once, and let bots ask each other for help. The reply comes back to the thread that asked.
 
-### Changes And Files
+## A Personal workspace
 
-- Git-aware workflows with status and diff visibility scoped to the current worktree
-- Built-in diff viewers for file-level and full-repository review flows
-- File tree browsing, file editor, Monaco-based syntax highlighting, and markdown preview
-- Open-file, close-warning, and unsaved-change protection for active edits
-- Full diff viewer plus per-file diff panels and GitHub Actions workflow run views in the changes column
-- Built-in browser tab panel, cookie import flow, and browser-driven workflow support
-- Browser image import and pasted-image handling for agent inputs
-- Integrated browser tabs for research and in-workspace workflow execution
-- Review workflows for pull requests and workflow runs directly from the app
+On first launch Nora creates a Personal workspace, so you can plan, write or research without a folder, repository or terminal. Add a folder or project when you are ready. Git controls appear only where Git is available.
 
-### Planning And Knowledge
+## Roles
 
-- Notes, tasks, specs, and task board surfaces for session coordination
-- Task creation, task boards, and open-task-in-workspace flows
-- Notes browser, spec browser, and shared markdown-oriented workflow surfaces
-- Context tracking across local and external harness sessions for Claude Code, Codex, Gemini CLI, and Cursor
-- Task center, note browser, and spec browser surfaces for planning and knowledge work
-- External harness context tracking for Claude Code, Codex, Gemini CLI, and Cursor
+Nora asks what kind of work you do: engineering, design, product, writing, research, operations, general, or a role you describe yourself. That choice shapes the tools you see first, the starter tasks, and the guidance your agents receive. A role does not grant permissions, and it does not change your provider or model. Change it any time in Settings. Existing conversations keep the role they started with.
 
-### Provider And Integration Surfaces
+## MCP connectors
 
-- Forge workflows for provider-backed coding tasks
-- Vercel workflows for deployment-oriented tasks
-- Full GitHub integration for PR creation, workflow run review, and repository-facing agent workflows
-- GitHub, GitLab, and Vercel integration support through the main process and renderer clients
-- OAuth device flow prompts and integration setup dialogs
-- System tooling setup, CLI detection, and install flows for supported agent runtimes
-- Browser and CLI tooling setup for agent workflows
+Add MCP connectors in Nora, sign in through your browser or with an API key, and Claude, Codex and ACP threads receive their tools. Limit a connector to chosen workspaces or bots, and see each connector’s status beside the thread.
 
-### Support And Release
+## Nora Remote
 
-- Agent usage analytics with usage charts and worktree attribution
-- Linux setup and update notices, plus startup-dependency prompts
-- About, privacy consent, error, and onboarding dialogs
-- Cross-platform desktop packaging and release flows for macOS, Linux, and Windows
+Nora Remote is a small app for phones and browsers. Chat with your agents, follow their progress, and approve or answer whatever is waiting, while the work keeps running on your own computer.
+
+Agents, files and history stay on that computer. It needs to be on, awake and online, with Nora running. Sign in with the same Nora account. Open Nora Remote in a browser and add it to your home screen, then turn it on in Nora Desktop under Settings → Remote access.
+
+## Download
+
+Nora 2.0.0 is free during the beta for macOS, Windows and Linux.
+
+**[Download Nora](https://www.withnora.run/download)** · [release notes](https://www.withnora.run/changelog/v2-0-0)
+
+The download page also has a one-line terminal install for the latest release.
 
 ## Project structure
 
@@ -111,10 +79,10 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for boundary and composition details.
 
 ## Development
 
-Requirements:
+Requirements, from `package.json` `engines`:
 
-- Node.js 20+
-- npm 10+
+- Node.js `>=24.16.0 <25`
+- npm `>=11.13.0`
 
 Install and run in development:
 
@@ -123,7 +91,7 @@ npm install
 npm run dev
 ```
 
-Run with production build/start flow:
+Run with the production build/start flow:
 
 ```bash
 npm start
@@ -138,7 +106,7 @@ npm start
 - `npm run check:path-hygiene`: path/casing hygiene checks
 - `npm run check:shell-assembly-imports`: shell assembly import guard
 - `npm run check:nora-bridge-usage`: bridge API usage guard
-- `npm run package`: package app via Electron Forge
+- `npm run package`: package the app via Electron Forge
 - `npm run make`: create distributables via Electron Forge
 
 ## Release builds
@@ -149,6 +117,14 @@ Version tags matching `v*` trigger release workflows in `.github/workflows/` to 
 
 - [AGENTS.md](./AGENTS.md): repository engineering rules
 - [ARCHITECTURE.md](./ARCHITECTURE.md): runtime architecture and boundaries
+
+## Links
+
+- [Nora](https://www.withnora.run)
+- [Download](https://www.withnora.run/download)
+- [Documentation](https://www.withnora.run/docs)
+- [v2.0.0 release notes](https://www.withnora.run/changelog/v2-0-0)
+- [GitHub releases](https://github.com/Citosoft/nora/releases)
 
 ## License
 
