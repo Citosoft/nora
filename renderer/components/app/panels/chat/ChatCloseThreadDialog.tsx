@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader } from "@/components/ui/dialog";
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import type { ChatCloseThreadDialogProps } from "@/components/app/types/chatPanels.types";
 
 /** Confirms closing a chat's branch or task tab, which settles its thread; a refusal (for example queued messages) is shown here. */
@@ -18,12 +18,12 @@ export function ChatCloseThreadDialog({ thread, onCancel, onConfirm }: ChatClose
   };
   return <Dialog open={!!thread} onOpenChange={(open) => { if (!open && !closing) onCancel(); }}>
     <DialogContent headerTitle={`Close ${kind}?`}>
-      <DialogHeader>
+      <DialogBody className="space-y-2">
         <DialogDescription>
           “{thread?.title}” will be settled and its tab removed. Its history is kept, and you can reopen it from the sidebar.
         </DialogDescription>
-      </DialogHeader>
-      {error && <p role="alert" className="px-6 text-sm text-destructive">{error}</p>}
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      </DialogBody>
       <DialogFooter>
         <Button variant="outline" onClick={onCancel} disabled={closing}>Keep {kind}</Button>
         <Button onClick={confirm} disabled={closing}>

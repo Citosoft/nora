@@ -1,5 +1,7 @@
 import { useAppMainCenterContent } from "@/components/app/context/appMainCenterContentContext";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
+import { useWorkflowLaunch } from "@/components/app/hooks/useWorkflowLaunch";
+import { useWorkspaceNavigation } from "@/components/app/hooks/useWorkspaceNavigation";
 import { createTaskBoardSection, deleteTaskBoardSection, moveTaskToBoardSection, renameTaskBoardSection } from "@/components/app/logic/taskBoardUtils";
 import { TaskBoardPanel } from "@/components/app/panels/TaskBoardPanel";
 import type { TaskBoardViewMode } from "@/components/app/types";
@@ -11,6 +13,8 @@ import { useEffect, useRef, useState } from "react";
 export function TaskCenter() {
   const snapshot = useCanonicalAppSnapshot();
   const { taskCenterProps } = useAppMainCenterContent();
+  const { runTaskWorkflow } = useWorkflowLaunch();
+  const { openTool } = useWorkspaceNavigation();
   const {
     projectId,
     workspaceTasks,
@@ -157,6 +161,8 @@ export function TaskCenter() {
         const task = allOpenTaskReferences.find((entry) => entry.projectId === projectId && entry.path === taskPath);
         return startTasks(task ? [task] : []);
       }}
+      onRunTaskWorkflow={runTaskWorkflow}
+      onOpenWorkflows={(id) => openTool(id, "workflows")}
       onOpenTask={onOpenTask}
       onCreateTask={onCreateTask}
       onGenerateTasks={onGenerateTasks}

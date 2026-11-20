@@ -13,7 +13,8 @@ import { TaskBoardColumn } from "@/components/app/tasks/TaskBoardColumn";
 import { TaskItem } from "@/components/app/tasks/TaskItem";
 import { TaskSelectionBar } from "@/components/app/tasks/TaskSelectionBar";
 import type { DraggedTask, TaskBoardPanelProps } from "@/components/app/types/component.types";
-import type { TaskStatusFilter } from "@/components/app/types/taskCenter.types";
+import type { TaskStatusFilter, TaskWorkflowActions } from "@/components/app/types/taskCenter.types";
+import type { WorkspaceTaskSummary } from "@shared/appTypes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -29,6 +30,8 @@ export function TaskBoardPanel(props: TaskBoardPanelProps) {
     onToggleTaskSelection,
     onOpenTask,
     onStartTask,
+    onRunTaskWorkflow,
+    onOpenWorkflows,
     onCreateTask,
     onGenerateTasks,
     onToggleTaskComplete,
@@ -63,6 +66,12 @@ export function TaskBoardPanel(props: TaskBoardPanelProps) {
   useEffect(() => {
     if (generateTasksRequest) setIsGenerateTasksDialogOpen(true);
   }, [generateTasksRequest]);
+
+  const workflowActionsFor = (projectId: string, task: WorkspaceTaskSummary): TaskWorkflowActions | null => task.completed ? null : {
+    projectId,
+    onRun: (definitionId) => onRunTaskWorkflow(projectId, definitionId, { path: task.path, title: task.title }),
+    onOpenWorkflows: () => onOpenWorkflows(projectId)
+  };
 
   const submitNewSection = (): void => {
     if (!activeWorkspace || !sectionDraft.trim()) return;
@@ -139,6 +148,7 @@ export function TaskBoardPanel(props: TaskBoardPanelProps) {
                           )
                         }
                         onDelete={() => onDeleteTask(activeWorkspace.projectId, task.path)}
+                        workflowActions={workflowActionsFor(activeWorkspace.projectId, task)}
                       />
                     ))}
                   </div>
@@ -221,6 +231,7 @@ export function TaskBoardPanel(props: TaskBoardPanelProps) {
                       )
                     }
                     onDelete={() => onDeleteTask(activeWorkspace.projectId, task.path)}
+                    workflowActions={workflowActionsFor(activeWorkspace.projectId, task)}
                     onDragStart={(event) => {
                       event.dataTransfer.effectAllowed = "move";
                       event.dataTransfer.setData("text/plain", task.path);

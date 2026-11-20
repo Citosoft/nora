@@ -11,6 +11,7 @@ import { WorkspaceSessionPanelProvider } from "@/components/app/context/workspac
 import { WorkspaceDocumentsTool } from "@/components/app/panels/workspace-tools/WorkspaceDocumentsTool";
 import { WorkspaceTerminalsTool } from "@/components/app/panels/workspace-tools/WorkspaceTerminalsTool";
 import { WorkspaceWorktreesTool } from "./WorkspaceWorktreesTool";
+import { LibraryTool } from "./library/LibraryTool";
 import { ForgeItemsTool } from "./forge-items/ForgeItemsTool";
 import type { WorkspaceToolContentProps } from "@/components/app/types/workspaceNavigation.types";
 
@@ -39,6 +40,7 @@ export function WorkspaceToolContent({ tool, workspace, active }: WorkspaceToolC
     case "issues": content = <ForgeItemsTool workspace={workspace} kind="issue" />; break;
     case "tasks": content = <TaskCenter />; break;
     case "documents": content = <WorkspaceDocumentsTool workspace={workspace} active={active} />; break;
+    case "library": content = <LibraryTool projectId={projectId} active={active} />; break;
     case "terminals": content = <WorkspaceTerminalsTool workspace={workspace} />; break;
     case "workflows": content = <WorkspaceWorkflowsTool workspace={workspace} agentCatalog={snapshot?.agentCatalog ?? []} onCreateChangeRequest={(run) => {
       if (!run.worktreeId) return Promise.reject(new Error("This workflow run does not have a managed worktree."));

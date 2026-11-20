@@ -70,6 +70,7 @@ test("task tools list by column, create with details and move by column title", 
   assert.deepEqual((await f.deps.tasks.list(context)).map((task) => [task.title, task.column]), [["Second", "Todo"], ["First", "Done"]]);
   const created = await f.deps.tasks.create("Ship", "Release it.", context);
   assert.deepEqual([created.path, created.title, created.column], [".nora/tasks/ship.md", "Ship", "Todo"]);
+  assert.equal(created.link, "nora://tasks/open?projectId=shell-w&taskId=ship");
   const moved = await f.deps.tasks.move(created.path, "in progress", context);
   assert.equal(moved.column, "In Progress");
   assert.deepEqual(f.board.taskPositions[created.path], { sectionId: "in-progress", order: 0 });
@@ -170,12 +171,27 @@ test("the loopback server serves every catalog tool only to the thread its token
   const catalog = noraToolsStatus("running").tools.filter((tool) => tool.audience.includes("nora") && tool.name !== "report_workflow_stage");
   assert.deepEqual(listed.map((tool) => tool.name).sort(), catalog.map((tool) => tool.name).sort());
   for (const tool of listed) assert.equal(tool.description, catalog.find((entry) => entry.name === tool.name)?.description);
+  const existingTasks = await client.callTool({ name: "list_tasks", arguments: {} });
+  assert.notEqual(existingTasks.isError, true);
+  assert.match(JSON.stringify(existingTasks.content), /\[Second\]\(nora:\/\/tasks\/open\?projectId=shell-w&taskId=b\)/);
+  const existingTask = await client.callTool({ name: "read_task", arguments: { id: "b" } });
+  assert.notEqual(existingTask.isError, true);
+  assert.match(JSON.stringify(existingTask.content), /\[Second\]\(nora:\/\/tasks\/open\?projectId=shell-w&taskId=b\)/);
+  const createdTask = await client.callTool({ name: "create_task", arguments: { title: "Ship [v2]", details: "Release it." } });
+  assert.notEqual(createdTask.isError, true);
+  assert.match(JSON.stringify(createdTask.content), /nora:\/\/tasks\/open\?projectId=shell-w&taskId=/);
+  assert.match(JSON.stringify(createdTask.content), /Include this Markdown link in your reply/);
   const startedTask = await client.callTool({ name: "start_task", arguments: { id: "b" } });
   assert.notEqual(startedTask.isError, true);
   assert.match(JSON.stringify(startedTask.content), /In Progress/);
+  assert.match(JSON.stringify(startedTask.content), /\[Second\]\(nora:\/\/tasks\/open\?projectId=shell-w&taskId=b\)/);
   const finishedTask = await client.callTool({ name: "finish_task", arguments: { id: "b" } });
   assert.notEqual(finishedTask.isError, true);
   assert.match(JSON.stringify(finishedTask.content), /completed/);
+  assert.match(JSON.stringify(finishedTask.content), /\[Second\]\(nora:\/\/tasks\/open\?projectId=shell-w&taskId=b\)/);
+  const movedTask = await client.callTool({ name: "move_task", arguments: { path: ".nora/tasks/completed/b.md", column: "Done" } });
+  assert.notEqual(movedTask.isError, true);
+  assert.match(JSON.stringify(movedTask.content), /\[Second\]\(nora:\/\/tasks\/open\?projectId=shell-w&taskId=b\)/);
   assert.match(JSON.stringify((await client.callTool({ name: "read_task", arguments: { id: "b" } })).content), /Complete the work/);
   const preferences = await client.callTool({ name: "get_settings", arguments: {} });
   assert.match(JSON.stringify(preferences.content), /automaticTitles/);
@@ -208,6 +224,29 @@ test("the loopback server serves every catalog tool only to the thread its token
 });
 
 
+test("worker threads are not served the orchestration tools, so delegation never nests", async (t) => {
+  const f = noraFixture();
+  f.conversations.set("worker", conversation("worker", { parentId: "plain", source: { kind: "worker" } }));
+  f.conversations.set("bot-worker", conversation("bot-worker", { parentId: "bot", source: { kind: "worker" }, bot: snapshotBot(bot("ada")) }));
+  const server = createNoraToolServer(f.deps);
+  t.after(() => server.close());
+  const names = async (id: string): Promise<string[]> => {
+    const endpoint = await server.resolve(f.conversations.get(id) as Conversation);
+    assert.ok(endpoint);
+    const client = new Client({ name: "test", version: "1.0.0" });
+    await client.connect(new StreamableHTTPClientTransport(new URL(endpoint.url), { requestInit: { headers: { Authorization: `Bearer ${endpoint.token}` } } }));
+    t.after(() => client.close());
+    return (await client.listTools()).tools.map((tool) => tool.name);
+  };
+  const orchestration = ["start_thread", "message_thread", "wait_for_threads"];
+  const plain = await names("plain");
+  const worker = await names("worker");
+  const botTools = await names("bot");
+  const botWorker = await names("bot-worker");
+  for (const name of orchestration) { assert.ok(plain.includes(name)); assert.ok(botTools.includes(name)); assert.ok(!worker.includes(name)); assert.ok(!botWorker.includes(name)); }
+  assert.ok(worker.includes("list_threads"));
+});
+
 test("task lifecycle uses a stable id, preserves assignments, and can be retried and reopened", async () => {
   const f = noraFixture();
   const context = contextOf(f, "bot");
@@ -223,6 +262,7 @@ test("task lifecycle uses a stable id, preserves assignments, and can be retried
   assert.deepEqual(f.board.taskAssignments[finished.path], [assignment]);
   assert.equal(f.board.taskAssignments[started.path], undefined);
   assert.deepEqual(await f.deps.tasks.finish("b", context), finished);
+  assert.equal(finished.link, started.link);
   assert.equal((await f.deps.tasks.read("b", context)).task.completed, true);
   assert.equal((await f.deps.tasks.list(context)).find((task) => task.id === "b")?.completed, true);
   const reopened = await f.deps.tasks.start("b", context);

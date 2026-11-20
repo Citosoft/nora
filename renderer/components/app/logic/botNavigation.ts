@@ -2,7 +2,7 @@ import { NORA_BOT_ID } from "@shared/bots/catalog";
 import { botAvatarStateForStatus } from "./botThreads";
 import type { EffectiveBot } from "@shared/types/bots/bots.types";
 import type { BotAvatarState } from "@/components/app/types/botAvatar.types";
-import type { BotNavigationGroup, BotNavigationItem } from "@/components/app/types/botNavigation.types";
+import type { BotNavigationGroup, BotNavigationItem, BotThreadNode } from "@/components/app/types/botNavigation.types";
 import type { ThreadNavigationRow } from "@/components/app/types/thread-workspace/ports.types";
 
 const URGENCY: readonly BotAvatarState[] = ["waiting", "thinking", "failed", "idle"];
@@ -37,4 +37,27 @@ export function buildBotNavigation(bots: readonly EffectiveBot[], rows: readonly
 /** Nora starts a new thread; any other bot opens its one chat. */
 export function botStartLabel(item: Pick<BotNavigationItem, "id" | "name">): string {
   return item.id === NORA_ASSISTANT.id ? `New thread with ${item.name}` : `Message ${item.name}`;
+}
+
+/** Keep children beside their parent even when activity sorting puts a child first; missing parents remain visible as roots. */
+export function buildBotThreadTree(rows: readonly ThreadNavigationRow[], limit = Infinity): BotThreadNode[] {
+  const ids = new Set(rows.map((row) => row.id));
+  const children = new Map<string, ThreadNavigationRow[]>();
+  const roots: ThreadNavigationRow[] = [];
+  for (const row of rows) {
+    if (!row.parentId || row.parentId === row.id || !ids.has(row.parentId)) roots.push(row);
+    else {
+      const siblings = children.get(row.parentId) ?? [];
+      siblings.push(row);
+      children.set(row.parentId, siblings);
+    }
+  }
+  const visited = new Set<string>();
+  const visit = (row: ThreadNavigationRow): BotThreadNode[] => {
+    if (visited.has(row.id) || visited.size >= limit) return [];
+    visited.add(row.id);
+    return [{ row, children: (children.get(row.id) ?? []).flatMap(visit) }];
+  };
+  // The second pass retains malformed cycles without duplicating nodes or looping forever.
+  return [...roots.flatMap(visit), ...rows.flatMap(visit)];
 }

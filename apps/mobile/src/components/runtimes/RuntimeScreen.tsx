@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { ScreenProps } from "@/types/navigationUi.types";
 import type { ConnectedRuntime } from "@/types/runtimeSession.types";
 import { useRuntimeSession } from "@/hooks/useRuntimeSession";
+import { SidebarFrame } from "@/components/sidebar/SidebarFrame";
 import { Screen } from "@/components/common/Screen";
 import { RuntimeLookupState } from "./RuntimeLookupState";
 import { ConnectionBanner } from "./ConnectionBanner";
@@ -26,10 +27,12 @@ export function RuntimeScreen({ runtimeId, title, subtitle, trailing, children, 
   }
   const runtime: ConnectedRuntime = { session: lookup.session, snapshot: lookup.snapshot, name: lookup.name };
   return (
-    <Screen {...frame} title={title(runtime)} subtitle={subtitle?.(runtime)} trailing={trailing?.(runtime)}>
-      <ConnectionBanner session={runtime.session} snapshot={runtime.snapshot} runtimeName={runtime.name} />
-      {children(runtime)}
-    </Screen>
+    <SidebarFrame runtimeId={runtimeId} runtimeName={runtime.name} activeConversationId={null}>
+      <Screen {...frame} title={title(runtime)} subtitle={subtitle?.(runtime)} trailing={trailing?.(runtime)}>
+        <ConnectionBanner session={runtime.session} snapshot={runtime.snapshot} runtimeName={runtime.name} />
+        {children(runtime)}
+      </Screen>
+    </SidebarFrame>
   );
 }
 

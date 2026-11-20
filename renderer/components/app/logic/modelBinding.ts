@@ -40,7 +40,7 @@ export function resolveModelBinding(input: ModelBindingInput): ModelBindingResol
   const policy = locked?.permissionPolicy ?? input.policyId;
   const reasoning = locked ? locked.reasoning : input.reasoning;
   const subagentModel = locked ? locked.subagentModel ?? null : input.subagentModel;
-  const binding = locked ?? { kind: provider.kind, instanceId: provider.instanceId, model: model?.id ?? input.modelId ?? "", permissionPolicy: policy ?? "", reasoning,
+  const binding = locked ?? { ...(catalog.catalog.connection !== undefined ? { connection: catalog.catalog.connection } : {}), kind: provider.kind, instanceId: provider.instanceId, model: model?.id ?? input.modelId ?? "", permissionPolicy: policy ?? "", reasoning,
     ...(subagentModel !== null ? { subagentModel } : {}) };
   const problem = providerBindingProblem(binding, catalog.catalog);
   return problem ? { status: "blocked", message: problem } : { status: "ready", binding };

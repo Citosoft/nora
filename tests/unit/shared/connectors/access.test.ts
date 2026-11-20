@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CONNECTOR_ACCESS_ALL, connectorAvailableTo, connectorSubjectOf } from "@shared/connectors/access";
+import { availableConnectors, CONNECTOR_ACCESS_ALL, connectorAvailableTo, connectorSubjectOf } from "@shared/connectors/access";
 import { connectorAccessSchema } from "@shared/connectors/contracts";
 import type { ConnectorAccess } from "@shared/types/connectors/connectors.types";
 
@@ -31,4 +31,28 @@ test("an empty list is never a valid rule, since it would reach no thread", () =
 test("a thread's subject is its workspace and bot", () => {
   const workspace = { environmentId: "local", projectId: "w", checkoutId: "c", path: "/w", branch: "main", access: "write" as const };
   assert.deepEqual(connectorSubjectOf({ workspace }), plain);
+});
+
+test("a thread's available connectors are the enabled ones its access admits", () => {
+  const adaOnly: ConnectorAccess = { workspaces: { kind: "all" }, bots: { kind: "only", ids: ["ada"] } };
+  const connectors = [
+    { id: "everywhere", enabled: true, access: CONNECTOR_ACCESS_ALL },
+    { id: "off", enabled: false, access: CONNECTOR_ACCESS_ALL },
+    { id: "ada", enabled: true, access: adaOnly }
+  ];
+  assert.deepEqual(availableConnectors(connectors, ada).map((connector) => connector.id), ["everywhere", "ada"]);
+  assert.deepEqual(availableConnectors(connectors, plain).map((connector) => connector.id), ["everywhere"]);
+});
+
+test("a bot selection narrows enabled connectors and preserves connector restrictions", () => {
+  const connectors = [
+    { id: "one", enabled: true, access: CONNECTOR_ACCESS_ALL },
+    { id: "two", enabled: true, access: CONNECTOR_ACCESS_ALL },
+    { id: "off", enabled: false, access: CONNECTOR_ACCESS_ALL },
+    { id: "elsewhere", enabled: true, access: { ...CONNECTOR_ACCESS_ALL, workspaces: { kind: "only" as const, ids: ["other"] } } },
+    { id: "other-bot", enabled: true, access: { ...CONNECTOR_ACCESS_ALL, bots: { kind: "only" as const, ids: ["grace"] } } }
+  ];
+  assert.deepEqual(availableConnectors(connectors, ada, ["two", "off", "elsewhere", "other-bot", "deleted"]).map((connector) => connector.id), ["two"]);
+  assert.deepEqual(availableConnectors(connectors, ada, []), []);
+  assert.deepEqual(availableConnectors(connectors, ada).map((connector) => connector.id), ["one", "two"]);
 });

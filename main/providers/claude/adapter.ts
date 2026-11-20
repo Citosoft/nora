@@ -1,3 +1,4 @@
+import { isReadOnlyToolScope, threadToolScope } from "@main/execution/toolScope";
 import { instructionWithTurnNotes, joinGuidance, optionalRunContext, runMcpServers, workflowReviewMcpServers } from "@main/nora-tools/endpoint";
 import { conversationGuidance } from "@shared/conversations/guidance";
 import type { McpAction, McpResult } from "@shared/types/provider/mcp.types";
@@ -21,7 +22,7 @@ export class ClaudeAdapter implements ExecutionProvider {
   get externalSessions() { return this.options.externalSessions; }
   readonly instanceId: string;
   // The SDK reads widget resources but has no public call for a widget's own tool calls.
-  readonly capabilities = { ...nativeCapabilities, subagentDetails: true, subagentModel: true, promptSuggestions: true, contextUsage: true, compaction: true,
+  readonly capabilities = { ...nativeCapabilities, readOnlyCommands: process.platform !== "win32", subagentDetails: true, subagentModel: true, promptSuggestions: true, contextUsage: true, compaction: true,
     mcpApps: { toolCalls: false } };
   private readonly active = new Map<string, ClaudeActive>();
   private readonly requests = new Map<string, ClaudePending>();
@@ -94,7 +95,8 @@ export class ClaudeAdapter implements ExecutionProvider {
     const runContext = await optionalRunContext(this.options.runContext, snapshot.conversation);
     const guidance = joinGuidance(conversationGuidance(snapshot.conversation), runContext.guidance);
     // Reserve the SDK-supported caller-supplied session ID durably before spawning.
-    const mcpServers = snapshot.conversation.workspace.access === "read"
+    const toolScope = threadToolScope(snapshot.conversation);
+    const mcpServers = isReadOnlyToolScope(toolScope)
       ? snapshot.conversation.source?.kind === "workflow" ? workflowReviewMcpServers(runContext) : []
       : runMcpServers(runContext);
     this.runServers.set(snapshot.conversation.id, mcpServers);
@@ -103,8 +105,7 @@ export class ClaudeAdapter implements ExecutionProvider {
       ...(autoCompactTokens ? { autoCompactTokens } : {}),
       nativeTurnId, instruction: run.action === "compact" ? CLAUDE_COMPACT_COMMAND : instructionWithTurnNotes(run.instruction, runContext), cwd: snapshot.conversation.workspace.path,
       ...(guidance ? { guidance } : {}), mcpServers,
-      model: snapshot.conversation.provider.model, permissionMode: snapshot.conversation.workspace.access === "read" ? "plan" : mode,
-      ...(snapshot.conversation.workspace.access === "read" ? { readOnly: true } : {}),
+      model: snapshot.conversation.provider.model, permissionMode: toolScope === "inspect" ? "plan" : toolScope === "read-worker" ? "default" : mode, toolScope,
       ...(snapshot.conversation.provider.subagentModel ? { subagentModel: snapshot.conversation.provider.subagentModel } : {}),
       effort: effort.data,
       onRequest: (prompt) => this.ask(execution, prompt, emit) });

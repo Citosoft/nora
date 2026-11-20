@@ -1,3 +1,4 @@
+import { pausedRoutineInputSchema, ROUTINES_PER_BOT_MAX } from "@shared/bots/routines/contracts";
 import { z } from "zod";
 import { providerKindSchema } from "@shared/providers/providerKinds";
 import { idleCompactionModeSchema, personalizationSchema, roleSelectionSchema, threadModelDefaultSchema, threadPreferencesPatchSchema } from "./contracts";
@@ -24,7 +25,8 @@ export const personalizationRequestSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("sync-checkouts"), projectId: z.string().min(1) }).strict(),
   z.object({ kind: z.literal("open-workspace-folder"), workspaceId: z.string().min(1) }).strict(),
   /** Creates (no previous scope) or updates a bot where its scope says; moving between scopes keeps its id and bumps its revision. */
-  z.object({ kind: z.literal("save-bot"), bot: botDefinitionSchema, previousScope: botScopeSchema.nullable() }).strict(),
+  z.object({ kind: z.literal("save-bot"), bot: botDefinitionSchema, previousScope: botScopeSchema.nullable(),
+    initialRoutines: z.array(pausedRoutineInputSchema).max(ROUTINES_PER_BOT_MAX).optional() }).strict(),
   z.object({ kind: z.literal("delete-bot"), botId: botIdSchema, scope: botScopeSchema }).strict(),
   z.object({ kind: z.literal("set-bot-hidden"), workspaceId: z.string().min(1), botId: botIdSchema, hidden: z.boolean() }).strict(),
   /** Re-reads shared bot files after they change outside Nora. */

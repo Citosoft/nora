@@ -25,6 +25,8 @@ export interface LoopRunnerDeps {
   randomId: () => string;
   prepareWorktree: (input: PrepareLoopRunWorktreeInput) => Promise<PreparedLoopRunWorktree>;
   notifyRunChanged: (run: LoopRun) => void;
+  /** A deleted run sends no change, so anything mirroring runs (such as the inbox) is told separately. */
+  notifyRunDeleted: (projectId: string, runId: string) => void;
   notifyRunOutput: (payload: LoopRunOutputUpdate) => void;
   /** Saves can come from the window or Nora's tools, so every save is broadcast for the Workflows tool to pick up. */
   notifyDefinitionChanged: (definition: LoopDefinition) => void;

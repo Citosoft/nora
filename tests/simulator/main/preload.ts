@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from "electron";
 import { createConversationBridge } from "@main/preload/createConversationBridge";
 import { nativeBootSchema } from "@shared/personalization/gateway";
 import type { ConnectorBridge } from "@shared/ipc/types/connectorGateway.types";
+import { createSecretBridge } from "@main/preload/createSecretBridge";
 import type { SimulatorBridge } from "../types/bridge.types";
 
 const bridge: SimulatorBridge = {
@@ -18,4 +19,5 @@ const connectors: ConnectorBridge = {
   },
   onChanged() { return () => {}; }
 };
-contextBridge.exposeInMainWorld("nora", { connectors });
+/** Secrets use the production bridge: the simulator runs the real secret service behind it. */
+contextBridge.exposeInMainWorld("nora", { connectors, secrets: createSecretBridge() });

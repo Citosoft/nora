@@ -1,27 +1,17 @@
-import { describeAttention } from "@shared/conversations/attention";
-import type { ConversationHeader, ConversationSummary } from "@shared/types/conversation/queries.types";
-import type { RuntimeRequest } from "@shared/types/conversation/contracts.types";
-import type { AttentionSource, AttentionToast, InlineQuestion } from "@/components/app/types/attentionToasts.types";
+import type { Conversation, RuntimeRequest } from "@shared/types/conversation/contracts.types";
+import type { InboxItem } from "@shared/types/inbox/inbox.types";
+import type { AttentionToast, InlineQuestion } from "@/components/app/types/attentionToasts.types";
 
 const INLINE_OPTIONS_MAX = 4;
 
-/** Unsettled threads with waiting requests among those `include` picks. */
-export function attentionSources(summaries: readonly ConversationSummary[], include: (summary: ConversationSummary) => boolean): AttentionSource[] {
-  return summaries.filter((summary) => summary.pendingRequestCount > 0 && summary.conversation.source?.kind !== "workflow" && !summary.conversation.archivedAt && include(summary))
-    .map(({ conversation, pendingRequestCount, latestRun }) => ({ conversationId: conversation.id, revision: `${pendingRequestCount}:${latestRun?.updatedAt ?? ""}` }));
-}
-
-/** One toast per waiting request, oldest first, worded like the desktop notification. */
-export function buildAttentionToasts(sources: readonly AttentionSource[], headers: ReadonlyMap<string, ConversationHeader>,
-  summaries: readonly ConversationSummary[], dismissed: ReadonlySet<string>): AttentionToast[] {
-  const conversations = new Map(summaries.map(({ conversation }) => [conversation.id, conversation]));
-  return sources.flatMap(({ conversationId }) => {
-    const header = headers.get(conversationId);
-    if (!header) return [];
-    const parent = header.conversation.parentId ? conversations.get(header.conversation.parentId) ?? null : null;
-    return header.pendingRequests.filter((request) => request.status === "pending" && !dismissed.has(request.id))
-      .map((request) => ({ request, conversation: header.conversation, notice: describeAttention(header.conversation, parent, request) }));
-  }).sort((a, b) => a.request.createdAt.localeCompare(b.request.createdAt));
+/**
+ * One toast per waiting request in the threads `include` picks, oldest first, worded like the desktop notification. Workflow
+ * stages are left to the workflow monitor and the inbox, which show them with their run.
+ */
+export function buildAttentionToasts(items: readonly InboxItem[], include: (conversation: Conversation) => boolean, dismissed: ReadonlySet<string>): AttentionToast[] {
+  return items.flatMap((item) => item.kind === "request" && item.conversation.source?.kind !== "workflow" && !dismissed.has(item.request.id) && include(item.conversation)
+    ? [{ request: item.request, conversation: item.conversation, notice: item.notice }] : [])
+    .sort((a, b) => a.request.createdAt.localeCompare(b.request.createdAt));
 }
 
 export function inlineQuestion(request: RuntimeRequest): InlineQuestion | null {

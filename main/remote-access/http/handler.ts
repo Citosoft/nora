@@ -8,6 +8,7 @@ import { createRuntimeRateLimit } from "./rateLimit";
 import { matchRuntimeRoute } from "./routes";
 import { readRuntimeRoute } from "./readRoutes";
 import { executeRemoteCommand } from "./commands";
+import { applyRemoteInboxCommand } from "./inbox";
 
 async function readJson(request: Request): Promise<unknown> {
   if (request.headers.get("Content-Type")?.split(";")[0].trim().toLowerCase() !== "application/json") throw new RuntimeFailure("invalid", "Send a JSON request body.");
@@ -58,6 +59,7 @@ export function createRuntimeApi(options: RuntimeApiOptions): RuntimeApi {
         request.signal.throwIfAborted();
         if (!options.permits(identity) || identity.expiresAt <= options.now()) throw new RuntimeFailure("forbidden", "Remote access is no longer available.");
         response = route.kind === "ticket" ? Response.json(realtimeTicketResponseSchema.parse(tickets.issue(identity)))
+          : route.kind === "inbox-command" ? applyRemoteInboxCommand(options, body)
           : await executeRemoteCommand(options, route, body, identity);
       }
     } catch (error) {

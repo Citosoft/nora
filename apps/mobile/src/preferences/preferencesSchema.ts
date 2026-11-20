@@ -12,7 +12,9 @@ export const preferencesSchema = z.object({
   lastConnected: z.record(z.string(), z.string().datetime()).catch({}),
   /** The last runtime list from the Worker, shown (marked as cached) when the Worker is unreachable. */
   cachedRuntimes: z.object({ userId: z.string(), savedAt: z.string().datetime(), runtimes: z.array(runtimeDirectoryEntrySchema) }).nullable().catch(null),
-  installHintDismissed: z.boolean().catch(false)
+  installHintDismissed: z.boolean().catch(false),
+  /** Desktop-sized windows only: the permanent sidebar shrunk to its icon rail. */
+  sidebarCollapsed: z.boolean().catch(false)
 });
 
 export const defaultPreferences = preferencesSchema.parse({});

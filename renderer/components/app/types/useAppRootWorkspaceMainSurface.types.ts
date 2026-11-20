@@ -1,3 +1,4 @@
+import type { OpenWorkspaceFileEditorOptions } from "@/components/app/types/workflow.types";
 import type { TaskEditorState, UiState } from "@/components/app/types";
 import type { ResetWorkspaceMainSurfaceOptions } from "@/components/app/types/appMainViewReset.types";
 import type { AppState } from "@shared/appTypes";
@@ -18,7 +19,7 @@ export type UseAppRootWorkspaceMainSurfaceArgs = {
   focusWorkspaceWithRecovery: (projectId: string) => Promise<AppState | null>;
   openWorkspaceSpec: (projectId: string, pathName: string) => Promise<void>;
   openWorkspaceNote: (projectId: string, pathName: string) => Promise<void>;
-  openFileEditor: (pathName: string, options?: { selectChange?: boolean; rootPath?: string | null }) => Promise<void>;
+  openFileEditor: (pathName: string, options?: OpenWorkspaceFileEditorOptions) => Promise<void>;
   workspaceFilesRootPath: string | null;
   uiCommands: {
     setFocusedAiChatTabId: (tabId: string | null) => void;

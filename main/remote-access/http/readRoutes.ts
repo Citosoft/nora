@@ -1,9 +1,11 @@
-import { RUNTIME_CAPABILITIES, runtimeInfoSchema, projectsResponseSchema, conversationsResponseSchema, conversationsQuerySchema,
-  conversationDetailResponseSchema, timelineResponseSchema, timelineQuerySchema, tasksResponseSchema, eventsQuerySchema, eventsResponseSchema } from "@shared/remote-access/runtimeApi";
+import { RUNTIME_CAPABILITIES, runtimeInfoSchema, projectsResponseSchema, botsResponseSchema, conversationsResponseSchema, conversationsQuerySchema,
+  conversationDetailResponseSchema, timelineResponseSchema, timelineQuerySchema, tasksResponseSchema, eventsQuerySchema, eventsResponseSchema, inboxResponseSchema } from "@shared/remote-access/runtimeApi";
 import { REMOTE_API_VERSION } from "@shared/remote-access/constants";
 import type { RuntimeApiOptions } from "@main/types/remote-access/http/runtime.types";
 import type { RuntimeRoute } from "@main/types/remote-access/http/routes.types";
 import { RuntimeFailure } from "./failure";
+import { REMOTE_INBOX_ITEM_KINDS } from "@shared/inbox/contracts";
+import { listRemoteBots } from "./botChats";
 
 export function requireRemoteConversation(options: RuntimeApiOptions, id: string) {
   const header = options.host.header(id);
@@ -18,6 +20,7 @@ export function readRuntimeRoute(options: RuntimeApiOptions, route: RuntimeRoute
     case "info": return Response.json(runtimeInfoSchema.parse({ apiVersion: REMOTE_API_VERSION, runtimeVersion: options.runtimeVersion,
       name: options.name(), environment: options.environment, environmentId: host.environmentId, capabilities: RUNTIME_CAPABILITIES, cursor: host.eventCursor() }));
     case "projects": return Response.json(projectsResponseSchema.parse({ projects: options.boot().workspaces.map(({ id, name, kind }) => ({ id, name, kind })) }));
+    case "bots": return Response.json(botsResponseSchema.parse({ bots: listRemoteBots(options.boot(), host.summaries()) }));
     case "conversations": {
       const input = conversationsQuerySchema.parse(Object.fromEntries(query));
       const conversations = host.summaries(input.projectId).filter(({ conversation }) => conversation.workspace.environmentId === host.environmentId
@@ -49,6 +52,7 @@ export function readRuntimeRoute(options: RuntimeApiOptions, route: RuntimeRoute
       });
       return Response.json(tasksResponseSchema.parse({ tasks }));
     }
+    case "inbox": return Response.json(inboxResponseSchema.parse({ items: options.inbox.snapshot().items.filter((item) => REMOTE_INBOX_ITEM_KINDS.has(item.kind)) }));
     default: throw new RuntimeFailure("not-found", "This runtime endpoint does not exist.");
   }
 }

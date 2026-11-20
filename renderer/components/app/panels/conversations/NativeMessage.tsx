@@ -7,7 +7,7 @@ export function NativeMessage({ item, onLinkClick }: NativeMessageProps) {
   const isUser = item.role === "user";
   // Actions appear once the text is final, so a streaming reply is never copied half-written.
   const showActions = item.complete || isUser;
-  return <div className={`group/message flex flex-col gap-1 ${isUser ? "items-end" : ""}`}>
+  return <div data-history-output={!isUser ? item.text : undefined} data-history-prompt={isUser ? item.id : undefined} data-history-text={isUser ? item.text : undefined} className={`group/message flex flex-col gap-1 ${isUser ? "items-end" : ""}`}>
     {item.author && <div className="flex items-center gap-2 text-sm font-medium">
       <BotAvatar avatar={item.author.avatar} size={22} /><span>{item.author.name}</span></div>}
     <article aria-label={item.author ? `${item.author.name} message` : `${item.role} message`}

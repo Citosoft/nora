@@ -1,5 +1,5 @@
 import { safeStorage } from "electron";
-import type { SecretCodec } from "@main/types/secretEncryption.types";
+import type { KeychainCodecMessages, SecretCodec } from "@main/types/secretEncryption.types";
 
 const ENCRYPTED_SECRET_PREFIX = "enc:v1:";
 
@@ -19,3 +19,25 @@ export const safeStorageSecretCodec: SecretCodec = {
     try { return safeStorage.decryptString(Buffer.from(encoded, "base64")); } catch { return ""; }
   }
 };
+
+/** Linux falls back to a hardcoded key ("basic_text") when no keyring is running, which protects nothing. */
+const keychainEncrypts = (): boolean => safeStorage.isEncryptionAvailable()
+  && !(process.platform === "linux" && safeStorage.getSelectedStorageBackend() === "basic_text");
+
+/**
+ * For secrets that must never rest in plaintext: the key lives in the OS keychain (macOS Keychain, Windows DPAPI, the Linux
+ * Secret Service or KWallet), and encrypting or decrypting without one throws instead of degrading.
+ */
+export function createKeychainOnlyCodec(messages: KeychainCodecMessages): SecretCodec {
+  return {
+    encrypt(secret) {
+      if (!keychainEncrypts()) throw new Error(messages.unavailable);
+      return `${ENCRYPTED_SECRET_PREFIX}${safeStorage.encryptString(secret).toString("base64")}`;
+    },
+    decrypt(stored) {
+      if (!stored.startsWith(ENCRYPTED_SECRET_PREFIX) || !safeStorage.isEncryptionAvailable()) throw new Error(messages.locked);
+      try { return safeStorage.decryptString(Buffer.from(stored.slice(ENCRYPTED_SECRET_PREFIX.length), "base64")); }
+      catch { throw new Error(messages.unreadable); }
+    }
+  };
+}

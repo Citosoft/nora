@@ -57,6 +57,7 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingsSearchEntry[] = [
   { group: "integrations", title: "GitHub Token", keywords: ["forge", "pull requests", "access token"] },
   { group: "integrations", title: "GitLab Token", keywords: ["forge", "merge requests", "access token"] },
   { group: "integrations", title: "Vercel Token", keywords: ["deployments", "access token"] },
+  { group: "vault", title: "Saved secrets", keywords: ["password", "api key", "token", "credentials", "keychain", "secure", "environment variable"] },
   { group: "ai", title: "Simple AI Tasks", keywords: ["commit message", "thread name", "runtime", "codex", "claude", "local", "cloud"] },
   { group: "ai", title: "Local Model", keywords: ["llama", "gguf", "on-device"] },
   { group: "ai", title: "Preferred Provider", keywords: ["openai", "anthropic", "google"] },

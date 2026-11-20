@@ -64,6 +64,8 @@ test("writer conflict and host mismatch reject before native admission", (t) => 
   f.create("one", "checkout"); f.create("two", "checkout"); f.submit("work", "one");
   assert.throws(() => f.submit("work", "two"), /isolated worktree/);
   assert.equal(f.snapshot("two").runs.length, 0);
+  f.create("isolated", "worker-checkout"); f.submit("worker", "isolated");
+  assert.equal(f.snapshot("isolated").runs.length, 1);
   assert.throws(() => f.command({ kind: "create", commandId: "remote-create", conversationId: "remote", title: "Remote", parentId: null, provider,
     workspace: { projectId: "p", environmentId: "ssh", checkoutId: "c", path: "/remote", branch: "main", access: "write" } }), /different execution host/);
 });
@@ -250,4 +252,38 @@ test("native request identity remains protected across historical turns and late
     request: { ...request, id: "new-but-late", runId: next.id, attemptId: next.attemptId } });
   assert.equal(f.snapshot().runs[1].state, "recovering");
   assert.equal(f.store.request("conversation", "new-but-late")?.status, "expired");
+});
+
+test("creating a worker atomically admits its initial instruction and replays without duplicates", (t) => {
+  const f = fixture(t);
+  const command = { kind: "create", commandId: "worker-create", conversationId: "worker", title: "Worker", parentId: null,
+    provider, source: { kind: "worker" },
+    workspace: { environmentId: "local", projectId: "project", checkoutId: "worker", path: "/test/worker", branch: "main", access: "write" },
+    initialInstruction: { runId: "first", instruction: "Do the work" }, done: "The work is merged" } as const;
+  const receipt = f.command(command);
+  assert.equal(f.snapshot("worker").runs[0].instruction, "Do the work");
+  assert.equal(f.snapshot("worker").conversation.done, "The work is merged");
+  assert.equal(f.snapshot("worker").runs[0].state, "starting");
+  assert.equal(f.store.effects().length, 1);
+  f.restart();
+  assert.deepEqual(f.command(command), receipt);
+  assert.equal(f.snapshot("worker").conversation.done, "The work is merged", "done criteria survive a restart");
+  assert.equal(f.snapshot("worker").runs.length, 1);
+  assert.equal(f.store.effects().length, 1);
+});
+
+test("rejected initial instructions leave no empty worker or receipt", (t) => {
+  const f = fixture(t);
+  f.create("writer", "checkout"); f.submit("work", "writer");
+  const command = { kind: "create", commandId: "worker-create", conversationId: "worker", title: "Worker", parentId: null,
+    provider, source: { kind: "worker" },
+    workspace: { environmentId: "local", projectId: "project", checkoutId: "checkout", path: "/test/checkout", branch: "main", access: "write" },
+    initialInstruction: { runId: "first", instruction: "Do the work" } } as const;
+  const cursor = f.store.cursor();
+  assert.throws(() => f.command(command), /isolated worktree/);
+  assert.equal(f.engine.snapshot("worker"), null);
+  assert.equal(f.engine.receipt(command), null);
+  assert.equal(f.store.cursor(), cursor);
+  assert.throws(() => f.command({ ...command, initialInstruction: { runId: "first", instruction: "   " } }));
+  assert.equal(f.engine.snapshot("worker"), null);
 });

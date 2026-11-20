@@ -23,7 +23,7 @@ import type {
 import type { UseAiModelCatalogResult, UseWorkspaceContentControllerResult, UseWorkspaceResourcesResult } from "@/components/app/types/appHooks.types";
 import type { AppMainCenterContentValue } from "@/components/app/types/appMainCenterContent.types";
 import type { SettingsGroup } from "@/components/app/types/settings.types";
-import type { TaskCenterTaskReference } from "@/components/app/types/workflow.types";
+import type { OpenWorkspaceFileEditorOptions, TaskCenterTaskReference } from "@/components/app/types/workflow.types";
 import type {
   AgentSession,
   AppSettings,
@@ -134,7 +134,7 @@ export type AppCenterContentValueArgs = {
   isCenterFullDiffExpanded: boolean;
   loadForgeWorkItemDetail: (kind: ForgeWorkItemKind, number: number, repoOverride?: { host: string; fullName: string } | null) => Promise<void>;
   openAiChat: (projectId: string) => void;
-  openFileEditor: (pathName: string, options?: { selectChange?: boolean; rootPath?: string | null }) => Promise<void>;
+  openFileEditor: (pathName: string, options?: OpenWorkspaceFileEditorOptions) => Promise<void>;
   openForgeViewer: (projectId: string, kind: ForgeWorkItemKind | "workflow_run", number: number, title: string, repoOverride?: { host: string; fullName: string } | null) => void;
   openSettingsPage: (group?: SettingsGroup) => void;
   performForgeWorkItemAction: (action: ForgeWorkItemAction) => void | Promise<void>;

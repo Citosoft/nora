@@ -15,6 +15,9 @@
     "renderer/mcpAppBridge.d.ts",
     "renderer/components/app/constants/uiLayout.ts",
     "renderer/components/app/logic/workspaceSessionSignatures.ts",
+    "renderer/components/app/logic/apps/dateRange.ts",
+    "renderer/components/app/logic/apps/calendar.ts",
+    "renderer/components/app/logic/connectorGalleryTable.ts",
     "renderer/components/app/logic/fileTreePanelUtils.ts",
     "renderer/components/app/logic/appPresenceSignatures.ts",
     "renderer/components/app/logic/appPersistence.ts",
@@ -30,7 +33,11 @@
     "renderer/components/app/logic/hydrateAppDomainState.ts",
     "renderer/components/app/logic/applyAppDomainEvents.ts",
     "renderer/components/app/logic/appStateFromAppDomainState.ts",
-    "renderer/components/app/logic/canonicalizeAppState.ts"
+    "renderer/components/app/logic/canonicalizeAppState.ts",
+    "renderer/components/app/logic/apps/formatValue.ts",
+    "renderer/components/app/logic/apps/resolveActionArgs.ts",
+    "renderer/components/app/logic/apps/sourceInputs.ts",
+    "renderer/components/app/logic/apps/buildSteps.ts"
   ],
   "exclude": [
     "dist",

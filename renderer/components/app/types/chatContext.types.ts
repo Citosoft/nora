@@ -30,7 +30,6 @@ export interface ChatContextPanelProps {
   target: DirectContextTarget | null;
   onTargetChange(target: DirectContextTarget | null): void;
   onRefresh(): void;
-  onClose(): void;
 }
 export interface ChatContextRequestCardProps { request: DirectContextModelRequest; }
 export interface ChatContextSectionProps { tally: ContextSectionTally; }
@@ -40,15 +39,12 @@ export interface ChatContextInspectorInput {
   draft: string;
   revision: string;
 }
+/** The inspector reads its preview only while the sidebar shows the Context tab. */
+export interface ChatContextInspectorOptions extends ChatContextInspectorInput { active: boolean; }
 export interface ChatContextInspector {
   available: boolean;
-  open: boolean;
-  toggle(): void;
-  close(): void;
   target: DirectContextTarget | null;
   setTarget(target: DirectContextTarget | null): void;
   state: DirectContextState;
   refresh(): void;
 }
-/** The header's toggle for the context panel; absent where the panel is unavailable. */
-export interface ChatContextToggle { open: boolean; onToggle(): void; }

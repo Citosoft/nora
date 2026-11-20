@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { BotEditorDialog } from "@/components/app/panels/settings/bots/BotEditorDialog";
 import { ThreadRow } from "@/components/app/panels/threads/ThreadRow";
 import { BotHomeCard } from "./BotHomeCard";
-import { BotTemplateSection } from "./BotTemplateSection";
+import { BotTemplateDialog } from "./BotTemplateDialog";
 import { BotsIntro } from "./BotsIntro";
 import { BotsHomeTabs } from "./BotsHomeTabs";
 import { BOTS_HOME_COLUMN_CLASS, BOTS_HOME_SCROLL_CLASS } from "@/components/app/constants/botsHomeLayout";
@@ -34,9 +34,10 @@ export function BotsHome() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div><div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground"><Bot className="size-4" aria-hidden="true" /><span>Bots{home.workspace ? ` · ${home.workspace.name}` : ""}</span></div>
           <h1 className="text-3xl font-semibold tracking-tight">Your bots</h1></div>
-        {hasBots && <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <BotTemplateDialog templates={home.templates} templateRole={home.templateRole} onUse={(template) => open(null, template)} />
           {canGroup && <Button type="button" variant="outline" className="gap-1.5" onClick={() => setGroupDialog(true)}><Users className="size-4" aria-hidden="true" />New group</Button>}
-          <Button type="button" className="gap-1.5" onClick={() => open(null, null)}><Plus className="size-4" aria-hidden="true" />New bot</Button></div>}
+          {hasBots && <Button type="button" className="gap-1.5" onClick={() => open(null, null)}><Plus className="size-4" aria-hidden="true" />New bot</Button>}</div>
       </header>
       {!hasBots && <BotsIntro onNewBot={() => open(null, null)} faces={[...home.templates.suggested, ...home.templates.more]} />}
       <section aria-labelledby="bots-home-bots">
@@ -54,12 +55,6 @@ export function BotsHome() {
           onOpen={home.openThread} onTogglePin={home.togglePin} />)}</div>
           : <p className="text-sm text-muted-foreground">Put {GROUP_MEMBERS_MIN} or more bots in a group to work on something together. @mention who should answer.</p>}
       </section>}
-      {home.templateRole ? <>
-        <BotTemplateSection id="bots-home-suggested" title={`Suggested for ${home.templateRole}`} templates={home.templates.suggested} onUse={(template) => open(null, template)}
-          description="Templates open the editor prefilled, so you can pick the model and adjust the instructions before saving." />
-        <BotTemplateSection id="bots-home-more" title="More templates" templates={home.templates.more} onUse={(template) => open(null, template)} />
-      </> : <BotTemplateSection id="bots-home-templates" title="Start from a template" templates={home.templates.more} onUse={(template) => open(null, template)}
-        description="Templates open the editor prefilled, so you can pick the model and adjust the instructions before saving." />}
     </div>
     {editor && <BotEditorDialog key={editor.key} target={editor.bot ? { bot: editor.bot } : null} template={editor.template} workspace={home.workspace}
       defaultScope={editor.bot?.scope ?? { kind: "global" }} takenIds={home.takenIds} onClose={() => setEditor(null)} />}

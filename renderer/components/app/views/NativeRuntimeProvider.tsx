@@ -4,7 +4,9 @@ import { materializeLegacyContext } from "@/components/app/logic/thread-workspac
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { NativeRuntimeContext } from "@/components/app/context/nativeRuntimeContext";
-import { nativeAttentionClient, nativeConversationBridge, nativePersonalizationClient } from "@/components/app/clients/nativeRuntimeClient";
+import { nativeConversationBridge, nativePersonalizationClient } from "@/components/app/clients/nativeRuntimeClient";
+import { inboxClient } from "@/components/app/clients/inboxClient";
+import { createInboxStore } from "@/components/app/logic/inbox/store";
 import { createConversationClient } from "@/components/app/clients/createConversationClient";
 import { createThreadWorkspaceStore } from "@/components/app/logic/thread-workspace/store";
 import { createThreadLayoutPersistence } from "@/components/app/logic/thread-workspace/persistence";
@@ -27,12 +29,13 @@ export function NativeRuntimeProvider({ children }: NativeRuntimeProviderProps) 
   // Changes made outside this window, such as a bot created by a thread, arrive as pushed state.
   useEffect(() => nativePersonalizationClient.onChanged(setBoot), []);
   const environmentId = boot?.environmentId;
+  // One inbox for the window: the Inbox view, the waiting-requests tray and the thread list's unread dots all read it.
+  const inbox = useMemo(() => createInboxStore({ client: inboxClient }), []);
+  useEffect(() => inbox.start(), [inbox]);
   const store = useMemo(() => environmentId ? createThreadWorkspaceStore({ boot: { environmentId, cursor: 0, providers: [], workspaces: [], sharedBots: [], noraTools: noraToolsStatus("idle"),
-    personalization: { defaultRole: null, workspaceRoles: {} } }, client: createConversationClient(nativeConversationBridge, environmentId),
-    persistence: createThreadLayoutPersistence(localStorage, environmentId), nextId: () => crypto.randomUUID(), now: () => new Date().toISOString() }) : null, [environmentId]);
+    personalization: { defaultRole: null, workspaceRoles: {} } }, client: createConversationClient(nativeConversationBridge, environmentId), unread: inbox,
+    persistence: createThreadLayoutPersistence(localStorage, environmentId), nextId: () => crypto.randomUUID(), now: () => new Date().toISOString() }) : null, [environmentId, inbox]);
   useEffect(() => { if (store && boot) store.updateBoot(boot); }, [store, boot]);
-  // A clicked "needs your approval" notification opens the waiting thread, even one hidden from the sidebar.
-  useEffect(() => store ? nativeAttentionClient.onOpenThread((conversationId) => { store.openThread(conversationId); }) : undefined, [store]);
   const launch = useCallback(async (input: ThreadLaunchInput = {}): Promise<string | null> => {
     if (!store) return null;
     const next = input.projectId ? await request({ kind: "register-workspace", projectId: input.projectId }) : await request({ kind: "boot" });
@@ -42,9 +45,9 @@ export function NativeRuntimeProvider({ children }: NativeRuntimeProviderProps) 
     if (!workspace) throw new Error("Choose an available workspace on the owning execution host.");
     const context = input.contextSelections?.length ? await materializeLegacyContext(input.contextSelections) : "";
     const text = [input.text, context].filter(Boolean).join("\n\n");
-    return launchThreadDraft(store, { source: input.source, workspaceId: workspace.id, ...(text ? { text } : {}), ...(input.group ? { group: input.group } : {}) }, input.submit);
+    return launchThreadDraft(store, { source: input.source, workspaceId: workspace.id, ...(text ? { text } : {}), ...(input.group ? { group: input.group } : {}), ...(input.provider ? { provider: input.provider } : {}) }, input.submit);
   }, [store, request]);
-  const ports = useMemo<NativeRuntimePorts | null>(() => store && boot ? { store, boot, request, launch } : null, [store, boot, request, launch]);
+  const ports = useMemo<NativeRuntimePorts | null>(() => store && boot ? { store, inbox, boot, request, launch } : null, [store, inbox, boot, request, launch]);
   if (!boot || !ports) return <SetupWindowShell><div role={error ? "alert" : "status"} className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-sm"><p>{error ?? "Opening Nora…"}</p>{error && <Button onClick={reload}>Reconnect</Button>}</div></SetupWindowShell>;
   if (!boot.personalization.defaultRole) return <SetupWindowShell><RoleOnboarding busy={busy} error={error} onComplete={async (role) => {
     if (busy) return; setBusy(true); setError(null);

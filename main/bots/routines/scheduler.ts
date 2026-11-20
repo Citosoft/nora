@@ -59,6 +59,22 @@ export function createRoutineScheduler(deps: RoutineSchedulerDeps): RoutineSched
     if (input.active && input.schedule.kind === "once" && !nextRunAt(input)) throw new RoutineScheduleError("Choose a date and time in the future.");
   };
 
+  function createMany(inputs: readonly RoutineInput[]): Routine[] {
+    const additions = new Map<string, number>();
+    for (const input of inputs) {
+      const count = (additions.get(input.botId) ?? 0) + 1;
+      additions.set(input.botId, count);
+      if (deps.store.count(input.botId) + count > ROUTINES_PER_BOT_MAX) throw new Error(`A bot can have at most ${ROUTINES_PER_BOT_MAX} routines.`);
+      validate(input);
+    }
+    const at = nowIso();
+    const routines = inputs.map((input): Routine => ({ ...input, id: deps.nextId(), nextRunAt: nextRunAt(input), threadId: null, createdAt: at, updatedAt: at }));
+    deps.store.putMany(routines);
+    for (const botId of additions.keys()) deps.onChanged(botId);
+    arm();
+    return routines;
+  }
+
   async function execute(routine: Routine, run: RoutineRun, controller: AbortController): Promise<void> {
     const workspace = deps.workspaces().find((entry) => entry.id === routine.workspaceId);
     const bot = workspace ? deps.bot(workspace.id, routine.botId) : null;
@@ -162,14 +178,8 @@ export function createRoutineScheduler(deps: RoutineSchedulerDeps): RoutineSched
       });
       return buildRoutineCalendar(range, routines, deps.store.allRuns());
     },
-    create(input) {
-      if (deps.store.count(input.botId) >= ROUTINES_PER_BOT_MAX) throw new Error(`A bot can have at most ${ROUTINES_PER_BOT_MAX} routines.`);
-      validate(input);
-      const at = nowIso();
-      const routine = save({ ...input, id: deps.nextId(), nextRunAt: nextRunAt(input), threadId: null, createdAt: at, updatedAt: at });
-      arm();
-      return routine;
-    },
+    create(input) { return createMany([input])[0]; },
+    createMany,
     update(id, input) {
       const current = required(id);
       if (current.botId !== input.botId) throw new Error("A routine cannot move to another bot.");

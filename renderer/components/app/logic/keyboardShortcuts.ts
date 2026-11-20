@@ -152,6 +152,11 @@ export const SHORTCUT_DEFINITIONS: ShortcutDefinition[] = [
   }
 ];
 
+/** The platform to label shortcuts for, where the window's UI state is not at hand. */
+export function shortcutPlatform(): WindowUiState["platform"] {
+  return typeof navigator !== "undefined" && navigator.platform.toLowerCase().includes("mac") ? "darwin" : "win32";
+}
+
 export function formatShortcutKeys(keys: ShortcutKey[], platform: WindowUiState["platform"]): string {
   const parts = formatShortcutKeyParts(keys, platform);
   if (platform === "darwin") {

@@ -39,3 +39,17 @@ test("every template is a valid bot once a model is chosen, with distinct ids an
     assert.deepEqual(result.ok && result.bot.avatar, { seed: 3, ...template.avatar });
   }
 });
+
+test("bot editor preserves explicit connector assignments and can choose none or all", () => {
+  const connectorIds = ["00000000-0000-4000-8000-000000000001"];
+  const existing = bot("ada", { kind: "global" }, { connectorIds });
+  const draft = botEditorDraft(existing);
+  assert.deepEqual(draft.connectorIds, connectorIds);
+  for (const ids of [connectorIds, [], undefined]) {
+    const result = botFromEditorDraft({ ...draft, connectorIds: ids }, existing, new Set());
+    assert.ok(result.ok);
+    assert.deepEqual(result.bot.connectorIds, ids);
+  }
+  const invalid = botFromEditorDraft({ ...draft, connectorIds: ["invalid-id"] }, existing, new Set());
+  assert.equal(invalid.ok, false);
+});

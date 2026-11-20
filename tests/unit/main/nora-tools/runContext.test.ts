@@ -12,9 +12,9 @@ import { bot } from "../../shared/bots/fixtures";
 const endpoint = { url: "http://127.0.0.1:1/mcp", token: "t" };
 const server = (available: boolean): NoraToolServer => ({ resolve: async () => available ? endpoint : null, running: () => available, close: async () => {} });
 const linear: RunMcpServer = { name: "linear", url: "http://127.0.0.1:2/connectors/a", token: "g" };
-const connectors = (servers: RunMcpServer[] = [], subjects: ConnectorSubject[] = []): RunContextConnectors => ({
-  endpoints: async (subject) => { subjects.push(subject); return servers; },
-  activeCount: (subject) => { subjects.push(subject); return servers.length; }
+const connectors = (servers: RunMcpServer[] = [], subjects: ConnectorSubject[] = [], chosen: (readonly string[] | undefined)[] = []): RunContextConnectors => ({
+  endpoints: async (subject, only) => { subjects.push(subject); chosen.push(only); return servers; },
+  activeCount: (subject, only) => { subjects.push(subject); chosen.push(only); return servers.length; }
 });
 
 function memoryFixture(t: test.TestContext) {
@@ -38,6 +38,19 @@ test("Nora threads get their own notes and the continuity guidance; bots get the
   const ada = await resolve(conversation("bot", { bot: snapshotBot(bot("ada")) }));
   assert.match(ada.guidance ?? "", /- \[n2\] Ada's note/);
   assert.doesNotMatch(ada.guidance ?? "", /You are Nora|Prefers dark mode/);
+});
+
+test("Nora threads are told to orchestrate; worker threads are briefed as workers instead, bot or not", async (t) => {
+  const resolve = createRunContext(server(true), memoryFixture(t), connectors()).resolve;
+  assert.match((await resolve(conversation("plain"))).guidance ?? "", /start_thread[\s\S]*wait_for_threads/);
+  const worker = (await resolve(conversation("worker", { parentId: "plain", source: { kind: "worker" } }))).guidance ?? "";
+  assert.match(worker, /You are a worker thread/);
+  assert.doesNotMatch(worker, /You are Nora|start_thread/);
+  const botWorker = (await resolve(conversation("ada-worker", { parentId: "plain", source: { kind: "worker" }, bot: snapshotBot(bot("ada")) }))).guidance ?? "";
+  assert.match(botWorker, /You are a worker thread[\s\S]*ask other bots/);
+  assert.doesNotMatch(botWorker, /start_thread/);
+  const botTask = (await resolve(conversation("ada-task", { bot: snapshotBot(bot("ada")) }))).guidance ?? "";
+  assert.match(botTask, /start_thread[\s\S]*message_thread[\s\S]*wait_for_threads/);
 });
 
 test("notes that do not fit are counted and pointed at recall; without tools only the notes remain", async (t) => {
@@ -115,4 +128,17 @@ test("connectors are chosen for the thread's workspace and bot", async (t) => {
   await source.resolve(conversation("plain"));
   source.preview(conversation("bot", { bot: snapshotBot(bot("ada")) }));
   assert.deepEqual(subjects, [{ workspaceId: "w", botId: null }, { workspaceId: "w", botId: "ada" }]);
+});
+
+test("an app's builder thread is handed only the connectors chosen for it, and carries the builder guide", async (t) => {
+  const memory = memoryFixture(t);
+  const chosen: (readonly string[] | undefined)[] = [];
+  const source = createRunContext(server(true), memory, connectors([linear], [], chosen));
+  const builder = await source.resolve(conversation("builder", { source: { kind: "app", appId: null, connectorIds: ["c-1", "c-2"] } }));
+  source.preview(conversation("plain"));
+  assert.deepEqual(chosen, [["c-1", "c-2"], undefined]);
+  assert.match(builder.guidance ?? "", /# Building apps/);
+  assert.match(builder.guidance ?? "", /then call create_app/);
+  const editor = await source.resolve(conversation("editor", { source: { kind: "app", appId: "app-1" } }));
+  assert.match(editor.guidance ?? "", /existing app \(id app-1\).*Never call create_app/);
 });

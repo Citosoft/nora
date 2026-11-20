@@ -41,6 +41,8 @@ async function mount(): Promise<void> {
   const boot = await window.noraChatSimulator.boot();
   const store: ThreadWorkspaceStore = createThreadWorkspaceStore({ boot,
     client: createConversationClient(window.noraChatSimulator.conversations, boot.environmentId),
+    // The simulator has no inbox, so nothing is ever unread.
+    unread: { unreadThreadIds: () => [], markThreadRead: () => {}, subscribe: () => () => {} },
     persistence: createThreadLayoutPersistence(localStorage, boot.environmentId), nextId: () => crypto.randomUUID(), now: () => new Date().toISOString() });
   store.focusWorkspace("simulator");
   if (!store.snapshot().layout.activeId) store.openDraft({ workspaceId: "simulator", text: "/tour" });

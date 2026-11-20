@@ -43,7 +43,7 @@ export class AcpAdapter implements ExecutionProvider {
 
   /** ACP has no structured question or steering channel; resume follows what the agent advertised once connected. */
   get capabilities(): ProviderCapabilities {
-    return { ...nativeCapabilities, questions: false, steering: false, turnChanges: false, resume: this.resumable ?? true };
+    return { ...nativeCapabilities, readOnlyCommands: false, questions: false, steering: false, turnChanges: false, resume: this.resumable ?? true };
   }
 
   private connect(): Promise<AcpLiveConnection> {
@@ -123,9 +123,9 @@ export class AcpAdapter implements ExecutionProvider {
     try {
       const session = await this.timeout(live.agent.request(methods.agent.session.new, { cwd: homedir(), mcpServers: [] }), `${this.options.label} did not open a session`);
       void this.closeProbe(live, session.sessionId);
-      return { kind: "account", account: { state: "signed-in", method: live.init.agentInfo?.title ?? this.options.label, label: null } };
+      return { kind: "account", account: { state: "signed-in", method: live.init.agentInfo?.title ?? this.options.label, label: null }, loginMethods: [] };
     } catch (error) {
-      if (isAcpAuthRequired(error)) return { kind: "account", account: { state: "signed-out" } };
+      if (isAcpAuthRequired(error)) return { kind: "account", account: { state: "signed-out" }, loginMethods: [] };
       return { kind: "unavailable", message: `${this.options.label}'s account could not be read. Check its configuration, then refresh.` };
     }
   }
@@ -151,6 +151,11 @@ export class AcpAdapter implements ExecutionProvider {
     const base = { conversationId: snapshot.conversation.id, runId: run.id, attemptId: run.attemptId };
     const fail = (eventId: string, failure: ExecutionFailure): void => emit({ ...base, eventId, kind: "finished", status: "failed", usage: null, failure });
     const label = this.options.label;
+    // ACP agents own their process tools; the protocol cannot impose a filesystem sandbox on them.
+    if (snapshot.conversation.workspace.access === "read" && !this.capabilities.readOnlyCommands) {
+      fail("read-only-unsupported", { code: "unsupported", message: `${label} cannot enforce read-only execution through ACP. Choose a runtime with read-only command support, or a write worker in an isolated worktree.`, retryable: false });
+      return;
+    }
     const cwd = snapshot.conversation.workspace.path;
     const runContext = await optionalRunContext(this.options.runContext, snapshot.conversation);
     const guidance = joinGuidance(conversationGuidance(snapshot.conversation), runContext.guidance);

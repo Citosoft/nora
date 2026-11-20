@@ -28,6 +28,6 @@ export async function prepareProviderTransition(command: Extract<ConversationCom
     const entry = referenceEntry(item);
     return entry ? [{ title: entry.title, content: entry.text, kind: item.kind === "message" && item.role === "user" ? "user-prompt" : "agent-output" }] : [];
   });
-  return { cursor: snapshot.cursor, handoff: { previousProvider: snapshot.conversation.provider,
+  return { cursor: snapshot.cursor, provider: { ...change.next, connection: result.catalog.connection ?? "unknown" }, handoff: { previousProvider: snapshot.conversation.provider,
     previousNativeConversationId: snapshot.conversation.nativeConversationId, reference, context: buildContextHandoff(entries, reference.indexPath) } };
 }

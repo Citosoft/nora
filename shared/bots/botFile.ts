@@ -1,3 +1,4 @@
+import { botConnectorIdsSchema } from "./connectorSelection";
 import { botDefinitionSchema, botIdSchema } from "./contracts";
 import type { BotDefinition } from "@shared/types/bots/bots.types";
 import type { BotFileField, BotFileParse } from "@shared/types/bots/botFile.types";
@@ -7,7 +8,7 @@ export const SHARED_BOT_DIRECTORY = ".nora/bots";
 export const SHARED_BOT_EXTENSION = ".md";
 export const SHARED_BOT_MAX_BYTES = 64 * 1024;
 
-const FIELDS: readonly BotFileField[] = ["name", "role", "provider", "instance", "model", "reasoning", "permission", "shape", "palette", "eyes", "seed", "revision"];
+const FIELDS: readonly BotFileField[] = ["connectors", "name", "role", "provider", "instance", "model", "reasoning", "permission", "shape", "palette", "eyes", "seed", "revision"];
 const isField = (key: string): key is BotFileField => (FIELDS as readonly string[]).includes(key);
 
 export function sharedBotFileName(botId: string): string { return `${botIdSchema.parse(botId)}${SHARED_BOT_EXTENSION}`; }
@@ -35,7 +36,16 @@ export function parseSharedBotFile(fileName: string, text: string, workspaceId: 
     const value = field(key);
     return value === undefined ? fallback : /^\d+$/.test(value) ? Number(value) : Number.NaN;
   };
+  let connectorIds: string[] | undefined;
+  if (fields.has("connectors")) {
+    try {
+      const parsedIds = botConnectorIdsSchema.safeParse(JSON.parse(fields.get("connectors") ?? ""));
+      if (!parsedIds.success) return { ok: false, message: "connectors: Enter a JSON array of unique connector IDs" };
+      connectorIds = parsedIds.data;
+    } catch { return { ok: false, message: "connectors: Enter a JSON array of connector IDs" }; }
+  }
   const parsed = botDefinitionSchema.safeParse({
+    ...(connectorIds !== undefined ? { connectorIds } : {}),
     id: id.data, name: fields.get("name") ?? "", role: fields.get("role") ?? "",
     instructions: lines.slice(end + 1).join("\n").trim(),
     binding: { kind: field("provider"), instanceId: field("instance") ?? field("provider"), model: field("model"),
@@ -61,5 +71,6 @@ export function serializeSharedBotFile(bot: BotDefinition): string {
     ...line("model", bot.binding.model), ...line("reasoning", bot.binding.reasoning), ...line("permission", bot.binding.permissionPolicy),
     ...line("shape", bot.avatar.shape), ...line("palette", bot.avatar.palette), ...line("eyes", bot.avatar.eyes), ...line("seed", bot.avatar.seed),
     ...line("revision", bot.revision),
+    ...(bot.connectorIds !== undefined ? line("connectors", JSON.stringify(bot.connectorIds)) : []),
     "---", "", bot.instructions, ""].join("\n");
 }

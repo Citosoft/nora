@@ -5,9 +5,11 @@ import { createPersonalizationBridge } from "./preload/createPersonalizationBrid
 import { createBotMemoryBridge } from "./preload/createBotMemoryBridge";
 import { createBotRoutineBridge } from "./preload/createBotRoutineBridge";
 import { createConnectorBridge } from "./preload/createConnectorBridge";
+import { createSecretBridge } from "./preload/createSecretBridge";
 import { createChatBranchBridge } from "./preload/createChatBranchBridge";
 import { createDirectContextBridge } from "./preload/createDirectContextBridge";
-import { createAttentionBridge } from "./preload/createAttentionBridge";
+import { createInboxBridge } from "./preload/createInboxBridge";
+import { createAppsBridge } from "./preload/createAppsBridge";
 import { createAccountBridge } from "./preload/createAccountBridge";
 import { exposeAccountSession } from "./preload/exposeAccountSession";
 import { createSettingsSyncBridge } from "./preload/createSettingsSyncBridge";
@@ -29,9 +31,11 @@ const noraApi: NoraBridge = {
   botMemory: createBotMemoryBridge(),
   botRoutines: createBotRoutineBridge(),
   connectors: createConnectorBridge(),
+  secrets: createSecretBridge(),
   chatBranches: createChatBranchBridge(),
   directContext: createDirectContextBridge(),
-  attention: createAttentionBridge(),
+  inbox: createInboxBridge(),
+  apps: createAppsBridge(),
   remoteAccess: createRemoteAccessBridge(),
   ...createAppBridge(),
   ...createWorkspaceBridge(),

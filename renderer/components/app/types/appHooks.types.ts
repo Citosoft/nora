@@ -1,3 +1,4 @@
+import type { OpenWorkspaceFileEditorOptions } from "@/components/app/types/workflow.types";
 import type { CreateTaskDialogProps } from "@/components/app/types/taskCreation.types";
 import type { ChangesPanelTab } from "@/components/app/types/changesPanelTab.types";
 import type {
@@ -248,7 +249,7 @@ export type UseWorkspaceContentControllerArgs = {
   reloadWorkspaceNotesForProject: (projectId: string) => Promise<void>;
   setFileEditorState: Dispatch<SetStateAction<FileEditorState | null>>;
   fileEditorState: FileEditorState | null;
-  openFileEditor: (pathName: string, options?: { selectChange?: boolean; rootPath?: string | null }) => Promise<void>;
+  openFileEditor: (pathName: string, options?: OpenWorkspaceFileEditorOptions) => Promise<void>;
   safelyAndRefresh: (action: () => Promise<AppState>, statusMessage?: string) => Promise<AppState | null>;
   updateSnapshotState: (next: AppState) => void;
   captureError: (error: unknown) => void;

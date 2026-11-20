@@ -1,6 +1,6 @@
 import type { z } from "zod";
 import type {
-  chatBranchOriginSchema, chatBranchSchema, conversationSourceSchema, commandReceiptSchema, conversationCommandSchema, conversationEventSchema, conversationSchema,
+  initialInstructionSchema, chatBranchOriginSchema, chatBranchSchema, conversationSourceSchema, commandReceiptSchema, conversationCommandSchema, conversationEventSchema, conversationSchema,
   eventPayloadSchema, failureSchema, providerBindingSchema, requestResponseSchema, requestSchema,
   runSchema, runActionSchema, contextUsageSchema, snapshotSchema, timelineItemSchema, usageSchema, workspaceRefSchema, toolDetailsSchema, toolStateSchema, approvalDetailsSchema
 } from "@shared/conversations/contracts";
@@ -22,6 +22,7 @@ export type ToolActivity = Extract<TimelineItem, { kind: "tool" }>;
 export type SubagentActivity = Extract<TimelineItem, { kind: "subagent" }>;
 export type ConnectorSignInItem = Extract<TimelineItem, { kind: "connector-sign-in" }>;
 export type ToolDetails = z.infer<typeof toolDetailsSchema>;
+export type ToolOutputFile = NonNullable<ToolDetails["outputFiles"]>[number];
 export type ToolState = z.infer<typeof toolStateSchema>;
 export type ApprovalDetails = z.infer<typeof approvalDetailsSchema>;
 export type ApprovalRequest = Extract<RuntimeRequest, { kind: "approval" }>;
@@ -37,3 +38,5 @@ export type EventPayload = z.infer<typeof eventPayloadSchema>;
 export type ConversationEvent = z.infer<typeof conversationEventSchema>;
 
 export type ConversationSource = z.infer<typeof conversationSourceSchema>;
+
+export type InitialInstruction = z.infer<typeof initialInstructionSchema>;

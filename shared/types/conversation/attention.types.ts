@@ -1,8 +1,5 @@
-/** Who is waiting on the user, worded for a notification or toast. */
-export interface AttentionNotice {
-  conversationId: string;
-  /** The waiting bot's name, or the thread title for a Nora thread. */
-  who: string;
-  title: string;
-  body: string;
-}
+import type { z } from "zod";
+import type { attentionNoticeSchema } from "@shared/conversations/attention";
+
+/** Who is waiting on the user; `who` is the waiting bot's name, or the thread title for a Nora thread. */
+export type AttentionNotice = z.infer<typeof attentionNoticeSchema>;

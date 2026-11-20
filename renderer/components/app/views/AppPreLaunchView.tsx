@@ -2,7 +2,7 @@ import { AppTools } from "@/components/app/sidebar/workspace-utilities/AppTools"
 import { buildAppToolsProps } from "@/components/app/logic/buildAppToolsProps";
 import { SplashScreen as AppSplashScreen } from "@/components/app/chrome/SplashScreen";
 import { TitleBar as AppTitleBar } from "@/components/app/chrome/TitleBar";
-import { AboutDialog as AppAboutDialog } from "@/components/app/dialogs/AboutDialog";
+import { AboutDialog as AppAboutDialog } from "@/components/app/dialogs/about/AboutDialog";
 import { AddWorkspaceDialog as AppAddWorkspaceDialog } from "@/components/app/dialogs/AddWorkspaceDialog";
 import { KeyboardShortcutsDialog as AppKeyboardShortcutsDialog } from "@/components/app/dialogs/KeyboardShortcutsDialog";
 import { OnboardingDialog as AppOnboardingDialog } from "@/components/app/dialogs/OnboardingDialog";

@@ -55,7 +55,8 @@ function readCodexTool(value: JsonValue, identity: TimelineIdentity, complete: b
       details: { category: "search", input: [native.action?.url, native.action?.pattern, ...(native.action?.queries ?? []), native.action?.query ?? native.query].filter(Boolean).join("\n") } };
     case "imageView": return { ...tool, label: "View image", details: { category: "image", input: native.path } };
     case "imageGeneration": return { ...tool, label: "Generate image", state: native.failure ? "failed" : tool.state,
-      output: native.failure?.message ?? native.savedPath ?? tool.output, details: { category: "image", ...(native.revisedPrompt ? { input: native.revisedPrompt } : {}) } };
+      output: native.failure?.message ?? native.savedPath ?? tool.output, details: { category: "image", ...(native.revisedPrompt ? { input: native.revisedPrompt } : {}),
+        ...(native.savedPath && !native.failure ? { outputFiles: [{ path: native.savedPath }] } : {}) } };
     case "sleep": return { ...tool, label: "Wait", details: { category: "wait", input: `${native.durationMs / 1000} seconds` } };
     case "collabAgentToolCall":
     case "collabToolCall": return { ...tool, label: native.tool, details: { category: "agent", ...(native.prompt ? { input: native.prompt } : {}) } };

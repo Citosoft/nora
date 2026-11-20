@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { threadRequestTarget } from "@/components/app/logic/thread-workspace/requests";
 import { summarizeThreadChanges } from "@/components/app/logic/thread-workspace/insights";
 import { summarizeThreadSubagents } from "@/components/app/logic/thread-workspace/subagents";
+import { collectThreadOutputs } from "@/components/app/logic/thread-workspace/outputs";
 import { describeChangeRequestCreate } from "@/components/app/logic/thread-workspace/changeRequest";
 import { useThreadRead } from "@/components/app/hooks/useThreadRead";
 import type { ThreadInsightsInput } from "@/components/app/types/threadInsights.types";
@@ -13,6 +14,8 @@ const NO_CONNECTIONS = { github: false, gitlab: false } as const;
 export function useThreadInsights({ header, items, workspace, hasOlderHistory, forge }: ThreadInsightsInput) {
   const changes = useMemo(() => summarizeThreadChanges(items, hasOlderHistory), [items, hasOlderHistory]);
   const subagents = useMemo(() => summarizeThreadSubagents(items), [items]);
+  const rootPath = header?.conversation.workspace.path ?? workspace.workspace.path;
+  const outputs = useMemo(() => collectThreadOutputs(items, rootPath), [items, rootPath]);
   const [revision, setRevision] = useState(0);
   const [focusRevision, setFocusRevision] = useState(0);
   const target = threadRequestTarget(header?.conversation.workspace, workspace);
@@ -48,5 +51,5 @@ export function useThreadInsights({ header, items, workspace, hasOlderHistory, f
   [loaded, projectId, checkoutPath]);
   const branchInsights = useMemo<ThreadBranchInsights>(() => ({ request, changes: branchChanges, create, diffTarget, refresh, createChangeRequest }),
     [request, branchChanges, create, diffTarget, refresh, createChangeRequest]);
-  return { changes, subagents, branch: branchInsights };
+  return { changes, subagents, outputs, branch: branchInsights };
 }

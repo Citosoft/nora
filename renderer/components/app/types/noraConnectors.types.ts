@@ -2,6 +2,7 @@ import type { Connector, ConnectorAccess, ConnectorInput, ConnectorSubject } fro
 import type { NativeBoot } from "@shared/ipc/types/personalizationGateway.types";
 import type { BotAvatar } from "@shared/types/bots/bots.types";
 import type { McpServerLogo } from "@shared/types/provider/mcp.types";
+import type { ConnectorGalleryEntry } from "@shared/types/connectors/gallery.types";
 import type { WorkspaceAvatarIdentity } from "@/components/app/types/workspaceAvatar.types";
 import type { ThreadConnectorsState } from "@/components/app/types/threadConnectors.types";
 import type { ReactNode } from "react";
@@ -67,15 +68,33 @@ export type ConnectorServerResult = { ok: true; server: ConnectorServerInput }
   | { ok: false; message: string; step: Exclude<AddConnectorStep, "access"> };
 /** Where the add dialog lands when asked for a step: that step, or an earlier one with a problem and why. */
 export interface AddConnectorStepTarget { step: AddConnectorStep; error: string | null; }
-/** Props shared by the add dialog's form steps. */
-export interface AddConnectorFormStepProps { form: ConnectorFormState; update(patch: Partial<ConnectorFormState>): void; }
+/** Props shared by the add dialog's form steps; `clientRequired` opens the own-client fields for servers that cannot register Nora themselves. */
+export interface AddConnectorFormStepProps { form: ConnectorFormState; update(patch: Partial<ConnectorFormState>): void; clientRequired?: boolean; }
 
 export interface AddConnectorDialogProps {
   open: boolean;
   onOpenChange(open: boolean): void;
   onCreate(input: ConnectorInput): Promise<void>;
   accessChoices: ConnectorAccessChoices;
+  /** A gallery entry to add: the form starts filled with its server and opens on the sign-in step. */
+  preset?: ConnectorGalleryEntry | null;
 }
+/** The whole add flow: the gallery of official servers first, then the add dialog for the chosen one or a custom server. */
+export interface ConnectorGalleryDialogProps {
+  open: boolean;
+  onOpenChange(open: boolean): void;
+  onCreate(input: ConnectorInput): Promise<void>;
+  accessChoices: ConnectorAccessChoices;
+  /** URLs already added, so those entries show as added instead of being offered twice. */
+  addedUrls: readonly string[];
+}
+export interface ConnectorGalleryGridProps { addedUrls: readonly string[]; onPick(entry: ConnectorGalleryEntry): void; onCustom(): void; }
+/** A gallery server as the table shows it. */
+export interface GalleryTableRow { entry: ConnectorGalleryEntry; category: string; ownApp: boolean; added: boolean; }
+export type GallerySortKey = "name" | "category" | "signIn" | "status";
+export interface GalleryTableQuery { search: string; category: ConnectorGalleryEntry["category"] | "all"; sort: GallerySortKey; direction: "asc" | "desc"; }
+/** The auth step's preset notice: where to create the client the service requires. */
+export interface AddConnectorPresetNoticeProps { preset: ConnectorGalleryEntry; }
 export interface ConnectorAccessDialogProps {
   /** The connector being edited; the dialog is open while one is set. */
   connector: Connector | null;

@@ -12,6 +12,7 @@ export type SessionCenterPorts = {
   forgeItems: ForgeItemsPorts;
   onOpenThreadSettings(): void;
   onOpenBotSettings(): void;
+  onOpenConnectorSettings(): void;
   sessionSurface: AppShellSignedInSessionSurfaceSources;
   centerTabs: AppShellSignedInCenterTabsSources;
   aiModels: AppShellSignedInAiModelSources;

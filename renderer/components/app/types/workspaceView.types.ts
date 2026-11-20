@@ -1,4 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
+import type { LibraryGrouping } from "./library.types";
 import type { SidebarPreferences, WorkspaceNavigationValue, WorkspaceToolId } from "./workspaceNavigation.types";
 
 export interface WorkspaceViewPreferences {
@@ -7,6 +8,7 @@ export interface WorkspaceViewPreferences {
   browserTabId: string | null;
   documentPath: string | null;
   documentKind: "notes" | "specs";
+  libraryGrouping: LibraryGrouping;
 }
 
 export interface WorkspaceViewStoreInput {

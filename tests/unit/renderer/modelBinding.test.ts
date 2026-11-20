@@ -65,3 +65,15 @@ test("new threads inherit the configured default provider and model, falling bac
   assert.equal(inheritedModelId(pickerCatalog(), codexProvider, preferred), null, "the default model applies only to its own provider");
   assert.equal(inheritedModelId({ status: "loading" }, claudeProvider, preferred), null);
 });
+
+
+test("new choices carry the catalog's connection while existing thread bindings retain their saved identity", () => {
+  const input = selection();
+  const catalog = pickerCatalog(); catalog.catalog.connection = "api";
+  const fresh = resolveModelBinding({ ...input, catalog });
+  assert.equal(fresh.status === "ready" ? fresh.binding.connection : null, "api");
+  assert.ok(fresh.status === "ready");
+  const saved = { ...fresh.binding, connection: "subscription" as const };
+  const locked = resolveModelBinding({ ...input, catalog, locked: saved });
+  assert.equal(locked.status === "ready" ? locked.binding.connection : null, "subscription");
+});

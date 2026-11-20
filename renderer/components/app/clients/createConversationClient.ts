@@ -25,6 +25,11 @@ export function createConversationClient(bridge: ConversationBridge, environment
       return value.kind === "history" ? value.page : incompatible(); },
     async catalog(providerKind, instanceId, workspace) { const value = await bridge.read({ ...route, kind: "catalog", providerKind, instanceId, workspace });
       return value.kind === "catalog" ? value.result : incompatible(); },
+    async outputs(projectId) { const value = await bridge.read({ ...route, kind: "outputs", projectId });
+      return value.kind === "outputs" ? value.threads : incompatible(); },
+    async outputFile(conversationId, itemId, path, size) { const value = await bridge.read({ ...route, kind: "output-file", conversationId, itemId, path, size });
+      return value.kind === "output-file" ? value.file : incompatible(); },
+    openOutputFile: (conversationId, itemId, path) => bridge.openOutput({ ...route, conversationId, itemId, path }),
     mcp: (request) => bridge.mcp(request),
     mcpApp: (request) => bridge.mcpApp(request),
     skills: (request) => bridge.skills(request),

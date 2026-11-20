@@ -22,6 +22,14 @@ export type ConversationHistoryPage = {
   nextBefore: number | null;
 } & ({ scope: "timeline"; items: TimelineItem[] } | { scope: "runs"; runs: ConversationRun[] });
 
+/** A tool's output image, re-encoded and bounded for display. */
+export interface ToolImagePreview { dataUrl: string; width: number; height: number; }
+/** Thumbnails fill a grid tile; previews are readable full-width. */
+export type OutputFileSize = "thumbnail" | "preview";
+/** How an output file can be shown; `unsupported` files open only with the operating system. */
+export type OutputFileContent = { kind: "image"; preview: ToolImagePreview } | { kind: "text"; text: string } | { kind: "unsupported" };
+/** One thread's output-bearing items, trimmed for output derivation. */
+export interface OutputThread { conversationId: string; title: string; workspacePath: string; updatedAt: string; archived: boolean; items: TimelineItem[]; }
 export interface ConversationSummary {
   conversation: Conversation;
   latestRun: Pick<ConversationRun, "id" | "state" | "createdAt" | "updatedAt" | "failure"> | null;

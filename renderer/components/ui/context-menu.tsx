@@ -1,7 +1,8 @@
 import * as ContextMenuPrimitive from "@radix-ui/react-context-menu";
+import { Check } from "lucide-react";
 import type { ReactNode } from "react";
 import { menuItemClass, menuItemDestructiveClass, menuLabelClass, menuSeparatorClass, menuSurfaceClass } from "@/components/ui/menu-styles";
-import type { MenuLabelProps } from "@/components/ui/types/primitives.types";
+import type { MenuCheckboxItemProps, MenuLabelProps } from "@/components/ui/types/primitives.types";
 import { cn } from "@/lib/utils";
 
 export type ContextMenuProps = {
@@ -84,4 +85,21 @@ export function ContextMenuLabel({ children }: MenuLabelProps) {
 
 export function ContextMenuSeparator() {
   return <ContextMenuPrimitive.Separator className={menuSeparatorClass} />;
+}
+
+export function ContextMenuCheckboxItem({ children, checked, disabled = false, onCheckedChange }: MenuCheckboxItemProps) {
+  return (
+    <ContextMenuPrimitive.CheckboxItem
+      checked={checked}
+      disabled={disabled}
+      onCheckedChange={onCheckedChange}
+      onSelect={(event) => event.preventDefault()}
+      className={cn(menuItemClass, "pl-8")}
+    >
+      <ContextMenuPrimitive.ItemIndicator className="absolute left-2 flex size-4 items-center justify-center">
+        <Check className="size-3.5" aria-hidden="true" />
+      </ContextMenuPrimitive.ItemIndicator>
+      {children}
+    </ContextMenuPrimitive.CheckboxItem>
+  );
 }

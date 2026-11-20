@@ -1,3 +1,4 @@
+import { TranscriptHistory } from "@/components/app/shared/TranscriptHistory";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,23 +14,26 @@ import { useNativeConversationPorts } from "@/components/app/hooks/useNativeConv
 import { useNativeConversation } from "@/components/app/hooks/useNativeConversation";
 import { useThreadLinks } from "@/components/app/hooks/useThreadLinks";
 import { useTranscriptFollow } from "@/components/app/hooks/useTranscriptFollow";
+import { buildChatActivity } from "@/components/app/logic/chatActivity";
 import { buildChatTimeline } from "@/components/app/logic/chatTimeline";
 import { chatParticipants } from "@/components/app/logic/chatParticipants";
 import { executionFailureMessage } from "@/components/app/logic/executionFailureMessage";
 import { BotAvatar } from "@/components/app/shared/BotAvatar";
 import { NativeQueue } from "@/components/app/panels/conversations/NativeQueue";
+import { ChatSidebar } from "./ChatSidebar";
 import { ChatHeader } from "./ChatHeader";
 import { ChatGreeting } from "./ChatGreeting";
 import { ChatTranscript } from "./ChatTranscript";
 import { ChatTyping } from "./ChatTyping";
 import { ChatRequests } from "./ChatRequests";
 import { ChatComposer } from "./ChatComposer";
+import { SecretPromptStack } from "@/components/app/panels/conversations/SecretPromptStack";
 import { ChatWorkspacePicker } from "./ChatWorkspacePicker";
-import { ChatContextPanel } from "./ChatContextPanel";
-import { useChatContextInspector } from "@/components/app/hooks/useChatContextInspector";
+import { useDirectChatFollowsWorkspace } from "@/components/app/hooks/useDirectChatFollowsWorkspace";
 import type { ComposerEditorHandle } from "@/components/app/types/composerEditor.types";
 import type { ChatTranscriptProps } from "@/components/app/types/chatPanels.types";
 import type { BotAvatarState } from "@/components/app/types/botAvatar.types";
+import type { ChatSidebarThreads } from "@/components/app/types/chatThreadDetail.types";
 
 /**
  * A bot chat (direct or group) as a messaging app: only what was said, a typing line while a bot works, and approvals as cards.
@@ -52,9 +56,13 @@ export function ChatConversationPanel() {
   const binding = participants?.kind === "group" ? GROUP_BINDING : DIRECT_BINDING;
   // Chats run on Nora's coordinators; the bots answer with their own models, so the send-ready binding is fixed.
   useEffect(() => { setBinding(binding, "inherited"); }, [binding, setBinding]);
-  const entries = useMemo(() => buildChatTimeline(view?.items ?? []), [view?.items]);
+  const entries = useMemo(() => buildChatTimeline(view?.items ?? [], ports.workThreads), [view?.items, ports.workThreads]);
+  const activity = useMemo(() => {
+    const workIds = new Set(ports.botWorkThreads.map((thread) => thread.id));
+    return buildChatActivity(view?.items ?? [], ports.workThreads.filter((thread) => workIds.has(thread.id)));
+  }, [view?.items, ports.workThreads, ports.botWorkThreads]);
   const workThreads = useMemo(() => new Map(ports.workThreads.map((thread) => [thread.id, thread])), [ports.workThreads]);
-  const chatTabs = useChatTabs(ports.workThreads);
+  const chatTabs = useChatTabs(ports.workThreads, document.workspaceId);
   const { tab, startDraft } = chatTabs;
   const branchFromMessage = useCallback<NonNullable<ChatTranscriptProps["onBranch"]>>((entry) => {
     if (entry.author) startDraft(entry.author.botId,
@@ -87,9 +95,15 @@ export function ChatConversationPanel() {
     && !!findEffectiveBot(ports.state.personalization.bots, entry.id, ports.state.sharedBots, direct.botId)) : [],
   [direct, ports.state.workspaces, ports.state.environmentId, ports.state.personalization.bots, ports.state.sharedBots]);
   const savedDirect = header?.conversation.direct;
+  useDirectChatFollowsWorkspace(header?.conversation ?? null, document.workspaceId, chatWorkspaces, execute);
+  // Where new work starts: a direct chat's chosen workspace (it follows the one you open it in), or a group's own.
+  const workingWorkspaceId = savedDirect?.workspaceId ?? header?.conversation.workspace.projectId ?? workspace.id;
+  const workingWorkspaceName = ports.state.workspaces.find((entry) => entry.id === workingWorkspaceId)?.name ?? null;
   const contextRevision = `${header?.cursor ?? 0}:${ports.workThreads.map((thread) => `${thread.id}@${thread.updatedAt}`).join(",")}`;
-  const inspector = useChatContextInspector({ chatId: savedDirect ? conversationId : null, draft: document.text, revision: contextRevision });
-  const footer = direct ? <ChatWorkspacePicker workspaces={chatWorkspaces} selectedId={savedDirect?.workspaceId ?? workspace.id}
+  const context = useMemo(() => ({ chatId: savedDirect ? conversationId : null, draft: document.text, revision: contextRevision }),
+    [savedDirect, conversationId, document.text, contextRevision]);
+  const connectorSubject = useMemo(() => direct ? { workspaceId: workingWorkspaceId, botId: direct.botId } : null, [direct, workingWorkspaceId]);
+  const footer = direct ? <ChatWorkspacePicker workspaces={chatWorkspaces} selectedId={workingWorkspaceId}
     fixed={!savedDirect || savedDirect.scope.kind === "workspace"} disabled={busy || settled}
     onSelect={(workspaceId) => { if (header) void execute({ kind: "set-direct-workspace", commandId: crypto.randomUUID(), conversationId: header.conversation.id, workspaceId }); }} /> : undefined;
   const error = runtime.error ?? ports.storageError ?? (executionFailure ? executionFailureMessage(executionFailure) : pending ? "Delivery is unconfirmed. Retry sends the same saved message." : null);
@@ -97,15 +111,20 @@ export function ChatConversationPanel() {
   const name = participants.kind === "direct" ? participants.bot.name : "the group";
   const botOf = (botId: string | null) => participants.kind === "direct" ? participants.bot : participants.members.find((member) => member.botId === botId) ?? null;
   const branchTarget = tabThread ? { kind: "thread" as const, thread: tabThread } : tabDraft ? { kind: "draft" as const, draft: tabDraft } : null;
-  const branchBot = tabThread ? botOf(tabThread.botId) : tabDraft ? botOf(tabDraft.botId) : null;
+  const branchBot = tabThread ? tabThread.author ?? botOf(tabThread.botId) : tabDraft ? botOf(tabDraft.botId) : null;
+  const sidebarThreads: ChatSidebarThreads = { chatId: conversationId, onOpenFull: ports.openThread, resolve: (threadId) => {
+    const thread = workThreads.get(threadId);
+    const bot = thread ? thread.author ?? botOf(thread.botId) : null;
+    return thread && bot ? { thread, bot } : null;
+  } };
   return <Tabs value={tab} onValueChange={chatTabs.select} asChild><section className="flex min-h-0 min-w-0 flex-1 flex-col" aria-label={participants.kind === "direct" ? `Chat with ${participants.bot.name}` : "Group chat"}>
     <ChatHeader participants={participants} state={avatarState} tabs={chatTabs.tabs} drafts={chatTabs.drafts}
-      onNewBranch={conversationId ? (botId) => chatTabs.startDraft(botId) : undefined} onCloseDraft={chatTabs.closeDraft} onCloseThread={setClosing}
-      context={inspector.available ? { open: inspector.open, onToggle: inspector.toggle } : undefined} />
+      onNewBranch={conversationId ? (botId) => chatTabs.startDraft(botId) : undefined} onCloseDraft={chatTabs.closeDraft} onCloseThread={setClosing} />
     <ChatCloseThreadDialog thread={closing ? workThreads.get(closing) ?? null : null} onCancel={() => setClosing(null)} onConfirm={confirmClose} />
     <TabsContent value={CHAT_TAB} className="flex min-h-0 flex-1">
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-    <div ref={transcript.ref} onWheel={transcript.onWheel} onScroll={transcript.onScroll} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6">
+    <TranscriptHistory scrollRef={transcript.ref} onNavigate={transcript.pauseFollowing}>
+    <div ref={transcript.ref} onWheel={transcript.onWheel} onScroll={transcript.onScroll} className="min-h-0 flex-1 overflow-y-auto overscroll-contain pl-10 pr-5 pb-6">
       <div className="mx-auto max-w-[760px]">
         {loadError && <div role="alert" className="mt-4"><p>{loadError}</p><Button onClick={reload}>Reload chat</Button></div>}
         {view?.nextBefore && <div className="mt-4 flex justify-center"><Button variant="ghost" size="sm" onClick={() => void older()}>Load earlier messages</Button></div>}
@@ -117,11 +136,14 @@ export function ChatConversationPanel() {
         {active && speaker && <ChatTyping name={speaker.name} avatar={speaker.avatar} workspaceName={current?.workspaceName ?? null} waiting={!!current?.waiting} />}
       </div>
     </div>
+    </TranscriptHistory>
     {transcript.newActivity && <Button variant="secondary" size="sm" className="mx-auto mb-3 rounded-full" onClick={transcript.jumpToLatest}>
       <ArrowDown className="size-3.5" aria-hidden="true" />Jump to latest</Button>}
     {/* Each tab has its own composer: here messages go to the chat, in a branch tab straight to that branch. */}
     <div className="mx-auto w-full max-w-[808px] space-y-2 px-4 pb-5 sm:px-6">
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      {/* Bots answer a chat from their own threads, so their secret prompts surface here, where the user is. */}
+      {conversationId && <SecretPromptStack conversationId={conversationId} />}
       {active?.state === "recovering" && <Button type="button" size="sm" variant="outline" disabled={busy}
         onClick={() => void execute({ kind: "reconcile", commandId: crypto.randomUUID(), conversationId: active.conversationId, runId: active.id })}>Check status</Button>}
       {header && <NativeQueue conversationId={header.conversation.id} runs={header.queuedRuns} paused={header.conversation.queuePaused} busy={busy} execute={execute} />}
@@ -133,12 +155,12 @@ export function ChatConversationPanel() {
         onChange={setText} onSubmit={() => void submit()} />
     </div>
     </div>
-    {inspector.open && <ChatContextPanel state={inspector.state} target={inspector.target} onTargetChange={inspector.setTarget}
-      onRefresh={inspector.refresh} onClose={inspector.close} />}
+    <ChatSidebar bot={direct ? { bot: direct, state: avatarState } : null} context={context} connectors={connectorSubject} threads={sidebarThreads}
+      work={{ activity, threads: ports.botWorkThreads, onSettleThread: ports.settleThread }} />
     </TabsContent>
     {branchTarget && branchBot && <TabsContent value={tab} className="flex min-h-0 flex-1 flex-col">
       <ChatBranchView key={tab} target={branchTarget} bot={branchBot} chatId={conversationId} composer={chatTabs.composer(tab)}
         onComposerChange={(patch) => chatTabs.updateComposer(tab, patch)} onStarted={(threadId) => chatTabs.markStarted(tab, threadId)}
-        onOpenThread={ports.openThread} onLinkClick={onLinkClick} /></TabsContent>}
+        onOpenThread={ports.openThread} onLinkClick={onLinkClick} chatWorkspaceName={workingWorkspaceName} /></TabsContent>}
   </section></Tabs>;
 }

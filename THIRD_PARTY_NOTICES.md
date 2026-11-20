@@ -2,7 +2,7 @@
 
 This product includes third-party open-source software.
 
-Generated: 2026-11-17T23:38:42.843Z
+Generated: 2026-11-20T21:08:21.056Z
 
 | Package | Version | License |
 | --- | --- | --- |
@@ -22,6 +22,8 @@ Generated: 2026-11-17T23:38:42.843Z
 | @floating-ui/react-dom | 2.1.9 | MIT |
 | @floating-ui/utils | 0.2.12 | MIT |
 | @icons-pack/react-simple-icons | 13.13.0 | MIT |
+| @json-render/core | 0.23.1 | Apache-2.0 |
+| @json-render/react | 0.23.1 | Apache-2.0 |
 | @modelcontextprotocol/client | 2.4.0 | Apache-2.0 |
 | @modelcontextprotocol/core | 2.4.0 | Apache-2.0 |
 | @modelcontextprotocol/ext-apps | 2.0.4 | MIT |
@@ -126,6 +128,7 @@ Generated: 2026-11-17T23:38:42.843Z
 | internmap | 2.0.3 | ISC |
 | is-plain-obj | 4.1.0 | MIT |
 | jose | 6.2.13 | MIT |
+| jsonata | 2.2.2 | MIT |
 | lodash | 4.18.1 | MIT |
 | longest-streak | 3.1.0 | MIT |
 | lucide-react | 0.511.0 | ISC |

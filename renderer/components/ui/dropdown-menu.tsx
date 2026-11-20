@@ -1,8 +1,8 @@
-import type { DropdownMenuContextValue, DropdownMenuGroupProps, DropdownMenuItemProps, DropdownMenuProps, DropdownMenuSubProps, MenuLabelProps } from "@/components/ui/types/primitives.types";
+import type { DropdownMenuContextValue, DropdownMenuGroupProps, DropdownMenuItemProps, DropdownMenuProps, DropdownMenuSubProps, MenuCheckboxItemProps, MenuLabelProps } from "@/components/ui/types/primitives.types";
 import { menuItemClass, menuItemDestructiveClass, menuItemDisabledClass, menuLabelClass, menuSeparatorClass, menuSurfaceClass } from "@/components/ui/menu-styles";
 import { cn } from "@/lib/utils";
 import * as React from "react";
-import { ChevronRight } from "lucide-react";
+import { Check, ChevronRight } from "lucide-react";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -181,6 +181,25 @@ export function DropdownMenuItem({
         context?.close();
       }}
     >
+      {children}
+    </button>
+  );
+}
+
+export function DropdownMenuCheckboxItem({ children, checked, disabled = false, onCheckedChange }: MenuCheckboxItemProps) {
+  const context = React.useContext(DropdownMenuContext);
+
+  return (
+    <button
+      type="button"
+      role="menuitemcheckbox"
+      aria-checked={checked}
+      className={cn(menuItemClass, "pl-8", disabled && menuItemDisabledClass)}
+      disabled={disabled}
+      onMouseEnter={() => context?.setOpenSubId(null)}
+      onClick={() => onCheckedChange(!checked)}
+    >
+      {checked && <Check className="absolute left-2 !size-3.5 !text-popover-foreground" aria-hidden="true" />}
       {children}
     </button>
   );

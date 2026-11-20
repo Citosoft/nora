@@ -14,7 +14,8 @@ import {
   Server,
   Shield,
   SlidersHorizontal,
-  TerminalSquare
+  TerminalSquare,
+  Vault
 } from "lucide-react";
 
 export const SETTINGS_GROUP_ITEMS: readonly SettingsGroupItem[] = [
@@ -27,6 +28,7 @@ export const SETTINGS_GROUP_ITEMS: readonly SettingsGroupItem[] = [
   { value: "threads", label: "Threads", icon: MessagesSquare },
   { value: "bots", label: "Bots", icon: Bot },
   { value: "mcp", label: "MCP Servers", icon: Server },
+  { value: "vault", label: "Vault", icon: Vault },
   { value: "agentUsage", label: "Agent usage", icon: BarChart3 },
   { value: "skills", label: "Skills", icon: ScrollText },
   { value: "integrations", label: "Integrations", icon: Plug },

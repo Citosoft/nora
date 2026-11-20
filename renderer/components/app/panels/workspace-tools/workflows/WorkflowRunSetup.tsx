@@ -10,6 +10,7 @@ import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainStat
 import { useLoopRunReviewFeedback } from "@/components/app/hooks/useLoopRunReviewFeedback";
 import { buildWorkflowAgentSummaries } from "@/components/app/logic/workflowAgents";
 import { applyLoopRunGoalTemplate } from "@/components/app/logic/applyLoopRunGoalTemplate";
+import { buildLoopRunSetupDefaults } from "@/components/app/logic/buildLoopRunSetupDefaults";
 import { formatWorktreeBranchPreview } from "@/components/app/logic/formatWorktreeBranchPreview";
 import {
   LOOP_RUN_REVIEW_FEEDBACK_TEMPLATE_ID,
@@ -92,42 +93,26 @@ function goalSourceLabel(
   return "Custom instructions";
 }
 
-export function WorkflowRunSetup({ definition, onBack, onStarted }: WorkflowRunSetupProps) {
+export function WorkflowRunSetup({ definition, task, onBack, onStarted }: WorkflowRunSetupProps) {
   const bots = useProjectBots(definition.projectId);
   const snapshot = useCanonicalAppSnapshot();
   // Plain (non-git) folders run the writer in the project folder instead of a managed worktree.
   const createsWorktree = !snapshot?.project || isGitProject(snapshot.project);
+  const [defaults] = useState(() => buildLoopRunSetupDefaults(definition, task));
   const [step, setStep] = useState<LoopRunStep>("goal");
-  const [goalKind, setGoalKind] = useState<LoopRunGoalKind>("spec");
+  const [goalKind, setGoalKind] = useState<LoopRunGoalKind>(defaults.goalKind);
   const [specs, setSpecs] = useState<WorkspaceSpecSummary[]>([]);
   const [tasks, setTasks] = useState<WorkspaceTaskSummary[]>([]);
   const [selectedSpecPath, setSelectedSpecPath] = useState("");
-  const [selectedTaskPath, setSelectedTaskPath] = useState("");
-  const [objective, setObjective] = useState("");
-  const [selectedTemplateId, setSelectedTemplateId] = useState("");
-  const [limitsDraft, setLimitsDraft] = useState<LoopLimitsDraft>({
-    maxIterations: 10,
-    maxDurationMinutes: 240,
-    roleTimeoutMinutes: 30
-  });
+  const [selectedTaskPath, setSelectedTaskPath] = useState(defaults.selectedTaskPath);
+  const [objective, setObjective] = useState(defaults.objective);
+  const [selectedTemplateId, setSelectedTemplateId] = useState(defaults.templateId);
+  const [limitsDraft, setLimitsDraft] = useState<LoopLimitsDraft>(defaults.limitsDraft);
   const [branchPrefix, setBranchPrefix] = useState(DEFAULT_LOOP_WORKTREE_BRANCH_PREFIX);
-  const [branchName, setBranchName] = useState("");
+  const [branchName, setBranchName] = useState(defaults.branchName);
   const [isLoadingGoals, setIsLoadingGoals] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    setStep("goal");
-    setGoalKind("custom");
-    setSelectedSpecPath("");
-    setSelectedTaskPath("");
-    setObjective("");
-    setSelectedTemplateId("");
-    setLimitsDraft(loopLimitsToDraft(definition.limits));
-    setBranchPrefix(DEFAULT_LOOP_WORKTREE_BRANCH_PREFIX);
-    setBranchName(definition.name);
-    setErrorMessage(null);
-  }, [definition]);
 
   useEffect(() => {
     let cancelled = false;
@@ -142,7 +127,8 @@ export function WorkflowRunSetup({ definition, onBack, onStarted }: WorkflowRunS
         setSpecs(nextSpecs);
         setTasks(activeTasks);
         setSelectedSpecPath(nextSpecs[0]?.path ?? "");
-        setSelectedTaskPath(activeTasks[0]?.path ?? "");
+        // Keep a task chosen before the list loaded, such as the one this run was launched from.
+        setSelectedTaskPath((current) => activeTasks.some((entry) => entry.path === current) ? current : activeTasks[0]?.path ?? "");
       })
       .catch(() => {
         if (!cancelled) {

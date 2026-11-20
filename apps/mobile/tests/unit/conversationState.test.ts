@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildActivityList, conversationsAwaitingDecision } from "@/state/activityList";
+import { buildActivityList } from "@/state/activityList";
 import { deriveExecutionState } from "@/state/executionState";
 import { capabilityGate, evaluateCompatibility } from "@/state/runtimeCompatibility";
 import { buildTimelineEntries } from "@/state/timelineEntries";
@@ -32,7 +32,6 @@ describe("conversation state helpers", () => {
     const list = buildActivityList(tasks, summaries);
     expect(list.active.map((entry) => [entry.run.id, entry.label])).toEqual([["r2", "Write it"]]);
     expect(list.recent.map((entry) => entry.run.id)).toEqual(["r1"]);
-    expect(conversationsAwaitingDecision(tasks, summaries)).toEqual(["conv-2"]);
   });
 
   it("nests subagent tool calls under their subagent", () => {

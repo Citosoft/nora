@@ -29,7 +29,7 @@ export interface DirectRouteInput {
   signal: AbortSignal;
 }
 /** Where a direct-chat message goes: an open work thread, or a new one in a workspace. */
-export type DirectRoute = { kind: "continue"; threadId: string } | { kind: "new"; workspaceId: string; title: string };
+export type DirectRoute = { kind: "continue"; threadId: string } | { kind: "new"; workspaceId: string; title: string; done: string | null };
 export type DirectRouter = (input: DirectRouteInput) => Promise<DirectRoute | null>;
 /** The router's request, exactly as it is sent to the simple AI tasks model. */
 export interface DirectRouterPrompt { system: string; user: string; }

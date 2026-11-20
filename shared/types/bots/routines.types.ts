@@ -1,6 +1,6 @@
 import type { z } from "zod";
 import type { ROUTINE_INTERVAL_UNITS, ROUTINE_MISSED_POLICIES, ROUTINE_RUN_PLACES, ROUTINE_RUN_STATUSES, routineCalendarEntrySchema, routineCalendarRangeSchema,
-  routineCalendarRoutineSchema, routineCalendarSchema, routineInputSchema, routineListSchema, routineRunSchema, routineScheduleSchema, routineSchema } from "@shared/bots/routines/contracts";
+  pausedRoutineInputSchema, routineCalendarRoutineSchema, routineCalendarSchema, routineInputSchema, routineListSchema, routineRunSchema, routineScheduleSchema, routineSchema } from "@shared/bots/routines/contracts";
 
 export type RoutineSchedule = z.infer<typeof routineScheduleSchema>;
 export type RoutineScheduleKind = RoutineSchedule["kind"];
@@ -10,6 +10,7 @@ export type RoutineMissedPolicy = (typeof ROUTINE_MISSED_POLICIES)[number];
 export type RoutineRunStatus = (typeof ROUTINE_RUN_STATUSES)[number];
 export type Routine = z.infer<typeof routineSchema>;
 export type RoutineRun = z.infer<typeof routineRunSchema>;
+export type PausedRoutineInput = z.infer<typeof pausedRoutineInputSchema>;
 export type RoutineInput = z.infer<typeof routineInputSchema>;
 export type RoutineList = z.infer<typeof routineListSchema>;
 export type RoutineCalendarRange = z.infer<typeof routineCalendarRangeSchema>;

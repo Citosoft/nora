@@ -17,6 +17,7 @@ export const simulatorScenarios: readonly SimulatorScenario[] = [
   { id: "output-budget", label: "Tool output budget", description: "Save a large synthetic log, show its diagnostic excerpt and read a targeted chunk." },
   { id: "mcp-app", label: "MCP App widget", description: "An MCP tool returns an interactive widget that follows the theme, calls its server's tools and suggests a message." },
   { id: "connector-sign-in", label: "Connector sign-in", description: "The model asks you to sign in to a connector before it continues." },
+  { id: "secrets", label: "Secure secrets", description: "The model asks for a token in a secure dialog, then asks to run a command with it; the value never enters the chat." },
   { id: "usage-limit", label: "Provider usage limit", description: "The provider has no usage remaining and rejects the turn." },
   { id: "failure", label: "Provider failure", description: "A failed tool followed by a failed task." },
   { id: "recovery", label: "Lost connection", description: "Unconfirmed work, then Check native status to recover." },
@@ -173,6 +174,11 @@ export function stepsForScenario(instruction: string): SimulatorStep[] {
       { kind: "display", id: "connector-sign-in", item: { kind: "connector-sign-in", server: simulatedConnectorName,
         reason: "Read the open issues assigned to you. Sign-in is simulated and never opens a browser." } },
       { kind: "text", text: "Once you're signed in, send a message and I'll continue." }];
+    case "secrets": return [
+      { kind: "text", text: "To publish the release I need a GitHub token. I won't ask you to paste it here: I'll request it through Nora's secure dialog, so it never appears in this chat." },
+      { kind: "secret-request", name: "GITHUB_TOKEN", purpose: "Publishing the release to GitHub. Type any made-up value; the simulator stores it in a temporary file, not your keychain." },
+      { kind: "secret-run", command: "gh release create v2.0.1 --notes-file CHANGELOG.md", secrets: ["GITHUB_TOKEN"] },
+      { kind: "text", text: "The simulated command printed the token on purpose. Expand the tool output above: Nora replaced it with a redaction marker before I could see it." }];
     case "usage-limit": return [{ kind: "failure", failure: { code: "usage-limit", message: "Codex usage limit reached", retryable: true } }];
     case "failure": return [failedTool, { kind: "failure" }];
     case "recovery": return [{ kind: "recovery" }];

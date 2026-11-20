@@ -15,9 +15,21 @@ export type TaskItemProps = {
   onStart: () => Promise<void>;
   onToggleComplete: () => Promise<void>;
   onDelete: () => Promise<void>;
+  /** Present for open tasks in a workspace that can run workflows. */
+  workflowActions: TaskWorkflowActions | null;
   onDragStart?: (event: DragEvent<HTMLDivElement>) => void;
   onDragEnd?: () => void;
 };
+
+/** What a task row needs to launch one of its workspace's saved workflows on that task. */
+export type TaskWorkflowActions = {
+  projectId: string;
+  onRun: (definitionId: string) => void;
+  onOpenWorkflows: () => void;
+};
+
+export type TaskWorkflowMenuProps = { taskTitle: string; actions: TaskWorkflowActions; disabled: boolean };
+export type TaskWorkflowMenuItemsProps = { actions: TaskWorkflowActions };
 
 export type TaskSelectionBarProps = Pick<
   TaskBoardPanelProps,

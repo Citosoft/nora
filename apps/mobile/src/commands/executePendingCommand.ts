@@ -50,6 +50,15 @@ async function send(client: RuntimeClient, store: PendingCommandStore, command: 
       return client.sendMessage(command.conversationId, { commandId: command.message.commandId, runId: command.message.runId,
         instruction: command.message.instruction });
     }
+    case "create-bot-chat": {
+      const saved = store.get(command.key);
+      if (!(saved?.kind === "create-bot-chat" && saved.created)) {
+        await client.createBotChat(command.botId, { commandId: command.commandId, conversationId: command.conversationId, scope: command.scope });
+        await store.put({ ...command, created: true });
+      }
+      return client.sendMessage(command.conversationId, { commandId: command.message.commandId, runId: command.message.runId,
+        instruction: command.message.instruction });
+    }
     case "decide-action":
       return client.decideAction(command.requestId, { commandId: command.commandId, conversationId: command.conversationId, response: command.response });
     case "cancel-task":

@@ -27,11 +27,3 @@ export function buildActivityList(tasks: readonly RemoteTask[], summaries: reado
   const newestFirst = [...entries.values()].sort((left, right) => Date.parse(right.run.updatedAt) - Date.parse(left.run.updatedAt));
   return { active: newestFirst.filter((entry) => entry.active), recent: newestFirst.filter((entry) => !entry.active).slice(0, recentLimit) };
 }
-
-/** Conversations whose requests the approvals list must load. */
-export function conversationsAwaitingDecision(tasks: readonly RemoteTask[], summaries: readonly ConversationSummary[]): string[] {
-  const ids = new Set<string>();
-  for (const task of tasks) if (task.pendingRequestCount > 0) ids.add(task.conversationId);
-  for (const summary of summaries) if (summary.pendingRequestCount > 0) ids.add(summary.conversation.id);
-  return [...ids];
-}

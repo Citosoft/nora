@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { botConnectorIdsSchema } from "./connectorSelection";
 import { providerKindSchema } from "@shared/providers/providerKinds";
 
 export const BOT_AVATAR_SHAPES = ["circle", "squircle", "pill", "pebble", "egg", "drop", "cloud", "flower", "clover", "sparkle",
@@ -41,6 +42,8 @@ export const botDefinitionSchema = z.object({
   name: z.string().trim().min(1).max(BOT_NAME_MAX),
   role: z.string().trim().max(BOT_ROLE_MAX),
   instructions: z.string().trim().max(BOT_INSTRUCTIONS_MAX),
+  /** Live connector selection; unlike instructions, changes apply on the next turn. */
+  connectorIds: botConnectorIdsSchema.optional(),
   binding: botBindingSchema,
   avatar: botAvatarSchema,
   scope: botScopeSchema,

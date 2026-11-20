@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import {
   SiAmp,
   SiClaude,
+  SiAnthropic,
   SiCursor,
   SiGithubcopilot,
   SiGooglegemini,
@@ -20,8 +21,10 @@ import {
 } from "@icons-pack/react-simple-icons";
 import { isAgentToolAvailable } from "@shared/agentToolState";
 import type { AgentCatalogEntry, ToolUsageInfo, WorkspaceFramework } from "@shared/appTypes";
-import { FolderGit2, Wrench, X } from "lucide-react";
-import type { ComponentType, MouseEvent, SVGProps } from "react";
+import { CircleHelp, FolderGit2, Wrench, X } from "lucide-react";
+import type { MouseEvent } from "react";
+import type { AgentToolIconProps, LocalToolIconConfig, LocalToolIconProps } from "@/components/app/types/providerIcon.types";
+import { providerIconPresentation } from "@/components/app/logic/providerIcon";
 import { forwardRef, useEffect, useState } from "react";
 
 export function toolLogoUrl(toolId: string): string {
@@ -52,16 +55,6 @@ export function toolLogoUrl(toolId: string): string {
 
   const domain = domainByTool[toolId] ?? "example.com";
   return productFaviconUrl(domain);
-}
-
-type LocalToolIconProps = SVGProps<SVGSVGElement> & {
-  color?: string;
-  size?: number | string;
-};
-
-interface LocalToolIconConfig {
-  Icon: ComponentType<LocalToolIconProps>;
-  color: "default" | "currentColor";
 }
 
 function CodexLocalIcon({ color = "currentColor", size = 24, ...props }: LocalToolIconProps) {
@@ -95,27 +88,21 @@ export function getLocalToolIconColor(toolId: string): LocalToolIconConfig["colo
   return localToolIconByToolId[toolId]?.color ?? null;
 }
 
-export function AgentToolIcon({
-  toolId,
-  label,
-  className,
-  imageClassName
-}: {
-  toolId: string;
-  label: string;
-  className?: string;
-  imageClassName?: string;
-}) {
-  const localIcon = localToolIconByToolId[toolId] ?? null;
+/** All provider marks go through this renderer; historical views pass the connection saved on their binding. */
+export function AgentToolIcon({ toolId, label, connection = "unknown", className, imageClassName }: AgentToolIconProps) {
+  const presentation = providerIconPresentation(toolId, label, connection);
+  const localIcon: LocalToolIconConfig | null = presentation.variant === "claude-api"
+    ? { Icon: SiAnthropic, color: "currentColor" } : localToolIconByToolId[toolId] ?? null;
   const LocalIcon = localIcon?.Icon ?? null;
   const localIconColor = localIcon?.color ?? "default";
 
   return (
-    <div className={cn("grid place-items-center overflow-hidden rounded-md bg-background", className)}>
+    <div role={presentation.label ? "img" : undefined} aria-label={presentation.label || undefined} title={presentation.label || undefined}
+      className={cn("relative grid place-items-center overflow-hidden rounded-md bg-background", className)}>
       {LocalIcon ? (
         <LocalIcon
           color={localIconColor}
-          className={cn("object-contain", localIconColor === "currentColor" && "text-foreground", imageClassName)}
+          className={cn("object-contain", localIconColor === "currentColor" && "text-foreground", imageClassName, presentation.variant === "claude-unknown" && "opacity-50")}
           aria-hidden="true"
         />
       ) : (
@@ -126,7 +113,7 @@ export function AgentToolIcon({
           aria-hidden="true"
         />
       )}
-      {label ? <span className="sr-only">{label}</span> : null}
+      {presentation.variant === "claude-unknown" && <CircleHelp aria-hidden="true" className="absolute bottom-0 right-0 size-2 rounded-full bg-background text-muted-foreground" />}
     </div>
   );
 }

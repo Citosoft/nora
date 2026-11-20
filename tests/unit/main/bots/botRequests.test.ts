@@ -68,3 +68,37 @@ test("a symlinked bot directory is refused", async (t) => {
   await assert.rejects(s.library.write(s.workspace, bot("ada", shared)), /regular directory/);
   assert.equal(existsSync(join(outside, "ada.md")), false);
 });
+
+test("new bots install paused presets after becoming visible, and failed installation is retryable", async (t) => {
+  const s = setup(t);
+  const input = { botId: "ada", name: "Review", instruction: "Inspect open reviews.", active: false as const, timezone: "Europe/London",
+    schedule: { kind: "weekdays" as const, time: "09:00" }, workspaceId: "w", runIn: "chat" as const, missedPolicy: "skip" as const };
+  for (const scope of [{ kind: "global" } as const, personal, shared]) {
+    const request = { kind: "save-bot" as const, bot: bot("ada", scope), previousScope: null, initialRoutines: [input] };
+    await assert.rejects(applyBotRequest(request, s.store, { ...s.deps, createRoutines() { throw new Error("Could not save routines"); } }), /Could not save routines/);
+    assert.deepEqual(s.settings.personalization.bots?.global ?? [], []);
+    assert.deepEqual(s.settings.personalization.bots?.workspaces.w?.private ?? [], []);
+    assert.ok(!s.library.list().some((set) => set.bots.some((entry) => entry.id === "ada")));
+    let added = 0;
+    await applyBotRequest(request, s.store, { ...s.deps, createRoutines(inputs) {
+      assert.equal(inputs.length, 1);
+      assert.equal(inputs[0].active, false);
+      if (scope.kind === "workspace" && scope.storage === "shared") assert.ok(s.library.list().some((set) => set.bots.some((entry) => entry.id === "ada")));
+      added += inputs.length;
+    } });
+    assert.equal(added, 1);
+    await assert.rejects(applyBotRequest({ ...request, previousScope: scope }, s.store, { ...s.deps, createRoutines() {} }), /only be added/);
+    await applyBotRequest({ kind: "delete-bot", botId: "ada", scope }, s.store, s.deps);
+  }
+});
+
+test("initial routine inputs must belong to the newly created bot and its workspace", async (t) => {
+  const s = setup(t);
+  const input = { botId: "other", name: "Review", instruction: "Inspect.", active: false as const, timezone: "UTC",
+    schedule: { kind: "weekdays" as const, time: "09:00" }, workspaceId: "w", runIn: "chat" as const, missedPolicy: "skip" as const };
+  const request = { kind: "save-bot" as const, bot: bot("ada", personal), previousScope: null, initialRoutines: [input] };
+  await assert.rejects(applyBotRequest(request, s.store, { ...s.deps, createRoutines() {} }), /belong/);
+  await assert.rejects(applyBotRequest({ ...request, initialRoutines: [{ ...input, botId: "ada", workspaceId: "other" }] }, s.store, { ...s.deps, createRoutines() {} }), /belong/);
+  await assert.rejects(applyBotRequest({ ...request, initialRoutines: [{ ...input, botId: "ada" }] }, s.store, s.deps), /available/);
+  assert.deepEqual(s.settings.personalization.bots?.workspaces ?? {}, {});
+});

@@ -162,3 +162,37 @@ test("a failed run records the provider's message, and deleting a routine remove
   env.scheduler.remove(routine.id);
   assert.deepEqual(env.scheduler.list("ada"), { routines: [], runs: [] });
 });
+
+test("a batch of paused routine presets stays idle until explicitly enabled", async () => {
+  const env = setup("2026-11-15T08:00:00.000Z");
+  env.scheduler.start();
+  const routines = env.scheduler.createMany([daily({ active: false }), daily({ name: "Weekly", active: false })]);
+  assert.equal(env.store.count("ada"), 2);
+  assert.ok(routines.every((routine) => !routine.active && routine.nextRunAt === null));
+  env.advance("2026-11-16T09:00:00.000Z");
+  env.scheduler.processDue();
+  await env.scheduler.idle();
+  assert.equal(env.fake.commands.length, 0);
+  assert.deepEqual(env.scheduler.list("ada").runs, []);
+  assert.ok(env.scheduler.setActive(routines[0].id, true).nextRunAt);
+  env.scheduler.stop(); env.store.close();
+});
+
+test("routine batches validate all inputs and the combined limit before writing", () => {
+  const env = setup("2026-11-15T08:00:00.000Z");
+  assert.throws(() => env.scheduler.createMany([daily({ active: false }), daily({ workspaceId: "missing", active: false })]), /open in Nora/);
+  assert.equal(env.store.count("ada"), 0);
+  assert.deepEqual(env.changed, []);
+  env.scheduler.createMany(Array.from({ length: 19 }, () => daily({ active: false })));
+  assert.throws(() => env.scheduler.createMany([daily({ active: false }), daily({ active: false })]), /at most/);
+  assert.equal(env.store.count("ada"), 19);
+  env.store.close();
+});
+
+test("routine storage rolls back earlier batch rows if a later row is invalid", () => {
+  const env = setup("2026-11-15T08:00:00.000Z");
+  const original = env.scheduler.create(daily({ active: false }));
+  assert.throws(() => env.store.putMany([{ ...original, id: "first" }, { ...original, id: "bad", name: "" }]));
+  assert.deepEqual(env.store.list("ada").map((routine) => routine.id), [original.id]);
+  env.store.close();
+});

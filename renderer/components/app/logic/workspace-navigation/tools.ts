@@ -1,9 +1,9 @@
 import type { WorkspaceToolId } from "@/components/app/types/workspaceNavigation.types";
 
-export const DEFAULT_WORKSPACE_TOOL_PINS: readonly WorkspaceToolId[] = ["terminals", "browser", "documents"];
+export const DEFAULT_WORKSPACE_TOOL_PINS: readonly WorkspaceToolId[] = ["terminals", "browser", "documents", "library"];
 
 export function availableWorkspaceTools(git: boolean): WorkspaceToolId[] {
-  return [...(git ? ["worktrees", "merge-requests", "issues"] as const : []), "documents", "tasks", "terminals", "browser", "workflows"];
+  return [...(git ? ["worktrees", "merge-requests", "issues"] as const : []), "documents", "library", "tasks", "terminals", "browser", "workflows"];
 }
 
 export function workspaceToolPins(available: readonly WorkspaceToolId[], pins: readonly WorkspaceToolId[] = DEFAULT_WORKSPACE_TOOL_PINS): WorkspaceToolId[] {

@@ -1,3 +1,6 @@
+import { createAppInstallRequests } from "./apps/installRequests";
+import { APP_INSTALL_SCHEME } from "@shared/apps/installLink";
+import { appsInstallRequestedChannel } from "@shared/apps/gateway";
 import { createDesktopRemoteAccess } from "./remote-access/desktop";
 import { registerRemoteAccessIpc } from "./ipc/registerRemoteAccessIpc";
 import { remoteAccessChangedChannel } from "@shared/remote-access/gateway";
@@ -27,6 +30,8 @@ import type {
 import { randomUUID } from "node:crypto";
 import { DEFAULT_APP_SETTINGS } from "@shared/appTypes";
 import { app, BrowserWindow, session, dialog, ipcMain, shell } from "electron";
+import { openOutputFileWithSystem } from "@main/helpers/openOutputFileWithSystem";
+import { createWorkerWorkspaces } from "./helpers/workerWorkspaces";
 import { openNativeRuntime } from "./helpers/nativeRuntime";
 import { withMainOwnedSettings } from "./helpers/mainOwnedSettings";
 import { createWindowStartup } from "./helpers/windowStartup";
@@ -44,11 +49,18 @@ import { registerPersonalizationIpc } from "./ipc/registerPersonalizationIpc";
 import { registerBotMemoryIpc } from "./ipc/registerBotMemoryIpc";
 import { registerBotRoutineIpc } from "./ipc/registerBotRoutineIpc";
 import { registerConnectorIpc } from "./ipc/registerConnectorIpc";
+import { registerAppsIpc } from "./ipc/registerAppsIpc";
+import { createAppFileDialogs } from "./apps/appFileDialogs";
+import { appsBuildingChannel, appsChangedChannel, appsDataChannel } from "@shared/apps/gateway";
 import { connectorsChangedChannel } from "@shared/connectors/gateway";
+import { registerSecretIpc } from "./ipc/registerSecretIpc";
+import { secretPromptsChangedChannel, secretVaultChangedChannel } from "@shared/secrets/gateway";
 import { registerChatBranchIpc } from "./ipc/registerChatBranchIpc";
 import { registerDirectContextIpc } from "./ipc/registerDirectContextIpc";
 import { botRoutinesChangedChannel } from "@shared/bots/routines/gateway";
-import { startDesktopAttention } from "./attention/desktop";
+import { startInboxRuntime } from "./inbox/runtime";
+import { registerInboxIpc } from "./ipc/registerInboxIpc";
+import type { InboxRuntime } from "./types/inbox/inboxRuntime.types";
 import { personalizationChangedChannel } from "@shared/personalization/gateway";
 import type { NativeRuntime } from "./types/native-runtime/runtime.types";
 import path from "node:path";
@@ -148,7 +160,7 @@ const appShutdown = createAppShutdown({
     await settingsSync.dispose();
     accountRuntime.dispose();
     loopRunner?.dispose();
-    stopDesktopAttention?.();
+    inbox?.stop();
     await nativeRuntime?.shutdown();
     if (mainWindow) await shutdownMainWindow();
   },
@@ -157,7 +169,7 @@ const appShutdown = createAppShutdown({
 });
 const appSettingsStore = new AppSettingsStore(getAppSettingsPath());
 let appSettings: AppSettings = DEFAULT_APP_SETTINGS;
-let stopDesktopAttention: (() => void) | null = null;
+let inbox: InboxRuntime | null = null;
 const windowSettingsPort = createWindowSettingsPort({ send(request) {
   if (!mainWindow || mainWindow.isDestroyed()) throw new Error("Open Nora to change window preferences.");
   mainWindow.webContents.send(WINDOW_SETTINGS_CHANNELS.request, request);
@@ -169,6 +181,12 @@ const settingsUpdates = createSettingsUpdates({ read: () => appSettings,
 const workspaceLoadingTimingByProject = new Map<string, { startedAt: number; lastStepAt: number }>();
 const SQUIRREL_WINDOW_LIFETIME_MS = APP_RUNTIME_SETTINGS.main.squirrelWindowLifetimeMs;
 const STATE_BROADCAST_INTERVAL_MS = APP_RUNTIME_SETTINGS.main.stateBroadcastIntervalMs;
+const appInstallRequests = createAppInstallRequests((id) => {
+  if (isDevelopmentMode) console.info(`[nora apps] Received install link: ${id}`);
+  windowStartup.activate();
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(appsInstallRequestedChannel, id);
+});
+
 const DEV_ANALYTICS_SWITCH = APP_RUNTIME_SETTINGS.main.devAnalyticsSwitch;
 const isDevelopmentMode = process.env.NORA_DEV_WATCH === "1";
 const devModeAnalyticsEnabled = app.commandLine.hasSwitch(DEV_ANALYTICS_SWITCH);
@@ -520,10 +538,13 @@ function registerIpc(): void {
   registerAccountIpc({ ipc: ipcMain, runtime: accountRuntime, isAllowedSender });
   registerWindowSettingsIpc({ ipc: ipcMain, port: windowSettingsPort, isAllowedSender });
   registerSettingsSyncIpc({ ipc: ipcMain, service: settingsSync, isAllowedSender });
-  registerConversationIpc({ ipc: ipcMain, isAllowedSender, mcpAppFrames, resolveHost: (environmentId) => environmentId === nativeRuntime.host.environmentId ? nativeRuntime.host : null });
+  registerConversationIpc({ ipc: ipcMain, isAllowedSender, mcpAppFrames, openOutputFile: openOutputFileWithSystem, resolveHost: (environmentId) => environmentId === nativeRuntime.host.environmentId ? nativeRuntime.host : null });
   registerBotMemoryIpc({ ipc: ipcMain, isAllowedSender, memory: nativeRuntime.memory, reviews: nativeRuntime.memoryReviewLog, now: () => new Date() });
   registerBotRoutineIpc({ ipc: ipcMain, isAllowedSender, routines: nativeRuntime.routines });
+  if (inbox) registerInboxIpc({ ipc: ipcMain, isAllowedSender, inbox: inbox.service });
   registerConnectorIpc({ ipc: ipcMain, isAllowedSender, connectors: nativeRuntime.connectors });
+  registerAppsIpc({ ipc: ipcMain, isAllowedSender, apps: nativeRuntime.apps, connectors: nativeRuntime.connectors, installRequests: appInstallRequests, files: createAppFileDialogs(() => mainWindow), now: () => new Date().toISOString() });
+  registerSecretIpc({ ipc: ipcMain, isAllowedSender, secrets: nativeRuntime.secrets });
   registerChatBranchIpc({ ipc: ipcMain, isAllowedSender, start: (request) => nativeRuntime.startBranch(request),
     name: (message) => nativeRuntime.nameBranch(message) });
   registerDirectContextIpc({ ipc: ipcMain, isAllowedSender, preview: (request) => nativeRuntime.previewDirectContext(request) });
@@ -644,10 +665,12 @@ async function bootstrap(): Promise<void> {
     runtime: createLoopThreadRuntime({ host: () => nativeRuntime.host, boot: () => nativeRuntime.personalization.state(),
       registerCheckouts: (projectId, paths) => nativeRuntime.catalog.setProjectCheckouts(projectId, paths), nextId: randomUUID }),
     notifyRunChanged: (run) => {
+      inbox?.service.observeWorkflowRun(run);
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send("loop-run:changed", run);
       }
     },
+    notifyRunDeleted: (_projectId, runId) => { inbox?.service.forgetWorkflowRun(runId); },
     notifyRunOutput: (payload) => {
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send("loop-run:output", payload);
@@ -690,7 +713,18 @@ async function bootstrap(): Promise<void> {
     onTasksChanged: notifyWorkspaceTasksChanged,
     onRoutinesChanged: (botId) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(botRoutinesChangedChannel, { botId }); },
     openExternal: (url) => shell.openExternal(url),
-    onConnectorsChanged: (connectors) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(connectorsChangedChannel, connectors); },
+    onConnectorsChanged: (connectors) => { inbox?.service.refreshConnectors(); if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(connectorsChangedChannel, connectors); },
+    onSecretPromptsChanged: (prompts) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(secretPromptsChangedChannel, prompts); },
+    onSecretVaultChanged: (secrets) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(secretVaultChangedChannel, secrets); },
+    onAppsChanged: (apps) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(appsChangedChannel, apps); },
+    onAppData: (data) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(appsDataChannel, data); },
+    onAppBuildStep: (step) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(appsBuildingChannel, step); },
+    onAppAlertsChanged: () => { inbox?.service.refreshAlerts(); },
+    workerWorkspaces: createWorkerWorkspaces({
+      boot: () => nativeRuntime.personalization.state(), nextId: randomUUID,
+      createWorktree: (payload) => services.session.createWorktree(payload),
+      syncCheckouts: (projectId) => nativeRuntime.personalization.request({ kind: "sync-checkouts", projectId })
+    }),
     tasks: {
       read: (projectId, path) => services.workspace.readWorkspaceFile({ projectId, path }),
       move: async (projectId, fromPath, toPath) => { await services.workspace.moveWorkspaceFile({ projectId, fromPath, toPath }); },
@@ -707,16 +741,20 @@ async function bootstrap(): Promise<void> {
       }
     }
   });
+  inbox = startInboxRuntime({ host: nativeRuntime.host, stateDirectory: getStateDir(), getMainWindow: () => mainWindow, getAppIcon, focusMainWindow,
+    notificationsEnabled: () => appSettings.agentCompletionNotificationsEnabled,
+    projectIds: () => nativeRuntime.personalization.state().workspaces.flatMap((entry) => entry.shellProjectId ? [entry.shellProjectId] : []),
+    listWorkflowRuns: (projectId) => loopRunner.listRuns(projectId),
+    workspaceForProject: (projectId) => nativeRuntime.personalization.state().workspaces.find((entry) => entry.shellProjectId === projectId)?.id ?? null,
+    connectors: () => nativeRuntime.connectors.list(), alerts: () => nativeRuntime.apps.activeAlerts() });
   remoteAccess = createDesktopRemoteAccess({ directory: getStateDir(), runtimeVersion: app.getVersion(), name: os.hostname(),
-    account: accountRuntime, host: nativeRuntime.host, boot: () => nativeRuntime.personalization.state(),
+    account: accountRuntime, host: nativeRuntime.host, inbox: inbox.service, boot: () => nativeRuntime.personalization.state(),
     onChanged: (view) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(remoteAccessChangedChannel, view); }
   });
   desktopLifecycle.attachRemoteAccess(remoteAccess);
   await remoteAccess.start();
   syncWorktreeCheckouts(services.snapshot.getSnapshot());
   registerIpc();
-  stopDesktopAttention = startDesktopAttention({ host: nativeRuntime.host, getMainWindow: () => mainWindow, getAppIcon, focusMainWindow,
-    notificationsEnabled: () => appSettings.agentCompletionNotificationsEnabled });
   await settingsSync.initialize();
   accountRuntime.initialize();
   desktopLifecycle.start();
@@ -731,9 +769,16 @@ async function bootstrap(): Promise<void> {
 if (!shouldExitForSquirrelLifecycle && hasSingleInstanceLock) {
   app.on("second-instance", (_event, argv, workingDirectory) => {
     windowStartup.activate();
+    for (const value of argv) appInstallRequests.enqueue(value);
     enqueueParsedLaunchCommand(argv, workingDirectory || process.cwd());
   });
 
+  app.on("open-url", (event, url) => { if (appInstallRequests.enqueue(url)) event.preventDefault(); });
+  for (const value of process.argv) appInstallRequests.enqueue(value);
+  void app.whenReady().then(() => {
+    if (process.defaultApp && process.argv[1]) app.setAsDefaultProtocolClient(APP_INSTALL_SCHEME, process.execPath, [path.resolve(process.argv[1])]);
+    else app.setAsDefaultProtocolClient(APP_INSTALL_SCHEME);
+  });
   configureWebviewGuests();
   void app.whenReady().then(bootstrap);
 }

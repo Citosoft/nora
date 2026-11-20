@@ -1,4 +1,4 @@
-import { actionDecisionRequestSchema, cancelTaskRequestSchema, createConversationRequestSchema, sendMessageRequestSchema, commandResponseSchema } from "@shared/remote-access/runtimeApi";
+import { actionDecisionRequestSchema, cancelTaskRequestSchema, createBotChatRequestSchema, createConversationRequestSchema, sendMessageRequestSchema, commandResponseSchema } from "@shared/remote-access/runtimeApi";
 import type { RemoteIdentity } from "@main/types/remote-access/auth.types";
 import type { RuntimeApiOptions } from "@main/types/remote-access/http/runtime.types";
 import type { RuntimeRoute } from "@main/types/remote-access/http/routes.types";
@@ -7,6 +7,7 @@ import type { RemoteAuditEntry } from "@shared/types/remote-access/remoteAccess.
 import { RuntimeFailure, describeRuntimeFailure } from "./failure";
 import { remoteProviderBinding } from "./defaultBinding";
 import { requireRemoteConversation } from "./readRoutes";
+import { botChatCommand } from "./botChats";
 
 export async function executeRemoteCommand(options: RuntimeApiOptions, route: RuntimeRoute, body: unknown, identity: RemoteIdentity): Promise<Response> {
   let action: RemoteAuditEntry["action"] | null = null;
@@ -31,6 +32,13 @@ export async function executeRemoteCommand(options: RuntimeApiOptions, route: Ru
         const provider = await remoteProviderBinding(options, workspace, input.provider ?? previous?.conversation.provider);
         command = { kind: "create", commandId: input.commandId, conversationId: input.conversationId, title: input.title,
           workspace, provider, parentId: null };
+        break;
+      }
+      case "bot-chat": {
+        action = "create-conversation";
+        const input = createBotChatRequestSchema.parse(body);
+        conversationId = input.conversationId;
+        command = botChatCommand(options.boot(), route.id, input);
         break;
       }
       case "send": {

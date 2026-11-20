@@ -113,7 +113,7 @@ export function ChatView({ runtime, runtimeId, conversation, view, runner, onSen
 
 const createStyles = (theme: Theme) => ({
   fill: { flex: 1 },
-  content: { paddingHorizontal: layout.gutter + 2, paddingTop: spacing.md, paddingBottom: spacing.lg, gap: spacing.lg },
+  content: { width: "100%" as const, maxWidth: layout.chatColumnWidth, alignSelf: "center" as const, paddingHorizontal: layout.gutter + 2, paddingTop: spacing.md, paddingBottom: spacing.lg, gap: spacing.lg },
   older: { alignItems: "center" as const, gap: spacing.xs },
   footer: { gap: spacing.md },
   muted: { ...type.footnote, color: theme.colors.textMuted, textAlign: "center" as const },

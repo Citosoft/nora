@@ -17,7 +17,11 @@ export const mcpServerLogoSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("icon"), lightUrl: httpsUrlSchema, darkUrl: httpsUrlSchema }).strict(),
   z.object({ kind: z.literal("domain"), domain: z.string().regex(/^[a-z0-9-]+(\.[a-z0-9-]+)+$/) }).strict()
 ]);
-export const mcpToolSchema = z.object({ name: z.string(), description: z.string().optional() }).strict();
+/** `inputSchema` is the tool's JSON Schema for its arguments, kept for Nora connectors so apps can be built against it. */
+export const mcpToolInputSchema = z.record(z.string(), z.json());
+export const mcpToolSchema = z.object({ name: z.string(), description: z.string().optional(), inputSchema: mcpToolInputSchema.optional() }).strict();
+/** Keeps a tool's JSON Schema when the SDK hands back plain JSON; anything else is dropped rather than typed loosely. */
+export const toolInputSchemaOf = (value: unknown): z.infer<typeof mcpToolInputSchema> | undefined => mcpToolInputSchema.safeParse(value).data;
 export const mcpServerSchema = z.object({ name: z.string(),
   status: z.enum(["connected", "pending", "needs-auth", "failed", "disabled", "unknown"]),
   authStatus: z.enum(["authenticated", "needs-auth", "unsupported", "unknown"]),

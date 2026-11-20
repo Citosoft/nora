@@ -1,5 +1,7 @@
 import { useMemoryWorkspace } from "@/components/app/hooks/useMemoryWorkspace";
 import { WorkspaceNavigationProvider } from "@/components/app/context/workspaceNavigationContext";
+import { WorkflowLaunchProvider } from "@/components/app/context/workflowLaunchContext";
+import { InboxOpenProvider } from "@/components/app/context/inboxOpenContext";
 import { BotInfoProvider } from "@/components/app/context/botInfoContext";
 import { AppRootShellFrameProvider } from "@/components/app/context/appRootShellFrameContext";
 import {
@@ -95,7 +97,7 @@ export const SignedInShellComposition = ({
                 <ChromeShellPortsProvider value={chromeShellPorts}>
                   <AppChromeShellComposeProvider value={chromeShellCompose}>
                     <AppShellLayoutProvider value={shellLayout}>
-                      <AppRootShellFrameProvider value={shellFrameValue}><WorkspaceNavigationProvider><BotInfoProvider>{children}</BotInfoProvider></WorkspaceNavigationProvider></AppRootShellFrameProvider>
+                      <AppRootShellFrameProvider value={shellFrameValue}><WorkspaceNavigationProvider><WorkflowLaunchProvider><InboxOpenProvider><BotInfoProvider>{children}</BotInfoProvider></InboxOpenProvider></WorkflowLaunchProvider></WorkspaceNavigationProvider></AppRootShellFrameProvider>
                     </AppShellLayoutProvider>
                   </AppChromeShellComposeProvider>
                 </ChromeShellPortsProvider>

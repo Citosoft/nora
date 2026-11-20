@@ -22,7 +22,7 @@ test("lost instruction replies retry original create/submit identities instead o
     async execute(command) { commands.push(command); if (command.kind === "submit" && loseReply) { loseReply = false; throw new Error("Reply lost"); }
       return { commandId: command.commandId, conversationId: command.conversationId, acceptedAt: "2026-11-09T10:00:00.000Z", cursor: 1 }; },
     async header() { return null; }, async summaries() { return []; }, async history() { throw new Error("unused"); },
-    async catalog() { throw new Error("unused"); }, subscribe() { return () => {}; }
+    async catalog() { throw new Error("unused"); }, async outputFile() { return null; }, async outputs() { return []; }, async openOutputFile() {}, subscribe() { return () => {}; }
   };
   await assert.rejects(deliverDraftIntent(client, intent), /Reply lost/);
   assert.equal(await deliverDraftIntent(client, intent), intent.submit.conversationId);

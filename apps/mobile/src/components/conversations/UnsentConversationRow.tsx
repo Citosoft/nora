@@ -1,5 +1,5 @@
 import { Text, View } from "react-native";
-import type { PendingCreateConversation } from "@/types/pendingCommand.types";
+import type { PendingCreateBotChat, PendingCreateConversation } from "@/types/pendingCommand.types";
 import type { Theme } from "@/types/theme.types";
 import { layout, spacing, type } from "@/theme/tokens";
 import { useTheme } from "@/hooks/useTheme";
@@ -8,7 +8,7 @@ import { Button } from "@/components/common/Button";
 import { Icon } from "@/components/common/Icon";
 
 interface UnsentConversationRowProps {
-  command: PendingCreateConversation;
+  command: PendingCreateConversation | PendingCreateBotChat;
   sending: boolean;
   onRetry: () => void;
   onDiscard: () => void;

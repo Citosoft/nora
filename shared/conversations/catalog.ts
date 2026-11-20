@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { providerKindSchema } from "@shared/providers/providerKinds";
+import { providerConnectionSchema } from "@shared/providers/account";
 import { failureSchema } from "./contracts";
 
 export const capabilitiesSchema = z.object({ resume: z.boolean(), interrupt: z.boolean(), steering: z.boolean(),
@@ -7,6 +8,8 @@ export const capabilitiesSchema = z.object({ resume: z.boolean(), interrupt: z.b
   turnChanges: z.boolean(), subagentDetails: z.boolean(), promptSuggestions: z.boolean().optional(),
   /** Accepts a default model for the subagents it spawns (`ProviderBinding.subagentModel`). */
   subagentModel: z.boolean().optional(),
+  /** Enforces read-only command execution for worker threads, independently of the selected model. */
+  readOnlyCommands: z.boolean().optional(),
   /** Reports native context occupancy after model requests. */
   contextUsage: z.boolean().optional(),
   /** Compacts native context on request. */
@@ -18,6 +21,7 @@ export const modelSchema = z.object({ id: z.string().min(1), name: z.string(), d
 export const policySchema = z.object({ id: z.string().min(1), label: z.string(), description: z.string().optional() }).strict();
 export const catalogSchema = z.object({ kind: providerKindSchema, instanceId: z.string().min(1),
   capabilities: capabilitiesSchema, models: z.array(modelSchema), policies: z.array(policySchema),
+  connection: providerConnectionSchema.optional(),
   authentication: z.enum(["required", "present", "unknown"]) }).strict();
 export const catalogResultSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("available"), catalog: catalogSchema }).strict(),

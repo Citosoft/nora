@@ -9,7 +9,7 @@ const AUTH_MODES: readonly { mode: ConnectorAuthMode; label: string; detail: str
 ];
 
 /** The add dialog's second step: how Nora authenticates to the server. */
-export function AddConnectorAuthStep({ form, update }: AddConnectorFormStepProps) {
+export function AddConnectorAuthStep({ form, update, clientRequired = false }: AddConnectorFormStepProps) {
   return <>
     <fieldset className="space-y-2">
       <legend className="sr-only">Authentication</legend>
@@ -19,9 +19,9 @@ export function AddConnectorAuthStep({ form, update }: AddConnectorFormStepProps
         <span><span className="font-medium text-foreground">{label}</span><span className="mt-0.5 block text-xs text-muted-foreground">{detail}</span></span>
       </label>)}
     </fieldset>
-    {form.authMode === "oauth" ? <details className="rounded-md border border-border/60 px-3 py-2 text-xs">
-      <summary className="cursor-pointer text-sm font-medium text-foreground">Use your own OAuth client</summary>
-      <p className="mt-2 text-muted-foreground">Only needed for servers that do not support dynamic client registration. Register this redirect URI with the provider: <code className="select-all break-all">{CONNECTOR_OAUTH_REDIRECT_URL}</code></p>
+    {form.authMode === "oauth" ? <details open={clientRequired} className="rounded-md border border-border/60 px-3 py-2 text-xs">
+      <summary className="cursor-pointer text-sm font-medium text-foreground">{clientRequired ? "Your OAuth client" : "Use your own OAuth client"}</summary>
+      <p className="mt-2 text-muted-foreground">{clientRequired ? "This server needs it. " : "Only needed for servers that do not support dynamic client registration. "}Register this redirect URI with the provider: <code className="select-all break-all">{CONNECTOR_OAUTH_REDIRECT_URL}</code></p>
       <div className="mt-3 space-y-3">
         <Field label="Client ID"><Input value={form.clientId} autoComplete="off" onChange={(event) => update({ clientId: event.target.value })} /></Field>
         <Field label="Client secret (optional)"><Input type="password" autoComplete="off" value={form.clientSecret} disabled={!form.clientId.trim()} onChange={(event) => update({ clientSecret: event.target.value })} /></Field>

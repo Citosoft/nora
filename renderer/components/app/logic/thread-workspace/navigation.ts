@@ -29,9 +29,9 @@ export function buildThreadNavigation(state: ThreadWorkspaceSnapshot, workspaceI
   const chatIds = new Set(state.summaries.flatMap(({ conversation }) => isChat(conversation) ? [conversation.id] : []));
   // Direct chats belong to their bot, not a workspace; the Bots sidebar reaches them from any workspace.
   if (filter !== "settled") for (const document of state.layout.documents) {
-    if (document.target.kind !== "draft" || document.direct || (workspaceId && document.workspaceId !== workspaceId)) continue;
+    if (document.target.kind !== "draft" || document.source?.kind === "app" || document.direct || (workspaceId && document.workspaceId !== workspaceId)) continue;
     rows.push({ id: document.id, target: { kind: "draft", documentId: document.id }, title: threadDocumentTitle(document, state.summaries),
-      workspaceId: document.workspaceId, providerKind: document.provider?.kind ?? null,
+      workspaceId: document.workspaceId, providerKind: document.provider?.kind ?? null, providerConnection: document.provider?.connection ?? "unknown",
       bot: null, group: draftGroup(state, document.workspaceId, document.group?.botIds), status: document.pending ? "Delivery unconfirmed" : "Draft",
       active: !!document.pending, working: false, unread: false, attention: !!document.pending, pinned: false, selected: document.id === state.layout.activeId,
       hasDraft: !isEmptyDraft(document), queuedCount: 0, updatedAt: document.updatedAt });
@@ -39,14 +39,14 @@ export function buildThreadNavigation(state: ThreadWorkspaceSnapshot, workspaceI
   const waiting = waitingDescendants(state.summaries);
   for (const summary of state.summaries) {
     const { conversation, latestRun, queuedCount, pendingRequestCount } = summary;
-    if (conversation.source?.kind === "workflow" || conversation.direct || conversation.workspace.environmentId !== state.boot.environmentId || (workspaceId && conversation.workspace.projectId !== workspaceId)
+    if (conversation.source?.kind === "workflow" || conversation.source?.kind === "app" || conversation.direct || conversation.workspace.environmentId !== state.boot.environmentId || (workspaceId && conversation.workspace.projectId !== workspaceId)
       || (!!conversation.archivedAt !== (filter === "settled"))) continue;
     // A create accepted before a lost submit reply is represented by its recoverable draft, once.
     if (state.layout.documents.some((entry) => entry.target.kind === "draft" && entry.pending?.submit.conversationId === conversation.id)) continue;
     const active = !!latestRun && !terminal.has(latestRun.state);
     const document = state.layout.documents.find((entry) => entry.target.kind === "thread" && entry.target.conversationId === conversation.id);
-    rows.push({ id: conversation.id, target: { kind: "thread", conversationId: conversation.id }, title: conversation.title,
-      workspaceId: conversation.workspace.projectId, providerKind: conversation.provider.kind, origin: conversation.origin,
+    rows.push({ id: conversation.id, parentId: conversation.parentId, target: { kind: "thread", conversationId: conversation.id }, title: conversation.title,
+      workspaceId: conversation.workspace.projectId, providerKind: conversation.provider.kind, providerConnection: conversation.provider.connection ?? "unknown", origin: conversation.origin,
       bot: conversation.bot ? { botId: conversation.bot.botId, name: conversation.bot.name, avatar: conversation.bot.avatar } : null,
       group: conversation.group?.members ?? null,
       waitingOn: conversation.archivedAt ? null : waiting.get(conversation.id) ?? null,

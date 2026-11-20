@@ -41,12 +41,20 @@ async function runChat(instruction: string, route: DirectRouter, setup?: (fake: 
 }
 
 test("a new task starts a write-enabled work thread in the routed workspace and links the reply to it", async () => {
-  const result = await runChat("Fix the footer on the site", async () => ({ kind: "new", workspaceId: "site", title: "Footer fix" }));
+  const result = await runChat("Fix the footer on the site", async () => ({ kind: "new", workspaceId: "site", title: "Footer fix", done: null }));
   assert.equal(result.threads.length, 1);
   const [thread] = result.threads;
   assert.deepEqual([thread.title, thread.workspace.projectId, thread.workspace.access, thread.bot?.botId], ["Footer fix", "site", "write", "ada"]);
   assert.deepEqual(result.replies, [["Ada", "done: Fix the footer on the site", thread.id]]);
   assert.equal(result.status, "completed");
+});
+
+test("a new task carries the router's done criteria on its thread and in its first prompt", async () => {
+  const result = await runChat("Fix the footer on the site", async () => ({ kind: "new", workspaceId: "site", title: "Footer fix", done: "Every footer link opens its page" }));
+  const create = result.fake.commands.find((command) => command.kind === "create");
+  assert.equal(create?.kind === "create" ? create.done : null, "Every footer link opens its page");
+  const submit = result.fake.commands.find((command) => command.kind === "submit");
+  assert.match(submit?.kind === "submit" ? submit.instruction : "", /Done means: Every footer link opens its page/);
 });
 
 test("a follow-up continues its open work thread instead of starting another", async () => {
@@ -75,15 +83,16 @@ test("without a usable route, the latest open task in the working workspace cont
   const base = { message: "Ship it", threads, workspaces, defaultWorkspaceId: "app" };
   assert.deepEqual(resolveDirectRoute({ ...base, route: null }), { kind: "continue", threadId: "new" });
   assert.deepEqual(resolveDirectRoute({ ...base, route: { kind: "continue", threadId: "gone" } }), { kind: "continue", threadId: "new" });
-  assert.deepEqual(resolveDirectRoute({ ...base, route: { kind: "new", workspaceId: "nowhere", title: "x" } }), { kind: "continue", threadId: "new" });
-  assert.deepEqual(resolveDirectRoute({ ...base, threads: [], route: null }), { kind: "new", workspaceId: "app", title: "Ship it" });
-  assert.deepEqual(resolveDirectRoute({ ...base, route: { kind: "new", workspaceId: "site", title: " " } }), { kind: "new", workspaceId: "site", title: "Ship it" });
+  assert.deepEqual(resolveDirectRoute({ ...base, route: { kind: "new", workspaceId: "nowhere", title: "x", done: null } }), { kind: "continue", threadId: "new" });
+  assert.deepEqual(resolveDirectRoute({ ...base, threads: [], route: null }), { kind: "new", workspaceId: "app", title: "Ship it", done: null });
+  assert.deepEqual(resolveDirectRoute({ ...base, route: { kind: "new", workspaceId: "site", title: " ", done: "Shipped" } }), { kind: "new", workspaceId: "site", title: "Ship it", done: "Shipped" });
   assert.equal(taskTitle("x".repeat(80)).length, 60);
 });
 
 test("the router's answer is parsed leniently and anything else means no opinion", () => {
   assert.deepEqual(parseDirectRoute('Sure: {"continue":"t1"}'), { kind: "continue", threadId: "t1" });
-  assert.deepEqual(parseDirectRoute('{"new":"site","title":"Footer"}'), { kind: "new", workspaceId: "site", title: "Footer" });
+  assert.deepEqual(parseDirectRoute('{"new":"site","title":"Footer"}'), { kind: "new", workspaceId: "site", title: "Footer", done: null });
+  assert.deepEqual(parseDirectRoute('{"new":"site","title":"Footer","done":" Links work "}'), { kind: "new", workspaceId: "site", title: "Footer", done: "Links work" });
   assert.equal(parseDirectRoute("none"), null);
   assert.equal(parseDirectRoute('{"maybe":1}'), null);
 });
@@ -96,6 +105,7 @@ test("a new task sees the chat so far; a continuing one only what is new since i
   assert.match(fresh, /\[User\]: Hi Ada/);
   const continuing = directPrompt(direct, items, "task", "App");
   assert.doesNotMatch(continuing, /Hi Ada/);
+  assert.doesNotMatch(directPrompt(direct, items, "task", "App", "Header fixed"), /Done means/, "a continuing thread already has its criteria");
   assert.match(continuing, /\[User\]: Now the header/);
 });
 
@@ -108,7 +118,7 @@ test("a router failure falls back to the working workspace, and Stop interrupts 
 });
 
 test("a run pinned to a workspace works there, whatever the chat's working workspace or the router says", async () => {
-  const result = await runChat("Routine: tidy the board", async () => ({ kind: "new", workspaceId: "app", title: "Board" }), (fake) => {
+  const result = await runChat("Routine: tidy the board", async () => ({ kind: "new", workspaceId: "app", title: "Board", done: null }), (fake) => {
     fake.add(conversation("task", { parentId: "dm", workspace: { ...ref("app"), access: "write" }, bot: undefined }));
   }, undefined, "site");
   const created = result.threads.filter((thread) => thread.id !== "task");

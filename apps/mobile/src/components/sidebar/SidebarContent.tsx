@@ -7,15 +7,19 @@ import type { SidebarProps } from "@/types/sidebar.types";
 import type { Theme } from "@/types/theme.types";
 import { spacing, type } from "@/theme/tokens";
 import { routes } from "@/navigation/routes";
+import { botChatHref } from "@/state/botChats";
 import { chatsOverview } from "@/state/chatsOverview";
+import { capabilityGate } from "@/state/runtimeCompatibility";
 import { filterByProject, filterConversations } from "@/state/conversationSearch";
 import { deriveExecutionState } from "@/state/executionState";
+import { useBots } from "@/hooks/useBots";
 import { useConversationList } from "@/hooks/useConversationList";
 import { useProjects } from "@/hooks/useProjects";
 import { useRuntimeSession } from "@/hooks/useRuntimeSession";
 import { useTheme } from "@/hooks/useTheme";
 import { useThemedStyles } from "@/hooks/useThemedStyles";
 import { BarIconButton } from "@/components/common/BarIconButton";
+import { BotAvatar } from "@/components/common/BotAvatar";
 import { Icon } from "@/components/common/Icon";
 import { SearchField } from "@/components/common/SearchField";
 import { SidebarGlyph } from "@/components/common/SidebarGlyph";
@@ -24,7 +28,7 @@ import { SidebarFooter } from "./SidebarFooter";
 import { SidebarRow } from "./SidebarRow";
 
 /** Header (computer switcher, search, close), destinations, projects, chats and the account footer. */
-export function SidebarContent({ runtimeId, runtimeName, activeConversationId, onClose }: SidebarProps) {
+export function SidebarContent({ runtimeId, runtimeName, activeConversationId, persistent = false, onClose }: SidebarProps) {
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -32,14 +36,20 @@ export function SidebarContent({ runtimeId, runtimeName, activeConversationId, o
   const session = lookup.status === "ready" ? lookup.session : null;
   const projects = useProjects(session);
   const list = useConversationList(session, null);
+  const info = lookup.status === "ready" && lookup.snapshot.info.status === "ready" ? lookup.snapshot.info.value : null;
+  const bots = useBots(capabilityGate(info, "bots.chat").enabled ? session : null);
   const [searching, setSearching] = useState(false);
   const [search, setSearch] = useState("");
   const [projectId, setProjectId] = useState<string | null>(null);
   const state = list.state;
   const summaries = useMemo(() => (state.status === "ready" ? state.value : state.status === "error" ? state.stale ?? [] : []), [state]);
   const projectList = projects.state.status === "ready" ? projects.state.value : [];
+  const botList = bots.state.status === "ready" ? bots.state.value : bots.state.status === "error" ? bots.state.stale ?? [] : [];
+  const summaryById = useMemo(() => new Map(summaries.map((summary) => [summary.conversation.id, summary])), [summaries]);
   const overview = useMemo(() => chatsOverview(summaries), [summaries]);
-  const chats = useMemo(() => filterConversations(filterByProject(summaries, searching ? null : projectId), search), [projectId, search, searching, summaries]);
+  // A bot's direct chat lives under Bots rather than among the chats.
+  const chats = useMemo(() => filterConversations(filterByProject(summaries.filter(({ conversation }) => !conversation.direct), searching ? null : projectId), search),
+    [projectId, search, searching, summaries]);
   const filterName = projectList.find((project) => project.id === projectId)?.name;
 
   const go = (href: Href, mode: "push" | "replace" = "push"): void => {
@@ -59,15 +69,15 @@ export function SidebarContent({ runtimeId, runtimeName, activeConversationId, o
         <BarIconButton label={searching ? "Close search" : "Search chats"} onPress={() => { setSearching((value) => !value); setSearch(""); }}>
           <Icon name={searching ? "close" : "search-outline"} size={24} color={colors.text} />
         </BarIconButton>
-        <BarIconButton label="Close sidebar" onPress={onClose}><SidebarGlyph color={colors.text} /></BarIconButton>
+        <BarIconButton label={persistent ? "Collapse sidebar" : "Close sidebar"} onPress={onClose}><SidebarGlyph color={colors.text} /></BarIconButton>
       </View>
       {searching ? <View style={styles.search}><SearchField value={search} onChange={setSearch} placeholder="Search chats" /></View> : null}
       <ScrollView style={styles.fill} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {searching ? null : (
           <View style={styles.group}>
             <SidebarRow label="New chat" icon="create-outline" selected={activeConversationId === null} onPress={() => go(routes.newConversation(runtimeId, projectId), "replace")} />
-            <SidebarRow label="Approvals" icon="hand-left-outline" detail={overview.pendingRequests ? String(overview.pendingRequests) : null}
-              onPress={() => go(routes.approvals(runtimeId))} />
+            <SidebarRow label="Inbox" icon="file-tray-outline" detail={overview.pendingRequests ? String(overview.pendingRequests) : null}
+              onPress={() => go(routes.inbox(runtimeId))} />
             <SidebarRow label="Activity" icon="pulse-outline" detail={overview.working ? `${overview.working} running` : null} onPress={() => go(routes.activity(runtimeId))} />
             <SidebarRow label="Computers" icon="desktop-outline" onPress={() => go(routes.home, "replace")} />
           </View>
@@ -83,6 +93,23 @@ export function SidebarContent({ runtimeId, runtimeName, activeConversationId, o
                   <Icon name="create-outline" size={20} color={colors.textMuted} />
                 </BarIconButton>} />
             ))}
+          </View>
+        ) : null}
+        {!searching && botList.length > 0 ? (
+          <View style={styles.group}>
+            <Text style={styles.sectionTitle} accessibilityRole="header">Bots</Text>
+            {botList.map((bot) => {
+              const chat = bot.chatConversationId ? summaryById.get(bot.chatConversationId) : undefined;
+              const status = chat ? deriveExecutionState(chat) : null;
+              const flagged = status?.tone === "active" || status?.tone === "attention" || status?.tone === "danger";
+              return (
+                <SidebarRow key={`${bot.id}/${bot.scope.kind === "workspace" ? bot.scope.workspaceId : ""}`} label={bot.name} selected={!!bot.chatConversationId && bot.chatConversationId === activeConversationId}
+                  leading={<BotAvatar avatar={bot.avatar} name={bot.name} size={26} />}
+                  accessibilityLabel={`${bot.name}${bot.role ? `, ${bot.role}` : ""}${status ? `, ${status.label}` : ""}`}
+                  onPress={() => go(botChatHref(runtimeId, bot), "replace")}
+                  trailing={status && flagged ? <View style={styles.dot}><StatusDot tone={status.tone} /></View> : null} />
+              );
+            })}
           </View>
         ) : null}
         <View style={styles.group}>

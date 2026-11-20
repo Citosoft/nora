@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { CodexAdapter } from "@main/providers/codex/adapter";
 import { ClaudeAdapter } from "@main/providers/claude/adapter";
@@ -56,6 +56,41 @@ test("Claude history narrows SDK payloads, preserves messages and tools, and doe
   assert.ok(tool.details?.input?.includes("[redacted]")); assert.ok(!tool.details?.input?.includes("private"));
   assert.equal(JSON.stringify(transcript).includes("Nested output"), false);
   assert.equal(normalizeClaudeHistory(session, [message("user", "u", { content: "Interrupted prompt" })]).turns[0].state, "interrupted");
+});
+
+test("imported Claude history keeps files that succeeded tool calls wrote or delivered", () => {
+  const transcript = normalizeClaudeHistory(session, [
+    message("user", "u", { content: "Make a chart" }),
+    message("assistant", "a", { content: [{ type: "tool_use", id: "deliver", name: "SendUserFile", input: { files: ["out/chart.png"] } },
+      { type: "tool_use", id: "write", name: "Write", input: { file_path: "/project/report.pdf", content: "…" } }] }),
+    message("user", "r", { content: [{ type: "tool_result", tool_use_id: "deliver", content: "1 file delivered to user." },
+      { type: "tool_result", tool_use_id: "write", content: "Permission denied", is_error: true }] })
+  ]);
+  const tools = transcript.turns[0].items.filter((item) => item.kind === "tool");
+  assert.deepEqual(tools.map((tool) => tool.kind === "tool" ? tool.details?.outputFiles : null), [[{ path: resolve("/project/out/chart.png") }], undefined]);
+});
+
+test("imported Claude history drops the app's notes and shows commands as the user ran them", () => {
+  const note = "<system-reminder>\nThe session you started finished a turn.\n</system-reminder>";
+  const transcript = normalizeClaudeHistory(session, [
+    message("user", "caveat", { content: "<local-command-caveat>The command below was run directly in Claude Code.</local-command-caveat>" }),
+    message("user", "model", { content: "<command-name>/model</command-name>\n<command-message>model</command-message>\n<command-args>claude-opus-5-5</command-args>" }),
+    message("user", "stdout", { content: "<local-command-stdout>Set model to claude-opus-5-5</local-command-stdout>" }),
+    message("user", "ask", { content: `${note}\nMake a chart` }),
+    message("assistant", "tool", { content: [{ type: "tool_use", id: "tabs", name: "tabs_context", input: {} }] }),
+    message("user", "result", { content: [{ type: "tool_result", tool_use_id: "tabs", content: [{ type: "text", text: "Tabs: 1" }, { type: "text", text: note }] }] }),
+    message("assistant", "answer", { content: [{ type: "text", text: "Done" }] }),
+    message("user", "event", { content: `${note}\n<side-sessions-event>None of the sessions is working now.</side-sessions-event>` }),
+    message("user", "shell", { content: "<bash-input>ls</bash-input><bash-stdout>README.md</bash-stdout><bash-stderr></bash-stderr>" })
+  ]);
+  assert.deepEqual(transcript.turns.map((turn) => [turn.instruction, turn.state]), [["/model claude-opus-5-5", "completed"], ["Make a chart", "completed"], ["!ls", "completed"]]);
+  assert.deepEqual(transcript.turns[0].items.map((item) => item.kind === "message" || item.kind === "milestone" ? item.text : item.kind),
+    ["/model claude-opus-5-5", "Set model to claude-opus-5-5"]);
+  const tool = transcript.turns[1].items.find((item) => item.kind === "tool");
+  assert.equal(tool?.kind === "tool" && tool.output, "Tabs: 1");
+  const shell = transcript.turns[2].items.find((item) => item.kind === "tool");
+  assert.deepEqual(shell?.kind === "tool" && [shell.label, shell.details?.input, shell.output], ["Shell", "ls", "README.md"]);
+  assert.equal(JSON.stringify(transcript).includes("system-reminder"), false);
 });
 
 test("Claude SDK discovery filters by workspace, excludes programmatic sessions and reads the selected native transcript", async (t) => {

@@ -1,33 +1,31 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { attentionSources, buildAttentionToasts, inlineQuestion } from "@/components/app/logic/attentionToasts";
+import { buildAttentionToasts, inlineQuestion } from "@/components/app/logic/attentionToasts";
+import { describeAttention } from "@shared/conversations/attention";
 import { compactApprovalActions } from "@/components/app/logic/approvalActions";
 import { snapshotBot } from "@shared/bots/snapshot";
 import type { Conversation, RuntimeRequest } from "@shared/types/conversation/contracts.types";
-import type { ConversationHeader, ConversationSummary } from "@shared/types/conversation/queries.types";
+import type { InboxItem } from "@shared/types/inbox/inbox.types";
 import { bot } from "../shared/bots/fixtures";
 import { conversation } from "../main/nora-tools/fixture";
 
 const approval = (id: string, createdAt: string, status: RuntimeRequest["status"] = "pending"): RuntimeRequest => ({ kind: "approval", id, runId: "r", attemptId: "a",
   nativeId: id, status, createdAt, expiresAt: "", title: "Run npm test?", options: [{ id: "allow", label: "Allow" }] });
-const summary = (entry: Conversation, pendingRequestCount: number): ConversationSummary => ({ conversation: entry, latestRun: null, queuedCount: 0, pendingRequestCount });
-const header = (entry: Conversation, pendingRequests: RuntimeRequest[]): ConversationHeader => ({ conversation: entry, activeRuns: [], queuedRuns: [], pendingRequests } as unknown as ConversationHeader);
+const requestItem = (entry: Conversation, request: RuntimeRequest, parent: Conversation | null = null): InboxItem => ({ kind: "request", id: `request:${request.id}`,
+  workspaceId: "personal", occurredAt: request.createdAt, readAt: null, snoozedUntil: null, conversation: entry, request, notice: describeAttention(entry, parent, request) });
 
-test("toasts cover waiting requests outside the viewed thread, oldest first, and skip dismissed or answered ones", () => {
+test("toasts cover waiting requests in the threads picked, oldest first, and skip dismissed ones and workflow stages", () => {
   const nora = conversation("nora");
   const rex = conversation("rex", { parentId: "nora", bot: snapshotBot(bot("rex")) });
   const viewed = conversation("viewed");
-  const settled = conversation("settled", { archivedAt: "2026-11-13T00:00:00.000Z" });
   const workflow = conversation("workflow", { source: { kind: "workflow", projectId: "project", runId: "run", stageId: "stage" } });
-  const summaries = [summary(nora, 1), summary(rex, 2), summary(viewed, 1), summary(settled, 1), summary(workflow, 1)];
-  const sources = attentionSources(summaries, ({ conversation }) => conversation.id !== "viewed");
-  assert.deepEqual(sources.map((source) => source.conversationId), ["nora", "rex"]);
-  const headers = new Map([["nora", header(nora, [approval("n1", "2026-11-13T00:00:03Z")])],
-    ["rex", header(rex, [approval("r1", "2026-11-13T00:00:01Z"), approval("r2", "2026-11-13T00:00:02Z", "responding")])]]);
-  const toasts = buildAttentionToasts(sources, headers, summaries, new Set());
+  const items = [requestItem(nora, approval("n1", "2026-11-13T00:00:03Z")), requestItem(rex, approval("r1", "2026-11-13T00:00:01Z"), nora),
+    requestItem(viewed, approval("v1", "2026-11-13T00:00:00Z")), requestItem(workflow, approval("w1", "2026-11-13T00:00:00Z"))];
+  const include = (entry: Conversation) => entry.id !== "viewed";
+  const toasts = buildAttentionToasts(items, include, new Set());
   assert.deepEqual(toasts.map((toast) => [toast.request.id, toast.notice.title, toast.notice.body]),
     [["r1", "Rex needs your approval", "Run npm test? · asked by Nora"], ["n1", "nora needs your approval", "Run npm test?"]]);
-  assert.deepEqual(buildAttentionToasts(sources, headers, summaries, new Set(["r1"])).map((toast) => toast.request.id), ["n1"]);
+  assert.deepEqual(buildAttentionToasts(items, include, new Set(["r1"])).map((toast) => toast.request.id), ["n1"]);
 });
 
 test("only a single single-choice question with a few options can be answered from a toast", () => {

@@ -1,6 +1,6 @@
 import type { ExternalSessionsResult } from "@shared/types/conversation/externalSessions.types";
 import type { CommandReceipt, ContextUsage, ConversationCommand, ConversationEvent, ProviderBinding, WorkspaceRef } from "@shared/types/conversation/contracts.types";
-import type { ConversationHeader, ConversationHistoryPage, ConversationSummary, HistoryQuery } from "@shared/types/conversation/queries.types";
+import type { ConversationHeader, ConversationHistoryPage, ConversationSummary, HistoryQuery, OutputFileContent, OutputFileSize, OutputThread } from "@shared/types/conversation/queries.types";
 import type { ProviderCatalogResult } from "@shared/types/provider/catalog.types";
 import type { McpRequest, McpResult } from "@shared/types/provider/mcp.types";
 import type { McpAppRequest, McpAppResult } from "@shared/types/provider/mcpApp.types";
@@ -23,6 +23,12 @@ export interface ConversationClient {
   summaries(projectId?: string): Promise<ConversationSummary[]>;
   history(query: HistoryQuery): Promise<ConversationHistoryPage>;
   catalog(kind: ProviderBinding["kind"], instanceId: string, workspace: WorkspaceRef): Promise<ProviderCatalogResult>;
+  /** Every thread in a project with its output-bearing items, for the workspace Library. */
+  outputs(projectId: string): Promise<OutputThread[]>;
+  /** One of an item's output files, read for display at a size; null when the file is gone or unreadable. */
+  outputFile(conversationId: string, itemId: string, path: string, size: OutputFileSize): Promise<OutputFileContent | null>;
+  /** Opens one of an item's output files with the owning host's operating system. */
+  openOutputFile(conversationId: string, itemId: string, path: string): Promise<void>;
   /** Discovers, refreshes or signs in to the MCP servers of one provider runtime. */
   mcp(request: McpRequest): Promise<McpResult>;
   mcpApp(request: McpAppRequest): Promise<McpAppResult>;

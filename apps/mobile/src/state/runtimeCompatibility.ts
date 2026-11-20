@@ -21,6 +21,9 @@ const capabilityExplanations: Record<RuntimeCapability, string> = {
   "tasks.cancel": "Stopping tasks remotely needs a newer Nora Desktop.",
   "tasks.list": "The activity list needs a newer Nora Desktop.",
   "events.replay": "Catching up on missed updates needs a newer Nora Desktop; the app reloads instead.",
+  "bots.chat": "Chatting with bots remotely needs a newer Nora Desktop.",
+  "inbox.read": "The full inbox needs a newer Nora Desktop; only approvals and questions show here.",
+  "inbox.update": "Marking inbox items read or done needs a newer Nora Desktop.",
   realtime: "Live updates need a newer Nora Desktop. Pull to refresh to see changes."
 };
 

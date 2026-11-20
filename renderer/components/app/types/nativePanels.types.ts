@@ -1,5 +1,7 @@
 import type { ChatWorkThread } from "./chatPanels.types";
 import type { McpAppHost } from "./mcpApp.types";
+import type { OutputHost } from "./toolImage.types";
+import type { ThreadOutputTarget } from "./threadOutputs.types";
 import type { BotAvatarState } from "./botAvatar.types";
 import type { BotAvatar, BotSnapshot } from "@shared/types/bots/bots.types";
 import type { ComposerAttachment } from "@shared/types/agentInput.types";
@@ -35,6 +37,10 @@ export interface NativeTimelineProps {
   onOpenThread?: (conversationId: string) => void;
   /** Serves MCP tool widgets; without it, widget-bearing calls show only as tool activity. */
   mcpApps?: McpAppHost | null;
+  /** Previews tool output images; without it, image-producing calls show only as tool activity. */
+  toolOutputs?: OutputHost | null;
+  /** Opens an output file in the file viewer, or with the operating system when the viewer can't show it. */
+  onOpenOutput?: (target: ThreadOutputTarget) => Promise<void>;
 }
 export interface NativeReviewProps { result: ConversationReview; }
 export interface NativeRequestProps {
@@ -57,6 +63,8 @@ export interface NativeConversationPorts {
   openBotSettings?: () => void;
   /** A chat's work threads, newest first; empty for ordinary threads. */
   workThreads: readonly ChatWorkThread[];
+  /** All work owned by a direct chat's bot, including its other chats and workspaces. */
+  botWorkThreads: readonly ChatWorkThread[];
   openThread(conversationId: string): void;
   /** Settles another thread, such as one of a chat's branches. */
   settleThread(conversationId: string): Promise<void>;

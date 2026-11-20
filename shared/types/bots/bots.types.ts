@@ -1,3 +1,5 @@
+import type { Connector } from "@shared/types/connectors/connectors.types";
+import type { ConnectorGalleryEntry } from "@shared/types/connectors/gallery.types";
 import type { RoleId } from "@shared/types/personalization/roles.types";
 import type { z } from "zod";
 import type { BOT_AVATAR_EYES, BOT_AVATAR_PALETTES, BOT_AVATAR_SHAPES, botAvatarSchema, botBindingSchema, botDefinitionSchema,
@@ -39,6 +41,10 @@ export type DirectRequest = z.infer<typeof directRequestSchema>;
 export type BotMemoryEntry = z.infer<typeof botMemoryEntrySchema>;
 /** A starting point for a new bot; avatar parts are pinned so each template keeps a recognisable face. */
 export interface BotTemplate {
+  /** Portable service references, resolved to this computer’s connector accounts when creating a bot. */
+  connectorGalleryIds: readonly string[];
+  /** Suggested routines copied into the bot as paused schedules during creation. */
+  routineTemplateIds: readonly string[];
   id: string;
   /** Roles this template suits; it is suggested first to users with one of them. */
   roles: readonly Exclude<RoleId, "custom">[];
@@ -49,3 +55,5 @@ export interface BotTemplate {
   avatar: { shape: BotAvatarShape; palette: BotAvatarPalette; eyes: BotAvatarEyes };
 }
 export interface BotTemplateSuggestions { suggested: readonly BotTemplate[]; more: readonly BotTemplate[]; }
+
+export interface TemplateConnectorMatch { entry: ConnectorGalleryEntry; connectors: readonly Connector[]; }

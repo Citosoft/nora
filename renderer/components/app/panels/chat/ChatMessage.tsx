@@ -13,7 +13,7 @@ const ACTION = "flex items-center gap-1 rounded px-1 text-xs text-muted-foregrou
 export function ChatMessage({ entry, workThread, onOpenThread, onBranch, onLinkClick }: ChatMessageProps) {
   const time = chatTime(entry.createdAt);
   if (entry.from === "user") {
-    return <div className={cn("flex flex-col items-end", entry.continued ? "mt-1" : "mt-4")}>
+    return <div data-history-prompt={entry.id} data-history-text={entry.text} className={cn("flex flex-col items-end", entry.continued ? "mt-1" : "mt-4")}>
       {/* A primary tint, not a solid fill: MarkdownRenderer paints text with `text-foreground`, so the bubble keeps foreground contrast in both themes. */}
       <article aria-label="Your message" title={time} className="max-w-[80%] rounded-2xl rounded-br-md bg-primary/15 px-4 py-2 ring-1 ring-inset ring-primary/20">
         <MarkdownRenderer className="min-w-0 break-words" onLinkClick={onLinkClick}>{entry.text}</MarkdownRenderer>
@@ -21,7 +21,7 @@ export function ChatMessage({ entry, workThread, onOpenThread, onBranch, onLinkC
     </div>;
   }
   const name = entry.author?.name ?? "Nora";
-  return <div className={cn("flex gap-3", entry.continued ? "mt-1" : "mt-4")}>
+  return <div data-history-output={entry.text} className={cn("flex gap-3", entry.continued ? "mt-1" : "mt-4")}>
     <div className="shrink-0" style={{ width: AVATAR }}>{!entry.continued && entry.author && <BotInfoTrigger botId={entry.author.botId} name={name} className="block rounded-full">
       <BotAvatar avatar={entry.author.avatar} size={AVATAR} /></BotInfoTrigger>}</div>
     <div className="flex min-w-0 max-w-[80%] flex-col items-start gap-1">

@@ -1,4 +1,5 @@
 import { settingsPortsFixture } from "./settingsFixture";
+import { secretsFixture } from "../secrets/fixture";
 import { createNoraToolOperations } from "@main/nora-tools/operations/index";
 import { openBotMemoryStore } from "@main/bots/memory/store";
 import { snapshotBot } from "@shared/bots/snapshot";
@@ -107,7 +108,10 @@ export function noraFixture() {
   let settingsNotifications = 0;
   const taskNotifications: string[] = [];
   const workflows = workflowFake();
+  const secrets = secretsFixture();
   const deps = createNoraToolOperations({
+    secrets: secrets.service,
+    apps: {} as never, connectorTools: {} as never,
     ...settingsPortsFixture(),
     readSettings: () => settings,
     async updateSettings(change) { settings = change(settings); return settings; },
@@ -151,5 +155,5 @@ export function noraFixture() {
       }
     }
   });
-  return { taskNotifications, workflows, deps, saved, conversations, items, memory, get settings() { return settings; }, get settingsNotifications() { return settingsNotifications; }, get board() { return board; }, get tasks() { return tasks; } };
+  return { taskNotifications, workflows, secrets, deps, saved, conversations, items, memory, get settings() { return settings; }, get settingsNotifications() { return settingsNotifications; }, get board() { return board; }, get tasks() { return tasks; } };
 }

@@ -8,6 +8,7 @@ export interface DesktopRemoteAccessOptions {
   name: string;
   account: Pick<AccountRuntime, "config" | "session" | "sessionToken">;
   host: RuntimeApiOptions["host"];
+  inbox: RuntimeApiOptions["inbox"];
   boot: RuntimeApiOptions["boot"];
   onChanged(view: RemoteAccessView): void;
 }

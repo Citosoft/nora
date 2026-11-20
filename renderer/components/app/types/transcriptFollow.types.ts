@@ -6,5 +6,6 @@ export interface TranscriptFollow {
   newActivity: boolean;
   onWheel(event: WheelEvent<HTMLDivElement>): void;
   onScroll(event: UIEvent<HTMLDivElement>): void;
+  pauseFollowing(): void;
   jumpToLatest(): void;
 }

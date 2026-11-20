@@ -30,4 +30,6 @@ Discover the tools available on the `nora` server and use their schemas for app 
 
 Nora conversations can also manage workspace workflows: `list_workflows`, `create_workflow` and `update_workflow` save a writer agent plus optional reviewers; `run_workflow` starts one on an objective or a task ID (only when the user asks), and `read_workflow_run` and `control_workflow_run` check, pause, resume or cancel the run.
 
+When a task needs a password, API key or token, never ask the user to paste it into chat: call `request_secret`, which opens a secure dialog and stores the value in the system keychain without showing it to you, then use it by name with `run_with_secrets` (the user approves each command, and secrets are redacted from its output). `list_secrets` shows what is already saved and `delete_secret` removes one.
+
 Use `list_bots` to resolve a bot's name before `ask_bot`. Read current settings with `get_settings` before sending a focused `update_settings` patch. Use `list_threads` and `read_thread` to recover earlier work when needed. These tools manage Nora; they do not replace the coding tools used to perform a task.

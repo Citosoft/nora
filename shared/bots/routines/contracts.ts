@@ -93,6 +93,9 @@ export const routineRunSchema = z.object({
 export const routineInputSchema = routineSchema.pick({ botId: true, name: true, instruction: true, active: true, timezone: true,
   schedule: true, workspaceId: true, runIn: true, missedPolicy: true }).strict();
 
+/** Template routines are installed paused; enabling them is a separate user action. */
+export const pausedRoutineInputSchema = routineInputSchema.extend({ active: z.literal(false) });
+
 export const routineListSchema = z.object({ routines: z.array(routineSchema), runs: z.array(routineRunSchema) }).strict();
 
 /** The longest range one calendar request may cover; a month grid shows at most six weeks. */

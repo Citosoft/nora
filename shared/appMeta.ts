@@ -17,3 +17,5 @@ export const APP_GITHUB_REPOSITORY_SLUG = APP_REPOSITORY_URL.replace(/^https:\/\
 export const APP_GITHUB_REPOSITORY_API_URL = `https://api.github.com/repos/${APP_GITHUB_REPOSITORY_SLUG}`;
 export const APP_SUBMIT_ISSUE_URL = `${APP_REPOSITORY_URL}/issues/new`;
 export const APP_DOCS_URL = "https://www.withnora.run/docs";
+export const APP_COMPANY_NAME = "Citosoft";
+export const APP_COMPANY_URL = "https://www.citosoft.co.uk";

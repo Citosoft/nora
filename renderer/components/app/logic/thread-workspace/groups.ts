@@ -1,3 +1,4 @@
+import { providerIconPresentation } from "@/components/app/logic/providerIcon";
 import { threadAppSource, threadSourceOptions } from "./sources";
 import type { ProviderBinding } from "@shared/types/conversation/contracts.types";
 import type { ThreadGrouping, ThreadNavigationGroup } from "@/components/app/types/thread-workspace/navigation.types";
@@ -57,15 +58,23 @@ export function buildThreadGroups(
   if (grouping === "source") {
     for (const source of threadSourceOptions.filter((option) => option.id !== "all")) {
       const entries = remaining.filter((row) => threadAppSource(row) === source.id);
-      if (entries.length) groups.push({ id: source.id, label: source.label, providerKind: source.providerKind, workspace: null, rows: entries });
+      if (entries.length) {
+        const connections = new Set(entries.map((row) => row.providerConnection ?? "unknown"));
+        groups.push({ id: source.id, label: source.label, providerKind: source.providerKind,
+          providerConnection: connections.size === 1 ? entries[0].providerConnection ?? "unknown" : "unknown", workspace: null, rows: entries });
+      }
     }
     return groups;
   }
   if (grouping === "provider") {
-    const byProvider = partitionRows(remaining, (row) => row.providerKind);
-    const providerGroups = Array.from(byProvider, ([kind, entries]) => ({
-      id: `provider:${kind ?? "none"}`, label: kind ? providers.get(kind) ?? kind : "No provider", providerKind: kind, workspace: null, rows: entries
-    }));
+    const byProvider = partitionRows(remaining, (row) => `${row.providerKind ?? "none"}:${row.providerConnection ?? "unknown"}`);
+    const providerGroups = Array.from(byProvider, ([key, entries]) => {
+      const kind = entries[0].providerKind;
+      const connection = entries[0].providerConnection ?? "unknown";
+      const label = kind ? providers.get(kind) ?? kind : "No provider";
+      return { id: `provider:${key}`, label: kind && connection !== "unknown" ? providerIconPresentation(kind, label, connection).label : label,
+        providerKind: kind, providerConnection: connection, workspace: null, rows: entries };
+    });
     return [...groups, ...providerGroups.sort((a, b) => a.label.localeCompare(b.label) || a.id.localeCompare(b.id))];
   }
   const activityGroups = [

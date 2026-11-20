@@ -17,6 +17,10 @@ import { outputBudgetSteps } from "../outputBudget";
 import type { ProviderMcpAppAction, ProviderMcpAppResult } from "@main/types/execution/mcpApp.types";
 import type { ProviderCapabilities } from "@shared/types/provider/capabilities.types";
 import { runSimulatedMcpApp } from "./mcpApps";
+import { NORA_MCP_SERVER } from "@shared/nora-tools/catalog";
+import type { JsonValue } from "@main/types/execution/rpc.types";
+import type { SecretService } from "@main/types/secrets/secrets.types";
+import { simulatedSecretOrigin } from "./secrets";
 
 /** Deliberately has no SDK, subprocess, filesystem-tool or network implementation. */
 export class SimulatorProvider implements ExecutionProvider {
@@ -25,7 +29,7 @@ export class SimulatorProvider implements ExecutionProvider {
   private readonly active = new Map<string, SimulatorExecution>();
   private sequence = 0;
   private readonly connectors: SimulatedConnectors;
-  constructor(private readonly speed = 1, readonly kind: "codex" | "claude" = "codex") {
+  constructor(private readonly secrets: SecretService, private readonly speed = 1, readonly kind: "codex" | "claude" = "codex") {
     this.connectors = new SimulatedConnectors(speed);
     // Like the real adapters: Codex runs widgets' own tool calls, Claude's SDK has no public way to.
     this.capabilities = { ...nativeCapabilities, steering: true, promptSuggestions: true, subagentDetails: true, subagentModel: true,
@@ -73,26 +77,9 @@ export class SimulatorProvider implements ExecutionProvider {
             if (item.kind === "subagent") active.agents.set(id, item);
             this.item(active, item); break;
           }
-          case "tool": {
-            const native = step.native;
-            const nativeId = native !== null && typeof native === "object" && !Array.isArray(native) && typeof native.id === "string" ? native.id : "tool";
-            const id = `${active.run.id}:${nativeId}`;
-            const previous = active.tools.get(id);
-            const normalized = normalizeCodexTool(native, { id, runId: active.run.id, createdAt: previous?.createdAt ?? new Date().toISOString() }, step.complete, previous);
-            const item = normalized && step.details
-              ? { ...normalized, details: { ...normalized.details, category: normalized.details?.category ?? "other", ...step.details } } : normalized;
-            if (item) {
-              if (step.complete) {
-                if (!previous) {
-                  const running = { ...item, state: "running" as const, output: "", details: item.details ? { ...item.details, durationMs: undefined, exitCode: undefined } : undefined };
-                  active.tools.set(id, running); this.item(active, running);
-                }
-                if (!await this.pause(active, simulatorPacing.toolRunMs)) break;
-              }
-              active.tools.set(id, item); this.item(active, item);
-            }
-            break;
-          }
+          case "tool": await this.tool(active, step); break;
+          case "secret-request":
+          case "secret-run": await this.useSecret(active, step); break;
           case "questions":
           case "approval": await this.ask(active, step); break;
           case "approval-batch": await Promise.all(step.approvals.map((approval) => this.ask(active, approval))); break;
@@ -107,6 +94,56 @@ export class SimulatorProvider implements ExecutionProvider {
     } finally {
       this.active.delete(execution.run.attemptId);
     }
+  }
+
+  private async tool(active: SimulatorExecution, step: Extract<SimulatorStep, { kind: "tool" }>): Promise<void> {
+    const native = step.native;
+    const nativeId = native !== null && typeof native === "object" && !Array.isArray(native) && typeof native.id === "string" ? native.id : "tool";
+    const id = `${active.run.id}:${nativeId}`;
+    const previous = active.tools.get(id);
+    const normalized = normalizeCodexTool(native, { id, runId: active.run.id, createdAt: previous?.createdAt ?? new Date().toISOString() }, step.complete, previous);
+    const item = normalized && step.details
+      ? { ...normalized, details: { ...normalized.details, category: normalized.details?.category ?? "other", ...step.details } } : normalized;
+    if (!item) return;
+    if (step.complete) {
+      if (!previous) {
+        const running = { ...item, state: "running" as const, output: "", details: item.details ? { ...item.details, durationMs: undefined, exitCode: undefined } : undefined };
+        active.tools.set(id, running); this.item(active, running);
+      }
+      if (!await this.pause(active, simulatorPacing.toolRunMs)) return;
+    }
+    active.tools.set(id, item); this.item(active, item);
+  }
+
+  /**
+   * Plays a Nora secret tool call against the real secret service: the tool stays running while the window's dialog waits on
+   * the user, and its result is exactly what a model would be told, which never includes the value.
+   */
+  private async useSecret(active: SimulatorExecution, step: Extract<SimulatorStep, { kind: "secret-request" | "secret-run" }>): Promise<void> {
+    const origin = simulatedSecretOrigin(active.snapshot.conversation);
+    const signal = active.controller.signal;
+    const call: { id: string; tool: string; arguments: JsonValue } = step.kind === "secret-request"
+      ? { id: `secret-request-${step.name}`, tool: "request_secret", arguments: { name: step.name, purpose: step.purpose } }
+      : { id: `secret-run-${++this.sequence}`, tool: "run_with_secrets", arguments: { command: step.command, secrets: [...step.secrets] } };
+    const native = (extra: { [key: string]: JsonValue }): JsonValue => ({ type: "mcpToolCall", server: NORA_MCP_SERVER, ...call, ...extra });
+    await this.tool(active, { kind: "tool", complete: false, native: native({ status: "inProgress" }) });
+    let result: string;
+    let failed = false;
+    try {
+      if (step.kind === "secret-request") {
+        const outcome = await this.secrets.request({ name: step.name, purpose: step.purpose, scope: "workspace", multiline: step.multiline ?? false }, origin, signal);
+        result = outcome === "saved" ? `${step.name} is saved securely. Its value is never shown to you.`
+          : outcome === "declined" ? `The user declined to provide ${step.name}.` : `The user has not answered the request for ${step.name}.`;
+      } else {
+        const outcome = await this.secrets.run({ command: step.command, secrets: step.secrets, timeoutMs: 60_000, cwd: active.snapshot.conversation.workspace.path }, origin, signal);
+        failed = outcome.kind !== "ran";
+        result = outcome.kind === "ran" ? `Exit code ${outcome.exitCode}\n${outcome.output}`
+          : outcome.kind === "declined" ? "The user did not allow this command to use those secrets." : "The user has not approved this command.";
+      }
+    } catch (cause) { failed = true; result = cause instanceof Error ? cause.message : "The simulated secret tool failed."; }
+    if (active.done) return;
+    await this.tool(active, { kind: "tool", complete: true, native: native({ status: failed ? "failed" : "completed",
+      ...(failed ? { error: { message: result } } : { result: { content: [{ type: "text", text: result }] } }) }) });
   }
 
   private async ask(active: SimulatorExecution, step: Extract<SimulatorStep, { kind: "questions" | "approval" }>): Promise<void> {

@@ -69,7 +69,7 @@ function RoundAction({ label, icon, busy, disabled, onPress, filled, glyph }: Ro
 }
 
 const createStyles = (theme: Theme) => ({
-  dock: { paddingHorizontal: spacing.md, paddingTop: spacing.xs, gap: spacing.xs },
+  dock: { width: "100%" as const, maxWidth: layout.chatColumnWidth, alignSelf: "center" as const, paddingHorizontal: spacing.md, paddingTop: spacing.xs, gap: spacing.xs },
   field: { borderRadius: 30, backgroundColor: theme.colors.composer, paddingTop: spacing.lg, gap: spacing.xs,
     borderWidth: theme.scheme === "dark" ? 0 : hairline, borderColor: theme.colors.separator,
     boxShadow: theme.scheme === "dark" ? "none" : `0px 4px 16px ${theme.colors.shadow}` },

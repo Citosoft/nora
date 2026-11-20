@@ -27,11 +27,14 @@ test("a chat shows only messages and notices, grouping each author's bursts", ()
 });
 
 test("chat tabs list open work threads oldest first, keep a settled one while selected, and fall back to the chat", () => {
-  const thread = (id: string, createdAt: string, settled = false) => ({ id, botId: "ada", title: id, workspaceName: "App", working: false, waiting: false,
+  const thread = (id: string, createdAt: string, settled = false, workspaceId = "app") => ({ id, connection: "unknown" as const, providerKind: "claude" as const, model: "model", canSettle: !settled, latestRun: null, phase: "pending" as const, author: { ...ada, role: "Helper" }, status: "Ready", botId: "ada", title: id, workspaceId, workspaceName: "App", working: false, waiting: false,
     settled, branch: null, createdAt, updatedAt: createdAt });
-  const threads = [thread("newer", at(5)), thread("done", at(1), true), thread("older", at(2))];
-  assert.deepEqual(chatTabThreads(threads, CHAT_TAB).map((entry) => entry.id), ["older", "newer"]);
-  assert.deepEqual(chatTabThreads(threads, "done").map((entry) => entry.id), ["done", "older", "newer"]);
+  const threads = [thread("newer", at(5)), thread("done", at(1), true), thread("older", at(2)), thread("elsewhere", at(3), false, "site")];
+  assert.deepEqual(chatTabThreads(threads, CHAT_TAB, "app").map((entry) => entry.id), ["older", "newer"]);
+  assert.deepEqual(chatTabThreads(threads, "done", "app").map((entry) => entry.id), ["done", "older", "newer"]);
+  // A global bot's chat follows you between workspaces: only the open workspace's work is tabbed, unless it is the one you have open.
+  assert.deepEqual(chatTabThreads(threads, CHAT_TAB, "site").map((entry) => entry.id), ["elsewhere"]);
+  assert.deepEqual(chatTabThreads(threads, "elsewhere", "app").map((entry) => entry.id), ["older", "elsewhere", "newer"]);
   const draft = { key: "branch:1", botId: "ada", from: null, threadId: null, title: null, naming: false };
   assert.equal(resolveChatTab(threads, [], "done"), "done");
   assert.equal(resolveChatTab(threads, [], "gone"), CHAT_TAB);

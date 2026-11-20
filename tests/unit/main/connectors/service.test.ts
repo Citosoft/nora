@@ -1,3 +1,4 @@
+import type { ConnectorServiceOptions } from "@main/types/connectors/connectors.types";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -14,13 +15,13 @@ const ANY_THREAD: ConnectorSubject = { workspaceId: "w", botId: null };
 let ids = 0;
 const nextId = () => `00000000-0000-4000-8000-${String(++ids).padStart(12, "0")}`;
 
-function serviceFixture(t: test.TestContext) {
+function serviceFixture(t: test.TestContext, connectorIdsForBot?: ConnectorServiceOptions["connectorIdsForBot"]) {
   const { store } = storeFixture(t);
   const changes: Connector[][] = [];
   const opened: string[] = [];
   // Stands in for the user's browser: following the authorization URL lands on Nora's callback with the code.
   const openExternal = async (url: string) => { opened.push(url); await fetch(url); };
-  const service = createConnectorService({ store, openExternal, onChanged: (list) => changes.push(list), nextId, callbackPort: 0 });
+  const service = createConnectorService({ store, openExternal, onChanged: (list) => changes.push(list), nextId, callbackPort: 0, connectorIdsForBot });
   t.after(() => service.close());
   const status = (id: string) => service.list().find((connector) => connector.id === id)?.status;
   const settled = (id: string) => until(() => status(id) !== "checking", "the connector check");
@@ -167,4 +168,33 @@ test("access limits which threads get a connector, persists, and is published to
   assert.deepEqual(service.list().find((connector) => connector.id !== created.id)?.access, CONNECTOR_ACCESS_ALL, "new connectors default to everywhere");
   assert.ok(plain);
   await assert.rejects(service.setAccess("00000000-0000-4000-8000-999999999999", access), /no longer exists/);
+});
+
+test("live bot selections filter endpoints, counts and tools without changing other threads", async (t) => {
+  const upstream = await startFakeMcpServer({ auth: "none" });
+  t.after(() => upstream.close());
+  let selection: readonly string[] | undefined;
+  const { service, settled } = serviceFixture(t, () => selection);
+  const [created] = await service.create({ name: "Selected", url: upstream.url, auth: { kind: "oauth" } });
+  assert.ok(created);
+  await settled(created.id);
+  const subject: ConnectorSubject = { workspaceId: "w", botId: "ada" };
+  assert.equal(service.activeCount(subject), 1, "existing bots without a selection retain access");
+  selection = [];
+  assert.deepEqual(await service.endpoints(subject), []);
+  assert.equal(service.activeCount(subject), 0);
+  assert.deepEqual(service.tools.available(subject), []);
+  await assert.rejects(service.tools.call(created.id, "echo", { text: "blocked" }, subject), /not available/);
+  assert.equal(service.activeCount(ANY_THREAD), 1, "plain threads ignore bot selections");
+  selection = [created.id];
+  assert.equal((await service.endpoints(subject)).length, 1);
+  assert.equal(service.activeCount(subject), 1);
+  assert.deepEqual(service.tools.available(subject).map((connector) => connector.id), [created.id]);
+  assert.equal((await service.tools.call(created.id, "echo", { text: "allowed" }, subject)).isError, undefined);
+  assert.equal(service.activeCount({ ...subject, workspaceId: "other" }), 1);
+  await service.setAccess(created.id, { workspaces: { kind: "only", ids: ["w"] }, bots: { kind: "all" } });
+  assert.equal(service.activeCount({ ...subject, workspaceId: "other" }), 0, "a selection cannot widen workspace restrictions");
+  await service.setEnabled(created.id, false);
+  assert.deepEqual(service.tools.available(subject), []);
+  await assert.rejects(service.tools.call(created.id, "echo", {}, subject), /not available/);
 });

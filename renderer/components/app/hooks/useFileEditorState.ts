@@ -47,7 +47,8 @@ export function useFileEditorState({
       return;
     }
 
-    if (options?.prefetchedContent !== undefined) {
+    const prefetched = options?.prefetched;
+    if (prefetched) {
       if (options.selectChange !== false) {
         void safely(() => noraWorkspaceClient.selectChange(pathName));
       }
@@ -56,11 +57,11 @@ export function useFileEditorState({
         projectId: snapshot.project.id,
         path: pathName,
         rootPath: options.rootPath ?? snapshot.changesRoot ?? snapshot.project.rootPath,
-        kind: "text",
-        content: options.prefetchedContent,
-        savedContent: options.prefetchedContent,
-        imageDataUrl: null,
-        imageMimeType: null,
+        kind: prefetched.kind,
+        content: prefetched.kind === "text" ? prefetched.content : "",
+        savedContent: prefetched.kind === "text" ? prefetched.content : "",
+        imageDataUrl: prefetched.kind === "image" ? prefetched.dataUrl : null,
+        imageMimeType: prefetched.kind === "image" ? prefetched.mimeType : null,
         isLoading: false,
         isSaving: false,
         errorMessage: null,

@@ -1,3 +1,4 @@
+import type { NoraWorkerWorkspaces } from "./workerWorkspaces.types";
 import type { WindowSettingsPort } from "@shared/types/nora-tools/settings.types";
 import type { SettingsSyncService } from "@main/types/settings-sync/service.types";
 import type { ProviderBinding } from "@shared/types/conversation/contracts.types";
@@ -6,7 +7,10 @@ import type { BotMemoryStore } from "@main/types/bots/memory.types";
 import type { NativeBoot } from "@shared/ipc/types/personalizationGateway.types";
 import type { BotDefinition, BotScope } from "@shared/types/bots/bots.types";
 import type { AppSettings, WorkspaceTaskBoard, WorkspaceTaskSummary } from "@shared/appTypes";
+import type { SecretService } from "@main/types/secrets/secrets.types";
 import type { LoopRunner } from "@main/types/loopRunner.types";
+import type { AppService } from "@main/types/apps/apps.types";
+import type { ConnectorToolAccess } from "@main/types/connectors/connectors.types";
 
 /** Task board access for a shell project, backed by the workspace service. */
 export interface NoraTaskStore {
@@ -28,17 +32,22 @@ export interface NoraWorkflowStore {
   runPlacement(projectId: string): NoraWorkflowRunPlacement;
 }
 export interface NoraToolOperationOptions {
+  workerWorkspaces?: NoraWorkerWorkspaces;
   host: BotConversationHost;
   nextId(): string;
   boot(): NativeBoot;
   /** Persists through the same path as Settings, so bots are validated and broadcast to the window. */
   saveBot(bot: BotDefinition, previousScope: BotScope | null): Promise<void>;
   memory: BotMemoryStore;
+  secrets: Pick<SecretService, "request" | "list" | "remove" | "run">;
   /** Absent when the task board is unavailable in this environment. */
   tasks?: NoraTaskStore;
   onTasksChanged?: (projectId: string) => void;
   /** Absent when workflows are unavailable in this environment. */
   workflows?: NoraWorkflowStore;
+  /** Apps the agent builds, and the connector tools they are built on. */
+  apps: AppService;
+  connectorTools: ConnectorToolAccess;
 }
 /** The model a bot falls back to when the caller names no provider or model. */
 export interface BotBindingFallback { kind: ProviderBinding["kind"]; instanceId: string; model: string; reasoning: string | null; permissionPolicy: string | null; }

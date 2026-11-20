@@ -10,13 +10,13 @@ import type { WorkspaceToolId } from "@/components/app/types/workspaceNavigation
 const project: ProjectSummary = { id: "a", name: "A", rootPath: "/a", versionControl: "git", gitCommonDir: "/a/.git", baseBranch: "main", framework: null, platform: "darwin", createdAt: "", updatedAt: "", lastOpenedAt: "" };
 
 test("workspace tools expose every tool and restrict worktrees to git projects", () => {
-  assert.deepEqual(availableWorkspaceTools(true), ["worktrees", "merge-requests", "issues", "documents", "tasks", "terminals", "browser", "workflows"]);
-  assert.deepEqual(availableWorkspaceTools(false), ["documents", "tasks", "terminals", "browser", "workflows"]);
+  assert.deepEqual(availableWorkspaceTools(true), ["worktrees", "merge-requests", "issues", "documents", "library", "tasks", "terminals", "browser", "workflows"]);
+  assert.deepEqual(availableWorkspaceTools(false), ["documents", "library", "tasks", "terminals", "browser", "workflows"]);
 });
 
 test("tool pins default to common tools, respect saved order and allow hiding every tool", () => {
   const available = availableWorkspaceTools(true);
-  assert.deepEqual(workspaceToolPins(available), ["terminals", "browser", "documents"]);
+  assert.deepEqual(workspaceToolPins(available), ["terminals", "browser", "documents", "library"]);
   assert.deepEqual(workspaceToolPins(available, []), []);
   assert.deepEqual(workspaceToolPins(available, ["tasks", "browser", "tasks"]), ["tasks", "browser"]);
 });
@@ -28,7 +28,7 @@ test("pinning is reversible and preserves unavailable pins without mutating save
   assert.deepEqual(updated, ["worktrees", "documents", "browser"]);
   assert.deepEqual(toggleWorkspaceToolPin(updated, "documents"), ["worktrees", "browser"]);
   assert.deepEqual(saved, ["worktrees", "documents"]);
-  assert.deepEqual(toggleWorkspaceToolPin(DEFAULT_WORKSPACE_TOOL_PINS, "browser"), ["terminals", "documents"]);
+  assert.deepEqual(toggleWorkspaceToolPin(DEFAULT_WORKSPACE_TOOL_PINS, "browser"), ["terminals", "documents", "library"]);
 });
 
 test("every available tool can be pinned and persisted independently per workspace", () => {
@@ -49,19 +49,19 @@ test("older saved tool pins round-trip without losing workspace preferences", ()
 
 test("malformed preferences recover to defaults", () => {
   for (const raw of [null, "{", "null", '{"toolPins": {"a": ["invalid"]}, "pinnedWorkspaceIds": []}']) {
-    assert.deepEqual(parseSidebarPreferences(raw), { sidebarMode: "threads", botsHome: "bots", pinnedWorkspaceIds: [], toolPins: {}, threadGrouping: "none", workThreads: "visible", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} });
+    assert.deepEqual(parseSidebarPreferences(raw), { sidebarMode: "threads", activeAppId: null, botsHome: "bots", inboxView: "all", pinnedWorkspaceIds: [], toolPins: {}, threadGrouping: "none", workThreads: "visible", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} });
   }
 });
 
 test("thread grouping migrates existing preferences, persists choices and preserves pins on invalid grouping", () => {
   const legacy = { pinnedWorkspaceIds: ["a"], toolPins: { a: ["documents"] } };
-  assert.deepEqual(parseSidebarPreferences(JSON.stringify(legacy)), { ...legacy, sidebarMode: "threads", botsHome: "bots", threadGrouping: "none", workThreads: "visible", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} });
+  assert.deepEqual(parseSidebarPreferences(JSON.stringify(legacy)), { ...legacy, sidebarMode: "threads", activeAppId: null, botsHome: "bots", inboxView: "all", threadGrouping: "none", workThreads: "visible", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} });
   for (const threadGrouping of ["none", "workspace", "activity", "source", "provider"]) {
-    const saved = { ...legacy, sidebarMode: "bots", botsHome: "routines", threadGrouping, workThreads: "hidden", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} };
+    const saved = { ...legacy, sidebarMode: "bots", activeAppId: null, botsHome: "routines", inboxView: "all", threadGrouping, workThreads: "hidden", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} };
     assert.deepEqual(parseSidebarPreferences(JSON.stringify(saved)), saved);
   }
   assert.equal(parseSidebarPreferences(JSON.stringify({ ...legacy, memberThreads: "hidden" })).workThreads, "hidden", "the older member-thread choice carries over");
-  assert.deepEqual(parseSidebarPreferences(JSON.stringify({ ...legacy, threadGrouping: "invalid" })), { ...legacy, sidebarMode: "threads", botsHome: "bots", threadGrouping: "none", workThreads: "visible", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} });
+  assert.deepEqual(parseSidebarPreferences(JSON.stringify({ ...legacy, threadGrouping: "invalid" })), { ...legacy, sidebarMode: "threads", activeAppId: null, botsHome: "bots", inboxView: "all", threadGrouping: "none", workThreads: "visible", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} });
 });
 
 test("tool navigation is scoped to workspace and capability", () => {
@@ -99,7 +99,7 @@ test("retired Files and Changes views cannot reopen and their pins are removed w
   assert.equal(saved.workspaceViews.a?.documentPath, "notes/keep.md");
   assert.equal(saved.workspaceViews.c?.activeTool, "worktrees");
   assert.deepEqual(parseSidebarPreferences(JSON.stringify(saved)), saved);
-  assert.deepEqual(availableWorkspaceTools(true), ["worktrees", "merge-requests", "issues", "documents", "tasks", "terminals", "browser", "workflows"]);
+  assert.deepEqual(availableWorkspaceTools(true), ["worktrees", "merge-requests", "issues", "documents", "library", "tasks", "terminals", "browser", "workflows"]);
 });
 
 test("thread source filters persist and invalid or older preferences retain other saved choices", () => {

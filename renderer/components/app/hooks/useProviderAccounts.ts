@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { nativeConversationBridge } from "@/components/app/clients/nativeRuntimeClient";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { useNativeRuntimePorts } from "@/components/app/hooks/useNativeRuntimePorts";
-import { providerAccountViewFromRead } from "@/components/app/logic/providerAccountView";
+import { completesSignIn, providerAccountViewFromRead, providerLoginMethodsFromRead } from "@/components/app/logic/providerAccountView";
 import type { ProviderAccountView } from "@/components/app/types/providerAccount.types";
 import type { NativeProvider } from "@shared/ipc/types/personalizationGateway.types";
-import type { ProviderAccountAction, ProviderAccountResult } from "@shared/types/provider/account.types";
+import type { ProviderAccountAction, ProviderAccountResult, ProviderLoginMethod } from "@shared/types/provider/account.types";
 
 const SIGN_IN_POLL_MS = 3_000;
 const SIGN_IN_TIMEOUT_MS = 3 * 60_000;
@@ -17,14 +17,25 @@ export function useProviderAccounts() {
   const { boot } = useNativeRuntimePorts();
   // Keyed by provider kind, which is also the agent catalog id, so settings can look providers up by tool id.
   const [views, setViews] = useState<ReadonlyMap<string, ProviderAccountView>>(() => new Map());
+  // Kept apart from views so a failed read or a sign-in in progress still offers the runtime's sign-in options.
+  const [loginMethods, setLoginMethods] = useState<ReadonlyMap<string, readonly ProviderLoginMethod[]>>(() => new Map());
   const generation = useRef(0);
-  const record = useCallback((kind: NativeProvider["kind"], view: ProviderAccountView) =>
-    setViews((previous) => new Map(previous).set(kind, view)), []);
+  // Mirrors views for sign-in, which must compare against the account shown when it started without re-subscribing.
+  const latestViews = useRef<Map<string, ProviderAccountView>>(new Map());
+  const record = useCallback((kind: NativeProvider["kind"], view: ProviderAccountView) => {
+    latestViews.current.set(kind, view);
+    setViews((previous) => new Map(previous).set(kind, view));
+  }, []);
   const call = useCallback((provider: NativeProvider, action: ProviderAccountAction): Promise<ProviderAccountResult> =>
     nativeConversationBridge.account({ schemaVersion: 1, environmentId: boot.environmentId, providerKind: provider.kind, instanceId: provider.instanceId, action }),
   [boot.environmentId]);
   const read = useCallback(async (provider: NativeProvider): Promise<ProviderAccountView> => {
-    try { return providerAccountViewFromRead(await call(provider, { kind: "read" })); } catch { return READ_FAILED; }
+    try {
+      const result = await call(provider, { kind: "read" });
+      const methods = providerLoginMethodsFromRead(result);
+      if (methods) setLoginMethods((previous) => new Map(previous).set(provider.kind, methods));
+      return providerAccountViewFromRead(result);
+    } catch { return READ_FAILED; }
   }, [call]);
 
   const refresh = useCallback(() => {
@@ -36,16 +47,17 @@ export function useProviderAccounts() {
   }, [boot.providers, read, record]);
   useEffect(() => { refresh(); return () => { generation.current++; }; }, [refresh]);
 
-  const signIn = useCallback(async (kind: string): Promise<void> => {
+  const signIn = useCallback(async (kind: string, methodId?: string): Promise<void> => {
     const provider = boot.providers.find((entry) => entry.kind === kind);
     if (!provider) return;
     const current = generation.current;
     const isCurrent = () => generation.current === current;
+    const before = latestViews.current.get(provider.kind);
     record(provider.kind, { status: "signing-in" });
     try {
-      const started = await call(provider, { kind: "login" });
+      const started = await call(provider, methodId === undefined ? { kind: "login" } : { kind: "login", methodId });
       if (started.kind === "unavailable" || started.kind === "account") {
-        if (isCurrent()) record(provider.kind, started.kind === "account" ? { status: "ready", account: started.account } : { status: "error", message: started.message });
+        if (isCurrent()) record(provider.kind, started.kind === "account" ? providerAccountViewFromRead(started) : { status: "error", message: started.message });
         return;
       }
       if (started.kind === "login") await noraSystemClient.openExternalUrl(started.authorizationUrl);
@@ -59,10 +71,12 @@ export function useProviderAccounts() {
     while (isCurrent() && Date.now() < deadline) {
       await wait(SIGN_IN_POLL_MS);
       latest = await read(provider);
-      if (latest.status === "ready" && latest.account.state === "signed-in") break;
+      if (completesSignIn(before, latest)) break;
     }
-    if (isCurrent()) record(provider.kind, latest);
+    if (isCurrent()) {
+      record(provider.kind, latest);
+    }
   }, [boot.providers, call, read, record]);
 
-  return { views, refresh, signIn };
+  return { views, loginMethods, refresh, signIn };
 }

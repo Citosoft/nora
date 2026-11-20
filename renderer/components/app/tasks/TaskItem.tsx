@@ -2,6 +2,7 @@ import { CheckCircle2, Circle, Play, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { TaskItemProps } from "@/components/app/types/taskCenter.types";
+import { TaskWorkflowMenu } from "./TaskWorkflowMenu";
 
 export function TaskItem({
   task,
@@ -14,6 +15,7 @@ export function TaskItem({
   onStart,
   onToggleComplete,
   onDelete,
+  workflowActions,
   onDragStart,
   onDragEnd
 }: TaskItemProps) {
@@ -87,6 +89,9 @@ export function TaskItem({
         )}
       </div>
       <div className="flex shrink-0 items-center gap-1">
+        {!task.completed && workflowActions && (
+          <TaskWorkflowMenu taskTitle={task.title} actions={workflowActions} disabled={isStartingThreads} />
+        )}
         {!task.completed && (
           <Button
             type="button"

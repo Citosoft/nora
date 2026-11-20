@@ -86,3 +86,20 @@ test("worktree IPC payloads reject malformed input without coercing or accepting
     assert.throws(() => parseCreateWorktreePayload(invalid), /branch name/);
   }
 });
+
+test("workers can create a worktree in another registered project without switching the active workspace", async () => {
+  const f = fixture();
+  const project = { ...f.project, id: "background", rootPath: "/background" };
+  const session = { ...f.session, id: "background-session", projectId: project.id };
+  f.deps.updateState((state) => ({ ...state, workspaces: [{ project, sessions: [session], worktrees: [], agents: [], terminals: [] }] }));
+  const original = f.deps.worktrees.planManagedWorktree;
+  f.deps.worktrees.planManagedWorktree = (target, targetSession, name) => ({ ...original(target, targetSession, name), projectId: target.id, sessionId: targetSession.id, path: "/background/managed" });
+  const state = await createWorkspaceWorktree({ projectId: project.id, branch: "worker/new" }, f.deps);
+  assert.equal(state.project?.id, f.project.id);
+  assert.equal(state.currentSessionId, f.session.id);
+  assert.deepEqual(state.worktrees, []);
+  const background = state.workspaces.find((entry) => entry.project.id === project.id);
+  assert.equal(background?.worktrees[0].branch, "worker/new");
+  assert.equal(background?.worktrees[0].projectId, project.id);
+  assert.equal(background?.sessions[0].id, session.id);
+});

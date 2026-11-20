@@ -14,6 +14,7 @@ export function useTranscriptFollow(changeKey: unknown): TranscriptFollow {
     else setNewActivity(true);
   }, [changeKey]);
   return { ref, newActivity,
+    pauseFollowing: () => { follow.current = false; },
     onWheel: (event) => { if (event.deltaY < 0) follow.current = false; },
     onScroll: () => { const element = ref.current; if (element) follow.current = element.scrollHeight - element.scrollTop - element.clientHeight <= 1; },
     jumpToLatest: () => { follow.current = true; setNewActivity(false); ref.current?.scrollTo({ top: ref.current.scrollHeight }); } };

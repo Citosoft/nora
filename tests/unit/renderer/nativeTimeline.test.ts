@@ -54,3 +54,12 @@ test("a tool with a widget stays in the turn's tool activity and also gets its o
   const entries = groupNativeTimelineEntries([plain, widget]);
   assert.deepEqual(entries, [{ kind: "tools", runId: "turn", items: [plain, widget] }, { kind: "app", call: { tool: widget, app } }]);
 });
+
+test("a tool that wrote images stays in the turn's tool activity and also gets its own image entry", () => {
+  const running: ToolActivity = { ...tool("image", "running"), details: { category: "image" } };
+  assert.deepEqual(groupNativeTimelineEntries([running]), [{ kind: "tools", runId: "turn", items: [running] }]);
+  const generated: ToolActivity = { ...tool("image"), details: { category: "file", outputFiles: [{ path: "/images/result.png" }, { path: "/out/report.pdf" }] } };
+  assert.deepEqual(groupNativeTimelineEntries([generated]), [{ kind: "tools", runId: "turn", items: [generated] }, { kind: "images", tool: generated, paths: ["/images/result.png"] }]);
+  const document: ToolActivity = { ...tool("pdf"), details: { category: "file", outputFiles: [{ path: "/out/report.pdf" }] } };
+  assert.deepEqual(groupNativeTimelineEntries([document]), [{ kind: "tools", runId: "turn", items: [document] }]);
+});

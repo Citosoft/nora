@@ -77,7 +77,7 @@ function NewConversationForm({ runtime, runtimeId, initialProjectId }: { runtime
 
 const createStyles = (theme: Theme) => ({
   fill: { flex: 1 },
-  content: { flexGrow: 1, width: "100%" as const, maxWidth: layout.maxContentWidth, alignSelf: "center" as const, paddingBottom: spacing.md },
+  content: { flexGrow: 1, width: "100%" as const, maxWidth: layout.chatColumnWidth, alignSelf: "center" as const, paddingBottom: spacing.md },
   hero: { flexGrow: 1, alignItems: "center" as const, justifyContent: "center" as const, paddingHorizontal: spacing.xxl, paddingBottom: spacing.xxl },
   heading: { fontSize: 28, lineHeight: 34, fontWeight: "400" as const, letterSpacing: -0.4, color: theme.colors.text, textAlign: "center" as const },
   notices: { gap: spacing.sm }

@@ -2,13 +2,14 @@ import { claudeToolCallSchema, claudeToolResultSchema } from "./toolSchemas";
 import { z } from "zod";
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { ClaudeToolFrame } from "@main/types/execution/claude.types";
-import type { ToolDetails, ToolState } from "@shared/types/conversation/contracts.types";
+import type { ToolDetails, ToolOutputFile, ToolState } from "@shared/types/conversation/contracts.types";
 import type { JsonValue } from "@main/types/execution/rpc.types";
 import { skillReadEvidence } from "../skillEvidence";
 import { formatToolContent, formatToolInput } from "../toolPresentation";
 import { ClaudeSubagentActivity } from "./subagentActivity";
 import { mcpAppCall } from "../mcpApp";
 import { claudeMcpAppResult } from "./mcpApps";
+import { claudeToolOutputFiles } from "./outputFiles";
 import type { ClaudeMcpAppLookup } from "@main/types/execution/claude.types";
 
 const skillInputSchema = z.object({ skill: z.string().min(1) });
@@ -31,6 +32,8 @@ const detachedResultSchema = z.object({ detachedToolCall: z.literal(true) });
 export class ClaudeToolActivity {
   private readonly tools = new Map<string, ClaudeToolFrame>();
   private readonly hiddenTasks = new Set<string>();
+  /** Files each call will have produced once its result confirms it succeeded. */
+  private readonly outputs = new Map<string, ToolOutputFile[]>();
   private apps: ClaudeMcpAppLookup | null = null;
   /** Subagent calls, results and task events are reported by the subagent tracker instead of as tools. */
   constructor(private readonly agents = new ClaudeSubagentActivity()) {}
@@ -107,6 +110,8 @@ export class ClaudeToolActivity {
           : /^(WebSearch|WebFetch)$/.test(native.name) ? "search" : native.name.startsWith("mcp__") ? "integration" : "other";
         const widget = category === "integration" ? this.apps?.(native.name) ?? null : null;
         const app = widget ? mcpAppCall({ server: widget.server, tool: widget.tool, resourceUri: widget.ui.resourceUri, input: native.input }) : null;
+        const files = claudeToolOutputFiles(native.name, native.input);
+        if (files.length) this.outputs.set(native.id, files);
         return this.put({ kind: "tool", nativeId: native.id, eventId: `${message.uuid}:${native.id}`, label: native.name, output: "", state: "running",
           details: { category, input: formatToolInput(native.input), ...claudeSkillEvidence(native.name, native.input), ...(app ? { app } : {}),
             ...("parent_tool_use_id" in message && message.parent_tool_use_id ? { parentId: message.parent_tool_use_id } : {}) } });
@@ -119,7 +124,9 @@ export class ClaudeToolActivity {
       const failed = native.is_error || errorContentSchema.safeParse(native.content).success;
       const app = previous?.details?.app;
       const settledApp = app && message.type === "user" ? mcpAppCall({ ...app, result: claudeMcpAppResult(message.tool_use_result, native.content) }) : null;
-      return this.put({ ...previous, ...(previous?.details && settledApp ? { details: { ...previous.details, app: settledApp } } : {}), kind: "tool", nativeId: native.tool_use_id, eventId: `${message.uuid}:${native.tool_use_id}`,
+      const files = failed ? undefined : this.outputs.get(native.tool_use_id);
+      const settled = previous?.details && (settledApp || files) ? { details: { ...previous.details, ...(settledApp ? { app: settledApp } : {}), ...(files ? { outputFiles: files } : {}) } } : {};
+      return this.put({ ...previous, ...settled, kind: "tool", nativeId: native.tool_use_id, eventId: `${message.uuid}:${native.tool_use_id}`,
         label: previous?.label ?? "Tool result", output: native.content === undefined ? "" : formatToolContent(native.content), state: failed ? "failed" : "completed" });
     });
   }

@@ -37,6 +37,11 @@ export async function applyBotRequest(request: BotRequest, settings: Personaliza
     case "refresh-bots": break;
     case "save-bot": {
       const input = botDefinitionSchema.parse(request.bot);
+      const initialRoutines = request.initialRoutines ?? [];
+      if (initialRoutines.length && (request.previousScope || !deps.createRoutines)) throw new Error("Routine presets can only be added when creating a new bot with routines available.");
+      if (initialRoutines.some((routine) => routine.botId !== input.id || routine.active || (input.scope.kind === "workspace" && routine.workspaceId !== input.scope.workspaceId))) {
+        throw new Error("Routine presets must be paused and belong to this bot and its workspace.");
+      }
       const workspace = scopeWorkspace(deps, input.scope);
       const previousScope = request.previousScope;
       const previous = previousScope ? existingBot(deps, settings.read(), previousScope, input.id) : null;
@@ -45,6 +50,17 @@ export async function applyBotRequest(request: BotRequest, settings: Personaliza
       const bot: BotDefinition = { ...input, revision: previous ? previous.revision + 1 : 1 };
       if (workspace && bot.scope.kind === "workspace" && bot.scope.storage === "shared") await deps.library.write(workspace, bot);
       else await settings.update((current) => ({ ...current, personalization: { ...current.personalization, bots: putStoredBot(current.personalization.bots, bot) } }));
+      if (initialRoutines.length) {
+        try {
+          // Shared bot files must be visible to the scheduler before it validates the new routines.
+          await deps.library.refresh(deps.workspaces());
+          deps.createRoutines?.(initialRoutines);
+        } catch (error) {
+          await removeAt(deps, settings, bot.scope, bot.id);
+          await deps.library.refresh(deps.workspaces());
+          throw error;
+        }
+      }
       // Write the new location first so a failed move never loses the bot.
       if (previousScope && !sameBotScope(previousScope, bot.scope)) await removeAt(deps, settings, previousScope, bot.id);
       break;

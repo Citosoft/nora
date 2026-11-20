@@ -8,14 +8,14 @@ import type { ChatBranchInfoPanelProps } from "@/components/app/types/chatPanels
  * Beside a branch or task tab: where it came from in the main chat, who it is with and where it works.
  * A branch shows the message it was started from as saved then, so it stays readable after the chat moves on.
  */
-export function ChatBranchInfoPanel({ target, bot, model, onOpenThread }: ChatBranchInfoPanelProps) {
+export function ChatBranchInfoPanel({ target, bot, model, chatWorkspaceName, onOpenThread }: ChatBranchInfoPanelProps) {
   const thread = target.kind === "thread" ? target.thread : null;
   const branch = thread ? thread.branch : { from: target.kind === "draft" ? target.draft.from : null };
   const from = branch?.from ?? null;
   const title = thread?.title ?? (target.kind === "draft" ? target.draft.title : null);
   const rows = [
     ["Status", chatBranchStatus(target)],
-    ["Workspace", thread?.workspaceName ?? "Where the chat is working"],
+    ["Workspace", thread?.workspaceName ?? chatWorkspaceName ?? "Where the chat is working"],
     ["Model", model ?? `${bot.name}'s own`],
     ["Started", thread ? formatChatMoment(thread.createdAt) : "When you send the first message"]
   ] as const;

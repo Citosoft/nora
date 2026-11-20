@@ -23,8 +23,8 @@ function setup(info: RuntimeInfo | Error) {
       if (info instanceof Error) throw info;
       return info;
     },
-    projects: unused, conversations: unused, conversation: unused, timeline: unused, tasks: unused, events: unused,
-    realtimeTicket: unused, realtimeUrl: unused, createConversation: unused, sendMessage: unused, decideAction: unused, cancelTask: unused
+    projects: unused, bots: unused, createBotChat: unused, conversations: unused, conversation: unused, timeline: unused, tasks: unused, events: unused,
+    realtimeTicket: unused, realtimeUrl: unused, createConversation: unused, sendMessage: unused, decideAction: unused, cancelTask: unused, inbox: unused, updateInbox: unused
   };
   const session = createRuntimeSession({
     runtimeId: "rt", hostname: "abc123.remote.withnora.run", client, now: () => new Date("2026-11-16T10:00:00.000Z"),

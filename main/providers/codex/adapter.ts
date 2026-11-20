@@ -1,4 +1,5 @@
-import { codexReadOnlyConfig } from "./readOnly";
+import { codexWithoutUserMcpServers } from "./userMcpServers";
+import { isReadOnlyToolScope, threadToolScope } from "@main/execution/toolScope";
 import { codexMcpServersConfig } from "./runMcpServers";
 import { instructionWithTurnNotes, joinGuidance, optionalRunContext, runMcpServers, workflowReviewMcpServers } from "@main/nora-tools/endpoint";
 import { conversationGuidance } from "@shared/conversations/guidance";
@@ -45,7 +46,7 @@ export class CodexAdapter implements ExecutionProvider {
   readonly instanceId: string;
   private rateLimits: CodexRateLimits | null = null;
   private steeringSupported = false;
-  get capabilities() { return { ...nativeCapabilities, turnChanges: true, subagentDetails: true, steering: this.steeringSupported, contextUsage: true, compaction: true,
+  get capabilities() { return { ...nativeCapabilities, readOnlyCommands: true, turnChanges: true, subagentDetails: true, steering: this.steeringSupported, contextUsage: true, compaction: true,
     mcpApps: { toolCalls: true } }; }
   private connection: Promise<StdioRpc> | null = null;
   private mcpDiscovery: CodexMcpDiscovery | null = null;
@@ -211,9 +212,12 @@ export class CodexAdapter implements ExecutionProvider {
     }
     const outputConfig = await codexOutputConfig(rpc, snapshot.conversation.workspace.path, this.options.compactToolOutput?.() ?? false);
     const runContext = await optionalRunContext(this.options.runContext, snapshot.conversation);
-    const readOnlyConfig = snapshot.conversation.workspace.access === "read" ? await codexReadOnlyConfig(rpc, snapshot.conversation.workspace.path) : {};
-    const params = { model: snapshot.conversation.provider.model, cwd: snapshot.conversation.workspace.path, ...(snapshot.conversation.workspace.access === "read" ? { sandbox: "read-only", approvalPolicy: "never" } : policy),
-      config: { "features.default_mode_request_user_input": true, ...outputConfig, ...readOnlyConfig, ...codexMcpServersConfig(snapshot.conversation.workspace.access === "read"
+    const toolScope = threadToolScope(snapshot.conversation);
+    const scopedConfig = toolScope === "full" ? {} : await codexWithoutUserMcpServers(rpc, snapshot.conversation.workspace.path);
+    // Codex cannot drop its shell, so a builder keeps a read-only sandbox and every command asks, which onRequest declines.
+    const scopedPolicy = isReadOnlyToolScope(toolScope) ? { sandbox: "read-only", approvalPolicy: "never" } : toolScope === "apps" ? { sandbox: "read-only", approvalPolicy: "untrusted" } : policy;
+    const params = { model: snapshot.conversation.provider.model, cwd: snapshot.conversation.workspace.path, ...scopedPolicy,
+      config: { "features.default_mode_request_user_input": true, ...outputConfig, ...scopedConfig, ...codexMcpServersConfig(isReadOnlyToolScope(toolScope)
         ? snapshot.conversation.source?.kind === "workflow" ? workflowReviewMcpServers(runContext) : []
         : runMcpServers(runContext)) },
       developerInstructions: questionGuidance("request_user_input", joinGuidance(conversationGuidance(snapshot.conversation), runContext.guidance)) };
@@ -396,7 +400,7 @@ export class CodexAdapter implements ExecutionProvider {
     const { threadId } = routingSchema.parse(params);
     const active = this.byThread.get(threadId);
     if (!active) throw new Error("Request has no active owner");
-    if (active.snapshot.conversation.workspace.access === "read"
+    if (threadToolScope(active.snapshot.conversation) !== "full"
       && (method === "item/commandExecution/requestApproval" || method === "item/fileChange/requestApproval")) return { decision: "decline" };
     const id = JSON.stringify([active.run.id, nativeId]);
     const common = { id, nativeId: JSON.stringify(nativeId), runId: active.run.id, attemptId: active.run.attemptId, status: "pending" as const,

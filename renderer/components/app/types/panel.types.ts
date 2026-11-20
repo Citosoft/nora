@@ -1,3 +1,4 @@
+import type { WorkflowRunTask } from "@/components/app/types/workflowLaunch.types";
 import type {
 AiChatMessage,
 AiChatReasoningLevel,
@@ -277,6 +278,9 @@ export type TaskBoardPanelProps = {
   onClearTaskSelection: () => void;
   onStartSelectedThreads: () => Promise<void>;
   onStartTask: (projectId: string, taskPath: string) => Promise<void>;
+  /** Opens the Workflows tool on run setup for this workflow with the task as its goal. */
+  onRunTaskWorkflow: (projectId: string, definitionId: string, task: WorkflowRunTask) => void;
+  onOpenWorkflows: (projectId: string) => void;
   onOpenTask: (projectId: string, taskPath: string) => void;
   onCreateTask: (projectId: string) => void;
   onGenerateTasks: (projectId: string, brief: string | null, specPath: string | null) => Promise<void>;

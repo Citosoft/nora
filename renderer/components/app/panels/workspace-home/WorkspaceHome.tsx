@@ -8,7 +8,7 @@ import type { WorkspaceToolId } from "@/components/app/types/workspaceNavigation
 const toolDescriptions: Record<WorkspaceToolId, string> = {
   "merge-requests": "Review workspace merge requests",
   issues: "Browse workspace issues",
-  documents: "Notes, specs & project files", tasks: "Plan what comes next", terminals: "Your command line",
+  documents: "Notes, specs & project files", library: "Images and files agents made", tasks: "Plan what comes next", terminals: "Your command line",
   worktrees: "Isolated branches of work", browser: "Preview your project", workflows: "Repeatable runs"
 };
 const dateFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });

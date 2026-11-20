@@ -7,15 +7,20 @@ import type { WorkThreadVisibility, ThreadGrouping } from "@/components/app/type
 import type { WorkspaceAvatarColor } from "@/components/app/types/workspaceAvatar.types";
 import type { WorkspaceViewPreferences } from "./workspaceView.types";
 import type { BotsHomePage } from "./routineCalendar.types";
+import type { InboxView } from "./inbox.types";
 
-export type WorkspaceToolId = "worktrees" | "merge-requests" | "issues" | "documents" | "tasks" | "workflows" | "terminals" | "browser";
+export type WorkspaceToolId = "worktrees" | "merge-requests" | "issues" | "documents" | "library" | "tasks" | "workflows" | "terminals" | "browser";
 export interface WorkspaceToolItem { id: WorkspaceToolId; label: string; icon: LucideIcon; }
-/** Threads lists conversations; Bots lists the bots you can talk to. */
-export type SidebarMode = "threads" | "bots";
+/** Threads lists conversations; Bots lists the bots you can talk to; Inbox lists what needs you and what is new; Apps lists the apps agents built. */
+export type SidebarMode = "threads" | "bots" | "inbox" | "apps";
 export interface SidebarPreferences {
   sidebarMode: SidebarMode;
+  /** The app shown in the center in Apps mode; null shows the Apps home. */
+  activeAppId: string | null;
   /** Which Bots home page shows in the center when no thread is open. */
   botsHome: BotsHomePage;
+  /** Which inbox view shows in the center when no thread is open. */
+  inboxView: InboxView;
   pinnedWorkspaceIds: string[];
   toolPins: Record<string, WorkspaceToolId[]>;
   threadGrouping: ThreadGrouping;

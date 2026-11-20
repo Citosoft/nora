@@ -29,6 +29,7 @@ export function parseLaunchCommand({
   const normalizedCwd = path.resolve(cwd);
   const normalizedAppRoot = path.resolve(appRoot);
   const args = argv.filter((arg, index) => {
+    if (arg.startsWith("nora:")) return false;
     if (index === 0) {
       return false;
     }

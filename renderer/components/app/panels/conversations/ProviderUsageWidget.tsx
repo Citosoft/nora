@@ -13,7 +13,7 @@ import type { ProviderUsageWidgetProps } from "@/components/app/types/toolUsage.
 const formatUpdatedAt = (iso: string): string => new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 
 /** Weekly and ~5-hour usage for the composer's selected provider, with details on hover. */
-export function ProviderUsageWidget({ provider }: ProviderUsageWidgetProps) {
+export function ProviderUsageWidget({ provider, connection }: ProviderUsageWidgetProps) {
   const { entry, load } = useToolUsage(provider?.kind ?? null);
   const hover = useHoverPopover({ onOpen: () => load() });
   const info = entry?.info ?? null;
@@ -29,7 +29,7 @@ export function ProviderUsageWidget({ provider }: ProviderUsageWidgetProps) {
     </PopoverTrigger>
     <PopoverContent side="top" align="end" aria-label={label} className="w-72 space-y-3" {...hover.contentProps}>
       <div className="flex items-center gap-2">
-        <AgentToolIcon toolId={provider.kind} label="" className="size-5 shrink-0" imageClassName="size-4" />
+        <AgentToolIcon connection={connection} toolId={provider.kind} label="" className="size-5 shrink-0" imageClassName="size-4" />
         <p className="min-w-0 flex-1 truncate text-sm font-medium">{label}</p>
         <Button type="button" variant="ghost" size="sm" className="size-7 shrink-0 p-0" disabled={entry.loading} aria-label={`Refresh ${label}`} onClick={() => load(true)}>
           {entry.loading ? <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" /> : <RefreshCcw className="size-3.5" aria-hidden="true" />}

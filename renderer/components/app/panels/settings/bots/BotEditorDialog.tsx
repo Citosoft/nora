@@ -1,3 +1,9 @@
+import { localTimezone } from "@shared/bots/routines/schedule";
+import { routineInputsForTemplate } from "@shared/bots/templateRoutines";
+import { BotRoutinePresets } from "./BotRoutinePresets";
+import { templateConnectorIds, templateConnectorMatches } from "@shared/bots/templateConnectors";
+import { useNoraConnectors } from "@/components/app/hooks/useNoraConnectors";
+import { BotConnectorFields } from "./BotConnectorFields";
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
@@ -19,20 +25,35 @@ import type { BotEditorDialogProps, BotEditorDraft } from "@/components/app/type
 /** Mounted per editing session (keyed by the caller), so every opening starts from the saved bot or a fresh draft. */
 export function BotEditorDialog({ target, workspace, defaultScope, takenIds, template, onClose }: BotEditorDialogProps) {
   const { boot, request } = useNativeRuntimePorts();
+  const connectors = useNoraConnectors();
   const existing = target?.bot ?? null;
   const [draft, setDraft] = useState<BotEditorDraft>(() => existing ? botEditorDraft(existing)
     : template ? templateEditorDraft(template, defaultScope, boot.personalization.threadModel ?? null, randomBotAvatarSeed())
     : newBotEditorDraft(defaultScope, boot.personalization.threadModel ?? null, randomBotAvatarSeed()));
+  const [connectorsChanged, setConnectorsChanged] = useState(false);
+  const useTemplateConnectors = !!template && !existing && !connectorsChanged;
+  const connectorWorkspaceId = draft.scope.kind === "workspace" ? draft.scope.workspaceId : workspace?.id ?? null;
+  const effectiveDraft = useTemplateConnectors ? { ...draft, connectorIds: templateConnectorIds(template, connectors.connectors ?? [],
+    connectorWorkspaceId ? { workspaceId: connectorWorkspaceId, botId: null } : undefined) } : draft;
+  const matchingConnectors = useTemplateConnectors && connectors.connectors === null && !connectors.loadError;
+  const [routineIds, setRoutineIds] = useState<string[]>(() => template && !existing ? [...template.routineTemplateIds] : []);
+  const [routineWorkspace, setRoutineWorkspace] = useState(workspace?.id ?? boot.workspaces[0]?.id ?? "");
+  const routineWorkspaceId = draft.scope.kind === "workspace" ? draft.scope.workspaceId : routineWorkspace;
+  const missingRoutineWorkspace = !existing && routineIds.length > 0 && !boot.workspaces.some((entry) => entry.id === routineWorkspaceId);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const update = (patch: Partial<BotEditorDraft>): void => { setDraft((current) => ({ ...current, ...patch })); setError(null); };
+  const update = (patch: Partial<BotEditorDraft>): void => { if ("connectorIds" in patch) setConnectorsChanged(true); setDraft((current) => ({ ...current, ...patch })); setError(null); };
   const leavesRepository = existing?.scope.kind === "workspace" && existing.scope.storage === "shared" && !sameBotScope(existing.scope, draft.scope);
   const save = async (): Promise<void> => {
-    const result = botFromEditorDraft(draft, existing, takenIds);
+    const result = botFromEditorDraft(effectiveDraft, existing, takenIds);
     if (!result.ok) { setError(result.message); return; }
     setBusy(true);
-    try { await request({ kind: "save-bot", bot: result.bot, previousScope: existing?.scope ?? null }); onClose(); }
+    try {
+      const initialRoutines = template && !existing ? routineInputsForTemplate(template, routineIds, result.bot, routineWorkspaceId, localTimezone()) : undefined;
+      await request({ kind: "save-bot", bot: result.bot, previousScope: existing?.scope ?? null, ...(initialRoutines?.length ? { initialRoutines } : {}) });
+      onClose();
+    }
     catch (cause) { setError(cause instanceof Error ? cause.message : "The bot could not be saved. Try again."); }
     finally { setBusy(false); }
   };
@@ -54,7 +75,7 @@ export function BotEditorDialog({ target, workspace, defaultScope, takenIds, tem
             <Dialog.Title className="text-lg font-semibold">{existing ? `Edit ${existing.name}` : template ? `New bot from ${template.role}` : "New bot"}</Dialog.Title>
             <Dialog.Close asChild><Button type="button" variant="ghost" size="icon" aria-label="Close" disabled={busy}><X className="size-4" aria-hidden="true" /></Button></Dialog.Close>
           </div>
-          <Dialog.Description className="px-6 text-sm text-muted-foreground">Changes apply to new threads with this bot. Existing threads keep the instructions they started with.</Dialog.Description>
+          <Dialog.Description className="px-6 text-sm text-muted-foreground">Changes apply to new threads with this bot. Existing threads keep the instructions they started with. Connector changes apply on their next turn.</Dialog.Description>
           {/* Who the bot is on the left, what it does (and remembers) on the right; stacked on narrow windows. */}
           <div className="grid min-h-0 flex-1 gap-x-8 gap-y-5 overflow-y-auto px-6 py-5 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
             <div className="space-y-4">
@@ -79,6 +100,15 @@ export function BotEditorDialog({ target, workspace, defaultScope, takenIds, tem
                   placeholder="Check the changelog and open issues before suggesting a release. Keep answers short and list risks first."
                   onChange={(event) => update({ instructions: event.target.value })} />
                 <span className="block text-xs text-muted-foreground">{draft.instructions.length.toLocaleString()} / {BOT_INSTRUCTIONS_MAX.toLocaleString()}</span></label>
+              <BotConnectorFields connectorIds={effectiveDraft.connectorIds} connectors={connectors.connectors} error={connectors.loadError} disabled={busy || matchingConnectors}
+                recommendations={template ? templateConnectorMatches(template, []).map((match) => match.entry) : []}
+                workspaceId={connectorWorkspaceId} botId={existing?.id ?? null}
+                onChange={(connectorIds) => update({ connectorIds })} />
+              {matchingConnectors && <p role="status" className="text-xs text-muted-foreground">Matching template connectors…</p>}
+              {useTemplateConnectors && connectors.loadError && <p role="alert" className="text-xs text-destructive">Template connectors could not be matched. You can choose them later.</p>}
+              {template && !existing && <BotRoutinePresets template={template} selectedIds={routineIds} workspaces={boot.workspaces} workspaceId={routineWorkspaceId}
+                workspaceLocked={draft.scope.kind === "workspace"} timezone={localTimezone()} disabled={busy} onSelect={setRoutineIds} onWorkspace={setRoutineWorkspace} />}
+              {missingRoutineWorkspace && <p role="alert" className="text-xs text-destructive">Choose an available workspace for the routine presets, or deselect them.</p>}
               {existing && <BotMemorySection botId={existing.id} botName={existing.name} scope={{ kind: "all", workspaces: boot.workspaces, currentWorkspace: workspace }} disabled={busy} />}
             </div>
             {error && <p role="alert" className="text-sm text-destructive md:col-span-2">{error}</p>}
@@ -88,7 +118,7 @@ export function BotEditorDialog({ target, workspace, defaultScope, takenIds, tem
               {confirmDelete ? `Delete ${existing.name}` : "Delete bot"}</Button>}
             <span className="flex-1" />
             <Dialog.Close asChild><Button type="button" variant="ghost" disabled={busy}>Cancel</Button></Dialog.Close>
-            <Button type="submit" disabled={busy}>{busy ? "Saving…" : existing ? "Save bot" : "Create bot"}</Button>
+            <Button type="submit" disabled={busy || matchingConnectors || missingRoutineWorkspace}>{busy ? "Saving…" : existing ? "Save bot" : "Create bot"}</Button>
           </div>
         </form>
       </Dialog.Content>

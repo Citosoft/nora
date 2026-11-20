@@ -1,4 +1,4 @@
-import type { ConversationRun, RuntimeRequest, TimelineItem } from "@shared/types/conversation/contracts.types";
+import type { ConversationRun, TimelineItem } from "@shared/types/conversation/contracts.types";
 import type { ConversationSummary } from "@shared/types/conversation/queries.types";
 import type { RemoteTask } from "@shared/types/remote-access/runtimeApi.types";
 
@@ -28,13 +28,6 @@ export interface ActivityEntry {
 export interface ActivityList {
   active: ActivityEntry[];
   recent: ActivityEntry[];
-}
-
-/** A pending request with the conversation it belongs to, for the cross-conversation approvals list. */
-export interface InboxRequest {
-  conversationId: string;
-  conversationTitle: string;
-  request: RuntimeRequest;
 }
 
 /** Timeline entries ready to render: subagent activity is nested under its subagent instead of interleaved. */

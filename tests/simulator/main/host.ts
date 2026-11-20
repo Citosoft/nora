@@ -11,19 +11,24 @@ import { createSimulatorCheckpoints } from "./checkpoints";
 import { createThreadReferenceWriter } from "@main/execution/thread-references/writeSnapshot";
 import { createMcpAppFrames } from "@main/helpers/mcpAppFrames";
 export { registerConversationIpc } from "@main/ipc/registerConversationIpc";
+export { registerSecretIpc } from "@main/ipc/registerSecretIpc";
+export { secretPromptsChangedChannel, secretVaultChangedChannel } from "@shared/secrets/gateway";
+import { createSimulatedSecrets } from "./secrets";
+import type { SimulatedSecretEvents } from "../types/secrets.types";
 
 /** Widgets get their own origin on this scheme, as they do on `nora-account` in the app; the launcher registers it. */
 export const SIMULATOR_APP_SCHEME = "nora-simulator";
 
-/** Production engine, queue, persistence and IPC; only the provider and workspace are simulated. */
-export function createSimulatorHost(directory: string, speed = 1) {
+/** Production engine, queue, persistence, secrets and IPC; only the provider, workspace, keychain and commands are simulated. */
+export function createSimulatorHost(directory: string, speed = 1, secretEvents: SimulatedSecretEvents = { promptsChanged() {}, vaultChanged() {} }) {
   const environmentId = "chat-simulator";
   // Scripted tools never write a checkout; pending scenarios can safely share this workspace.
   const workspace = { environmentId, projectId: "simulator", checkoutId: "simulator", path: directory, branch: "simulated", access: "read" as const, versionControl: "none" as const };
   const boot: NativeBoot = { environmentId, cursor: 0, personalization: { defaultRole: { id: "general" }, workspaceRoles: {} },
     providers: [{ kind: "codex", instanceId: "simulator", label: "Codex simulator · no LLM", reportsMcp: false }, { kind: "claude", instanceId: "simulator", label: "Claude simulator · no LLM", reportsMcp: false }],
     workspaces: [{ id: "simulator", name: "Chat simulator", kind: "personal", workspace }], sharedBots: [], noraTools: noraToolsStatus("idle") };
-  const providers = new ProviderRegistry(); providers.register(new SimulatorProvider(speed)); providers.register(new SimulatorProvider(speed, "claude"));
+  const secrets = createSimulatedSecrets(directory, secretEvents);
+  const providers = new ProviderRegistry(); providers.register(new SimulatorProvider(secrets, speed)); providers.register(new SimulatorProvider(secrets, speed, "claude"));
   const store = new SqliteExecutionStore(join(directory, "simulator.sqlite"), environmentId);
   const verify = async (selection: WorkspaceRef): Promise<void> => {
     if (selection.environmentId !== environmentId || selection.path !== directory) throw new Error("Only the isolated simulator workspace is available");
@@ -36,5 +41,5 @@ export function createSimulatorHost(directory: string, speed = 1) {
     checkpoints: createSimulatorCheckpoints(),
     onFailure: (failure) => { process.stderr.write(`Simulator: ${failure.message}\n`); } });
   host.start();
-  return { host, boot, mcpAppFrames: createMcpAppFrames(SIMULATOR_APP_SCHEME) };
+  return { host, boot, secrets, mcpAppFrames: createMcpAppFrames(SIMULATOR_APP_SCHEME) };
 }

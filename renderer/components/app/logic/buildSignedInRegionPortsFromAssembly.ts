@@ -51,6 +51,7 @@ export const buildSessionCenterSurfacePortsFromAssembly = (
   },
   onOpenThreadSettings: () => a.core.openSettingsPage("threads"),
   onOpenBotSettings: () => a.core.openSettingsPage("bots"),
+  onOpenConnectorSettings: () => a.core.openSettingsPage("mcp"),
   sessionSurface: a.sessionSurface,
   centerTabs: a.centerTabs,
   aiModels: a.aiModels,
@@ -89,6 +90,7 @@ export const buildModalClusterPorts = (modalDialogs: AppModalDialogsBuildDeps): 
 export const buildWorkspaceSidebarPortsFromAssembly = (a: AppShellSignedInAssemblySources, chrome: AppChromeShellComposeSlice, threadForge: ThreadForgeClient): WorkspaceSidebarPorts => {
   const onOpenConnectionsSettings = () => a.core.openSettingsPage("connections");
   return {
+    onError: a.core.captureError,
     sidebarBuild: assembleSignedInWorkspaceSidebarBuild(a),
     utilities: {
       status: chrome.workspaceStatus,

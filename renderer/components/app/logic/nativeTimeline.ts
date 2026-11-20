@@ -3,6 +3,7 @@ import type { NativeTimelineEntry, NativeTimelineRow } from "@/components/app/ty
 import { askBotCall } from "./askBotCalls";
 import { rememberCall } from "./rememberCalls";
 import { mcpAppToolCall } from "./mcp-app/toolCall";
+import { toolOutputImages } from "./thread-workspace/outputs";
 import { nativeTurnActivity } from "./nativeTurnActivity";
 
 /**
@@ -29,6 +30,8 @@ export function groupNativeTimelineEntries(items: readonly TimelineItem[]): Nati
       }
       const app = mcpAppToolCall(item);
       if (app) entries.push({ kind: "app", call: app });
+      const images = toolOutputImages(item);
+      if (images.length) entries.push({ kind: "images", tool: item, paths: images });
       continue;
     }
     if (item.kind === "reasoning" && !item.text.trim()) continue;
@@ -40,7 +43,8 @@ export function groupNativeTimelineEntries(items: readonly TimelineItem[]): Nati
 }
 
 function entryRunId(entry: NativeTimelineEntry): string {
-  return entry.kind === "item" ? entry.item.runId : entry.kind === "ask" || entry.kind === "memory" || entry.kind === "app" ? entry.call.tool.runId : entry.runId;
+  return entry.kind === "item" ? entry.item.runId : entry.kind === "ask" || entry.kind === "memory" || entry.kind === "app" ? entry.call.tool.runId
+    : entry.kind === "images" ? entry.tool.runId : entry.runId;
 }
 
 function entryKey(entry: NativeTimelineEntry): string {
@@ -51,6 +55,7 @@ function entryKey(entry: NativeTimelineEntry): string {
     case "ask": return `ask:${entry.call.tool.id}`;
     case "memory": return `memory:${entry.call.tool.id}`;
     case "app": return `app:${entry.call.tool.id}`;
+    case "images": return `images:${entry.tool.id}`;
   }
 }
 

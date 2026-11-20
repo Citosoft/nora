@@ -1,9 +1,15 @@
 import { connectorInputSchema } from "@shared/connectors/contracts";
 import { EVERYWHERE_ACCESS_DRAFT, buildConnectorAccess } from "@/components/app/logic/connectorAccess";
+import type { ConnectorGalleryEntry } from "@shared/types/connectors/gallery.types";
 import type { AddConnectorStep, AddConnectorStepTarget, ConnectorAccessChoices, ConnectorFormResult, ConnectorFormState, ConnectorServerResult } from "@/components/app/types/noraConnectors.types";
 
 export const EMPTY_CONNECTOR_FORM: ConnectorFormState = { name: "", url: "", authMode: "oauth", clientId: "", clientSecret: "",
   headerName: "Authorization", headerValue: "", access: EVERYWHERE_ACCESS_DRAFT };
+
+/** The add form filled from a gallery entry: its server is known, so the dialog opens on the sign-in step. */
+export const presetConnectorForm = (entry: ConnectorGalleryEntry): ConnectorFormState => ({ ...EMPTY_CONNECTOR_FORM, name: entry.name, url: entry.url, authMode: "oauth" });
+/** Where the dialog opens for a form: a gallery preset skips the server step, since both fields are already right. */
+export const initialAddConnectorStep = (preset: ConnectorGalleryEntry | null): AddConnectorStep => preset ? "auth" : "server";
 
 /** A connector name from its URL's host ("mcp.linear.app" → "Linear"), offered until the user types their own. */
 export function suggestConnectorName(url: string): string {

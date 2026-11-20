@@ -1,3 +1,4 @@
+import type { OpenWorkspaceFileEditorOptions } from "@/components/app/types/workflow.types";
 import { noraSessionClient } from "@/components/app/clients/noraSessionClient";
 import type { WorkspaceQuickSearchPick } from "@/components/app/types/titlebarWorkspaceSearch.types";
 import type { AppState } from "@shared/appTypes";
@@ -23,7 +24,7 @@ export function useWorkspaceQuickSearchActions({
   focusWorkspaceWithRecovery: (projectId: string) => Promise<AppState | null>;
   openWorkspaceSpec: (projectId: string, path: string) => Promise<void>;
   openWorkspaceNote: (projectId: string, path: string) => Promise<void>;
-  openFileEditor: (pathName: string, options?: { selectChange?: boolean; rootPath?: string | null }) => Promise<void>;
+  openFileEditor: (pathName: string, options?: OpenWorkspaceFileEditorOptions) => Promise<void>;
   workspaceFilesRootPath: string | null;
 }): {
   handleWorkspaceQuickSearchPick: (pick: WorkspaceQuickSearchPick) => void;

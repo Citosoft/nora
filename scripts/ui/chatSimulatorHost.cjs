@@ -13,11 +13,11 @@ if (!app.isReady()) protocol.registerSchemesAsPrivileged([{ scheme: WIDGET_SCHEM
 async function createChatSimulator(options = {}) {
   const root = resolve(__dirname, '../..');
   const directory = await fs.mkdtemp(join(tmpdir(), 'nora-chat-simulator-'));
-  let runtime, fixture, unregister, unhandle, allowedWindow;
+  let runtime, fixture, unregister, unregisterSecrets, unhandle, allowedWindow;
   let closed = false;
   const close = async () => {
     if (closed) return; closed = true;
-    unregister?.(); unhandle?.(); ipcMain.removeHandler('simulator:boot');
+    unregister?.(); unregisterSecrets?.(); unhandle?.(); ipcMain.removeHandler('simulator:boot');
     await runtime?.host.shutdown(); await fixture?.close();
     await fs.rm(directory, { recursive: true, force: true });
   };
@@ -28,9 +28,11 @@ async function createChatSimulator(options = {}) {
     // The MCP App scenario's widget, read by the simulated provider from the simulator directory.
     await build({ entryPoints: [join(root, 'tests/simulator/widget/buildHealth.ts')], bundle: true, minify: true, platform: 'browser', format: 'iife',
       tsconfig: join(root, 'tsconfig.json'), outfile: join(directory, 'mcp-app-widget.js') });
-    const { createSimulatorHost, registerConversationIpc, SIMULATOR_APP_SCHEME } = require(join(directory, 'host.cjs'));
+    const { createSimulatorHost, registerConversationIpc, registerSecretIpc, secretPromptsChangedChannel, secretVaultChangedChannel, SIMULATOR_APP_SCHEME } = require(join(directory, 'host.cjs'));
     if (SIMULATOR_APP_SCHEME !== WIDGET_SCHEME) throw new Error(`Widget scheme mismatch: ${SIMULATOR_APP_SCHEME}`);
-    runtime = createSimulatorHost(directory, options.speed ?? 1);
+    const send = (channel, payload) => { if (allowedWindow && !allowedWindow.isDestroyed()) allowedWindow.webContents.send(channel, payload); };
+    runtime = createSimulatorHost(directory, options.speed ?? 1, {
+      promptsChanged: prompts => send(secretPromptsChangedChannel, prompts), vaultChanged: secrets => send(secretVaultChangedChannel, secrets) });
     await app.whenReady();
     protocol.handle(WIDGET_SCHEME, request => runtime.mcpAppFrames.respond(new URL(request.url)) ?? new Response('Not found', { status: 404 }));
     unhandle = () => protocol.unhandle(WIDGET_SCHEME);
@@ -39,6 +41,7 @@ async function createChatSimulator(options = {}) {
       && event.senderFrame.url.startsWith('file:');
     unregister = registerConversationIpc({ ipc: ipcMain, resolveHost: id => id === runtime.host.environmentId ? runtime.host : null, isAllowedSender: allowed,
       mcpAppFrames: runtime.mcpAppFrames });
+    unregisterSecrets = registerSecretIpc({ ipc: ipcMain, isAllowedSender: allowed, secrets: runtime.secrets });
     ipcMain.handle('simulator:boot', event => { if (!allowed(event)) throw new Error('Simulator window only'); return runtime.boot; });
     fixture = await createFixtureHost('tests/simulator/renderer/Simulator.tsx', {
       preload: join(directory, 'preload.cjs'), watch: options.watch ?? false, visible: options.visible ?? false, width: 1360, title: 'Nora · Developer chat simulator',

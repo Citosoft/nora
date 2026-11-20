@@ -95,7 +95,7 @@ module.exports = {
     ignoreModules: ["node-pty"]
   },
   packagerConfig: {
-    protocols: [{ name: "Nora account", schemes: ["nora-account"] }],
+    protocols: [{ name: "Nora account", schemes: ["nora-account"] }, { name: "Nora apps", schemes: ["nora"] }],
     // Separate deployables (mobile/web app, remote Worker) with their own node_modules; never part of the desktop bundle.
     // The Claude Agent SDK's per-platform native CLI packages (~300 MB each) are never used: Nora always runs the
     // user's installed `claude` via `pathToClaudeCodeExecutable`, so the SDK never resolves its bundled binary.
@@ -151,7 +151,7 @@ module.exports = {
     new MakerDeb({
       options: {
         bin: "Nora",
-        mimeType: ["x-scheme-handler/nora-account"],
+        mimeType: ["x-scheme-handler/nora-account", "x-scheme-handler/nora"],
         icon: iconPngPath,
         categories: ["Development", "IDE"]
       }

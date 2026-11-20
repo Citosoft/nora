@@ -10,7 +10,7 @@ import { useOptionalSessionCenterPorts } from "@/components/app/hooks/useSession
 import { NativeConversationPanel } from "@/components/app/panels/conversations/NativeConversationPanel";
 import { ChatConversationPanel } from "@/components/app/panels/chat/ChatConversationPanel";
 import { isChat } from "@/components/app/logic/directChats";
-import { buildChatWorkThreads } from "@/components/app/logic/chatWorkThreads";
+import { buildBotWorkThreads, buildChatWorkThreads } from "@/components/app/logic/chatWorkThreads";
 import type { NativeConversationPorts } from "@/components/app/types/nativePanels.types";
 import type { ThreadViewContentProps } from "@/components/app/types/thread-workspace/ports.types";
 
@@ -60,13 +60,16 @@ export function ThreadViewContent({ documentId }: ThreadViewContentProps) {
   const chat = !!document?.direct || !!document?.group || (!!summary && isChat(summary.conversation));
   const workThreads = useMemo(() => chat && conversationId ? buildChatWorkThreads(state.summaries, conversationId, state.boot.workspaces) : [],
     [chat, conversationId, state.summaries, state.boot.workspaces]);
+  const directBotId = summary?.conversation.direct?.botId ?? document?.direct?.botId;
+  const botWorkThreads = useMemo(() => directBotId ? buildBotWorkThreads(state.summaries, directBotId, state.boot.environmentId, state.boot.workspaces) : workThreads,
+    [directBotId, state.summaries, state.boot.environmentId, state.boot.workspaces, workThreads]);
   const referenceChoices = useMemo(() => state.summaries.filter((summary) => summary.conversation.source?.kind !== "workflow" && summary.conversation.id !== conversationId
     && summary.conversation.workspace.environmentId === state.boot.environmentId).map(({ conversation }) => ({ id: conversation.id, title: conversation.title,
       workspace: state.boot.workspaces.find((entry) => entry.id === conversation.workspace.projectId)?.name ?? conversation.workspace.path, settled: !!conversation.archivedAt })),
     [state.summaries, state.boot.environmentId, state.boot.workspaces, conversationId]);
-  const ports = useMemo<NativeConversationPorts | null>(() => document && workspace && baseWorkspace ? { visible, client: store.client, workspace, baseWorkspace, state: state.boot, userDisplayName, threadForge, openThreadSettings, openBotSettings, referenceChoices, workThreads,
+  const ports = useMemo<NativeConversationPorts | null>(() => document && workspace && baseWorkspace ? { visible, client: store.client, workspace, baseWorkspace, state: state.boot, userDisplayName, threadForge, openThreadSettings, openBotSettings, referenceChoices, workThreads, botWorkThreads,
     document, runtime: state.runtime[documentId] ?? { busy: false, error: null, readyBinding: null }, storageError: state.storageError, latestFailure, ...actions } : null,
-  [visible, store.client, workspace, baseWorkspace, state.boot, document, state.runtime, state.storageError, latestFailure, actions, documentId, userDisplayName, threadForge, openThreadSettings, openBotSettings, referenceChoices, workThreads]);
+  [visible, store.client, workspace, baseWorkspace, state.boot, document, state.runtime, state.storageError, latestFailure, actions, documentId, userDisplayName, threadForge, openThreadSettings, openBotSettings, referenceChoices, workThreads, botWorkThreads]);
   if (!ports) return <section className="p-6 text-sm text-muted-foreground" role="status">This thread's workspace is unavailable on its owning host. Its saved draft has been retained.</section>;
   return <NativeConversationContext.Provider value={ports}>{chat ? <ChatConversationPanel /> : <NativeConversationPanel />}</NativeConversationContext.Provider>;
 }

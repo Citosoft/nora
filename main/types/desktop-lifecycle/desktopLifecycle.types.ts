@@ -22,11 +22,21 @@ export interface WindowCloseInput {
 }
 
 export interface ActiveWorkInput {
-  conversations: readonly Pick<ConversationSummary, "latestRun" | "queuedCount" | "pendingRequestCount">[];
-  agents: readonly Pick<AgentSession, "isBusy">[];
+  conversations: readonly (Pick<ConversationSummary, "latestRun" | "queuedCount" | "pendingRequestCount"> & {
+    conversation: { title: string; workspace: Pick<ConversationSummary["conversation"]["workspace"], "path"> };
+  })[];
+  agents: readonly Pick<AgentSession, "isBusy" | "name" | "threadTitle" | "workspace">[];
+}
+
+export interface ActiveWorkItem {
+  kind: "thread" | "terminal-agent";
+  title: string;
+  workspace: string;
+  status: string;
 }
 
 export interface ActiveWorkCount {
+  items: ActiveWorkItem[];
   /** Native threads with a run in progress, queued messages or a pending approval/question. */
   conversations: number;
   /** Terminal agents that are working on a turn. */

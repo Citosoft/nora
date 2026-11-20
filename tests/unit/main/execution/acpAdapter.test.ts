@@ -60,8 +60,8 @@ test("ACP account reads sign-in state through session setup and reports auth-req
   const rejected = harness(t, "auth-rejected");
   try {
     assert.deepEqual(await rejected.adapter.account({ kind: "login" }), { kind: "unavailable", message: "OpenCode sign-in failed: This account type is not supported" });
-    assert.deepEqual(await signedIn.adapter.account({ kind: "read" }), { kind: "account", account: { state: "signed-in", method: "Fixture Agent", label: null } });
-    assert.deepEqual(await signedOut.adapter.account({ kind: "read" }), { kind: "account", account: { state: "signed-out" } });
+    assert.deepEqual(await signedIn.adapter.account({ kind: "read" }), { kind: "account", account: { state: "signed-in", method: "Fixture Agent", label: null }, loginMethods: [] });
+    assert.deepEqual(await signedOut.adapter.account({ kind: "read" }), { kind: "account", account: { state: "signed-out" }, loginMethods: [] });
     assert.deepEqual(await signedOut.adapter.account({ kind: "login" }), { kind: "login-started" });
   } finally { await signedIn.adapter.close(); await signedOut.adapter.close(); await rejected.adapter.close(); }
 });
@@ -191,6 +191,20 @@ test("workflow stages fail before prompting when their ACP provider cannot expos
   try {
     const failed = waitFor(f.engine, "failed"); await new EffectWorker(f.engine, registry).runNext(["start"]); await failed;
     assert.match(f.snapshot().runs[0].failure?.message ?? "", /HTTP MCP reporting/);
+    assert.equal(calls().includes("session/prompt"), false);
+  } finally { await registry.close(); }
+});
+
+test("ACP does not silently run a read-only worker through an agent whose tools Nora cannot sandbox", async (t) => {
+  const f = fixture(t);
+  f.command({ kind: "create", commandId: "create", conversationId: "conversation", title: "Worker", parentId: null, provider: binding,
+    source: { kind: "worker" }, workspace: { ...workspace, access: "read" } });
+  f.submit();
+  const { adapter, calls } = harness(t, "stream"); const registry = new ProviderRegistry(); registry.register(adapter);
+  try {
+    const failed = waitFor(f.engine, "failed"); await new EffectWorker(f.engine, registry).runNext(["start"]); await failed;
+    assert.equal(f.snapshot().runs[0].failure?.code, "unsupported");
+    assert.match(f.snapshot().runs[0].failure?.message ?? "", /cannot enforce read-only execution/);
     assert.equal(calls().includes("session/prompt"), false);
   } finally { await registry.close(); }
 });

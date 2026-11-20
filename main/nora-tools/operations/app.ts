@@ -12,7 +12,7 @@ export function createAppOperations(options: NoraToolOperationOptions): NoraAppO
       return Promise.all(options.boot().providers.map(async (provider) => {
         const catalog = await options.host.catalog(provider.kind, provider.instanceId, conversation.workspace)
           .catch((): null => null);
-        return { kind: provider.kind, instanceId: provider.instanceId, label: provider.label,
+        return { readOnlyCommands: catalog?.status === "available" && catalog.catalog.capabilities.readOnlyCommands === true, kind: provider.kind, instanceId: provider.instanceId, label: provider.label,
           models: catalog?.status === "available" ? catalog.catalog.models.map((model) => model.id) : [],
           unavailable: !catalog ? "the provider could not be reached" : catalog.status === "available" ? null : catalog.failure.message };
       }));

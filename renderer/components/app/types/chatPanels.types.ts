@@ -1,4 +1,10 @@
-import type { ChatContextToggle } from "./chatContext.types";
+import type { ProviderConnectionKind } from "@shared/types/provider/account.types";
+import type { ChatActivityEvent } from "./chatActivity.types";
+import type { ConversationSummary } from "@shared/types/conversation/queries.types";
+import type { ChatWorkPhase } from "./chatWork.types";
+import type { ChatContextInspectorInput } from "./chatContext.types";
+import type { ConnectorSubject } from "@shared/types/connectors/connectors.types";
+import type { ChatSidebarThreads } from "./chatThreadDetail.types";
 import type { ReactNode, RefObject } from "react";
 import type { ComposerEditorHandle } from "./composerEditor.types";
 import type { ComposerSuggestionOption } from "./composerInput.types";
@@ -7,14 +13,14 @@ import type { NativeWorkspace } from "@shared/types/personalization/workspaces.t
 import type { MarkdownRendererLinkClickHandler } from "@/components/app/types/markdownRenderer.types";
 import type { BotAvatarState } from "./botAvatar.types";
 import type { ChatBranchRequest } from "@shared/ipc/types/chatBranchGateway.types";
-import type { ChatBranch, ChatBranchOrigin } from "@shared/types/conversation/contracts.types";
+import type { ChatBranch, ChatBranchOrigin, ProviderBinding } from "@shared/types/conversation/contracts.types";
 
 /** Who a chat is with: one bot (a direct chat) or a group's members. */
 export type ChatParticipants =
   | { kind: "direct"; bot: { botId: string; name: string; role: string; avatar: BotAvatar } }
   | { kind: "group"; members: readonly { botId: string; name: string; role: string; avatar: BotAvatar }[]; writer: string | null; lead: string | null };
 /** A work thread behind a chat, as the chat shows it; `branch` marks a side chat the user started rather than a task the chat routed. */
-export interface ChatWorkThread { id: string; botId: string | null; title: string; workspaceName: string | null; working: boolean; waiting: boolean; settled: boolean; branch: ChatBranch | null; createdAt: string; updatedAt: string; }
+export interface ChatWorkThread { connection: ProviderConnectionKind; providerKind: ProviderBinding["kind"]; model: string; canSettle: boolean; latestRun: ConversationSummary["latestRun"]; phase: ChatWorkPhase; author: ChatBranchBot | null; status: string; id: string; botId: string | null; title: string; workspaceId: string; workspaceName: string | null; working: boolean; waiting: boolean; settled: boolean; branch: ChatBranch | null; createdAt: string; updatedAt: string; }
 /** A branch being started: shown as its own tab until its first message creates the thread (`threadId`) and that thread is listed. */
 export interface ChatBranchDraft {
   key: string; botId: string; from: ChatBranchOrigin | null; threadId: string | null;
@@ -34,7 +40,7 @@ export type ChatBranchBot = Extract<ChatParticipants, { kind: "direct" }>["bot"]
 export type ChatEntry =
   | { kind: "message"; id: string; from: "user" | "bot"; author: BotAuthor | null; text: string; createdAt: string; complete: boolean;
     workThreadId: string | null; continued: boolean }
-  | { kind: "notice"; id: string; text: string };
+  | { kind: "notice"; id: string; text: string; workThreadId?: string };
 export interface ChatMessageProps {
   entry: Extract<ChatEntry, { kind: "message" }>;
   workThread: ChatWorkThread | null;
@@ -60,8 +66,6 @@ export interface ChatHeaderProps {
   onCloseDraft(key: string): void;
   /** Settles a work thread or branch, removing its tab. */
   onCloseThread(threadId: string): void;
-  /** Developer context panel toggle; absent where the panel is unavailable. */
-  context?: ChatContextToggle;
 }
 export interface ChatTabProps { thread: ChatWorkThread; onClose(): void; }
 /** `thread` is the one being closed; the dialog is open while it is set. `onConfirm` rejects with a reason when the thread cannot settle. */
@@ -74,6 +78,8 @@ export interface ChatBranchInfoPanelProps {
   bot: ChatBranchBot;
   /** The thread's current model, once loaded. */
   model: string | null;
+  /** Where the chat starts new work, named for a draft that has no workspace of its own yet; null when unavailable. */
+  chatWorkspaceName: string | null;
   onOpenThread(conversationId: string): void;
 }
 export interface ChatBranchViewProps {
@@ -86,6 +92,8 @@ export interface ChatBranchViewProps {
   onStarted(threadId: string): void;
   onOpenThread(conversationId: string): void;
   onLinkClick?: MarkdownRendererLinkClickHandler;
+  /** Where the chat starts new work, shown for a draft branch. */
+  chatWorkspaceName: string | null;
 }
 export interface ChatGreetingProps { participants: ChatParticipants; }
 export interface ChatTypingProps { name: string; avatar: BotAvatar; workspaceName: string | null; waiting: boolean; }
@@ -114,3 +122,27 @@ export interface ChatComposerProps {
   onChange(text: string): void;
   onSubmit(): void;
 }
+
+export interface ChatWorkPanelProps {
+  activity: readonly ChatActivityEvent[];
+  threads: readonly ChatWorkThread[];
+  onOpenThread(id: string): void;
+  onSettleThread(id: string): Promise<void>;
+}
+/** The tabs of a chat's right sidebar. */
+export type ChatSidebarTab = "work" | "connectors" | "context";
+/**
+ * The chat's right sidebar: the bot's work and activity, the connectors a direct chat's bot gets (`connectors`, null in group chats),
+ * and the developer context preview where it is available. Opening a thread from the activity shows its detail in place.
+ */
+export interface ChatSidebarProps {
+  /** The direct chat's bot, headed above the tabs; null in group chats, whose members already head the chat. */
+  bot: ChatSidebarBot | null;
+  work: Omit<ChatWorkPanelProps, "onOpenThread">;
+  threads: ChatSidebarThreads;
+  connectors: ConnectorSubject | null;
+  context: ChatContextInspectorInput;
+}
+/** The bot a direct chat's sidebar is headed by, with its live face state. */
+export interface ChatSidebarBot { bot: ChatBranchBot; state: BotAvatarState; }
+export interface ChatConnectorsPanelProps { subject: ConnectorSubject; }
