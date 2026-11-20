@@ -1,8 +1,9 @@
+import { useBotConnectorIds } from "@/components/app/hooks/useBotConnectorIds";
 import { useState } from "react";
 import { Plug, Plus, RefreshCcw } from "lucide-react";
-import { connectorAvailableTo } from "@shared/connectors/access";
+import { connectorSelectedFor } from "@shared/connectors/access";
 import type { Connector } from "@shared/types/connectors/connectors.types";
-import { AddConnectorDialog } from "@/components/app/dialogs/AddConnectorDialog";
+import { ConnectorGalleryDialog } from "@/components/app/dialogs/ConnectorGalleryDialog";
 import { ConnectorAccessDialog } from "@/components/app/dialogs/ConnectorAccessDialog";
 import { useNoraConnectors } from "@/components/app/hooks/useNoraConnectors";
 import { composerConnectorBadge } from "@/components/app/logic/composerConnectors";
@@ -22,11 +23,12 @@ const SECTION_HEADING = "flex items-center gap-1.5 text-xs font-medium text-mute
  */
 export function NativeComposerConnectors({ disabled, subject, accessChoices, providerConnectors }: NativeComposerConnectorsProps) {
   const controls = useNoraConnectors();
+  const connectorIds = useBotConnectorIds(subject);
   const [open, setOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   const [editingAccess, setEditingAccess] = useState<Connector | null>(null);
   const connectors = controls.connectors ?? [];
-  const here = connectors.filter((connector) => connectorAvailableTo(connector.access, subject));
+  const here = connectors.filter((connector) => connectorSelectedFor(connector, subject, connectorIds));
   const elsewhere = connectors.filter((connector) => !here.includes(connector));
   const badge = composerConnectorBadge(here, providerConnectors?.summary ?? null);
   // Dialogs open after the popover closes, so focus moves into the dialog instead of fighting the popover.
@@ -64,13 +66,14 @@ export function NativeComposerConnectors({ disabled, subject, accessChoices, pro
             ? <p className="text-muted-foreground">No connectors are available in this thread yet. Add a server URL to give it that server's tools.</p> : null}
           {elsewhere.length ? <section className="space-y-1.5 border-t border-border/50 pt-3" aria-label="Not available in this thread">
             <p className={SECTION_HEADING}>Not available in this thread</p>
+            {subject.botId && <p className="text-xs text-muted-foreground">Check this bot’s connector selection in its editor as well as connector availability.</p>}
             <ul className="space-y-1.5">{elsewhere.map(item)}</ul>
           </section> : null}
         </div>
         <Button type="button" variant="outline" size="sm" className="w-full" onClick={startAdding}><Plus className="size-3.5" aria-hidden="true" />Add connector</Button>
       </PopoverContent>
     </Popover>
-    <AddConnectorDialog open={adding} onOpenChange={setAdding} onCreate={controls.create} accessChoices={accessChoices} />
+    <ConnectorGalleryDialog open={adding} onOpenChange={setAdding} onCreate={controls.create} accessChoices={accessChoices} addedUrls={connectors.map((entry) => entry.url)} />
     <ConnectorAccessDialog connector={editingAccess} accessChoices={accessChoices} onClose={() => setEditingAccess(null)} onSave={controls.setAccess} />
   </>;
 }

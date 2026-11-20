@@ -5,7 +5,7 @@ import type { ThreadListRow } from "@/components/app/types/thread-workspace/list
 import { adoptExternalSession } from "./externalSessions";
 import { closeThreadDocument } from "./changes";
 
-export function canSettleThread(row: ThreadListRow): boolean {
+export function canSettleThread(row: Pick<ThreadListRow, "target" | "active" | "queuedCount">): boolean {
   return row.target.kind !== "draft" && !row.active && row.queuedCount === 0
     && (row.target.kind !== "external" || !row.target.disabled);
 }

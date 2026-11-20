@@ -1,3 +1,4 @@
+import type { RoutineInput } from "@shared/types/bots/routines.types";
 import type { PersonalizationRequest } from "@shared/ipc/types/personalizationGateway.types";
 import type { BotDefinition, SharedBotSet } from "@shared/types/bots/bots.types";
 import type { NativeWorkspace } from "@shared/types/personalization/workspaces.types";
@@ -10,6 +11,8 @@ export interface SharedBotLibrary {
   remove(workspace: NativeWorkspace, botId: string): Promise<void>;
 }
 export interface BotRequestDeps {
+  /** Installs an entire routine set or throws without saving any. */
+  createRoutines?(inputs: readonly RoutineInput[]): void;
   workspaces(): NativeWorkspace[];
   library: SharedBotLibrary;
 }

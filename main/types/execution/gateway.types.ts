@@ -2,7 +2,7 @@ import type { ConversationCursorHint, ConversationGatewayReply, ConversationWatc
 import type { ExecutionHost } from "@main/execution/host";
 import type { McpAppFrameServer } from "./mcpApp.types";
 
-export type ConversationHost = Pick<ExecutionHost, "reference" | "externalSessions" | "environmentId" | "execute" | "header" | "context" | "summaries" | "conversationHistory" | "history" | "catalog" | "mcp" | "mcpApp" | "account" | "skills" | "subscribe" | "eventCursor">;
+export type ConversationHost = Pick<ExecutionHost, "reference" | "externalSessions" | "environmentId" | "execute" | "header" | "context" | "summaries" | "conversationHistory" | "history" | "catalog" | "outputFile" | "outputFilePath" | "outputs" | "mcp" | "mcpApp" | "account" | "skills" | "subscribe" | "eventCursor">;
 export type ConversationReplyValue = Extract<ConversationGatewayReply, { ok: true }>["value"];
 export interface GatewayDependencies { resolveHost: (environmentId: string) => ConversationHost | null }
 export interface WatchHandle { receipt: ConversationWatchReceipt; cancel: () => void }
@@ -26,6 +26,8 @@ export interface RegisterConversationDeps extends GatewayDependencies {
   /** Serves widget documents the host returns, so widget HTML never reaches the renderer. */
   mcpAppFrames: Pick<McpAppFrameServer, "register">;
   isAllowedSender: (event: ConversationInvocation) => boolean;
+  /** Shows a validated tool output file with the operating system. */
+  openOutputFile: (filePath: string) => Promise<void>;
 }
 export interface WatchSession extends WatchHandle {
   fingerprint: string;

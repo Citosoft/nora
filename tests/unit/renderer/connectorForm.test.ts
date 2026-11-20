@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { EMPTY_CONNECTOR_FORM, buildConnectorInput, buildConnectorServer, resolveAddConnectorStep, suggestConnectorName } from "@/components/app/logic/connectorForm";
+import { EMPTY_CONNECTOR_FORM, buildConnectorInput, buildConnectorServer, initialAddConnectorStep, presetConnectorForm, resolveAddConnectorStep, suggestConnectorName } from "@/components/app/logic/connectorForm";
+import { CONNECTOR_GALLERY } from "@shared/connectors/gallery";
 import { bot } from "../shared/bots/fixtures";
 import { CONNECTOR_ACCESS_ALL } from "@shared/connectors/access";
 import type { ConnectorAccessChoices } from "@/components/app/types/noraConnectors.types";
@@ -52,4 +53,21 @@ test("moving forward stops at the earliest step with a problem; moving back alwa
   assert.deepEqual(resolveAddConnectorStep(header, "auth"), { step: "auth", error: null }, "the auth step itself can be reached before it is filled in");
   assert.deepEqual(resolveAddConnectorStep(header, "access"), { step: "auth", error: "Enter the header value" });
   assert.deepEqual(resolveAddConnectorStep({ ...header, url: "" }, "server"), { step: "server", error: null });
+});
+
+test("a gallery preset fills the server and opens on the sign-in step, where the service's own client can be added", () => {
+  const gmail = CONNECTOR_GALLERY.find((entry) => entry.id === "gmail");
+  const notion = CONNECTOR_GALLERY.find((entry) => entry.id === "notion");
+  assert.ok(gmail && notion);
+  const form = presetConnectorForm(gmail);
+  assert.equal(form.url, gmail.url);
+  assert.equal(form.name, "Gmail");
+  assert.equal(form.authMode, "oauth");
+  assert.equal(initialAddConnectorStep(gmail), "auth");
+  assert.equal(initialAddConnectorStep(null), "server");
+  const server = buildConnectorServer({ ...form, clientId: "client-1", clientSecret: "s3cret" });
+  assert.ok(server.ok);
+  assert.deepEqual(server.server.auth, { kind: "oauth", clientId: "client-1", clientSecret: "s3cret" });
+  // Moving on from a preset's sign-in step never bounces back to the server step: the preset's fields are already valid.
+  assert.deepEqual(resolveAddConnectorStep(presetConnectorForm(notion), "access"), { step: "access", error: null });
 });

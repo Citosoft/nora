@@ -123,6 +123,18 @@ export interface BotsHomeState {
   togglePin(row: ThreadNavigationRow): void;
 }
 export interface BotHomeCardProps { item: BotNavigationItem; onStart(): void; onShowInfo: (() => void) | null; onEdit: (() => void) | null; }
-export interface BotTemplateCardProps { template: BotTemplate; onUse(): void; }
 export interface BotsIntroProps { onNewBot(): void; faces: readonly BotTemplate[]; }
-export interface BotTemplateSectionProps { id: string; title: string; description?: string; templates: readonly BotTemplate[]; onUse(template: BotTemplate): void; }
+
+/** A visible thread and the work it spawned, ordered with the parent first. */
+export interface BotThreadNode {
+  row: ThreadNavigationRow;
+  children: readonly BotThreadNode[];
+}
+export interface BotThreadTreeProps extends Pick<BotNavigationRowProps, "now" | "onOpen" | "onTogglePin"> {
+  nodes: readonly BotThreadNode[];
+  nested?: boolean;
+}
+
+export interface BotThreadTreeRowProps extends Omit<BotThreadTreeProps, "nodes"> {
+  node: BotThreadNode;
+}

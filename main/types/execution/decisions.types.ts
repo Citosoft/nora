@@ -1,3 +1,4 @@
+import type { ProviderConnectionKind } from "@shared/types/provider/account.types";
 import type { BotSnapshot, DirectDescriptor, GroupDescriptor } from "@shared/types/bots/bots.types";
 import type { ExecutionEffect } from "@main/types/execution/store.types";
 import type { EventPayload, RuntimeRequest, TimelineItem } from "@shared/types/conversation/contracts.types";
@@ -9,6 +10,7 @@ export interface Decision {
   effects: ExecutionEffect[];
 }
 export interface DecisionContext {
+  providerConnection?: ProviderConnectionKind;
   /** Host-resolved bot for a create command that names one. */
   bot?: BotSnapshot;
   /** Host-resolved members for a create command that starts a group chat. */

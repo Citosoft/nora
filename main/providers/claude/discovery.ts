@@ -1,6 +1,6 @@
 import { withClaudeControlSession } from "./controlSession";
 import type { ClaudeDiscovery, ClaudeRuntimeOptions } from "@main/types/execution/claude.types";
-import { normalizeClaudeAuthentication } from "./authentication";
+import { normalizeClaudeAuthentication, normalizeClaudeConnection } from "./authentication";
 
 /** Initializes SDK control methods without sending a user instruction or invoking inference. */
 export function createClaudeDiscovery(runtime: ClaudeRuntimeOptions): (cwd: string) => Promise<ClaudeDiscovery> {
@@ -11,6 +11,7 @@ export function createClaudeDiscovery(runtime: ClaudeRuntimeOptions): (cwd: stri
         models: models.map((model) => ({ id: model.value, name: model.displayName, description: model.description,
           reasoningEfforts: model.supportsEffort ? model.supportedEffortLevels ?? [] : [], defaultReasoningEffort: null })),
         // A catalog or account source does not establish entitlement to a particular model.
+        connection: normalizeClaudeConnection(account),
         authentication: normalizeClaudeAuthentication(account)
       };
     });

@@ -1,5 +1,6 @@
 import { externalSessionOriginSchema } from "./externalSessions";
 import { z } from "zod";
+import { providerConnectionSchema } from "@shared/providers/account";
 import { providerKindSchema } from "@shared/providers/providerKinds";
 import { conversationReviewSchema } from "./review";
 import { roleSelectionSchema, roleSnapshotSchema } from "@shared/personalization/contracts";
@@ -11,6 +12,8 @@ const id = z.string().min(1).max(512);
 const time = z.string().datetime();
 export const promptSuggestionSchema = z.string().trim().min(1).max(4000);
 export const providerBindingSchema = z.object({
+  /** Connection captured when this binding starts; missing historical metadata is unknown. */
+  connection: providerConnectionSchema.optional(),
   kind: providerKindSchema,
   instanceId: id,
   model: id,
@@ -64,8 +67,14 @@ export const chatBranchOriginSchema = z.object({ itemId: id, role: z.enum(["user
 export const chatBranchSchema = z.object({ from: chatBranchOriginSchema.nullable() }).strict();
 export const conversationSourceSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("task"), projectId: id, path: z.string().min(1) }).strict(),
-  z.object({ kind: z.literal("workflow"), projectId: id, runId: id, stageId: id }).strict()
+  z.object({ kind: z.literal("workflow"), projectId: id, runId: id, stageId: id }).strict(),
+  /** An app's builder thread: its agent gets the builder guidance, and edits the app once `create_app` names it (null until then). `connectorIds` limits the connectors it is handed. */
+  z.object({ kind: z.literal("app"), appId: id.nullable(), connectorIds: z.array(z.uuid()).max(50).optional() }).strict(),
+  /** A worker thread Nora or a bot started (start_thread) to do one part of its parent thread's job; it reports back and cannot start workers itself. */
+  z.object({ kind: z.literal("worker") }).strict()
 ]);
+/** What finished looks like for a work thread, in a sentence or two; given to its agent and shown to the user. */
+export const doneCriteriaSchema = z.string().trim().min(1).max(1_000);
 export const conversationSchema = z.object({
   id,
   origin: externalSessionOriginSchema.optional(),
@@ -80,6 +89,8 @@ export const conversationSchema = z.object({
   /** Set on a side chat the user branched off a bot or group chat; the chat never routes its own messages into it. */
   chatBranch: chatBranchSchema.optional(),
   title: z.string().min(1),
+  /** Set on a work thread started with completion criteria (a bot's worker, or a direct chat's task). */
+  done: doneCriteriaSchema.optional(),
   workspace: workspaceRefSchema,
   provider: providerBindingSchema,
   parentId: id.nullable(),
@@ -132,7 +143,9 @@ export const toolDetailsSchema = z.object({
   /** The skill this call used: `loaded` when the runtime reports loading it, `read` when its SKILL.md was read directly. */
   skill: z.object({ name: z.string().min(1), evidence: z.enum(["loaded", "read"]) }).strict().optional(),
   /** Set when the MCP server declared an interactive widget (MCP Apps) for this tool. */
-  app: mcpAppCallSchema.optional()
+  app: mcpAppCallSchema.optional(),
+  /** Files the tool wrote or delivered on the owning host; views preview or open them through the item, never by path alone. */
+  outputFiles: z.array(z.object({ path: z.string().min(1).max(32_768) }).strict()).min(1).max(50).optional()
 }).strict();
 export const approvalDetailsSchema = z.object({
   kind: z.enum(["command", "files", "network", "tool"]),
@@ -187,7 +200,8 @@ export const snapshotSchema = z.object({
 }).strict();
 
 const commandBase = { commandId: id, conversationId: id };
-export const createConversationCommandSchema = z.object({ ...commandBase, kind: z.literal("create"), title: z.string().trim().min(1), workspace: workspaceRefSchema, provider: providerBindingSchema, parentId: id.nullable(), role: roleSelectionSchema.optional(), botId: botIdSchema.optional(), chatBranch: chatBranchSchema.optional(), group: groupRequestSchema.optional(), direct: directRequestSchema.optional(), source: conversationSourceSchema.optional(), externalSessionId: id.optional() }).strict();
+export const initialInstructionSchema = z.object({ runId: id, instruction: z.string().trim().min(1) }).strict();
+export const createConversationCommandSchema = z.object({ initialInstruction: initialInstructionSchema.optional(), ...commandBase, kind: z.literal("create"), title: z.string().trim().min(1), done: doneCriteriaSchema.optional(), workspace: workspaceRefSchema, provider: providerBindingSchema, parentId: id.nullable(), role: roleSelectionSchema.optional(), botId: botIdSchema.optional(), chatBranch: chatBranchSchema.optional(), group: groupRequestSchema.optional(), direct: directRequestSchema.optional(), source: conversationSourceSchema.optional(), externalSessionId: id.optional() }).strict();
 export const submitConversationCommandSchema = z.object({ ...commandBase, kind: z.literal("submit"), runId: id, instruction: z.string().trim().min(1), action: runActionSchema.optional(), compactionDeadline: time.optional(),
   /** Pins a direct-chat message to one workspace for this run only, leaving the chat's working workspace unchanged. */
   workspaceId: id.optional(),

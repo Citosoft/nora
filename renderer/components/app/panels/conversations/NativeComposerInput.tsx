@@ -8,6 +8,14 @@ import type { ComposerSuggestionOption } from "@/components/app/types/composerIn
 import { ComposerEditor } from "./ComposerEditor";
 import { composerKeyAction, visiblePromptSuggestion } from "@/components/app/logic/promptSuggestion";
 import type { NativeComposerInputProps } from "@/components/app/types/composerInput.types";
+import type { PromptRecall } from "@/components/app/types/composerPrompts.types";
+import { IDLE_PROMPT_RECALL, readPromptHistory, stepPromptRecall } from "@/components/app/logic/composer-prompts/promptHistory";
+import { isPromptStashShortcut, PROMPT_STASH_SHORTCUT } from "@/components/app/logic/composer-prompts/promptStash";
+import { formatShortcutKeys, shortcutPlatform } from "@/components/app/logic/keyboardShortcuts";
+import { usePromptStash } from "@/components/app/hooks/usePromptStash";
+import { ComposerStashMenu } from "./ComposerStashMenu";
+
+const STASH_SHORTCUT_LABEL = formatShortcutKeys(PROMPT_STASH_SHORTCUT, shortcutPlatform());
 
 export function NativeComposerInput({ inputRef, value: savedValue, disabled, placeholder, suggestion, onChange: publishChange, onSubmit, onFiles, trailingAction, mentions, issueSource }: NativeComposerInputProps) {
   const draft = useComposerDraft(savedValue, publishChange);
@@ -41,6 +49,13 @@ export function NativeComposerInput({ inputRef, value: savedValue, disabled, pla
     pendingCaret.current = next.caret; setCaret(next.caret); onChange(next.text); inputRef.current?.focus();
   };
   const dismiss = (): void => { if (suggestion) setDismissedRunId(suggestion.runId); };
+  const stash = usePromptStash();
+  const recall = useRef<PromptRecall>(IDLE_PROMPT_RECALL);
+  /** Swaps in a whole prompt (recalled or unstashed) with the caret at its end. */
+  const replace = (text: string): void => {
+    dismiss(); setDismissedMention(null);
+    pendingCaret.current = text.length; setCaret(text.length); onChange(text); inputRef.current?.focus();
+  };
   return <div className="relative" onBlur={() => draft.flush()}>
     <span id={`${id}-label`} className="sr-only">Message Nora</span>
     {trailingAction}
@@ -64,8 +79,20 @@ export function NativeComposerInput({ inputRef, value: savedValue, disabled, pla
           if (matches.length && (event.key === "Enter" || event.key === "Tab") && !event.shiftKey) { event.preventDefault(); pick(matches[Math.min(activeIndex, matches.length - 1)]); return; }
           if (event.key === "Escape") { event.preventDefault(); if (mention) setDismissedMention(`${mention.trigger}:${mention.start}`); return; }
         }
+        const composing = event.nativeEvent.isComposing || event.keyCode === 229;
+        if (!composing && isPromptStashShortcut(event)) {
+          event.preventDefault();
+          const next = stash.toggle(value);
+          if (next !== null) replace(next);
+          return;
+        }
+        if (!composing && (event.key === "ArrowUp" || event.key === "ArrowDown") && !event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey
+          && event.currentTarget.ownerDocument.getSelection()?.isCollapsed !== false) {
+          const step = stepPromptRecall({ history: readPromptHistory(), recall: recall.current, text: value, caret, direction: event.key === "ArrowUp" ? "older" : "newer" });
+          if (step) { event.preventDefault(); recall.current = step.recall; replace(step.text); return; }
+        }
         const action = composerKeyAction({ key: event.key, shiftKey: event.shiftKey, altKey: event.altKey, ctrlKey: event.ctrlKey,
-          metaKey: event.metaKey, composing: event.nativeEvent.isComposing || event.keyCode === 229, hasSuggestion: !!ghost });
+          metaKey: event.metaKey, composing, hasSuggestion: !!ghost });
         if (!action) return;
         event.preventDefault();
         if (action === "accept-suggestion" && ghost) { acceptedText.current = ghost.text; dismiss(); onChange(ghost.text); }
@@ -75,6 +102,8 @@ export function NativeComposerInput({ inputRef, value: savedValue, disabled, pla
           submit.current();
         }
       }} />
+    <ComposerStashMenu entries={stash.entries} disabled={disabled} shortcut={STASH_SHORTCUT_LABEL}
+      onRestore={(entryId) => { const next = stash.restore(entryId, value); if (next !== null) replace(next); }} onRemove={stash.remove} />
     {open && <ComposerSuggestionList label={suggestions.label} message={suggestions.message} loading={suggestions.loading} onRetry={suggestions.retry} id={listId} options={matches} activeIndex={Math.min(activeIndex, matches.length - 1)} onPick={pick} onHover={setActiveIndex} />}
     {ghost && <>
       <div aria-hidden="true" className={`pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words px-2 py-2 text-sm text-muted-foreground/60 ${trailingAction ? "pr-10" : ""}`}>

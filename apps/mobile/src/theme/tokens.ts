@@ -95,6 +95,15 @@ export const type = Object.freeze({
 
 export const layout = Object.freeze({
   maxContentWidth: 720,
+  /** Width of list and settings pages on desktop-sized windows. */
+  wideContentWidth: 960,
+  /** Reading width of a conversation's messages and composer, centred in whatever space the screen has. */
+  chatColumnWidth: 768,
+  /** From this window width the sidebar stays open beside the conversation instead of sliding over it. */
+  wideBreakpoint: 900,
+  sidebarWidth: 300,
+  /** The sidebar collapsed to icons. */
+  railWidth: 64,
   minTouchTarget: 44,
   navBarHeight: 52,
   /** Leading inset of grouped content and row separators. */

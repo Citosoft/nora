@@ -6,6 +6,7 @@ import type { Theme } from "@/types/theme.types";
 import { layout, spacing, type } from "@/theme/tokens";
 import { glassStyle } from "@/platform/glassStyle";
 import { useTheme } from "@/hooks/useTheme";
+import { useContentWidth } from "@/hooks/useContentWidth";
 import { useThemedStyles } from "@/hooks/useThemedStyles";
 import { NavBar } from "./NavBar";
 
@@ -20,6 +21,7 @@ export function Screen({ title, largeTitle = false, subtitle, back, leading, tra
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const maxWidth = useContentWidth();
   const scrollY = useRef(new Animated.Value(0)).current;
   const [dockHeight, setDockHeight] = useState(0);
   const titleOpacity = useMemo(() => (largeTitle && scroll ? scrollY.interpolate(largeTitleCollapse) : 1), [largeTitle, scroll, scrollY]);
@@ -34,7 +36,7 @@ export function Screen({ title, largeTitle = false, subtitle, back, leading, tra
   const dockView = dock ? (
     <View onLayout={onDockLayout} style={[scroll ? styles.floatingDock : null, scroll ? glassStyle : null, scroll ? styles.dockChrome : { backgroundColor: background },
       { paddingBottom: insets.bottom }]}>
-      <View style={styles.column}>{dock}</View>
+      <View style={[styles.column, { maxWidth }]}>{dock}</View>
     </View>
   ) : null;
 
@@ -42,7 +44,7 @@ export function Screen({ title, largeTitle = false, subtitle, back, leading, tra
     return (
       <View style={[styles.fill, { backgroundColor: background }]}>
         {bar}
-        <View style={[styles.fill, styles.column]}>{children}</View>
+        <View style={[styles.fill, styles.column, { maxWidth }]}>{children}</View>
         {dockView}
       </View>
     );
@@ -52,7 +54,7 @@ export function Screen({ title, largeTitle = false, subtitle, back, leading, tra
       <Animated.ScrollView onScroll={onScroll} scrollEventThrottle={16} keyboardShouldPersistTaps="handled" refreshControl={refreshControl}
         contentContainerStyle={{ paddingTop: barHeight, paddingBottom: (dock ? dockHeight : insets.bottom) + spacing.xxl }}
         scrollIndicatorInsets={{ top: barHeight }}>
-        <View style={styles.column}>
+        <View style={[styles.column, { maxWidth }]}>
           {largeTitle ? (
             <View style={styles.largeTitleBlock}>
               <Text style={styles.largeTitle} accessibilityRole="header" numberOfLines={2}>{title}</Text>
@@ -70,7 +72,7 @@ export function Screen({ title, largeTitle = false, subtitle, back, leading, tra
 
 const createStyles = (theme: Theme) => ({
   fill: { flex: 1 },
-  column: { width: "100%" as const, maxWidth: layout.maxContentWidth, alignSelf: "center" as const },
+  column: { width: "100%" as const, alignSelf: "center" as const },
   largeTitleBlock: { paddingHorizontal: layout.gutter + spacing.xs, paddingTop: spacing.xs, paddingBottom: spacing.md },
   largeTitle: { ...type.largeTitle, color: theme.colors.text },
   largeSubtitle: { ...type.subheadline, color: theme.colors.textMuted, marginTop: spacing.xxs },

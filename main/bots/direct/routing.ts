@@ -15,8 +15,8 @@ export function taskTitle(message: string): string {
 export function resolveDirectRoute({ route, message, threads, workspaces, defaultWorkspaceId }: DirectRoutingInput): DirectRoute {
   if (route?.kind === "continue" && threads.some((thread) => thread.id === route.threadId)) return route;
   if (route?.kind === "new" && workspaces.some((workspace) => workspace.id === route.workspaceId)) {
-    return { kind: "new", workspaceId: route.workspaceId, title: route.title.trim() || taskTitle(message) };
+    return { kind: "new", workspaceId: route.workspaceId, title: route.title.trim() || taskTitle(message), done: route.done };
   }
   const latest = threads.filter((thread) => thread.workspaceId === defaultWorkspaceId).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
-  return latest ? { kind: "continue", threadId: latest.id } : { kind: "new", workspaceId: defaultWorkspaceId, title: taskTitle(message) };
+  return latest ? { kind: "continue", threadId: latest.id } : { kind: "new", workspaceId: defaultWorkspaceId, title: taskTitle(message), done: null };
 }

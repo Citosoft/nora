@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { context } from "esbuild";
+import { prepareMacDevApp } from "./devMacApp.mjs";
 import { writeAccountBuildConfig } from "./account-build-config.mjs";
 
 const root = process.cwd();
@@ -31,6 +32,8 @@ const disableGpu = process.argv.includes("--disable-gpu");
 const forwardedElectronArgs = process.argv.slice(2).filter((arg) => arg !== "--disable-gpu");
 
 let electronProcess = null;
+let electronLifecycle = Promise.resolve();
+let macDevApp = null;
 let restartTimer = null;
 let startTimer = null;
 let staticCopyPromise = Promise.resolve();
@@ -228,26 +231,37 @@ async function watchRendererBundle() {
   return () => ctx.dispose();
 }
 
-function stopElectron() {
-  if (!electronProcess) {
-    return;
-  }
-  electronProcess.kill();
+async function stopElectron() {
+  const child = electronProcess;
+  if (!child) return;
   electronProcess = null;
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("Nora is still closing; finish any quit prompt before restarting development.")), 10_000);
+    child.once("exit", () => { clearTimeout(timer); resolve(); });
+    child.kill();
+  });
 }
 
-async function startElectron() {
-  stopElectron();
-  const electronExe = await resolveElectronExecutable();
-  electronProcess = spawnLongRunning(
-    electronExe,
-    [".", ...forwardedElectronArgs],
-    "electron",
-    {
-      NORA_DEV_WATCH: "1",
-      ...(disableGpu ? { NORA_DISABLE_HARDWARE_ACCELERATION: "1" } : {})
-    }
-  );
+function startElectron() {
+  electronLifecycle = electronLifecycle.catch(() => undefined).then(async () => {
+    await stopElectron();
+    const stockElectronExe = await resolveElectronExecutable();
+    // Drop a failed preparation so the next restart retries instead of replaying the same rejection.
+    macDevApp ??= (isMac ? prepareMacDevApp(root, stockElectronExe) : Promise.resolve(stockElectronExe))
+      .catch((error) => { macDevApp = null; throw error; });
+    const electronExe = await macDevApp;
+    electronProcess = spawnLongRunning(
+      electronExe,
+      [...(isMac ? [] : ["."]), ...forwardedElectronArgs],
+      "electron",
+      {
+        NORA_DEV_WATCH: "1",
+        ...(disableGpu ? { NORA_DISABLE_HARDWARE_ACCELERATION: "1" } : {})
+      }
+    );
+  });
+  return electronLifecycle;
 }
 
 function scheduleElectronStart() {
@@ -276,11 +290,23 @@ function scheduleElectronRestart() {
   }, 300);
 }
 
+/** Any emitted main-process or shared module restarts Electron, not only the entrypoints: a tool schema or service edit lands in a file main.js merely requires. */
 function watchMainBuild() {
   const cleanupFns = [
     watchPolledFile(distMainPath, scheduleElectronRestart),
     watchPolledFile(distPreloadPath, scheduleElectronRestart)
   ];
+  for (const dir of [path.dirname(distMainPath), path.join(root, "dist", "shared")]) {
+    try {
+      const watcher = fs.watch(dir, { recursive: true }, (eventType, filename) => {
+        if (typeof filename === "string" && /\.(?:c|m)?js$/.test(filename)) scheduleElectronRestart();
+      });
+      watcher.on("error", (error) => console.error(`Stopped watching ${dir}`, error));
+      cleanupFns.push(() => watcher.close());
+    } catch (error) {
+      console.error(`Could not watch ${dir}; only the entrypoints trigger restarts`, error);
+    }
+  }
 
   return () => {
     for (const cleanup of cleanupFns) {
@@ -379,14 +405,15 @@ async function main() {
   scheduleElectronStart();
   cleanupFns.push(watchMainBuild());
 
-  const shutdown = () => {
+  const shutdown = async () => {
     if (restartTimer) {
       clearTimeout(restartTimer);
     }
     if (startTimer) {
       clearTimeout(startTimer);
     }
-    stopElectron();
+    await electronLifecycle.catch(() => undefined);
+    await stopElectron();
     for (const child of processes) {
       child.kill();
     }

@@ -1,3 +1,4 @@
+import type { ProviderConnectionKind } from "@shared/types/provider/account.types";
 import type { AiProvider, AiRuntimeTaskProvider, AiSimpleTaskProvider } from "@shared/types/ai.types";
 import type { MemoryReviewActivity, MemoryReviewRecord } from "@shared/types/bots/memoryReview.types";
 import type { ThreadModelDefault } from "@shared/types/personalization/threadModel.types";
@@ -42,6 +43,7 @@ export interface ModelSettingsInput {
   onSubagentModel(value: string | null): void;
 }
 export interface ModelPopoverProps {
+  selectedConnection: ProviderConnectionKind;
   continuation?: boolean;
   providers: readonly NativeProvider[];
   store: ModelCatalogStore;
@@ -77,7 +79,7 @@ export interface ThreadModelDefaultFieldsProps {
 }
 export interface ThreadModelDefaultSettingProps { target?: "thread" | "subagent"; }
 /** `kind` is a provider kind or an agent catalog id; both key the same icon set. */
-export interface ProviderOptionLabelProps { kind: string; label: string; }
+export interface ProviderOptionLabelProps { kind: string; label: string; connection?: ProviderConnectionKind; }
 export interface ProviderModelFieldLabels {
   provider: string;
   model: string;

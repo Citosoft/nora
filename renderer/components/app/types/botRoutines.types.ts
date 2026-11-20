@@ -1,6 +1,6 @@
 import type { NativeWorkspace } from "@shared/types/personalization/workspaces.types";
 import type { BotDefinition } from "@shared/types/bots/bots.types";
-import type { Routine, RoutineInput, RoutineIntervalUnit, RoutineMissedPolicy, RoutineRun, RoutineRunPlace, RoutineScheduleKind } from "@shared/types/bots/routines.types";
+import type { Routine, RoutineInput, RoutineIntervalUnit, RoutineMissedPolicy, RoutineRun, RoutineRunPlace, RoutineScheduleKind, RoutineTemplate } from "@shared/types/bots/routines.types";
 
 export interface BotRoutinesState {
   routines: readonly Routine[];
@@ -80,3 +80,7 @@ export interface RoutineDeliveryFieldsProps extends RoutineStepFieldsProps { wor
 export interface RoutineTemplatePickerProps { selectedId: string | null; disabled: boolean; onPick(templateId: string | null): void; }
 export interface RoutineEditorStepRailProps { steps: readonly RoutineEditorStepInfo[]; current: RoutineEditorStep; reachable(step: RoutineEditorStep): boolean; onSelect(step: RoutineEditorStep): void; }
 export interface RoutineRunListProps { runs: readonly RoutineRun[]; timezoneFor(routineId: string): string; openerFor(conversationId: string): (() => void) | null; }
+
+export interface RoutinePresetDetailsProps {
+  template: RoutineTemplate;
+}

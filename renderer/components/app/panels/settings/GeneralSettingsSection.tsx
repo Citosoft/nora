@@ -3,7 +3,7 @@ import { SettingRow, SettingsSectionHeader, ToggleButton } from "@/components/ap
 import { WorkRoleSetting } from "@/components/app/panels/settings/WorkRoleSetting";
 import { IdeBadge } from "@/components/app/shared/IdeBadge";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { PopoverMenu, PopoverMenuItem } from "@/components/ui/popover-menu";
 import { Select } from "@/components/ui/select";
 import { APP_SHORT_NAME } from "@shared/appMeta";
 import type { AppSettings } from "@shared/appTypes";
@@ -56,8 +56,9 @@ export function GeneralSettingsSection() {
         control={
           <div className="space-y-3">
             {installedIdes.length ? (
-              <DropdownMenu
+              <PopoverMenu
                 align="end"
+                label="Default IDE"
                 widthClassName="w-[280px]"
                 trigger={(
                   <button
@@ -79,7 +80,7 @@ export function GeneralSettingsSection() {
                   </button>
                 )}
               >
-                <DropdownMenuItem onSelect={() => updateDefaultIde(null)}>
+                <PopoverMenuItem onSelect={() => updateDefaultIde(null)}>
                   <Code2 className="size-4 text-primary" />
                   <span className="truncate">Use automatic selection</span>
                   {!selectedDefaultIde ? (
@@ -87,9 +88,9 @@ export function GeneralSettingsSection() {
                       Current
                     </span>
                   ) : null}
-                </DropdownMenuItem>
+                </PopoverMenuItem>
                 {installedIdes.map((ide) => (
-                  <DropdownMenuItem key={ide.id} onSelect={() => updateDefaultIde(ide.id)}>
+                  <PopoverMenuItem key={ide.id} onSelect={() => updateDefaultIde(ide.id)}>
                     <IdeBadge ide={ide} className="size-4" iconClassName="size-2.5" />
                     <span className="truncate">{ide.name}</span>
                     {selectedDefaultIde?.id === ide.id ? (
@@ -97,9 +98,9 @@ export function GeneralSettingsSection() {
                         Current
                       </span>
                     ) : null}
-                  </DropdownMenuItem>
+                  </PopoverMenuItem>
                 ))}
-              </DropdownMenu>
+              </PopoverMenu>
             ) : (
               <button
                 type="button"

@@ -48,7 +48,7 @@ export class PersonalizationService {
   private async apply(input: PersonalizationRequest): Promise<NativeBoot> {
     if (isBotRequest(input)) {
       if (!this.options.bots) throw new Error("Bots are unavailable in this environment");
-      await applyBotRequest(input, this.settings, { workspaces: () => this.catalog.list(), library: this.options.bots });
+      await applyBotRequest(input, this.settings, { workspaces: () => this.catalog.list(), library: this.options.bots, createRoutines: this.options.createRoutines });
       return this.state();
     }
     switch (input.kind) {

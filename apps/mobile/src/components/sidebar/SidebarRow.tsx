@@ -7,14 +7,14 @@ import { useThemedStyles } from "@/hooks/useThemedStyles";
 import { Icon } from "@/components/common/Icon";
 
 /** A sidebar destination: outline icon, label, optional detail; the current one sits on a soft highlight. */
-export function SidebarRow({ label, icon, selected = false, onPress, detail, trailing, accessibilityLabel }: SidebarRowProps) {
+export function SidebarRow({ label, icon, leading, selected = false, onPress, detail, trailing, accessibilityLabel }: SidebarRowProps) {
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
   return (
     <View style={[styles.row, selected && styles.selected]}>
       <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel ?? (detail ? `${label}, ${detail}` : label)}
         accessibilityState={{ selected }} onPress={onPress} style={({ pressed }) => [styles.main, pressed && styles.pressed]}>
-        {icon ? <Icon name={icon} size={23} color={colors.text} /> : null}
+        {leading ?? (icon ? <Icon name={icon} size={23} color={colors.text} /> : null)}
         <Text style={styles.label} numberOfLines={1}>{label}</Text>
         {detail ? <Text style={styles.detail} numberOfLines={1}>{detail}</Text> : null}
       </Pressable>

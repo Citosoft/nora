@@ -15,6 +15,7 @@ import { ConnectorSignInCard } from "./ConnectorSignInCard";
 import { NativeAskBotCard } from "./NativeAskBotCard";
 import { NativeMemoryLine } from "./NativeMemoryLine";
 import { McpAppEntry } from "./mcp-app/McpAppEntry";
+import { ToolImageEntry } from "./ToolImageEntry";
 import type { NativeTimelineEntry } from "@/components/app/types/nativeActivity.types";
 
 function renderItem(item: Extract<NativeTimelineEntry, { kind: "item" }>["item"], { onLinkClick, connectors = null }: Pick<NativeTimelineProps, "onLinkClick" | "connectors">) {
@@ -30,13 +31,14 @@ function renderItem(item: Extract<NativeTimelineEntry, { kind: "item" }>["item"]
   }
 }
 
-export const NativeTimeline = memo(function NativeTimeline({ items, runs = [], onLinkClick, connectors, resolveBot, onOpenThread, mcpApps }: NativeTimelineProps) {
+export const NativeTimeline = memo(function NativeTimeline({ items, runs = [], onLinkClick, connectors, resolveBot, onOpenThread, mcpApps, toolOutputs, onOpenOutput }: NativeTimelineProps) {
   return <div className="space-y-5">{buildNativeTimeline(items, runs).map(({ key, entry, timing, activity }) => <Fragment key={key}>
       {entry.kind === "tools" ? <NativeToolHistory items={entry.items} />
         : entry.kind === "reasoning" ? <NativeReasoning items={entry.items} />
         : entry.kind === "ask" ? <NativeAskBotCard call={entry.call} bot={resolveBot?.(entry.call.bot) ?? null} onOpenThread={onOpenThread} />
         : entry.kind === "memory" ? <NativeMemoryLine call={entry.call} />
         : entry.kind === "app" ? mcpApps && <McpAppEntry call={entry.call} host={mcpApps} />
+        : entry.kind === "images" ? toolOutputs && <ToolImageEntry tool={entry.tool} paths={entry.paths} host={toolOutputs} onOpen={onOpenOutput} />
         : renderItem(entry.item, { onLinkClick, connectors })}
       {activity && <NativeTurnStatus activity={activity} />}
       {timing && <NativeTurnTime {...timing} />}

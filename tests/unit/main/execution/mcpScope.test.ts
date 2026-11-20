@@ -33,6 +33,7 @@ test("Claude account connectors are explained unless Claude Code uses a claude.a
     "current runtimes report a claude.ai login only through its profile");
   assert.match(claudeAccountConnectorNotice({ apiProvider: "firstParty" }) ?? "", /not signed in/);
   assert.match(claudeAccountConnectorNotice({ tokenSource: "claude.ai", apiKeySource: "ANTHROPIC_API_KEY", apiProvider: "firstParty" }) ?? "", /API key takes precedence/);
+  assert.match(claudeAccountConnectorNotice({ apiProvider: "firstParty", apiKeySource: "/login managed key", email: "me@example.test" }) ?? "", /Anthropic Console/);
   assert.match(claudeAccountConnectorNotice({ tokenSource: "CLAUDE_CODE_OAUTH_TOKEN", apiKeySource: "none" }) ?? "", /long-lived token/);
   assert.match(claudeAccountConnectorNotice({ apiProvider: "bedrock" }) ?? "", /third-party API provider/);
 });

@@ -13,9 +13,12 @@ const MESSAGES: Record<QuitReason, string> = {
 export function describeQuitPrompt(reason: QuitReason, work: ActiveWorkCount): QuitPrompt | null {
   if (work.total === 0) return null;
   const interrupted = plural(work.total, "task");
+  const singleLine = (value: string): string => value.replace(/\s+/g, " ").trim();
+  const tasks = work.items.map((item) =>
+    `• ${singleLine(item.title)} — ${item.status}\n  ${singleLine(item.workspace)}`).join("\n");
   return {
     message: MESSAGES[reason],
-    detail: `${interrupted} ${work.total === 1 ? "is" : "are"} still running and will be interrupted.`,
+    detail: `${interrupted} ${work.total === 1 ? "is" : "are"} still active and will be interrupted.\n\n${tasks}`,
     confirmLabel: CONFIRM_LABELS[reason],
     cancelLabel: "Cancel"
   };

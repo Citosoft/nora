@@ -4,7 +4,7 @@ import type { ProviderCatalog } from "@shared/types/provider/catalog.types";
 export function sameProviderBinding(left: ProviderBinding, right: ProviderBinding): boolean {
   return left.kind === right.kind && left.instanceId === right.instanceId && left.model === right.model
     && left.permissionPolicy === right.permissionPolicy && left.reasoning === right.reasoning
-    && left.subagentModel === right.subagentModel;
+    && left.subagentModel === right.subagentModel && (left.connection ?? "unknown") === (right.connection ?? "unknown");
 }
 
 /** Shared catalog validation for draft choices and host-side session transitions. */

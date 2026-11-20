@@ -37,6 +37,7 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
   };
   if (command.kind === "create") {
     if (state) throw new ExecutionCommandError("conflict", "Conversation already exists");
+    if (command.initialInstruction && command.externalSessionId) throw new ExecutionCommandError("invalid", "Import history before sending an initial instruction");
     if (command.workspace.environmentId !== context.environmentId) {
       throw new ExecutionCommandError("environment", "Workspace belongs to a different execution host");
     }
@@ -56,14 +57,21 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
     }
     add({ kind: "conversation", conversation: {
       ...(command.source ? { source: command.source } : {}),
-      id: command.conversationId, title: command.title,
+      id: command.conversationId, title: command.title, ...(command.done ? { done: command.done } : {}),
       // A chat never writes itself; only its work threads (or a group's writer member) may.
       workspace: context.group || context.direct ? { ...command.workspace, access: "read" } : command.workspace,
       role: command.role && !context.bot && !context.group && !context.direct ? snapshotRole(command.role) : null,
       ...(context.bot ? { bot: context.bot } : {}), ...(command.chatBranch ? { chatBranch: command.chatBranch } : {}), ...(context.group ? { group: context.group } : {}), ...(context.direct ? { direct: context.direct } : {}),
-      provider: command.provider, parentId: command.parentId, nativeConversationId: null,
+      provider: context.providerConnection !== undefined ? { ...command.provider, connection: context.providerConnection } : command.provider, parentId: command.parentId, nativeConversationId: null,
       archivedAt: null, queuePaused: false, createdAt: context.now, updatedAt: context.now
     } });
+    if (command.initialInstruction) {
+      if (!state) throw new ExecutionCommandError("invalid", "The initial thread state could not be created");
+      const initial = decideCommand({ kind: "submit", commandId: command.commandId, conversationId: command.conversationId,
+        runId: command.initialInstruction.runId, instruction: command.initialInstruction.instruction }, { ...context, state, steerFollowUp: false });
+      decision.events.push(...initial.events);
+      decision.effects.push(...initial.effects);
+    }
     return decision;
   }
   if (!state) throw new ExecutionCommandError("missing", "Conversation does not exist");
@@ -105,7 +113,7 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
         || !sameProviderBinding(context.providerTransition.handoff.previousProvider, change.expected) || sameProviderBinding(change.expected, change.next))) {
         throw new ExecutionCommandError("conflict", "The provider handoff does not match this chat. Reload before changing providers.");
       }
-      const conversation = { ...initial.conversation, ...(change ? { provider: change.next, nativeConversationId: null, pendingHandoffRunId: command.runId, context: null, queuePaused: false } : {}), updatedAt: context.now };
+      const conversation = { ...initial.conversation, ...(change ? { provider: context.providerTransition?.provider ?? change.next, nativeConversationId: null, pendingHandoffRunId: command.runId, context: null, queuePaused: false } : {}), updatedAt: context.now };
       add({ kind: "conversation", conversation });
       if (change) add({ kind: "item", item: { kind: "milestone", id: JSON.stringify([command.runId, "provider-change"]), runId: command.runId, createdAt: context.now,
         text: `Continued from ${change.expected.kind} / ${change.expected.model} to ${change.next.kind} / ${change.next.model} in a fresh session with a saved history handoff.` } });

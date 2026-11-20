@@ -1,7 +1,10 @@
+import type { RoutineInput } from "@shared/types/bots/routines.types";
 import type { NativeProvider } from "@shared/ipc/types/personalizationGateway.types";
 import type { SharedBotLibrary } from "@main/types/bots/sharedBots.types";
 
 export interface PersonalizationServiceOptions {
+  /** Installs an entire routine set or throws without saving any. */
+  createRoutines?(inputs: readonly RoutineInput[]): void;
   cursor(): number;
   environmentId: string;
   providers: readonly NativeProvider[];

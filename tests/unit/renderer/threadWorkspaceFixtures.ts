@@ -4,6 +4,7 @@ import type { Conversation, ConversationCommand } from "@shared/types/conversati
 import type { ConversationSummary } from "@shared/types/conversation/queries.types";
 import type { ConversationClient, ConversationListener } from "@/components/app/types/conversationClient.types";
 import type { ThreadLayout, ThreadLayoutPersistence } from "@/components/app/types/thread-workspace/state.types";
+import type { ThreadUnreadSource } from "@/components/app/types/inbox.types";
 import { pickerCatalog, pickerWorkspace, codexProvider } from "./modelPickerFixtures";
 import { snapshotRole } from "@shared/personalization/profiles";
 
@@ -11,6 +12,20 @@ export const threadBoot: NativeBoot = { environmentId: "local", cursor: 0,
   personalization: { defaultRole: { id: "general" }, workspaceRoles: {} }, providers: [codexProvider], sharedBots: [], noraTools: noraToolsStatus("idle"),
   workspaces: [{ id: "personal", name: "Personal", kind: "personal", workspace: pickerWorkspace },
     { id: "project", name: "Project", kind: "folder", shellProjectId: "shell", workspace: { ...pickerWorkspace, projectId: "project", checkoutId: "git", path: "/project", branch: "main", versionControl: "git" } }] };
+/** Stands in for the inbox: tests set which threads have unread updates and see which ones the views read. */
+export function unreadSource(initial: readonly string[] = []): ThreadUnreadSource & { set(ids: readonly string[]): void; readonly read: readonly string[] } {
+  let ids = initial;
+  const listeners = new Set<() => void>();
+  const read: string[] = [];
+  const set = (next: readonly string[]): void => { ids = next; for (const listener of [...listeners]) listener(); };
+  return {
+    unreadThreadIds: () => ids,
+    // Like the inbox, a read arrives later as a new snapshot, never inside the view's own publish.
+    markThreadRead(id) { read.push(id); queueMicrotask(() => set(ids.filter((entry) => entry !== id))); },
+    subscribe(listener) { listeners.add(listener); return () => { listeners.delete(listener); }; },
+    set, read
+  };
+}
 export const threadBinding = { kind: "codex" as const, instanceId: "account", model: "first", reasoning: null, permissionPolicy: "read" };
 export function threadSummary(id = "existing"): ConversationSummary {
   return { conversation: { nativeConversationId: null, id, title: "Existing task", parentId: null, workspace: pickerWorkspace, provider: threadBinding,
@@ -40,6 +55,9 @@ export function threadWorkspaceFixture() {
     async mcpApp() { return { kind: "unavailable", message: "No MCP widgets in this fixture" }; },
     async skills() { return { kind: "unavailable", message: "No skills in this fixture" }; },
     async context() { return null; },
+    async outputFile() { return null; },
+    async outputs() { return []; },
+    async openOutputFile() {},
     async execute(command) {
       commands.push(command);
       if (!accepted.has(command.commandId)) {
@@ -69,7 +87,8 @@ export function threadWorkspaceFixture() {
     async catalog() { return pickerCatalog(); },
     subscribe(listener) { listeners.add(listener); return () => { listeners.delete(listener); }; }
   };
-  const deps = { boot: threadBoot, client, persistence, nextId: () => `view-${++sequence}`, now: () => "2026-11-09T11:00:00.000Z" };
-  return { deps, commands, summaries, listeners, get saved() { return saved; }, get summaryReads() { return summaryReads; },
+  const unread = unreadSource();
+  const deps = { boot: threadBoot, client, unread, persistence, nextId: () => `view-${++sequence}`, now: () => "2026-11-09T11:00:00.000Z" };
+  return { deps, unread, commands, summaries, listeners, get saved() { return saved; }, get summaryReads() { return summaryReads; },
     get acceptedCount() { return accepted.size; }, setUnavailable(value: boolean) { unavailable = value; }, loseNextReply() { loseReply = true; } };
 }

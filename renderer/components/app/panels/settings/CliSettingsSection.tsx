@@ -12,6 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isAgentToolAvailable } from "@shared/agentToolState";
+import type { ProviderLoginMethod } from "@shared/types/provider/account.types";
+
+const NO_LOGIN_METHODS: readonly ProviderLoginMethod[] = [];
 
 /** Installed providers with sign-in status and enablement, plus supported providers that can be installed. */
 export function CliSettingsSection() {
@@ -52,8 +55,9 @@ export function CliSettingsSection() {
           {installed.length ? (
             <ul {...settingAnchorAttributes("Providers")} aria-label="Installed providers" className="mt-2">
               {installed.map((tool) => (
-                <ProviderListRow key={tool.id} tool={tool} accountView={providerAccounts.views.get(tool.id)} connecting={runtimes.refreshing}
-                  onToggle={(enabled) => toggleToolEnabled(tool.id, enabled)} onSignIn={() => void providerAccounts.signIn(tool.id)} />
+                <ProviderListRow key={tool.id} tool={tool} accountView={providerAccounts.views.get(tool.id)}
+                  loginMethods={providerAccounts.loginMethods.get(tool.id) ?? NO_LOGIN_METHODS} connecting={runtimes.refreshing}
+                  onToggle={(enabled) => toggleToolEnabled(tool.id, enabled)} onSignIn={(methodId) => void providerAccounts.signIn(tool.id, methodId)} />
               ))}
             </ul>
           ) : (

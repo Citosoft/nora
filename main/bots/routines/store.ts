@@ -24,14 +24,22 @@ export function openRoutineStore(path: string): RoutineStore {
     database.prepare(`SELECT data FROM routines ${where} ORDER BY created_at, rowid`).all(...values).map(toRoutine);
   const runs = (where: string, ...values: (string | number)[]): RoutineRun[] =>
     database.prepare(`SELECT data FROM routine_runs ${where}`).all(...values).map(toRun);
+  const put = (routine: Routine): void => {
+    const valid = routineSchema.parse(routine);
+    database.prepare(`INSERT INTO routines (id, bot_id, created_at, data) VALUES (?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET data = excluded.data`).run(valid.id, valid.botId, valid.createdAt, JSON.stringify(valid));
+  };
   return {
     list: (botId) => routines("WHERE bot_id = ?", botId),
     all: () => routines(""),
     get: (id) => routines("WHERE id = ?", id)[0] ?? null,
-    put(routine) {
-      const valid = routineSchema.parse(routine);
-      database.prepare(`INSERT INTO routines (id, bot_id, created_at, data) VALUES (?, ?, ?, ?)
-        ON CONFLICT(id) DO UPDATE SET data = excluded.data`).run(valid.id, valid.botId, valid.createdAt, JSON.stringify(valid));
+    put,
+    putMany(items) {
+      database.exec("BEGIN");
+      try {
+        for (const routine of items) put(routine);
+        database.exec("COMMIT");
+      } catch (error) { database.exec("ROLLBACK"); throw error; }
     },
     remove(id) {
       database.prepare("DELETE FROM routine_runs WHERE routine_id = ?").run(id);

@@ -135,6 +135,7 @@ export type SettingsGroup =
   | "threads"
   | "bots"
   | "mcp"
+  | "vault"
   | "agentUsage"
   | "skills"
   | "integrations"

@@ -1,10 +1,10 @@
 import { LoaderCircle } from "lucide-react";
 import type { ProviderAccountRowProps, ProviderAccountStatusProps } from "@/components/app/types/providerAccount.types";
+import { ProviderSignInButton } from "@/components/app/panels/settings/ProviderSignInButton";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 
-export function ProviderAccountStatus({ providerLabel, view, onSignIn }: ProviderAccountStatusProps) {
-  const signInButton = <Button variant="outline" size="sm" onClick={onSignIn}>Sign in</Button>;
+export function ProviderAccountStatus({ providerLabel, view, loginMethods, onSignIn }: ProviderAccountStatusProps) {
+  const signInButton = <ProviderSignInButton providerLabel={providerLabel} label="Sign in" loginMethods={loginMethods} onSignIn={onSignIn} />;
   switch (view.status) {
     case "loading":
       return <Row><LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />Checking sign-in…</Row>;
@@ -15,7 +15,10 @@ export function ProviderAccountStatus({ providerLabel, view, onSignIn }: Provide
     case "ready": {
       const { account } = view;
       if (account.state === "signed-in") {
-        return <Row><Badge variant="success">Signed in</Badge>
+        // Offered only when the runtime has several sign-ins, e.g. moving Claude from a subscription to an Anthropic Console account.
+        const switchButton = loginMethods.length > 1
+          ? <ProviderSignInButton providerLabel={providerLabel} label="Switch account" loginMethods={loginMethods} onSignIn={onSignIn} /> : undefined;
+        return <Row action={switchButton}><Badge variant="success">Signed in</Badge>
           <span className="truncate">{account.method}{account.label ? ` · ${account.label}` : ""}</span></Row>;
       }
       if (account.state === "signed-out") return <Row action={signInButton}><Badge variant="warning">Signed out</Badge></Row>;

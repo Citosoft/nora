@@ -132,11 +132,12 @@
     [data-thread-insights="collapsed"] .thread-transcript { padding-top: 4.5rem; }
   }
 
-  [data-changes-sidebar-open="true"] .thread-insights { display: none; }
-  [data-changes-sidebar-open="true"] [data-thread-insights] .thread-transcript {
+  /* The floating panel steps aside when the Changes sidebar shows the same details, and in an app's builder, where the app is the point. */
+  [data-changes-sidebar-open="true"] .thread-insights, [data-app-builder] .thread-insights { display: none; }
+  [data-changes-sidebar-open="true"] [data-thread-insights] .thread-transcript, [data-app-builder] [data-thread-insights] .thread-transcript {
     @apply pr-5 pt-7;
   }
-  [data-changes-sidebar-open="true"] [data-thread-insights] .thread-composer { padding-right: 0; }
+  [data-changes-sidebar-open="true"] [data-thread-insights] .thread-composer, [data-app-builder] [data-thread-insights] .thread-composer { padding-right: 0; }
 
   .setup-window-shell {
     --primary: 213 79% 47%;
@@ -557,4 +558,149 @@
     opacity: 0 !important;
     pointer-events: none !important;
   }
+}
+
+/* Library viewer: the overlay fades in and the panel settles into place over the grid. */
+@keyframes libraryOverlayIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes libraryViewerIn {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(0.98); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .library-overlay-in { animation: libraryOverlayIn 140ms ease-out; }
+  .library-viewer-in { animation: libraryViewerIn 180ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+}
+
+/* Apps: a grid follows the width of the app canvas it renders in, not the window, so it stacks beside a builder thread. */
+.app-canvas { container-type: inline-size; }
+.app-grid { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); }
+@container (min-width: 36rem) {
+  .app-grid[data-columns="2"], .app-grid[data-columns="3"], .app-grid[data-columns="4"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container (min-width: 56rem) {
+  .app-grid[data-columns="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .app-grid[data-columns="4"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* Apps welcome: a centred intro whose example plays as a build (prompt types in, Nora replies, panels assemble); layout follows the column width. */
+.apps-welcome { container-type: inline-size; }
+.app-welcome-accent {
+  background: linear-gradient(100deg, hsl(var(--foreground)) 10%, hsl(var(--primary)) 90%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.app-welcome-stage::before {
+  content: ""; position: absolute; inset: -3rem -2rem; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 55% at 50% 40%, hsl(var(--primary) / 0.14), transparent 70%),
+    radial-gradient(circle at 1px 1px, hsl(var(--foreground) / 0.09) 1px, transparent 0) 0 0 / 18px 18px;
+  -webkit-mask-image: radial-gradient(ellipse at 50% 45%, #000 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse at 50% 45%, #000 30%, transparent 75%);
+}
+.app-welcome-frame { box-shadow: 0 1px 0 hsl(var(--foreground) / 0.03), 0 24px 60px -24px hsl(var(--foreground) / 0.18); }
+.app-welcome-chat { border-bottom: 1px solid hsl(var(--border) / 0.6); }
+.app-welcome-panels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.app-welcome-chart {
+  background: repeating-linear-gradient(to top, hsl(var(--border) / 0.5) 0 1px, transparent 1px 25%);
+}
+.app-welcome-steps { grid-template-columns: minmax(0, 1fr); }
+@container (max-width: 32rem) { .app-welcome-panels > :nth-child(n + 3) { grid-column: span 2; } }
+.app-welcome-dots { display: inline-flex; gap: 2px; }
+.app-welcome-dots i { width: 3px; height: 3px; border-radius: 999px; background: currentColor; }
+.app-welcome-progress {
+  position: absolute; left: 0.875rem; right: 0.875rem; bottom: 2px; height: 2px; border-radius: 999px;
+  background: hsl(var(--primary) / 0.7); transform-origin: left; transform: scaleX(0);
+}
+.app-welcome-sweep {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0;
+  background: linear-gradient(100deg, transparent 30%, hsl(var(--primary) / 0.1) 50%, transparent 70%);
+  background-size: 250% 100%;
+}
+.app-welcome-ready { opacity: 0; }
+@container (min-width: 44rem) {
+  .app-welcome-frame { grid-template-columns: minmax(13rem, 1fr) 2fr; }
+  .app-welcome-chat { border-bottom: 0; border-right: 1px solid hsl(var(--border) / 0.6); }
+  .app-welcome-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2rem; }
+}
+/* Wide: the two metrics stack beside the chart and list, so the preview stays short enough to fit with the intro. */
+@container (min-width: 56rem) {
+  .app-welcome-panels { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1.4fr); }
+  .app-welcome-panels > :nth-child(-n + 2) { grid-column: 1; }
+  .app-welcome-panels > :nth-child(3) { grid-column: 2; grid-row: 1 / span 2; display: flex; flex-direction: column; }
+  .app-welcome-panels > :nth-child(4) { grid-column: 3; grid-row: 1 / span 2; }
+  .app-welcome-panels > :nth-child(3) .app-welcome-chart { flex: 1; }
+}
+/* Short windows: keep everything in view by dropping decorative and secondary detail, then the step descriptions, then the steps. */
+@media (max-height: 760px) {
+  .app-welcome-badge, .app-welcome-metric-note { display: none; }
+  .app-welcome-title { margin-top: 0; }
+  .app-welcome-showcase { margin-top: 1.25rem; }
+}
+@media (max-height: 720px) { .app-welcome-step-text { display: none; } }
+@media (max-height: 600px) { .app-welcome-steps { display: none; } }
+@keyframes appWelcomeIn { from { opacity: 0; transform: translate3d(0, 8px, 0); } to { opacity: 1; transform: none; } }
+@keyframes appWelcomeOut { to { opacity: 0; transform: translate3d(0, -6px, 0); } }
+@keyframes appWelcomeWord { from { opacity: 0; filter: blur(4px); transform: translate3d(0, 3px, 0); } to { opacity: 1; filter: none; transform: none; } }
+@keyframes appWelcomePanel { from { opacity: 0; filter: blur(6px); transform: translate3d(0, 12px, 0) scale(0.97); } to { opacity: 1; filter: none; transform: none; } }
+@keyframes appWelcomeBar { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes appWelcomeSweep { 0% { opacity: 1; background-position: 120% 0; } 100% { opacity: 1; background-position: -120% 0; } }
+@keyframes appWelcomeDot { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+@keyframes appWelcomeProgress { to { transform: scaleX(1); } }
+@media (prefers-reduced-motion: no-preference) {
+  .app-welcome-rise { animation: appWelcomeIn 600ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .app-welcome-in { animation: appWelcomeIn 420ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .app-welcome-word { display: inline-block; white-space: pre; animation: appWelcomeWord 320ms ease-out both; }
+  .app-welcome-panel { animation: appWelcomePanel 620ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .app-welcome-bar { transform-origin: bottom; animation: appWelcomeBar 800ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .app-welcome-sweep { animation: appWelcomeSweep 1.4s ease-in-out both; }
+  .app-welcome-building { animation: appWelcomeIn 300ms ease-out both, appWelcomeOut 260ms ease-in forwards; }
+  .app-welcome-ready { animation: appWelcomeIn 360ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .app-welcome-dots i { animation: appWelcomeDot 1s ease-in-out infinite; }
+  .app-welcome-dots i:nth-child(2) { animation-delay: 150ms; }
+  .app-welcome-dots i:nth-child(3) { animation-delay: 300ms; }
+  .app-welcome-progress { animation: appWelcomeProgress 9s linear forwards; }
+  .app-welcome-showcase:hover .app-welcome-progress { animation-play-state: paused; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-welcome-building, .app-welcome-progress { display: none; }
+  .app-welcome-ready { opacity: 1; }
+}
+
+/* Apps builder: the building scene's glow and drifting blocks, the reveal when the app lands, and the chat drawer sliding in. */
+.app-building-scene {
+  background:
+    radial-gradient(ellipse at 50% 40%, hsl(var(--primary) / 0.12), transparent 55%),
+    radial-gradient(ellipse at 20% 80%, hsl(var(--primary) / 0.05), transparent 45%);
+}
+.app-building-block {
+  position: absolute; display: block; width: 22%; height: 18%; border-radius: 0.75rem;
+  background: linear-gradient(110deg, hsl(var(--primary) / 0.06), hsl(var(--primary) / 0.14), hsl(var(--primary) / 0.06));
+  background-size: 200% 100%; opacity: 0;
+}
+.app-building-block:nth-child(1) { left: 8%; top: 14%; }
+.app-building-block:nth-child(2) { left: 39%; top: 10%; width: 30%; }
+.app-building-block:nth-child(3) { right: 8%; top: 18%; }
+.app-building-block:nth-child(4) { left: 12%; bottom: 16%; width: 34%; height: 26%; }
+.app-building-block:nth-child(5) { right: 14%; bottom: 14%; width: 28%; height: 24%; }
+.app-building-block:nth-child(6) { left: 46%; top: 44%; width: 16%; height: 12%; }
+.app-building-backdrop { filter: saturate(0.6); opacity: 0.55; }
+.app-builder-drawer { transform: translate3d(104%, 0, 0); transition: transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0s linear 320ms; visibility: hidden; }
+.app-builder-drawer-open { transform: translate3d(0, 0, 0); visibility: visible; transition-delay: 0s; }
+@keyframes appBlockDrift {
+  0% { opacity: 0; transform: translate3d(0, 18px, 0) scale(0.96); background-position: 200% 0; }
+  20% { opacity: 0.9; }
+  80% { opacity: 0.9; }
+  100% { opacity: 0; transform: translate3d(0, -14px, 0) scale(1.02); background-position: -200% 0; }
+}
+@keyframes appOrbPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 hsl(var(--primary) / 0.25); } 50% { transform: scale(1.06); box-shadow: 0 0 0 18px hsl(var(--primary) / 0); } }
+@keyframes appLineIn { from { opacity: 0; transform: translate3d(0, 6px, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
+@keyframes appReveal { from { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.995); } to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } }
+@media (prefers-reduced-motion: no-preference) {
+  .app-building-block { animation: appBlockDrift 4.2s ease-in-out infinite; }
+  .app-building-orb { animation: appOrbPulse 2.4s ease-in-out infinite; }
+  .app-building-line { animation: appLineIn 320ms ease-out; }
+  .app-reveal { animation: appReveal 480ms cubic-bezier(0.16, 1, 0.3, 1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-building-block { opacity: 0.5; }
+  .app-builder-drawer { transition: none; }
 }

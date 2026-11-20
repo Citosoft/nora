@@ -27,5 +27,5 @@ export async function codexAccount(rpc: StdioRpc, action: ProviderAccountAction)
     if (!result.authUrl) return { kind: "unavailable", message: "Codex did not return a sign-in link. Update Codex and try again." };
     return providerAccountResultSchema.parse({ kind: "login", authorizationUrl: result.authUrl });
   }
-  return { kind: "account", account: normalizeCodexAccount(await rpc.request("account/read", {}, z.unknown())) };
+  return { kind: "account", account: normalizeCodexAccount(await rpc.request("account/read", {}, z.unknown())), loginMethods: [] };
 }

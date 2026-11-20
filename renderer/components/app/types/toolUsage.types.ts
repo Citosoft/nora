@@ -1,3 +1,4 @@
+import type { ProviderConnectionKind } from "@shared/types/provider/account.types";
 import type { ToolUsageInfo, ToolUsageWindow } from "@shared/appTypes";
 import type { NativeProvider } from "@shared/ipc/types/personalizationGateway.types";
 
@@ -50,4 +51,4 @@ export interface UsageSummaryGridProps { info: ToolUsageInfo; }
 export type GaugeRingValue = Pick<UsageRing, "percentUsed" | "tone">;
 /** Concentric rings from the outside in; null draws an empty track. */
 export interface RingGaugeProps { rings: ReadonlyArray<GaugeRingValue | null>; className?: string; }
-export interface ProviderUsageWidgetProps { provider: NativeProvider | null; }
+export interface ProviderUsageWidgetProps { connection?: ProviderConnectionKind; provider: NativeProvider | null; }

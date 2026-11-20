@@ -9,7 +9,7 @@ import type { ModelPopoverProps } from "@/components/app/types/modelPicker.types
 import { NativeModelList } from "./NativeModelList";
 import { NativeModelOptions } from "./NativeModelOptions";
 
-export function NativeModelPopover({ providers, store, selectedProvider, selectedModel, selectedModelId, locked, settings, onSelect, continuation }: ModelPopoverProps) {
+export function NativeModelPopover({ providers, store, selectedConnection, selectedProvider, selectedModel, selectedModelId, locked, settings, onSelect, continuation }: ModelPopoverProps) {
   const [open, setOpen] = useState(false);
   const [browsingKey, setBrowsingKey] = useState<string | null>(null);
   const selectedKey = selectedProvider ? nativeProviderKey(selectedProvider) : null;
@@ -28,7 +28,7 @@ export function NativeModelPopover({ providers, store, selectedProvider, selecte
     <PopoverTrigger asChild><Button type="button" size="sm" variant="ghost"
       aria-label={`Choose provider and model: ${modelLabel}; Permissions: ${permissionLabel}; Reasoning: ${reasoningLabel}${subagentLabel ? `; Subagents: ${subagentLabel}` : ""}`}
       className="h-auto min-h-8 max-w-full gap-2 px-2 py-1 font-normal">
-      {selectedProvider && <AgentToolIcon toolId={selectedProvider.kind} label="" className="size-4 shrink-0" imageClassName="size-3.5" />}
+      {selectedProvider && <AgentToolIcon connection={selectedConnection} toolId={selectedProvider.kind} label="" className="size-4 shrink-0" imageClassName="size-3.5" />}
       <span className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
         <span className="min-w-0 truncate" title={modelLabel}>{modelLabel}</span>
         <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
@@ -53,13 +53,15 @@ export function NativeModelPopover({ providers, store, selectedProvider, selecte
         <nav aria-label="Providers" className="scrollbar-none flex max-h-80 flex-col items-center gap-2 overflow-y-auto border-r bg-muted/40 px-2 py-3">
           {providers.map((provider) => {
             const key = nativeProviderKey(provider);
+            const cachedCatalog = store.get(key);
+            const connection = cachedCatalog.status === "available" ? cachedCatalog.catalog.connection : undefined;
             const active = browsed && key === nativeProviderKey(browsed);
             const sameKind = providers.filter((entry) => entry.kind === provider.kind).length > 1;
             return <Button key={key} ref={active ? providerFocus : undefined} type="button" size="icon" variant="ghost" aria-pressed={!!active}
               aria-label={`${provider.label} (${provider.instanceId})`} tooltip={`${provider.label} · ${provider.instanceId}`}
               className={`relative size-11 shrink-0 rounded-md border ${active ? "border-border bg-background shadow-sm" : "border-transparent"}`}
               onClick={() => setBrowsingKey(key)}>
-              <AgentToolIcon toolId={provider.kind} label="" className="size-7 rounded-md" imageClassName="size-6" />
+              <AgentToolIcon connection={connection} toolId={provider.kind} label="" className="size-7 rounded-md" imageClassName="size-6" />
               {sameKind && <span className="absolute -bottom-1 max-w-14 truncate rounded bg-popover px-1 text-[11px] text-popover-foreground">{provider.instanceId}</span>}
             </Button>;
           })}

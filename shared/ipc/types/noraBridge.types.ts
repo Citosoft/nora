@@ -10,9 +10,11 @@ import type { PersonalizationBridge } from "./personalizationGateway.types";
 import type { BotMemoryBridge } from "./botMemoryGateway.types";
 import type { BotRoutineBridge } from "./botRoutineGateway.types";
 import type { ConnectorBridge } from "./connectorGateway.types";
+import type { SecretBridge } from "./secretGateway.types";
 import type { ChatBranchBridge } from "./chatBranchGateway.types";
 import type { DirectContextBridge } from "./directContextGateway.types";
-import type { AttentionBridge } from "./attentionGateway.types";
+import type { InboxBridge } from "./inboxGateway.types";
+import type { AppsBridge } from "./appsGateway.types";
 import type { AccountBridge } from "@shared/types/account/account.types";
 import type { SettingsSyncBridge } from "@shared/types/settings-sync/sync.types";
 import type { RemoteAccessBridge } from "./remoteAccessGateway.types";
@@ -32,8 +34,10 @@ export interface NoraBridge
   botMemory: BotMemoryBridge;
   botRoutines: BotRoutineBridge;
   connectors: ConnectorBridge;
+  secrets: SecretBridge;
   chatBranches: ChatBranchBridge;
   directContext: DirectContextBridge;
-  attention: AttentionBridge;
+  inbox: InboxBridge;
+  apps: AppsBridge;
   remoteAccess: RemoteAccessBridge;
 }

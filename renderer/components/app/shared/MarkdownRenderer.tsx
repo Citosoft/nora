@@ -1,3 +1,4 @@
+import { parseTaskLink } from "@shared/taskLink";
 import { parseIssueReference } from "@/components/app/logic/forge-items/issueReference";
 import { IssueReferencePill } from "./IssueReferencePill";
 import { useMemo } from "react";
@@ -69,7 +70,7 @@ export function MarkdownRenderer({ children, className, onLinkClick, allowHtml =
   return (
     <div className={className}>
       <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={allowHtml ? markdownHtmlPlugins : undefined} components={components}
-        urlTransform={(url, key) => key === "href" && onLinkClick && /^(?:file:|[a-z]:[\\/])/i.test(url) ? url : defaultUrlTransform(url)}>
+        urlTransform={(url, key) => key === "href" && onLinkClick && (parseTaskLink(url) || /^(?:file:|[a-z]:[\\/])/i.test(url)) ? url : defaultUrlTransform(url)}>
         {children}
       </ReactMarkdown>
     </div>

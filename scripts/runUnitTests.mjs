@@ -21,14 +21,15 @@ function collectTestFiles(directory) {
 
 const testRoot = join(process.cwd(), "dist-tests", "tests", "unit");
 await cp("package.json", join(process.cwd(), "dist-tests", "package.json"));
-const testFiles = collectTestFiles(testRoot).sort();
+const testFiles = collectTestFiles(testRoot);
 
 if (testFiles.length === 0) {
   console.error(`No unit test files found under ${testRoot}`);
   process.exit(1);
 }
 
-const result = spawnSync(process.execPath, ["--test", ...testFiles], {
+// Pass a glob rather than every path: the full file list overflows Windows' 32K command-line limit.
+const result = spawnSync(process.execPath, ["--test", "dist-tests/tests/unit/**/*.test.js"], {
   stdio: "inherit"
 });
 

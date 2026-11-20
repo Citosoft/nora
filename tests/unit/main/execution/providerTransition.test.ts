@@ -58,7 +58,7 @@ test("provider change is durable, keeps visible history, and starts a fresh sess
   const receipt = f.engine.execute(command, { steerFollowUp: false, providerTransition: prepared });
   assert.equal(f.snapshot().conversation.nativeConversationId, null);
   assert.equal(f.snapshot().conversation.context, null);
-  assert.deepEqual(f.snapshot().conversation.provider, next);
+  assert.deepEqual(f.snapshot().conversation.provider, { ...next, connection: "unknown" });
   assert.equal(f.snapshot().runs[0].provider?.kind, "codex");
   assert.equal(f.snapshot().runs[1].handoff?.previousNativeConversationId, "old-native-session");
   assert.ok(f.snapshot().items.some((item) => item.kind === "message" && item.text.includes("preserve the public API")));
@@ -144,4 +144,22 @@ test("handoff survives a provider failure before native acceptance and is consum
   assert.equal(f.snapshot().conversation.pendingHandoffRunId, undefined);
   f.submit("follow-up"); while (await worker.runNext()) { /* Subsequent turns reuse native history. */ }
   assert.equal(starts[1].run.instruction, "follow-up");
+});
+
+
+test("an explicit provider change captures the new connection while retaining the old binding in run history", async (t) => {
+  const { f, deps, replacement } = await transitionFixture(t);
+  const catalog = replacement.catalog.bind(replacement);
+  replacement.catalog = async (workspace) => {
+    const result = await catalog(workspace);
+    return result.status === "available" ? { ...result, catalog: { ...result.catalog, connection: "api" } } : result;
+  };
+  const prepared = await prepareProviderTransition(command, deps); assert.ok(prepared);
+  f.engine.execute(command, { providerTransition: prepared });
+  assert.equal(f.snapshot().conversation.provider.connection, "api");
+  assert.equal(f.snapshot().runs[1].provider?.connection, "api");
+  assert.deepEqual(f.snapshot().runs[1].handoff?.previousProvider, provider);
+  assert.deepEqual(f.snapshot().runs[0].provider, provider);
+  f.restart();
+  assert.equal(f.snapshot().conversation.provider.connection, "api");
 });

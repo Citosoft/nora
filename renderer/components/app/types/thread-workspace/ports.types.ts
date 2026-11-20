@@ -1,3 +1,4 @@
+import type { ProviderConnectionKind } from "@shared/types/provider/account.types";
 import type { ThreadListRow, ThreadSourceFilter, ThreadSort } from "./list.types";
 import type { ForgeBranchPullRequestStatus } from "@shared/appTypes";
 import type { ReactNode } from "react";
@@ -11,7 +12,15 @@ import type { WorkspaceAvatarIdentity } from "@/components/app/types/workspaceAv
 export type ThreadNavigationFilter = "all" | "active" | "attention" | "settled";
 export type ThreadNavigationStatus = "Queued" | "Starting" | "Working" | "Needs approval" | "Needs input" | "Stopping"
   | "Completed" | "Failed" | "Interrupted" | "Outcome unconfirmed" | "Delivery unconfirmed" | "Draft" | "Queue paused" | "Ready" | "Settled";
+export interface ThreadRowDisclosure {
+  expanded: boolean;
+  controls: string;
+  onToggle(): void;
+}
 export interface ThreadRowProps {
+  disclosure?: ThreadRowDisclosure;
+  /** Optional surface-specific identity in place of the default bot or provider icon. */
+  leadingIcon?: ReactNode;
   row: ThreadListRow;
   now?: number;
   workspace: WorkspaceAvatarIdentity | null;
@@ -28,6 +37,9 @@ export interface ThreadStatusIconProps { row: Pick<ThreadNavigationRow, "status"
 /** A descendant thread waiting on the user, surfaced on its visible ancestor's row. */
 export interface WaitingThread { conversationId: string; name: string; }
 export interface ThreadNavigationRow {
+  providerConnection?: ProviderConnectionKind;
+  /** Owning thread, when this work was spawned from another conversation. */
+  parentId?: string | null;
   target: { kind: "draft"; documentId: string } | { kind: "thread"; conversationId: string };
   id: string;
   title: string;

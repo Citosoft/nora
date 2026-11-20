@@ -2,16 +2,18 @@ import { ChevronRight, Info } from "lucide-react";
 import { AppMark } from "@/components/app/shared/AppMark";
 import { BotAvatar } from "@/components/app/shared/BotAvatar";
 import { Button } from "@/components/ui/button";
-import { ThreadRow } from "@/components/app/panels/threads/ThreadRow";
+import { useMemo } from "react";
+import { BotThreadTree } from "./BotThreadTree";
 import { BotRowContextMenu } from "./BotRowContextMenu";
 import type { BotNavigationRowProps } from "@/components/app/types/botNavigation.types";
-import { botStartLabel } from "@/components/app/logic/botNavigation";
+import { botStartLabel, buildBotThreadTree } from "@/components/app/logic/botNavigation";
 
 const VISIBLE_THREADS = 10;
 
 /** A bot (or Nora): a click opens its chat (Nora starts a thread); the thread count on the right lists the threads it works in. */
 export function BotNavigationRow({ item, expanded, now, onToggle, onStart, onOpen, onTogglePin, onShowAllThreads, onShowInfo, onEdit, onDelete }: BotNavigationRowProps) {
   const { name, role, avatar, threads, state } = item;
+  const tree = useMemo(() => buildBotThreadTree(threads, VISIBLE_THREADS), [threads]);
   const hasThreads = threads.length > 0;
   const hidden = threads.length - VISIBLE_THREADS;
   return <li>
@@ -33,8 +35,7 @@ export function BotNavigationRow({ item, expanded, now, onToggle, onStart, onOpe
     </div>
     </BotRowContextMenu>
     {expanded && hasThreads && <div className="ml-5 mt-0.5 space-y-0.5 border-l border-border/60 pl-2">
-      {threads.slice(0, VISIBLE_THREADS).map((row) => <ThreadRow key={row.id} row={{ ...row, bot: null, providerKind: null }} now={now} workspace={null} request={null}
-        onOpen={onOpen} onTogglePin={onTogglePin} />)}
+      <BotThreadTree nodes={tree} now={now} onOpen={onOpen} onTogglePin={onTogglePin} />
       {hidden > 0 && <Button type="button" variant="ghost" size="sm" className="h-7 w-full justify-start px-2 text-xs font-normal text-muted-foreground" onClick={onShowAllThreads}>
         {hidden} more in Threads</Button>}
     </div>}

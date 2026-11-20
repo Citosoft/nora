@@ -1,3 +1,4 @@
+import type { ProviderConnectionKind } from "@shared/types/provider/account.types";
 import type { ProviderBinding } from "@shared/types/conversation/contracts.types";
 import type { AppState } from "@shared/appTypes";
 import type { WorkspaceAvatarIdentity } from "@/components/app/types/workspaceAvatar.types";
@@ -13,6 +14,7 @@ export interface ThreadNavigationGroup {
   id: string;
   label: string | null;
   workspace: WorkspaceAvatarIdentity | null;
+  providerConnection?: ProviderConnectionKind;
   providerKind?: ProviderBinding["kind"] | null;
   rows: readonly ThreadListRow[];
 }

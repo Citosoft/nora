@@ -80,6 +80,7 @@ export type ShortcutKey =
   | "3"
   | "4"
   | "5"
+  | "s"
   | "w";
 
 export type ShortcutDefinition = {
@@ -379,8 +380,11 @@ export type UseFileEditorStateArgs = {
 export type OpenWorkspaceFileEditorOptions = {
   selectChange?: boolean;
   rootPath?: string | null;
-  /** When set, skips workspace read and opens the tab with this content immediately. */
-  prefetchedContent?: string;
+  /**
+   * When set, skips the workspace read and opens the tab with this content immediately, e.g. for files
+   * outside the checkout that another source already read.
+   */
+  prefetched?: { kind: "text"; content: string } | { kind: "image"; dataUrl: string; mimeType: string };
   /** When true with prefetched content, save and edit affordances are disabled. */
   isReadOnly?: boolean;
 };

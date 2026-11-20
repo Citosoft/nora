@@ -1,6 +1,6 @@
 import { auth } from "@modelcontextprotocol/sdk/client/auth.js";
 import { CONNECTOR_OAUTH_CALLBACK_PORT, isAllowedConnectorUrl } from "@shared/connectors/contracts";
-import { CONNECTOR_ACCESS_ALL, connectorAvailableTo } from "@shared/connectors/access";
+import { availableConnectors, CONNECTOR_ACCESS_ALL, connectorSelectedFor } from "@shared/connectors/access";
 import type { Connector, ConnectorInput, ConnectorSubject } from "@shared/types/connectors/connectors.types";
 import type { ConnectorRuntimeState, ConnectorService, ConnectorServiceOptions, StoredConnector } from "@main/types/connectors/connectors.types";
 import { createConnectorCredentials } from "./credentials";
@@ -8,6 +8,8 @@ import { createConnectorGateway } from "./gateway";
 import { ConnectorOAuthClient } from "./oauthClient";
 import { openOAuthCallback } from "./oauthCallback";
 import { probeConnector } from "./probe";
+import { createConnectorToolClient } from "./toolClient";
+import { ConnectorToolError } from "./toolError";
 import { uniqueServerName } from "./serverName";
 
 /** Browser sign-in waits on the user; give up after this so an abandoned sign-in releases its callback port. */
@@ -59,11 +61,16 @@ export function createConnectorService(options: ConnectorServiceOptions): Connec
   }
   const checkInBackground = (id: string): void => { void check(id); };
 
+  const needsAuth = (id: string): void => { if (states.get(id)?.status !== "needs-auth") setState(id, NEEDS_AUTH); };
+  const toolClient = createConnectorToolClient({ store, credentials, onNeedsAuth: needsAuth, ...(fetchFn ? { fetch: fetchFn } : {}) });
+  const forgetSession = (id: string): void => { void toolClient.forget(id); };
   const gateway = createConnectorGateway({ store, credentials, ...(fetchFn ? { fetch: fetchFn } : {}),
-    onNeedsAuth: (id) => { if (states.get(id)?.status !== "needs-auth") setState(id, NEEDS_AUTH); } });
+    onNeedsAuth: needsAuth });
   const usable = (connector: StoredConnector): boolean => connector.enabled && states.get(connector.id)?.status !== "needs-auth";
-  const usableFor = (subject: ConnectorSubject): StoredConnector[] =>
-    store.list().filter((connector) => usable(connector) && connectorAvailableTo(connector.access, subject));
+  const selectionFor = (subject: ConnectorSubject): readonly string[] | undefined => subject.botId ? options.connectorIdsForBot?.(subject) : undefined;
+  const availableFor = (connector: StoredConnector, subject: ConnectorSubject): boolean => connectorSelectedFor(connector, subject, selectionFor(subject));
+  const usableFor = (subject: ConnectorSubject, only?: readonly string[]): StoredConnector[] =>
+    store.list().filter((connector) => usable(connector) && availableFor(connector, subject) && (!only || only.includes(connector.id)));
 
   for (const connector of store.list()) if (connector.enabled) checkInBackground(connector.id);
 
@@ -111,7 +118,7 @@ export function createConnectorService(options: ConnectorServiceOptions): Connec
     async setEnabled(id, enabled) {
       existing(id);
       store.update(id, { enabled });
-      if (enabled) checkInBackground(id); else { checks.set(id, (checks.get(id) ?? 0) + 1); states.delete(id); publish(); }
+      if (enabled) checkInBackground(id); else { forgetSession(id); checks.set(id, (checks.get(id) ?? 0) + 1); states.delete(id); publish(); }
       return list();
     },
     async setAccess(id, access) {
@@ -122,6 +129,7 @@ export function createConnectorService(options: ConnectorServiceOptions): Connec
     },
     async remove(id) {
       signIns.get(id)?.abort(new Error("The connector was removed."));
+      forgetSession(id);
       store.remove(id);
       states.delete(id); checks.delete(id);
       publish();
@@ -151,6 +159,7 @@ export function createConnectorService(options: ConnectorServiceOptions): Connec
       existing(id);
       signIns.get(id)?.abort(new Error("Signed out."));
       store.updateSecrets(id, { tokens: undefined });
+      forgetSession(id);
       checks.set(id, (checks.get(id) ?? 0) + 1);
       setState(id, NEEDS_AUTH);
       return list();
@@ -160,11 +169,19 @@ export function createConnectorService(options: ConnectorServiceOptions): Connec
       await Promise.all(targets.map((connector) => check(connector.id)));
       return list();
     },
-    endpoints: (subject) => Promise.all(usableFor(subject).map((connector) => gateway.endpoint(connector))),
-    activeCount: (subject) => usableFor(subject).length,
+    endpoints: (subject, only) => Promise.all(usableFor(subject, only).map((connector) => gateway.endpoint(connector))),
+    activeCount: (subject, only) => usableFor(subject, only).length,
+    tools: {
+      call(connectorId, tool, args, subject) {
+        const connector = store.get(connectorId);
+        if (!connector?.enabled || !availableFor(connector, subject)) return Promise.reject(new ConnectorToolError("unavailable", "This connector is not available here."));
+        return toolClient.callTool(connectorId, tool, args);
+      },
+      available: (subject) => availableConnectors(store.list(), subject, selectionFor(subject)).map(view)
+    },
     async close() {
       for (const controller of signIns.values()) controller.abort(new Error("Nora is closing."));
-      await gateway.close();
+      await Promise.all([gateway.close(), toolClient.close()]);
     }
   };
 }

@@ -1,14 +1,32 @@
 import type { ConversationRun } from "@shared/types/conversation/contracts.types";
-import type { ActiveWorkCount, ActiveWorkInput } from "@main/types/desktop-lifecycle/desktopLifecycle.types";
+import type { ActiveWorkCount, ActiveWorkInput, ActiveWorkItem } from "@main/types/desktop-lifecycle/desktopLifecycle.types";
 
-const SETTLED_RUN_STATES: ReadonlySet<ConversationRun["state"]> = new Set(["completed", "failed", "interrupted"]);
+const RUN_LABELS: Record<ConversationRun["state"], string | null> = {
+  queued: "Queued", starting: "Starting", running: "Running", "awaiting-approval": "Waiting for approval",
+  "awaiting-input": "Waiting for input", stopping: "Stopping", recovering: "Recovering",
+  completed: null, failed: null, interrupted: null
+};
 
-/** Counts work that quitting would interrupt: native threads still running, queued or waiting, and busy terminal agents. */
+/** Lists work quitting would interrupt, including queued messages and requests awaiting the user. */
 export function countActiveWork({ conversations, agents }: ActiveWorkInput): ActiveWorkCount {
-  const activeConversations = conversations.filter((summary) =>
-    (summary.latestRun !== null && !SETTLED_RUN_STATES.has(summary.latestRun.state))
-    || summary.queuedCount > 0
-    || summary.pendingRequestCount > 0).length;
-  const busyAgents = agents.filter((agent) => agent.isBusy).length;
-  return { conversations: activeConversations, agents: busyAgents, total: activeConversations + busyAgents };
+  const items: ActiveWorkItem[] = [];
+  for (const summary of conversations) {
+    const statuses: string[] = [];
+    const runLabel = summary.latestRun ? RUN_LABELS[summary.latestRun.state] : null;
+    if (runLabel) statuses.push(runLabel);
+    if (summary.pendingRequestCount > 0 && runLabel !== "Waiting for approval" && runLabel !== "Waiting for input") {
+      statuses.push("Waiting for approval or input");
+    }
+    if (summary.queuedCount > 0 && runLabel !== "Queued") statuses.push(`${summary.queuedCount} queued`);
+    if (statuses.length === 0) continue;
+    items.push({ kind: "thread", title: summary.conversation.title, workspace: summary.conversation.workspace.path,
+      status: statuses.join(", ") });
+  }
+  const activeConversations = items.length;
+  for (const agent of agents) {
+    if (!agent.isBusy) continue;
+    items.push({ kind: "terminal-agent", title: agent.threadTitle?.trim() || agent.name,
+      workspace: agent.workspace, status: "Terminal agent running" });
+  }
+  return { conversations: activeConversations, agents: items.length - activeConversations, total: items.length, items };
 }

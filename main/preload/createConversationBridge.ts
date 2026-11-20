@@ -37,6 +37,8 @@ export function createConversationBridge(transport: ConversationTransport = {
         || (!importing && value.receipt.conversationId !== input.command.conversationId)) throw incompatible(); return value.receipt; },
     async read(input) { const value = await request(conversationChannels.read, input);
       if (value.kind !== input.kind) throw incompatible(); return value; },
+    async openOutput(input) { const value = await request(conversationChannels.output, input);
+      if (value.kind !== "output-opened") throw incompatible(); },
     async watch(input) { const value = await request(conversationChannels.watch, input);
       if (value.kind !== "watch" || value.receipt.watchId !== input.watchId) throw incompatible(); return value.receipt; },
     async unwatch(input) { const value = await request(conversationChannels.unwatch, input);

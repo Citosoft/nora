@@ -1,3 +1,4 @@
+import { isKeyboardFocusNavigation } from "@/lib/focusModality";
 import { cn } from "@/lib/utils";
 import { type PropsWithChildren, type ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -142,7 +143,13 @@ export function Tooltip({
           setCursorPoint({ x: event.clientX, y: event.clientY });
         }}
         onMouseLeave={() => setOpen(false)}
-        onFocus={() => setOpen(true)}
+        onFocus={() => {
+          // Only keyboard navigation opens on focus; dialogs and popovers move
+          // focus programmatically when they open or close.
+          if (isKeyboardFocusNavigation()) {
+            setOpen(true);
+          }
+        }}
         onBlur={() => setOpen(false)}
       >
         {children}

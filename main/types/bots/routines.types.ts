@@ -12,6 +12,8 @@ export interface RoutineStore {
   all(): Routine[];
   get(id: string): Routine | null;
   put(routine: Routine): void;
+  /** Writes a batch atomically, leaving no partial set after a validation or storage failure. */
+  putMany(routines: readonly Routine[]): void;
   /** Removes the routine and its runs. */
   remove(id: string): void;
   count(botId: string): number;
@@ -58,6 +60,7 @@ export interface RoutineScheduler {
   /** Every bot's routines and their runs in the range, for the calendar. */
   calendar(range: RoutineCalendarRange): RoutineCalendar;
   create(input: RoutineInput): Routine;
+  createMany(inputs: readonly RoutineInput[]): Routine[];
   update(id: string, input: RoutineInput): Routine;
   setActive(id: string, active: boolean): Routine;
   remove(id: string): void;

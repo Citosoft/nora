@@ -17,6 +17,8 @@ import { WorkspaceActions } from "@/components/app/sidebar/workspace-navigation/
 import { WorkspaceSwitcher } from "@/components/app/sidebar/workspace-navigation/WorkspaceSwitcher";
 import { WorkspaceStatusIndicator } from "@/components/app/sidebar/workspace-navigation/WorkspaceStatusIndicator";
 import { BotNavigation } from "@/components/app/panels/bots/BotNavigation";
+import { InboxSidebar } from "@/components/app/panels/inbox/InboxSidebar";
+import { AppsSidebar } from "@/components/app/panels/apps/AppsSidebar";
 import { BotEditorDialog } from "@/components/app/panels/settings/bots/BotEditorDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,12 +55,14 @@ export function WorkspaceSidebar() {
   };
   /** Opens a Bots home page in the center, closing any open thread view. */
   const showBotsHome = (page: BotsHomePage) => { navigation.closeTool(); navigation.setPreferences((current) => ({ ...current, botsHome: page })); showHome(); };
-  const primary = mode === "bots" ? { label: "New bot", run: () => setBotEditor((current) => current + 1) } : { label: "New thread", run: () => newThread() };
+  const showAppsHome = () => { navigation.closeTool(); navigation.setPreferences((current) => ({ ...current, activeAppId: null })); showHome(); };
+  const primary = mode === "bots" ? { label: "New bot", run: () => setBotEditor((current) => current + 1) }
+    : mode === "apps" ? { label: "New app", run: showAppsHome } : { label: "New thread", run: () => newThread() };
   return <aside aria-label="Workspace navigation" className={`workspace-shell-surface flex h-full min-h-0 flex-col overflow-hidden ${collapsed ? "items-center" : ""}`}>
     <div className={`flex w-full shrink-0 items-center ${collapsed ? "flex-col gap-1 px-1 py-3" : "gap-1 px-3 pt-3"}`}>
       <WorkspaceSwitcher workspaces={workspaces} activeId={snapshot?.project?.id ?? null} collapsed={collapsed} recentWorkspaces={recentWorkspaces}
         onSelect={chooseWorkspace} onOpenRecent={(rootPath, name) => { navigation.closeTool(); onOpenRecentWorkspace(rootPath, name); }} onAdd={actions.onChooseProject} />
-      {workspace && <Button variant="ghost" size="icon" className="size-8 shrink-0 text-muted-foreground" aria-label={mode === "bots" ? "Open Bots home" : "Open workspace home"} tooltip={mode === "bots" ? "Bots home" : "Workspace home"} onClick={() => { if (mode === "bots") showBotsHome("bots"); else { navigation.closeTool(); showHome(); } }}><Home className="size-4" aria-hidden="true" /></Button>}
+      {workspace && mode !== "inbox" && <Button variant="ghost" size="icon" className="size-8 shrink-0 text-muted-foreground" aria-label={mode === "bots" ? "Open Bots home" : mode === "apps" ? "Open Apps home" : "Open workspace home"} tooltip={mode === "bots" ? "Bots home" : mode === "apps" ? "Apps home" : "Workspace home"} onClick={() => { if (mode === "bots") showBotsHome("bots"); else if (mode === "apps") showAppsHome(); else { navigation.closeTool(); showHome(); } }}><Home className="size-4" aria-hidden="true" /></Button>}
       {!collapsed && workspace && <WorkspaceActions workspace={workspace} />}
       {!collapsed && workspace && <WorkspaceStatusIndicator workspace={workspace} />}
     </div>
@@ -67,10 +71,12 @@ export function WorkspaceSidebar() {
       {mode === "bots" && <Button variant="ghost" size={collapsed ? "icon" : "default"} className={collapsed ? "size-8" : "-mt-2 h-9 w-full justify-start px-2 text-sm font-normal"}
         onClick={() => showBotsHome("routines")} aria-label="Routines" tooltip={collapsed ? "Routines" : undefined}>
         <CalendarDays className="size-4 text-muted-foreground" aria-hidden="true" />{!collapsed && "Routines"}</Button>}
-      {!collapsed && <div className="relative"><Search className="pointer-events-none absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" aria-hidden="true" /><Input type="search" className="h-8 rounded-md border-transparent bg-transparent pl-8 text-xs shadow-none hover:bg-muted/40 focus-visible:border-border" placeholder={mode === "bots" ? "Search bots…" : "Search threads…"} aria-label={mode === "bots" ? "Search bots" : "Search threads"} value={query} onChange={(event) => setQuery(event.target.value)} /></div>}
+      {!collapsed && mode !== "inbox" && mode !== "apps" && <div className="relative"><Search className="pointer-events-none absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" aria-hidden="true" /><Input type="search" className="h-8 rounded-md border-transparent bg-transparent pl-8 text-xs shadow-none hover:bg-muted/40 focus-visible:border-border" placeholder={mode === "bots" ? "Search bots…" : "Search threads…"} aria-label={mode === "bots" ? "Search bots" : "Search threads"} value={query} onChange={(event) => setQuery(event.target.value)} /></div>}
     </div>
     {!collapsed && (error || navigation.preferenceError) && <p role="alert" className="px-4 pb-3 text-xs text-destructive">{error ?? navigation.preferenceError}</p>}
-    {mode === "bots" ? <BotNavigation workspaceId={nativeWorkspace?.id ?? null} workspaceName={nativeWorkspace?.name ?? workspace?.project.name ?? null} query={query} collapsed={collapsed}
+    {mode === "inbox" ? <InboxSidebar collapsed={collapsed} />
+    : mode === "apps" ? <AppsSidebar collapsed={collapsed} />
+    : mode === "bots" ? <BotNavigation workspaceId={nativeWorkspace?.id ?? null} workspaceName={nativeWorkspace?.name ?? workspace?.project.name ?? null} query={query} collapsed={collapsed}
       onStart={(botId) => botId ? messageBot(botId) : newThread()} onNavigate={navigation.closeTool}
       onShowThreads={() => navigation.setPreferences((current) => ({ ...current, sidebarMode: "threads" }))}
       onNewGroup={nativeWorkspace ? () => setGroupDialog(true) : undefined} />

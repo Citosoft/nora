@@ -14,7 +14,7 @@ const boot = { environmentId: "local", cursor: 0, sharedBots: [], providers: [],
 const setup = (reply: Parameters<typeof fakeHost>[1]) => {
   const fake = fakeHost(bots, reply);
   let sequence = 0;
-  const asks = createAskOperations({ host: fake.host, nextId: () => `id${++sequence}`, boot: () => boot, saveBot: async () => {}, memory: {} as never });
+  const asks = createAskOperations({ host: fake.host, nextId: () => `id${++sequence}`, boot: () => boot, saveBot: async () => {}, memory: {} as never, secrets: {} as never, apps: {} as never, connectorTools: {} as never });
   return { fake, asks };
 };
 const signal = new AbortController().signal;

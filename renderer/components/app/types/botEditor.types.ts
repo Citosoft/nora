@@ -1,3 +1,5 @@
+import type { ConnectorGalleryEntry } from "@shared/types/connectors/gallery.types";
+import type { Connector } from "@shared/types/connectors/connectors.types";
 import type { BotAvatarPart } from "./botAvatar.types";
 import type { BotAvatar, BotDefinition, BotScope, BotTemplate, EffectiveBot } from "@shared/types/bots/bots.types";
 import type { ThreadModelDefault } from "@shared/types/personalization/threadModel.types";
@@ -7,6 +9,7 @@ export interface BotEditorDraft {
   name: string;
   role: string;
   instructions: string;
+  connectorIds: string[] | undefined;
   model: ThreadModelDefault | null;
   avatar: BotAvatar;
   scope: BotScope;
@@ -33,4 +36,32 @@ export interface BotListProps {
   onEdit(bot: BotDefinition): void;
   /** Per-row hide control for bots inherited from a lower layer in a workspace. */
   hide?: { hiddenIds: ReadonlySet<string>; onToggle(botId: string, hidden: boolean): void };
+}
+
+export interface BotConnectorFieldsProps {
+  recommendations: readonly ConnectorGalleryEntry[];
+  connectorIds: readonly string[] | undefined;
+  connectors: readonly Connector[] | null;
+  error: string | null;
+  disabled: boolean;
+  workspaceId: string | null;
+  botId: string | null;
+  onChange(ids: string[] | undefined): void;
+}
+
+export interface BotConnectorPickerProps extends Omit<BotConnectorFieldsProps, "connectorIds" | "onChange"> {
+  connectorIds: readonly string[];
+  onChange(ids: string[]): void;
+}
+
+export interface BotRoutinePresetsProps {
+  template: BotTemplate;
+  selectedIds: readonly string[];
+  workspaces: readonly NativeWorkspace[];
+  workspaceId: string;
+  workspaceLocked: boolean;
+  timezone: string;
+  disabled: boolean;
+  onSelect(ids: string[]): void;
+  onWorkspace(id: string): void;
 }

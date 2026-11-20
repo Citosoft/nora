@@ -1,4 +1,5 @@
-import { claudeReadOnlyOptions, isClaudeInspectionTool } from "./readOnly";
+import { isReadOnlyToolScope } from "@main/execution/toolScope";
+import { claudeToolAllowed, claudeToolScopeOptions } from "./toolScope";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
@@ -9,7 +10,6 @@ import type { ClaudeOpenInput, ClaudeSession, ClaudeRuntimeOptions } from "@main
 import type { ClaudeToolOutputOptions } from "@main/types/execution/toolOutput.types";
 import { claudeOutputOptions } from "./outputBudget";
 import { claudeMcpAppLookup } from "./mcpApps";
-import { claudeMcpServersConfig } from "./runMcpServers";
 
 const questionInputSchema = z.object({ questions: z.array(z.object({ question: z.string(), header: z.string(), options: z.array(z.object({ label: z.string() })), multiSelect: z.boolean().optional() })) });
 
@@ -41,14 +41,14 @@ function openClaudeSession(input: ClaudeOpenInput, runtime: ClaudeRuntimeOptions
     env: { ...process.env, ...runtime.environment, ...(input.subagentModel ? { CLAUDE_CODE_SUBAGENT_MODEL: input.subagentModel } : {}),
       ...(toolTimeoutSeconds ? { MCP_TOOL_TIMEOUT: String(toolTimeoutSeconds * 1000) } : {}) },
     ...(input.resume ? { resume: input.sessionId } : { sessionId: input.sessionId }),
-    ...(input.readOnly ? claudeReadOnlyOptions(input.mcpServers)
-      : claudeMcpServersConfig(input.mcpServers)),
+    ...claudeToolScopeOptions(input.toolScope, input.mcpServers, input.cwd),
     includePartialMessages: true,
     promptSuggestions: true,
     canUseTool: async (name, toolInput, options) => {
-      if (input.readOnly && name !== "AskUserQuestion") return isClaudeInspectionTool(name)
-        ? { behavior: "allow", updatedInput: toolInput }
-        : { behavior: "deny", message: "This thread has read-only access. Run commands and tests in a work stage." };
+      if (!claudeToolAllowed(input.toolScope, name)) return { behavior: "deny", message: isReadOnlyToolScope(input.toolScope)
+        ? "This thread has read-only access. File edits and unsandboxed actions are unavailable."
+        : "This thread builds an app: it has Nora's app tools and the app's connectors, nothing else." };
+      if (isReadOnlyToolScope(input.toolScope) && name !== "AskUserQuestion") return { behavior: "allow", updatedInput: toolInput };
       if (name === "AskUserQuestion") {
         const parsed = questionInputSchema.parse(toolInput);
         const response = await input.onRequest({ kind: "question", nativeId: options.toolUseID, signal: options.signal,

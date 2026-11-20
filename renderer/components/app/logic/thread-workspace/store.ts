@@ -3,11 +3,10 @@ import { COMPOSER_ATTACHMENT_MAX_COUNT } from "@shared/composerAttachments";
 import { setThreadSettlement } from "./settlement";
 import { createThreadReferences } from "./references";
 import { importExternalSession, pinExternalSession } from "./externalSessions";
-import { unreadCompletions } from "./unread";
 import { effectiveRole } from "@shared/personalization/profiles";
 import { findEffectiveBot } from "@shared/bots/catalog";
 import { threadLayoutSchema } from "./schema";
-import { findDirectChat } from "@/components/app/logic/directChats";
+import { findDirectChat } from "@shared/bots/directChats";
 import { emptyThreadLayout } from "./persistence";
 import { closeThreadDocument, createThreadDraft, focusThreadDocument, isEmptyDraft, openThreadDocument } from "./changes";
 import type { ThreadWorkspaceDeps, ThreadWorkspaceStore, ThreadWorkspaceSnapshot, ThreadLayout, ThreadDocumentRuntime } from "@/components/app/types/thread-workspace/state.types";
@@ -36,7 +35,10 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
   const publish = (next: ThreadWorkspaceSnapshot): void => {
     const active = next.layout.documents.find((entry) => entry.id === next.layout.activeId);
     const viewedId = windowFocused && threadVisible && active?.target.kind === "thread" ? active.target.conversationId : null;
-    state = { ...next, unreadThreadIds: next.unreadThreadIds.filter((id) => id !== viewedId) };
+    // Unread updates come from the inbox; the thread on screen is read as soon as it is seen.
+    const unread = deps.unread.unreadThreadIds();
+    if (viewedId && unread.includes(viewedId)) deps.unread.markThreadRead(viewedId);
+    state = { ...next, unreadThreadIds: viewedId ? unread.filter((id) => id !== viewedId) : unread };
     for (const listener of [...listeners]) { try { listener(); } catch { /* A view cannot change accepted execution. */ } }
   };
   const runtime = (id: string): ThreadDocumentRuntime => Object.hasOwn(state.runtime, id) ? state.runtime[id] : { busy: false, readyBinding: null, error: null };
@@ -62,7 +64,7 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
     const current = ++sequence, generation = epoch;
     try {
       const summaries = await deps.client.summaries();
-      if (current === sequence && generation === epoch) publish({ ...state, summaries, unreadThreadIds: unreadCompletions(state, summaries), loading: false, error: null });
+      if (current === sequence && generation === epoch) publish({ ...state, summaries, loading: false, error: null });
     } catch (cause) {
       if (current === sequence && generation === epoch) publish({ ...state, loading: false, error: cause instanceof Error ? cause.message : "Threads could not be loaded from their execution host." });
     }
@@ -98,8 +100,10 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
     start() {
       if (++users === 1) {
         epoch++;
-        stop = deps.client.subscribe({ after: state.boot.cursor, onEvent: (event) => { if (event.payload.kind !== "item") scheduleRefresh(); },
+        const stopEvents = deps.client.subscribe({ after: state.boot.cursor, onEvent: (event) => { if (event.payload.kind !== "item") scheduleRefresh(); },
           onError: (cause) => publish({ ...state, error: cause.message }) });
+        const stopUnread = deps.unread.subscribe(() => publish(state));
+        stop = () => { stopEvents(); stopUnread(); };
         scheduleRefresh();
       }
       let closed = false;
@@ -150,6 +154,8 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
       if (document) { save(focusThreadDocument(state.layout, document)); publish({ ...state, focusRevision: state.focusRevision + 1 }); }
     },
     focusWorkspace(id) {
+      // Startup registers the restored workspace again; keep its saved selection, including an inactive thread surface.
+      if (state.layout.focusedWorkspaceId === id) return;
       if (!state.boot.workspaces.some((entry) => entry.id === id)) return;
       const activeId = state.layout.openIds.filter((key) => state.layout.documents.find((entry) => entry.id === key)?.workspaceId === id).at(-1) ?? null;
       save({ ...state.layout, focusedWorkspaceId: id, activeId });

@@ -1,8 +1,9 @@
+import { z } from "zod";
 import type { Conversation, RuntimeRequest } from "@shared/types/conversation/contracts.types";
 import type { AttentionNotice } from "@shared/types/conversation/attention.types";
 
-/** Main → window: open a thread, e.g. after the user clicks a "needs your approval" notification. */
-export const openThreadChannel = "native:open-thread";
+/** Who is waiting on the user, worded for a notification, toast or inbox row. */
+export const attentionNoticeSchema = z.object({ conversationId: z.string().min(1).max(512), who: z.string().min(1), title: z.string().min(1), body: z.string() }).strict();
 
 /** Says who is waiting and, for a bot working for another thread, on whose behalf, so a hidden child thread is still recognisable. */
 export function describeAttention(conversation: Conversation, parent: Conversation | null, request: RuntimeRequest): AttentionNotice {

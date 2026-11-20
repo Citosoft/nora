@@ -40,3 +40,17 @@ test("malformed files report a readable problem instead of throwing", () => {
     if (!parsed.ok) assert.match(parsed.message, message);
   }
 });
+
+test("connector selections round-trip, including none, while older files keep all available", () => {
+  for (const connectorIds of [undefined, [], ["00000000-0000-4000-8000-000000000001"]]) {
+    const original = bot("assigned", scope, connectorIds === undefined ? {} : { connectorIds });
+    const text = serializeSharedBotFile(original);
+    assert.deepEqual(parseSharedBotFile("assigned.md", text, "w"), { ok: true, bot: original });
+  }
+  const original = serializeSharedBotFile(bot("assigned", scope));
+  for (const value of ["nope", "null", '["invalid-id"]', '["00000000-0000-4000-8000-000000000001","00000000-0000-4000-8000-000000000001"]']) {
+    const parsed = parseSharedBotFile("assigned.md", original.replace("revision: 1", `revision: 1\nconnectors: ${value}`), "w");
+    assert.equal(parsed.ok, false);
+    if (!parsed.ok) assert.match(parsed.message, /^connectors:/);
+  }
+});

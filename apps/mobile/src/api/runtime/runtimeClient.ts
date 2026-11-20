@@ -1,7 +1,7 @@
 import type { z } from "zod";
-import { RUNTIME_ROUTES, commandResponseSchema, conversationDetailResponseSchema, conversationsResponseSchema, eventsResponseSchema,
+import { RUNTIME_ROUTES, botsResponseSchema, commandResponseSchema, conversationDetailResponseSchema, conversationsResponseSchema, eventsResponseSchema,
   projectsResponseSchema, realtimeTicketResponseSchema, runtimeApiErrorSchema, runtimeInfoSchema, tasksResponseSchema,
-  timelineResponseSchema } from "@shared/remote-access/runtimeApi";
+  timelineResponseSchema, inboxResponseSchema } from "@shared/remote-access/runtimeApi";
 import type { CommandReceipt } from "@shared/types/conversation/contracts.types";
 import type { RuntimeApiErrorCode } from "@shared/types/remote-access/runtimeApi.types";
 import type { HttpMethod } from "@/types/http.types";
@@ -24,6 +24,7 @@ export function createRuntimeClient(config: RuntimeClientConfig): RuntimeClient 
     origin,
     info: () => call("GET", RUNTIME_ROUTES.info, runtimeInfoSchema),
     projects: async () => (await call("GET", RUNTIME_ROUTES.projects, projectsResponseSchema)).projects,
+    bots: async () => (await call("GET", RUNTIME_ROUTES.bots, botsResponseSchema)).bots,
     conversations: async (query = {}) => {
       const settled = query.settled === undefined ? undefined : String(query.settled);
       const path = withQuery(RUNTIME_ROUTES.conversations, { projectId: query.projectId, settled });
@@ -38,8 +39,11 @@ export function createRuntimeClient(config: RuntimeClientConfig): RuntimeClient 
     realtimeTicket: () => call("POST", RUNTIME_ROUTES.ticket, realtimeTicketResponseSchema, {}),
     realtimeUrl: (ticket) => `${runtimeRealtimeOrigin(config.hostname)}${withQuery(RUNTIME_ROUTES.realtime, { ticket })}`,
     createConversation: (request) => command(RUNTIME_ROUTES.conversations, request),
+    createBotChat: (botId, request) => command(RUNTIME_ROUTES.botChat(botId), request),
     sendMessage: (conversationId, request) => command(RUNTIME_ROUTES.messages(conversationId), request),
     decideAction: (requestId, request) => command(RUNTIME_ROUTES.decision(requestId), request),
-    cancelTask: (runId, request) => command(RUNTIME_ROUTES.cancel(runId), request)
+    cancelTask: (runId, request) => command(RUNTIME_ROUTES.cancel(runId), request),
+    inbox: () => call("GET", RUNTIME_ROUTES.inbox, inboxResponseSchema),
+    updateInbox: (change) => call("POST", RUNTIME_ROUTES.inbox, inboxResponseSchema, { command: change })
   };
 }

@@ -2,13 +2,15 @@ import { useEffect, useId, useState } from "react";
 import type { FormEvent } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Plug } from "lucide-react";
-import { ADD_CONNECTOR_STEPS, EMPTY_CONNECTOR_FORM, buildConnectorInput, resolveAddConnectorStep } from "@/components/app/logic/connectorForm";
+import { ADD_CONNECTOR_STEPS, EMPTY_CONNECTOR_FORM, buildConnectorInput, initialAddConnectorStep, presetConnectorForm, resolveAddConnectorStep } from "@/components/app/logic/connectorForm";
+import { McpServerLogo } from "@/components/app/panels/settings/McpServerLogo";
 import { WizardProgress } from "@/components/app/shared/WizardProgress";
 import type { AddConnectorDialogProps, AddConnectorStep, ConnectorFormState } from "@/components/app/types/noraConnectors.types";
 import type { WizardProgressStep } from "@/components/app/types/wizardProgress.types";
 import { Button } from "@/components/ui/button";
 import { DialogBody, DialogContent, DialogFooter, DialogHeader } from "@/components/ui/dialog";
 import { AddConnectorAuthStep } from "./AddConnectorAuthStep";
+import { AddConnectorPresetNotice } from "./AddConnectorPresetNotice";
 import { AddConnectorServerStep } from "./AddConnectorServerStep";
 import { ConnectorAccessFields } from "./ConnectorAccessFields";
 
@@ -24,13 +26,14 @@ const DESCRIPTIONS: Readonly<Record<AddConnectorStep, string>> = {
  * Adds a remote MCP server (Streamable HTTP) as a Nora connector in three steps: the server, how Nora authenticates to it,
  * then where it is available. Sign-in happens from the connector's row once it is added.
  */
-export function AddConnectorDialog({ open, onOpenChange, onCreate, accessChoices }: AddConnectorDialogProps) {
-  const [form, setForm] = useState<ConnectorFormState>(EMPTY_CONNECTOR_FORM);
-  const [step, setStep] = useState<AddConnectorStep>("server");
+export function AddConnectorDialog({ open, onOpenChange, onCreate, accessChoices, preset = null }: AddConnectorDialogProps) {
+  const [form, setForm] = useState<ConnectorFormState>(() => preset ? presetConnectorForm(preset) : EMPTY_CONNECTOR_FORM);
+  const [step, setStep] = useState<AddConnectorStep>(() => initialAddConnectorStep(preset));
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const errorId = useId();
-  useEffect(() => { if (!open) { setForm(EMPTY_CONNECTOR_FORM); setStep("server"); setError(null); setSaving(false); } }, [open]);
+  // Each opening starts from its preset (or blank); closing clears everything the user typed.
+  useEffect(() => { setForm(preset ? presetConnectorForm(preset) : EMPTY_CONNECTOR_FORM); setStep(initialAddConnectorStep(preset)); setError(null); setSaving(false); }, [open, preset]);
   const update = (patch: Partial<ConnectorFormState>) => { setForm((current) => ({ ...current, ...patch })); setError(null); };
 
   /** A later step is only reachable once earlier ones are valid, so no step fails on a field the user can no longer see. */
@@ -60,7 +63,8 @@ export function AddConnectorDialog({ open, onOpenChange, onCreate, accessChoices
       <Dialog.Overlay className="fixed inset-0 z-[30000] bg-background/80 backdrop-blur-sm" />
       {/* Join the modal stack so Settings releases pointer events and focus. */}
       <Dialog.Content className="fixed left-1/2 top-1/2 z-[30001] -translate-x-1/2 -translate-y-1/2 focus:outline-none">
-        <DialogContent className="w-[min(34rem,calc(100vw-2rem))]" onClose={() => onOpenChange(false)} headerTitle={<Dialog.Title className="flex items-center gap-2"><Plug className="size-4 text-primary" />Add connector</Dialog.Title>}>
+        <DialogContent className="w-[min(34rem,calc(100vw-2rem))]" onClose={() => onOpenChange(false)}
+          headerTitle={<Dialog.Title className="flex items-center gap-2">{preset ? <McpServerLogo logo={preset.logo} /> : <Plug className="size-4 text-primary" />}{preset ? `Add ${preset.name}` : "Add connector"}</Dialog.Title>}>
           <DialogHeader>
             <WizardProgress ariaLabel="Add connector" steps={STEPS} activeStep={step} onStepChange={goTo} />
             <Dialog.Description className="text-sm text-muted-foreground">{DESCRIPTIONS[step]}</Dialog.Description>
@@ -69,7 +73,7 @@ export function AddConnectorDialog({ open, onOpenChange, onCreate, accessChoices
           <form className="flex min-h-0 flex-col" onSubmit={(event) => void submit(event)} aria-describedby={error ? errorId : undefined}>
             <DialogBody className="space-y-4">
               {step === "server" ? <AddConnectorServerStep form={form} update={update} />
-                : step === "auth" ? <AddConnectorAuthStep form={form} update={update} />
+                : step === "auth" ? <>{preset?.setup && <AddConnectorPresetNotice preset={preset} />}<AddConnectorAuthStep form={form} update={update} clientRequired={preset?.registration === "client"} /></>
                 : <ConnectorAccessFields value={form.access} choices={accessChoices} onChange={(access) => update({ access })} />}
               {error ? <p id={errorId} role="alert" className="text-sm text-destructive">{error}</p> : null}
             </DialogBody>

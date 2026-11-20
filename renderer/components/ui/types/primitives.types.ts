@@ -1,4 +1,4 @@
-import type { PropsWithChildren, ReactNode } from "react";
+import type { PropsWithChildren, ReactElement, ReactNode } from "react";
 
 export interface DialogProps extends PropsWithChildren {
   open: boolean;
@@ -39,6 +39,19 @@ export type DropdownMenuContextValue = {
   setOpenSubId: (id: string | null) => void;
 };
 
+/** `trigger` is a single focusable element (it receives the popover's trigger props); `label` names the menu for assistive tech. */
+export type PopoverMenuProps = {
+  trigger: ReactElement;
+  label: string;
+  children: ReactNode;
+  align?: "start" | "end";
+  widthClassName?: string;
+};
+
+export type PopoverMenuItemProps = DropdownMenuItemProps;
+
+export type PopoverMenuContextValue = { close: () => void };
+
 export type DropdownMenuGroupProps = {
   label: string;
   children: ReactNode;
@@ -77,4 +90,12 @@ export type SelectOptionGroup = {
 
 export type SelectOptionItemProps = {
   option: SelectOption;
+};
+
+export type MenuCheckboxItemProps = {
+  children: ReactNode;
+  checked: boolean;
+  disabled?: boolean;
+  /** Toggling keeps the menu open so several options can be changed in one visit. */
+  onCheckedChange: (checked: boolean) => void;
 };

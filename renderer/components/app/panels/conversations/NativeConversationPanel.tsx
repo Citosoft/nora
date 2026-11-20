@@ -1,3 +1,4 @@
+import { TranscriptHistory } from "@/components/app/shared/TranscriptHistory";
 import type { ComposerEditorHandle } from "@/components/app/types/composerEditor.types";
 import { executionFailureMessage } from "@/components/app/logic/executionFailureMessage";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -12,6 +13,7 @@ import { buildConnectorAccessChoices } from "@/components/app/logic/connectorAcc
 import { NativeThreadReferenceChips } from "./NativeThreadReferenceChips";
 import { useComposerAttachments } from "@/components/app/hooks/useComposerAttachments";
 import { NativeComposerInput } from "./NativeComposerInput";
+import { rememberPrompt } from "@/components/app/logic/composer-prompts/promptHistory";
 import { selectPromptSuggestion } from "@/components/app/logic/promptSuggestion";
 import { useNativeConversationPorts } from "@/components/app/hooks/useNativeConversationPorts";
 import { useNativeConversation } from "@/components/app/hooks/useNativeConversation";
@@ -23,6 +25,8 @@ import { useThreadSkills } from "@/components/app/hooks/useThreadSkills";
 import { useOnceVisible } from "@/components/app/hooks/useOnceVisible";
 import { useTranscriptFollow } from "@/components/app/hooks/useTranscriptFollow";
 import { useMcpAppHost } from "@/components/app/hooks/useMcpAppHost";
+import { useOutputHost } from "@/components/app/hooks/useOutputHost";
+import { useThreadOutputOpener } from "@/components/app/hooks/useThreadOutputOpener";
 import { useConnectorSignInRefresh } from "@/components/app/hooks/useConnectorSignInRefresh";
 import { roleProfile } from "@shared/personalization/profiles";
 import { getGreetingFirstName } from "@/components/app/logic/thread-workspace/greeting";
@@ -31,6 +35,7 @@ import { ThreadCheckoutPicker } from "../threads/ThreadCheckoutPicker";
 import { NativeProviderPicker } from "./NativeProviderPicker";
 import { NativeTimeline } from "./NativeTimeline";
 import { NativeRequestStack } from "./NativeRequestStack";
+import { SecretPromptStack } from "./SecretPromptStack";
 import { NativeQueue } from "./NativeQueue";
 import type { ProviderCapabilities } from "@shared/types/provider/capabilities.types";
 import type { TimelineItem } from "@shared/types/conversation/contracts.types";
@@ -118,24 +123,32 @@ export function NativeConversationPanel() {
   const sendLabel = pending ? "Retry saved instruction" : active ? steerFollowUp ? "Steer instruction" : "Queue instruction" : "Send instruction";
   const stopLabel = active?.state === "stopping" ? "Stopping turn" : "Stop turn";
   const actionLabel = showStop ? stopLabel : busy ? "Sending instruction" : sendLabel;
+  const send = (): void => {
+    if (!canSend) return;
+    rememberPrompt(pending?.submit.instruction ?? document.text);
+    void submit();
+  };
   const chooseStarter = (text: string): void => { setText(text); composer.current?.focus(); };
   const mcpApps = useMcpAppHost(client, header ? { id: header.conversation.id, environmentId: header.conversation.workspace.environmentId } : null, chooseStarter);
+  const toolOutputs = useOutputHost(client, header?.conversation.id ?? null);
+  const openOutput = useThreadOutputOpener(header?.conversation.workspace.path ?? workspace.workspace.path, toolOutputs);
   return <section className={cn("thread-conversation flex min-h-0 min-w-0 flex-1 flex-col", !conversationId && "justify-center pb-[12vh]")} aria-label={conversationId ? "Thread" : "New thread"}
     data-thread-insights={header ? insightsExpanded ? "expanded" : "collapsed" : undefined}>
     {/* A new thread sizes the transcript to its greeting so the composer sits directly beneath it. */}
     <div className={cn("relative flex min-h-0 flex-col", conversationId ? "flex-1" : "flex-initial")}>
-    {header && providerLabel !== null && <ThreadInsightsPanel header={header} providerLabel={providerLabel} connectors={connectors} skills={skills} changes={insights.changes} subagents={insights.subagents} branch={insights.branch} expanded={insightsExpanded} busy={busy}
+    {header && providerLabel !== null && <ThreadInsightsPanel header={header} providerLabel={providerLabel} connectors={connectors} skills={skills} changes={insights.changes} subagents={insights.subagents} outputs={insights.outputs} branch={insights.branch} expanded={insightsExpanded} busy={busy}
       canSettle={!active && !header.queuedRuns.length} hasOlderHistory={!!view?.nextBefore}
-      onToggle={() => setInsightsExpanded((current) => !current)} onLoadHistory={() => void older()}
+      onToggle={() => setInsightsExpanded((current) => !current)} onLoadHistory={() => void older()} onOpenOutput={openOutput}
       onSettleChange={() => void execute({ kind: settled ? "unarchive" : "archive", commandId: crypto.randomUUID(), conversationId: header.conversation.id })} />}
-    <div className={cn("thread-transcript min-h-0 overflow-y-auto overscroll-contain px-5 py-7", conversationId ? "flex-1" : "flex-initial")} ref={transcript.ref}
+    <TranscriptHistory scrollRef={transcript.ref} onNavigate={transcript.pauseFollowing} className={!conversationId ? "flex-initial" : undefined}>
+    <div className={cn("thread-transcript min-h-0 overflow-y-auto overscroll-contain pl-10 pr-5 py-7", conversationId ? "flex-1" : "flex-initial")} ref={transcript.ref}
       onWheel={transcript.onWheel} onScroll={transcript.onScroll}>
       <div className="mx-auto max-w-[800px] space-y-5 text-[15px]">
         {loadError && <div role="alert"><p>{loadError}</p><Button onClick={reload}>Reload thread</Button></div>}
         {view?.nextBefore && <Button variant="ghost" onClick={() => void older()}>Load older messages</Button>}
         {conversationId && !view && !loadError && <p className="text-muted-foreground">Loading thread…</p>}
         {view && <NativeTimeline items={view.items} runs={view.runHistory.runs} onLinkClick={onLinkClick} connectors={connectors}
-          resolveBot={resolveBot} onOpenThread={openThread} mcpApps={mcpApps} />}
+          resolveBot={resolveBot} onOpenThread={openThread} mcpApps={mcpApps} toolOutputs={toolOutputs} onOpenOutput={openOutput} />}
         {!conversationId && <div className="mx-auto flex w-full flex-col items-center gap-7 pb-2 text-center">
           <div className="space-y-3"><p className="text-xs font-medium text-muted-foreground">{profile?.label ?? "Your workspace"}</p>
             <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">What would you like to work on in <span className="text-primary">{workspace.name}</span>{firstName && <>, <span className="whitespace-nowrap text-primary">{firstName}</span></>}?</h1></div>
@@ -144,17 +157,19 @@ export function NativeConversationPanel() {
         </div>}
       </div>
     </div>
+    </TranscriptHistory>
     </div>
     {transcript.newActivity && <Button variant="secondary" size="sm" className="mx-auto mb-3 rounded-full" onClick={transcript.jumpToLatest}><ArrowDown className="size-3.5" aria-hidden="true" />Jump to latest</Button>}
     <div className="thread-composer">
     <div className="mx-auto w-full max-w-[848px] space-y-3 px-4 pb-5 sm:px-6">
       {header && <NativeRequestStack key={header.conversation.id} requests={header.pendingRequests} busy={busy} visible={ports.visible} onRespond={(requestId, response) => execute({ kind: "respond", commandId: crypto.randomUUID(), conversationId: header.conversation.id, requestId, response })} />}
+      {conversationId && <SecretPromptStack conversationId={conversationId} />}
       {active?.state === "recovering" && <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void execute({ kind: "reconcile", commandId: crypto.randomUUID(), conversationId: active.conversationId, runId: active.id })}>Check native status</Button>}
       {(runtime.error || ports.storageError || executionFailure || pending) && <p role="alert" className="text-sm text-destructive">{runtime.error ?? ports.storageError ?? (executionFailure ? executionFailureMessage(executionFailure) : "Delivery is unconfirmed. Retry checks the same saved instruction.")}</p>}
       <div>
       {header && <NativeQueue conversationId={header.conversation.id} runs={header.queuedRuns} paused={header.conversation.queuePaused} busy={busy} execute={execute}
         steerTarget={capabilities?.steering && active?.state === "running" && active.nativeTurnId && !header.pendingRequests.length && !header.queuedRuns.some((run) => run.steering === "pending") ? active.id : null} />}
-      <form className="relative space-y-2 rounded-lg border bg-card p-3 shadow-sm focus-within:ring-1 focus-within:ring-ring/30" onSubmit={(event) => { event.preventDefault(); if (canSend) void submit(); }}
+      <form className="relative space-y-2 rounded-lg border bg-card p-3 shadow-sm focus-within:ring-1 focus-within:ring-ring/30" onSubmit={(event) => { event.preventDefault(); send(); }}
         onDragOver={(event) => { if (event.dataTransfer.types.includes("Files")) { event.preventDefault(); event.dataTransfer.dropEffect = pending || settled || busy || attachmentInput.saving ? "none" : "copy"; } }}
         onDrop={(event) => { if (event.dataTransfer.files.length) { event.preventDefault(); void attachmentInput.addFiles(Array.from(event.dataTransfer.files)); } }}>
         <NativeComposerInput inputRef={composer} value={pending?.submit.instruction ?? document.text} disabled={!!pending || settled}
@@ -162,7 +177,7 @@ export function NativeConversationPanel() {
             aria-label="Open thread settings" tooltip="Thread settings" onClick={ports.openThreadSettings}><Settings className="size-4" aria-hidden="true" /></Button> : undefined}
           placeholder={settled ? "Reopen this settled thread to continue" : active ? "Queue your next instruction…" : "Ask, plan, or start something…"}
           suggestion={hasContent || attachmentInput.saving || busy || pending || loadError || runtime.error ? null : selectPromptSuggestion(view, capabilities)}
-          onFiles={(files) => void attachmentInput.addFiles(files)} onChange={setText} onSubmit={() => { if (canSend) void submit(); }} mentions={mentionOptions} issueSource={issueSource} />
+          onFiles={(files) => void attachmentInput.addFiles(files)} onChange={setText} onSubmit={send} mentions={mentionOptions} issueSource={issueSource} />
         <NativeComposerAttachments attachments={attachments} disabled={!!pending || settled || busy} saving={attachmentInput.saving}
           error={attachmentInput.error} onFiles={(files) => void attachmentInput.addFiles(files)} onRemove={ports.removeAttachment}
           trailingAction={<>

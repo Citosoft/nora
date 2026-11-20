@@ -16,7 +16,9 @@ export type NativeTimelineEntry =
   /** Nora or a bot saved a note with `remember`; shown as its own memory line so the user sees what was kept. */
   | { kind: "memory"; call: RememberCall }
   /** An MCP tool's widget; the call itself still appears in the turn's tool activity. */
-  | { kind: "app"; call: McpAppToolCall };
+  | { kind: "app"; call: McpAppToolCall }
+  /** Images a tool wrote or delivered; the call itself still appears in the turn's tool activity. */
+  | { kind: "images"; tool: ToolActivity; paths: string[] };
 /** A `remember` call as its memory line shows it. `text` is null when the runtime truncated the arguments. */
 export interface RememberCall { tool: ToolActivity; text: string | null; updated: boolean; workspace: boolean; }
 export interface NativeMemoryLineProps { call: RememberCall; }

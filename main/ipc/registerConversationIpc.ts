@@ -1,7 +1,8 @@
-import { conversationChannels, executeRequestSchema, readRequestSchema, unwatchRequestSchema, watchRequestSchema } from "@shared/conversations/gateway";
+import { conversationChannels, executeRequestSchema, outputRequestSchema, readRequestSchema, unwatchRequestSchema, watchRequestSchema } from "@shared/conversations/gateway";
 import type { ConversationGatewayReply } from "@shared/ipc/types/conversationGateway.types";
 import type { ConversationInvocation, RegisterConversationDeps } from "@main/types/execution/gateway.types";
 import { ConversationGateway, conversationReply } from "@main/execution/gateway";
+import { ExecutionCommandError } from "@main/execution/errors";
 import { registerProviderIpc } from "./registerProviderIpc";
 import { ViewSubscriptions } from "@main/execution/viewSubscriptions";
 
@@ -16,6 +17,13 @@ export function registerConversationIpc(deps: RegisterConversationDeps): () => v
     ? conversationReply(executeRequestSchema, input, async (request) => ({ kind: "receipt", receipt: await gateway.execute(request) })) : forbidden());
   deps.ipc.handle(conversationChannels.read, async (event, input) => allowed(event)
     ? conversationReply(readRequestSchema, input, (request) => gateway.read(request)) : forbidden());
+  deps.ipc.handle(conversationChannels.output, async (event, input) => allowed(event)
+    ? conversationReply(outputRequestSchema, input, async (request) => {
+      const filePath = gateway.outputFilePath(request);
+      try { await deps.openOutputFile(filePath); }
+      catch (error) { throw new ExecutionCommandError("unavailable", error instanceof Error ? error.message : "This file could not be opened."); }
+      return { kind: "output-opened" };
+    }) : forbidden());
   deps.ipc.handle(conversationChannels.watch, async (event, input) => allowed(event)
     ? conversationReply(watchRequestSchema, input, async (request) => {
       return { kind: "watch", receipt: subscriptions.watch(event.sender, request) };
@@ -27,6 +35,6 @@ export function registerConversationIpc(deps: RegisterConversationDeps): () => v
   return () => {
     unregisterProvider();
     subscriptions.dispose();
-    for (const channel of [conversationChannels.execute, conversationChannels.read, conversationChannels.watch, conversationChannels.unwatch]) deps.ipc.removeHandler(channel);
+    for (const channel of [conversationChannels.execute, conversationChannels.read, conversationChannels.output, conversationChannels.watch, conversationChannels.unwatch]) deps.ipc.removeHandler(channel);
   };
 }

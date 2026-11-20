@@ -47,7 +47,7 @@ export class ConversationEngine {
   /** `prepared` carries host-resolved inputs that are not part of the command's durable identity. */
   execute(input: ConversationCommand, prepared: PreparedCommand = {}): CommandReceipt {
     this.deps.assertOwnership();
-    const { workspace: preparedWorkspace, role: preparedRole, bot, group, direct, externalTranscript, steerFollowUp = false, providerTransition } = prepared;
+    const { workspace: preparedWorkspace, role: preparedRole, bot, group, direct, externalTranscript, steerFollowUp = false, providerTransition, providerConnection } = prepared;
     const command = conversationCommandSchema.parse(input);
     const decisionCommand = command.kind === "create"
       ? { ...command, ...(preparedWorkspace ? { workspace: workspaceRefSchema.parse(preparedWorkspace) } : {}),
@@ -78,8 +78,8 @@ export class ConversationEngine {
         if (!providerTransition || state?.cursor !== providerTransition.cursor) throw new ExecutionCommandError("conflict", "The chat changed while preparing the handoff. Retry the saved instruction.");
       }
       const decision = decideCommand(decisionCommand, { now, environmentId: this.deps.store.environmentId, state,
-        steerFollowUp, providerTransition, bot, group, direct,
-        writers: state ? transaction.writers(state.conversation.workspace) : [], effects: transaction.unfinishedEffects() });
+        steerFollowUp, providerTransition, providerConnection, bot, group, direct,
+        writers: decisionCommand.kind === "create" ? transaction.writers(decisionCommand.workspace) : state ? transaction.writers(state.conversation.workspace) : [], effects: transaction.unfinishedEffects() });
       const created = decision.events.find((event) => event.kind === "conversation");
       const events = command.kind === "create" && externalTranscript && created?.kind === "conversation"
         ? externalImportEvents(created.conversation, externalTranscript) : decision.events;

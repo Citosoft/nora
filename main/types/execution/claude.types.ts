@@ -1,6 +1,7 @@
+import type { ThreadToolScope } from "./toolScope.types";
 import type { NoraRunContextResolver, RunMcpServer } from "@main/types/nora-tools/noraTools.types";
 import type { ExternalSessionReader } from "./externalSessions.types";
-import type { ProviderAccountAction, ProviderAccountResult } from "@shared/types/provider/account.types";
+import type { ProviderAccountAction, ProviderAccountResult, ProviderLoginMethod } from "@shared/types/provider/account.types";
 import type { McpAction, McpResult } from "@shared/types/provider/mcp.types";
 import type { SkillsResult } from "@shared/types/provider/skills.types";
 import type { EffortLevel, PermissionMode, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
@@ -36,7 +37,7 @@ export interface ClaudeOpenInput {
   cwd: string;
   model: string;
   permissionMode: PermissionMode;
-  readOnly?: boolean;
+  toolScope: ThreadToolScope;
   effort: EffortLevel | null;
   /** Default model for subagents; per-agent definitions and explicit Agent call models still take precedence. */
   subagentModel?: string;
@@ -91,6 +92,7 @@ export interface ClaudeSharedControlSession<Session> extends ClaudeControlSessio
 export type ClaudeControlSessionRunner<Session> = <T>(runtime: ClaudeRuntimeOptions, cwd: string, read: (session: Session) => Promise<T>, model?: string,
   mcpServers?: readonly RunMcpServer[]) => Promise<T>;
 export interface ClaudeDiscovery {
+  connection?: ProviderCatalog["connection"];
   models: ProviderModel[];
   authentication: ProviderCatalog["authentication"];
 }
@@ -112,7 +114,9 @@ export type ClaudeMcpAppLookup = (toolName: string) => ClaudeMcpAppTool | null;
 export type ClaudeSubagentFrame = Extract<ClaudeFrame, { kind: "subagent" }>;
 
 /** The credential Claude Code authenticates with, as derived from the SDK account report. */
-export type ClaudeLogin = "claude.ai" | "api-key" | "token" | "third-party" | "none" | "unknown";
+export type ClaudeLogin = "claude.ai" | "console" | "api-key" | "token" | "third-party" | "none" | "unknown";
+/** A sign-in the Claude runtime offers, with the `claude auth login` flag that selects it. */
+export interface ClaudeLoginMethod extends ProviderLoginMethod { flag: "--claudeai" | "--console"; }
 
 /** Timing for re-reading Claude MCP status until background connections settle; injectable for tests. */
 /** Runs the runtime's own MCP sign-in for one server in `cwd`; resolves whether it completed. */

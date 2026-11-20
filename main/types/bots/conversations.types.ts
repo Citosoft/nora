@@ -1,5 +1,5 @@
 import type { BotSnapshot } from "@shared/types/bots/bots.types";
-import type { ChatBranch } from "@shared/types/conversation/contracts.types";
+import type { InitialInstruction, ChatBranch, ConversationEvent, ConversationSource } from "@shared/types/conversation/contracts.types";
 import type { CommandReceipt, ConversationCommand, ProviderBinding, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ConversationHeader, ConversationHistoryPage, ConversationSummary, HistoryQuery } from "@shared/types/conversation/queries.types";
 import type { ProviderCatalogResult } from "@shared/types/provider/catalog.types";
@@ -16,7 +16,15 @@ export interface BotConversationHost {
   catalog(kind: ProviderBinding["kind"], instanceId: string, workspace: WorkspaceRef): Promise<ProviderCatalogResult>;
 }
 export interface BotRunnerDeps { host: BotConversationHost; nextId(): string; }
-export interface BotThreadOptions { chatBranch?: ChatBranch; ids?: { commandId: string; conversationId: string }; }
+export interface BotThreadOptions { initialInstruction?: InitialInstruction; chatBranch?: ChatBranch; done?: string; ids?: { commandId: string; conversationId: string }; source?: ConversationSource; }
+/** Watches a conversation's events after `after`; `settle` returns a value to stop watching, or undefined to keep going. */
+export interface ConversationWatchInput<T> {
+  conversationId: string;
+  after: number;
+  signal: AbortSignal;
+  timeoutMs: number;
+  settle(event: ConversationEvent): T | undefined;
+}
 export interface BotReply {
   conversationId: string;
   status: "completed" | "failed" | "interrupted" | "timed-out";

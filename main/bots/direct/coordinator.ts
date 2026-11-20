@@ -57,9 +57,9 @@ export class DirectCoordinator implements ExecutionProvider {
       if (!bot) { chat.milestone(`${direct.name} is no longer available in ${workspace.name}.`); chat.finish("completed"); return; }
       const deps = { host: this.options.host, nextId: this.options.nextId };
       const threadId = route.kind === "continue" ? route.threadId
-        : await createBotThread(deps, conversation, bot, { ...workspace.workspace, access: "write" }, route.title);
+        : await createBotThread(deps, conversation, bot, { ...workspace.workspace, access: "write" }, route.title, route.done ? { done: route.done } : {});
       const reply = await askBotThread(deps, { conversationId: threadId, signal: controller.signal, timeoutMs: this.options.replyTimeoutMs ?? REPLY_TIMEOUT_MS,
-        instruction: directPrompt(direct, items, threadId, workspace.name), chatText: execution.run.instruction,
+        instruction: directPrompt(direct, items, threadId, workspace.name, route.kind === "new" ? route.done : null), chatText: execution.run.instruction,
         onWaiting: () => chat.milestone(`${bot.name} is waiting for you.`) });
       if (reply.text) chat.reply(authorOf(bot), reply.text, threadId);
       else if (reply.status !== "interrupted") chat.milestone(`${bot.name} could not reply${reply.failure ? `: ${reply.failure}` : reply.status === "timed-out" ? " in time" : ""}.`);

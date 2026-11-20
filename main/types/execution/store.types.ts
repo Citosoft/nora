@@ -24,6 +24,8 @@ export interface StoreReader {
   checkpointReservations(): WorkspaceRef[];
   writers(workspace: WorkspaceRef): string[];
   summaries(projectId?: string): ConversationSummary[];
+  /** The newest items in a project that can carry outputs: tool calls with output files and reviewed turns, oldest first. */
+  outputItems(projectId: string, limit: number): { conversationId: string; item: TimelineItem }[];
   header(conversationId: string): ConversationHeader | null;
   history(query: HistoryQuery): ConversationHistoryPage;
   receipt(commandId: string): StoredReceipt | null;

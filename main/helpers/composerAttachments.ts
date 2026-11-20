@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
-import sharp from "sharp";
 import { z } from "zod";
 import { COMPOSER_ATTACHMENT_MAX_BYTES } from "@shared/composerAttachments";
 import type { ComposerAttachment } from "@shared/types/agentInput.types";
+import { readImagePreview } from "./imagePreview";
 
 const payloadSchema = z.object({
   name: z.string().min(1).max(255), mimeType: z.string().max(255),
@@ -33,13 +33,10 @@ export async function readComposerAttachmentThumbnail(filePath: unknown, storage
     const directory = await fs.realpath(path.join(storageRoot, "chat-attachments"));
     const resolved = await fs.realpath(parsed.data);
     if (path.dirname(resolved) !== directory) return null;
-    const stat = await fs.stat(resolved);
-    if (!stat.isFile() || stat.size > COMPOSER_ATTACHMENT_MAX_BYTES) return null;
-    const thumbnail = await sharp(resolved, { limitInputPixels: 40_000_000 })
-      .rotate().resize(128, 128, { fit: "inside", withoutEnlargement: true }).webp({ quality: 75 }).toBuffer();
-    return `data:image/webp;base64,${thumbnail.toString("base64")}`;
-  } catch {
     // A missing or unsupported image must not prevent sending the original file.
+    const preview = await readImagePreview(resolved, { maxEdge: 128, maxBytes: COMPOSER_ATTACHMENT_MAX_BYTES, quality: 75 });
+    return preview?.dataUrl ?? null;
+  } catch {
     return null;
   }
 }

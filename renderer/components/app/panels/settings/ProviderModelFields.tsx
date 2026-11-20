@@ -14,6 +14,7 @@ export function ProviderModelFields({ workspace, value, onChange, labels, disabl
   const provider = boot.providers.find((entry) => nativeProviderKey(entry) === providerKey) ?? null;
   const catalog = useNativeModelCatalog(catalogs, provider);
   const models = catalog.status === "available" ? catalog.catalog.models : [];
+  const connection = catalog.status === "available" ? catalog.catalog.connection : undefined;
   const unsupported = catalog.status === "available" ? unsupportedReason?.(catalog.catalog) ?? null : null;
   const modelId = value && savedKey === providerKey ? value.model : "";
   const status = !provider ? null : unsupported ?? (catalog.status === "unavailable" ? catalog.failure.message
@@ -27,14 +28,19 @@ export function ProviderModelFields({ workspace, value, onChange, labels, disabl
     <Select aria-label={labels.provider} className="w-full" value={providerKey} disabled={disabled}
       onChange={(event) => { setProviderKey(event.target.value); if (!event.target.value) onChange(null); }}>
       {labels.clear ? <option value="">{labels.clear}</option> : <option value="" disabled>Choose a provider</option>}
-      {boot.providers.map((entry) => <option key={nativeProviderKey(entry)} value={nativeProviderKey(entry)}><ProviderOptionLabel kind={entry.kind} label={entry.label} /></option>)}
+      {boot.providers.map((entry) => {
+        const key = nativeProviderKey(entry);
+        const cached = catalogs.get(key);
+        return <option key={key} value={key}><ProviderOptionLabel kind={entry.kind} label={entry.label}
+          connection={cached.status === "available" ? cached.catalog.connection : undefined} /></option>;
+      })}
       {value && !boot.providers.some((entry) => nativeProviderKey(entry) === savedKey) && <option value={savedKey}><ProviderOptionLabel kind={value.kind} label={`${value.kind} (unavailable)`} /></option>}
     </Select>
     {provider && catalog.status === "available" && !unsupported && models.length > 0 && <Select aria-label={labels.model} className="w-full" value={modelId} disabled={disabled}
       onChange={(event) => { if (event.target.value) onChange({ kind: provider.kind, instanceId: provider.instanceId, model: event.target.value }); }}>
       <option value="" disabled>Choose a model</option>
-      {models.map((model) => <option key={model.id} value={model.id}><ProviderOptionLabel kind={provider.kind} label={model.name || model.id} /></option>)}
-      {modelId && !models.some((model) => model.id === modelId) && <option value={modelId}><ProviderOptionLabel kind={provider.kind} label={`${modelId} (unavailable)`} /></option>}
+      {models.map((model) => <option key={model.id} value={model.id}><ProviderOptionLabel kind={provider.kind} label={model.name || model.id} connection={connection} /></option>)}
+      {modelId && !models.some((model) => model.id === modelId) && <option value={modelId}><ProviderOptionLabel kind={provider.kind} label={`${modelId} (unavailable)`} connection={connection} /></option>}
     </Select>}
     {(error ?? status) && <p role={error ? "alert" : "status"} className={`text-xs ${error ? "text-destructive" : "text-muted-foreground"}`}>{error ?? status}</p>}
   </div>;

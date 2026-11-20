@@ -1,13 +1,16 @@
 import type { z } from "zod";
-import type { actionDecisionRequestSchema, anonymousRuntimeInfoSchema, cancelTaskRequestSchema, commandResponseSchema, conversationDetailResponseSchema,
+import type { actionDecisionRequestSchema, anonymousRuntimeInfoSchema, botsResponseSchema, cancelTaskRequestSchema, createBotChatRequestSchema, commandResponseSchema, conversationDetailResponseSchema,
   conversationsResponseSchema, createConversationRequestSchema, eventsResponseSchema, projectsResponseSchema, realtimeClientMessageSchema,
-  realtimeServerMessageSchema, realtimeTicketResponseSchema, remoteProjectSchema, remoteTaskSchema, runtimeApiErrorCodeSchema, runtimeApiErrorSchema,
+  realtimeServerMessageSchema, realtimeTicketResponseSchema, remoteBotSchema, remoteProjectSchema, remoteTaskSchema, runtimeApiErrorCodeSchema, runtimeApiErrorSchema,
   runtimeInfoSchema, sendMessageRequestSchema, tasksResponseSchema, timelineResponseSchema, RUNTIME_CAPABILITIES } from "@shared/remote-access/runtimeApi";
 
 export type RuntimeCapability = (typeof RUNTIME_CAPABILITIES)[number];
 export type AnonymousRuntimeInfo = z.infer<typeof anonymousRuntimeInfoSchema>;
 export type RuntimeInfo = z.infer<typeof runtimeInfoSchema>;
 export type RemoteProject = z.infer<typeof remoteProjectSchema>;
+export type RemoteBot = z.infer<typeof remoteBotSchema>;
+export type BotsResponse = z.infer<typeof botsResponseSchema>;
+export type CreateBotChatRequest = z.infer<typeof createBotChatRequestSchema>;
 export type ProjectsResponse = z.infer<typeof projectsResponseSchema>;
 export type ConversationsResponse = z.infer<typeof conversationsResponseSchema>;
 export type ConversationDetailResponse = z.infer<typeof conversationDetailResponseSchema>;

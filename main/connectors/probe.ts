@@ -3,6 +3,7 @@ import { StreamableHTTPClientTransport, StreamableHTTPError } from "@modelcontex
 import { resolveMcpServerLogo } from "@main/providers/mcpLogo";
 import type { ConnectorCredentials, ConnectorProbe, StoredConnector } from "@main/types/connectors/connectors.types";
 import type { McpServer } from "@shared/types/provider/mcp.types";
+import { toolInputSchemaOf } from "@shared/providers/mcp";
 
 const PROBE_TIMEOUT_MS = 20_000;
 const MAX_TOOL_PAGES = 20;
@@ -30,7 +31,7 @@ async function listTools(connector: StoredConnector, headers: Record<string, str
     let cursor: string | undefined;
     for (let page = 0; page < MAX_TOOL_PAGES; page += 1) {
       const result = await client.listTools(cursor ? { cursor } : {}, { signal });
-      tools.push(...result.tools.map((tool) => ({ name: tool.name, ...(tool.description ? { description: tool.description } : {}) })));
+      tools.push(...result.tools.map((tool) => ({ name: tool.name, ...(tool.description ? { description: tool.description } : {}), inputSchema: toolInputSchemaOf(tool.inputSchema) })));
       cursor = result.nextCursor;
       if (!cursor) break;
     }

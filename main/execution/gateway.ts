@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { gatewayReplySchema, readResultSchema } from "@shared/conversations/gateway";
-import type { ExecuteConversationRequest, ReadConversationRequest, ReadConversationResult, WatchConversationRequest, ConversationCursorHint,
+import type { ConversationOutputRequest, ExecuteConversationRequest, ReadConversationRequest, ReadConversationResult, WatchConversationRequest, ConversationCursorHint,
   ConversationGatewayReply } from "@shared/ipc/types/conversationGateway.types";
 import type { ConversationReplyValue, GatewayDependencies, WatchHandle } from "@main/types/execution/gateway.types";
 import { ExecutionCommandError } from "./errors";
@@ -25,6 +25,9 @@ export class ConversationGateway {
     return host;
   }
   execute(request: ExecuteConversationRequest) { return this.host(request.environmentId).execute(request.command); }
+  outputFilePath(request: ConversationOutputRequest): string {
+    return this.host(request.environmentId).outputFilePath(request.conversationId, request.itemId, request.path);
+  }
   async read(request: ReadConversationRequest): Promise<ReadConversationResult> {
     const host = this.host(request.environmentId);
     let result: ReadConversationResult;
@@ -37,6 +40,8 @@ export class ConversationGateway {
       case "history": result = { kind: "history", page: host.conversationHistory(request) }; break;
       case "events": result = { kind: "events", page: host.history(request.conversationId, request.after, request.limit) }; break;
       case "catalog": result = { kind: "catalog", result: await host.catalog(request.providerKind, request.instanceId, request.workspace) }; break;
+      case "outputs": result = { kind: "outputs", threads: host.outputs(request.projectId) }; break;
+      case "output-file": result = { kind: "output-file", file: await host.outputFile(request.conversationId, request.itemId, request.path, request.size) }; break;
     }
     return readResultSchema.parse(result);
   }

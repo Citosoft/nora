@@ -34,6 +34,16 @@ test("Codex normalizes each tool family without forwarding provider payloads", (
   }
 });
 
+test("Codex image generation keeps the saved file as the tool's output image only when it succeeded", () => {
+  const generated = normalizeCodexTool({ id: "x", type: "imageGeneration", status: "completed", savedPath: "/images/result.png", revisedPrompt: "A red square" }, identity, true);
+  assert.deepEqual(generated?.details, { category: "image", input: "A red square", outputFiles: [{ path: "/images/result.png" }] });
+  const running = normalizeCodexTool({ id: "x", type: "imageGeneration", status: "inProgress" }, identity, false);
+  assert.equal(running?.details?.outputFiles, undefined);
+  const failed = normalizeCodexTool({ id: "x", type: "imageGeneration", status: "failed", savedPath: "/images/partial.png", failure: { message: "Blocked" } }, identity, true);
+  assert.equal(failed?.details?.outputFiles, undefined);
+  assert.equal(failed?.output, "Blocked");
+});
+
 test("native failures, declines, interrupted tools and exit codes keep their final state", () => {
   for (const [status, state] of [["failed", "failed"], ["declined", "declined"], ["interrupted", "interrupted"]]) {
     assert.equal(normalizeCodexTool({ type: "commandExecution", id: "x", command: "test", status }, identity, true)?.state, state);

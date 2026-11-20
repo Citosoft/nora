@@ -1,3 +1,4 @@
+import { createFileSourceReader } from "@main/apps/fileSource";
 import { generateThreadName } from "@main/ai/threadNameGenerator";
 import { generateBranchName } from "@main/ai/branchNameGenerator";
 import { join } from "node:path";
@@ -10,6 +11,7 @@ import { PersonalizationService } from "@main/personalization/service";
 import { discoverNativeProviders } from "@main/helpers/nativeProviderDiscovery";
 import { buildProcessEnv } from "@main/processEnv";
 import { effectiveRole } from "@shared/personalization/profiles";
+import { connectorIdsForBot } from "@shared/bots/connectorSelection";
 import { findEffectiveBot } from "@shared/bots/catalog";
 import { createSharedBotLibrary } from "@main/bots/sharedBotLibrary";
 import { createNoraToolServer } from "@main/nora-tools/server";
@@ -17,7 +19,14 @@ import { createNoraToolOperations } from "@main/nora-tools/operations/index";
 import { createRunContext } from "@main/nora-tools/runContext";
 import { createConnectorService } from "@main/connectors/service";
 import { openConnectorStore } from "@main/connectors/store";
-import { safeStorageSecretCodec } from "@main/helpers/secretEncryption";
+import { openAppStore } from "@main/apps/appStore";
+import { createAppService } from "@main/apps/appService";
+import { createKeychainOnlyCodec, safeStorageSecretCodec } from "@main/helpers/secretEncryption";
+import { openSecretStore } from "@main/secrets/store";
+import { createSecretPrompts } from "@main/secrets/prompts";
+import { createSecretService } from "@main/secrets/service";
+import { runSecretCommand } from "@main/secrets/command";
+import { NORA_TOOL_TIMEOUT_SECONDS } from "@main/nora-tools/endpoint";
 import { GroupCoordinator } from "@main/bots/groups/coordinator";
 import { createGroupRouter } from "@main/bots/groups/router";
 import { DirectCoordinator } from "@main/bots/direct/coordinator";
@@ -87,8 +96,23 @@ export async function openNativeRuntime(options: NativeRuntimeOptions): Promise<
     eventCursor: () => started(host).eventCursor(), catalog: (kind, instanceId, workspace) => started(host).catalog(kind, instanceId, workspace)
   };
   const memory = openBotMemoryStore(join(options.stateDirectory, "bot-memory.sqlite"), { now: () => new Date().toISOString(), nextId: randomUUID });
+  const secrets = createSecretService({ runCommand: runSecretCommand,
+    store: openSecretStore({ path: join(options.stateDirectory, "secrets.json"), now, onChanged: options.onSecretVaultChanged, codec: createKeychainOnlyCodec({
+      unavailable: "Secure storage is unavailable, so the secret was not saved. Unlock or set up your system keychain and try again.",
+      locked: "Unlock your system keychain to use saved secrets.",
+      unreadable: "A saved secret can no longer be unlocked. Ask for it again with request_secret." }) }),
+    // Lapses a minute before the runtimes' tool-call limit, so the model is told the prompt went unanswered.
+    prompts: createSecretPrompts({ nextId: randomUUID, now, timeoutMs: (NORA_TOOL_TIMEOUT_SECONDS - 60) * 1000, onChanged: options.onSecretPromptsChanged }) });
+  const botIn = (workspaceId: string, botId: string) => findEffectiveBot(options.readSettings().personalization.bots, workspaceId, bots.list(), botId);
+  const connectors = createConnectorService({ store: openConnectorStore({ path: join(options.stateDirectory, "connectors.json"), codec: safeStorageSecretCodec }),
+    openExternal: options.openExternal, onChanged: options.onConnectorsChanged, nextId: randomUUID,
+    connectorIdsForBot: (subject) => connectorIdsForBot(options.readSettings().personalization.bots, bots.list(), subject) });
+  const appStore = openAppStore(join(options.stateDirectory, "apps.sqlite"));
+  const apps = createAppService({ store: appStore, connectors: connectors.tools, files: createFileSourceReader(), nextId: randomUUID, now, onChanged: options.onAppsChanged, onData: options.onAppData, onBuildStep: options.onAppBuildStep, onAlertsChanged: options.onAppAlertsChanged });
+  apps.start();
   const noraTools = createNoraToolServer(createNoraToolOperations({
-    host: lazyHost, nextId: randomUUID, memory,
+    workerWorkspaces: options.workerWorkspaces,
+    host: lazyHost, nextId: randomUUID, memory, secrets, apps, connectorTools: connectors.tools,
     readSettings: options.readSettings, updateSettings: options.updateSettings,
     windowSettings: options.windowSettings, settingsSync: options.settingsSync,
     onSettingsChanged: (settings) => { started(personalization).publish(); options.onSettingsChanged(settings); },
@@ -98,12 +122,9 @@ export async function openNativeRuntime(options: NativeRuntimeOptions): Promise<
     ...(options.tasks ? { tasks: options.tasks } : {}),
     ...(options.workflows ? { workflows: options.workflows } : {})
   }), () => personalization?.publish());
-  const connectors = createConnectorService({ store: openConnectorStore({ path: join(options.stateDirectory, "connectors.json"), codec: safeStorageSecretCodec }),
-    openExternal: options.openExternal, onChanged: options.onConnectorsChanged, nextId: randomUUID });
   const runContextSource = createRunContext(noraTools, memory, connectors);
   const runContext = runContextSource.resolve;
   await bots.refresh(catalog.list());
-  const botIn = (workspaceId: string, botId: string) => findEffectiveBot(options.readSettings().personalization.bots, workspaceId, bots.list(), botId);
   host = await openLocalHost({ runContext, environmentId, databasePath: join(options.stateDirectory, "execution.sqlite"), gitExecutable: "git", instances,
     idleCompactionMode: () => options.readSettings().personalization.idleCompaction ?? "suggest",
     threadPreferences: readThreadPreferences,
@@ -123,6 +144,7 @@ export async function openNativeRuntime(options: NativeRuntimeOptions): Promise<
       return found.map((entry) => entry.provider);
     },
     chooseFolder: options.chooseFolder, openFolder: options.openFolder, activateWorkspace, bots, noraToolsRunning: noraTools.running,
+    createRoutines: (inputs) => { routines.createMany(inputs); },
     projectCheckouts: options.projectCheckouts,
     resolveProject: (id) => {
       const project = options.projects().find((entry) => entry.id === id && entry.location?.kind !== "ssh");
@@ -146,6 +168,6 @@ export async function openNativeRuntime(options: NativeRuntimeOptions): Promise<
   const previewContext = (request: DirectContextRequest) => previewDirectContext({ host: lazyHost, bot: botIn, workspaces: chatWorkspaces, now,
     runContext: runContextSource.preview, routerModel: () => simpleTaskModelLabel(options.readSettings().ai) }, request);
   const openedHost = host;
-  return { host: openedHost, personalization, catalog, memory, memoryReviewLog, routines, connectors, startBranch, nameBranch, previewDirectContext: previewContext,
-    async shutdown() { memoryReview.stop(); routines.stop(); await openedHost.shutdown(); await noraTools.close(); await connectors.close(); memory.close(); memoryReviewLog.close(); routineStore.close(); } };
+  return { host: openedHost, personalization, catalog, memory, memoryReviewLog, routines, connectors, secrets, apps, startBranch, nameBranch, previewDirectContext: previewContext,
+    async shutdown() { memoryReview.stop(); routines.stop(); apps.close(); await openedHost.shutdown(); await noraTools.close(); await connectors.close(); memory.close(); memoryReviewLog.close(); routineStore.close(); appStore.close(); } };
 }

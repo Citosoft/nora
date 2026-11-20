@@ -10,6 +10,7 @@ import type { ExecutionHost } from "@main/execution/host";
 import type { ProviderUpdate } from "@main/types/execution/provider.types";
 import { SimulatorProvider } from "../../../simulator/main/provider";
 import { fixture } from "./fixture";
+import { secretsFixture } from "../secrets/fixture";
 import { readFile } from "node:fs/promises";
 import { inlineQuestion } from "@/components/app/logic/attentionToasts";
 import { SIMULATED_WIDGET_SCRIPT } from "../../../simulator/main/mcpApps";
@@ -201,7 +202,7 @@ test("default simulator pacing waits for the first response and interruption can
   const f = fixture(t); f.create(); f.submit();
   const snapshot = f.store.execution("conversation", "run"); assert.ok(snapshot);
   const execution = { snapshot, run: snapshot.runs[0] };
-  const provider = new SimulatorProvider();
+  const provider = new SimulatorProvider(secretsFixture().service);
   const updates: ProviderUpdate[] = [];
   const task = provider.start(execution, (update) => updates.push(update));
   assert.deepEqual(updates.map((update) => update.kind), ["started"]);
@@ -212,7 +213,7 @@ test("default simulator pacing waits for the first response and interruption can
 test("completed-only simulated tools first emit running activity and streaming uses small chunks", async (t) => {
   const f = fixture(t); f.create(); f.submit();
   const snapshot = f.store.execution("conversation", "run"); assert.ok(snapshot);
-  const provider = new SimulatorProvider(0);
+  const provider = new SimulatorProvider(secretsFixture().service, 0);
   const updates: ProviderUpdate[] = [];
   await provider.start({ snapshot, run: { ...snapshot.runs[0], instruction: "/long-output" } }, (update) => updates.push(update));
   const items = updates.flatMap((update) => update.kind === "item" ? [update.item] : []);
@@ -297,5 +298,37 @@ test("MCP App scenario serves its widget from the stored call; only Codex runs t
     const claude = await run("claude");
     assert.ok(claude.open.kind === "resource" && !claude.open.toolCalls);
     assert.equal(claude.called.kind, "unavailable");
+  } finally { await host.shutdown(); rmSync(directory, { recursive: true, force: true }); }
+});
+
+test("secrets scenario waits on the secure dialog and the command approval, and keeps the value out of the thread", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "nora-simulator-secrets-"));
+  const { host, boot, secrets } = createSimulatorHost(directory, 0);
+  const nextPrompt = async (kind: "input" | "use") => {
+    const deadline = Date.now() + 5000;
+    for (;;) {
+      const prompt = secrets.pending().find((entry) => entry.kind === kind);
+      if (prompt) return prompt;
+      if (Date.now() > deadline) throw new Error(`No ${kind} prompt opened`);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+  };
+  try {
+    await host.execute({ kind: "create", commandId: randomUUID(), conversationId: "secrets", title: "Secrets", parentId: null,
+      workspace: boot.workspaces[0].workspace, provider: { kind: "codex", instanceId: "simulator", model: "simulated", permissionPolicy: "simulated", reasoning: null } });
+    await host.execute({ kind: "submit", commandId: randomUUID(), conversationId: "secrets", runId: "run", instruction: "/secrets" });
+    const input = await nextPrompt("input");
+    assert.deepEqual([input.conversationIds, input.kind === "input" && input.name], [["secrets"], "GITHUB_TOKEN"]);
+    secrets.answer({ kind: "save", promptId: input.id, value: "ghp_simulated-value" });
+    const use = await nextPrompt("use");
+    assert.deepEqual(use.kind === "use" && use.secrets, ["GITHUB_TOKEN"]);
+    secrets.answer({ kind: "allow", promptId: use.id, remember: false });
+    await waitForSimulator(host, "secrets", (header) => header?.activeRuns.length === 0);
+    const page = host.conversationHistory({ conversationId: "secrets", scope: "timeline", limit: 100 }); assert.ok(page.scope === "timeline");
+    const tools = page.items.filter((item) => item.kind === "tool");
+    assert.deepEqual(tools.map((item) => item.state), ["completed", "completed"]);
+    assert.match(JSON.stringify(tools), /GITHUB_TOKEN=\[GITHUB_TOKEN redacted\]/);
+    assert.doesNotMatch(JSON.stringify(page.items), /ghp_simulated-value/);
+    assert.doesNotMatch(await readFile(join(directory, "secrets.json"), "utf8"), /ghp_simulated-value/);
   } finally { await host.shutdown(); rmSync(directory, { recursive: true, force: true }); }
 });

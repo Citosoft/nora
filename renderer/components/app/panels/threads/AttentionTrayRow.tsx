@@ -10,7 +10,7 @@ import type { RequestResponse } from "@shared/types/conversation/contracts.types
 import type { AttentionTrayRowProps } from "@/components/app/types/attentionToasts.types";
 
 /** One waiting request as a single row: who and what, the command or choices beneath, and its main actions on the right. */
-export function AttentionTrayRow({ toast, onRespond, onOpen, onDismiss }: AttentionTrayRowProps) {
+export function AttentionTrayRow({ toast, onRespond, onOpen, onDismiss, menuItems }: AttentionTrayRowProps) {
   const { request, conversation, notice } = toast;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +30,8 @@ export function AttentionTrayRow({ toast, onRespond, onOpen, onDismiss }: Attent
     aria-label={`More actions for ${notice.title}`}><Ellipsis className="size-3.5" aria-hidden="true" /></Button>}>
     {approval?.more.map(({ option, intent }) => <DropdownMenuItem key={option.id} destructive={intent === "cancel"} onSelect={() => approve(option.id)}>{option.label}</DropdownMenuItem>)}
     <DropdownMenuItem onSelect={onOpen}>Open thread</DropdownMenuItem>
-    <DropdownMenuItem onSelect={onDismiss}>Hide (keeps waiting)</DropdownMenuItem>
+    {onDismiss && <DropdownMenuItem onSelect={onDismiss}>Hide (keeps waiting)</DropdownMenuItem>}
+    {menuItems}
   </DropdownMenu>;
   return <li className="px-3 py-2">
     <div className="flex items-center gap-2.5">

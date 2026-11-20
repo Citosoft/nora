@@ -1,13 +1,14 @@
+import { buildTaskLink } from "@shared/taskLink";
 import { taskIdFromPath } from "@shared/taskIdentity";
 import type { WorkspaceTaskBoard, WorkspaceTaskSummary } from "@shared/appTypes";
 import type { NoraTaskInfo, NoraTaskOperations, NoraToolContext } from "@main/types/nora-tools/noraTools.types";
 import type { NoraTaskStore, NoraToolOperationOptions } from "@main/types/nora-tools/operations.types";
 import { shellProjectOf } from "./shellProject";
 
-function taskInfo(task: WorkspaceTaskSummary, board: WorkspaceTaskBoard): NoraTaskInfo {
+function taskInfo(task: WorkspaceTaskSummary, board: WorkspaceTaskBoard, projectId: string): NoraTaskInfo {
   const sectionId = board.taskPositions[task.path]?.sectionId ?? board.sections[0]?.id ?? "todo";
   const section = board.sections.find((entry) => entry.id === sectionId);
-  return { id: taskIdFromPath(task.path), path: task.path, title: task.title, columnId: sectionId, column: section?.title ?? sectionId, completed: task.completed };
+  return { link: buildTaskLink(projectId, taskIdFromPath(task.path)), id: taskIdFromPath(task.path), path: task.path, title: task.title, columnId: sectionId, column: section?.title ?? sectionId, completed: task.completed };
 }
 
 export function createTaskOperations(options: NoraToolOperationOptions): NoraTaskOperations {
@@ -49,21 +50,21 @@ export function createTaskOperations(options: NoraToolOperationOptions): NoraTas
     if (path !== task.path) await store.move(projectId, task.path, path);
     const saved = await store.saveBoard(projectId, { ...board, taskPositions, taskAssignments });
     options.onTasksChanged?.(projectId);
-    return taskInfo({ ...task, path, completed }, saved);
+    return taskInfo({ ...task, path, completed }, saved, projectId);
   };
   return {
     async read(id, context) {
       const { tasks, board, store, projectId } = await snapshot(context);
       const task = findTask(tasks, id);
-      return { task: taskInfo(task, board), content: await store.read(projectId, task.path) };
+      return { task: taskInfo(task, board, projectId), content: await store.read(projectId, task.path) };
     },
     start: (id, context) => transition(id, false, context),
     finish: (id, context) => transition(id, true, context),
     async list(context) {
-      const { tasks, board } = await snapshot(context);
+      const { tasks, board, projectId } = await snapshot(context);
       const order = (path: string): number => board.taskPositions[path]?.order ?? Number.MAX_SAFE_INTEGER;
       const sections = board.sections.map((section) => section.id);
-      return tasks.map((task) => taskInfo(task, board))
+      return tasks.map((task) => taskInfo(task, board, projectId))
         .sort((a, b) => sections.indexOf(a.columnId) - sections.indexOf(b.columnId) || order(a.path) - order(b.path));
     },
     async create(title, details, context) {
@@ -73,7 +74,7 @@ export function createTaskOperations(options: NoraToolOperationOptions): NoraTas
       const { tasks, board } = await snapshot(context);
       const task = tasks.find((entry) => entry.path === path);
       if (!task) throw new Error("The task was written but did not appear on the board. Refresh the task board.");
-      return taskInfo(task, board);
+      return taskInfo(task, board, projectId);
     },
     async move(path, column, context) {
       const { tasks, board, store, projectId } = await snapshot(context);
@@ -85,7 +86,7 @@ export function createTaskOperations(options: NoraToolOperationOptions): NoraTas
       const last = Math.max(-1, ...Object.entries(board.taskPositions).filter(([key, position]) => key !== path && position.sectionId === section.id).map(([, position]) => position.order));
       const saved = await store.saveBoard(projectId, { ...board, taskPositions: { ...board.taskPositions, [path]: { sectionId: section.id, order: last + 1 } } });
       options.onTasksChanged?.(projectId);
-      return taskInfo(task, saved);
+      return taskInfo(task, saved, projectId);
     }
   };
 }

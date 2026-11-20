@@ -29,6 +29,7 @@ export function NativeProviderPicker({ state, workspace, client, locked: current
   const modelId = locked?.model ?? choice.modelId ?? inheritedModelId(catalog, provider, defaults);
   const model = selectedNativeModel(catalog, modelId);
   const available = catalog.status === "available" ? catalog.catalog : null;
+  const connection = locked ? locked.connection ?? "unknown" : available?.connection ?? "unknown";
   const policyId = locked?.permissionPolicy ?? policy ?? (needsPolicy ? "" : available?.policies[0]?.id ?? "");
   const effort = locked ? locked.reasoning : reasoning;
   const agentModel = locked ? locked.subagentModel ?? null : subagentModel !== undefined ? subagentModel
@@ -56,7 +57,7 @@ export function NativeProviderPicker({ state, workspace, client, locked: current
   useEffect(() => { onCapabilities?.(available?.capabilities ?? null); }, [available, onCapabilities]);
   return <div className="space-y-2">
     <div className="flex min-w-0 items-center gap-1">
-      <NativeModelPopover providers={state.providers} store={store} selectedProvider={provider} selectedModel={model} selectedModelId={modelId} locked={!!locked}
+      <NativeModelPopover selectedConnection={connection} providers={state.providers} store={store} selectedProvider={provider} selectedModel={model} selectedModelId={modelId} locked={!!locked}
         continuation={!!current}
         settings={{ catalog: available, policyId, reasoning: effort, subagentModel: agentModel,
           onPolicy: (value) => { choose(); setPolicy(value); setNeedsPolicy(false); },
@@ -69,7 +70,7 @@ export function NativeProviderPicker({ state, workspace, client, locked: current
           if (changedProvider || model?.id !== nextModel.id) setReasoning(null);
           setChoice({ providerKey: key, modelId: nextModel.id, inherited: false });
         }} />
-      <ProviderUsageWidget provider={provider} />
+      <ProviderUsageWidget connection={connection} provider={provider} />
       {current && allowChange !== undefined && <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" disabled={!allowChange}
         aria-label={editing ? "Cancel provider change" : "Change provider or model"}
         onClick={() => {

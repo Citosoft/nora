@@ -1,8 +1,10 @@
 import type { OAuthClientInformationMixed, OAuthTokens } from "@modelcontextprotocol/sdk/shared/auth.js";
-import type { Connector, ConnectorAccess, ConnectorInput } from "@shared/types/connectors/connectors.types";
+import type { Connector, ConnectorAccess, ConnectorInput, ConnectorSubject } from "@shared/types/connectors/connectors.types";
 import type { McpServerLogo } from "@shared/types/provider/mcp.types";
 import type { SecretCodec } from "@main/types/secretEncryption.types";
 import type { RunContextConnectors, RunMcpServer } from "@main/types/nora-tools/noraTools.types";
+import type { McpTool } from "@shared/types/provider/mcp.types";
+import type { JsonValue } from "@main/jsonValue";
 
 /** Non-secret authentication settings kept in the clear. */
 export type StoredConnectorAuth = { kind: "oauth"; clientId?: string } | { kind: "header"; name: string };
@@ -77,7 +79,26 @@ export interface ConnectorGatewayOptions {
   fetch?: typeof fetch;
 }
 
+/** What a connector tool returned, as the MCP SDK shapes it; `structuredContent` is preferred when the tool declares an output schema. */
+export interface ConnectorToolCallResult { content: readonly { type: string; text?: string }[]; structuredContent?: Record<string, unknown>; isError?: boolean; }
+/** Calls connector tools from main itself (for apps), with the same credentials and refresh as the gateway. */
+export interface ConnectorToolClient {
+  callTool(connectorId: string, tool: string, args: Record<string, JsonValue>): Promise<ConnectorToolCallResult>;
+  listTools(connectorId: string): Promise<McpTool[]>;
+  /** Drops the connector's session so the next call reconnects with current credentials. */
+  forget(connectorId: string): Promise<void>;
+  close(): Promise<void>;
+}
+export interface ConnectorToolClientOptions {
+  store: ConnectorStore;
+  credentials: ConnectorCredentials;
+  onNeedsAuth(id: string): void;
+  fetch?: typeof fetch;
+}
+
 export interface ConnectorServiceOptions {
+  /** Resolves current bot settings per request, so saved changes also affect existing threads. */
+  connectorIdsForBot?(subject: ConnectorSubject): readonly string[] | undefined;
   store: ConnectorStore;
   openExternal(url: string): Promise<void>;
   onChanged(connectors: Connector[]): void;
@@ -95,5 +116,13 @@ export interface ConnectorService extends RunContextConnectors {
   signIn(id: string): Promise<Connector[]>;
   signOut(id: string): Promise<Connector[]>;
   refresh(id?: string): Promise<Connector[]>;
+  /** Nora's own calls to connector tools, for apps; honours each connector's access rules through `subject`. */
+  tools: ConnectorToolAccess;
   close(): Promise<void>;
+}
+/** Tool calls on behalf of a subject (an app is a Nora-owned subject in its workspace), refused for connectors it cannot reach. */
+export interface ConnectorToolAccess {
+  call(connectorId: string, tool: string, args: Record<string, JsonValue>, subject: ConnectorSubject): Promise<ConnectorToolCallResult>;
+  /** Connectors the subject can use, with their tools and input schemas as last probed. */
+  available(subject: ConnectorSubject): Connector[];
 }

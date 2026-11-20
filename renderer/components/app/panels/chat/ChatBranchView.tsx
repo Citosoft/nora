@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from "react";
+import { TranscriptHistory } from "@/components/app/shared/TranscriptHistory";
+import { useMemo, useRef } from "react";
 import { ArrowDown, SquareArrowOutUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNativeConversationPorts } from "@/components/app/hooks/useNativeConversationPorts";
@@ -6,8 +7,7 @@ import { useNativeConversation } from "@/components/app/hooks/useNativeConversat
 import { useThreadLinks } from "@/components/app/hooks/useThreadLinks";
 import { useTranscriptFollow } from "@/components/app/hooks/useTranscriptFollow";
 import { buildBranchTimeline } from "@/components/app/logic/chatBranchTimeline";
-import { newBranchIds, sendBranchMessage } from "@/components/app/logic/chatBranchSend";
-import { chatBranchClient } from "@/components/app/clients/chatBranchClient";
+import { useChatThreadSend } from "@/components/app/hooks/useChatThreadSend";
 import { BotAvatar } from "@/components/app/shared/BotAvatar";
 import { ChatTranscript } from "./ChatTranscript";
 import { ChatTyping } from "./ChatTyping";
@@ -23,7 +23,7 @@ const NO_THREADS: ReadonlyMap<string, ChatWorkThread> = new Map();
  * A branch of a chat: one work thread read and written like the chat itself, so you can keep several conversations going with
  * a bot without each one carrying the others' context. A draft branch has no thread yet; its first message starts one.
  */
-export function ChatBranchView({ target, bot, chatId, composer, onComposerChange, onStarted, onOpenThread, onLinkClick }: ChatBranchViewProps) {
+export function ChatBranchView({ target, bot, chatId, composer, onComposerChange, onStarted, onOpenThread, onLinkClick, chatWorkspaceName }: ChatBranchViewProps) {
   const { client, workspace } = useNativeConversationPorts();
   const thread = target.kind === "thread" ? target.thread : null;
   const conversationId = thread?.id ?? (target.kind === "draft" ? target.draft.threadId : null);
@@ -33,36 +33,18 @@ export function ChatBranchView({ target, bot, chatId, composer, onComposerChange
   const transcript = useTranscriptFollow(view?.items);
   const threadLinks = useThreadLinks(workspace.workspace.path);
   const input = useRef<ComposerEditorHandle>(null);
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const active = view?.header.activeRuns[0];
+  const { sending, error, send, stop } = useChatThreadSend({ client, target, chatId, composer, onComposerChange, onStarted, reload, active });
   const starting = target.kind === "draft" && !!target.draft.threadId;
   const settled = !!thread?.settled;
   const busy = sending || starting;
   const canSend = !busy && !settled && (!!composer.pending || !!composer.text.trim());
-  const send = async (): Promise<void> => {
-    const text = composer.text.trim();
-    const ids = composer.pending ?? newBranchIds();
-    onComposerChange({ pending: ids });
-    setSending(true); setError(null);
-    try {
-      const threadId = await sendBranchMessage({ conversations: client, branches: chatBranchClient }, target, chatId, text, ids);
-      onComposerChange({ text: "", pending: null });
-      if (target.kind === "draft") onStarted(threadId);
-      reload();
-    } catch (cause) {
-      // The same identities are kept, so Retry repeats this message rather than sending a second one.
-      setError(cause instanceof Error ? cause.message : "Delivery was not confirmed. Retry sends the same message.");
-    } finally { setSending(false); }
-  };
-  const stop = active && !composer.text.trim() ? { label: active.state === "stopping" ? "Stopping" : "Stop", disabled: active.state === "stopping",
-    onStop: () => void client.execute({ kind: "interrupt", commandId: crypto.randomUUID(), conversationId: active.conversationId, runId: active.id })
-      .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "The reply could not be stopped.")) } : null;
   const working = !!active || !!thread?.working || starting;
   const waiting = !!thread?.waiting;
   return <div className="flex min-h-0 flex-1">
     <div className="flex min-w-0 flex-1 flex-col">
-    <div ref={transcript.ref} onWheel={transcript.onWheel} onScroll={transcript.onScroll} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6">
+    <TranscriptHistory scrollRef={transcript.ref} onNavigate={transcript.pauseFollowing}>
+    <div ref={transcript.ref} onWheel={transcript.onWheel} onScroll={transcript.onScroll} className="min-h-0 flex-1 overflow-y-auto overscroll-contain pl-10 pr-5 pb-6">
       <div className="mx-auto max-w-[760px]">
         {/* The info panel carries this on wider windows. */}
         <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground md:hidden">
@@ -83,6 +65,7 @@ export function ChatBranchView({ target, bot, chatId, composer, onComposerChange
         {working && <ChatTyping name={bot.name} avatar={bot.avatar} workspaceName={thread?.workspaceName ?? null} waiting={waiting} />}
       </div>
     </div>
+    </TranscriptHistory>
     {transcript.newActivity && <Button variant="secondary" size="sm" className="mx-auto mb-3 rounded-full" onClick={transcript.jumpToLatest}>
       <ArrowDown className="size-3.5" aria-hidden="true" />Jump to latest</Button>}
     <div className="mx-auto w-full max-w-[808px] space-y-2 px-4 pb-5 sm:px-6">
@@ -93,6 +76,6 @@ export function ChatBranchView({ target, bot, chatId, composer, onComposerChange
         onChange={(text) => onComposerChange({ text })} onSubmit={() => void send()} />
     </div>
     </div>
-    <ChatBranchInfoPanel target={target} bot={bot} model={view?.header.conversation.provider.model ?? null} onOpenThread={onOpenThread} />
+    <ChatBranchInfoPanel target={target} bot={bot} model={view?.header.conversation.provider.model ?? null} chatWorkspaceName={chatWorkspaceName} onOpenThread={onOpenThread} />
   </div>;
 }

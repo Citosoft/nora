@@ -43,7 +43,7 @@ export function loopFixture(options: LoopFixtureOptions = {}) {
         }
         return result;
       } },
-    notifyRunChanged: () => {}, notifyRunOutput: () => {}, notifyDefinitionChanged: (value) => broadcasts.push(value),
+    notifyRunChanged: () => {}, notifyRunDeleted: () => {}, notifyRunOutput: () => {}, notifyDefinitionChanged: (value) => broadcasts.push(value),
     resolveWorkspaceStatePath: async (_project, path) => path
   });
   return { runner, runs, store, broadcasts, branches, definition: saved,

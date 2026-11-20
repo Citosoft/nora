@@ -26,13 +26,17 @@ import {
   resolveMonacoLanguageId
 } from "@/components/app/logic/fileEditorMonaco";
 import { ExternalFilePlaceholder } from "@/components/app/panels/file-editor/ExternalFilePlaceholder";
+import { DelimitedTableView } from "@/components/app/panels/file-editor/DelimitedTableView";
+import { FileEditorViewToggle } from "@/components/app/panels/file-editor/FileEditorViewToggle";
+import { delimiterForFile } from "@shared/text/delimited";
+import type { DelimitedFileView, FileEditorViewOption } from "@/components/app/types/delimitedText.types";
 import { MarkdownRenderer } from "@/components/app/shared/MarkdownRenderer";
 import type { FileEditorPanelProps } from "@/components/app/types/component.types";
 import { cn } from "@/lib/utils";
 import { resolveWorkspaceFileViewKind } from "@shared/workspaceFileViewKind";
 import type { BeforeMount, Monaco, OnMount } from "@monaco-editor/react";
 import Editor from "@monaco-editor/react";
-import { AlertCircle, Columns2, Eye, Image as ImageIcon, LoaderCircle, PencilLine, X } from "lucide-react";
+import { AlertCircle, Columns2, Eye, FileText, Image as ImageIcon, LoaderCircle, PencilLine, Table2, X } from "lucide-react";
 import type { editor } from "monaco-editor";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent } from "react";
 
@@ -61,6 +65,13 @@ function getMultiSelectionText(ed: editor.ICodeEditor): string | null {
   }
   return parts.join("\n");
 }
+
+const MARKDOWN_VIEWS: readonly FileEditorViewOption<MarkdownEditorTabView>[] = [
+  { value: "preview", label: "Preview", icon: Eye }, { value: "hybrid", label: "Split", icon: Columns2 }, { value: "edit", label: "Edit", icon: PencilLine }
+];
+const DELIMITED_VIEWS: readonly FileEditorViewOption<DelimitedFileView>[] = [
+  { value: "table", label: "Table", icon: Table2 }, { value: "text", label: "Text", icon: FileText }
+];
 
 export function FileEditorPanel(props: FileEditorPanelContextProps) {
   const native = useNativeRuntimePorts();
@@ -107,6 +118,10 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
   const [monacoEditor, setMonacoEditor] = useState<editor.IStandaloneCodeEditor | null>(null);
   const [markdownViewByTabPath, setMarkdownViewByTabPath] = useState<Record<string, MarkdownEditorTabView>>({});
   const isMarkdownFile = isTextTab && /\.(md|markdown)$/i.test(pathName);
+  // CSV and TSV files open as a table; Text switches to the editor, including for read-only tabs.
+  const delimiter = isTextTab && !isLoading ? delimiterForFile(pathName, content) : null;
+  const [delimitedViewByTabPath, setDelimitedViewByTabPath] = useState<Record<string, DelimitedFileView>>({});
+  const delimitedView: DelimitedFileView = delimiter === null ? "text" : delimitedViewByTabPath[pathName] ?? "table";
   const supportsWorkspaceFileLinkDrop =
     isTextTab &&
     !isReadOnlyTab &&
@@ -156,6 +171,8 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
 
   useEffect(() => {
     const openPaths = new Set(tabs.map((tab) => tab.path));
+    setDelimitedViewByTabPath((prev) => Object.keys(prev).every((path) => openPaths.has(path)) ? prev
+      : Object.fromEntries(Object.entries(prev).filter(([path]) => openPaths.has(path))));
     setMarkdownViewByTabPath((prev) => {
       const staleKeys = Object.keys(prev).filter((path) => !openPaths.has(path));
       if (staleKeys.length === 0) {
@@ -170,10 +187,10 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
   }, [tabs]);
 
   useEffect(() => {
-    if (isMarkdownFile && markdownView === "preview") {
+    if ((isMarkdownFile && markdownView === "preview") || delimitedView === "table") {
       setMonacoEditor(null);
     }
-  }, [isMarkdownFile, markdownView]);
+  }, [isMarkdownFile, markdownView, delimitedView]);
 
   const handleMarkdownLinkClick = async (href: string) => {
     const projectId = sessionData.project?.id ?? null;
@@ -407,51 +424,11 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
             })}
           </div>
           {!isLoading && isMarkdownFile && !isReadOnlyTab ? (
-            <div
-              className="inline-flex shrink-0 items-center rounded-md border border-border/60 bg-background p-1"
-              role="tablist"
-              aria-label="Markdown view"
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={markdownView === "preview"}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-[3px] px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  markdownView === "preview" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
-                )}
-                onClick={() => setMarkdownView("preview")}
-              >
-                <Eye className="size-3.5 shrink-0" aria-hidden />
-                Preview
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={markdownView === "hybrid"}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-[3px] px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  markdownView === "hybrid" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
-                )}
-                onClick={() => setMarkdownView("hybrid")}
-              >
-                <Columns2 className="size-3.5 shrink-0" aria-hidden />
-                Split
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={markdownView === "edit"}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-[3px] px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  markdownView === "edit" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
-                )}
-                onClick={() => setMarkdownView("edit")}
-              >
-                <PencilLine className="size-3.5 shrink-0" aria-hidden />
-                Edit
-              </button>
-            </div>
+            <FileEditorViewToggle label="Markdown view" value={markdownView} options={MARKDOWN_VIEWS} onChange={setMarkdownView} />
+          ) : null}
+          {delimiter !== null ? (
+            <FileEditorViewToggle label="Table view" value={delimitedView} options={DELIMITED_VIEWS}
+              onChange={(view) => setDelimitedViewByTabPath((current) => ({ ...current, [pathName]: view }))} />
           ) : null}
         </div>
       </div>
@@ -529,7 +506,9 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
                 Unable to preview this image.
               </div>
             )
-            ) : isMarkdownFile && (isReadOnlyTab || markdownView === "preview") ? (
+            ) : delimiter !== null && delimitedView === "table" ? (
+            <DelimitedTableView content={content} delimiter={delimiter} />
+          ) : isMarkdownFile && (isReadOnlyTab || markdownView === "preview") ? (
             <div className="thin-scrollbar h-full min-h-0 overflow-auto px-4 py-4">
               <MarkdownRenderer onLinkClick={handleMarkdownLinkClick}>{content}</MarkdownRenderer>
             </div>

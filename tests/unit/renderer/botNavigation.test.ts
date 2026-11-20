@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildBotNavigation } from "@/components/app/logic/botNavigation";
+import { buildBotNavigation, buildBotThreadTree } from "@/components/app/logic/botNavigation";
 import { applyWorkThreadVisibility } from "@/components/app/logic/thread-workspace/navigation";
 import type { ThreadNavigationRow, ThreadNavigationStatus } from "@/components/app/types/thread-workspace/ports.types";
 import { bot } from "../shared/bots/fixtures";
@@ -55,4 +55,26 @@ test("bot info finds the bot's definition, provider label and the groups it belo
   if (info?.kind === "bot") assert.deepEqual([info.provider, info.groups.map((entry) => entry.id)], ["Claude", ["new", "old"]]);
   assert.equal(buildBotInfo(item.find((entry) => entry.id === "nora"), [ada], rows, new Map())?.kind, "nora");
   assert.equal(buildBotInfo(undefined, [ada], rows, new Map()), null);
+});
+
+
+test("bot thread trees place spawned work below its parent despite newer child activity", () => {
+  const parent = row("hi", "ada", "Completed", "2026-11-01");
+  const hi = { ...row("Hi", "ada", "Completed", "2026-11-03"), parentId: parent.id };
+  const bye = { ...row("Bye", "ada", "Completed", "2026-11-02"), parentId: parent.id };
+  const tree = buildBotThreadTree([hi, bye, parent]);
+  assert.deepEqual(tree.map((node) => [node.row.id, node.children.map((child) => child.row.id)]), [["hi", ["Hi", "Bye"]]]);
+  assert.deepEqual(buildBotThreadTree([hi, bye, parent], 2)[0].children.map((node) => node.row.id), ["Hi"]);
+});
+
+test("bot thread trees retain missing parents, grandchildren and cyclic links without duplicates", () => {
+  const a = { ...row("a", "ada", "Completed", "2026-11-03"), parentId: "b" };
+  const b = { ...row("b", "ada", "Completed", "2026-11-02"), parentId: "a" };
+  const orphan = { ...row("orphan", "ada", "Completed", "2026-11-01"), parentId: "hidden" };
+  const grandchild = { ...row("grandchild", "ada", "Completed", "2026-11-04"), parentId: "orphan" };
+  const tree = buildBotThreadTree([grandchild, a, b, orphan]);
+  assert.deepEqual(tree.map((node) => node.row.id), ["orphan", "a"]);
+  assert.equal(tree[0].children[0].row.id, "grandchild");
+  assert.equal(tree[1].children[0].row.id, "b");
+  assert.equal(tree[1].children[0].children.length, 0);
 });

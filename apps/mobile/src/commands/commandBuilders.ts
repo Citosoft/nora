@@ -1,5 +1,6 @@
 import type { RequestResponse } from "@shared/types/conversation/contracts.types";
-import type { CommandFactoryDeps, PendingCancelTask, PendingCreateConversation, PendingDecideAction, PendingSendMessage } from "@/types/pendingCommand.types";
+import type { RemoteBot } from "@shared/types/remote-access/runtimeApi.types";
+import type { CommandFactoryDeps, PendingCancelTask, PendingCreateBotChat, PendingCreateConversation, PendingDecideAction, PendingSendMessage } from "@/types/pendingCommand.types";
 
 /** Stable store keys: one entry per user intent, so repeating the same intent finds (and reuses) the saved IDs. */
 export const pendingCommandKeys = Object.freeze({
@@ -24,6 +25,16 @@ export function buildCreateConversation(deps: CommandFactoryDeps,
   return {
     kind: "create-conversation", key: pendingCommandKeys.create(input.runtimeId, conversationId), runtimeId: input.runtimeId,
     conversationId, commandId: deps.createId(), projectId: input.projectId, title: input.title.trim(), created: false,
+    message: { commandId: deps.createId(), runId: deps.createId(), instruction: input.instruction.trim() },
+    createdAt: deps.now().toISOString(), lastError: null
+  };
+}
+
+export function buildCreateBotChat(deps: CommandFactoryDeps, input: { runtimeId: string; bot: Pick<RemoteBot, "id" | "name" | "scope">; instruction: string }): PendingCreateBotChat {
+  const conversationId = deps.createId();
+  return {
+    kind: "create-bot-chat", key: pendingCommandKeys.create(input.runtimeId, conversationId), runtimeId: input.runtimeId,
+    conversationId, commandId: deps.createId(), botId: input.bot.id, scope: input.bot.scope, title: input.bot.name, created: false,
     message: { commandId: deps.createId(), runId: deps.createId(), instruction: input.instruction.trim() },
     createdAt: deps.now().toISOString(), lastError: null
   };

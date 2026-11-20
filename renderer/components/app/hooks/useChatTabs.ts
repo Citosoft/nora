@@ -6,8 +6,8 @@ import type { ChatBranchComposerState, ChatBranchDraft, ChatWorkThread } from "@
 
 const EMPTY_COMPOSER: ChatBranchComposerState = { text: "", pending: null };
 
-/** The chat's tabs: the chat, its work threads and draft branches, with each branch tab's unsent text kept while you switch tabs. */
-export function useChatTabs(workThreads: readonly ChatWorkThread[]) {
+/** The chat's tabs: the chat, its work threads in the open workspace and draft branches, with each branch tab's unsent text kept while you switch tabs. */
+export function useChatTabs(workThreads: readonly ChatWorkThread[], workspaceId: string) {
   const [selected, select] = useState(CHAT_TAB);
   const [drafts, setDrafts] = useState<ChatBranchDraft[]>([]);
   const [composers, setComposers] = useState<Readonly<Record<string, ChatBranchComposerState>>>({});
@@ -20,7 +20,7 @@ export function useChatTabs(workThreads: readonly ChatWorkThread[]) {
     if (shown?.threadId) select(shown.threadId);
   }, [drafts, workThreads, selected]);
   const tab = resolveChatTab(workThreads, drafts, selected);
-  const tabs = useMemo(() => chatTabThreads(workThreads, tab), [workThreads, tab]);
+  const tabs = useMemo(() => chatTabThreads(workThreads, tab, workspaceId), [workThreads, tab, workspaceId]);
   const startDraft = useCallback((botId: string, from: ChatBranchOrigin | null = null) => {
     const key = `branch:${crypto.randomUUID()}`;
     setDrafts((current) => [...current, { key, botId, from, threadId: null, title: null, naming: !!from }]);

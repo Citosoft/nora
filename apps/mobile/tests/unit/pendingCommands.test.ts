@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { buildCreateConversation, buildDecideAction, buildSendMessage } from "@/commands/commandBuilders";
+import { buildCreateBotChat, buildCreateConversation, buildDecideAction, buildSendMessage } from "@/commands/commandBuilders";
 import { executePendingCommand } from "@/commands/executePendingCommand";
 import { createPendingCommandStore, PENDING_COMMANDS_STORAGE_KEY } from "@/commands/pendingCommandStore";
 import { createRuntimeClient } from "@/api/runtime/runtimeClient";
@@ -89,6 +89,23 @@ describe("pending commands", () => {
       ["/v1/conversations", { commandId: "id-2", conversationId: "id-1", projectId: "proj-1", title: "Launch" }],
       ["/v1/conversations/id-1/messages", { commandId: "id-3", runId: "id-4", instruction: "Draft a plan" }],
       ["/v1/conversations/id-1/messages", { commandId: "id-3", runId: "id-4", instruction: "Draft a plan" }]
+    ]);
+    expect(store.list()).toEqual([]);
+  });
+
+  it("starts a bot chat through the bot's own route, then sends the first message once on retry", async () => {
+    const store = createPendingCommandStore(memoryStorage());
+    const bot = { id: "reviewer", name: "Reviewer", scope: { kind: "workspace" as const, workspaceId: "proj-1" } };
+    const command = buildCreateBotChat(idSequence(), { runtimeId: "rt", bot, instruction: " Review my diff " });
+    const { fetch, calls } = fakeFetch(receiptFor, networkError, receiptFor);
+    const client = runtimeClient(fetch);
+    expect((await executePendingCommand(client, store, command)).status).toBe("uncertain");
+    expect(store.get(command.key)).toMatchObject({ kind: "create-bot-chat", created: true, title: "Reviewer" });
+    expect((await executePendingCommand(client, store, command)).status).toBe("accepted");
+    expect(calls.map((call) => [call.url.replace("https://abc123.remote.withnora.run", ""), call.body])).toEqual([
+      ["/v1/bots/reviewer/chat", { commandId: "id-2", conversationId: "id-1", scope: { kind: "workspace", workspaceId: "proj-1" } }],
+      ["/v1/conversations/id-1/messages", { commandId: "id-3", runId: "id-4", instruction: "Review my diff" }],
+      ["/v1/conversations/id-1/messages", { commandId: "id-3", runId: "id-4", instruction: "Review my diff" }]
     ]);
     expect(store.list()).toEqual([]);
   });

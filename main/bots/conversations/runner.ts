@@ -1,6 +1,6 @@
-import type { BotDefinition, BotSnapshot } from "@shared/types/bots/bots.types";
+import type { BotBinding, BotDefinition, BotSnapshot } from "@shared/types/bots/bots.types";
 import type { Conversation, ConversationRun, ProviderBinding, WorkspaceRef } from "@shared/types/conversation/contracts.types";
-import type { BotAskInput, BotReply, BotRunnerDeps, BotThreadOptions } from "@main/types/bots/conversations.types";
+import type { BotAskInput, BotReply, BotRunnerDeps, BotThreadOptions, ConversationWatchInput } from "@main/types/bots/conversations.types";
 
 const TERMINAL = new Set<ConversationRun["state"]>(["completed", "failed", "interrupted"]);
 const CHAIN_LIMIT = 32;
@@ -16,12 +16,13 @@ export function conversationChain(deps: BotRunnerDeps, conversation: Conversatio
   return chain;
 }
 
-async function bindingFor(deps: BotRunnerDeps, bot: BotDefinition, workspace: WorkspaceRef): Promise<ProviderBinding> {
-  if (bot.binding.permissionPolicy) return { ...bot.binding, permissionPolicy: bot.binding.permissionPolicy };
-  const catalog = await deps.host.catalog(bot.binding.kind, bot.binding.instanceId, workspace);
+/** A runnable binding: a saved permission policy, or the provider's default one for this workspace. `owner` names whose provider it is in errors. */
+export async function runnableBinding(deps: BotRunnerDeps, binding: BotBinding, workspace: WorkspaceRef, owner: string): Promise<ProviderBinding> {
+  if (binding.permissionPolicy) return { ...binding, permissionPolicy: binding.permissionPolicy };
+  const catalog = await deps.host.catalog(binding.kind, binding.instanceId, workspace);
   const policy = catalog.status === "available" ? catalog.catalog.policies[0]?.id : undefined;
-  if (!policy) throw new Error(`${bot.name}'s provider is unavailable${catalog.status === "unavailable" ? `: ${catalog.failure.message}` : "."}`);
-  return { ...bot.binding, permissionPolicy: policy };
+  if (!policy) throw new Error(`${owner} provider is unavailable${catalog.status === "unavailable" ? `: ${catalog.failure.message}` : "."}`);
+  return { ...binding, permissionPolicy: policy };
 }
 
 /**
@@ -31,8 +32,9 @@ async function bindingFor(deps: BotRunnerDeps, bot: BotDefinition, workspace: Wo
 export async function createBotThread(deps: BotRunnerDeps, parent: Conversation | null, bot: BotDefinition, workspace: WorkspaceRef, title: string,
   options: BotThreadOptions = {}): Promise<string> {
   const receipt = await deps.host.execute({ kind: "create", commandId: options.ids?.commandId ?? deps.nextId(), conversationId: options.ids?.conversationId ?? deps.nextId(),
-    title: title.slice(0, 100) || bot.name, workspace, provider: await bindingFor(deps, bot, workspace), parentId: parent?.id ?? null, botId: bot.id,
-    ...(options.chatBranch ? { chatBranch: options.chatBranch } : {}) });
+    ...(options.initialInstruction ? { initialInstruction: options.initialInstruction } : {}),
+    title: title.slice(0, 100) || bot.name, workspace, provider: await runnableBinding(deps, bot.binding, workspace, `${bot.name}'s`), parentId: parent?.id ?? null, botId: bot.id,
+    ...(options.chatBranch ? { chatBranch: options.chatBranch } : {}), ...(options.done ? { done: options.done } : {}), ...(options.source ? { source: options.source } : {}) });
   return receipt.conversationId;
 }
 
@@ -42,11 +44,37 @@ export async function ensureBotThread(deps: BotRunnerDeps, parent: Conversation,
   return existing ? existing.conversation.id : createBotThread(deps, parent, bot, { ...parent.workspace, access }, title);
 }
 
-function finalAssistantText(deps: BotRunnerDeps, conversationId: string, runId: string): string | null {
+/** The last complete assistant message of one run, or of the whole thread when `runId` is null. */
+export function finalAssistantText(deps: BotRunnerDeps, conversationId: string, runId: string | null): string | null {
   const page = deps.host.conversationHistory({ conversationId, scope: "timeline", limit: 200 });
   if (page.scope !== "timeline") return null;
-  const message = page.items.filter((item) => item.kind === "message" && item.role === "assistant" && item.runId === runId && item.complete && item.text.trim()).at(-1);
+  const message = page.items.filter((item) => item.kind === "message" && item.role === "assistant" && (runId === null || item.runId === runId) && item.complete && item.text.trim()).at(-1);
   return message?.kind === "message" ? message.text : null;
+}
+
+/**
+ * Watches one conversation's events after `after` until `settle` returns a value, the timeout passes or the caller aborts.
+ * The shared primitive behind waiting on a bot's reply and on worker threads.
+ */
+export function watchConversation<T>(deps: BotRunnerDeps, input: ConversationWatchInput<T>): Promise<T | "timed-out" | "aborted"> {
+  return new Promise((resolve) => {
+    let settled = false;
+    let unsubscribe = () => {};
+    const settle = (value: T | "timed-out" | "aborted"): void => {
+      if (settled) return;
+      settled = true; clearTimeout(timer); input.signal.removeEventListener("abort", abort); unsubscribe(); resolve(value);
+    };
+    const abort = (): void => settle("aborted");
+    const timer = setTimeout(() => settle("timed-out"), input.timeoutMs);
+    input.signal.addEventListener("abort", abort, { once: true });
+    unsubscribe = deps.host.subscribe({ after: input.after, conversationId: input.conversationId, onError: () => settle("aborted"),
+      onEvent(event) {
+        const value = input.settle(event);
+        if (value !== undefined) settle(value);
+      } });
+    if (settled) unsubscribe();
+    if (input.signal.aborted) abort();
+  });
 }
 
 /** Sends one instruction to a bot thread and waits for that run to finish, interrupting it if the caller gives up. */
@@ -56,27 +84,14 @@ export async function askBotThread(deps: BotRunnerDeps, input: BotAskInput): Pro
   const after = deps.host.eventCursor();
   await deps.host.execute({ kind: "submit", commandId: deps.nextId(), conversationId: input.conversationId, runId, instruction: input.instruction,
     ...(input.workspaceId ? { workspaceId: input.workspaceId } : {}), ...(input.chatText ? { chatText: input.chatText } : {}) });
-  const run = await new Promise<ConversationRun | "timed-out" | "aborted">((resolve) => {
-    let waitingReported = false;
-    let settled = false;
-    let unsubscribe = () => {};
-    const settle = (value: ConversationRun | "timed-out" | "aborted"): void => {
-      if (settled) return;
-      settled = true; clearTimeout(timer); input.signal.removeEventListener("abort", abort); unsubscribe(); resolve(value);
-    };
-    const abort = (): void => settle("aborted");
-    const timer = setTimeout(() => settle("timed-out"), input.timeoutMs);
-    input.signal.addEventListener("abort", abort, { once: true });
-    unsubscribe = deps.host.subscribe({ after, conversationId: input.conversationId, onError: () => settle("aborted"),
-      onEvent(event) {
-        if (event.payload.kind === "request" && event.payload.request.runId === runId && event.payload.request.status === "pending" && !waitingReported) {
-          waitingReported = true; input.onWaiting?.();
-        }
-        if (event.payload.kind === "run" && event.payload.run.id === runId && TERMINAL.has(event.payload.run.state)) settle(event.payload.run);
-      } });
-    if (settled) unsubscribe();
-    if (input.signal.aborted) abort();
-  });
+  let waitingReported = false;
+  const run = await watchConversation<ConversationRun>(deps, { conversationId: input.conversationId, after, signal: input.signal, timeoutMs: input.timeoutMs,
+    settle(event) {
+      if (event.payload.kind === "request" && event.payload.request.runId === runId && event.payload.request.status === "pending" && !waitingReported) {
+        waitingReported = true; input.onWaiting?.();
+      }
+      return event.payload.kind === "run" && event.payload.run.id === runId && TERMINAL.has(event.payload.run.state) ? event.payload.run : undefined;
+    } });
   if (run === "aborted" || run === "timed-out") {
     await deps.host.execute({ kind: "interrupt", commandId: deps.nextId(), conversationId: input.conversationId, runId }).catch(() => undefined);
     return { conversationId: input.conversationId, status: run === "aborted" ? "interrupted" : "timed-out", text: finalAssistantText(deps, input.conversationId, runId), failure: null };

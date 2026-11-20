@@ -1,5 +1,3 @@
-import { Braces } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { BotAvatar } from "@/components/app/shared/BotAvatar";
 import { BotAvatarStack } from "@/components/app/shared/BotAvatarStack";
 import { BotInfoTrigger } from "@/components/app/shared/BotInfoTrigger";
@@ -12,7 +10,7 @@ import { ChatNewBranchButton } from "./ChatNewBranchButton";
 import type { ChatHeaderProps } from "@/components/app/types/chatPanels.types";
 
 /** Who the chat is with, then a tab for the chat, one for each work thread or branch behind it, and + to branch off. */
-export function ChatHeader({ participants, state, tabs, drafts, onNewBranch, onCloseDraft, onCloseThread, context }: ChatHeaderProps) {
+export function ChatHeader({ participants, state, tabs, drafts, onNewBranch, onCloseDraft, onCloseThread }: ChatHeaderProps) {
   const group = participants.kind === "group" ? participants : null;
   const writer = group?.members.find((member) => member.botId === group.writer)?.name;
   const lead = group?.members.find((member) => member.botId === group.lead)?.name;
@@ -32,7 +30,5 @@ export function ChatHeader({ participants, state, tabs, drafts, onNewBranch, onC
         name={participants.kind === "direct" ? participants.bot.name : participants.members.find((member) => member.botId === draft.botId)?.name ?? "a member"} />)}
     </TabsList>
     {onNewBranch && <ChatNewBranchButton participants={participants} onNewBranch={onNewBranch} />}
-    {context && <Button type="button" variant={context.open ? "secondary" : "ghost"} size="icon" className="size-7 shrink-0" aria-pressed={context.open}
-      aria-label="Inspect next request context" title="Inspect next request context" onClick={context.onToggle}><Braces className="size-3.5" aria-hidden="true" /></Button>}
   </header>;
 }

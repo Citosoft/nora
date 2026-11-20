@@ -12,7 +12,7 @@ import { assertLoopReviewer, loopReworkResults } from "@shared/loopStages";
 import { createLoopPersistence } from "./runPersistence";
 import { normalizeLoopRunGoal, resolveLoopRunGoalAttachmentPath, type LoopRunGoal } from "@shared/loopRunGoal";
 import { resolveLoopRunLimits } from "@shared/loopLimits";
-import { isLoopRunDeletable } from "@shared/loopRunLifecycle";
+import { isLoopRunDeletable, LOOP_USER_STOP_REASONS } from "@shared/loopRunLifecycle";
 import type { LoopRunner, LoopRunnerDeps, LoopStageResult, ResolvedLoopStage, LoopStageReport } from "@main/types/loopRunner.types";
 import type { PrepareLoopRunWorktreeInput } from "@main/types/prepareLoopRunWorktree.types";
 import { resolveLoopStages } from "./resolveLoopStages";
@@ -295,7 +295,7 @@ export function createLoopRunner(deps: LoopRunnerDeps): LoopRunner {
         if (run.status === "pausing") {
           run = await updateRun(run, {
             status: "paused",
-            stopReason: "Paused by user.",
+            stopReason: LOOP_USER_STOP_REASONS.paused,
             iterations: [...run.iterations.slice(0, -1), iteration],
             events: [...run.events, event(deps, "paused", "Workflow paused.", null, iteration.number)]
           });
@@ -308,7 +308,7 @@ export function createLoopRunner(deps: LoopRunnerDeps): LoopRunner {
       if (latest?.status === "pausing") {
         await updateRun(latest, {
           status: "paused",
-          stopReason: "Paused by user.",
+          stopReason: LOOP_USER_STOP_REASONS.paused,
           activeRoleId: null,
           activeToken: null,
           events: [...latest.events, event(
@@ -383,6 +383,7 @@ export function createLoopRunner(deps: LoopRunnerDeps): LoopRunner {
         throw new Error("Pause or cancel this workflow run before deleting it.");
       }
       await deps.store.deleteRun(projectId, runId);
+      deps.notifyRunDeleted(projectId, runId);
     },
     async startRun(payload: StartLoopRunPayload) {
       const savedDefinition = (await deps.store.listDefinitions(payload.projectId)).find((item) => item.id === payload.definitionId);
@@ -475,7 +476,7 @@ export function createLoopRunner(deps: LoopRunnerDeps): LoopRunner {
       if (!run.activeRoleId) {
         return updateRun(run, {
           status: "paused",
-          stopReason: "Paused by user.",
+          stopReason: LOOP_USER_STOP_REASONS.paused,
           events: [...run.events, event(
             deps,
             "paused",
@@ -485,7 +486,7 @@ export function createLoopRunner(deps: LoopRunnerDeps): LoopRunner {
           )]
         });
       }
-      const pausing = await updateRun(run, { status: "pausing", stopReason: "Pause requested by user." });
+      const pausing = await updateRun(run, { status: "pausing", stopReason: LOOP_USER_STOP_REASONS.pausing });
       activeTurns.get(runId)?.abort();
       return pausing;
     },
@@ -523,7 +524,7 @@ export function createLoopRunner(deps: LoopRunnerDeps): LoopRunner {
       preparingRuns.get(runId)?.abort();
       const cancelled = await updateRun(run, {
         status: "cancelled",
-        stopReason: "Cancelled by user.",
+        stopReason: LOOP_USER_STOP_REASONS.cancelled,
         activeRoleId: null,
         activeToken: null,
         completedAt: deps.nowIso(),

@@ -1,5 +1,6 @@
 import type { RuntimeEnvironment } from "@shared/types/remote-access/directory.types";
 import type { ExecutionHost } from "@main/execution/host";
+import type { InboxService } from "@main/types/inbox/inbox.types";
 import type { NativeBoot } from "@shared/ipc/types/personalizationGateway.types";
 import type { RemoteIdentity, RemoteTokenVerifier } from "../auth.types";
 import type { RemoteAuditEntry } from "@shared/types/remote-access/remoteAccess.types";
@@ -8,6 +9,7 @@ import type { RuntimeApiErrorCode, RealtimeServerMessage } from "@shared/types/r
 export type RemoteExecutionHost = Pick<ExecutionHost, "environmentId" | "execute" | "catalog" | "header" | "summaries" | "history" | "conversationHistory" | "eventCursor" | "subscribe">;
 export interface RuntimeApiOptions {
   host: RemoteExecutionHost;
+  inbox: Pick<InboxService, "snapshot" | "execute">;
   boot(): NativeBoot;
   runtimeVersion: string;
   environment: RuntimeEnvironment;

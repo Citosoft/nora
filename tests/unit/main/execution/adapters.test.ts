@@ -583,7 +583,50 @@ test("Claude read access requests inspection-only tools regardless of its config
   const registry = new ProviderRegistry(); registry.register(adapter);
   try {
     f.submit(); await new EffectWorker(f.engine, registry).runNext(["start"]);
-    assert.equal(opened[0].readOnly, true);
+    assert.equal(opened[0].toolScope, "inspect");
     assert.equal(opened[0].permissionMode, "plan");
+  } finally { await registry.close(); }
+});
+
+test("Claude read-only worker access selects sandboxed execution on both start and resume, independent of model policy", async (t) => {
+  const f = fixture(t);
+  f.command({ kind: "create", commandId: "create", conversationId: "conversation", title: "Worker", parentId: null,
+    source: { kind: "worker" }, provider: { ...provider, kind: "claude" },
+    workspace: { projectId: "project", environmentId: "local", checkoutId: "checkout", path: "/test/checkout", branch: "main", access: "read" } });
+  const opened: ClaudeOpenInput[] = [];
+  const adapter = new ClaudeAdapter({ instanceId: "account-a", policies: { "native-default": "acceptEdits" }, now, nextId: randomUUID, discover,
+    runContext: async () => ({ tools: { url: "http://127.0.0.1:1/mcp", token: "nora" }, connectors: [], guidance: "Worker", turnNotes: null }),
+    open(input) {
+      opened.push(input);
+      return { async interrupt() {}, close() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
+        yield { kind: "init", eventId: "init", sessionId: input.sessionId };
+        yield { kind: "finished", eventId: "done", status: "completed", failure: null, usage: { inputTokens: 0, outputTokens: 0 } };
+      } };
+    } });
+  const registry = new ProviderRegistry(); registry.register(adapter);
+  try {
+    const worker = new EffectWorker(f.engine, registry);
+    for (const run of ["first", "resumed"]) { f.submit(run); await worker.runNext(["start"]); await worker.runNext(["review"]); }
+    assert.equal(opened.length, 2);
+    for (const input of opened) {
+      assert.equal(input.toolScope, "read-worker");
+      assert.equal(input.permissionMode, "default");
+      assert.deepEqual(input.mcpServers, []);
+    }
+    assert.equal(opened[1].resume, true);
+  } finally { await registry.close(); }
+});
+
+test("Codex read-only workers retain the native read-only sandbox on start and resume", async (t) => {
+  const f = fixture(t);
+  f.command({ kind: "create", commandId: "create", conversationId: "conversation", title: "Worker", parentId: null, provider,
+    source: { kind: "worker" }, workspace: { projectId: "project", environmentId: "local", checkoutId: "checkout", path: "/test/checkout", branch: "main", access: "read" } });
+  const adapter = new CodexAdapter({ instanceId: "account-a", executable: process.execPath, arguments: [server],
+    environment: { NORA_CODEX_FIXTURE_MODE: "guidance", NORA_CODEX_EXPECT_READ_ONLY: "true" }, policies: { "native-default": { approvalPolicy: "never", sandbox: "danger-full-access" } }, now });
+  const registry = new ProviderRegistry(); registry.register(adapter);
+  try {
+    const worker = new EffectWorker(f.engine, registry);
+    for (const run of ["first", "resumed"]) { f.submit(run); const done = waitFor(f.engine, "completed"); await worker.runNext(["start"]); await done; await worker.runNext(["review"]); }
+    assert.deepEqual(f.snapshot().runs.map((run) => run.state), ["completed", "completed"]);
   } finally { await registry.close(); }
 });

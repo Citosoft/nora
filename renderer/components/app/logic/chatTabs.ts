@@ -4,11 +4,13 @@ import type { ChatBranchDraft, ChatWorkThread } from "@/components/app/types/cha
 export const CHAT_TAB = "chat";
 
 /**
- * The work threads shown as tabs beside the chat, oldest first so new ones open on the right: every unsettled one,
- * plus a settled one while it is selected (so a tab that settles while open does not vanish under you).
+ * The work threads shown as tabs beside the chat, oldest first so new ones open on the right: every unsettled one in the open
+ * workspace (a global bot's chat follows you between workspaces), plus the selected one wherever it is, so a tab that settles
+ * or a branch that runs in another workspace does not vanish under you.
  */
-export function chatTabThreads(threads: readonly ChatWorkThread[], selected: string): ChatWorkThread[] {
-  return threads.filter((thread) => !thread.settled || thread.id === selected).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+export function chatTabThreads(threads: readonly ChatWorkThread[], selected: string, workspaceId: string): ChatWorkThread[] {
+  return threads.filter((thread) => thread.id === selected || (!thread.settled && thread.workspaceId === workspaceId))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
 /** Falls back to the chat when the selected work thread or draft branch is no longer behind it. */

@@ -4,6 +4,7 @@ import type { ThreadForgeClient } from "@/components/app/types/threadForge.types
 
 /** Workspace sidebar region: full sidebar build deps (same shape as former `WorkspaceSidebarBuildProvider`). */
 export type WorkspaceSidebarPorts = {
+  onError(error: unknown): void;
   sidebarBuild: WorkspaceSidebarBuildDeps;
   utilities: WorkspaceUtilitiesInput;
   threadForge: ThreadForgeClient;

@@ -1,9 +1,14 @@
+import type { AppIcon } from "@shared/types/apps/apps.types";
 import type { AgentSettings, AgentSettingsPatch } from "@shared/types/nora-tools/settings.types";
-import type { Conversation } from "@shared/types/conversation/contracts.types";
+import type { Conversation, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ConnectorSubject } from "@shared/types/connectors/connectors.types";
 import type { NoraToolAudience } from "@shared/types/nora-tools/noraTools.types";
 import type { LoopDefinition, LoopRun, LoopRoleOutcome } from "@shared/appTypes";
+import type { SecretScope, SecretSummary } from "@shared/types/secrets/secrets.types";
+import type { SecretPromptOutcome, SecretRunOutcome } from "@main/types/secrets/secrets.types";
 import type { BotMemoryEntry, BotAvatarEyes, BotAvatarPalette, BotAvatarShape, BotDefinition, EffectiveBot } from "@shared/types/bots/bots.types";
+import type { AppDefinition, AppRenderData, AppSpecInput } from "@shared/types/apps/apps.types";
+import type { JsonValue } from "@main/jsonValue";
 
 /** Where a runtime reaches Nora's own tools for one conversation; the token identifies that conversation. */
 export interface NoraToolEndpoint { url: string; token: string; }
@@ -71,7 +76,7 @@ export interface NoraBotOperations {
 }
 
 export interface NoraWorkspaceInfo { id: string; name: string; kind: string; path: string; branch: string | null; current: boolean; }
-export interface NoraProviderModels { kind: string; instanceId: string; label: string; models: readonly string[]; unavailable: string | null; }
+export interface NoraProviderModels { readOnlyCommands: boolean; kind: string; instanceId: string; label: string; models: readonly string[]; unavailable: string | null; }
 export interface NoraSettingsOperations {
   read(): Promise<AgentSettings>;
   update(patch: AgentSettingsPatch): Promise<AgentSettings>;
@@ -98,7 +103,7 @@ export interface NoraChatOperations {
   history(skip: number, limit: number, context: NoraToolContext): NoraChatHistory;
 }
 
-export interface NoraTaskInfo { id: string; path: string; title: string; column: string; columnId: string; completed: boolean; }
+export interface NoraTaskInfo { link: string; id: string; path: string; title: string; column: string; columnId: string; completed: boolean; }
 export interface NoraTaskDetail { task: NoraTaskInfo; content: string; }
 export interface NoraTaskOperations {
   list(context: NoraToolContext): Promise<NoraTaskInfo[]>;
@@ -139,6 +144,20 @@ export interface NoraWorkflowOperations {
   controlRun(runId: string, action: WorkflowRunControl, context: NoraToolContext): Promise<LoopRun>;
 }
 
+/** A worker runs as a saved bot (`bot`) or on a provider and model from list_models; both default to the calling thread's. */
+export interface StartWorkerToolInput extends BotModelInput { title: string; prompt: string; done?: string; bot?: string; access?: "read" | "write"; isolation?: "worktree" | "shared"; }
+export interface NoraWorkerStart { workspace: WorkspaceRef; id: string; title: string; runsAs: string; access: "read" | "write"; }
+/** Where a worker stands: still working, stopped on the user, paused, or finished its latest turn (or never started one: ready). */
+export type NoraWorkerStatus = "running" | "needs-approval" | "needs-input" | "paused" | "completed" | "failed" | "interrupted" | "ready";
+export interface NoraWorkerReport { id: string; title: string; status: NoraWorkerStatus; report: string | null; failure: string | null; }
+export interface WaitForWorkersInput { ids?: readonly string[]; mode: "all" | "any"; timeoutMs: number; }
+/** Worker threads a Nora thread starts and collects; every operation is scoped to the caller's own workers. */
+export interface NoraWorkerOperations {
+  start(input: StartWorkerToolInput, context: NoraToolContext): Promise<NoraWorkerStart>;
+  message(id: string, prompt: string, context: NoraToolContext): Promise<{ id: string; title: string }>;
+  wait(input: WaitForWorkersInput, context: NoraToolContext, signal: AbortSignal): Promise<NoraWorkerReport[]>;
+}
+
 export interface AskBotResult { botName: string; conversationId: string; reply: string; }
 export interface NoraAskOperations {
   /** Runs the bot in its own child thread of the caller and waits for its final reply. */
@@ -152,10 +171,38 @@ export interface NoraMemoryOperations {
   forget(memoryId: string, context: NoraToolContext): BotMemoryEntry;
 }
 
+export interface RequestSecretToolInput { name: string; purpose: string; scope: SecretScope; multiline: boolean; }
+export interface RunWithSecretsToolInput { command: string; secrets: readonly string[]; timeoutSeconds: number; }
+/** Secrets as a thread uses them: by name only. No operation returns a value. */
+export interface NoraSecretOperations {
+  request(input: RequestSecretToolInput, context: NoraToolContext, signal: AbortSignal): Promise<Exclude<SecretPromptOutcome["kind"], "allowed">>;
+  list(context: NoraToolContext): SecretSummary[];
+  /** False when no such secret was saved. */
+  remove(name: string, scope: SecretScope, context: NoraToolContext): boolean;
+  run(input: RunWithSecretsToolInput, context: NoraToolContext, signal: AbortSignal): Promise<SecretRunOutcome>;
+}
+
 /** App operations the tools call; each acts as the user would in Nora, scoped to the calling thread. */
+/** Apps the agent builds for the user (the Apps section), as distinct from `NoraAppOperations`, which describes Nora itself. */
+export interface NoraAppsOperations {
+  guide(): string;
+  listConnectorTools(connectorId: string | undefined, context: NoraToolContext): Promise<string>;
+  sample(input: SampleAppSourceToolInput, context: NoraToolContext): Promise<JsonValue>;
+  sampleFile(input: SampleAppFileToolInput, context: NoraToolContext): Promise<JsonValue>;
+  create(input: CreateAppToolInput, context: NoraToolContext): Promise<AppDefinition>;
+  update(input: UpdateAppToolInput, context: NoraToolContext): Promise<AppDefinition>;
+  read(id: string, context: NoraToolContext): { app: AppDefinition; data: AppRenderData };
+}
+export interface SampleAppSourceToolInput { sourceId: string; connectorId: string; tool: string; args: Record<string, JsonValue>; }
+export interface SampleAppFileToolInput { sourceId: string; path: string; }
+export interface CreateAppToolInput { name: string; spec: AppSpecInput; suggestions?: readonly string[]; icon?: AppIcon; }
+export interface UpdateAppToolInput { id: string; spec: AppSpecInput; summary: string; suggestions?: readonly string[]; icon?: AppIcon; }
+
 export interface NoraToolDeps {
   asks: NoraAskOperations;
+  apps: NoraAppsOperations;
   memory: NoraMemoryOperations;
+  secrets: NoraSecretOperations;
   context(conversationId: string): NoraToolContext | null;
   bots: NoraBotOperations;
   app: NoraAppOperations;
@@ -164,12 +211,13 @@ export interface NoraToolDeps {
   chats: NoraChatOperations;
   tasks: NoraTaskOperations;
   workflows: NoraWorkflowOperations;
+  workers: NoraWorkerOperations;
 }
 /** The connectors a run receives; satisfied by the connector service. */
 export interface RunContextConnectors {
-  /** The connectors this thread gets: usable ones whose access admits its workspace and bot. */
-  endpoints(subject: ConnectorSubject): Promise<RunMcpServer[]>;
-  activeCount(subject: ConnectorSubject): number;
+  /** The connectors this thread gets: usable ones whose access admits its workspace and bot, narrowed to `only` when a thread names its own. */
+  endpoints(subject: ConnectorSubject, only?: readonly string[]): Promise<RunMcpServer[]>;
+  activeCount(subject: ConnectorSubject, only?: readonly string[]): number;
 }
 export interface NoraToolServer {
   resolve: NoraToolEndpointResolver;

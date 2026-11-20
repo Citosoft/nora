@@ -15,6 +15,9 @@ export function registerAppTools(server: McpServer, context: NoraToolContext, de
   server.registerTool("list_workspaces", { ...NORA_TOOLS.list_workspaces, annotations: { readOnlyHint: true, openWorldHint: false } }, () => runTool(() =>
     deps.app.workspaces(context).map((workspace) => `- ${workspace.name}${workspace.current ? " (this thread)" : ""}: ${workspace.kind}, ${workspace.path}`
       + `${workspace.branch ? `, branch ${workspace.branch}` : ""}`).join("\n") || "No workspaces are open."));
+}
+
+export function registerModelListTool(server: McpServer, context: NoraToolContext, deps: NoraToolDeps): void {
   server.registerTool("list_models", { ...NORA_TOOLS.list_models, annotations: { readOnlyHint: true, openWorldHint: false } }, () => runTool(async () => {
     const providers = await deps.app.models(context);
     if (!providers.length) return "No providers are installed.";
@@ -22,7 +25,7 @@ export function registerAppTools(server: McpServer, context: NoraToolContext, de
       const heading = `- ${provider.label} (provider ${provider.kind}${provider.instanceId !== provider.kind ? `, instance ${provider.instanceId}` : ""})`;
       if (provider.unavailable) return `${heading}: models unavailable — ${provider.unavailable}`;
       const extra = provider.models.length > MODELS_SHOWN ? `, and ${provider.models.length - MODELS_SHOWN} more` : "";
-      return `${heading}: ${provider.models.slice(0, MODELS_SHOWN).join(", ")}${extra}`;
+      return `${heading}: ${provider.models.slice(0, MODELS_SHOWN).join(", ")}${extra}; read-only worker commands ${provider.readOnlyCommands ? "supported" : "unsupported"}`;
     }).join("\n");
   }));
 }

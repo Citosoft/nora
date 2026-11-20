@@ -2,13 +2,16 @@ import { createSettingsOperations } from "./settings";
 import type { NoraToolDeps } from "@main/types/nora-tools/noraTools.types";
 import type { NoraToolOperationOptions, NoraSettingsOptions } from "@main/types/nora-tools/operations.types";
 import { createAppOperations } from "./app";
+import { createAppsOperations } from "./apps";
 import { createAskOperations } from "./asks";
 import { createMemoryOperations } from "./memory";
+import { createSecretOperations } from "./secrets";
 import { createBotOperations } from "./bots";
 import { createTaskOperations } from "./tasks";
 import { createThreadOperations } from "./threads";
 import { createChatOperations } from "./chats";
 import { createWorkflowOperations } from "./workflows";
+import { createWorkerOperations } from "./workers";
 
 /**
  * Composes every tool domain. Nora and bot threads get different tool sets, and a bot answering in a group or direct chat also reads
@@ -26,12 +29,15 @@ export function createNoraToolOperations(options: NoraToolOperationOptions & Nor
     },
     asks: createAskOperations(options),
     memory: createMemoryOperations(options),
+    secrets: createSecretOperations(options),
     bots: createBotOperations(options),
     app: createAppOperations(options),
+    apps: createAppsOperations(options),
     settings: createSettingsOperations(options),
     threads: createThreadOperations(options),
     chats: createChatOperations(options),
     tasks,
-    workflows: createWorkflowOperations(options, tasks)
+    workflows: createWorkflowOperations(options, tasks),
+    workers: createWorkerOperations(options)
   };
 }

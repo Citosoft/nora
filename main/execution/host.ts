@@ -1,7 +1,8 @@
+import { captureProviderConnection } from "./providerConnection";
 import type { ExternalSessionsResult } from "@shared/types/conversation/externalSessions.types";
 import { discoverExternalSessions, readExternalTranscript } from "./externalSessions";
 import type { CommandReceipt, ContextUsage, Conversation, ConversationCommand, ProviderBinding, WorkspaceRef } from "@shared/types/conversation/contracts.types";
-import type { ConversationEventPage, ConversationHeader, ConversationHistoryPage, ConversationSummary, HistoryQuery, HostShutdownResult } from "@shared/types/conversation/queries.types";
+import type { ConversationEventPage, ConversationHeader, ConversationHistoryPage, ConversationSummary, HistoryQuery, HostShutdownResult, OutputFileContent, OutputFileSize, OutputThread } from "@shared/types/conversation/queries.types";
 import type { McpRequest, McpResult } from "@shared/types/provider/mcp.types";
 import type { McpAppRequest } from "@shared/types/provider/mcpApp.types";
 import type { McpAppHostResult } from "@main/types/execution/mcpApp.types";
@@ -15,6 +16,8 @@ import { ConversationEngine } from "./engine";
 import { EffectWorker } from "./effectWorker";
 import { ExecutionOwnership } from "./ownership";
 import { ExecutionCommandError } from "./errors";
+import { itemOutputFile, readItemOutputFile } from "./itemOutputs";
+import { readWorkspaceOutputs } from "./workspaceOutputs";
 import { botSnapshotSchema } from "@shared/bots/contracts";
 import { conversationCommandSchema } from "@shared/conversations/contracts";
 import { ConversationNaming } from "./conversationNaming";
@@ -109,12 +112,14 @@ export class ExecutionHost {
       }
     }
     const workspace = command.kind === "create" ? await this.deps.workspaces.prepare(command.workspace) : undefined;
+    const providerConnection = command.kind === "create"
+      ? await captureProviderConnection(this.deps.providers, command.provider, workspace ?? command.workspace, !!command.externalSessionId) : undefined;
     const providerTransition = command.kind === "submit" ? await prepareProviderTransition(command, this.deps) : undefined;
     if (this.lifecycle !== "running") throw new ExecutionCommandError("conflict", "Execution host is not accepting instructions");
     if (command.kind === "create") this.deps.providers.resolve(command.provider.kind, command.provider.instanceId);
     const bot = command.kind === "create" && command.botId ? (frozenBot ? botSnapshotSchema.parse(frozenBot) : this.resolveBot(command.workspace.projectId, command.botId)) : undefined;
     const group = command.kind === "create" && command.group ? this.resolveGroup(command.workspace.projectId, command.group) : undefined;
-    const direct = command.kind === "create" && command.direct ? this.resolveDirect(command.direct) : undefined;
+    const direct = command.kind === "create" && command.direct ? this.resolveDirect(command.direct, command.conversationId) : undefined;
     if (command.kind === "set-direct-workspace") this.assertDirectWorkspace(command.conversationId, command.workspaceId);
     if (command.kind === "submit" && command.workspaceId) this.assertDirectWorkspace(command.conversationId, command.workspaceId);
     const role = command.kind === "create" && !bot && !group && !direct ? command.role ?? this.deps.roleForWorkspace?.(command.workspace.projectId) : undefined;
@@ -129,7 +134,7 @@ export class ExecutionHost {
     const provider = owner && preferences.followUp === "steer" && !(command.kind === "submit" && command.action)
       ? this.deps.providers.resolve(owner.provider.kind, owner.provider.instanceId) : null;
     const steerFollowUp = preferences.followUp === "steer" && !!provider?.capabilities.steering && !!provider.steer;
-    const receipt = this.engine.execute(command, { workspace, role, bot, group, direct, externalTranscript, steerFollowUp, providerTransition });
+    const receipt = this.engine.execute(command, { workspace, role, bot, group, direct, externalTranscript, steerFollowUp, providerTransition, providerConnection });
     if (firstInstruction && command.kind === "submit" && preferences.automaticTitles && !command.action) {
       const conversation = this.deps.store.header(command.conversationId)?.conversation;
       // A direct chat keeps its bot's name as its title.
@@ -153,14 +158,14 @@ export class ExecutionHost {
     if (request.lead && !request.botIds.includes(request.lead)) throw new ExecutionCommandError("invalid", "The group's lead must be one of its members.");
     return { members, writer: request.writer, lead: request.lead, hopLimit: GROUP_HOP_LIMIT_DEFAULT };
   }
-  /** One chat per bot: a second create for the same bot is refused while its chat exists. */
-  private resolveDirect(request: DirectRequest): DirectDescriptor {
+  /** One chat per bot: a second create for the same bot is refused while its chat exists, except a retry of the create that made it. */
+  private resolveDirect(request: DirectRequest, conversationId: string): DirectDescriptor {
     const bot = this.deps.botForWorkspace?.(request.workspaceId, request.botId);
     if (!bot) throw new ExecutionCommandError("invalid", "This bot is no longer available in this workspace. Choose another bot or Nora.");
     const scope = bot.scope.kind === "workspace" ? { kind: "workspace" as const, workspaceId: bot.scope.workspaceId } : { kind: "global" as const };
     const existing = this.deps.store.summaries().find(({ conversation }) => conversation.direct?.botId === bot.id
       && JSON.stringify(conversation.direct.scope) === JSON.stringify(scope));
-    if (existing) throw new ExecutionCommandError("conflict", `You already have a chat with ${bot.name}. Open it from Bots.`);
+    if (existing && existing.conversation.id !== conversationId) throw new ExecutionCommandError("conflict", `You already have a chat with ${bot.name}. Open it from Bots.`);
     return { botId: bot.id, name: bot.name, role: bot.role, avatar: bot.avatar, scope, workspaceId: request.workspaceId };
   }
   private assertDirectWorkspace(conversationId: string, workspaceId: string): void {
@@ -213,6 +218,21 @@ export class ExecutionHost {
     const result = await provider.mcpApp(conversation, { kind: "call-tool", server: app.server, tool: request.action.tool, arguments: request.action.arguments });
     return result.kind === "resource" ? { kind: "unavailable", message: "The runtime answered a tool call with a widget." } : result;
   }
+  /** Reads one of an item's recorded output files for display; paths the item did not record are never read. */
+  async outputFile(conversationId: string, itemId: string, filePath: string, size: OutputFileSize): Promise<OutputFileContent | null> {
+    const item = this.deps.store.item(conversationId, itemId);
+    if (!item) throw new ExecutionCommandError("missing", "This output is unavailable");
+    return readItemOutputFile(item, filePath, this.checkoutPath(conversationId), size);
+  }
+  /** The project's threads with their output-bearing items, for the workspace Library. */
+  outputs(projectId: string): OutputThread[] { return readWorkspaceOutputs(this.deps.store, projectId); }
+  /** Resolves an output file an item recorded, so it can be opened on this host. */
+  outputFilePath(conversationId: string, itemId: string, filePath: string): string {
+    const file = itemOutputFile(this.deps.store.item(conversationId, itemId), filePath, this.checkoutPath(conversationId));
+    if (!file) throw new ExecutionCommandError("missing", "This file is not one of the thread's outputs");
+    return file;
+  }
+  private checkoutPath(conversationId: string): string { return this.deps.store.header(conversationId)?.conversation.workspace.path ?? ""; }
   /** Measures a thread once when it has no reading; concurrent views share one native read. */
   async context(conversationId: string): Promise<ContextUsage | null> {
     if (this.lifecycle !== "running") throw new ExecutionCommandError("conflict", "Execution host is not running");

@@ -30,7 +30,7 @@ export function runtimeFixture(t: TestContext) {
       models: [{ id: "test-model", name: "Test", description: "", reasoningEfforts: [], defaultReasoningEffort: null }],
       policies: [{ id: "native-default", label: "Default" }, { id: "dangerous", label: "Unrestricted" }] } }; }
   };
-  const options: RuntimeApiOptions = { host, boot: () => boot, name: () => "My Nora", runtimeVersion: "0.2.2", environment: "desktop", origins: ["https://app.withnora.run"],
+  const options: RuntimeApiOptions = { host, inbox: { snapshot: () => ({ items: [] }), execute: () => ({ items: [] }) }, boot: () => boot, name: () => "My Nora", runtimeVersion: "0.2.2", environment: "desktop", origins: ["https://app.withnora.run"],
     verifier: { async verify(token) { if (token === "invalid.token.signature") throw new Error("Bad signature"); return { userId: token === "other.token.signature" ? "other" : "owner", sessionId: "session", expiresAt: now + 60_000 }; } },
     permits: (identity) => enabled && identity.userId === "owner", record: (entry) => audit.push(entry), now: () => now };
   const api = createRuntimeApi(options);

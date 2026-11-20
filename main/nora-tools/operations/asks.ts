@@ -1,6 +1,6 @@
 import { askBotThreadMark } from "@shared/nora-tools/askBot";
-import { effectiveBots } from "@shared/bots/catalog";
 import { askBotThread, conversationChain, ensureBotThread } from "@main/bots/conversations/runner";
+import { findBotTarget } from "./botTarget";
 import type { NoraAskOperations } from "@main/types/nora-tools/noraTools.types";
 import type { NoraToolOperationOptions } from "@main/types/nora-tools/operations.types";
 
@@ -11,11 +11,7 @@ const ASK_TIMEOUT_MS = 15 * 60_000;
 export function createAskOperations(options: NoraToolOperationOptions): NoraAskOperations {
   return {
     async ask(target, message, { conversation }, signal) {
-      const boot = options.boot();
-      const wanted = target.trim().toLocaleLowerCase();
-      const bots = effectiveBots(boot.personalization.bots, conversation.workspace.projectId, boot.sharedBots).map((entry) => entry.bot);
-      const bot = bots.find((entry) => entry.id === wanted) ?? bots.find((entry) => entry.name.toLocaleLowerCase() === wanted);
-      if (!bot) throw new Error(`No bot called "${target}" here. Available: ${bots.map((entry) => entry.name).join(", ") || "none"}.`);
+      const bot = findBotTarget(options, conversation.workspace.projectId, target);
       if (conversation.bot?.botId === bot.id) throw new Error("A bot cannot ask itself. Answer directly instead.");
       const deps = { host: options.host, nextId: options.nextId };
       const chain = conversationChain(deps, conversation);

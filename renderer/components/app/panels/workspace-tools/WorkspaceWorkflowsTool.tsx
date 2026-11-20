@@ -2,7 +2,8 @@ import { useNativeRuntimePorts } from "@/components/app/hooks/useNativeRuntimePo
 import { useThreadWorkspaceSnapshot } from "@/components/app/hooks/useThreadWorkspaceSnapshot";
 import { workflowRequestTargets } from "@/components/app/logic/workflowRequests";
 import { useProjectBots } from "@/components/app/hooks/useProjectBots";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useWorkflowLaunch } from "@/components/app/hooks/useWorkflowLaunch";
 import { Plus, Repeat2 } from "lucide-react";
 import { useWorkspaceLoops } from "@/components/app/hooks/useWorkspaceLoops";
 import { buildWorkflowAgentSummaries } from "@/components/app/logic/workflowAgents";
@@ -23,9 +24,20 @@ export function WorkspaceWorkflowsTool({ workspace, agentCatalog, onCreateChange
   const bots = useProjectBots(workspace.project.id);
   const [selection, setSelection] = useState<WorkflowSelection>({ kind: "overview" });
   const back = () => setSelection({ kind: "overview" });
+  const { request, settleRequest } = useWorkflowLaunch();
+  // A request waits for saved workflows and runs to load, then opens run setup for a task or the monitor of a run.
+  useEffect(() => {
+    if (!request || request.projectId !== workspace.project.id || loops.isLoading) return;
+    if (request.kind === "monitor") setSelection({ kind: "monitor", runId: request.runId });
+    else {
+      const definition = loops.definitions.find((entry) => entry.id === request.definitionId);
+      if (definition) setSelection({ kind: "run", definition, task: request.task });
+    }
+    settleRequest(request.revision);
+  }, [request, workspace.project.id, loops.isLoading, loops.definitions, settleRequest]);
   switch (selection.kind) {
     case "design": return <WorkflowDesigner key={selection.definition?.id ?? "new"} projectId={workspace.project.id} agentCatalog={agentCatalog} definition={selection.definition} onBack={back} onSaved={(definition) => { loops.upsertDefinition(definition); back(); }} />;
-    case "run": return <WorkflowRunSetup definition={selection.definition} onBack={back} onStarted={(run) => { loops.upsertRun(run); setSelection({ kind: "monitor", runId: run.id }); }} />;
+    case "run": return <WorkflowRunSetup key={`${selection.definition.id}:${selection.task?.path ?? ""}`} definition={selection.definition} task={selection.task} onBack={back} onStarted={(run) => { loops.upsertRun(run); setSelection({ kind: "monitor", runId: run.id }); }} />;
     case "monitor": {
       const run = loops.runs.find((entry) => entry.id === selection.runId);
       return run ? <WorkflowRunMonitor run={run} onBack={back} onRunChanged={loops.upsertRun} onCreateChangeRequest={onCreateChangeRequest} />
@@ -49,7 +61,7 @@ export function WorkspaceWorkflowsTool({ workspace, agentCatalog, onCreateChange
         <h2 id="workflows-saved" className="text-sm font-medium">Saved workflows</h2>
         {hasDefinitions ? <ul className="divide-y rounded-md border">{loops.definitions.map((definition) => <WorkflowDefinitionRow key={definition.id} definition={definition}
           agents={buildWorkflowAgentSummaries(definition.stages, agentCatalog, bots)}
-          onEdit={() => setSelection({ kind: "design", definition })} onRun={() => setSelection({ kind: "run", definition })}
+          onEdit={() => setSelection({ kind: "design", definition })} onRun={() => setSelection({ kind: "run", definition, task: null })}
           onDelete={() => { if (window.confirm(`Delete the ${definition.name} workflow definition?`)) void loops.removeDefinition(definition.id); }} />)}</ul>
           : <p className="text-sm text-muted-foreground">{loops.isLoading ? "Loading workflows…" : "Create a workflow when you have a process worth repeating, such as implement-then-review."}</p>}
       </section>

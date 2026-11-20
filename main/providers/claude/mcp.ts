@@ -34,6 +34,7 @@ export function claudeAccountConnectorNotice(account: AccountInfo): string | und
     case "claude.ai":
     case "unknown": return undefined;
     case "third-party": return `${CONNECTORS} are not available while Claude Code uses a third-party API provider.`;
+    case "console": return `${CONNECTORS} are not loaded because Claude Code is signed in with an Anthropic Console account. Sign in with a Claude subscription in Providers settings, then refresh.`;
     case "api-key": return `${CONNECTORS} are not loaded because an API key takes precedence over a claude.ai login. Remove the API key from Claude Code's environment, then refresh.`;
     case "token": return `${CONNECTORS} are not loaded because Claude Code is using a long-lived token. Sign in to Claude in Providers settings, then refresh.`;
     case "none": return `${CONNECTORS} are not loaded because Claude Code is not signed in with a claude.ai account. Sign in to Claude in Providers settings, then refresh.`;

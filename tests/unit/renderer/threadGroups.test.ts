@@ -94,3 +94,14 @@ test("provider grouping combines Nora and resumable chats, preserves pins, and h
   ]);
   assert.equal(groups[1].providerKind, "claude");
 });
+
+
+test("provider groups preserve the subscription/API distinction and keep unrecorded history separate", () => {
+  const rows = [row("sub", "native-a", { providerKind: "claude", providerConnection: "subscription" }),
+    row("api", "native-a", { providerKind: "claude", providerConnection: "api" }), row("legacy", "native-a", { providerKind: "claude" })];
+  const groups = buildThreadGroups(rows, "provider", workspaces, new Map([["claude", "Claude"]]));
+  assert.equal(groups.length, 3);
+  assert.deepEqual(groups.map((group) => group.providerConnection).sort(), ["api", "subscription", "unknown"]);
+  assert.equal(groups.find((group) => group.providerConnection === "subscription")?.label, "Claude subscription");
+  assert.equal(groups.find((group) => group.providerConnection === "api")?.label, "Claude Console / API");
+});

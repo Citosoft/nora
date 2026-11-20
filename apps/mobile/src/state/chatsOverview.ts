@@ -2,7 +2,7 @@ import type { ConversationSummary } from "@shared/types/conversation/queries.typ
 import type { ChatsOverview } from "@/types/conversationState.types";
 import { deriveExecutionState } from "./executionState";
 
-/** Counts for the Approvals and Activity shortcuts above the chat list, derived from the summaries already loaded. */
+/** Counts for the Inbox and Activity shortcuts above the chat list, derived from the summaries already loaded. */
 export function chatsOverview(summaries: readonly ConversationSummary[]): ChatsOverview {
   let pendingRequests = 0;
   let working = 0;

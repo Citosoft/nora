@@ -4,6 +4,7 @@ import type { AgentCatalogEntry, LoopDefinition, LoopRoleDefinition, LoopRoleKin
 import type { LoopLimitsDraft } from "@shared/loopLimits";
 import type { NativeProvider } from "@shared/ipc/types/personalizationGateway.types";
 import type { ModelCatalogStore } from "@/components/app/types/modelPicker.types";
+import type { WorkflowRunTask } from "@/components/app/types/workflowLaunch.types";
 
 /** "form" keeps wizards to a readable column; "wide" gives the run monitor room for progress beside output. */
 export type WorkflowSurfaceWidth = "form" | "wide";
@@ -46,13 +47,18 @@ export interface WorkflowDesignerProps {
   projectId: string; agentCatalog: AgentCatalogEntry[]; definition: LoopDefinition | null;
   onBack(): void; onSaved(definition: LoopDefinition): void;
 }
-export interface WorkflowRunSetupProps { definition: LoopDefinition; onBack(): void; onStarted(run: LoopRun): void; }
+export interface WorkflowRunSetupProps {
+  definition: LoopDefinition;
+  /** Prefills the goal with this task when the run was launched from the task list. */
+  task: WorkflowRunTask | null;
+  onBack(): void; onStarted(run: LoopRun): void;
+}
 export interface WorkflowRunMonitorProps {
   run: LoopRun; onBack(): void; onRunChanged(run: LoopRun): void; onCreateChangeRequest(run: LoopRun): Promise<void>;
 }
 export interface WorkspaceWorkflowsProps { workspace: WorkspaceSummary; agentCatalog: AgentCatalogEntry[]; onCreateChangeRequest(run: LoopRun): Promise<void>; }
 export type WorkflowSelection = { kind: "overview" } | { kind: "design"; definition: LoopDefinition | null }
-  | { kind: "run"; definition: LoopDefinition } | { kind: "monitor"; runId: string };
+  | { kind: "run"; definition: LoopDefinition; task: WorkflowRunTask | null } | { kind: "monitor"; runId: string };
 
 export interface WorkflowStageEditorProps extends Omit<WorkflowAgentFieldsProps, "value" | "onChange"> {
   stage: LoopRoleDefinition;

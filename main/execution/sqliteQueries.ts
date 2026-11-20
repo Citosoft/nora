@@ -1,7 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { conversationSchema, requestSchema, runSchema, timelineItemSchema } from "@shared/conversations/contracts";
-import type { ConversationSnapshot, WorkspaceRef } from "@shared/types/conversation/contracts.types";
+import type { ConversationSnapshot, TimelineItem, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import { workspacesOverlap } from "./workspaceConflict";
 import { loadCheckpoint } from "./checkpoints/storage";
 import { readJsonRow } from "./sqliteRows";
@@ -15,6 +15,7 @@ const headSchema = z.object({ cursor: z.number().int().nonnegative(), json: z.st
 const idRowSchema = z.object({ id: z.string() });
 const positionRowSchema = z.object({ position: z.number().int().positive(), json: z.string() });
 const countRowSchema = z.object({ count: z.number().int().nonnegative() });
+const outputRowSchema = z.object({ conversationId: z.string(), json: z.string() });
 // These literals come exclusively from the domain enum, never command or provider input.
 const activeSql = activeRunStates.map((state) => `'${state}'`).join(", ");
 
@@ -113,6 +114,14 @@ export class SqliteQueries {
       const pendingRequestCount = this.count("SELECT count(*) AS count FROM conversation_requests WHERE conversation_id = ? AND status = 'pending'", id);
       return { ...summarizeConversation({ conversation, runs: latest ? [readJsonRow(latest, runSchema)] : [], requests: [] }), queuedCount, pendingRequestCount };
     });
+  }
+  outputItems(projectId: string, limit: number): { conversationId: string; item: TimelineItem }[] {
+    const rows = this.database.prepare(`SELECT i.conversation_id AS conversationId, i.json FROM conversation_items i
+      JOIN conversation_heads h ON h.id = i.conversation_id WHERE h.project_id = ? AND (
+        (json_extract(i.json, '$.kind') = 'tool' AND json_extract(i.json, '$.details.outputFiles') IS NOT NULL)
+        OR (json_extract(i.json, '$.kind') = 'review' AND json_extract(i.json, '$.result.scope') = 'turn'))
+      ORDER BY i.rowid DESC LIMIT ?`).all(projectId, limit);
+    return rows.reverse().map((row) => ({ conversationId: outputRowSchema.parse(row).conversationId, item: readJsonRow(row, timelineItemSchema) }));
   }
   private count(sql: string, id: string): number { return countRowSchema.parse(this.database.prepare(sql).get(id)).count; }
 

@@ -2,7 +2,7 @@ import type { SidebarPreferences } from "@/components/app/types/workspaceNavigat
 import type { WorkspaceViewPreferences } from "@/components/app/types/workspaceView.types";
 
 export const defaultWorkspaceView: WorkspaceViewPreferences = {
-  activeTool: null, terminalId: null, browserTabId: null, documentPath: null, documentKind: "notes"
+  activeTool: null, terminalId: null, browserTabId: null, documentPath: null, documentKind: "notes", libraryGrouping: "date"
 };
 
 export function updateWorkspaceView(preferences: SidebarPreferences, projectId: string, patch: Partial<WorkspaceViewPreferences>): SidebarPreferences {

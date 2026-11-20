@@ -1,7 +1,7 @@
 import { useAppMainCenterContent } from "@/components/app/context/appMainCenterContentContext";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
 import { NORA_ASCII_3D } from "@/components/app/logic/asciiWordmark";
-import { SHORTCUT_DEFINITIONS, formatShortcutKeyParts } from "@/components/app/logic/keyboardShortcuts";
+import { SHORTCUT_DEFINITIONS, formatShortcutKeyParts, shortcutPlatform } from "@/components/app/logic/keyboardShortcuts";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,9 +26,7 @@ export function ProjectSelectorScreen() {
     [snapshot?.agentCatalog]
   );
   const availableCount = availableTools.length;
-  const shortcutPlatform = typeof navigator !== "undefined" && navigator.platform.toLowerCase().includes("mac")
-    ? "darwin"
-    : "win32";
+  const platform = shortcutPlatform();
   const recentWorkspacePreview = useMemo(
     () => snapshot?.recentProjects.slice(0, 5) ?? [],
     [snapshot?.recentProjects]
@@ -38,23 +36,23 @@ export function ProjectSelectorScreen() {
     if (!addWorkspaceShortcut) {
       return [];
     }
-    return formatShortcutKeyParts(addWorkspaceShortcut.keys, shortcutPlatform).map((part, index) => ({
+    return formatShortcutKeyParts(addWorkspaceShortcut.keys, platform).map((part, index) => ({
       part,
-      showPlus: index > 0 && shortcutPlatform !== "darwin"
+      showPlus: index > 0 && platform !== "darwin"
     }));
-  }, [shortcutPlatform]);
+  }, [platform]);
   const recentWorkspaceShortcutParts = useMemo(() => {
     return [1, 2, 3, 4, 5].map((position) => {
       const definition = SHORTCUT_DEFINITIONS.find((entry) => entry.id === `open-recent-workspace-${position}`);
       if (!definition) {
         return [];
       }
-      return formatShortcutKeyParts(definition.keys, shortcutPlatform).map((part, index) => ({
+      return formatShortcutKeyParts(definition.keys, platform).map((part, index) => ({
         part,
-        showPlus: index > 0 && shortcutPlatform !== "darwin"
+        showPlus: index > 0 && platform !== "darwin"
       }));
     });
-  }, [shortcutPlatform]);
+  }, [platform]);
 
   if (!snapshot) {
     return null;

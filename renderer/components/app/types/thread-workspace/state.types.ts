@@ -9,6 +9,7 @@ import type { ConversationSummary } from "@shared/types/conversation/queries.typ
 import type { NativeBoot } from "@shared/ipc/types/personalizationGateway.types";
 import type { ConversationClient } from "../conversationClient.types";
 import type { BindingOrigin } from "../modelPicker.types";
+import type { ThreadUnreadSource } from "../inbox.types";
 
 export type ThreadLayout = z.infer<typeof threadLayoutSchema>;
 export type ThreadDocument = z.infer<typeof threadDocumentSchema>;
@@ -16,6 +17,7 @@ export interface ThreadDocumentRuntime { busy: boolean; readyBinding: ProviderBi
 export interface ThreadWorkspaceSnapshot {
   boot: NativeBoot;
   focusRevision: number;
+  /** Threads with an unread update in the inbox, except the one on screen. */
   unreadThreadIds: readonly string[];
   layout: ThreadLayout;
   summaries: readonly ConversationSummary[];
@@ -28,6 +30,7 @@ export interface ThreadLayoutPersistence { read(): ThreadLayout | null; write(la
 export interface ThreadWorkspaceDeps {
   boot: NativeBoot;
   client: ConversationClient;
+  unread: ThreadUnreadSource;
   persistence: ThreadLayoutPersistence;
   nextId(): string;
   now(): string;

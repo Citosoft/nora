@@ -31,16 +31,18 @@ export function useAppRuntimeEffects({
 }: UseAppRuntimeEffectsArgs): void {
   const snapshot = useCanonicalAppSnapshot();
   useEffect(() => {
+    // Read-only tabs hold content another source supplied (e.g. a tool's output outside the checkout) and can't be re-read by path.
+    const restorableTabs = fileEditorState?.tabs.filter((tab) => tab.isReadOnly !== true) ?? [];
     const nextStoredContentState: StoredWorkspaceContentState = {
       activeWorkspaceContentTab,
       fileEditor: fileEditorState
         ? {
-            tabs: fileEditorState.tabs.map((tab) => ({
+            tabs: restorableTabs.map((tab) => ({
               projectId: tab.projectId,
               path: tab.path,
               rootPath: tab.rootPath
             })),
-            activePath: fileEditorState.activePath
+            activePath: restorableTabs.some((tab) => tab.path === fileEditorState.activePath) ? fileEditorState.activePath : null
           }
         : null
     };

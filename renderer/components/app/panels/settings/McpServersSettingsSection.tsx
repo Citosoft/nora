@@ -5,7 +5,7 @@ import { useNoraConnectors } from "@/components/app/hooks/useNoraConnectors";
 import { useRuntimeMcpCatalog } from "@/components/app/hooks/useRuntimeMcpCatalog";
 import { buildMcpServerTable } from "@/components/app/logic/mcpServerTable";
 import { settingAnchorAttributes } from "@/components/app/logic/settingsSearch";
-import { AddConnectorDialog } from "@/components/app/dialogs/AddConnectorDialog";
+import { ConnectorGalleryDialog } from "@/components/app/dialogs/ConnectorGalleryDialog";
 import { ConnectorAccessDialog } from "@/components/app/dialogs/ConnectorAccessDialog";
 import { buildConnectorAccessChoices } from "@/components/app/logic/connectorAccess";
 import type { Connector } from "@shared/types/connectors/connectors.types";
@@ -63,7 +63,7 @@ export function McpServersSettingsSection() {
       </p> : null}
     </div>
     {sources.some((source) => source.kind === "claude") ? <p className="mt-4 text-xs text-muted-foreground">Sign in opens your browser for remote servers and claude.ai connectors. For servers configured with other credentials, set them up in Claude Code, then refresh here.</p> : null}
-    <AddConnectorDialog open={adding} onOpenChange={setAdding} onCreate={connectors.create} accessChoices={accessChoices} />
+    <ConnectorGalleryDialog open={adding} onOpenChange={setAdding} onCreate={connectors.create} accessChoices={accessChoices} addedUrls={(connectors.connectors ?? []).map((entry) => entry.url)} />
     <ConnectorAccessDialog connector={editingAccess} accessChoices={accessChoices} onClose={() => setEditingAccess(null)} onSave={connectors.setAccess} />
   </div>;
 }

@@ -20,9 +20,12 @@ export class GatewayFixture implements ConversationIpc {
   readonly dispose: () => void;
   /** Widget documents the gateway registered, in order. */
   readonly frames: McpAppResource[] = [];
+  /** Output files the gateway asked the operating system to open, in order. */
+  readonly opened: string[] = [];
   constructor(deps: GatewayDependencies) {
     this.dispose = registerConversationIpc({ ...deps, ipc: this, isAllowedSender: (event) => event.senderFrame?.url === "app://nora",
-      mcpAppFrames: { register: (resource) => `nora-account://app-${this.frames.push(resource)}/` } });
+      mcpAppFrames: { register: (resource) => `nora-account://app-${this.frames.push(resource)}/` },
+      openOutputFile: async (filePath) => { this.opened.push(filePath); } });
   }
   handle(channel: string, listener: Parameters<ConversationIpc["handle"]>[1]): void {
     if (this.handlers.has(channel)) throw new Error("Channel has multiple owners");

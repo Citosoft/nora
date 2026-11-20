@@ -1,8 +1,9 @@
+import { DirectoryAppInstallDialog } from "@/components/app/dialogs/DirectoryAppInstallDialog";
 import { CreateTaskDialog } from "@/components/app/dialogs/CreateTaskDialog";
 import { PersonalWorkspaceIntro } from "@/components/app/dialogs/PersonalWorkspaceIntro";
 import { useModalClusterPorts } from "@/components/app/hooks/useModalClusterPorts";
 import { useAppModalDialogs } from "@/components/app/context/appModalDialogsContext";
-import { AboutDialog as AppAboutDialog } from "@/components/app/dialogs/AboutDialog";
+import { AboutDialog as AppAboutDialog } from "@/components/app/dialogs/about/AboutDialog";
 import { AddWorkspaceDialog as AppAddWorkspaceDialog } from "@/components/app/dialogs/AddWorkspaceDialog";
 import { AnalyticsConsentDialog as AppAnalyticsConsentDialog } from "@/components/app/dialogs/AnalyticsConsentDialog";
 import { BrowserCookieImportPromptDialog as AppBrowserCookieImportPromptDialog } from "@/components/app/dialogs/BrowserCookieImportPromptDialog";
@@ -26,6 +27,7 @@ export const AppModalDialogs = () => {
 
   return (
     <>
+      <DirectoryAppInstallDialog />
       <PersonalWorkspaceIntro blocked={Object.values(d).some((dialog) => dialog.open) || !!createTaskDialog} />
       {createTaskDialog && <CreateTaskDialog {...createTaskDialog} />}
       <AppErrorDialog {...d.error} />

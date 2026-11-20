@@ -38,6 +38,32 @@ export const NORA_TOOLS = {
     description: "Delete one of the notes you saved, by its id, when it turns out wrong or out of date, or after you merged it into another. "
       + "Notes the user wrote can only be changed by the user."
   },
+  request_secret: {
+    audience: ["nora", "bot"],
+    title: "Ask for a secret",
+    description: "Ask the user for a password, API key, token or other secret through Nora's secure input dialog, and wait for them to save it. "
+      + "The value is encrypted with the system keychain and never appears in this thread; you only learn whether it was saved. "
+      + "Always use this instead of asking the user to paste a secret into chat. Name it like an environment variable (GITHUB_TOKEN) and say what it is for. "
+      + "Check list_secrets first; asking for a name that is already saved replaces it."
+  },
+  list_secrets: {
+    audience: ["nora", "bot"],
+    title: "List saved secrets",
+    description: "List the secrets saved for this workspace and everywhere, with each one's name, purpose and scope. Values are never returned."
+  },
+  run_with_secrets: {
+    audience: ["nora", "bot"],
+    title: "Run a command with secrets",
+    description: "Run a shell command in this thread's workspace folder with saved secrets set as environment variables named after them "
+      + "(sh, or cmd.exe on Windows), and return its exit code and output with the secrets redacted. The user approves each command first. "
+      + "Reference secrets only as variables, such as \"$GITHUB_TOKEN\" (%GITHUB_TOKEN% on Windows); never print, echo, encode or copy them, "
+      + "and prefer piping or environment variables over writing them to files. Use your normal tools for commands that need no secret."
+  },
+  delete_secret: {
+    audience: ["nora", "bot"],
+    title: "Delete a saved secret",
+    description: "Delete a saved secret by name and scope (from list_secrets) when the user asks for it to be removed or it is no longer valid."
+  },
   chat_history: {
     audience: ["member"],
     title: "Read the chat",
@@ -80,15 +106,15 @@ export const NORA_TOOLS = {
     description: "List the workspaces open in Nora, with their kind, folder and Git branch, and mark the one this thread belongs to."
   },
   list_models: {
-    audience: ["nora"],
+    audience: ["nora", "bot"],
     title: "List providers and models",
-    description: "List the installed providers (such as claude and codex) and the models each one offers, for choosing a bot's model."
+    description: "List the installed providers (such as claude and codex), their models and whether they enforce read-only worker commands."
   },
   list_threads: {
     audience: ["nora", "bot"],
     title: "List Nora threads",
     description: "List threads in this workspace (or every workspace), newest first, with id, title, bot, status and last activity. "
-      + "A bot sees only its own threads. Settled threads are left out unless you ask for them."
+      + "A bot sees its own threads and the workers it started. Settled threads are left out unless you ask for them."
   },
   read_thread: {
     audience: ["nora", "bot"],
@@ -96,21 +122,42 @@ export const NORA_TOOLS = {
     description: "Read the latest messages of another thread by id (from list_threads): what the user asked and the final answers, "
       + "without tool output. Use it to pick up context from earlier work."
   },
+  start_thread: {
+    audience: ["nora", "bot"],
+    title: "Start a worker thread",
+    description: "Hand one part of the job to a new worker thread and return at once with its id; the worker runs in the background while you carry on. "
+      + "Give it a self-contained prompt (it cannot see this thread) and say what done means for it with done. For bots it defaults to your own identity and model. You can pick a provider and model, or a saved bot from list_bots. "
+      + "Write workers in Git get a separate managed worktree by default; pass isolation shared to use the caller’s checkout, which permits only one writer. Read workers share the checkout and can run commands under the provider’s read-only sandbox; list_models shows which providers enforce it. Isolated worktrees start from committed project HEAD and do not include uncommitted changes; provide all needed context. Start several for independent parts. "
+      + "Collect their reports with wait_for_threads."
+  },
+  message_thread: {
+    audience: ["nora", "bot"],
+    title: "Message a worker thread",
+    description: "Send a follow-up instruction to one of this thread's workers (or workers you started in earlier threads as the same bot) by id (from start_thread), such as a correction or the next step, and return at once. "
+      + "It queues behind any turn the worker is still running. Collect the answer with wait_for_threads."
+  },
+  wait_for_threads: {
+    audience: ["nora", "bot"],
+    title: "Wait for worker threads",
+    description: "Wait until this thread's workers (by id, or all of them when ids is omitted) finish their current work, then return each one's status and final report. "
+      + "Waits for all of them by default, or for the first to finish with mode any. Returns early for a worker that needs the user's approval or input, "
+      + "and after timeout_minutes (at most 15) with the ones still running, which you can wait for again."
+  },
   list_tasks: {
     audience: ["nora", "bot", "member"],
     title: "List workspace tasks",
-    description: "List the tasks on this workspace's task board, with their stable id, path, title and column (such as Todo, In Progress or Done)."
+    description: "List the tasks on this workspace's task board, with their stable id, path, title, column (such as Todo, In Progress or Done), and Markdown link that opens each task in Nora. Use these links when referring the user to existing tasks."
   },
   create_task: {
     audience: ["nora", "bot", "member"],
     title: "Create a workspace task",
     description: "Add a task to this workspace's task board, in the first column. It is saved as a Markdown file under .nora/tasks "
-      + "with the title as its heading and your details as the body."
+      + "with the title as its heading and your details as the body. When telling the user you created a task, you MUST include the Markdown task link returned by this tool so they can open it in Nora. Include a link for each task you create."
   },
   read_task: {
     audience: ["nora", "bot", "member"],
     title: "Read a workspace task",
-    description: "Read a task's current details and status by its stable id from list_tasks or a task handoff."
+    description: "Read a task's current details, status and Markdown link that opens it in Nora, by its stable id from list_tasks or a task handoff. Use the returned link when referring the user to this task."
   },
   start_task: {
     audience: ["nora", "bot", "member"],
@@ -163,6 +210,46 @@ export const NORA_TOOLS = {
     title: "Pause, resume or cancel a workflow run",
     description: "Pause a running workflow run (it stops after the current agent turn), resume a paused one, or cancel it for good, by run id. "
       + "Its worktree and changes are kept either way."
+  },
+  app_builder_guide: {
+    audience: ["nora"],
+    title: "How to build a Nora app",
+    description: "Read the guide for building apps: dashboards and mini apps over the user's connectors that live in Nora's Apps section. "
+      + "It lists every UI component and action an app may use and how sources, select expressions and actions fit together. Read it before create_app or update_app unless this thread's guidance already includes it."
+  },
+  list_connector_tools: {
+    audience: ["nora"],
+    title: "List connector tools for apps",
+    description: "List the connectors an app built from this thread may use, with each tool's name, description and input schema. Pass connector_id to see one connector's tools in full."
+  },
+  sample_connector_tool: {
+    audience: ["nora"],
+    title: "Sample a connector tool for an app source",
+    description: "Call a connector tool once with the arguments an app source would use and see what it returns, shaped exactly as a source's select expression sees it. "
+      + "Nora keeps the result as that source's sample, so create_app and update_app can check the expression against real data. Keep results small with limits or filters."
+  },
+  sample_file: {
+    audience: ["nora"],
+    title: "Sample a file for an app source",
+    description: "Read a CSV, TSV or JSON file on this computer the way an app source will see it (CSV and TSV as one object per row, headed by the first line) and keep the result as that source's sample. "
+      + "Paths are absolute or start with ~. The app re-reads the file whenever it changes."
+  },
+  create_app: {
+    audience: ["nora"],
+    title: "Create a Nora app",
+    description: "Save a new app from a complete spec: its sources (connector tool calls with a select expression), its actions and its UI. "
+      + "Every source must have been sampled first. Returns the app's id, or every problem found so you can fix them in one pass. The app appears in Apps at once."
+  },
+  update_app: {
+    audience: ["nora"],
+    title: "Update a Nora app",
+    description: "Replace an app's spec with a new complete version and describe the change in one line; the previous version is kept and can be restored. "
+      + "Read the current spec with read_app first and change only what the user asked for."
+  },
+  read_app: {
+    audience: ["nora"],
+    title: "Read a Nora app",
+    description: "Read an app's current spec, version and the state of each source (loaded, failing, or waiting on a sign-in), by id."
   }
 } as const;
 

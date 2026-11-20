@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { runtimeFixture } from "./runtimeFixture";
 import { createRuntimeApi } from "@main/remote-access/http/handler";
-import { commandResponseSchema, conversationDetailResponseSchema, conversationsResponseSchema, runtimeInfoSchema, runtimeApiErrorSchema } from "@shared/remote-access/runtimeApi";
+import { botsResponseSchema, commandResponseSchema, conversationDetailResponseSchema, conversationsResponseSchema, runtimeInfoSchema, runtimeApiErrorSchema } from "@shared/remote-access/runtimeApi";
 
 const create = { commandId: "create-remote", conversationId: "remote", projectId: "project", title: "Remote thread" };
 
@@ -87,4 +87,28 @@ test("remote approval decisions keep native option validation, deduplication and
   assert.equal((await f.request("/v1/actions/approval/decision", response)).status, 200);
   assert.equal((await f.request("/v1/actions/approval/decision", { ...response, commandId: "stale" })).status, 410);
   assert.equal(f.audit.some((entry) => entry.action === "decide-action" && entry.outcome === "rejected"), true);
+});
+
+const reviewer = { id: "reviewer", name: "Reviewer", role: "Code review", instructions: "Review diffs.", avatar: { seed: 3 }, scope: { kind: "global" as const }, revision: 1,
+  binding: { kind: "codex" as const, instanceId: "account-a", model: "test-model", reasoning: null, permissionPolicy: "native-default" } };
+
+test("remote clients list bots and start each bot's direct chat on the runtime's own terms", async (t) => {
+  const f = runtimeFixture(t);
+  f.boot.personalization.bots = { global: [reviewer], workspaces: {} };
+  // The fixture's bare engine has no bot resolver, so supply the descriptor the real execution host derives from the bot's settings.
+  f.options.host.execute = async (command) => f.execution.engine.execute(command, command.kind === "create" && command.direct
+    ? { direct: { botId: reviewer.id, name: reviewer.name, role: reviewer.role, avatar: reviewer.avatar, scope: reviewer.scope, workspaceId: command.direct.workspaceId } } : {});
+  const before = botsResponseSchema.parse(await (await f.request("/v1/bots")).json());
+  assert.deepEqual(before.bots.map(({ id, scope, chatConversationId }) => ({ id, scope, chatConversationId })), [{ id: "reviewer", scope: { kind: "global" }, chatConversationId: null }]);
+
+  const body = { commandId: "bot-chat", conversationId: "reviewer-chat", scope: { kind: "global" } };
+  assert.equal((await f.request("/v1/bots/reviewer/chat", body)).status, 200);
+  assert.equal((await f.request("/v1/bots/reviewer/chat", body)).status, 200);
+  assert.equal(f.execution.store.summaries().length, 1);
+  const chat = f.execution.store.header("reviewer-chat")?.conversation;
+  assert.equal(chat?.title, "Reviewer"); assert.equal(chat?.direct?.botId, "reviewer"); assert.equal(chat?.workspace.access, "read");
+  assert.equal(botsResponseSchema.parse(await (await f.request("/v1/bots")).json()).bots[0]?.chatConversationId, "reviewer-chat");
+
+  assert.equal((await f.request("/v1/bots/missing/chat", { ...body, commandId: "other", conversationId: "other" })).status, 404);
+  assert.equal((await f.request("/v1/bots/reviewer/chat", { ...body, commandId: "other", conversationId: "other", workspace: { path: "/etc" } })).status, 400);
 });

@@ -6,19 +6,25 @@ import { z } from "zod";
 import type { SDKSessionInfo, SessionMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { ClaudeHistoryApi, ExternalSessionReader, ExternalTranscript, ExternalTurn } from "@main/types/execution/externalSessions.types";
 import type { ExternalSession } from "@shared/types/conversation/externalSessions.types";
-import type { ToolActivity } from "@shared/types/conversation/contracts.types";
+import type { ToolActivity, ToolOutputFile } from "@shared/types/conversation/contracts.types";
 import { isExternalWorkspace } from "../externalWorkspace";
 import { formatToolContent, formatToolInput } from "../toolPresentation";
+import { claudeToolOutputFiles } from "./outputFiles";
+import { readClaudeUserInput, stripClaudeNotes } from "./harnessMarkup";
 import { ExecutionCommandError } from "@main/execution/errors";
 
 const messageSchema = z.object({ content: z.union([z.string(), z.array(z.json())]) });
 const textSchema = z.object({ type: z.literal("text"), text: z.string() });
 const thinkingSchema = z.object({ type: z.literal("thinking"), thinking: z.string() });
+/** Long command output stays readable as one muted line; the full text was only ever shown in the terminal. */
+const COMMAND_OUTPUT_MAX = 2000;
 
 /** SessionMessage.message is an untyped SDK boundary; narrow every block before projecting it. */
 export function normalizeClaudeHistory(session: ExternalSession, messages: readonly SessionMessage[]): ExternalTranscript {
   const turns: ExternalTurn[] = [];
   const tools = new Map<string, ToolActivity>();
+  // Output files are kept only once the call succeeded.
+  const outputs = new Map<string, ToolOutputFile[]>();
   let turn: ExternalTurn | undefined;
   for (const message of messages) {
     if (message.parent_tool_use_id || message.type === "system") continue;
@@ -27,9 +33,28 @@ export function normalizeClaudeHistory(session: ExternalSession, messages: reado
     const blocks = typeof parsed.data.content === "string" ? [{ type: "text", text: parsed.data.content }] : parsed.data.content;
     const text = blocks.flatMap((block) => { const part = textSchema.safeParse(block); return part.success ? [part.data.text] : []; }).join("\n");
     if (message.type === "user" && text.trim()) {
-      turn = { id: message.uuid, instruction: text, state: "interrupted", items: [] };
-      turns.push(turn);
-      turn.items.push({ id: message.uuid, runId: turn.id, createdAt: session.createdAt, kind: "message", role: "user", text, complete: true });
+      // Turns start only for what the user did; the app's notes for the model are dropped, and commands show as typed.
+      const start = (instruction: string, shown: string, state: ExternalTurn["state"]): ExternalTurn => {
+        const next: ExternalTurn = { id: message.uuid, instruction, state, items: [] };
+        turns.push(next);
+        next.items.push({ id: message.uuid, runId: next.id, createdAt: session.createdAt, kind: "message", role: "user", text: shown, complete: true });
+        return next;
+      };
+      const input = readClaudeUserInput(text);
+      switch (input.kind) {
+        case "message": turn = start(input.text, input.text, "interrupted"); break;
+        case "command": turn = start(input.prompt, input.command, "completed"); break;
+        case "shell":
+          turn = start(`!${input.command}`, `!${input.command}`, "completed");
+          turn.items.push({ id: `${message.uuid}:shell`, runId: turn.id, createdAt: session.createdAt, kind: "tool", label: "Shell", output: input.output,
+            state: "completed", details: { category: "command", input: input.command } });
+          break;
+        case "command-output":
+          turn?.items.push({ id: `${message.uuid}:output`, runId: turn.id, createdAt: session.createdAt, kind: "milestone",
+            text: input.text.length > COMMAND_OUTPUT_MAX ? `${input.text.slice(0, COMMAND_OUTPUT_MAX)}…` : input.text });
+          break;
+        case "none": break;
+      }
     }
     if (!turn) continue;
     if (message.type === "assistant" && text) {
@@ -45,13 +70,19 @@ export function normalizeClaudeHistory(session: ExternalSession, messages: reado
         const tool: ToolActivity = { ...identity, id: call.data.id, kind: "tool", label: call.data.name, output: "", state: "unconfirmed",
           details: { category: "other", input: formatToolInput(call.data.input) } };
         tools.set(call.data.id, tool);
+        const files = claudeToolOutputFiles(call.data.name, call.data.input, session.cwd || undefined);
+        if (files.length) outputs.set(call.data.id, files);
         turn.items.push(tool);
         turn.state = "interrupted";
       }
       const result = claudeToolResultSchema.safeParse(block);
       if (result.success) {
         const tool = tools.get(result.data.tool_use_id);
-        if (tool) { tool.output = formatToolContent(result.data.content ?? null); tool.state = result.data.is_error ? "failed" : "completed"; }
+        if (tool) {
+          tool.output = stripClaudeNotes(formatToolContent(result.data.content ?? null)); tool.state = result.data.is_error ? "failed" : "completed";
+          const files = outputs.get(result.data.tool_use_id);
+          if (files && tool.state === "completed") tool.details = { ...tool.details, category: tool.details?.category ?? "other", outputFiles: files };
+        }
       }
     }
   }
