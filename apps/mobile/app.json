@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Nora",
-    "slug": "nora-mobile",
+    "slug": "nora",
     "version": "0.1.0",
     "scheme": "nora",
     "orientation": "default",
@@ -50,6 +50,12 @@
         }
       ],
       "expo-font"
-    ]
+    ],
+    "owner": "citosoft",
+    "extra": {
+      "eas": {
+        "projectId": "1211afdd-95ba-4d2b-bc7c-e4e980af97fd"
+      }
+    }
   }
 }
