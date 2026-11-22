@@ -10,7 +10,10 @@
     "backgroundColor": "#0D1410",
     "ios": {
       "bundleIdentifier": "run.withnora.app",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "run.withnora.app",
@@ -45,7 +48,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#0D1410"
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }
