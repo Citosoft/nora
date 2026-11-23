@@ -16,6 +16,8 @@ export interface RuntimeClientConfig {
   fetch: FetchLike;
   timeoutMs: number;
   commandTimeoutMs: number;
+  /** Names this device in the desktop's device list; null leaves the desktop to work it out. */
+  clientLabel?: string | null;
 }
 
 export interface ConversationListQuery {

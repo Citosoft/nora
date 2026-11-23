@@ -103,6 +103,7 @@ export const buildWorkspaceSidebarPortsFromAssembly = (a: AppShellSignedInAssemb
     recentWorkspaces: chrome.titleBar.recentWorkspaces,
     onOpenRecentWorkspace: chrome.titleBar.handleOpenRecentWorkspace,
     onOpenConnectionsSettings,
+    onOpenRemoteAccessSettings: () => a.core.openSettingsPage("remoteAccess"),
     onAddRemoteWorkspace: a.core.openAddRemoteWorkspaceModal
   };
 };

@@ -49,19 +49,25 @@ test("older saved tool pins round-trip without losing workspace preferences", ()
 
 test("malformed preferences recover to defaults", () => {
   for (const raw of [null, "{", "null", '{"toolPins": {"a": ["invalid"]}, "pinnedWorkspaceIds": []}']) {
-    assert.deepEqual(parseSidebarPreferences(raw), { sidebarMode: "threads", activeAppId: null, botsHome: "bots", inboxView: "all", pinnedWorkspaceIds: [], toolPins: {}, threadGrouping: "none", workThreads: "visible", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} });
+    assert.deepEqual(parseSidebarPreferences(raw), { sidebarMode: "threads", activeAppId: null, botsHome: "bots", inboxView: "all", pinnedWorkspaceIds: [], toolPins: {}, threadGrouping: "none", workThreads: "hidden", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} });
   }
 });
 
 test("thread grouping migrates existing preferences, persists choices and preserves pins on invalid grouping", () => {
   const legacy = { pinnedWorkspaceIds: ["a"], toolPins: { a: ["documents"] } };
-  assert.deepEqual(parseSidebarPreferences(JSON.stringify(legacy)), { ...legacy, sidebarMode: "threads", activeAppId: null, botsHome: "bots", inboxView: "all", threadGrouping: "none", workThreads: "visible", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} });
+  assert.deepEqual(parseSidebarPreferences(JSON.stringify(legacy)), { ...legacy, sidebarMode: "threads", activeAppId: null, botsHome: "bots", inboxView: "all", threadGrouping: "none", workThreads: "hidden", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} });
   for (const threadGrouping of ["none", "workspace", "activity", "source", "provider"]) {
-    const saved = { ...legacy, sidebarMode: "bots", activeAppId: null, botsHome: "routines", inboxView: "all", threadGrouping, workThreads: "hidden", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} };
+    const saved = { ...legacy, sidebarMode: "bots", activeAppId: null, botsHome: "routines", inboxView: "all", threadGrouping, workThreads: "visible", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} };
     assert.deepEqual(parseSidebarPreferences(JSON.stringify(saved)), saved);
   }
-  assert.equal(parseSidebarPreferences(JSON.stringify({ ...legacy, memberThreads: "hidden" })).workThreads, "hidden", "the older member-thread choice carries over");
-  assert.deepEqual(parseSidebarPreferences(JSON.stringify({ ...legacy, threadGrouping: "invalid" })), { ...legacy, sidebarMode: "threads", activeAppId: null, botsHome: "bots", inboxView: "all", threadGrouping: "none", workThreads: "visible", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} });
+  assert.equal(parseSidebarPreferences(JSON.stringify({ ...legacy, memberThreads: "visible" })).workThreads, "visible", "the older member-thread choice carries over");
+  assert.deepEqual(parseSidebarPreferences(JSON.stringify({ ...legacy, threadGrouping: "invalid" })), { ...legacy, sidebarMode: "threads", activeAppId: null, botsHome: "bots", inboxView: "all", threadGrouping: "none", workThreads: "hidden", threadSourceFilter: "all", threadSort: "recent", workspaceAvatarColors: {}, workspaceViews: {} });
+});
+
+test("a saved Mobile page opens Threads on launch without dropping other preferences", () => {
+  const saved = parseSidebarPreferences(JSON.stringify({ pinnedWorkspaceIds: ["a"], toolPins: {}, sidebarMode: "mobile" }));
+  assert.equal(saved.sidebarMode, "threads");
+  assert.deepEqual(saved.pinnedWorkspaceIds, ["a"]);
 });
 
 test("tool navigation is scoped to workspace and capability", () => {

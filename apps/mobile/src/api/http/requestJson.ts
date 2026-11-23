@@ -8,7 +8,7 @@ import { RemoteRequestError } from "./remoteRequestError";
  */
 export async function requestJson<TResult, TCode extends string>(options: JsonRequestOptions<TResult, TCode>): Promise<TResult> {
   const fail = (failure: RequestFailure<TCode>): RemoteRequestError<TCode> => new RemoteRequestError(options.service, failure);
-  const headers: Record<string, string> = { Accept: "application/json" };
+  const headers: Record<string, string> = { ...options.headers, Accept: "application/json" };
   if (options.getToken) {
     const token = await options.getToken();
     if (!token) throw fail({ kind: "signed-out" });

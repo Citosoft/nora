@@ -5,8 +5,6 @@ import type { ExternalThreadControlsProps } from "@/components/app/types/externa
 export function ExternalThreadControls({ state }: ExternalThreadControlsProps) {
   return <div className="space-y-1">
     <div className="flex items-center gap-1 px-1">
-      {state.total > 5 && <Button type="button" variant="ghost" size="sm" className="h-7 flex-1 justify-start px-1 text-xs" aria-expanded={state.expanded}
-        onClick={state.toggleExpanded}>{state.expanded ? "Show less" : `Show more (${state.hidden})`}</Button>}
       <Button variant="ghost" size="icon" className="ml-auto size-6 text-muted-foreground" aria-label="Refresh resumable threads"
         disabled={state.loading || state.busy} onClick={state.refresh}><RefreshCw className={`size-3 ${state.loading ? "animate-spin" : ""}`} aria-hidden="true" /></Button>
     </div>

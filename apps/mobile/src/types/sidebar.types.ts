@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { RemoteProject } from "@shared/types/remote-access/runtimeApi.types";
 import type { IconName } from "./icon.types";
 
 export interface SidebarProps {
@@ -32,4 +33,11 @@ export interface ConversationShellProps {
   /** Centre of the top bar (the computer pill on the home screen, the chat title in a chat). */
   center: ReactNode;
   children: ReactNode;
+}
+
+export interface WorkspaceSwitcherProps {
+  workspaces: readonly RemoteProject[];
+  /** The workspace whose chats are shown; null shows chats from every workspace. */
+  selectedId: string | null;
+  onSelect: (workspaceId: string | null) => void;
 }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import type { ConnectedRuntime } from "@/types/runtimeSession.types";
 import type { Theme } from "@/types/theme.types";
 import { layout, spacing } from "@/theme/tokens";
@@ -11,6 +11,7 @@ import { useRuntimeSession } from "@/hooks/useRuntimeSession";
 import { useStartConversation } from "@/hooks/useStartConversation";
 import { useThemedStyles } from "@/hooks/useThemedStyles";
 import { Banner } from "@/components/common/Banner";
+import { KeyboardAvoidingArea } from "@/components/common/KeyboardAvoidingArea";
 import { Button } from "@/components/common/Button";
 import { Inset } from "@/components/common/Inset";
 import { ProjectMenu } from "@/components/conversations/ProjectPicker";
@@ -53,7 +54,7 @@ function NewConversationForm({ runtime, runtimeId, initialProjectId }: { runtime
     await start({ projectId: selectedProject.id, title: titleFromInstruction(text), instruction: text });
   };
   return (
-    <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KeyboardAvoidingArea>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.hero}>
           <Text style={styles.heading} accessibilityRole="header">What shall we work on?</Text>
@@ -71,12 +72,11 @@ function NewConversationForm({ runtime, runtimeId, initialProjectId }: { runtime
       </ScrollView>
       <Composer draft={instruction} onDraftChange={setInstruction} onSend={submit} disabledReason={disabledReason} placeholder="Ask Nora"
         context={<ProjectMenu projects={projectList} selected={selectedProject} onSelect={setProjectChoice} />} />
-    </KeyboardAvoidingView>
+    </KeyboardAvoidingArea>
   );
 }
 
 const createStyles = (theme: Theme) => ({
-  fill: { flex: 1 },
   content: { flexGrow: 1, width: "100%" as const, maxWidth: layout.chatColumnWidth, alignSelf: "center" as const, paddingBottom: spacing.md },
   hero: { flexGrow: 1, alignItems: "center" as const, justifyContent: "center" as const, paddingHorizontal: spacing.xxl, paddingBottom: spacing.xxl },
   heading: { fontSize: 28, lineHeight: 34, fontWeight: "400" as const, letterSpacing: -0.4, color: theme.colors.text, textAlign: "center" as const },

@@ -1,8 +1,7 @@
 import { useContext, useMemo, useState } from "react";
 import { WorkspaceNavigationContext } from "@/components/app/context/workspaceNavigationContext";
+import { DEFAULT_WORK_THREAD_VISIBILITY } from "@/components/app/logic/workspace-navigation/preferences";
 import type { WorkThreadVisibility, WorkThreadVisibilityControl } from "@/components/app/types/thread-workspace/navigation.types";
-
-const DEFAULT_VISIBILITY: WorkThreadVisibility = "visible";
 
 /**
  * The saved choice to list or hide bots' work threads (behind group and direct chats), shared by the sidebar, Bots home and chats. Hosts without the app's
@@ -10,7 +9,7 @@ const DEFAULT_VISIBILITY: WorkThreadVisibility = "visible";
  */
 export function useWorkThreadVisibility(): WorkThreadVisibilityControl {
   const navigation = useContext(WorkspaceNavigationContext);
-  const [local, setLocal] = useState<WorkThreadVisibility>(DEFAULT_VISIBILITY);
+  const [local, setLocal] = useState<WorkThreadVisibility>(DEFAULT_WORK_THREAD_VISIBILITY);
   const visibility = navigation?.preferences.workThreads ?? local;
   const setPreferences = navigation?.setPreferences;
   return useMemo(() => ({ visibility,

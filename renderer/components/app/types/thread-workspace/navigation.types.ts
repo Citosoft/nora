@@ -1,5 +1,6 @@
 import type { ProviderConnectionKind } from "@shared/types/provider/account.types";
 import type { ProviderBinding } from "@shared/types/conversation/contracts.types";
+import type { ReactNode } from "react";
 import type { AppState } from "@shared/appTypes";
 import type { WorkspaceAvatarIdentity } from "@/components/app/types/workspaceAvatar.types";
 import type { ThreadListRow } from "./list.types";
@@ -30,4 +31,8 @@ export type ThreadShellNavigation =
   | { kind: "unchanged" }
   | { kind: "reveal"; projectId: string | null };
 
-export interface ThreadGroupHeaderProps { group: ThreadNavigationGroup; }
+export interface ThreadGroupRowsProps { group: ThreadNavigationGroup; expanded: boolean; onToggle(): void; renderRow(row: ThreadListRow): ReactNode; }
+export interface ThreadGroupShowMoreProps { hidden: number; expanded: boolean; label: string | null; onToggle(): void; }
+export interface ThreadGroupHeaderProps { group: ThreadNavigationGroup; collapsed: boolean; onToggle(): void; }
+/** Settled threads collapsed at the foot of the thread list, rendered with the list's own row renderer. */
+export interface SettledThreadsSectionProps { rows: readonly ThreadListRow[]; expanded: boolean; onExpandedChange(expanded: boolean): void; renderRow(row: ThreadListRow): ReactNode; }

@@ -15,6 +15,8 @@ export interface ResumableThreadRow extends Omit<ThreadNavigationRow, "target"> 
   target: { kind: "external"; entry: ExternalSessionEntry; pending: ResumableThreadAction | null; disabled: boolean };
 }
 export type ThreadListRow = ThreadNavigationRow | ResumableThreadRow;
+/** A group's rows after its resumable-thread preview limit; `limited` means the group has more resumable threads than the preview holds. */
+export interface ThreadGroupPreview { rows: ThreadListRow[]; hidden: number; limited: boolean; }
 export interface ThreadAgeProps { updatedAt: string; now: number; className?: string; }
 /** The row's trailing slot: the age, swapped for the pin control while the row is hovered or focused. */
 export interface ThreadAgePinSlotProps {
@@ -32,3 +34,10 @@ export interface ThreadAgeValue { label: string; description: string; }
 export type ThreadSort = z.infer<typeof threadSortSchema>;
 export interface ThreadSortEntry { id: string; title: string; updatedAt: string; }
 export interface ThreadSortOption { id: ThreadSort; label: string; }
+/** Who a thread runs as: group members, the bot, or else the provider's logo. */
+export interface ThreadRowIdentityProps {
+  row: Pick<ThreadNavigationRow, "group" | "bot" | "providerKind" | "providerConnection" | "status">;
+  /** Readable provider name for the logo's label; falls back to the provider kind. */
+  providerLabel?: string;
+  size?: "sm" | "md";
+}

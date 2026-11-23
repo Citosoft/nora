@@ -9,6 +9,8 @@ import { matchRuntimeRoute } from "./routes";
 import { readRuntimeRoute } from "./readRoutes";
 import { executeRemoteCommand } from "./commands";
 import { applyRemoteInboxCommand } from "./inbox";
+import { describeRemoteClient } from "./clientLabel";
+import { REMOTE_CLIENT_HEADER } from "@shared/remote-access/constants";
 
 async function readJson(request: Request): Promise<unknown> {
   if (request.headers.get("Content-Type")?.split(";")[0].trim().toLowerCase() !== "application/json") throw new RuntimeFailure("invalid", "Send a JSON request body.");
@@ -38,7 +40,7 @@ export function createRuntimeApi(options: RuntimeApiOptions): RuntimeApi {
     const headers = new Headers({ "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", Vary: "Origin" });
     if (origin && options.origins.includes(origin)) {
       headers.set("Access-Control-Allow-Origin", origin);
-      headers.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
+      headers.set("Access-Control-Allow-Headers", `Authorization, Content-Type, ${REMOTE_CLIENT_HEADER}`);
       headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     }
     let response: Response;
@@ -49,8 +51,10 @@ export function createRuntimeApi(options: RuntimeApiOptions): RuntimeApi {
       const token = bearerToken(request.headers.get("Authorization"));
       if (!token) throw new RuntimeFailure("unauthenticated", "Sign in to access this runtime.");
       const identity = await options.verifier.verify(token).catch(() => { throw new RuntimeFailure("unauthenticated", "Sign in to access this runtime."); });
+      if (options.presence.revoked(identity.sessionId)) throw new RuntimeFailure("forbidden", "This device was disconnected from the computer. Sign out of Nora on this device and sign in again to reconnect.");
       if (!options.permits(identity) || identity.expiresAt <= options.now()) throw new RuntimeFailure("forbidden", "Remote access is not available for this account.");
       if (!allow(identity.sessionId)) throw new RuntimeFailure("rate-limited", "Too many requests. Try again shortly.");
+      options.presence.seen(identity, describeRemoteClient(request.headers));
       const url = new URL(request.url);
       const route = matchRuntimeRoute(request.method, url.pathname);
       if (request.method === "GET") response = readRuntimeRoute(options, route, url.searchParams);

@@ -704,3 +704,80 @@
   .app-building-block { opacity: 0.5; }
   .app-builder-drawer { transition: none; }
 }
+
+/* Mobile page: the pitch and setup sit beside a phone playing through the remote app; they stack on narrow columns. */
+.mobile-remote-page { container-type: inline-size; }
+.mobile-remote-layout { display: grid; gap: 2rem; grid-template-columns: minmax(0, 1fr); align-content: center; justify-items: center; }
+@container (min-width: 52rem) {
+  .mobile-remote-layout { grid-template-columns: minmax(0, 1fr) auto; align-items: center; justify-items: stretch; gap: 4rem; }
+}
+.mobile-remote-accent {
+  background: linear-gradient(100deg, hsl(var(--foreground)) 10%, hsl(var(--primary)) 90%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.mobile-remote-stage { position: relative; isolation: isolate; perspective: 1600px; padding: 0.5rem 1.5rem; }
+.mobile-remote-stage::before {
+  content: ""; position: absolute; inset: -3rem -4rem; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(ellipse 55% 50% at 50% 45%, hsl(var(--primary) / 0.18), transparent 70%),
+    radial-gradient(circle at 1px 1px, hsl(var(--foreground) / 0.09) 1px, transparent 0) 0 0 / 18px 18px;
+  -webkit-mask-image: radial-gradient(ellipse at 50% 45%, #000 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse at 50% 45%, #000 30%, transparent 75%);
+}
+/* The phone turns slightly towards the pitch: a two-tone bezel, side buttons and layered shadows give it depth; hover squares it up. */
+.mobile-remote-phone {
+  --mobile-remote-tilt: rotateY(-16deg) rotateX(6deg) rotateZ(1deg);
+  position: relative; width: 272px; height: 556px; padding: 10px; border-radius: 3rem;
+  background: linear-gradient(135deg, #3a3f49 0%, #16181d 38%, #0c0d10 100%);
+  box-shadow:
+    inset 0 0 0 1.5px #4a505c, inset 0 0 0 4px #1b1e24,
+    1px 1px 0 #2a2e36, 3px 3px 0 #1f2228, 5px 5px 0 #17191e, 7px 7px 0 #111317,
+    24px 40px 60px -20px hsl(var(--foreground) / 0.45), 50px 70px 90px -40px hsl(var(--primary) / 0.35);
+  transform: var(--mobile-remote-tilt); transform-style: preserve-3d;
+  transition: transform 500ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.mobile-remote-stage:hover .mobile-remote-phone { --mobile-remote-tilt: rotateY(-4deg) rotateX(2deg); }
+.mobile-remote-phone::before, .mobile-remote-phone::after {
+  content: ""; position: absolute; left: -3px; width: 3px; border-radius: 3px 0 0 3px; background: linear-gradient(to right, #4a505c, #23262d);
+}
+.mobile-remote-phone::before { top: 110px; height: 30px; box-shadow: 0 46px 0 #2c3038; }
+.mobile-remote-phone::after { top: 200px; height: 48px; }
+.mobile-remote-glare {
+  position: absolute; inset: 10px; border-radius: 2.4rem; pointer-events: none; z-index: 2;
+  background: linear-gradient(115deg, rgb(255 255 255 / 0.16) 0%, rgb(255 255 255 / 0.04) 28%, transparent 42%);
+}
+.mobile-remote-screen { position: relative; height: 100%; overflow: hidden; border-radius: 2.4rem; background: hsl(var(--background)); color: hsl(var(--foreground)); }
+.mobile-remote-island { width: 80px; height: 22px; border-radius: 999px; background: #000; }
+.mobile-remote-progress {
+  position: absolute; left: 0.75rem; right: 0.75rem; bottom: 2px; height: 2px; border-radius: 999px;
+  background: hsl(var(--primary) / 0.7); transform-origin: left; transform: scaleX(0);
+}
+@keyframes mobileRemoteIn { from { opacity: 0; transform: translate3d(0, 6px, 0); } to { opacity: 1; transform: none; } }
+@keyframes mobileRemoteTap { 0%, 55% { transform: scale(1); } 65% { transform: scale(0.92); box-shadow: 0 0 0 6px hsl(var(--primary) / 0.25); } 80%, 100% { transform: scale(1); box-shadow: 0 0 0 0 hsl(var(--primary) / 0); } }
+@keyframes mobileRemoteProgress { to { transform: scaleX(1); } }
+@media (prefers-reduced-motion: no-preference) {
+  .mobile-remote-in { animation: mobileRemoteIn 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .mobile-remote-tap { animation: mobileRemoteTap 2.6s ease-in-out both; }
+  .mobile-remote-progress { animation: mobileRemoteProgress 6.5s linear forwards; }
+  .mobile-remote-features:hover .mobile-remote-progress { animation-play-state: paused; }
+}
+@media (prefers-reduced-motion: reduce) { .mobile-remote-progress { display: none; } .mobile-remote-phone { transition: none; } }
+@media (max-height: 640px) { .mobile-remote-phone { transform: scale(0.85) var(--mobile-remote-tilt); transform-origin: top center; margin-bottom: -83px; } }
+
+/* Nora Connect diagram: nodes and links follow the theme; packets travel the HTTPS link and the tunnel unless motion is reduced. */
+.nora-connect-diagram { overflow: visible; }
+.nora-connect-node { fill: hsl(var(--background)); stroke: hsl(var(--border)); stroke-width: 1; }
+.nora-connect-node-accent { fill: hsl(var(--primary) / 0.08); stroke: hsl(var(--primary) / 0.45); }
+.nora-connect-title { font-size: 13px; font-weight: 600; fill: hsl(var(--foreground)); }
+.nora-connect-label { font-size: 11px; fill: hsl(var(--muted-foreground)); }
+.nora-connect-link { stroke: hsl(var(--muted-foreground) / 0.6); stroke-width: 1.5; }
+.nora-connect-link-dashed { fill: none; stroke: hsl(var(--muted-foreground) / 0.5); stroke-width: 1.25; stroke-dasharray: 4 4; }
+.nora-connect-tunnel { stroke: hsl(var(--primary) / 0.7); stroke-width: 2; }
+.nora-connect-badge { fill: hsl(var(--primary)); }
+.nora-connect-badge-text { font-size: 11px; font-weight: 600; fill: hsl(var(--primary-foreground)); }
+.nora-connect-packet { fill: hsl(var(--primary)); opacity: 0; }
+.nora-connect-packet-reply { fill: #10b981; }
+@keyframes noraConnectPacket { 0% { offset-distance: 0%; opacity: 0; } 10%, 90% { opacity: 1; } 100% { offset-distance: 100%; opacity: 0; } }
+@media (prefers-reduced-motion: no-preference) {
+  .nora-connect-packet { animation: noraConnectPacket 2.8s linear infinite both; }
+}

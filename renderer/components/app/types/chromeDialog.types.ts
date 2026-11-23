@@ -87,12 +87,6 @@ export type TitleBarProps = {
   onFocusNextSessionTab: () => void;
   onOpenStartupDependencies: () => void;
   onOpenOnboarding: () => void;
-  splitViewSelection?: {
-    views: Array<{ id: string; name: string }>;
-    activeViewId: string | null;
-    onActiveViewChange: (viewId: string | null) => void;
-    onCreateView: () => void;
-  } | null;
   workspaceQuickSearch?: TitleBarWorkspaceQuickSearchConfig | null;
 };
 

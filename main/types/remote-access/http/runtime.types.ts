@@ -3,6 +3,7 @@ import type { ExecutionHost } from "@main/execution/host";
 import type { InboxService } from "@main/types/inbox/inbox.types";
 import type { NativeBoot } from "@shared/ipc/types/personalizationGateway.types";
 import type { RemoteIdentity, RemoteTokenVerifier } from "../auth.types";
+import type { RemotePresenceRecorder } from "../presence.types";
 import type { RemoteAuditEntry } from "@shared/types/remote-access/remoteAccess.types";
 import type { RuntimeApiErrorCode, RealtimeServerMessage } from "@shared/types/remote-access/runtimeApi.types";
 
@@ -19,6 +20,8 @@ export interface RuntimeApiOptions {
   /** Rejects after disable, sign-out, account switch or shutdown, including after an awaited authentication. */
   permits(identity: RemoteIdentity): boolean;
   record(entry: RemoteAuditEntry): void;
+  /** Notes which signed-in devices reach this computer, for the desktop's device list. */
+  presence: RemotePresenceRecorder;
   now(): number;
 }
 export interface RuntimeFailureDescription { code: RuntimeApiErrorCode; status: number; message: string; }

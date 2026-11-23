@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
 import type { RemoteBot } from "@shared/types/remote-access/runtimeApi.types";
 import type { ConnectedRuntime } from "@/types/runtimeSession.types";
@@ -14,6 +14,7 @@ import { useRuntimeSession } from "@/hooks/useRuntimeSession";
 import { useStartBotChat } from "@/hooks/useStartBotChat";
 import { useThemedStyles } from "@/hooks/useThemedStyles";
 import { Banner } from "@/components/common/Banner";
+import { KeyboardAvoidingArea } from "@/components/common/KeyboardAvoidingArea";
 import { BotAvatar } from "@/components/common/BotAvatar";
 import { Inset } from "@/components/common/Inset";
 import { UnsentConversationRow } from "@/components/conversations/UnsentConversationRow";
@@ -67,7 +68,7 @@ function BotChatForm({ runtime, runtimeId, botId, workspaceId }: BotChatScreenPr
     await start({ bot, instruction: text });
   };
   return (
-    <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KeyboardAvoidingArea>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.hero}>
           {bot ? <BotAvatar avatar={bot.avatar} name={bot.name} size={72} /> : null}
@@ -82,12 +83,11 @@ function BotChatForm({ runtime, runtimeId, botId, workspaceId }: BotChatScreenPr
         </View>
       </ScrollView>
       <Composer draft={instruction} onDraftChange={setInstruction} onSend={submit} disabledReason={disabledReason} placeholder={bot ? `Message ${bot.name}` : "Message"} />
-    </KeyboardAvoidingView>
+    </KeyboardAvoidingArea>
   );
 }
 
 const createStyles = (theme: Theme) => ({
-  fill: { flex: 1 },
   content: { flexGrow: 1, width: "100%" as const, maxWidth: layout.chatColumnWidth, alignSelf: "center" as const, paddingBottom: spacing.md },
   hero: { flexGrow: 1, alignItems: "center" as const, justifyContent: "center" as const, gap: spacing.sm, paddingHorizontal: spacing.xxl, paddingBottom: spacing.xxl },
   heading: { fontSize: 28, lineHeight: 34, fontWeight: "400" as const, letterSpacing: -0.4, color: theme.colors.text, textAlign: "center" as const },

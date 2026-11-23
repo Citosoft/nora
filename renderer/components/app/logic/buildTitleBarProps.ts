@@ -42,18 +42,5 @@ export const buildTitleBarProps = (d: TitleBarBuildDeps): TitleBarProps => ({
   onFocusNextSessionTab: d.focusNextSessionTab,
   onOpenStartupDependencies: d.openStartupDependencies,
   onOpenOnboarding: d.openOnboarding,
-  splitViewSelection: d.snapshotProject
-    ? {
-        views: d.activeSplitViewCollection.views.map((view) => ({
-          id: view.id,
-          name: view.name
-        })),
-        activeViewId: d.workspaceSessionViews.activeViewId,
-        onActiveViewChange: d.workspaceSessionViews.setActiveViewId,
-        onCreateView: () => {
-          void d.workspaceSessionViews.createView();
-        }
-      }
-    : null,
   workspaceQuickSearch: d.workspaceQuickSearch
 });

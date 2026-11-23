@@ -15,7 +15,7 @@ export function createRemoteStateStore(options: RemoteStoreOptions): RemoteState
       } catch (error) {
         if (!isNodeError(error) || error.code !== "ENOENT") throw new Error("Remote access settings could not be restored. Your existing registration has been preserved.");
         return { version: 1, installationId: options.nextId(), name: options.name.trim().slice(0, 64) || "Nora",
-          enabled: false, ownerId: null, port: null, runtime: null, connectorSecret: null, cleanup: [] };
+          enabled: false, ownerId: null, port: null, runtime: null, connectorSecret: null, cleanup: [], revokedSessions: [] };
       }
     },
     save(state: RemoteState) {

@@ -35,6 +35,8 @@ export interface JsonRequestOptions<TResult, TCode extends string> {
   schema: z.ZodType<TResult>;
   errorSchema: z.ZodType<ErrorEnvelope<TCode>>;
   body?: object;
+  /** Extra request headers, such as the device label runtimes list; never credentials. */
+  headers?: Readonly<Record<string, string>>;
 }
 
 export interface HttpClientConfig {

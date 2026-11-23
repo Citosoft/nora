@@ -7,7 +7,7 @@ import type { TrayMenuItem, TrayActionId } from "@main/types/desktop-lifecycle/d
 
 function fixture(platform: NodeJS.Platform = "win32", failTray = false) {
   const settings = { keepRunningInBackground: false, launchAtLogin: false };
-  let view: RemoteAccessView = { signedIn: true, enabled: false, status: { status: "disabled" }, runtime: null, webAppUrl: "https://app.withnora.run", pendingCleanup: false };
+  let view: RemoteAccessView = { signedIn: true, enabled: false, status: { status: "disabled" }, runtime: null, webAppUrl: "https://app.withnora.run", pendingCleanup: false, devices: [] };
   let listener = (_view: RemoteAccessView): void => {};
   let onAction = (_action: TrayActionId): void => {};
   let visible = true;
@@ -22,7 +22,7 @@ function fixture(platform: NodeJS.Platform = "win32", failTray = false) {
     view: () => view, isEnabled: () => view.enabled,
     subscribe: (next) => { listener = next; return () => { listener = () => {}; }; },
     async activity() { return []; }, async enable() { return view; }, async disable() { return view; },
-    async retry() { return view; }, async rotate() { return view; }, async rename() { return view; }
+    async retry() { return view; }, async rotate() { return view; }, async rename() { return view; }, async disconnectDevice() { return view; }
   };
   const lifecycle = createDesktopLifecycle({ platform, readSettings: () => settings, getRemoteAccess: () => remote,
     getMainWindow: () => ({ isDestroyed: () => false, isVisible: () => visible, isMinimized: () => minimized,

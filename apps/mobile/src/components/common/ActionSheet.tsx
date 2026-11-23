@@ -1,4 +1,4 @@
-import { Modal, Pressable, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { ActionSheetProps } from "@/types/listUi.types";
 import type { Theme } from "@/types/theme.types";
@@ -13,6 +13,7 @@ export function ActionSheet({ visible, title, message, options, onClose }: Actio
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>
@@ -25,15 +26,17 @@ export function ActionSheet({ visible, title, message, options, onClose }: Actio
                 {message ? <Text style={styles.message}>{message}</Text> : null}
               </View>
             ) : null}
-            {options.map((option, index) => (
-              <Pressable key={option.label} accessibilityRole="button" accessibilityState={{ selected: option.selected === true }}
-                onPress={() => { onClose(); option.onPress(); }}
-                style={({ pressed }) => [styles.option, (index > 0 || Boolean(title || message)) && styles.separated, pressed && styles.pressed]}>
-                {option.icon ? <Icon name={option.icon} size={20} color={option.destructive ? colors.danger : colors.accent} /> : null}
-                <Text style={[styles.label, option.destructive && styles.destructive]} numberOfLines={1}>{option.label}</Text>
-                {option.selected ? <Icon name="checkmark" size={20} color={colors.accent} /> : null}
-              </Pressable>
-            ))}
+            <ScrollView style={{ maxHeight: height * 0.6 }} bounces={false}>
+              {options.map((option, index) => (
+                <Pressable key={`${index}:${option.label}`} accessibilityRole="button" accessibilityState={{ selected: option.selected === true }}
+                  onPress={() => { onClose(); option.onPress(); }}
+                  style={({ pressed }) => [styles.option, (index > 0 || Boolean(title || message)) && styles.separated, pressed && styles.pressed]}>
+                  {option.icon ? <Icon name={option.icon} size={20} color={option.destructive ? colors.danger : colors.accent} /> : null}
+                  <Text style={[styles.label, option.destructive && styles.destructive]} numberOfLines={1}>{option.label}</Text>
+                  {option.selected ? <Icon name="checkmark" size={20} color={colors.accent} /> : null}
+                </Pressable>
+              ))}
+            </ScrollView>
           </View>
           <Pressable accessibilityRole="button" onPress={onClose} style={({ pressed }) => [styles.group, styles.option, glassStyle, pressed && styles.pressed]}>
             <Text style={[styles.label, styles.cancel]}>Cancel</Text>

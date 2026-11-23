@@ -225,7 +225,7 @@ export const AGENT_DEFINITIONS: AgentDefinition[] = [
   agent({
     id: "antigravity",
     label: "Antigravity",
-    aliases: ["agy", "antigravity"],
+    aliases: ["agy"],
     launchCommand: "agy",
     installTemplate: ANTIGRAVITY_INSTALL_TEMPLATE,
     description: "Antigravity CLI coding agent",

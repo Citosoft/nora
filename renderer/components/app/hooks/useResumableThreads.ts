@@ -9,10 +9,7 @@ export function useResumableThreads({ ports, workspaceId, query, sourceFilter, s
   const discovery = useExternalSessions({ ports, workspaceId, enabled });
   const [busy, setBusy] = useState<ResumableThreadBusy | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [expandedScope, setExpandedScope] = useState<string | null>(null);
-  const scope = workspaceId ?? "all";
-  const expanded = expandedScope === scope;
-  const { visible, hidden, total } = buildExternalSessionList({ entries: discovery.entries, query, expanded, sourceFilter, sort });
+  const visible = buildExternalSessionList({ entries: discovery.entries, query, sourceFilter, sort });
   /** One import at a time: open, pin and settle all create the same Nora conversation. */
   const run = async (key: string, action: ResumableThreadAction, work: () => Promise<void>, failure: string): Promise<boolean> => {
     if (busy) return false;
@@ -31,9 +28,8 @@ export function useResumableThreads({ ports, workspaceId, query, sourceFilter, s
     await run(target.kind === "external" ? resumableThreadKey(target.entry) : row.id, "settle", () => ports.setSettled(target, settled), "The thread could not be updated.");
   };
   const controls: ExternalThreadControlsState = {
-    loading: enabled && discovery.loading, busy: busy !== null, expanded, hidden, total,
-    errors: [...(enabled ? discovery.errors : []), ...(error ? [error] : [])], refresh: discovery.refresh,
-    toggleExpanded: () => setExpandedScope(expanded ? null : scope)
+    loading: enabled && discovery.loading, busy: busy !== null,
+    errors: [...(enabled ? discovery.errors : []), ...(error ? [error] : [])], refresh: discovery.refresh
   };
   return { rows: buildResumableThreadRows(visible, busy), open, pin, setSettled, controls };
 }

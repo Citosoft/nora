@@ -11,5 +11,6 @@ export type WorkspaceSidebarPorts = {
   recentWorkspaces: import("@shared/appTypes").RecentProject[];
   onOpenRecentWorkspace(rootPath: string, name: string): void;
   onOpenConnectionsSettings(): void;
+  onOpenRemoteAccessSettings(): void;
   onAddRemoteWorkspace(): void;
 };

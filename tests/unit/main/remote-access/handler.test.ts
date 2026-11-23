@@ -21,6 +21,20 @@ test("every runtime read requires a verified owning account and an approved brow
   f.disable(); assert.equal((await f.request("/v1/projects")).status, 403);
 });
 
+test("authenticated requests report their session and device label; rejected ones do not", async (t) => {
+  const f = runtimeFixture(t);
+  await f.request("/v1/projects", undefined, { Authorization: "Bearer other.token.signature" });
+  assert.deepEqual(f.seen, []);
+  const response = await f.request("/v1/projects", undefined, { "X-Nora-Client": "iPhone · Nora app" });
+  assert.match(response.headers.get("Access-Control-Allow-Headers") ?? "", /X-Nora-Client/);
+  assert.deepEqual(f.seen, [{ sessionId: "session", label: "iPhone · Nora app" }]);
+  f.revoked.add("session");
+  const refused = await f.request("/v1/projects");
+  assert.equal(refused.status, 403);
+  assert.match(runtimeApiErrorSchema.parse(await refused.json()).error.message, /disconnected/);
+  assert.equal(f.seen.length, 1, "a disconnected device is not listed again");
+});
+
 test("remote create/send retries use native durable command receipts and safe default permissions", async (t) => {
   const f = runtimeFixture(t);
   const first = await f.request("/v1/conversations", create);

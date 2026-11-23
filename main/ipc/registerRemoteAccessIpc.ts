@@ -11,6 +11,7 @@ async function apply(deps: RemoteAccessIpcDeps, request: RemoteAccessRequest): P
     case "retry": return { ok: true, view: await service.retry() };
     case "rename": return { ok: true, view: await service.rename(request.name) };
     case "rotate": return { ok: true, view: await service.rotate() };
+    case "disconnect-device": return { ok: true, view: await service.disconnectDevice(request.deviceId) };
     case "activity": return { ok: true, activity: await service.activity(request.limit ?? 50) };
   }
 }

@@ -9,6 +9,7 @@ import { LocalTerminalDock as AppLocalTerminalDock } from "@/components/app/pane
 import { WorkspaceSidebar as AppWorkspaceSidebar } from "@/components/app/sidebar/WorkspaceSidebar";
 import { SidebarModeStrip } from "@/components/app/sidebar/SidebarModeStrip";
 import { AppMainCenterContent } from "@/components/app/views/AppMainCenterContent";
+import { MobileRemoteOverlay } from "@/components/app/panels/mobile-remote/MobileRemoteOverlay";
 
 export function AppSignedInWorkspaceView() {
   const {
@@ -76,7 +77,7 @@ export function AppSignedInWorkspaceView() {
     <WorkspaceRuntimeProvider value={workspaceRuntimeValue}>
     <AppMainCenterContentProvider value={appMainCenterContentValue}>
       <div
-        className="grid h-full min-h-0"
+        className="relative grid h-full min-h-0"
         style={{
           gridTemplateColumns
         }}
@@ -84,6 +85,7 @@ export function AppSignedInWorkspaceView() {
         {workspaceSidebarCell}
         {centerColumnCell}
         {changesSidebarCell}
+        <MobileRemoteOverlay edge={areSidebarsSwapped ? "right" : "left"} />
       </div>
     </AppMainCenterContentProvider>
     </WorkspaceRuntimeProvider>

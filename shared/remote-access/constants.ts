@@ -7,6 +7,13 @@ export const DEFAULT_CONTROL_PLANE_URL = "https://remote-api.withnora.run";
 export const REMOTE_WEB_APP_ORIGIN = "https://app.withnora.run";
 export const RUNTIME_HOSTNAME_SUFFIX = "remote.withnora.run";
 
+/**
+ * Native apps name the device they run on in this request header so the desktop can list it. Browsers do not send it
+ * (it would need a CORS preflight older desktops reject); the desktop describes them from their User-Agent instead.
+ */
+export const REMOTE_CLIENT_HEADER = "X-Nora-Client";
+export const REMOTE_CLIENT_LABEL_MAX = 48;
+
 export const REMOTE_LIMITS = Object.freeze({
   /** Conservative per-account runtime quota enforced by the Worker. */
   maxRuntimesPerUser: 3,

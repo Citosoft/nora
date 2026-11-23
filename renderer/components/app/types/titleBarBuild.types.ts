@@ -1,10 +1,8 @@
-import type { WorkspaceSessionViewsApi } from "@/components/app/hooks/useWorkspaceSessionViews";
 import type { AppView, ResolvedTheme, ThemeMode, WindowUiState } from "@/components/app/types";
 import type { TitleBarWorkspaceQuickSearchConfig } from "@/components/app/types/titlebarWorkspaceSearch.types";
-import type { AppState, InstalledIde, WorkspaceSplitViewCollection } from "@shared/appTypes";
+import type { AppState, InstalledIde } from "@shared/appTypes";
 
 export type TitleBarBuildDeps = {
-  activeSplitViewCollection: WorkspaceSplitViewCollection;
   activeView: AppView;
   canOpenProjectInIde: boolean;
   defaultIdeId: string | null;
@@ -39,11 +37,9 @@ export type TitleBarBuildDeps = {
   preferredIde: InstalledIde | null;
   recentWorkspaces: AppState["recentProjects"];
   resolvedTheme: ResolvedTheme;
-  snapshotProject: AppState["project"];
   themeMode: ThemeMode;
   toggleTheme: () => void;
   useMacTitleBarChrome: boolean;
   windowUiState: WindowUiState;
   workspaceQuickSearch: TitleBarWorkspaceQuickSearchConfig | null;
-  workspaceSessionViews: Pick<WorkspaceSessionViewsApi, "activeViewId" | "setActiveViewId" | "createView">;
 };

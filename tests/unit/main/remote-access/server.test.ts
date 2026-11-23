@@ -44,3 +44,27 @@ test("loopback HTTP and WebSocket transport validate Host, Origin and single-use
   await server.close();
   await closed;
 });
+
+test("WebSocket accepts the runtime's own origin from native clients and rejects foreign origins", { timeout: 5000 }, async (t) => {
+  const f = runtimeFixture(t);
+  const hostname = "device.remote.withnora.run";
+  const server = await startRuntimeServer({ ...f.options, port: null, hostname: () => hostname });
+  t.after(() => server.close());
+  const base = `http://127.0.0.1:${server.port}`;
+  const socketUrl = async (): Promise<string> => {
+    const response = await fetch(`${base}/v1/realtime/ticket`, { method: "POST", headers: { ...headers, "Content-Type": "application/json" }, body: "{}" });
+    const ticket = realtimeTicketResponseSchema.parse(await response.json()).ticket;
+    return `ws://127.0.0.1:${server.port}/v1/realtime?ticket=${encodeURIComponent(ticket)}`;
+  };
+
+  const native = new WebSocket(await socketUrl(), { origin: `https://${hostname}` });
+  native.on("error", () => {});
+  t.after(() => native.terminate());
+  await once(native, "open");
+
+  const foreign = new WebSocket(await socketUrl(), { origin: "https://evil.example" });
+  foreign.on("error", () => {});
+  t.after(() => foreign.terminate());
+  const status = await new Promise<number>((resolve) => foreign.once("unexpected-response", (_request, response) => { response.resume(); resolve(response.statusCode ?? 0); }));
+  assert.equal(status, 403);
+});

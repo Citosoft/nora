@@ -28,7 +28,7 @@ export function createDesktopRemoteAccess(options: DesktopRemoteAccessOptions): 
     control: createRemoteControlPlane({ origin: DEFAULT_CONTROL_PLANE_URL, fetch, sessionToken: options.account.sessionToken }),
     session: options.account.session,
     connector: createRemoteConnector({ directory: path.join(options.directory, "remote-connector"), platform: process.platform, arch: process.arch, fetch, env: process.env }),
-    startServer: (port, permits) => startRuntimeServer({ port, permits, verifier, origins, host: options.host, inbox: options.inbox, boot: options.boot,
+    startServer: (port, permits, presence) => startRuntimeServer({ port, permits, presence, verifier, origins, host: options.host, inbox: options.inbox, boot: options.boot,
       runtimeVersion: options.runtimeVersion, environment: "desktop", name: () => service?.view().runtime?.name ?? (options.name.trim().slice(0, 64) || "Nora"),
       hostname: () => service?.view().runtime?.hostname ?? null, record: (entry) => activityLog().record(entry), now: Date.now }),
     activity: (limit) => activityLog().activity(limit), onChanged: options.onChanged, close: () => audit?.close()

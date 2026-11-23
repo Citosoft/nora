@@ -109,3 +109,10 @@ test("script-backed agent tools do not invent uninstall commands", () => {
     assert.equal(getDefaultToolCommand(tool, "remove"), "");
   }
 });
+
+test("Antigravity is only detected through its agy CLI, never the IDE's antigravity launcher", () => {
+  const antigravity = AGENT_DEFINITIONS.find((tool) => tool.id === "antigravity");
+  assert.ok(antigravity);
+  assert.deepEqual(antigravity.aliases, ["agy"]);
+  assert.equal(antigravity.executablePathCandidates.some((candidate) => /antigravity(\.(cmd|exe))?$/i.test(candidate.path)), false);
+});

@@ -16,7 +16,7 @@ export function legacyInbox(summaries: readonly ConversationSummary[], details: 
   const conversations = new Map(summaries.map(({ conversation }) => [conversation.id, conversation]));
   const requests: InboxRequestSource[] = details.flatMap(({ header }) => header.pendingRequests.map((request) => ({ conversation: header.conversation,
     parent: header.conversation.parentId ? conversations.get(header.conversation.parentId) ?? null : null, request })));
-  return projectInbox({ summaries: [], requests, workflows: [], connectors: [], previews: new Map() }, { version: 1, baselineAt: now, marks: {} }, now).snapshot.items;
+  return projectInbox({ summaries: [], requests, workflows: [], connectors: [], alerts: [], previews: new Map() }, { version: 1, baselineAt: now, marks: {} }, now).snapshot.items;
 }
 
 export function mobileInboxSections(items: readonly InboxItem[], now: string): MobileInboxSection[] {
@@ -40,6 +40,8 @@ export function describeInboxEntry(item: Exclude<InboxItem, { kind: "request" }>
       ? { title: `${item.workflowName} paused`, detail: `${item.stopReason ?? item.objective} · Review it in Nora on your computer.`, icon: "git-network-outline", tone: "warning" }
       : { title: `${item.workflowName} finished`, detail: item.objective || null, icon: "git-network-outline", tone: "default" };
     case "connector": return { title: `${item.name} needs you to sign in`, detail: "Sign in again in Nora on your computer.", icon: "extension-puzzle-outline", tone: "warning" };
+    // Computers leave app alerts out of what they serve to the phone until it can open apps; described here should one arrive.
+    case "alert": return { title: item.title, detail: item.detail ?? `From ${item.appName} · Open it in Nora on your computer.`, icon: "notifications-outline", tone: item.tier === "needs-you" ? "warning" : "default" };
   }
 }
 

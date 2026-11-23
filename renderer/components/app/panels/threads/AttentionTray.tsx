@@ -3,13 +3,14 @@ import { ChevronDown, ShieldQuestion } from "lucide-react";
 import { useAttentionToasts } from "@/components/app/hooks/useAttentionToasts";
 import { Button } from "@/components/ui/button";
 import { AttentionTrayRow } from "./AttentionTrayRow";
+import type { AttentionTrayProps } from "@/components/app/types/attentionToasts.types";
 
 /**
  * Every request waiting in other threads and bots, in one card in the bottom-right corner, answerable without switching threads.
  * Collapses to a small "N waiting" pill; it sits just under menus (z 9999) so row menus open above it.
  */
-export function AttentionTray() {
-  const { toasts, respond, open, dismiss } = useAttentionToasts();
+export function AttentionTray({ excludedWorkspaceId = null }: AttentionTrayProps) {
+  const { toasts, respond, open, dismiss } = useAttentionToasts(excludedWorkspaceId);
   const [collapsed, setCollapsed] = useState(false);
   if (!toasts.length) return null;
   const label = `${toasts.length} waiting for you`;

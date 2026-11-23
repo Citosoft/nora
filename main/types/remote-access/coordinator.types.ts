@@ -5,6 +5,7 @@ import type { RemoteControlPlane } from "./controlPlane.types";
 import type { RemoteConnector } from "./connector/connector.types";
 import type { RuntimeServer } from "./http/runtime.types";
 import type { RemoteIdentity } from "./auth.types";
+import type { RemotePresenceRecorder } from "./presence.types";
 import type { RemoteAccessView, RemoteAuditEntry } from "@shared/types/remote-access/remoteAccess.types";
 
 export interface RemoteCoordinatorOptions {
@@ -13,7 +14,9 @@ export interface RemoteCoordinatorOptions {
   control: RemoteControlPlane;
   connector: RemoteConnector;
   session(): AccountSession | null;
-  startServer(port: number | null, permits: (identity: RemoteIdentity) => boolean): Promise<RuntimeServer>;
+  startServer(port: number | null, permits: (identity: RemoteIdentity) => boolean, presence: RemotePresenceRecorder): Promise<RuntimeServer>;
+  /** Clock for the device list; defaults to the system clock. */
+  now?(): number;
   activity(limit: number): Promise<RemoteAuditEntry[]>;
   onChanged(view: RemoteAccessView): void;
   close(): void;

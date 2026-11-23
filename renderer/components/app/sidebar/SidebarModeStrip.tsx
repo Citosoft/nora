@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { MessagesSquare, Bot, Inbox } from "lucide-react";
+import { MessagesSquare, Bot, Inbox, Smartphone } from "lucide-react";
 import { APPS_SECTION_ICON } from "@/components/app/constants/appsSectionIcon";
 import { inboxCounts } from "@shared/inbox/projection";
 import { useInbox } from "@/components/app/hooks/useInbox";
@@ -21,7 +21,7 @@ const MODES: readonly { mode: SidebarMode; label: string; icon: LucideIcon }[] =
   { mode: "apps", label: "Apps", icon: APPS_SECTION_ICON }
 ];
 
-/** Persistent navigation for the inbox, threads, bots, apps and the active workspace's tools. */
+/** Persistent navigation for the inbox, threads, bots, apps, the active workspace's tools and the phone app page. */
 export function SidebarModeStrip({ edge }: SidebarModeStripProps) {
   const navigation = useWorkspaceNavigation();
   const mode = navigation.preferences.sidebarMode;
@@ -42,6 +42,9 @@ export function SidebarModeStrip({ edge }: SidebarModeStripProps) {
         active={entry === mode && !navigation.route} badge={entry === "inbox" ? waiting : 0} onSelect={() => select(entry)} />)}
       <SidebarWorkspaceTools edge={edge} />
     </div>
-    <div className="mt-auto flex justify-center pt-2"><SidebarUserAvatar /></div>
+    <div className="mt-auto flex flex-col items-center gap-1 pt-2">
+      <SidebarIconButton label="Mobile" icon={Smartphone} active={mode === "mobile" && !navigation.route} onSelect={() => select("mobile")} />
+      <SidebarUserAvatar />
+    </div>
   </nav>;
 }

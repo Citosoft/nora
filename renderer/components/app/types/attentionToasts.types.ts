@@ -11,6 +11,10 @@ export interface AttentionToastsState {
   open(toast: AttentionToast): void;
   dismiss(toast: AttentionToast): void;
 }
+export interface AttentionTrayProps {
+  /** A workspace whose home is on screen and answers its own requests there. */
+  excludedWorkspaceId?: string | null;
+}
 export interface AttentionTrayRowProps {
   toast: AttentionToast;
   onRespond(response: RequestResponse): Promise<void>;

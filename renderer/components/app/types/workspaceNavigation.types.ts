@@ -11,8 +11,11 @@ import type { InboxView } from "./inbox.types";
 
 export type WorkspaceToolId = "worktrees" | "merge-requests" | "issues" | "documents" | "library" | "tasks" | "workflows" | "terminals" | "browser";
 export interface WorkspaceToolItem { id: WorkspaceToolId; label: string; icon: LucideIcon; }
-/** Threads lists conversations; Bots lists the bots you can talk to; Inbox lists what needs you and what is new; Apps lists the apps agents built. */
-export type SidebarMode = "threads" | "bots" | "inbox" | "apps";
+/**
+ * Threads lists conversations; Bots lists the bots you can talk to; Inbox lists what needs you and what is new; Apps lists the apps agents built;
+ * Mobile shows the phone app page over the sidebar and center. Mobile is never restored on launch.
+ */
+export type SidebarMode = "threads" | "bots" | "inbox" | "apps" | "mobile";
 export interface SidebarPreferences {
   sidebarMode: SidebarMode;
   /** The app shown in the center in Apps mode; null shows the Apps home. */
@@ -30,6 +33,7 @@ export interface SidebarPreferences {
   workspaceAvatarColors: Record<string, WorkspaceAvatarColor>;
   workspaceViews: Record<string, WorkspaceViewPreferences>;
 }
+export interface SidebarModeHomeProps { mode: SidebarMode; botsHome: BotsHomePage; }
 export interface WorkspaceToolRoute { projectId: string; tool: WorkspaceToolId; }
 export interface WorkspaceToolRequest extends WorkspaceToolRoute { revision: number; }
 export interface WorkspaceNavigationValue {

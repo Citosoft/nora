@@ -91,3 +91,44 @@ test("cleanup failures keep their actionable cause on enable and retry, then rec
   assert.equal(f.service.view().status.status, "connected");
   await f.service.shutdown();
 });
+
+test("devices reaching the runtime show in the view and are forgotten on disable or account change", async () => {
+  const f = serviceFixture(); await f.service.start(); await f.service.enable();
+  const phone = { userId: "owner", sessionId: "phone-session", expiresAt: Date.now() + 60_000 };
+  const changes: number[] = [];
+  f.service.subscribe((view) => changes.push(view.devices.length));
+  f.presence().seen(phone, "iPhone · Nora app");
+  const release = f.presence().connect(phone, () => {});
+  assert.deepEqual(f.service.view().devices.map((device) => [device.label, device.connected]), [["iPhone · Nora app", true]]);
+  assert.deepEqual(changes, [1, 1]);
+  release();
+  assert.equal(f.service.view().devices[0].connected, false);
+  f.setSession({ userId: "owner", sessionId: "session-b" }); f.service.sessionChanged();
+  assert.deepEqual(f.service.view().devices, []);
+  await tick();
+  f.presence().seen(phone, null);
+  assert.equal(f.service.view().devices.length, 1);
+  await f.service.disable();
+  assert.deepEqual(f.service.view().devices, []);
+  await f.service.shutdown();
+});
+
+test("disconnecting a device refuses its session, survives a restart and is forgotten when remote access is turned off", async () => {
+  const f = serviceFixture(); await f.service.start(); await f.service.enable();
+  const phone = { userId: "owner", sessionId: "phone-session", expiresAt: Date.now() + 60_000 };
+  let closed = 0;
+  f.presence().seen(phone, "iPhone · Nora app");
+  f.presence().connect(phone, () => { closed += 1; });
+  const view = await f.service.disconnectDevice("phone-session");
+  assert.equal(closed, 1);
+  assert.deepEqual(view.devices, []);
+  assert.equal(f.presence().revoked("phone-session"), true);
+  assert.equal(f.permits(), true, "other sessions of the owner are still allowed");
+  assert.deepEqual(f.state().revokedSessions, ["phone-session"]);
+  await f.service.shutdown();
+  const resumed = serviceFixture(f.state()); await resumed.service.start();
+  assert.equal(resumed.presence().revoked("phone-session"), true);
+  await resumed.service.disable();
+  assert.deepEqual(resumed.state().revokedSessions, []);
+  await resumed.service.shutdown();
+});

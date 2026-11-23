@@ -30,6 +30,16 @@ export async function startRuntimeServer(options: RuntimeServerOptions): Promise
   let closing = false;
   let port = options.port ?? 0;
   const allowedHost = (host: string | undefined): boolean => host === `127.0.0.1:${port}` || (!!options.hostname() && host === options.hostname());
+  /**
+   * Browsers send the web app's origin. Native WebSocket clients (React Native's iOS SocketRocket) derive Origin from
+   * the URL they connect to, i.e. this runtime's own public hostname; that same-origin value is not forgeable by a
+   * cross-site page, so it is accepted alongside the configured origins.
+   */
+  const allowedSocketOrigin = (origin: string | undefined): boolean => {
+    if (!origin) return false;
+    const hostname = options.hostname();
+    return options.origins.includes(origin) || (!!hostname && origin === `https://${hostname}`);
+  };
   const server = createServer({ maxHeaderSize: 16_384, requestTimeout: 15_000, headersTimeout: 10_000 }, (incoming, outgoing) => {
     void (async () => {
       try {
@@ -66,8 +76,7 @@ export async function startRuntimeServer(options: RuntimeServerOptions): Promise
   server.on("upgrade", (request, socket, head) => {
     try {
       const url = new URL(request.url ?? "/", `http://127.0.0.1:${port}`);
-      const origin = request.headers.origin;
-      if (closing || !allowedHost(request.headers.host) || !origin || !options.origins.includes(origin)
+      if (closing || !allowedHost(request.headers.host) || !allowedSocketOrigin(request.headers.origin)
         || url.pathname !== "/v1/realtime" || [...url.searchParams.keys()].some((key) => key !== "ticket")) throw new Error("Rejected handshake");
       const ticket = url.searchParams.get("ticket") ?? "";
       if (ticket.length > 128 || websocket.clients.size >= REMOTE_LIMITS.maxRealtimeSockets) throw new Error("Rejected handshake");
@@ -75,6 +84,7 @@ export async function startRuntimeServer(options: RuntimeServerOptions): Promise
       if (!identity || !options.permits(identity)) throw new Error("Rejected handshake");
       websocket.handleUpgrade(request, socket, head, (client) => {
         client.on("error", () => client.terminate());
+        client.once("close", options.presence.connect(identity, () => client.close(REALTIME_CLOSE_CODES.forbidden)));
         attachRuntimeRealtime(options, api.tickets, {
           send(message) {
             if (client.readyState !== WebSocket.OPEN || client.bufferedAmount > 1024 * 1024) return false;

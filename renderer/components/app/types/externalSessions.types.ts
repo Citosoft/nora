@@ -6,18 +6,13 @@ export interface ExternalSessionEntry { session: ExternalSession; workspaceId: s
 export interface ExternalDiscoveryState { entries: ExternalSessionEntry[]; loading: boolean; errors: string[]; }
 export interface ExternalSessionsInput { ports: ThreadNavigationPorts; workspaceId: string | null; enabled?: boolean; }
 
-export interface ExternalListInput { entries: readonly ExternalSessionEntry[]; query: string; expanded: boolean; sourceFilter?: ThreadSourceFilter; sort?: ThreadSort; }
-export interface ExternalListResult { visible: ExternalSessionEntry[]; total: number; hidden: number; }
+export interface ExternalListInput { entries: readonly ExternalSessionEntry[]; query: string; sourceFilter?: ThreadSourceFilter; sort?: ThreadSort; }
 
 export interface ResumableThreadsInput extends ExternalSessionsInput { query: string; sourceFilter: ThreadSourceFilter; sort: ThreadSort; }
 export interface ExternalThreadControlsState {
   loading: boolean;
   busy: boolean;
-  expanded: boolean;
-  total: number;
-  hidden: number;
   errors: string[];
   refresh(): void;
-  toggleExpanded(): void;
 }
 export interface ExternalThreadControlsProps { state: ExternalThreadControlsState; }

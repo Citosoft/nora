@@ -6,6 +6,7 @@ import type { Href } from "expo-router";
 import type { SidebarProps } from "@/types/sidebar.types";
 import type { Theme } from "@/types/theme.types";
 import { spacing, type } from "@/theme/tokens";
+import { providerPresentations } from "@/config/providerIcons";
 import { routes } from "@/navigation/routes";
 import { botChatHref } from "@/state/botChats";
 import { chatsOverview } from "@/state/chatsOverview";
@@ -23,9 +24,11 @@ import { BotAvatar } from "@/components/common/BotAvatar";
 import { Icon } from "@/components/common/Icon";
 import { SearchField } from "@/components/common/SearchField";
 import { SidebarGlyph } from "@/components/common/SidebarGlyph";
+import { ProviderIcon } from "@/components/common/ProviderIcon";
 import { StatusDot } from "@/components/common/StatusDot";
 import { SidebarFooter } from "./SidebarFooter";
 import { SidebarRow } from "./SidebarRow";
+import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 
 /** Header (computer switcher, search, close), destinations, projects, chats and the account footer. */
 export function SidebarContent({ runtimeId, runtimeName, activeConversationId, persistent = false, onClose }: SidebarProps) {
@@ -75,6 +78,7 @@ export function SidebarContent({ runtimeId, runtimeName, activeConversationId, p
       <ScrollView style={styles.fill} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {searching ? null : (
           <View style={styles.group}>
+            {projectList.length > 1 ? <WorkspaceSwitcher workspaces={projectList} selectedId={projectId} onSelect={setProjectId} /> : null}
             <SidebarRow label="New chat" icon="create-outline" selected={activeConversationId === null} onPress={() => go(routes.newConversation(runtimeId, projectId), "replace")} />
             <SidebarRow label="Inbox" icon="file-tray-outline" detail={overview.pendingRequests ? String(overview.pendingRequests) : null}
               onPress={() => go(routes.inbox(runtimeId))} />
@@ -82,19 +86,6 @@ export function SidebarContent({ runtimeId, runtimeName, activeConversationId, p
             <SidebarRow label="Computers" icon="desktop-outline" onPress={() => go(routes.home, "replace")} />
           </View>
         )}
-        {!searching && projectList.length > 1 ? (
-          <View style={styles.group}>
-            <Text style={styles.sectionTitle} accessibilityRole="header">Projects</Text>
-            {projectList.map((project) => (
-              <SidebarRow key={project.id} label={project.name} icon={projectId === project.id ? "folder-open-outline" : "folder-outline"} selected={projectId === project.id}
-                accessibilityLabel={`${project.name}, ${projectId === project.id ? "showing its chats" : "show its chats"}`}
-                onPress={() => setProjectId((current) => (current === project.id ? null : project.id))}
-                trailing={<BarIconButton label={`New chat in ${project.name}`} onPress={() => go(routes.newConversation(runtimeId, project.id), "replace")}>
-                  <Icon name="create-outline" size={20} color={colors.textMuted} />
-                </BarIconButton>} />
-            ))}
-          </View>
-        ) : null}
         {!searching && botList.length > 0 ? (
           <View style={styles.group}>
             <Text style={styles.sectionTitle} accessibilityRole="header">Bots</Text>
@@ -122,7 +113,8 @@ export function SidebarContent({ runtimeId, runtimeName, activeConversationId, p
             const flagged = status.tone === "active" || status.tone === "attention" || status.tone === "danger";
             return (
               <SidebarRow key={item.conversation.id} label={item.conversation.title} selected={item.conversation.id === activeConversationId}
-                accessibilityLabel={`${item.conversation.title}, ${status.label}`}
+                leading={<ProviderIcon kind={item.conversation.provider.kind} />}
+                accessibilityLabel={`${item.conversation.title}, ${providerPresentations[item.conversation.provider.kind].label}, ${status.label}`}
                 onPress={() => go(routes.conversation(runtimeId, item.conversation.id), "replace")}
                 trailing={flagged ? <View style={styles.dot}><StatusDot tone={status.tone} /></View> : null} />
             );

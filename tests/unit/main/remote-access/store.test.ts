@@ -19,6 +19,9 @@ test("device state keeps a stable installation and writes atomic private snapsho
   await Promise.all([store.save({ ...first, name: "Earlier" }), store.save({ ...first, name: "Latest" })]);
   assert.equal((await store.load()).name, "Latest");
   if (process.platform !== "win32") assert.equal((await stat(file)).mode & 0o777, 0o600);
+  const { revokedSessions: _omitted, ...older } = first;
+  await writeFile(file, JSON.stringify(older));
+  assert.deepEqual((await store.load()).revokedSessions, [], "files saved before device disconnects still load");
   await writeFile(file, "corrupt existing registration");
   await assert.rejects(store.load(), /preserved/);
   assert.equal(await readFile(file, "utf8"), "corrupt existing registration");

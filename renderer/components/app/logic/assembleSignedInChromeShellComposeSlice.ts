@@ -12,7 +12,6 @@ export const assembleSignedInChromeShellComposeSlice = (s: SignedInChromeShellAs
 
   return {
     titleBar: {
-      activeSplitViewCollection: sessionSurface.activeSplitViewCollection,
       activeView: core.activeView,
       canOpenProjectInIde: chromeShell.canOpenProjectInIde,
       defaultIdeId: chromeShell.defaultIdeId,
@@ -55,7 +54,6 @@ export const assembleSignedInChromeShellComposeSlice = (s: SignedInChromeShellAs
       preferredIde: chromeShell.preferredIde,
       recentWorkspaces: core.snapshot.recentProjects,
       resolvedTheme: core.resolvedTheme,
-      snapshotProject: core.snapshot.project,
       themeMode: chromeShell.themeMode,
       toggleTheme: chromeShell.toggleTheme,
       useMacTitleBarChrome: chromeShell.useMacTitleBarChrome,
@@ -68,12 +66,7 @@ export const assembleSignedInChromeShellComposeSlice = (s: SignedInChromeShellAs
             openShortcutLabel: chromeShell.workspaceQuickSearchOpenShortcutLabel,
             onPick: chromeShell.handleWorkspaceQuickSearchPick
           }
-        : null,
-      workspaceSessionViews: {
-        activeViewId: sessionSurface.workspaceSessionViews.activeViewId,
-        setActiveViewId: sessionSurface.workspaceSessionViews.setActiveViewId,
-        createView: sessionSurface.workspaceSessionViews.createView
-      }
+        : null
     },
     topBanners: {
       linuxUpdateStatus: chromeShell.linuxUpdateStatus,

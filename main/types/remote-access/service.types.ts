@@ -10,6 +10,8 @@ export interface RemoteAccessService {
   retry(): Promise<RemoteAccessView>;
   rename(name: string): Promise<RemoteAccessView>;
   rotate(): Promise<RemoteAccessView>;
+  /** Closes one device's connections and refuses its sign-in until that device signs in again. */
+  disconnectDevice(deviceId: string): Promise<RemoteAccessView>;
   view(): RemoteAccessView;
   /** Whether the user opted in (even while paused or failing). */
   isEnabled(): boolean;

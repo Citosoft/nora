@@ -11,6 +11,7 @@ import { createRealtimeConnection } from "@/realtime/realtimeConnection";
 import { createWebSocket, scheduleTimer } from "@/realtime/webSocketFactory";
 import { createRuntimeSession } from "./runtimeSession";
 import { createRuntimeSessionRegistry } from "./runtimeSessionRegistry";
+import { describeThisDevice } from "@/platform/clientLabel";
 
 export interface RemoteAccessServicesDeps {
   userId: string;
@@ -24,6 +25,7 @@ export interface RemoteAccessServicesDeps {
 /** Composition root for the signed-in app: every client, store and session is wired here and nowhere else. */
 export function createRemoteAccessServices(deps: RemoteAccessServicesDeps): RemoteAccessServices {
   const fetchImpl: FetchLike = (input, init) => globalThis.fetch(input, init);
+  const clientLabel = describeThisDevice();
   const now = () => new Date();
   const recordConnected = (installationId: string, at: Date): void => {
     void deps.preferences.update((current) => ({ ...current, lastConnected: { ...current.lastConnected, [installationId]: at.toISOString() } }));
@@ -34,7 +36,7 @@ export function createRemoteAccessServices(deps: RemoteAccessServicesDeps): Remo
     runtimeId: endpoint.installationId,
     hostname: endpoint.hostname,
     client: createRuntimeClient({ hostname: endpoint.hostname, getToken: deps.getToken, fetch: fetchImpl,
-      timeoutMs: REQUEST_TIMEOUTS.runtimeMs, commandTimeoutMs: REQUEST_TIMEOUTS.commandMs }),
+      timeoutMs: REQUEST_TIMEOUTS.runtimeMs, commandTimeoutMs: REQUEST_TIMEOUTS.commandMs, clientLabel }),
     createConnection: (connectionDeps, listener) => createRealtimeConnection({
       ...connectionDeps, createSocket: createWebSocket, schedule: scheduleTimer, now: () => Date.now(), random: Math.random
     }, listener),

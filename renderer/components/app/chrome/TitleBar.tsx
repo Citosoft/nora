@@ -2,10 +2,8 @@ import { TitleBarControls } from "@/components/app/chrome/TitleBarControls";
 import { TitleBarWorkspaceQuickSearch } from "@/components/app/chrome/TitleBarWorkspaceQuickSearch";
 import { AppMark } from "@/components/app/shared/AppMark";
 import type { TitleBarProps } from "@/components/app/types/component.types";
-import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuSub } from "@/components/ui/dropdown-menu";
 import { menuItemDescriptionClass } from "@/components/ui/menu-styles";
-import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronLeft, ChevronRight, Code2, FolderGit2, Globe, History, MessageSquarePlus, PanelBottom, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus, RefreshCcw, TerminalSquare, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -36,7 +34,6 @@ export function TitleBar({
   onFocusLocalTerminalDock,
   onFocusPreviousSessionTab,
   onFocusNextSessionTab,
-  splitViewSelection,
   workspaceQuickSearch
 }: TitleBarProps) {
   const titleBarRef = useRef<HTMLDivElement | null>(null);
@@ -76,8 +73,6 @@ export function TitleBar({
   );
   const shouldUseAbsoluteCenteredSearch = centeredSearchAvailableWidth >= 208;
   const absoluteCenteredSearchWidth = Math.min(384, centeredSearchAvailableWidth);
-  const shouldHideSplitViewSelector = isNarrowTitleBar;
-  const shouldHideSplitViewCreateButton = isCompactTitleBar;
   const showCustomTitleMenus = !useMacTitleBarChrome;
 
   const dedupedRecentWorkspaces = useMemo(() => {
@@ -91,7 +86,6 @@ export function TitleBar({
     });
   }, [recentWorkspaces]);
   const titleBarIconToneClass = resolvedTheme === "light" ? "text-slate-700" : "text-muted-foreground";
-  const titleBarSelectorSurfaceClass = resolvedTheme === "light" ? "border-border bg-white" : "border-border/70 bg-background";
 
   return (
     <div
@@ -300,30 +294,6 @@ export function TitleBar({
         </div>
       ) : null}
       <div ref={rightControlsRef} className="app-no-drag ml-auto flex min-w-0 items-center justify-end gap-0">
-        <div className="mr-2 flex items-center">
-          {splitViewSelection && !shouldHideSplitViewSelector ? (
-            <div className="mr-2 flex items-center gap-2">
-              <Select
-                value={splitViewSelection.activeViewId ?? ""}
-                onChange={(event) => splitViewSelection.onActiveViewChange(event.target.value || null)}
-                className={`h-8 text-xs ${isCompactTitleBar ? "w-[136px]" : "w-[170px]"} ${titleBarSelectorSurfaceClass}`}
-              >
-                <option value="">Focused session</option>
-                {splitViewSelection.views.map((view) => (
-                  <option key={view.id} value={view.id}>
-                    {view.name}
-                  </option>
-                ))}
-              </Select>
-              {!shouldHideSplitViewCreateButton ? (
-                <Button variant="outline" size="sm" className="h-8 px-2.5 text-xs" onClick={splitViewSelection.onCreateView}>
-                  <Plus className="size-3.5" />
-                  New view
-                </Button>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
         <button
           type="button"
           className={`grid h-8 w-11 shrink-0 place-items-center ${titleBarIconToneClass} transition hover:bg-accent hover:text-foreground`}

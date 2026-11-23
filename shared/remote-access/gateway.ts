@@ -16,6 +16,17 @@ export const remoteAccessStatusSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("paused"), reason: z.enum(["signed-out", "different-account"]) }).strict(),
   z.object({ status: z.literal("error"), message: z.string().min(1), retryable: z.boolean() }).strict()
 ]);
+/** A phone or browser session that has reached this computer since remote access started; never persisted. */
+export const remoteDeviceSchema = z.object({
+  /** The account session the device signed in with; stable while that sign-in lasts. */
+  id: z.string().min(1).max(128),
+  /** Self-described by the app or derived from the browser; display only, never trusted. */
+  label: z.string().min(1).max(64).nullable(),
+  /** Whether the device holds a live connection for updates right now. */
+  connected: z.boolean(),
+  firstSeenAt: z.string().datetime(),
+  lastSeenAt: z.string().datetime()
+}).strict();
 export const remoteAccessViewSchema = z.object({
   /** Whether a Nora account is signed in on this computer; remote access requires it. */
   signedIn: z.boolean(),
@@ -25,7 +36,9 @@ export const remoteAccessViewSchema = z.object({
   /** Where to open Nora on a phone; a convenience link that grants nothing by itself. */
   webAppUrl: z.string().url(),
   /** A previous disable could not reach the control plane; cleanup is retried on the next start or sign-in. */
-  pendingCleanup: z.boolean()
+  pendingCleanup: z.boolean(),
+  /** Devices seen since remote access last started, connected ones first. */
+  devices: z.array(remoteDeviceSchema).max(32)
 }).strict();
 export const remoteAuditEntrySchema = z.object({
   at: z.string().datetime(),
@@ -48,6 +61,8 @@ export const remoteAccessRequestSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("rename"), name: runtimeNameSchema }).strict(),
   /** Replaces the tunnel's connector credentials and drops existing connections. */
   z.object({ kind: z.literal("rotate") }).strict(),
+  /** Disconnects one device listed in the view and refuses its account session until it signs in again. */
+  z.object({ kind: z.literal("disconnect-device"), deviceId: z.string().min(1).max(128) }).strict(),
   z.object({ kind: z.literal("activity"), limit: z.number().int().min(1).max(200).optional() }).strict()
 ]);
 export const remoteAccessReplySchema = z.union([

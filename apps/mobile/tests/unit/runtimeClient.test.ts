@@ -34,6 +34,14 @@ describe("runtimeClient", () => {
     expect(calls.map((call) => call.headers.Authorization)).toEqual(["Bearer token-1", "Bearer token-2"]);
   });
 
+  it("names this device to the runtime only when it has a label", async () => {
+    const { fetch, calls } = fakeFetch(() => json(200, info));
+    await createRuntimeClient({ hostname: "abc123.remote.withnora.run", fetch, timeoutMs: 50, commandTimeoutMs: 50,
+      getToken: async () => "token", clientLabel: "iPhone · Nora app" }).info();
+    await client(fetch).info();
+    expect(calls.map((call) => call.headers["X-Nora-Client"])).toEqual(["iPhone · Nora app", undefined]);
+  });
+
   it("fails as signed-out without calling the runtime when no token is available", async () => {
     const { fetch, calls } = fakeFetch(() => json(200, info));
     const error = await failureOf(client(fetch, [null]).info());

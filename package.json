@@ -3,7 +3,7 @@
   "productName": "Nora",
   "displayName": "Nora",
   "desktopName": "nora.desktop",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "A desktop workspace for your AI team: Claude, Codex and ACP agents and bots, working side by side.",
   "main": "dist/main/main.js",
   "scripts": {

@@ -9,6 +9,7 @@ import type { RemoteState } from "@main/types/remote-access/store.types";
 import type { RemoteIdentity } from "@main/types/remote-access/auth.types";
 import type { RuntimeServer } from "@main/types/remote-access/http/runtime.types";
 import type { ConnectorHandle } from "@main/types/remote-access/connector/connector.types";
+import { createRemotePresence } from "./presence";
 
 /** Owns the opt-in, account binding and transport lifetime independently of Electron windows. */
 export function createRemoteAccessService(options: RemoteCoordinatorOptions): RemoteAccessService {
@@ -23,10 +24,11 @@ export function createRemoteAccessService(options: RemoteCoordinatorOptions): Re
   let disposed = false;
   let shutdownJob: Promise<void> | null = null;
   const listeners = new Set<(view: RemoteAccessView) => void>();
+  const presence = createRemotePresence({ now: options.now ?? Date.now, onChanged: () => notify(), revoked: (sessionId) => state?.revokedSessions.includes(sessionId) ?? false });
 
   const view = (): RemoteAccessView => ({ signedIn: options.session() !== null, enabled: state?.enabled ?? false,
     status: structuredClone(status), runtime: state?.runtime ? { installationId: state.installationId, name: state.name, hostname: state.runtime.hostname } : null,
-    webAppUrl: REMOTE_WEB_APP_ORIGIN, pendingCleanup: !!state?.cleanup.length });
+    webAppUrl: REMOTE_WEB_APP_ORIGIN, pendingCleanup: !!state?.cleanup.length, devices: presence.devices() });
   const notify = (): void => { const next = view(); options.onChanged(next); for (const listener of listeners) listener(next); };
   const invalidate = (): number => { accepting = false; controller.abort(); controller = new AbortController(); return ++generation; };
   const assertCurrent = (epoch: number, session?: AccountSession): void => {
@@ -84,13 +86,14 @@ export function createRemoteAccessService(options: RemoteCoordinatorOptions): Re
     status = { status: "starting" }; notify();
     try {
       const permits = (identity: RemoteIdentity): boolean =>
-        accepting && !disposed && generation === epoch && !!state?.enabled && state.ownerId === identity.userId && options.session()?.userId === identity.userId;
+        accepting && !disposed && generation === epoch && !!state?.enabled && state.ownerId === identity.userId && options.session()?.userId === identity.userId
+        && !presence.revoked(identity.sessionId);
       let opened: RuntimeServer;
-      try { opened = await options.startServer(local.port, permits); }
+      try { opened = await options.startServer(local.port, permits, presence); }
       catch (error) {
         if (!local.port || !isNodeError(error) || error.code !== "EADDRINUSE") throw error;
         assertCurrent(epoch, session);
-        opened = await options.startServer(null, permits);
+        opened = await options.startServer(null, permits, presence);
         recover = true; // The control plane must update ingress before a cached connector can use the new port.
       }
       if (generation !== epoch || disposed) { await opened.close(); assertCurrent(epoch); }
@@ -160,9 +163,9 @@ export function createRemoteAccessService(options: RemoteCoordinatorOptions): Re
         if (state.ownerId && !state.cleanup.some((entry) => entry.ownerId === state?.ownerId && entry.installationId === state.installationId)) {
           state.cleanup.push({ ownerId: state.ownerId, installationId: state.installationId });
         }
-        state.enabled = false; state.ownerId = null; state.runtime = null; state.connectorSecret = null; state.port = null;
+        state.enabled = false; state.ownerId = null; state.runtime = null; state.connectorSecret = null; state.port = null; state.revokedSessions = [];
       }
-      status = { status: "disabled" }; notify();
+      status = { status: "disabled" }; presence.clear(); notify();
       // Stop immediately even while a provisioning response is still outstanding.
       const stopped = stopTransport();
       return enqueue(async () => { await stopped; assertCurrent(epoch); await save(); await cleanupWhenAvailable(epoch); notify(); return view(); });
@@ -186,6 +189,14 @@ export function createRemoteAccessService(options: RemoteCoordinatorOptions): Re
         local.name = validated; await save(); notify(); return view();
       });
     },
+    disconnectDevice(deviceId) {
+      const local = loaded();
+      if (!local.enabled) return Promise.reject(new Error("Remote access is off, so no devices are connected."));
+      // Refuse the session and close its sockets now; persisting can wait behind any running transport work.
+      if (!local.revokedSessions.includes(deviceId)) local.revokedSessions = [...local.revokedSessions, deviceId].slice(-64);
+      presence.disconnect(deviceId); notify();
+      return enqueue(async () => { await save(); return view(); });
+    },
     view,
     isEnabled: () => state?.enabled ?? false,
     activity: options.activity,
@@ -194,7 +205,7 @@ export function createRemoteAccessService(options: RemoteCoordinatorOptions): Re
       if (disposed) return;
       const epoch = invalidate();
       if (state?.enabled) { status = { status: "paused", reason: options.session() ? "different-account" : "signed-out" }; }
-      notify();
+      presence.clear(); notify();
       const stopped = stopTransport();
       void enqueue(async () => { await stopped; assertCurrent(epoch); if (state) await connect(epoch, false); }).catch((error: unknown) => setFailure(error, epoch));
     },

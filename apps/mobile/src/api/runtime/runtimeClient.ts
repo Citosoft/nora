@@ -4,6 +4,7 @@ import { RUNTIME_ROUTES, botsResponseSchema, commandResponseSchema, conversation
   timelineResponseSchema, inboxResponseSchema } from "@shared/remote-access/runtimeApi";
 import type { CommandReceipt } from "@shared/types/conversation/contracts.types";
 import type { RuntimeApiErrorCode } from "@shared/types/remote-access/runtimeApi.types";
+import { REMOTE_CLIENT_HEADER } from "@shared/remote-access/constants";
 import type { HttpMethod } from "@/types/http.types";
 import type { RuntimeClient, RuntimeClientConfig } from "@/types/runtimeClient.types";
 import { requestJson } from "@/api/http/requestJson";
@@ -11,11 +12,12 @@ import { runtimeOrigin, runtimeRealtimeOrigin, withQuery } from "./runtimeOrigin
 
 export function createRuntimeClient(config: RuntimeClientConfig): RuntimeClient {
   const origin = runtimeOrigin(config.hostname);
+  const headers = config.clientLabel ? { [REMOTE_CLIENT_HEADER]: config.clientLabel } : undefined;
   const call = <T>(method: HttpMethod, path: string, schema: z.ZodType<T>, body?: object): Promise<T> =>
     requestJson<T, RuntimeApiErrorCode>({
       service: "runtime", method, url: `${origin}${path}`, getToken: config.getToken, fetch: config.fetch,
       timeoutMs: method === "GET" ? config.timeoutMs : config.commandTimeoutMs, schema, errorSchema: runtimeApiErrorSchema,
-      ...(body === undefined ? {} : { body })
+      ...(headers ? { headers } : {}), ...(body === undefined ? {} : { body })
     });
   const command = async (path: string, body: object): Promise<CommandReceipt> =>
     (await call("POST", path, commandResponseSchema, body)).receipt;

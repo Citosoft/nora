@@ -1,7 +1,8 @@
 {
   "expo": {
     "name": "Nora",
-    "slug": "nora-mobile",
+    "slug": "nora",
+    "owner": "citosoft",
     "version": "0.1.0",
     "scheme": "nora",
     "orientation": "default",
@@ -10,7 +11,11 @@
     "backgroundColor": "#0D1410",
     "ios": {
       "bundleIdentifier": "run.withnora.app",
-      "supportsTablet": true
+      "icon": "./assets/icon-ios.png",
+      "supportsTablet": true,
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "run.withnora.app",
@@ -45,7 +50,13 @@
           "resizeMode": "contain",
           "backgroundColor": "#0D1410"
         }
-      ]
-    ]
+      ],
+      "expo-font"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "1211afdd-95ba-4d2b-bc7c-e4e980af97fd"
+      }
+    }
   }
 }

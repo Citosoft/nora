@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select } from "@/components/ui/select";
 import { useWorkThreadVisibility } from "@/components/app/hooks/useWorkThreadVisibility";
+import { DEFAULT_WORK_THREAD_VISIBILITY } from "@/components/app/logic/workspace-navigation/preferences";
 
 const filters: readonly ThreadFilterOption[] = [
   { id: "all", label: "Recent" },
@@ -23,7 +24,7 @@ const filters: readonly ThreadFilterOption[] = [
 export function ThreadViewOptions({ canGroupByWorkspace, filter, sort, onSortChange, sourceFilter, onSourceFilterChange, grouping, onFilterChange, onGroupingChange }: ThreadViewOptionsProps) {
   const groupingOptions = availableThreadGroupings(canGroupByWorkspace);
   const workThreads = useWorkThreadVisibility();
-  const active = filter !== "all" || grouping !== "none" || sourceFilter !== "all" || sort !== "recent" || workThreads.visibility !== "visible";
+  const active = filter !== "all" || grouping !== "none" || sourceFilter !== "all" || sort !== "recent" || workThreads.visibility !== DEFAULT_WORK_THREAD_VISIBILITY;
   const filterLabel = filters.find((entry) => entry.id === filter)?.label ?? "Recent";
   const groupingLabel = groupingOptions.find((entry) => entry.id === grouping)?.label ?? "No grouping";
   const sourceLabel = threadSourceOptions.find((entry) => entry.id === sourceFilter)?.label ?? "All chats";
@@ -77,7 +78,7 @@ export function ThreadViewOptions({ canGroupByWorkspace, filter, sort, onSortCha
       </div>
       <div className="mt-3 border-t border-border/60 pt-2">
         <Button variant="ghost" className="h-7 w-full justify-start px-1 text-xs text-muted-foreground" disabled={!active}
-          onClick={() => { onFilterChange("all"); onGroupingChange("none"); onSourceFilterChange("all"); onSortChange("recent"); workThreads.setVisibility("visible"); }}>Reset view</Button>
+          onClick={() => { onFilterChange("all"); onGroupingChange("none"); onSourceFilterChange("all"); onSortChange("recent"); workThreads.setVisibility(DEFAULT_WORK_THREAD_VISIBILITY); }}>Reset view</Button>
       </div>
     </PopoverContent>
   </Popover>;

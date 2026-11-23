@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Text, View, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
+import { ActivityIndicator, FlatList, Text, View, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 import type { ConversationView } from "@shared/types/conversation/conversationView.types";
 import type { ComposerStop } from "@/types/composer.types";
 import type { ConversationHandle } from "@/types/conversationHook.types";
@@ -15,6 +15,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { useThemedStyles } from "@/hooks/useThemedStyles";
 import { RequestCard } from "@/components/approvals/RequestCard";
 import { Banner } from "@/components/common/Banner";
+import { KeyboardAvoidingArea } from "@/components/common/KeyboardAvoidingArea";
 import { Button } from "@/components/common/Button";
 import { Icon } from "@/components/common/Icon";
 import { Composer } from "./Composer";
@@ -73,9 +74,9 @@ export function ChatView({ runtime, runtimeId, conversation, view, runner, onSen
   };
 
   return (
-    <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KeyboardAvoidingArea>
       <FlatList ref={list} data={entries} keyExtractor={entryKey} renderItem={({ item }) => <TimelineEntryView entry={item} />}
-        contentContainerStyle={styles.content} onScroll={onScroll} scrollEventThrottle={64} onContentSizeChange={followNewContent}
+        contentContainerStyle={styles.content} onScroll={onScroll} scrollEventThrottle={64} onContentSizeChange={followNewContent} onLayout={followNewContent}
         accessibilityLabel="Conversation" keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive"
         ListHeaderComponent={view.nextBefore !== null ? (
           <View style={styles.older}>
@@ -107,12 +108,11 @@ export function ChatView({ runtime, runtimeId, conversation, view, runner, onSen
         } />
       <Composer draft={draft} onDraftChange={setDraft} onSend={send} stop={stop} placeholder="Reply to Nora"
         disabledReason={!reachable ? "Your computer is offline" : sendGate.enabled ? null : sendGate.reason} />
-    </KeyboardAvoidingView>
+    </KeyboardAvoidingArea>
   );
 }
 
 const createStyles = (theme: Theme) => ({
-  fill: { flex: 1 },
   content: { width: "100%" as const, maxWidth: layout.chatColumnWidth, alignSelf: "center" as const, paddingHorizontal: layout.gutter + 2, paddingTop: spacing.md, paddingBottom: spacing.lg, gap: spacing.lg },
   older: { alignItems: "center" as const, gap: spacing.xs },
   footer: { gap: spacing.md },
