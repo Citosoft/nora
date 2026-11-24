@@ -237,6 +237,9 @@ export function createAppService(options: AppServiceOptions): AppService {
     },
     async update(input) {
       const current = existing(input.id);
+      if (input.baseVersion !== undefined && input.baseVersion !== current.version) {
+        throw new Error(`The app is now at version ${current.version}, not ${input.baseVersion}: it changed since this thread last saw it. Call read_app, then make the change to the current version.`);
+      }
       const spec = await validated({ spec: input.spec, workspaceId: current.workspaceId, sampleKey: current.id });
       const app: AppDefinition = { ...current, spec, version: current.version + 1, suggestions: [...(input.suggestions ?? [])], icon: input.icon ?? current.icon, updatedAt: options.now() };
       store.put(app, input.summary);

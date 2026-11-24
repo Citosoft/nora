@@ -2,7 +2,7 @@ import type { NativeWorkspace } from "@shared/types/personalization/workspaces.t
 import type { Conversation } from "@shared/types/conversation/contracts.types";
 import type { ThreadDocument, ThreadWorkspaceSnapshot } from "@/components/app/types/thread-workspace/state.types";
 import type { NativeDraftInput } from "@/components/app/types/nativeConversation.types";
-import { findEffectiveBot } from "@shared/bots/catalog";
+import { findChatBot } from "@shared/bots/noraChat";
 import { directChatHome } from "@shared/bots/directChats";
 
 /** Whether a conversation is a bot chat (direct or group), shown as a messages-only chat. */
@@ -13,7 +13,7 @@ export function isChat(conversation: Pick<Conversation, "direct" | "group">): bo
 /** The create details for a direct-chat draft, or null for other drafts; it throws when the bot or the chat's home is gone. */
 export function directDraft(state: Pick<ThreadWorkspaceSnapshot, "boot">, document: ThreadDocument, openedFrom: NativeWorkspace): Pick<NativeDraftInput, "direct"> | null {
   if (!document.direct) return null;
-  const bot = findEffectiveBot(state.boot.personalization.bots, openedFrom.id, state.boot.sharedBots, document.direct.botId);
+  const bot = findChatBot(state.boot.personalization.bots, openedFrom.id, state.boot.sharedBots, document.direct.botId);
   if (!bot) throw new Error("This bot is no longer available in this workspace. Your message has been retained.");
   const home = directChatHome(state.boot, bot, openedFrom.id);
   if (!home) throw new Error(`${bot.name}'s workspace is unavailable. Your message has been retained.`);

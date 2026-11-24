@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildActivityList } from "@/state/activityList";
 import { deriveExecutionState } from "@/state/executionState";
 import { capabilityGate, evaluateCompatibility } from "@/state/runtimeCompatibility";
-import { buildTimelineEntries } from "@/state/timelineEntries";
+import { buildTimelineEntries, timelineEntryKey } from "@/state/timelineEntries";
 import { at, conversation, run, summary } from "./fixtures/conversationFixtures";
 
 const info = { apiVersion: 1, runtimeVersion: "3.0.0", name: "Mac", environment: "desktop" as const, environmentId: "env", capabilities: ["realtime"], cursor: 1 };
@@ -40,7 +40,7 @@ describe("conversation state helpers", () => {
       { id: "t1", runId: "r", createdAt: at, kind: "tool", label: "Search", output: "", state: "completed", details: { category: "search", parentId: "agent-1" } },
       { id: "t2", runId: "r", createdAt: at, kind: "tool", label: "Read", output: "", state: "completed" }
     ]);
-    expect(entries.map((entry) => entry.kind === "subagent" ? `subagent:${entry.children.map((child) => child.id).join(",")}` : entry.item.id))
-      .toEqual(["subagent:t1", "t2"]);
+    expect(entries.map((entry) => entry.kind === "subagent" ? `subagent:${entry.children.map((child) => child.id).join(",")}` : timelineEntryKey(entry)))
+      .toEqual(["subagent:t1", "tools:r"]);
   });
 });

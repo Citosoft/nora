@@ -14,7 +14,7 @@ export function ThreadRow({ row, leadingIcon, disclosure, workspace, request, on
   const linkedRequest = request?.pullRequestNumber ? request : null;
   const requestLabel = linkedRequest ? `PR / MR #${linkedRequest.pullRequestNumber} · ${linkedRequest.label}` : null;
   const timestamp = Date.parse(row.updatedAt);
-  const activityDate = Number.isFinite(timestamp) ? `\nLast activity ${new Date(timestamp).toLocaleString()}` : "";
+  const activityDate = Number.isFinite(timestamp) ? `Last activity ${new Date(timestamp).toLocaleString()}` : null;
   const stateLabel = row.waitingOn ? `, ${row.waitingOn.name} is waiting for you` : row.attention || row.status === "Interrupted" ? `, ${row.status.toLocaleLowerCase()}` : "";
   const waitingOn = row.waitingOn;
   return <ThreadRowContextMenu row={row} onSetSettled={onSetSettled} onRename={onRename} onDiscardDraft={onDiscardDraft}><div className={`group flex items-center rounded-md ${row.selected ? "bg-secondary" : "hover:bg-muted"}`}>
@@ -23,7 +23,12 @@ export function ThreadRow({ row, leadingIcon, disclosure, workspace, request, on
       aria-expanded={disclosure.expanded} aria-controls={disclosure.controls} onClick={disclosure.onToggle}>
       <ChevronRight aria-hidden="true" className={`size-3.5 transition-transform ${disclosure.expanded ? "rotate-90" : ""}`} />
     </Button>}
-    <Tooltip content={`${row.title}\n${workspace ? `${workspace.name} · ` : ""}${row.status}${requestLabel ? ` · ${requestLabel}` : ""}${activityDate}`} triggerClassName="flex min-w-0 flex-1">
+    <Tooltip content={<>
+      <strong className="block font-bold">{row.title}</strong>
+      <span className="block">{`${workspace ? `${workspace.name} · ` : ""}${row.status}${requestLabel ? ` · ${requestLabel}` : ""}`}</span>
+      {row.model && <span className="block">Model: {row.model}</span>}
+      {activityDate && <span className="block">{activityDate}</span>}
+    </>} triggerClassName="flex min-w-0 flex-1">
       <button type="button" disabled={disabled} aria-label={`Open ${row.title}${workspace ? `, workspace ${workspace.name}` : ""}${stateLabel}${row.unread ? ", unread completion" : ""}${requestLabel ? `, ${requestLabel}` : ""}`} aria-current={row.selected ? "page" : undefined}
         onClick={() => onOpen(row)} className="thread-row-open flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">
         {leadingIcon ?? <ThreadRowIdentity row={row} />}
@@ -32,7 +37,7 @@ export function ThreadRow({ row, leadingIcon, disclosure, workspace, request, on
         <ThreadStatusIcon row={row} />
       </button>
     </Tooltip>
-    {waitingOn && <Button type="button" variant="ghost" size="sm" className="h-6 shrink-0 gap-1 px-1.5 text-[11px] text-amber-600 hover:text-amber-700 dark:text-amber-400"
+    {waitingOn && <Button type="button" variant="ghost" size="sm" className="h-6 shrink-0 gap-1 px-1.5 text-[10px] text-amber-600 hover:text-amber-700 dark:text-amber-400"
       aria-label={`Open ${waitingOn.name}'s thread, waiting for your approval or answer`} tooltip={`${waitingOn.name} is waiting for you`}
       onClick={() => onOpen({ ...row, id: waitingOn.conversationId, target: { kind: "thread", conversationId: waitingOn.conversationId }, waitingOn: null })}>
       <ShieldQuestion className="size-3" aria-hidden="true" /><span className="max-w-20 truncate">{waitingOn.name}</span></Button>}

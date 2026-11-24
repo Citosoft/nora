@@ -302,7 +302,7 @@ function FileTreeNodeRow({
         <span className="truncate">{node.name}</span>
       )}
       {changeSummary ? (
-        <span className="ml-auto flex shrink-0 items-center gap-2 text-[11px] text-muted-foreground">
+        <span className="ml-auto flex shrink-0 items-center gap-2 text-[10px] text-muted-foreground">
           <span className="text-emerald-500">+{changeSummary.additions}</span>
           <span className="text-destructive">-{changeSummary.deletions}</span>
         </span>
@@ -679,7 +679,7 @@ export function FileTreePanel({
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  "h-7 min-w-0 px-1.5 text-[11px] font-medium tracking-tight",
+                  "h-7 min-w-0 px-1.5 text-[10px] font-medium tracking-tight",
                   isCaseSensitiveSearch ? "bg-accent text-foreground" : "text-muted-foreground"
                 )}
                 onClick={() => onCaseSensitiveSearchChange(!isCaseSensitiveSearch)}
@@ -726,7 +726,7 @@ export function FileTreePanel({
                   <div className="flex w-full items-center gap-2">
                     <WorkspaceFileIcon path={result.path} className="size-4 shrink-0" />
                     <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{result.path}</span>
-                    <span className="shrink-0 text-[11px] text-muted-foreground">
+                    <span className="shrink-0 text-[10px] text-muted-foreground">
                       {result.matchCount} match{result.matchCount === 1 ? "" : "es"}
                     </span>
                   </div>

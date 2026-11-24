@@ -1,182 +1,65 @@
-import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
+import { useLocalVoiceSetup } from "@/components/app/hooks/useLocalVoiceSetup";
 import { useSettingsRuntime } from "@/components/app/hooks/useSettingsRuntime";
+import { summarizeLocalVoiceSetup } from "@/components/app/logic/localVoiceSetupSummary";
+import { LocalVoiceModelOptionLabel } from "@/components/app/panels/settings/LocalVoiceModelOptionLabel";
 import { SettingRow, SettingsSectionHeader } from "@/components/app/panels/settings/settingsUi";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import type {
-  LocalVoiceModelStatus,
-  LocalVoiceRuntimeStatus,
-  LocalWhisperModelId,
-  VoiceDictationProvider
-} from "@shared/appTypes";
+import type { VoiceSettings } from "@shared/appTypes";
+import { isLocalVoiceModelId, LOCAL_VOICE_MODELS, localVoiceModel } from "@shared/voice/localModels";
 import { Download, Mic2, RefreshCcw } from "lucide-react";
-import { useEffect, useState } from "react";
 
-const LOCAL_WHISPER_MODEL_LABELS: Record<LocalWhisperModelId, string> = {
-  "tiny.en": "Whisper tiny.en",
-  "base.en": "Whisper base.en"
-};
-
-const LOCAL_WHISPER_MODELS: LocalWhisperModelId[] = ["tiny.en", "base.en"];
-
-function parseVoiceDictationProvider(value: string): VoiceDictationProvider {
-  return value === "localWhisper" ? "localWhisper" : "openai";
-}
-
-function parseLocalWhisperModelId(value: string): LocalWhisperModelId {
-  return value === "tiny.en" ? "tiny.en" : "base.en";
-}
-
-function formatModelSize(sizeBytes: number | null): string {
-  if (typeof sizeBytes !== "number") {
-    return "";
-  }
-  return `${Math.max(1, Math.round(sizeBytes / 1024 / 1024))} MB`;
+function LocalVoiceModelSetting({ voice, onChange }: { voice: VoiceSettings; onChange(voice: VoiceSettings): void }) {
+  const model = localVoiceModel(voice.localModelId);
+  const setup = useLocalVoiceSetup(model.id);
+  const summary = summarizeLocalVoiceSetup(model, setup.status, setup.installing);
+  const busy = setup.loading || setup.installing;
+  return <SettingRow
+    title="Local model"
+    description="Free speech-to-text models that run on this computer, so your audio never leaves it."
+    control={(
+      <div className="space-y-2">
+        <div className="flex flex-row items-center gap-2">
+          <Select className="min-w-0 flex-1" value={model.id} aria-label="Local voice model"
+            onChange={(event) => { if (isLocalVoiceModelId(event.target.value)) onChange({ ...voice, localModelId: event.target.value }); }}>
+            {LOCAL_VOICE_MODELS.map((option) => <option key={option.id} value={option.id}><LocalVoiceModelOptionLabel model={option} /></option>)}
+          </Select>
+          <Button variant="outline" size="icon" className="size-10" onClick={setup.refresh} disabled={busy} aria-label="Refresh local model status">
+            <RefreshCcw className={`size-4 ${setup.loading ? "animate-spin" : ""}`} aria-hidden="true" />
+          </Button>
+          <Button variant="outline" size="sm" className="h-10 gap-2" onClick={setup.install} disabled={busy}>
+            <Download className={`size-4 ${setup.installing ? "animate-pulse" : ""}`} aria-hidden="true" />
+            {summary.installLabel}
+          </Button>
+        </div>
+        <div className="space-y-1 text-xs text-muted-foreground">
+          <div>{model.description}</div>
+          <div className={setup.status && !summary.ready ? "text-foreground" : undefined}>{summary.status}</div>
+        </div>
+        {setup.error ? <div role="alert" className="text-xs text-destructive">{setup.error}</div> : null}
+      </div>
+    )}
+  />;
 }
 
 export function VoiceSettingsSection() {
   const { appSettings, updateVoiceSettings } = useSettingsRuntime();
-  const [modelStatus, setModelStatus] = useState<LocalVoiceModelStatus | null>(null);
-  const [runtimeStatus, setRuntimeStatus] = useState<LocalVoiceRuntimeStatus | null>(null);
-  const [isLoadingStatus, setIsLoadingStatus] = useState(false);
-  const [isInstalling, setIsInstalling] = useState(false);
-  const [installError, setInstallError] = useState<string | null>(null);
-  const selectedModelId = appSettings.voice.localWhisperModelId;
-  const isModelInstalled = modelStatus?.state === "installed";
-  const isRuntimeInstalled = runtimeStatus?.state === "installed";
-  const isLocalWhisperReady = isModelInstalled && isRuntimeInstalled;
-
-  const refreshModelStatus = async () => {
-    setIsLoadingStatus(true);
-    setInstallError(null);
-    try {
-      const [nextModelStatus, nextRuntimeStatus] = await Promise.all([
-        noraSystemClient.getLocalVoiceModelStatus(selectedModelId),
-        noraSystemClient.getLocalVoiceRuntimeStatus()
-      ]);
-      setModelStatus(nextModelStatus);
-      setRuntimeStatus(nextRuntimeStatus);
-    } catch (error) {
-      setInstallError(error instanceof Error ? error.message : "Unable to inspect local Whisper setup.");
-      setModelStatus(null);
-      setRuntimeStatus(null);
-    } finally {
-      setIsLoadingStatus(false);
-    }
-  };
-
-  useEffect(() => {
-    void refreshModelStatus();
-  }, [selectedModelId]);
-
-  const handleInstallLocalWhisper = async () => {
-    setIsInstalling(true);
-    setInstallError(null);
-    try {
-      if (!isRuntimeInstalled) {
-        setRuntimeStatus(await noraSystemClient.installLocalVoiceRuntime());
-      }
-      setModelStatus(await noraSystemClient.installLocalVoiceModel(selectedModelId));
-      await refreshModelStatus();
-    } catch (error) {
-      setInstallError(error instanceof Error ? error.message : "Unable to install local Whisper.");
-    } finally {
-      setIsInstalling(false);
-    }
-  };
-
-  const installedLabel =
-    modelStatus?.state === "installed"
-      ? `Model installed${formatModelSize(modelStatus.sizeBytes) ? ` (${formatModelSize(modelStatus.sizeBytes)})` : ""}`
-      : "Model not installed";
-  const runtimeLabel = runtimeStatus?.state === "installed"
-    ? `Runtime ready${runtimeStatus.executablePath ? ` (${runtimeStatus.executablePath})` : ""}`
-    : "Runtime not installed";
-  const installButtonLabel = isInstalling
-    ? "Installing"
-    : isLocalWhisperReady
-      ? "Reinstall"
-      : "Install";
-
+  const voice = appSettings.voice;
   return (
     <div className="max-w-4xl">
-      <SettingsSectionHeader
-        title="Voice"
-        description="Choose how Nora transcribes microphone dictation."
-        icon={Mic2}
-      />
-
+      <SettingsSectionHeader title="Voice" description="Choose how Nora transcribes microphone dictation." icon={Mic2} />
       <SettingRow
         title="Dictation Engine"
-        description="Use OpenAI transcription through your API key, or use an installed local Whisper model."
+        description="Use OpenAI transcription through your API key, or a local model that runs offline on this computer."
         control={(
-          <Select
-            value={appSettings.voice.dictationProvider}
-            onChange={(event) =>
-              updateVoiceSettings({
-                ...appSettings.voice,
-                dictationProvider: parseVoiceDictationProvider(event.target.value)
-              })}
-            aria-label="Voice dictation engine"
-          >
+          <Select value={voice.dictationProvider} aria-label="Voice dictation engine"
+            onChange={(event) => updateVoiceSettings({ ...voice, dictationProvider: event.target.value === "local" ? "local" : "openai" })}>
             <option value="openai">OpenAI API</option>
-            <option value="localWhisper">Local Whisper</option>
+            <option value="local">Local model</option>
           </Select>
         )}
       />
-
-      <SettingRow
-        title="Local Whisper"
-        description="Install the whisper.cpp runtime and selected model with one click so dictation can run without sending audio to OpenAI."
-        control={(
-          <div className="space-y-2">
-            <div className="flex flex-row items-center gap-2">
-              <Select
-                className="min-w-0 flex-1"
-                value={selectedModelId}
-                onChange={(event) =>
-                  updateVoiceSettings({
-                    ...appSettings.voice,
-                    localWhisperModelId: parseLocalWhisperModelId(event.target.value)
-                  })}
-                aria-label="Local Whisper model"
-              >
-                {LOCAL_WHISPER_MODELS.map((modelId) => (
-                  <option key={modelId} value={modelId}>
-                    {LOCAL_WHISPER_MODEL_LABELS[modelId]}
-                  </option>
-                ))}
-              </Select>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-10 w-10 px-0"
-                onClick={() => void refreshModelStatus()}
-                disabled={isLoadingStatus || isInstalling}
-                title="Refresh local Whisper status"
-                aria-label="Refresh local Whisper status"
-              >
-                <RefreshCcw className={`size-4 ${isLoadingStatus ? "animate-spin" : ""}`} />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-10 gap-2"
-                onClick={() => void handleInstallLocalWhisper()}
-                disabled={isInstalling || isLoadingStatus}
-              >
-                <Download className={`size-4 ${isInstalling ? "animate-pulse" : ""}`} aria-hidden />
-                {installButtonLabel}
-              </Button>
-            </div>
-            <div className="space-y-1 text-xs text-muted-foreground">
-              <div>{installedLabel}</div>
-              <div className={isRuntimeInstalled ? undefined : "text-destructive"}>{runtimeLabel}</div>
-            </div>
-            {installError ? <div className="text-xs text-destructive">{installError}</div> : null}
-          </div>
-        )}
-      />
+      {voice.dictationProvider === "local" && <LocalVoiceModelSetting voice={voice} onChange={updateVoiceSettings} />}
     </div>
   );
 }

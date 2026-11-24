@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { openCenterFullDiff } from "@/components/app/logic/openCenterFullDiff";
 import type { CenterDiffControllerInput, CenterDiffPorts, CenterDiffSource, ThreadBranchDiffTarget } from "@/components/app/types/centerDiff.types";
 
-const WORKSPACE_DIFF: CenterDiffSource = { kind: "workspace" };
+const WORKSPACE_DIFF: CenterDiffSource = { kind: "workspace", focus: null };
 
 /** Owns which changes the center full-diff viewer shows; the sidebar opens the workspace, threads open their branch. */
 export function useCenterDiffController({ fullDiffOpen, setTaskEditorState, setIsTaskBoardOpen, setIsCenterFullDiffExpanded,
@@ -13,6 +13,8 @@ export function useCenterDiffController({ fullDiffOpen, setTaskEditorState, setI
     setIsCenterDiffExpanded, setActiveWorkspaceContentTab }),
   [setTaskEditorState, setIsTaskBoardOpen, setIsCenterFullDiffExpanded, setIsCenterDiffExpanded, setActiveWorkspaceContentTab]);
   const openWorkspaceDiff = useCallback(() => { setSource(WORKSPACE_DIFF); open(); }, [open]);
+  const openWorkspaceFileDiff = useCallback((path: string) => { setSource({ kind: "workspace", focus: { path } }); open(); }, [open]);
   const openBranchDiff = useCallback((target: ThreadBranchDiffTarget) => { setSource({ kind: "branch", target }); open(); }, [open]);
-  return useMemo(() => ({ source, openWorkspaceDiff, openBranchDiff }), [source, openWorkspaceDiff, openBranchDiff]);
+  return useMemo(() => ({ source, openWorkspaceDiff, openWorkspaceFileDiff, openBranchDiff }),
+    [source, openWorkspaceDiff, openWorkspaceFileDiff, openBranchDiff]);
 }

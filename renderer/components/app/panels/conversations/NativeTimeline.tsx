@@ -1,4 +1,4 @@
-import { Fragment, memo } from "react";
+import { memo } from "react";
 import { Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toolStateLabel } from "@/components/app/logic/toolStateLabel";
@@ -18,9 +18,9 @@ import { McpAppEntry } from "./mcp-app/McpAppEntry";
 import { ToolImageEntry } from "./ToolImageEntry";
 import type { NativeTimelineEntry } from "@/components/app/types/nativeActivity.types";
 
-function renderItem(item: Extract<NativeTimelineEntry, { kind: "item" }>["item"], { onLinkClick, connectors = null }: Pick<NativeTimelineProps, "onLinkClick" | "connectors">) {
+function renderItem(item: Extract<NativeTimelineEntry, { kind: "item" }>["item"], continued: boolean, { onLinkClick, connectors = null, pins }: Pick<NativeTimelineProps, "onLinkClick" | "connectors" | "pins">) {
   switch (item.kind) {
-    case "message": return <NativeMessage key={item.id} item={item} onLinkClick={onLinkClick} />;
+    case "message": return <NativeMessage key={item.id} item={item} onLinkClick={onLinkClick} pins={pins} actions={continued ? "overlay" : "inline"} />;
     case "milestone": return <p key={item.id} className="text-sm text-muted-foreground">{item.text}</p>;
     case "plan": return <ol key={item.id} className="space-y-2 text-sm">{item.steps.map((step, index) => <li key={index}>{step.state} · {step.text}</li>)}</ol>;
     case "changes": return <NativeFileChanges key={item.id} item={item} />;
@@ -31,16 +31,18 @@ function renderItem(item: Extract<NativeTimelineEntry, { kind: "item" }>["item"]
   }
 }
 
-export const NativeTimeline = memo(function NativeTimeline({ items, runs = [], onLinkClick, connectors, resolveBot, onOpenThread, mcpApps, toolOutputs, onOpenOutput }: NativeTimelineProps) {
-  return <div className="space-y-5">{buildNativeTimeline(items, runs).map(({ key, entry, timing, activity }) => <Fragment key={key}>
+export const NativeTimeline = memo(function NativeTimeline({ items, runs = [], onLinkClick, connectors, resolveBot, onOpenThread, mcpApps, toolOutputs, onOpenOutput, pins }: NativeTimelineProps) {
+  const rows = buildNativeTimeline(items, runs);
+  // Rows sit 20px apart, except an agent message that runs straight on from the previous one in its turn.
+  return <div>{rows.map(({ key, entry, timing, activity, continued }, index) => <div key={key} className={cn("space-y-5", index > 0 && (rows[index - 1].continued ? "mt-2" : "mt-5"))}>
       {entry.kind === "tools" ? <NativeToolHistory items={entry.items} />
         : entry.kind === "reasoning" ? <NativeReasoning items={entry.items} />
         : entry.kind === "ask" ? <NativeAskBotCard call={entry.call} bot={resolveBot?.(entry.call.bot) ?? null} onOpenThread={onOpenThread} />
         : entry.kind === "memory" ? <NativeMemoryLine call={entry.call} />
         : entry.kind === "app" ? mcpApps && <McpAppEntry call={entry.call} host={mcpApps} />
         : entry.kind === "images" ? toolOutputs && <ToolImageEntry tool={entry.tool} paths={entry.paths} host={toolOutputs} onOpen={onOpenOutput} />
-        : renderItem(entry.item, { onLinkClick, connectors })}
+        : renderItem(entry.item, continued, { onLinkClick, connectors, pins })}
       {activity && <NativeTurnStatus activity={activity} />}
       {timing && <NativeTurnTime {...timing} />}
-    </Fragment>)}</div>;
+    </div>)}</div>;
 });

@@ -10,5 +10,6 @@ export interface DesktopRemoteAccessOptions {
   host: RuntimeApiOptions["host"];
   inbox: RuntimeApiOptions["inbox"];
   boot: RuntimeApiOptions["boot"];
+  management: NonNullable<RuntimeApiOptions["management"]>;
   onChanged(view: RemoteAccessView): void;
 }

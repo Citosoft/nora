@@ -90,7 +90,7 @@ export function WorkflowRunOutput({ segments, isActive, scrollRef }: WorkflowRun
               );
             case "usage":
               return (
-                <p key={segment.id} className="text-right text-[11px] text-muted-foreground">
+                <p key={segment.id} className="text-right text-[10px] text-muted-foreground">
                   {tokenCount(segment.inputTokens)} input · {tokenCount(segment.outputTokens)} output tokens
                   {segment.cachedInputTokens ? ` · ${tokenCount(segment.cachedInputTokens)} cached` : ""}
                 </p>

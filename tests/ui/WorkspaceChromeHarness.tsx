@@ -13,6 +13,8 @@ import type { AppToolsProps } from "@/components/app/types/workspaceUtilities.ty
 import type { TitleBarProps } from "@/components/app/types/chromeDialog.types";
 import type { AgentCatalogEntry, ForgeBranchChanges, ForgeBranchPullRequestStatus } from "@shared/appTypes";
 import type { ThreadForgeClient } from "@/components/app/types/threadForge.types";
+import type { MessagePins } from "@/components/app/types/messagePins.types";
+import type { UpdateIndicators } from "@/components/app/types/updateIndicators.types";
 import type { NativeWorkspace } from "@shared/types/personalization/workspaces.types";
 import type { ConversationHeader } from "@shared/types/conversation/queries.types";
 import type { TimelineItem } from "@shared/types/conversation/contracts.types";
@@ -35,6 +37,8 @@ const items: TimelineItem[] = [{ kind: "review", id: "review", runId: "run", cre
     presentation: "text", patch: "diff --git a/app.ts b/app.ts\n--- a/app.ts\n+++ b/app.ts\n@@ -1 +1,2 @@\n-old\n+new\n+added\n" }]
 } }];
 
+const noUpdates: UpdateIndicators = { providers: null, nora: null };
+
 /** Isolated chrome acceptance: no real workspaces, providers, credentials, or remote requests. */
 export function WorkspaceChromeHarness() {
   const [collapsed, setCollapsed] = useState(false);
@@ -47,6 +51,7 @@ export function WorkspaceChromeHarness() {
   const record = useCallback((event: string) => setEvents((current) => [...current, event]), []);
   const forge = useMemo<ThreadForgeClient>(() => ({
     connections: { github: true, gitlab: false },
+    readIssues: async () => [],
     readBranchRequest: async (projectId, branch): Promise<ForgeBranchPullRequestStatus | null> => {
       record(`branch:${projectId}:${branch}`);
       if (scenario.current === "failed") throw new Error("Could not load this branch's change request.");
@@ -58,11 +63,13 @@ export function WorkspaceChromeHarness() {
     createChangeRequest: async () => { record("create-pr"); throw new Error("Fixture cannot create pull requests."); }
   }), [record]);
   const insights = useThreadInsights({ header, items, workspace, hasOlderHistory: false, forge });
+  const pins = useMemo<MessagePins>(() => ({ pins: [], seeking: null, notice: null, isPinned: () => false,
+    toggle: (itemId) => record(`pin:${itemId}`), jumpTo: (itemId) => record(`jump:${itemId}`) }), [record]);
   const appTools: AppToolsProps = {
     resolvedTheme: theme, settingsActive: settings,
     onToggleTheme: () => { const next = theme === "dark" ? "light" : "dark"; setTheme(next); document.documentElement.dataset.theme = next; document.documentElement.classList.toggle("dark", next === "dark"); },
     onOpenSettings: () => setSettings((current) => !current), onOpenKeyboardShortcuts: () => record("shortcuts"), onOpenAbout: () => record("about"),
-    onSubmitIssue: () => record("issue"), onOpenStartupDependencies: () => record("dependencies"), onOpenResourceMonitor: () => record("resources"), onOpenOnboarding: () => record("onboarding"), onOpenHomeTerminal: () => record("home-terminal"), onOpenConnectionsSettings: () => record("connections")
+    onSubmitIssue: () => record("issue"), onOpenStartupDependencies: () => record("dependencies"), onOpenResourceMonitor: () => record("resources"), onOpenOnboarding: () => record("onboarding"), onOpenHomeTerminal: () => record("home-terminal")
   };
   const title: TitleBarProps = { ...appTools, settingsActive: settings, themeMode: "system", windowUiState: { platform: "linux", isMaximized: false }, useMacTitleBarChrome: false,
     canOpenProjectInIde: false, installedIdes: [], isLoadingInstalledIdes: false, preferredIde: null, defaultIdeId: null, onOpenProjectInIde: () => {},
@@ -76,13 +83,13 @@ export function WorkspaceChromeHarness() {
     <AppMainChromeShell titleBar={<TitleBar {...title} />} topBanners={null} mainScrollChildren={<div className="flex h-full min-h-0">
       <aside aria-label="Projects sidebar" style={{ width: collapsed ? 64 : 240 }} className="flex min-h-0 shrink-0 flex-col border-r bg-card">
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-5 text-xs text-muted-foreground">{!collapsed && "Projects and threads"}</div>
-        <WorkspaceUtilitiesView collapsed={collapsed} status={status} appTools={appTools} />
+        <WorkspaceUtilitiesView collapsed={collapsed} status={status} appTools={appTools} updates={noUpdates} />
       </aside>
       <main className="thread-conversation flex min-h-0 min-w-0 flex-1 flex-col bg-background">
         <>
           <div className="relative flex min-h-0 flex-1 flex-col" data-thread-insights={expanded ? "expanded" : "collapsed"}>
-            <ThreadInsightsPanel header={{ ...header, conversation: { ...header.conversation, archivedAt: archived ? "2026-11-10T10:00:00.000Z" : null } }} providerLabel="Codex" connectors={null} skills={null} subagents={insights.subagents} changes={insights.changes} branch={insights.branch} expanded={expanded} busy={false} canSettle={!archived} hasOlderHistory={false}
-              onToggle={() => setExpanded((current) => !current)} onLoadHistory={() => {}} onSettleChange={() => { setArchived(true); record("archive"); }} />
+            <ThreadInsightsPanel header={{ ...header, conversation: { ...header.conversation, archivedAt: archived ? "2026-11-10T10:00:00.000Z" : null } }} providerLabel="Codex" connectors={null} skills={null} subagents={insights.subagents} changes={insights.changes} outputs={insights.outputs} branch={insights.branch} pins={pins} expanded={expanded} busy={false} canSettle={!archived} hasOlderHistory={false}
+              onToggle={() => setExpanded((current) => !current)} onLoadHistory={() => {}} onOpenOutput={async () => { record("open-output"); }} onSettleChange={() => { setArchived(true); record("archive"); }} />
             <div className="thread-transcript min-h-0 flex-1 overflow-auto px-5 py-7"><p>Workspace controls are grouped in the sidebar. This conversation keeps its own change summary and branch request.</p></div>
           </div>
           <div className="m-4 rounded-2xl border bg-card p-3"><Textarea aria-label="Fixture message" variant="embedded" placeholder="Ask, plan, or start something…" /></div>

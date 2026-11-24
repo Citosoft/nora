@@ -32,8 +32,8 @@ export function RolePicker({ value, onChange, disabled, variant = "cards" }: Rol
                 <Icon className="size-5" strokeWidth={1.7} />
               </span>}
               <span className={compact ? "min-w-0 text-center" : "min-w-0 flex-1"}>
-                <span className={`block text-[13px] leading-snug text-foreground ${compact ? "font-normal" : "font-medium"}`}>{compact ? shortLabel : role.label}</span>
-                <span id={`${id}-${role.id}-description`} className={compact ? "sr-only" : "mt-1 block text-[11px] leading-snug text-muted-foreground"}>{description}</span>
+                <span className={`block text-[12px] leading-snug text-foreground ${compact ? "font-normal" : "font-medium"}`}>{compact ? shortLabel : role.label}</span>
+                <span id={`${id}-${role.id}-description`} className={compact ? "sr-only" : "mt-1 block text-[10px] leading-snug text-muted-foreground"}>{description}</span>
               </span>
               <span className="role-option-check flex size-4 shrink-0 items-center justify-center rounded-full border" aria-hidden="true">
                 <Check className="size-2.5" strokeWidth={3} />
@@ -59,7 +59,7 @@ export function RolePicker({ value, onChange, disabled, variant = "cards" }: Rol
       <div className="min-w-0">
         <p className="text-xs font-medium">Your starting point · {profile?.label}</p>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{profile?.starters.join(" · ")}</p>
-        <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">Suggested tools: {profile?.tools.join(", ")}. Availability depends on your workspace and provider.</p>
+        <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">Suggested tools: {profile?.tools.join(", ")}. Availability depends on your workspace and provider.</p>
       </div>
     </div>}
   </div>;

@@ -16,7 +16,7 @@ const STEPS = [
 export function AppsWelcome({ onCreate, onImport, importing }: AppsWelcomeProps) {
   return <div className="apps-welcome flex flex-col items-center">
     <header className="app-welcome-rise flex max-w-2xl flex-col items-center text-center">
-      <span className="app-welcome-badge flex items-center gap-1.5 rounded-full border border-border/70 bg-card/60 py-1 pl-1.5 pr-3 text-[11px] font-medium text-muted-foreground">
+      <span className="app-welcome-badge flex items-center gap-1.5 rounded-full border border-border/70 bg-card/60 py-1 pl-1.5 pr-3 text-[10px] font-medium text-muted-foreground">
         <span className="flex size-5 items-center justify-center rounded-full bg-primary/10 text-primary"><APPS_SECTION_ICON className="size-3" aria-hidden="true" /></span>Apps
       </span>
       <h1 className="app-welcome-title mt-4 text-balance text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">Describe it. <span className="app-welcome-accent">Nora builds it.</span></h1>
@@ -32,7 +32,7 @@ export function AppsWelcome({ onCreate, onImport, importing }: AppsWelcomeProps)
       {STEPS.map(({ icon: Icon, title, text }, index) => <li key={title} className="relative border-t border-border/60 pt-3">
         <span className="absolute -top-px left-0 h-px w-10 bg-primary/70" aria-hidden="true" />
         <div className="flex items-center gap-2 text-xs font-medium">
-          <span className="font-mono text-[10px] tabular-nums text-muted-foreground">0{index + 1}</span>
+          <span className="font-mono text-[9px] tabular-nums text-muted-foreground">0{index + 1}</span>
           <Icon className="size-3.5 text-primary" aria-hidden="true" />{title}
         </div>
         <p className="app-welcome-step-text mt-1 text-xs leading-5 text-muted-foreground">{text}</p>

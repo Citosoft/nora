@@ -101,7 +101,7 @@ function ForgeBranchSummary({ item }: { item: ForgeWorkItemSummary }) {
   return (
     <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
       <GitBranch className="size-3 shrink-0 opacity-75" aria-hidden />
-      <span className="font-mono text-[11px] text-foreground/80">
+      <span className="font-mono text-[10px] text-foreground/80">
         {item.sourceBranch || "?"} {"->"} {item.targetBranch || "?"}
       </span>
     </div>
@@ -177,7 +177,7 @@ function ForgeWorkItemList({
     <div className="space-y-3">
       {groupedItems.map((group) => (
         <section key={group.monthKey} aria-label={group.monthLabel}>
-          <h4 className="px-2 pb-1 text-[11px] font-medium text-muted-foreground">{group.monthLabel}</h4>
+          <h4 className="px-2 pb-1 text-[10px] font-medium text-muted-foreground">{group.monthLabel}</h4>
           {group.items.map((item) => {
             const branches = item.sourceBranch || item.targetBranch ? `${item.sourceBranch || "?"} → ${item.targetBranch || "?"}` : null;
             return (
@@ -198,10 +198,10 @@ function ForgeWorkItemList({
                   <ItemIcon className="size-3.5" aria-hidden="true" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="line-clamp-2 text-[12.5px] leading-snug">
+                  <span className="line-clamp-2 text-[11.5px] leading-snug">
                     <span className="text-muted-foreground">#{item.number}</span> {item.title}
                   </span>
-                  <span className="block truncate text-[11px] text-muted-foreground">
+                  <span className="block truncate text-[10px] text-muted-foreground">
                     {[branches ?? item.sourceRepository, item.author || "Unknown", formatForgeShortDate(item.updatedAt)].filter(Boolean).join(" · ")}
                   </span>
                 </span>
@@ -243,8 +243,8 @@ function ForgeWorkflowRunList({
             <Activity className="size-3.5" aria-hidden="true" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[12.5px]">{run.name}</span>
-            <span className="block truncate text-[11px] text-muted-foreground">
+            <span className="block truncate text-[11.5px]">{run.name}</span>
+            <span className="block truncate text-[10px] text-muted-foreground">
               {[run.branch, run.event, formatForgeShortDate(run.updatedAt)].filter(Boolean).join(" · ")}
             </span>
           </span>
@@ -381,11 +381,11 @@ export function ForgePanel(props: ForgePanelProps) {
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex min-w-0 items-center gap-2 px-4 pb-2">
         <div className="min-w-0 flex-1">
-          <p className="flex min-w-0 items-center gap-1.5 text-[12.5px] font-medium">
+          <p className="flex min-w-0 items-center gap-1.5 text-[11.5px] font-medium">
             {repo ? <ForgeProviderIcon provider={repo.provider} className="size-3.5 shrink-0" /> : null}
             <span className="truncate">{repo?.fullName || "No repository detected"}</span>
           </p>
-          <p className="truncate text-[11px] text-muted-foreground">{repo ? repo.host : isLoading ? "Loading forge data…" : "Add a GitHub or GitLab remote to see activity."}</p>
+          <p className="truncate text-[10px] text-muted-foreground">{repo ? repo.host : isLoading ? "Loading forge data…" : "Add a GitHub or GitLab remote to see activity."}</p>
         </div>
         {(["github", "gitlab"] as const).map((entry) => (
           <SidebarIconAction
@@ -414,7 +414,7 @@ export function ForgePanel(props: ForgePanelProps) {
                     variant="ghost"
                     size="sm"
                     aria-pressed={activeMergeRequestScopeTab === scope}
-                    className={cn("h-6 px-2 text-[11px] font-normal text-muted-foreground", activeMergeRequestScopeTab === scope && "bg-secondary text-foreground")}
+                    className={cn("h-6 px-2 text-[10px] font-normal text-muted-foreground", activeMergeRequestScopeTab === scope && "bg-secondary text-foreground")}
                     onClick={() => setActiveMergeRequestScopeTab(scope)}
                   >
                     {scope === "project" ? "This project" : "Assigned to me"}
@@ -657,7 +657,7 @@ function ForgeReviewDetailPanel({
                   <span>{formatForgeReviewLineLabel(comment.oldLine, comment.newLine)}</span>
                   <span>{comment.author || "Unknown"}</span>
                 </div>
-                <div className="terminal-text mt-2 overflow-x-auto rounded-md border border-border/40 bg-background px-2 py-1 text-[11px] leading-5">
+                <div className="terminal-text mt-2 overflow-x-auto rounded-md border border-border/40 bg-background px-2 py-1 text-[10px] leading-5">
                   {comment.lineText || "(line context unavailable)"}
                 </div>
                 <div className="mt-2 whitespace-pre-wrap text-sm leading-5 text-foreground/85">
@@ -926,7 +926,7 @@ function ForgeReviewDetailPanel({
                               className="size-7 shrink-0 rounded-full border border-border/60 object-cover"
                             />
                           ) : (
-                            <div className="grid size-7 shrink-0 place-items-center rounded-full border border-border/60 bg-background/80 text-[10px] font-semibold text-foreground/80">
+                            <div className="grid size-7 shrink-0 place-items-center rounded-full border border-border/60 bg-background/80 text-[9px] font-semibold text-foreground/80">
                               {getCommentInitials(comment.author)}
                             </div>
                           )}

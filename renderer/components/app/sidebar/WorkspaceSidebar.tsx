@@ -77,7 +77,7 @@ export function WorkspaceSidebar() {
     {mode === "inbox" ? <InboxSidebar collapsed={collapsed} />
     : mode === "apps" ? <AppsSidebar collapsed={collapsed} />
     : mode === "bots" ? <BotNavigation workspaceId={nativeWorkspace?.id ?? null} workspaceName={nativeWorkspace?.name ?? workspace?.project.name ?? null} query={query} collapsed={collapsed}
-      onStart={(botId) => botId ? messageBot(botId) : newThread()} onNavigate={navigation.closeTool}
+      onStart={messageBot} onNavigate={navigation.closeTool}
       onShowThreads={() => navigation.setPreferences((current) => ({ ...current, sidebarMode: "threads" }))}
       onNewGroup={nativeWorkspace ? () => setGroupDialog(true) : undefined} />
     : collapsed ? <div className="min-h-0 flex-1" /> : <ThreadNavigation workspaceId={nativeWorkspace?.id ?? (workspace ? `unregistered:${workspace.project.id}` : null)} query={query} unified onNavigate={navigation.closeTool}

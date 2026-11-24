@@ -31,12 +31,23 @@ Copy `.env.example` to `.env` (git-ignored):
 1. Use the Clerk application Nora Desktop already signs in with (runtimes only accept tokens from their owner's account).
 2. In the Clerk dashboard, add `https://app.withnora.run` (and `http://localhost:8081` for development) to the allowed
    origins / authorized parties for that instance, and enable the sign-in methods you want on the web.
-3. For native builds, enable the Native API and register the app's bundle ID / package (`run.withnora.app`) so the hosted
-   sign-in (Account Portal) can redirect back; the `@clerk/expo` config plugin registers the callback scheme.
+3. For native builds, enable the Native API and register the iOS bundle ID (`com.citosoft.nora`) and Android package
+   (`run.withnora.app`) so the hosted
+   sign-in (Account Portal) can redirect back; the `@clerk/expo` config plugin registers the callback scheme. In Clerk's
+   mobile SSO redirect allowlist, add `com.citosoft.nora://callback` for iOS. Update both the native app registration and
+   this allowlist whenever the bundle ID changes; hosted iOS authentication derives its callback from the bundle ID.
 4. On the web the app loads Clerk's browser SDK from the instance's Frontend API domain; content blockers that block it
    show a "Can't reach the sign-in service" message after 15 seconds.
 
 ## Development
+
+### Offline demo
+
+Choose **Explore demo** from the welcome, sign-in loading, or missing-configuration screen. It opens the normal app
+with a simulated computer, chats, bots, approval and question requests, and editable settings. Demo preferences and
+pending commands use a separate in-memory store; no Clerk session, runtime HTTP request or WebSocket is used.
+**Leave demo** resets all sample data and returns to the real sign-in flow. TestFlight reviewer instructions are in
+`store/app-store-listing.md`.
 
 ```sh
 npm install
@@ -73,7 +84,7 @@ the build independent of Clerk configuration and avoids rendering Clerk on the s
 
 ### PWA pieces
 
-- `public/manifest.webmanifest` and `public/icons/*` (generated from `renderer/icon.png` with macOS `sips`), linked from
+- `public/manifest.webmanifest` and `public/icons/*` (generated from `assets/icon-ios.png`, the App Store icon, with macOS `sips`), linked from
   `public/index.html` (the HTML template Expo uses for single-page output).
 - `public/sw.js`: caches only the versioned app shell (HTML entry, manifest, icons, hashed JS/CSS). Navigation is network
   first with the cached shell as an offline fallback; it never touches cross-origin requests, so runtime, Worker and Clerk
@@ -84,7 +95,7 @@ the build independent of Clerk configuration and avoids rendering Clerk on the s
 
 ## Native (iOS/Android)
 
-`app.json` carries the native config (bundle ID / package `run.withnora.app`, scheme `nora`, splash, icons). Generate
+`app.json` carries the native config (iOS bundle ID `com.citosoft.nora`, Android package `run.withnora.app`, scheme `nora`, splash, icons). Generate
 native projects with `npx expo prebuild` (continuous native generation; `ios/` and `android/` are git-ignored) and build
 with `npx expo run:ios|android` or EAS (`npx eas-cli build`). Native-specific pieces live behind platform files:
 
@@ -101,6 +112,32 @@ with `npx expo run:ios|android` or EAS (`npx eas-cli build`). Native-specific pi
 Preferences use AsyncStorage rather than SecureStore on native because nothing stored there is secret (preferences,
 computer names/hostnames, unsent commands) and the cached runtime list can exceed SecureStore's value-size guidance.
 Tokens stay in Clerk's storage only.
+
+### Over-the-air updates
+
+EAS Update delivers compatible JavaScript, styling and bundled asset changes to native release builds. The
+`production` build profile (including TestFlight) receives the `production` channel; internal preview builds receive
+`preview`. Build a new binary once after enabling `expo-updates`; earlier TestFlight builds cannot receive updates.
+
+From `apps/mobile`, publish an iOS update to the intended channel with its matching EAS environment:
+
+```sh
+npx eas-cli@latest update --platform ios --channel preview --environment preview --message "Describe the change"
+# After validation and explicit approval to deploy to production:
+npx eas-cli@latest update --platform ios --channel production --environment production --message "Describe the change"
+```
+
+EAS injects the selected environment's public configuration during export. Native fingerprinting determines the OTA
+runtime, so native dependency, SDK or native configuration changes get a separate compatibility boundary automatically.
+Ship a new binary for those changes; the public `expo.version` can stay the same while EAS increments its build number.
+JavaScript-only updates target the matching installed fingerprint. Older builds that used the app-version runtime
+remain isolated from fingerprinted updates.
+
+Release builds check for updates at startup and when returning to the app. When an update is available, a full-screen
+prompt offers to download and restart; updates already downloaded by Expo offer “Restart and update”. Failed installs
+can be retried, and “Not now” keeps the current app available. Offline checks never block startup. This prompt itself
+must first reach older installations through the existing background-download / next-restart flow (up to two cold
+launches). Web/PWA deployments continue to use the separate web export and deploy flow above.
 
 ## Shared contracts
 
@@ -151,7 +188,7 @@ tests/unit/         vitest tests for the non-UI logic
 ## Known limitations
 
 - Not verified against a real Clerk instance, a real runtime/Worker, or real iPhone/Android devices.
-- Attachments and images are not supported (the runtime API has none yet); diffs show changed paths only.
+- Photo and file attachments need a desktop runtime advertising `attachments.upload`; diffs show changed paths only.
 - Connector sign-in requests must be completed on the computer.
 - No push notifications (out of MVP scope); the PWA does not run agents in the background — they run on the computer.
 - Native sign-in uses Clerk's hosted Account Portal; a native-component sign-in flow is not implemented.

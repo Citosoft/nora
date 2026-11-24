@@ -11,6 +11,7 @@ export function accountAssetPath(url: string): string | null {
     case "/bundle.js": return "bundle.js";
     case "/styles.css": return "styles.css";
     case "/icon.svg": return "icon.svg";
+    case "/mark.svg": return "mark.svg";
     case "/icon.png": return "icon.png";
     case "/icon-256.png": return "icon-256.png";
     default: return /^\/(fonts\/[a-zA-Z0-9-]+\.woff2|product-icons\/[a-zA-Z0-9][a-zA-Z0-9.-]*\.(svg|png))$/.test(parsed.pathname) ? parsed.pathname.slice(1) : null;

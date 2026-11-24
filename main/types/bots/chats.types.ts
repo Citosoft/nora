@@ -1,10 +1,11 @@
-import type { BotAuthor, BotDefinition, BotSnapshot, DirectDescriptor } from "@shared/types/bots/bots.types";
-import type { ContextUsage, ProviderBinding, WorkspaceRef } from "@shared/types/conversation/contracts.types";
-import type { BotConversationHost } from "./conversations.types";
+import type { BotAuthor, BotDefinition, BotSnapshot, ChatBotProfile, DirectDescriptor } from "@shared/types/bots/bots.types";
+import type { ContextUsage, Conversation, ProviderBinding, WorkspaceRef } from "@shared/types/conversation/contracts.types";
+import type { BotConversationHost, BotRunnerDeps, BotThreadOptions } from "./conversations.types";
 import type { ConversationInvocation } from "@main/types/execution/gateway.types";
 import type { ChatBranchNameReply, ChatBranchReply, ChatBranchRequest } from "@shared/ipc/types/chatBranchGateway.types";
 import type { DirectContextPreview, DirectContextReply, DirectContextRequest } from "@shared/ipc/types/directContextGateway.types";
 import type { NoraRunContextPreview, RunContextSubject } from "@main/types/nora-tools/noraTools.types";
+import type { ThreadModelDefault } from "@shared/types/personalization/threadModel.types";
 
 /** What a coordinator can post into its chat during one run. */
 export interface ChatRunOutput {
@@ -33,11 +34,18 @@ export type DirectRoute = { kind: "continue"; threadId: string } | { kind: "new"
 export type DirectRouter = (input: DirectRouteInput) => Promise<DirectRoute | null>;
 /** The router's request, exactly as it is sent to the simple AI tasks model. */
 export interface DirectRouterPrompt { system: string; user: string; }
-export interface DirectCoordinatorOptions {
-  host: BotConversationHost;
-  nextId(): string;
-  now(): string;
+/** What starting a direct chat's work thread needs: configured bots by workspace, and the binding Nora's chat runs on there. */
+export interface DirectWorkerDeps extends BotRunnerDeps {
   bot(workspaceId: string, botId: string): BotDefinition | null;
+  noraBinding(workspace: WorkspaceRef): Promise<ProviderBinding>;
+}
+/** A direct chat's bot in one workspace: who it is, and how it starts a work thread there. */
+export interface DirectWorker {
+  profile: ChatBotProfile;
+  start(parent: Conversation, workspace: WorkspaceRef, title: string, options?: BotThreadOptions): Promise<string>;
+}
+export interface DirectCoordinatorOptions extends DirectWorkerDeps {
+  now(): string;
   /** Workspaces registered on this host. */
   workspaces(): readonly ChatWorkspace[];
   route: DirectRouter;
@@ -51,10 +59,7 @@ export interface DirectRoutingInput {
   defaultWorkspaceId: string;
 }
 /** What starting a chat branch needs: the host, the bots and workspaces it may resolve, and ids for anything it creates itself. */
-export interface ChatBranchDeps {
-  host: BotConversationHost;
-  nextId(): string;
-  bot(workspaceId: string, botId: string): BotDefinition | null;
+export interface ChatBranchDeps extends DirectWorkerDeps {
   workspaces(): readonly ChatWorkspace[];
   /** Generates a branch name with the simple AI tasks model. */
   name(message: string): Promise<string>;
@@ -74,8 +79,10 @@ export interface ChatBranchIpcDeps {
 export interface DirectPreviewThread {
   id: string;
   workspaceName: string;
-  bot: BotSnapshot;
-  provider: Pick<ProviderBinding, "kind" | "model">;
+  /** Null for Nora's chat, whose work threads are ordinary Nora threads. */
+  bot: BotSnapshot | null;
+  /** Null when Nora's chat has no saved model and will use the first available one. */
+  provider: Pick<ProviderBinding, "kind" | "model"> | null;
   subject: RunContextSubject;
   lastRequest: ContextUsage | null;
 }
@@ -83,6 +90,8 @@ export interface DirectPreviewThread {
 export interface DirectContextPreviewDeps {
   host: Pick<BotConversationHost, "header" | "summaries" | "conversationHistory">;
   bot(workspaceId: string, botId: string): BotDefinition | null;
+  /** The model Nora's chat starts new work threads on, or null for the first available one. */
+  noraModel(): ThreadModelDefault | null;
   workspaces(): readonly ChatWorkspace[];
   runContext(subject: RunContextSubject): NoraRunContextPreview;
   /** The simple AI tasks model the router runs on. */

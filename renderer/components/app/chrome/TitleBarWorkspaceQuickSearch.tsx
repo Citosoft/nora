@@ -302,7 +302,7 @@ export const TitleBarWorkspaceQuickSearch = ({
                 spellCheck={false}
                 className="h-9 flex-1 border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
               />
-              <kbd className="hidden shrink-0 rounded border border-border/70 bg-muted/50 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground sm:inline-block">
+              <kbd className="hidden shrink-0 rounded border border-border/70 bg-muted/50 px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground sm:inline-block">
                 Esc
               </kbd>
             </div>
@@ -367,7 +367,7 @@ export const TitleBarWorkspaceQuickSearch = ({
                 </ScrollArea>
               )}
             </div>
-            <div className="shrink-0 border-t border-border/60 px-3 py-2 text-[11px] text-muted-foreground">
+            <div className="shrink-0 border-t border-border/60 px-3 py-2 text-[10px] text-muted-foreground">
               <span className="hidden sm:inline">↑↓ to navigate · Enter to open · </span>
               Esc to close
             </div>
@@ -399,7 +399,7 @@ export const TitleBarWorkspaceQuickSearch = ({
           aria-hidden
         />
         <span className="min-w-0 flex-1 truncate text-muted-foreground">Search project...</span>
-        <kbd className="shrink-0 rounded border border-border/60 bg-muted/40 px-1 py-px font-mono text-[10px] text-muted-foreground">
+        <kbd className="shrink-0 rounded border border-border/60 bg-muted/40 px-1 py-px font-mono text-[9px] text-muted-foreground">
           {openShortcutLabel}
         </kbd>
       </button>

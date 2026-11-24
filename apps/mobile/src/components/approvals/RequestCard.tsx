@@ -3,7 +3,7 @@ import type { RuntimeRequest } from "@shared/types/conversation/contracts.types"
 import type { CapabilityGate } from "@/types/runtimeSession.types";
 import type { CommandRunner } from "@/types/pendingCommand.types";
 import type { Theme } from "@/types/theme.types";
-import { hairline, radii, spacing, type } from "@/theme/tokens";
+import { hairline, layout, radii, spacing, type } from "@/theme/tokens";
 import { relativeTime } from "@/state/relativeTime";
 import { useNow } from "@/hooks/useNow";
 import { useRequestDecision } from "@/hooks/useRequestDecision";
@@ -40,7 +40,7 @@ export function RequestCard({ runtimeId, conversationId, request, runner, gate, 
   return (
     <View style={styles.card} accessibilityLabel={`${approval ? "Approval needed" : "Question"}: ${request.title}`}>
       <View style={styles.header}>
-        <IconTile icon={approval ? "hand-left" : "chatbubble-ellipses"} color={colors.tones.attention.solid} size={34} />
+        <IconTile icon={approval ? "hand-left" : "chatbubble-ellipses"} color={colors.tones.attention.solid} size={layout.iconTile} />
         <View style={styles.headerText}>
           <Text style={styles.kind} numberOfLines={1}>{context ?? (approval ? "Needs your approval" : "Nora has a question")}</Text>
           <Text style={styles.expires}>{context ? (approval ? "Needs your approval · " : "Question · ") : ""}Expires {relativeTime(request.expiresAt, now)}</Text>
@@ -61,7 +61,7 @@ export function RequestCard({ runtimeId, conversationId, request, runner, gate, 
 
 const createStyles = (theme: Theme) => ({
   card: { borderRadius: radii.xl, backgroundColor: theme.colors.surface, padding: spacing.lg, gap: spacing.md,
-    borderWidth: hairline, borderColor: theme.scheme === "dark" ? theme.colors.separator : "rgba(0, 0, 0, 0.06)", boxShadow: `0px 2px 14px ${theme.colors.shadow}` },
+    borderWidth: hairline, borderColor: theme.colors.cardBorder, boxShadow: `0px 2px 14px ${theme.colors.shadow}` },
   header: { flexDirection: "row" as const, alignItems: "center" as const, gap: spacing.md },
   headerText: { flex: 1, minWidth: 0 },
   kind: { ...type.subheadline, fontWeight: "600" as const, color: theme.colors.text },

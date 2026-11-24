@@ -3,6 +3,7 @@ import { portableSettingsSchema, appearanceSchema } from "@shared/settings-sync/
 import { idleCompactionModeSchema, threadModelDefaultSchema, threadPreferencesSchema, personalizationSchema } from "@shared/personalization/contracts";
 
 import { localSettingsSchema } from "./windowSettings";
+import { LOCAL_VOICE_MODEL_IDS } from "../voice/localModels";
 
 const providerStrings = z.object({ openai: z.string(), google: z.string(), anthropic: z.string() }).strict();
 const aiSettingsSchema = z.object({
@@ -12,7 +13,7 @@ const aiSettingsSchema = z.object({
   runtimeModelByProvider: z.object({ codex: z.string().trim().min(1).max(512).nullable(), claude: z.string().trim().min(1).max(512).nullable() }).strict(),
   memoryReview: z.object({ provider: z.enum(["codex", "claude", "cloud"]), runtimeModel: z.string().trim().min(1).max(512).nullable() }).strict()
 }).strict();
-const voiceSettingsSchema = z.object({ dictationProvider: z.enum(["openai", "localWhisper"]), localWhisperModelId: z.enum(["tiny.en", "base.en"]) }).strict();
+const voiceSettingsSchema = z.object({ dictationProvider: z.enum(["openai", "local"]), localModelId: z.enum(LOCAL_VOICE_MODEL_IDS) }).strict();
 const quickLaunchSchema = z.object({ name: z.string(), target: z.enum(["session-default", "root"]) }).strict();
 const lifecycleSchema = z.object({
   keepRunningInBackground: z.boolean().describe("Keep Nora running in the tray when its window closes."),

@@ -32,6 +32,7 @@ export function buildThreadNavigation(state: ThreadWorkspaceSnapshot, workspaceI
     if (document.target.kind !== "draft" || document.source?.kind === "app" || document.direct || (workspaceId && document.workspaceId !== workspaceId)) continue;
     rows.push({ id: document.id, target: { kind: "draft", documentId: document.id }, title: threadDocumentTitle(document, state.summaries),
       workspaceId: document.workspaceId, providerKind: document.provider?.kind ?? null, providerConnection: document.provider?.connection ?? "unknown",
+      model: document.group ? null : (state.runtime[document.id]?.readyBinding ?? document.provider)?.model ?? null,
       bot: null, group: draftGroup(state, document.workspaceId, document.group?.botIds), status: document.pending ? "Delivery unconfirmed" : "Draft",
       active: !!document.pending, working: false, unread: false, attention: !!document.pending, pinned: false, selected: document.id === state.layout.activeId,
       hasDraft: !isEmptyDraft(document), queuedCount: 0, updatedAt: document.updatedAt });
@@ -47,6 +48,7 @@ export function buildThreadNavigation(state: ThreadWorkspaceSnapshot, workspaceI
     const document = state.layout.documents.find((entry) => entry.target.kind === "thread" && entry.target.conversationId === conversation.id);
     rows.push({ id: conversation.id, parentId: conversation.parentId, target: { kind: "thread", conversationId: conversation.id }, title: conversation.title,
       workspaceId: conversation.workspace.projectId, providerKind: conversation.provider.kind, providerConnection: conversation.provider.connection ?? "unknown", origin: conversation.origin,
+      model: conversation.group ? null : conversation.provider.model,
       bot: conversation.bot ? { botId: conversation.bot.botId, name: conversation.bot.name, avatar: conversation.bot.avatar } : null,
       group: conversation.group?.members ?? null,
       waitingOn: conversation.archivedAt ? null : waiting.get(conversation.id) ?? null,

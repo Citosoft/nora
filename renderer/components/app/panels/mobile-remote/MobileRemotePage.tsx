@@ -7,7 +7,7 @@ import type { MobileRemoteDemoScene } from "@/components/app/types/remoteAccess.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MobileRemoteDemo } from "./MobileRemoteDemo";
 import { MobileRemoteSetup } from "./MobileRemoteSetup";
-import { NoraConnectDialog } from "./NoraConnectDialog";
+import { NoraRelayDialog } from "./NoraRelayDialog";
 
 /**
  * Pitches the phone app with a phone that plays through it, beside the steps to switch remote access on.
@@ -35,7 +35,7 @@ export function MobileRemotePage() {
           <p className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card/70 px-2.5 py-1 text-xs text-muted-foreground">
             <Smartphone className="size-3.5 text-primary" aria-hidden="true" />Nora for iPhone · Beta</p>
           <h1 id="mobile-remote-title" className="text-2xl font-semibold tracking-tight">Your agents, <span className="mobile-remote-accent">in your pocket</span></h1>
-          <p className="text-sm leading-relaxed text-muted-foreground">Keep work moving when you step away. Nora Connect links the Nora app on your phone to this computer, so you can follow threads, answer approvals and send instructions from anywhere. <NoraConnectDialog /></p>
+          <p className="text-sm leading-relaxed text-muted-foreground">Keep work moving when you step away. Nora Relay links the Nora app on your phone to this computer, so you can follow threads, answer approvals and send instructions from anywhere. <NoraRelayDialog /></p>
         </div>
         <TabsList aria-label="What you can do from your phone" className="mobile-remote-features flex h-auto w-full flex-col items-stretch gap-0.5 border-0 bg-transparent p-0">
           {MOBILE_REMOTE_DEMO_SCENES.map((entry) => <TabsTrigger key={entry.id} value={entry.id}

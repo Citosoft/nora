@@ -48,7 +48,7 @@ export function RemoteWorkspaceSetup({
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
                 <span className="font-medium">{label}</span>
-                <span className="text-[11px] text-muted-foreground">
+                <span className="text-[10px] text-muted-foreground">
                   {ready ? "Ready" : "Setup required"}
                 </span>
               </div>
@@ -109,7 +109,7 @@ export function RemoteWorkspaceSetup({
             <summary className="cursor-pointer text-muted-foreground">
               View setup script
             </summary>
-            <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-md bg-muted/40 p-3 font-mono text-[11px]">
+            <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-md bg-muted/40 p-3 font-mono text-[10px]">
               {bootstrapScript}
             </pre>
           </details>

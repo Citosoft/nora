@@ -1,4 +1,5 @@
-import { getInlineCommentKey, type ParsedDiffLine } from "@/components/app/logic/forgePanelDiff";
+import { getInlineCommentKey } from "@/components/app/logic/forgePanelDiff";
+import type { ParsedDiffLine } from "@/components/app/types/diffLine.types";
 import type { DiffAnnotation } from "@shared/appTypes";
 
 export function buildDiffAnnotationKey(path: string, oldLine: number | null, newLine: number | null): string {

@@ -1,4 +1,5 @@
 import type { AppIcon } from "@shared/types/apps/apps.types";
+import type { UpdateAppInput } from "@main/types/apps/apps.types";
 import type { AgentSettings, AgentSettingsPatch } from "@shared/types/nora-tools/settings.types";
 import type { Conversation, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ConnectorSubject } from "@shared/types/connectors/connectors.types";
@@ -30,6 +31,8 @@ export interface NoraRunContext {
   tools: NoraToolEndpoint | null;
   /** Connectors added in Nora, reached through its gateway. */
   connectors: readonly RunMcpServer[];
+  /** Names of the runtime account's own connectors this thread may use (a bot's choice); absent or empty means none. */
+  accountConnectors?: readonly string[];
   /** Session guidance; kept stable across a thread's turns so providers can cache the conversation behind it. */
   guidance: string | null;
   /** Context for this turn only (saved-note changes), sent in front of the user's instruction. */
@@ -196,7 +199,8 @@ export interface NoraAppsOperations {
 export interface SampleAppSourceToolInput { sourceId: string; connectorId: string; tool: string; args: Record<string, JsonValue>; }
 export interface SampleAppFileToolInput { sourceId: string; path: string; }
 export interface CreateAppToolInput { name: string; spec: AppSpecInput; suggestions?: readonly string[]; icon?: AppIcon; }
-export interface UpdateAppToolInput { id: string; spec: AppSpecInput; summary: string; suggestions?: readonly string[]; icon?: AppIcon; }
+/** A builder thread always says which version it changed, so its saves never overwrite edits it has not seen. */
+export type UpdateAppToolInput = UpdateAppInput & { baseVersion: number };
 
 export interface NoraToolDeps {
   asks: NoraAskOperations;
@@ -219,6 +223,8 @@ export interface RunContextConnectors {
   endpoints(subject: ConnectorSubject, only?: readonly string[]): Promise<RunMcpServer[]>;
   activeCount(subject: ConnectorSubject, only?: readonly string[]): number;
 }
+/** The runtime account connectors a thread's subject may use, read live so a bot's change applies on its next turn. */
+export type RunContextAccountConnectors = (subject: ConnectorSubject) => readonly string[];
 export interface NoraToolServer {
   resolve: NoraToolEndpointResolver;
   running(): boolean;

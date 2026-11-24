@@ -227,7 +227,7 @@ const AppToastItem = ({ toast, onDismiss }: { toast: AppToast; onDismiss: (id: n
       </div>
       <div className={cn("flex min-w-0 flex-1", compact ? "items-center gap-2.5" : "flex-col gap-2")}>
         <div className={cn("min-w-0", compact ? "flex-1 space-y-0.5" : "space-y-1")}>
-          <ToastTitle className={cn(compact && "truncate text-[13px]")}>{toast.title}</ToastTitle>
+          <ToastTitle className={cn(compact && "truncate text-[12px]")}>{toast.title}</ToastTitle>
           {toast.description ? (
             <ToastDescription className={cn(descriptionClass, compact && "truncate text-xs leading-snug")}>
               {toast.description}

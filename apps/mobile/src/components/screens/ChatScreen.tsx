@@ -1,3 +1,6 @@
+import { router } from "expo-router";
+import { routes } from "@/navigation/routes";
+import type { SendMessageRequest } from "@shared/types/remote-access/runtimeApi.types";
 import type { ComposerStop } from "@/types/composer.types";
 import type { ConversationHandle } from "@/types/conversationHook.types";
 import type { CommandRunner } from "@/types/pendingCommand.types";
@@ -28,12 +31,15 @@ export function ChatScreen({ runtimeId, conversationId }: { runtimeId: string; c
 
   const runtime = lookup.status === "ready" ? { session: lookup.session, snapshot: lookup.snapshot, name: lookup.name } : null;
   const cancelGate = capabilityGate(runtime?.snapshot.info.status === "ready" ? runtime.snapshot.info.value : null, "tasks.cancel");
+  const bot = view?.header.conversation.direct;
+  const canEditBot = capabilityGate(runtime?.snapshot.info.status === "ready" ? runtime.snapshot.info.value : null, "bots.manage").enabled;
   const stop: ComposerStop | null = activeRun
     ? { onStop: () => void actions.stop(activeRun.id), busy: actions.stopping(activeRun.id), disabled: !cancelGate.enabled }
     : null;
   return (
     <ConversationShell runtimeId={runtimeId} activeConversationId={conversationId}
-      center={<ChatTitle title={view?.header.conversation.title ?? "Chat"} status={view ? conversationStatus(view) : null} />}>
+      center={<ChatTitle title={view?.header.conversation.title ?? "Chat"} status={view ? conversationStatus(view) : null} bot={bot}
+        onEditBot={bot && canEditBot ? () => router.push(routes.editBot(runtimeId, bot.botId, bot.scope)) : undefined} />}>
       {runtime ? <ChatBody runtime={runtime} runtimeId={runtimeId} conversation={conversation} runner={runner} onSend={actions.send} stop={stop}
         stopError={actions.stopError} /> : null}
     </ConversationShell>
@@ -45,7 +51,7 @@ interface ChatBodyProps {
   runtimeId: string;
   conversation: ConversationHandle;
   runner: CommandRunner;
-  onSend: (text: string) => Promise<void>;
+  onSend: (text: string, providerChange?: SendMessageRequest["providerChange"]) => Promise<void>;
   stop: ComposerStop | null;
   stopError: string | null;
 }
@@ -59,7 +65,7 @@ function ChatBody({ runtime, runtimeId, conversation, runner, onSend, stop, stop
     <>
       {state.status === "error" ? <Inset><Banner tone="danger" title="Showing what was loaded before" message={state.message} /></Inset> : null}
       {stopError ? <Inset><Banner tone="danger" title="Couldn't stop the task" message={stopError} /></Inset> : null}
-      <ChatView runtime={runtime} runtimeId={runtimeId} conversation={conversation} view={view} runner={runner} onSend={onSend} stop={stop} />
+      <ChatView key={`${runtimeId}/${view.header.conversation.id}`} runtime={runtime} runtimeId={runtimeId} conversation={conversation} view={view} runner={runner} onSend={onSend} stop={stop} />
     </>
   );
 }

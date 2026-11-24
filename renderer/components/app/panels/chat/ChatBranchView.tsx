@@ -8,7 +8,7 @@ import { useThreadLinks } from "@/components/app/hooks/useThreadLinks";
 import { useTranscriptFollow } from "@/components/app/hooks/useTranscriptFollow";
 import { buildBranchTimeline } from "@/components/app/logic/chatBranchTimeline";
 import { useChatThreadSend } from "@/components/app/hooks/useChatThreadSend";
-import { BotAvatar } from "@/components/app/shared/BotAvatar";
+import { SpeakerAvatar } from "@/components/app/shared/SpeakerAvatar";
 import { ChatTranscript } from "./ChatTranscript";
 import { ChatTyping } from "./ChatTyping";
 import { ChatRequests } from "./ChatRequests";
@@ -53,7 +53,7 @@ export function ChatBranchView({ target, bot, chatId, composer, onComposerChange
             <SquareArrowOutUpRight className="size-3" aria-hidden="true" />Open thread</Button>}
         </div>
         {target.kind === "draft" && !entries.length && <div className="flex flex-col items-center gap-3 py-10 text-center">
-          <BotAvatar avatar={bot.avatar} size={64} />
+          <SpeakerAvatar botId={bot.botId} avatar={bot.avatar} size={64} />
           <p className="max-w-md text-sm text-muted-foreground">A side chat with {bot.name}. {target.draft.from ? "It knows the chat up to the message you branched from, and nothing said here goes back to the main chat." : "It starts fresh, apart from your main chat."}</p>
           {target.draft.from && <blockquote className="max-w-md truncate border-l-2 pl-3 text-left text-sm text-muted-foreground md:hidden">{target.draft.from.excerpt}</blockquote>}
         </div>}
@@ -62,7 +62,7 @@ export function ChatBranchView({ target, bot, chatId, composer, onComposerChange
         {conversationId && !view && !loadError && <p className="mt-4 text-muted-foreground">Loading…</p>}
         <ChatTranscript entries={entries} workThreads={NO_THREADS} onOpenThread={onOpenThread} onLinkClick={onLinkClick ?? threadLinks} />
         {chatId && conversationId && <ChatRequests conversationId={chatId} threadId={conversationId} />}
-        {working && <ChatTyping name={bot.name} avatar={bot.avatar} workspaceName={thread?.workspaceName ?? null} waiting={waiting} />}
+        {working && <ChatTyping botId={bot.botId} name={bot.name} avatar={bot.avatar} workspaceName={thread?.workspaceName ?? null} waiting={waiting} />}
       </div>
     </div>
     </TranscriptHistory>

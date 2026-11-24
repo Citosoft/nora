@@ -30,7 +30,7 @@ export function IdeBadge({
   }
 
   return (
-    <div className={`grid ${className} place-items-center rounded-[3px] bg-primary/15 text-[8px] font-semibold uppercase text-primary`}>
+    <div className={`grid ${className} place-items-center rounded-[3px] bg-primary/15 text-[7px] font-semibold uppercase text-primary`}>
       {ide.name.slice(0, 1)}
     </div>
   );

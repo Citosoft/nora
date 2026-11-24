@@ -1,19 +1,17 @@
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useTranscriptHistory } from "@/components/app/hooks/useTranscriptHistory";
+import { findTranscriptElement, scrollTranscriptTo } from "@/components/app/logic/transcriptScroll";
 import type { TranscriptHistoryProps } from "@/components/app/types/transcript-history/history.types";
 
 export function TranscriptHistory({ scrollRef, onNavigate, children, className }: TranscriptHistoryProps) {
   const { prompts, visible } = useTranscriptHistory(scrollRef);
   const jump = (id: string) => {
     const scroller = scrollRef.current;
-    const target = Array.from(scroller?.querySelectorAll<HTMLElement>("[data-history-prompt]") ?? [])
-      .find((element) => element.dataset.historyPrompt === id);
+    const target = scroller && findTranscriptElement(scroller, "data-history-prompt", id);
     if (!scroller || !target) return;
     onNavigate();
-    scroller.scrollTo({ top: target.getBoundingClientRect().top - scroller.getBoundingClientRect().top
-      - scroller.clientTop + scroller.scrollTop - 24,
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+    scrollTranscriptTo(scroller, target);
   };
   return <div className={cn("relative flex min-h-0 flex-1 flex-col", className)}>
     {children}

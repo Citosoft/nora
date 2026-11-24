@@ -15,7 +15,7 @@ export function SessionPidBadge({ pid, className }: SessionPidBadgeProps) {
     <Badge
       variant="outline"
       className={cn(
-        "border-border/70 bg-muted/50 font-mono text-[11px] tabular-nums font-medium leading-none text-foreground",
+        "border-border/70 bg-muted/50 font-mono text-[10px] tabular-nums font-medium leading-none text-foreground",
         "dark:border-border/90 dark:bg-muted/25 dark:text-foreground/95",
         className
       )}

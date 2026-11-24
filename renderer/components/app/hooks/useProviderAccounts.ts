@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { nativeConversationBridge } from "@/components/app/clients/nativeRuntimeClient";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { useNativeRuntimePorts } from "@/components/app/hooks/useNativeRuntimePorts";
+import { enabledAccountProviders } from "@/components/app/logic/enabledAccountProviders";
 import { completesSignIn, providerAccountViewFromRead, providerLoginMethodsFromRead } from "@/components/app/logic/providerAccountView";
 import type { ProviderAccountView } from "@/components/app/types/providerAccount.types";
 import type { NativeProvider } from "@shared/ipc/types/personalizationGateway.types";
@@ -12,8 +13,8 @@ const SIGN_IN_TIMEOUT_MS = 3 * 60_000;
 const READ_FAILED: ProviderAccountView = { status: "error", message: "The provider runtime could not be reached. Check its configuration and refresh." };
 const wait = (ms: number) => new Promise<void>((resolve) => { setTimeout(resolve, ms); });
 
-/** Reads each native provider's account through its runtime, and drives browser sign-in until the account changes. */
-export function useProviderAccounts() {
+/** Reads each enabled native provider's account through its runtime, and drives browser sign-in until the account changes. */
+export function useProviderAccounts(enabledToolIds: readonly string[]) {
   const { boot } = useNativeRuntimePorts();
   // Keyed by provider kind, which is also the agent catalog id, so settings can look providers up by tool id.
   const [views, setViews] = useState<ReadonlyMap<string, ProviderAccountView>>(() => new Map());
@@ -38,14 +39,32 @@ export function useProviderAccounts() {
     } catch { return READ_FAILED; }
   }, [call]);
 
-  const refresh = useCallback(() => {
-    const current = ++generation.current;
-    for (const provider of boot.providers) {
+  const forget = useCallback((kind: string) => {
+    latestViews.current.delete(kind);
+    setViews((previous) => { const next = new Map(previous); next.delete(kind); return next; });
+  }, []);
+
+  // A new runtime set (rediscovery or Refresh) drops every reading, so each enabled provider is checked afresh.
+  useEffect(() => {
+    latestViews.current = new Map();
+    setViews(new Map());
+    return () => { generation.current++; };
+  }, [boot.providers]);
+
+  // Only enabled providers are asked for sign-in; enabling one reads it, disabling one forgets it.
+  const scoped = useMemo(() => enabledAccountProviders(boot.providers, enabledToolIds), [boot.providers, enabledToolIds]);
+  useEffect(() => {
+    const inScope = new Set<string>(scoped.map((provider) => provider.kind));
+    for (const kind of [...latestViews.current.keys()]) if (!inScope.has(kind)) forget(kind);
+    const current = generation.current;
+    for (const provider of scoped) {
+      if (latestViews.current.has(provider.kind)) continue;
       record(provider.kind, { status: "loading" });
-      void read(provider).then((view) => { if (generation.current === current) record(provider.kind, view); });
+      void read(provider).then((view) => {
+        if (generation.current === current && latestViews.current.has(provider.kind)) record(provider.kind, view);
+      });
     }
-  }, [boot.providers, read, record]);
-  useEffect(() => { refresh(); return () => { generation.current++; }; }, [refresh]);
+  }, [scoped, read, record, forget]);
 
   const signIn = useCallback(async (kind: string, methodId?: string): Promise<void> => {
     const provider = boot.providers.find((entry) => entry.kind === kind);
@@ -78,5 +97,5 @@ export function useProviderAccounts() {
     }
   }, [boot.providers, call, read, record]);
 
-  return { views, loginMethods, refresh, signIn };
+  return { views, loginMethods, signIn };
 }

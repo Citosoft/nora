@@ -1,4 +1,5 @@
-import { isReadOnlyToolScope, threadToolScope } from "@main/execution/toolScope";
+import { isReadOnlyToolScope, threadLoadsAccountExtras, threadToolScope } from "@main/execution/toolScope";
+import { isBotOrChatThread } from "@shared/conversations/accountExtras";
 import { instructionWithTurnNotes, joinGuidance, optionalRunContext, runMcpServers, workflowReviewMcpServers } from "@main/nora-tools/endpoint";
 import { conversationGuidance } from "@shared/conversations/guidance";
 import type { McpAction, McpResult } from "@shared/types/provider/mcp.types";
@@ -10,7 +11,8 @@ import type { ContextReading, Conversation, RequestResponse, RuntimeRequest, Sub
 import type { ProviderCatalogResult } from "@shared/types/provider/catalog.types";
 import { nativeCapabilities } from "@main/execution/providerCapabilities";
 import { z } from "zod";
-import { claudePermissionPolicy } from "./permissionPolicies";
+import type { PermissionMode } from "@anthropic-ai/claude-agent-sdk";
+import { CLAUDE_ALLOW_AND_AUTO, claudeAutoSwitchPolicy, claudePermissionPolicy } from "./permissionPolicies";
 import type { ProviderMcpAppAction, ProviderMcpAppResult } from "@main/types/execution/mcpApp.types";
 import type { RunMcpServer } from "@main/types/nora-tools/noraTools.types";
 
@@ -100,12 +102,19 @@ export class ClaudeAdapter implements ExecutionProvider {
       ? snapshot.conversation.source?.kind === "workflow" ? workflowReviewMcpServers(runContext) : []
       : runMcpServers(runContext);
     this.runServers.set(snapshot.conversation.id, mcpServers);
+    const accountExtras = threadLoadsAccountExtras(snapshot.conversation);
+    // Only a working thread can call MCP tools at all, so a scoped one is never handed account connectors.
+    const accountConnectorNames = !accountExtras && toolScope === "full" ? runContext.accountConnectors ?? [] : [];
+    const accountConnectors = accountConnectorNames.length && this.options.accountConnectors
+      ? await this.options.accountConnectors.resolve(snapshot.conversation.workspace.path, accountConnectorNames) : {};
     emit({ ...base, eventId: "native-binding", kind: "bound", nativeConversationId: sessionId });
     const session = this.options.open({ sessionId, resume: !!snapshot.conversation.nativeConversationId,
       ...(autoCompactTokens ? { autoCompactTokens } : {}),
       nativeTurnId, instruction: run.action === "compact" ? CLAUDE_COMPACT_COMMAND : instructionWithTurnNotes(run.instruction, runContext), cwd: snapshot.conversation.workspace.path,
       ...(guidance ? { guidance } : {}), mcpServers,
       model: snapshot.conversation.provider.model, permissionMode: toolScope === "inspect" ? "plan" : toolScope === "read-worker" ? "default" : mode, toolScope,
+      accountExtras, accountConnectors,
+      promptSuggestions: !isBotOrChatThread(snapshot.conversation) && (this.options.promptSuggestions?.() ?? true),
       ...(snapshot.conversation.provider.subagentModel ? { subagentModel: snapshot.conversation.provider.subagentModel } : {}),
       effort: effort.data,
       onRequest: (prompt) => this.ask(execution, prompt, emit) });
@@ -176,9 +185,7 @@ export class ClaudeAdapter implements ExecutionProvider {
     const common = { id, runId: run.id, attemptId: run.attemptId, nativeId: prompt.nativeId, title: prompt.title,
       status: "pending" as const, createdAt: this.options.now(), expiresAt: new Date(Date.parse(this.options.now()) + (this.options.requestLifetimeMs ?? 30 * 60_000)).toISOString() };
     const request: RuntimeRequest = prompt.kind === "question" ? { ...common, kind: "question", questions: prompt.questions }
-      : { ...common, kind: "approval", ...(prompt.details ? { details: prompt.details } : {}),
-        options: [{ id: "allow", label: "Allow once", intent: "allow", scope: "once", description: "Allow only this action." },
-          { id: "deny", label: "Decline", intent: "deny", description: "Decline this action; the agent may continue." }] };
+      : { ...common, kind: "approval", ...(prompt.details ? { details: prompt.details } : {}), options: this.approvalOptions(prompt.permissionMode) };
     return new Promise<RequestResponse>((resolve, reject) => {
       const expire = (): void => {
         cleanup(); this.requests.delete(id);
@@ -197,6 +204,14 @@ export class ClaudeAdapter implements ExecutionProvider {
       try { emit({ kind: "request", eventId: `request:${id}`, conversationId: snapshot.conversation.id, runId: run.id, attemptId: run.attemptId, request }); }
       catch (error) { this.requests.delete(id); cleanup(); reject(error); }
     });
+  }
+
+  private approvalOptions(mode: PermissionMode): Extract<RuntimeRequest, { kind: "approval" }>["options"] {
+    const auto = claudeAutoSwitchPolicy(this.options.policies, mode);
+    return [{ id: "allow", label: "Allow once", intent: "allow", scope: "once", description: "Allow only this action." },
+      ...(auto ? [{ id: CLAUDE_ALLOW_AND_AUTO, label: "Allow and switch to Auto", intent: "allow" as const, switchesPolicy: auto,
+        description: "Allow this action and let Claude review later actions automatically for the rest of this thread." }] : []),
+      { id: "deny", label: "Decline", intent: "deny", description: "Decline this action; the agent may continue." }];
   }
 
   async respond(execution: ProviderExecution, request: RuntimeRequest, response: RequestResponse, emit: EmitProviderUpdate): Promise<void> {

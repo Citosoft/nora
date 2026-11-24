@@ -5,6 +5,7 @@ const send = (value) => process.stdout.write(`${JSON.stringify(value)}\n`);
 const notify = (method, params) => send({ method, params });
 const route = { threadId: "thread", turnId: "turn" };
 const finish = () => notify("turn/completed", { threadId: "thread", turn: { id: "turn", status: "completed", error: null } });
+const expectedReviewers = process.env.NORA_CODEX_EXPECT_REVIEWERS ? process.env.NORA_CODEX_EXPECT_REVIEWERS.split(",") : [];
 let resumeCount = 0;
 createInterface({ input: process.stdin }).on("line", (line) => {
   const message = JSON.parse(line);
@@ -36,6 +37,11 @@ createInterface({ input: process.stdin }).on("line", (line) => {
     }
     if (process.env.NORA_CODEX_EXPECT_GUIDANCE && message.params.developerInstructions !== process.env.NORA_CODEX_EXPECT_GUIDANCE) {
       send({ id: message.id, error: { code: -32602, message: "Conversation guidance mismatch" } }); return;
+    }
+    // Each start or resume takes the next expected approvals reviewer.
+    const reviewer = expectedReviewers.shift();
+    if (reviewer !== undefined && message.params.approvalsReviewer !== reviewer) {
+      send({ id: message.id, error: { code: -32602, message: `Expected approvals reviewer ${reviewer}` } }); return;
     }
     if (message.method === "thread/resume") resumeCount++;
     send({ id: message.id, result: { thread: { id: "thread", path: process.env.NORA_CODEX_FIXTURE_ROLLOUT_PATH ?? null } } });

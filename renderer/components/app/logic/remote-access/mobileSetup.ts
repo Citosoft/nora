@@ -1,4 +1,5 @@
 import { presentRemoteStatus } from "./presentation";
+import { NORA_RELAY_NAME } from "@shared/remote-access/constants";
 import type { MobileRemoteSetupStep } from "@/components/app/types/remoteAccess.types";
 import type { RemoteAccessView } from "@shared/types/remote-access/remoteAccess.types";
 
@@ -20,7 +21,7 @@ export function mobileRemoteSetupMessage(step: MobileRemoteSetupStep): string {
   switch (step.kind) {
     case "loading": case "connected": return "";
     case "sign-in": return "Sign in to your Nora account to connect your phone.";
-    case "enable": return "Remote access is off. Turn it on to reach this computer from your phone.";
+    case "enable": return `${NORA_RELAY_NAME} is off. Turn it on to reach this computer from your phone.`;
     case "starting": case "attention": return step.detail ? `${step.label} · ${step.detail}` : step.label;
   }
 }

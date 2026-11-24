@@ -1,3 +1,5 @@
+import { useComposerAttachments } from "@/hooks/useComposerAttachments";
+import { Button } from "@/components/common/Button";
 import { useEffect, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
@@ -35,7 +37,7 @@ export function BotChatScreen({ runtimeId, botId, workspaceId }: BotChatScreenPr
   return (
     <ConversationShell runtimeId={runtimeId} activeConversationId={null} center={<ComputerPill runtimeId={runtimeId} />}>
       {lookup.status === "ready" ? (
-        <BotChatForm runtime={{ session: lookup.session, snapshot: lookup.snapshot, name: lookup.name }} runtimeId={runtimeId} botId={botId} workspaceId={workspaceId} />
+        <BotChatForm key={`${runtimeId}/${botId}/${workspaceId ?? "global"}`} runtime={{ session: lookup.session, snapshot: lookup.snapshot, name: lookup.name }} runtimeId={runtimeId} botId={botId} workspaceId={workspaceId} />
       ) : null}
     </ConversationShell>
   );
@@ -49,7 +51,9 @@ function BotChatForm({ runtime, runtimeId, botId, workspaceId }: BotChatScreenPr
   const [instruction, setInstruction] = useState("");
   const info = runtime.snapshot.info.status === "ready" ? runtime.snapshot.info.value : null;
   const gate = capabilityGate(info, "bots.chat");
+  const canEdit = capabilityGate(info, "bots.manage").enabled;
   const sendGate = capabilityGate(info, "messages.send");
+  const attachments = useComposerAttachments(runtime.session.client, capabilityGate(info, "attachments.upload"));
   const list = bots.state.status === "ready" ? bots.state.value : [];
   const bot: RemoteBot | null = findBot(list, botId, botScopeFromParam(workspaceId));
   const existingChat = bot?.chatConversationId ?? null;
@@ -74,6 +78,7 @@ function BotChatForm({ runtime, runtimeId, botId, workspaceId }: BotChatScreenPr
           {bot ? <BotAvatar avatar={bot.avatar} name={bot.name} size={72} /> : null}
           <Text style={styles.heading} accessibilityRole="header">{bot?.name ?? "Bot"}</Text>
           {bot?.role ? <Text style={styles.role}>{bot.role}</Text> : null}
+          {bot && canEdit ? <Button label="Edit bot" compact variant="ghost" onPress={() => router.push(routes.editBot(runtimeId, bot.id, bot.scope))} /> : null}
         </View>
         <View style={styles.notices}>
           {bots.state.status === "error" ? <Inset><Banner tone="danger" title="Couldn't load bots" message={bots.state.message} /></Inset> : null}
@@ -82,7 +87,7 @@ function BotChatForm({ runtime, runtimeId, botId, workspaceId }: BotChatScreenPr
             onRetry={() => void retry(command)} onDiscard={() => void runner.discard(command.key)} />)}
         </View>
       </ScrollView>
-      <Composer draft={instruction} onDraftChange={setInstruction} onSend={submit} disabledReason={disabledReason} placeholder={bot ? `Message ${bot.name}` : "Message"} />
+      <Composer attachments={attachments} draft={instruction} onDraftChange={setInstruction} onSend={submit} disabledReason={disabledReason} placeholder={bot ? `Message ${bot.name}` : "Message"} />
     </KeyboardAvoidingArea>
   );
 }
@@ -90,7 +95,7 @@ function BotChatForm({ runtime, runtimeId, botId, workspaceId }: BotChatScreenPr
 const createStyles = (theme: Theme) => ({
   content: { flexGrow: 1, width: "100%" as const, maxWidth: layout.chatColumnWidth, alignSelf: "center" as const, paddingBottom: spacing.md },
   hero: { flexGrow: 1, alignItems: "center" as const, justifyContent: "center" as const, gap: spacing.sm, paddingHorizontal: spacing.xxl, paddingBottom: spacing.xxl },
-  heading: { fontSize: 28, lineHeight: 34, fontWeight: "400" as const, letterSpacing: -0.4, color: theme.colors.text, textAlign: "center" as const },
+  heading: { ...type.display, color: theme.colors.text, textAlign: "center" as const },
   role: { ...type.subheadline, color: theme.colors.textMuted, textAlign: "center" as const },
   notices: { gap: spacing.sm }
 });

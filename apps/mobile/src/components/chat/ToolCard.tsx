@@ -53,7 +53,7 @@ export const ToolCard = memo(function ToolCard({ item }: { item: ToolActivity })
 const createStyles = (theme: Theme) => ({
   summary: { flexDirection: "row" as const, alignItems: "center" as const, gap: spacing.sm },
   label: { ...type.subheadline, flexShrink: 1, color: theme.colors.textMuted },
-  code: { fontFamily: monospaceFont, fontSize: 12, lineHeight: 17, color: theme.colors.text, backgroundColor: theme.colors.codeBackground,
+  code: { ...type.code, fontFamily: monospaceFont, color: theme.colors.text, backgroundColor: theme.colors.codeBackground,
     padding: spacing.md - 2, borderRadius: radii.sm },
   note: { ...type.footnote, color: theme.colors.textMuted }
 });

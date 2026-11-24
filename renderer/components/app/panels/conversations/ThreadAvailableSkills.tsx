@@ -14,8 +14,8 @@ export function ThreadAvailableSkills({ skills }: ThreadAvailableSkillsProps) {
       const scope = skill.scope === "plugin" && skill.plugin ? skill.plugin : scopeLabels[skill.scope];
       return <li key={`${skill.scope}:${skill.plugin ?? ""}:${skill.name}`} className="min-w-0">
         <p className="flex min-w-0 items-center gap-1.5"><span className="truncate" title={skill.name}>{skill.name}</span>
-          {scope && <span className="shrink-0 rounded bg-muted px-1 text-[10px] text-muted-foreground">{scope}</span>}</p>
-        {skill.description && <p className="line-clamp-2 text-[10px] leading-relaxed text-muted-foreground" title={skill.description}>{skill.description}</p>}
+          {scope && <span className="shrink-0 rounded bg-muted px-1 text-[9px] text-muted-foreground">{scope}</span>}</p>
+        {skill.description && <p className="line-clamp-2 text-[9px] leading-relaxed text-muted-foreground" title={skill.description}>{skill.description}</p>}
       </li>;
     })}</ul>
   </details>;

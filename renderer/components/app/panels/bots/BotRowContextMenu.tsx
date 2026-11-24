@@ -4,10 +4,10 @@ import type { BotRowContextMenuProps } from "@/components/app/types/botNavigatio
 import { botStartLabel } from "@/components/app/logic/botNavigation";
 
 /** Right-click actions for a bot in the Bots sidebar; Nora gets only the thread actions. */
-export function BotRowContextMenu({ children, id, name, hasThreads, expanded, onToggle, onStart, onShowInfo, onEdit, onDelete }: BotRowContextMenuProps) {
+export function BotRowContextMenu({ children, name, hasThreads, expanded, onToggle, onStart, onShowInfo, onEdit, onDelete }: BotRowContextMenuProps) {
   return <ContextMenu><ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
     <ContextMenuContent>
-      <ContextMenuItem onSelect={onStart}><MessageSquarePlus className="size-3.5" aria-hidden="true" />{botStartLabel({ id, name })}</ContextMenuItem>
+      <ContextMenuItem onSelect={onStart}><MessageSquarePlus className="size-3.5" aria-hidden="true" />{botStartLabel({ name })}</ContextMenuItem>
       {hasThreads && <ContextMenuItem onSelect={onToggle}><ChevronRight className={`size-3.5 ${expanded ? "rotate-90" : ""}`} aria-hidden="true" />{expanded ? "Hide work threads" : "Show work threads"}</ContextMenuItem>}
       {onShowInfo && <ContextMenuItem onSelect={onShowInfo}><Info className="size-3.5" aria-hidden="true" />Bot info</ContextMenuItem>}
       {onEdit && <ContextMenuItem onSelect={onEdit}><Pencil className="size-3.5" aria-hidden="true" />Edit bot…</ContextMenuItem>}

@@ -20,7 +20,17 @@ export interface ThreadViewOptionsProps {
   onGroupingChange(grouping: ThreadGrouping): void;
 }
 
+/** The header's refresh button: reloads Nora's threads and, when shown, rescans other tools for resumable ones. */
+export interface ThreadRefreshControl {
+  loading: boolean;
+  disabled: boolean;
+  onRefresh(): void;
+}
+
 export interface ThreadToolbarProps extends ThreadViewOptionsProps {
+  refresh: ThreadRefreshControl;
+  onBulkSettle?(): void;
+  bulkSettleDisabled?: boolean;
   allWorkspaces?: boolean;
   onScopeChange(allWorkspaces: boolean): void;
   onNew?(): void;

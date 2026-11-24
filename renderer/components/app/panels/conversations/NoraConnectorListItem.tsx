@@ -13,8 +13,8 @@ export function NoraConnectorListItem({ connector, controls, manage, onEditAcces
     <McpServerLogo logo={connector.logo} />
     <span className="min-w-0 flex-1 truncate">{connector.name}</span>
     {needsAction ? null : connector.status === "connected"
-      ? <span className="shrink-0 tabular-nums text-[10px] text-muted-foreground">{tools}</span>
-      : <Badge variant={status.variant} className="shrink-0 whitespace-nowrap px-1.5 py-0 text-[10px]">{status.label}</Badge>}
+      ? <span className="shrink-0 tabular-nums text-[9px] text-muted-foreground">{tools}</span>
+      : <Badge variant={status.variant} className="shrink-0 whitespace-nowrap px-1.5 py-0 text-[9px]">{status.label}</Badge>}
     {needsAction || manage ? <NoraConnectorActions connector={connector} controls={controls} compact menu={manage} onEditAccess={onEditAccess} /> : null}
   </li>;
 }

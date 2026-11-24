@@ -1,7 +1,7 @@
 import { pausedRoutineInputSchema, ROUTINES_PER_BOT_MAX } from "@shared/bots/routines/contracts";
 import { z } from "zod";
 import { providerKindSchema } from "@shared/providers/providerKinds";
-import { idleCompactionModeSchema, personalizationSchema, roleSelectionSchema, threadModelDefaultSchema, threadPreferencesPatchSchema } from "./contracts";
+import { idleCompactionModeSchema, personalizationSchema, roleSelectionSchema, threadModelDefaultSchema, threadModelTargetSchema, threadPreferencesPatchSchema } from "./contracts";
 import { nativeWorkspaceSchema } from "./workspaces";
 import { noraToolsStatusSchema } from "@shared/nora-tools/catalog";
 import { botDefinitionSchema, botIdSchema, botScopeSchema, sharedBotSetSchema } from "@shared/bots/contracts";
@@ -15,8 +15,13 @@ export const personalizationRequestSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("refresh-providers") }).strict(),
   z.object({ kind: z.literal("onboard"), role: roleSelectionSchema }).strict(),
   z.object({ kind: z.literal("set-role"), workspaceId: z.string().min(1).nullable(), role: roleSelectionSchema.nullable() }).strict(),
-  /** Null clears the default so new threads fall back to the first available provider. */
-  z.object({ kind: z.literal("set-thread-model"), model: threadModelDefaultSchema.nullable() }).strict(),
+  /**
+   * Null clears the default: new threads fall back to the first available provider, and Nora's chat to the new-thread default.
+   * An absent target is the new-thread default.
+   */
+  z.object({ kind: z.literal("set-thread-model"), model: threadModelDefaultSchema.nullable(), target: threadModelTargetSchema.optional() }).strict(),
+  /** Adds a model to, or removes it from, the model picker's Favourites. */
+  z.object({ kind: z.literal("set-favorite-model"), model: threadModelDefaultSchema, favorite: z.boolean() }).strict(),
   z.object({ kind: z.literal("set-idle-compaction"), mode: idleCompactionModeSchema }).strict(),
   z.object({ kind: z.literal("set-thread-preferences"), patch: threadPreferencesPatchSchema }).strict(),
   z.object({ kind: z.literal("add-workspace") }).strict(),
@@ -26,6 +31,7 @@ export const personalizationRequestSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("open-workspace-folder"), workspaceId: z.string().min(1) }).strict(),
   /** Creates (no previous scope) or updates a bot where its scope says; moving between scopes keeps its id and bumps its revision. */
   z.object({ kind: z.literal("save-bot"), bot: botDefinitionSchema, previousScope: botScopeSchema.nullable(),
+    expectedRevision: z.number().int().positive().optional(),
     initialRoutines: z.array(pausedRoutineInputSchema).max(ROUTINES_PER_BOT_MAX).optional() }).strict(),
   z.object({ kind: z.literal("delete-bot"), botId: botIdSchema, scope: botScopeSchema }).strict(),
   z.object({ kind: z.literal("set-bot-hidden"), workspaceId: z.string().min(1), botId: botIdSchema, hidden: z.boolean() }).strict(),

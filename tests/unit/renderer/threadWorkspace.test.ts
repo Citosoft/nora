@@ -15,6 +15,17 @@ function openDraft(f: ReturnType<typeof threadWorkspaceFixture>, text = "Write a
   return { store, id };
 }
 
+test("sidebar rows expose stored models and the current draft model, including inherited choices", () => {
+  const f = threadWorkspaceFixture();
+  const { store, id } = openDraft(f);
+  store.setBinding(id, { ...threadBinding, model: "inherited-model" }, "inherited");
+  const rows = buildThreadNavigation({ ...store.snapshot(), summaries: f.summaries }, null, "all");
+  assert.equal(rows.find((row) => row.id === "existing")?.model, threadBinding.model);
+  assert.equal(rows.find((row) => row.id === id)?.model, "inherited-model");
+  store.setBinding(id, null, "inherited");
+  assert.equal(buildThreadNavigation(store.snapshot(), null, "all").find((row) => row.id === id)?.model, threadBinding.model);
+});
+
 test("new views never create native work, and independent drafts survive closing and restart", () => {
   const f = threadWorkspaceFixture();
   const { store, id } = openDraft(f);

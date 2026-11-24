@@ -1,3 +1,4 @@
+import { BotRevisionConflict } from "@main/bots/errors";
 import { ZodError } from "zod";
 import { ExecutionCommandError } from "@main/execution/errors";
 import type { RuntimeApiErrorCode } from "@shared/types/remote-access/runtimeApi.types";
@@ -9,6 +10,7 @@ export class RuntimeFailure extends Error {
   constructor(readonly code: RuntimeApiErrorCode, message: string) { super(message); }
 }
 export function describeRuntimeFailure(error: unknown): RuntimeFailureDescription {
+  if (error instanceof BotRevisionConflict) return { code: "conflict", status: 409, message: error.message };
   if (error instanceof RuntimeFailure) return { code: error.code, status: STATUS[error.code], message: error.message };
   if (error instanceof ZodError || error instanceof SyntaxError || error instanceof URIError) return { code: "invalid", status: 400, message: "This request is invalid." };
   if (error instanceof ExecutionCommandError) {

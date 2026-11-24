@@ -690,7 +690,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                 />
                 <span className="min-w-0 flex-1 truncate text-right text-muted-foreground">{headerSummary}</span>
                 {additionsTotal || deletionsTotal ? (
-                  <span className="flex shrink-0 items-center gap-1.5 text-[11px] tabular-nums" title={`${additionsTotal} additions, ${deletionsTotal} deletions`}>
+                  <span className="flex shrink-0 items-center gap-1.5 text-[10px] tabular-nums" title={`${additionsTotal} additions, ${deletionsTotal} deletions`}>
                     <span className="text-emerald-500">+{additionsTotal}</span>
                     <span className="text-destructive">−{deletionsTotal}</span>
                   </span>
@@ -717,8 +717,8 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                       <History className="size-3.5" aria-hidden="true" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="break-words text-[12.5px] font-medium leading-snug" title={selectedCommit.subject}>{selectedCommit.subject}</p>
-                      <p className="mt-0.5 break-words text-[11px] text-muted-foreground" title={commitSubtitle(selectedCommit)}>{commitSubtitle(selectedCommit)}</p>
+                      <p className="break-words text-[11.5px] font-medium leading-snug" title={selectedCommit.subject}>{selectedCommit.subject}</p>
+                      <p className="mt-0.5 break-words text-[10px] text-muted-foreground" title={commitSubtitle(selectedCommit)}>{commitSubtitle(selectedCommit)}</p>
                     </div>
                   </div>
                   <Button variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs text-muted-foreground" onClick={() => void onClearCommitInspection()}>
@@ -741,7 +741,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                     actions={remoteActions}
                     notice={!gitStatusHasConfiguredUpstream && activeBranch ? (
                       <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2">
-                        <div className="min-w-0 text-[11px] text-muted-foreground">
+                        <div className="min-w-0 text-[10px] text-muted-foreground">
                           <span className="font-medium text-foreground">{activeBranch}</span> has no upstream branch.
                         </div>
                         <DropdownMenu
@@ -750,7 +750,7 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                           trigger={(
                             <Button
                               variant="outline"
-                              className="h-7 shrink-0 gap-1.5 px-2 text-[11px]"
+                              className="h-7 shrink-0 gap-1.5 px-2 text-[10px]"
                               disabled={isSettingUpstream || gitStatusRemoteBranches.length === 0}
                               tooltip={
                                 gitStatusRemoteBranches.length
@@ -896,13 +896,13 @@ function ChangesPanelInner({ snapshot }: { snapshot: AppState }) {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 px-1.5 text-[11px] font-normal text-muted-foreground"
+                        className="h-6 px-1.5 text-[10px] font-normal text-muted-foreground"
                         onClick={() => setSelectedCommitPaths(allChangesSelected ? [] : snapshot.changes.map((change) => change.path))}
                       >
                         {allChangesSelected ? "Select none" : "Select all"}
                       </Button>
                     ) : null}
-                    <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[11px] font-normal text-muted-foreground" onClick={onOpenFullDiff}>
+                    <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[10px] font-normal text-muted-foreground" onClick={onOpenFullDiff}>
                       Full diff
                     </Button>
                   </>

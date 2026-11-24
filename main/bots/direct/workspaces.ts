@@ -1,11 +1,11 @@
-import type { BotDefinition, DirectDescriptor } from "@shared/types/bots/bots.types";
+import type { ChatBotProfile, DirectDescriptor } from "@shared/types/bots/bots.types";
 import type { Conversation } from "@shared/types/conversation/contracts.types";
 import type { ConversationSummary } from "@shared/types/conversation/queries.types";
 import type { ChatWorkspace, DirectPlacement, DirectWorkThread } from "@main/types/bots/chats.types";
 
 /** Workspaces a direct chat may work in: the bot's own workspace, or every workspace a global bot is available in. */
 export function directWorkspaces(direct: DirectDescriptor, workspaces: readonly ChatWorkspace[],
-  bot: (workspaceId: string, botId: string) => BotDefinition | null): ChatWorkspace[] {
+  bot: (workspaceId: string, botId: string) => ChatBotProfile | null): ChatWorkspace[] {
   return workspaces.filter((entry) => direct.scope.kind === "workspace" ? entry.id === direct.scope.workspaceId : !!bot(entry.id, direct.botId));
 }
 
@@ -13,7 +13,7 @@ export function directWorkspaces(direct: DirectDescriptor, workspaces: readonly 
  * Where a direct-chat message may work, and the workspace it works in by default; null when the bot is available nowhere.
  * A pinned run (a routine's) works only in its own workspace.
  */
-export function directPlacement(direct: DirectDescriptor, all: readonly ChatWorkspace[], bot: (workspaceId: string, botId: string) => BotDefinition | null,
+export function directPlacement(direct: DirectDescriptor, all: readonly ChatWorkspace[], bot: (workspaceId: string, botId: string) => ChatBotProfile | null,
   pinned: string | null): DirectPlacement | null {
   const workspaces = directWorkspaces(direct, all, bot).filter((entry) => !pinned || entry.id === pinned);
   if (!workspaces.length) return null;

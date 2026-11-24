@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Bot } from "lucide-react";
 import { useProviderAccounts } from "@/components/app/hooks/useProviderAccounts";
 import { useRuntimeProviderSync } from "@/components/app/hooks/useRuntimeProviderSync";
 import { useSettingsRuntime } from "@/components/app/hooks/useSettingsRuntime";
+import { useStableIds } from "@/components/app/hooks/useStableIds";
 import { settingAnchorAttributes } from "@/components/app/logic/settingsSearch";
 import { ProviderInstallRow } from "@/components/app/panels/settings/ProviderInstallRow";
 import { ProviderListRow } from "@/components/app/panels/settings/ProviderListRow";
@@ -19,11 +20,11 @@ const NO_LOGIN_METHODS: readonly ProviderLoginMethod[] = [];
 /** Installed providers with sign-in status and enablement, plus supported providers that can be installed. */
 export function CliSettingsSection() {
   const { agentCatalog, appSettings, updatePreferredAgentToolId, toggleToolEnabled, refreshAgentCatalog, installTool } = useSettingsRuntime();
-  const providerAccounts = useProviderAccounts();
   const [tab, setTab] = useState<ProvidersTab>("installed");
   const installed = agentCatalog.filter((tool) => tool.detected);
-  const installedIds = useMemo(() => installed.map((tool) => tool.id), [installed]);
+  const installedIds = useStableIds(installed.map((tool) => tool.id));
   const runtimes = useRuntimeProviderSync(installedIds);
+  const providerAccounts = useProviderAccounts(useStableIds(installed.filter((tool) => tool.enabled).map((tool) => tool.id)));
   const installable = agentCatalog.filter((tool) => !tool.detected && tool.installTemplate.trim().length > 0);
   const available = installed.filter((tool) => isAgentToolAvailable(tool));
   const preferred = available.some((tool) => tool.id === appSettings.preferredAgentToolId) ? appSettings.preferredAgentToolId ?? "" : "";

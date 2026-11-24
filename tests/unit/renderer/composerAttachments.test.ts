@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { handoffThread } from "@/components/app/logic/thread-workspace/handoff";
 import { buildThreadNavigation } from "@/components/app/logic/thread-workspace/navigation";
-import { buildComposerInstruction } from "@/components/app/logic/composerAttachments";
+import { buildComposerInstruction } from "@shared/conversations/composerInstruction";
 import { COMPOSER_ATTACHMENT_MAX_COUNT } from "@shared/composerAttachments";
 import { createThreadWorkspaceStore } from "@/components/app/logic/thread-workspace/store";
 import { threadBinding, threadWorkspaceFixture } from "./threadWorkspaceFixtures";

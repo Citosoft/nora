@@ -43,7 +43,7 @@ export function InboxScreen({ runtimeId }: { runtimeId: string }) {
   }, [marks, apply, runtimeId]);
   return (
     <RuntimeScreen runtimeId={runtimeId} largeTitle title={() => "Inbox"} subtitle={(runtime) => runtime.name}
-      back={{ label: "chat", fallbackHref: routes.runtime(runtimeId) }}
+      back={{ label: "Chat", fallbackHref: routes.runtime(runtimeId) }}
       trailing={() => <NavButton icon="refresh" label="Refresh" busy={refreshing} onPress={inbox.refresh} />}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={inbox.refresh} />}>
       {(runtime: ConnectedRuntime) => {

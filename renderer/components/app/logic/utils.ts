@@ -1,22 +1,5 @@
-import type { ResolvedTheme } from "@/components/app/types";
-
 export function formatAgentMode(mode: "read" | "write"): string {
   return mode === "read" ? "Read-only" : "Writable";
-}
-
-export function diffLineClass(line: string, resolvedTheme: ResolvedTheme): string {
-  const isDark = resolvedTheme === "dark";
-
-  if (line.startsWith("+") && !line.startsWith("+++")) {
-    return isDark ? "bg-emerald-500/10 text-emerald-200" : "bg-emerald-500/10 text-emerald-900";
-  }
-  if (line.startsWith("-") && !line.startsWith("---")) {
-    return isDark ? "bg-rose-500/10 text-rose-200" : "bg-rose-500/10 text-rose-900";
-  }
-  if (line.startsWith("@@")) {
-    return isDark ? "bg-sky-500/10 text-sky-200" : "bg-sky-500/10 text-sky-900";
-  }
-  return isDark ? "text-slate-200" : "text-slate-800";
 }
 
 export function formatTimestamp(timestamp: string | null | undefined): string {

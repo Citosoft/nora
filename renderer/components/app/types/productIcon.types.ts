@@ -9,3 +9,10 @@ export type ProductIconSources = {
   localUrl: string | null;
   remoteUrl: string;
 };
+
+export interface ProductLogoProps {
+  /** The product's domain; its bundled icon (renderer/product-icons) is used when present. */
+  domain: string;
+  className?: string;
+  imgClassName?: string;
+}

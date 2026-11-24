@@ -1,65 +1,22 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { groupNativeTimelineEntries } from "@/components/app/logic/nativeTimeline";
-import type { TimelineItem, ToolActivity, ToolState } from "@shared/types/conversation/contracts.types";
-import type { ReasoningActivity } from "@/components/app/types/nativeActivity.types";
+import { buildNativeTimeline } from "@/components/app/logic/nativeTimeline";
+import type { TimelineItem } from "@shared/types/conversation/contracts.types";
 
 const createdAt = "2026-11-10T10:00:00.000Z";
+const message = (id: string, role: "user" | "assistant", runId = "run"): TimelineItem =>
+  ({ id, runId, createdAt, kind: "message", role, text: id, complete: true });
+const tool = (id: string): TimelineItem => ({ id, runId: "run", createdAt, kind: "tool", label: "Read", state: "completed", output: "" });
 
-function tool(id: string, state: ToolState = "completed", runId = "turn"): ToolActivity {
-  return { id, runId, kind: "tool", label: id, state, output: `Output ${id}`, createdAt };
-}
-
-function reasoning(id: string, runId = "turn"): ReasoningActivity {
-  return { id, runId, kind: "reasoning", text: `Thinking ${id}`, complete: true, createdAt };
-}
-
-function message(id: string, runId = "turn"): TimelineItem {
-  return { id, runId, kind: "message", role: "assistant", text: id, complete: true, createdAt };
-}
-
-test("tool history groups an entire turn across messages without combining turns or dropping details", () => {
-  const reply = message("message");
-  const first = tool("first"); const nested = { ...tool("nested"), details: { category: "command" as const, parentId: "first", input: "ls" } };
-  const next = tool("next", "running", "next-turn");
-  const entries = groupNativeTimelineEntries([first, reply, nested, next]);
-  assert.deepEqual(entries, [{ kind: "tools", runId: "turn", items: [first, nested] }, { kind: "item", item: reply }, { kind: "tools", runId: "next-turn", items: [next] }]);
-  assert.deepEqual(groupNativeTimelineEntries([]), []);
+test("agent messages that run straight into another agent message in the same turn are marked continued", () => {
+  const rows = buildNativeTimeline([message("ask", "user"), message("a", "assistant"), tool("t1"), message("b", "assistant"),
+    tool("t2"), message("c", "assistant")], []);
+  // Later tool calls fold into the turn's first tool row, so a, b and c follow one another after it.
+  assert.deepEqual(rows.map(({ key, continued }) => [key, continued]),
+    [["ask", false], ["a", false], ["tools:run", false], ["b", true], ["c", false]]);
 });
 
-test("reasoning with no visible text is skipped without splitting surrounding reasoning", () => {
-  const a = reasoning("a"); const b = reasoning("b");
-  const empty = { ...reasoning("empty"), text: "  \n" };
-  assert.deepEqual(groupNativeTimelineEntries([empty]), []);
-  assert.deepEqual(groupNativeTimelineEntries([a, empty, b]), [{ kind: "reasoning", runId: "turn", items: [a, b] }]);
-});
-
-test("consecutive reasoning merges into one row, including across folded tool calls, but not across messages or turns", () => {
-  const [a, b, c, d, e] = [reasoning("a"), reasoning("b"), reasoning("c"), reasoning("d"), reasoning("e", "next-turn")];
-  const first = tool("first"); const second = tool("second"); const reply = message("reply");
-  const entries = groupNativeTimelineEntries([first, a, second, b, c, reply, d, e]);
-  assert.deepEqual(entries, [
-    { kind: "tools", runId: "turn", items: [first, second] },
-    { kind: "reasoning", runId: "turn", items: [a, b, c] },
-    { kind: "item", item: reply },
-    { kind: "reasoning", runId: "turn", items: [d] },
-    { kind: "reasoning", runId: "next-turn", items: [e] },
-  ]);
-});
-
-test("a tool with a widget stays in the turn's tool activity and also gets its own widget entry", () => {
-  const app = { server: "lab", tool: "chart", resourceUri: "ui://lab/chart", displayMode: "inline" as const };
-  const widget: ToolActivity = { ...tool("chart"), details: { category: "integration", app } };
-  const plain = tool("plain");
-  const entries = groupNativeTimelineEntries([plain, widget]);
-  assert.deepEqual(entries, [{ kind: "tools", runId: "turn", items: [plain, widget] }, { kind: "app", call: { tool: widget, app } }]);
-});
-
-test("a tool that wrote images stays in the turn's tool activity and also gets its own image entry", () => {
-  const running: ToolActivity = { ...tool("image", "running"), details: { category: "image" } };
-  assert.deepEqual(groupNativeTimelineEntries([running]), [{ kind: "tools", runId: "turn", items: [running] }]);
-  const generated: ToolActivity = { ...tool("image"), details: { category: "file", outputFiles: [{ path: "/images/result.png" }, { path: "/out/report.pdf" }] } };
-  assert.deepEqual(groupNativeTimelineEntries([generated]), [{ kind: "tools", runId: "turn", items: [generated] }, { kind: "images", tool: generated, paths: ["/images/result.png"] }]);
-  const document: ToolActivity = { ...tool("pdf"), details: { category: "file", outputFiles: [{ path: "/out/report.pdf" }] } };
-  assert.deepEqual(groupNativeTimelineEntries([document]), [{ kind: "tools", runId: "turn", items: [document] }]);
+test("a turn's last agent message, user messages and messages before another turn are not continued", () => {
+  const rows = buildNativeTimeline([message("ask", "user"), message("a", "assistant"), message("next", "assistant", "other")], []);
+  assert.deepEqual(rows.map(({ continued }) => continued), [false, false, false]);
 });

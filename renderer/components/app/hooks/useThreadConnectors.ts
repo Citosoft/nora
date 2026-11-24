@@ -15,12 +15,13 @@ export function useThreadConnectors(client: Pick<ConversationClient, "mcp">, inp
   const provider = input?.conversation.provider;
   const workspace = input?.conversation.workspace;
   const providerLabel = input?.providerLabel;
+  const accountConnectors = input?.accountConnectors;
   // Keyed on the fields that select the runtime and checkout, so streaming header updates do not re-query the runtime.
   const sources = useMemo(() => provider && workspace && providerLabel !== undefined
     ? [threadMcpSource({ conversation: { provider, workspace }, providerLabel })] : NO_SOURCES,
   [provider?.kind, provider?.instanceId, workspace?.environmentId, workspace?.checkoutId, workspace?.path, providerLabel]);
   const { entries, refresh, logins } = useRuntimeMcpCatalog(client, sources);
   const entry = entries[0];
-  const summary = useMemo(() => entry ? summarizeThreadConnectors(entry.state) : { status: "loading" as const }, [entry]);
+  const summary = useMemo(() => entry ? summarizeThreadConnectors(entry.state, accountConnectors) : { status: "loading" as const }, [entry, accountConnectors]);
   return useMemo(() => sources[0] ? { source: sources[0], summary, logins, refresh } : null, [sources, summary, logins, refresh]);
 }

@@ -2,10 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createModelCatalogStore, nativeProviderKey } from "@/components/app/logic/modelCatalogStore";
 import { inheritedModelId, inheritedSubagentModel, inheritedNativeProvider, resolveModelBinding, selectedNativeModel } from "@/components/app/logic/modelBinding";
 import { threadPreferences } from "@shared/personalization/threads";
+import { permissionChoices } from "@/components/app/logic/permissionPosture";
+import { PROVIDER_REASONING, reasoningChoices } from "@/components/app/logic/reasoningEffort";
 import { useNativeModelCatalog } from "@/components/app/hooks/useNativeModelCatalog";
 import type { NativeProviderPickerProps } from "@/components/app/types/nativePanels.types";
 import type { ModelChoice } from "@/components/app/types/modelPicker.types";
 import { NativeModelPopover } from "./NativeModelPopover";
+import { ComposerSettingPopover } from "./ComposerSettingPopover";
 import { ProviderUsageWidget } from "./ProviderUsageWidget";
 import { Button } from "@/components/ui/button";
 
@@ -34,6 +37,9 @@ export function NativeProviderPicker({ state, workspace, client, locked: current
   const effort = locked ? locked.reasoning : reasoning;
   const agentModel = locked ? locked.subagentModel ?? null : subagentModel !== undefined ? subagentModel
     : inheritedSubagentModel(catalog, provider, threadPreferences(state.personalization).subagentModel);
+  const usable = !!model && !!available && available.authentication !== "required";
+  const policyChoices = useMemo(() => permissionChoices(available?.policies ?? []), [available]);
+  const effortChoices = useMemo(() => available?.capabilities.reasoning ? reasoningChoices(model) : [], [available, model]);
   const resolution = useMemo(() => resolveModelBinding({ provider, catalog, modelId, policyId, reasoning: effort, subagentModel: agentModel, locked }),
     [provider, catalog, modelId, policyId, effort, agentModel, locked]);
   // Resolve inherited defaults once; a later catalog reorder must not silently change the model.
@@ -59,9 +65,7 @@ export function NativeProviderPicker({ state, workspace, client, locked: current
     <div className="flex min-w-0 items-center gap-1">
       <NativeModelPopover selectedConnection={connection} providers={state.providers} store={store} selectedProvider={provider} selectedModel={model} selectedModelId={modelId} locked={!!locked}
         continuation={!!current}
-        settings={{ catalog: available, policyId, reasoning: effort, subagentModel: agentModel,
-          onPolicy: (value) => { choose(); setPolicy(value); setNeedsPolicy(false); },
-          onReasoning: (value) => { choose(); setReasoning(value); }, onSubagentModel: (value) => { choose(); setSubagentModel(value); } }}
+        settings={{ catalog: available, subagentModel: agentModel, onSubagentModel: (value) => { choose(); setSubagentModel(value); } }}
         onSelect={(nextProvider, nextModel) => {
           if (locked) return;
           const key = nativeProviderKey(nextProvider);
@@ -70,6 +74,12 @@ export function NativeProviderPicker({ state, workspace, client, locked: current
           if (changedProvider || model?.id !== nextModel.id) setReasoning(null);
           setChoice({ providerKey: key, modelId: nextModel.id, inherited: false });
         }} />
+      <ComposerSettingPopover name="Permissions" choices={policyChoices} selectedId={policyId}
+        placeholder={policyId ? "Permissions unavailable" : "Choose permissions"} disabled={!usable || !policyChoices.length} locked={!!locked} continuation={!!current}
+        onSelect={(value) => { choose(); setPolicy(value); setNeedsPolicy(false); }} />
+      {effortChoices.length > 0 && <ComposerSettingPopover name="Reasoning" choices={effortChoices} selectedId={effort ?? PROVIDER_REASONING}
+        placeholder={effort ?? "Reasoning"} disabled={!usable} locked={!!locked} continuation={!!current}
+        onSelect={(value) => { choose(); setReasoning(value === PROVIDER_REASONING ? null : value); }} />}
       <ProviderUsageWidget connection={connection} provider={provider} />
       {current && allowChange !== undefined && <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs" disabled={!allowChange}
         aria-label={editing ? "Cancel provider change" : "Change provider or model"}

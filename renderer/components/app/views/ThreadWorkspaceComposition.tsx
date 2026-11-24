@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { ThreadNavigationContext, ThreadCenterContext, ThreadTabsContext } from "@/components/app/context/threadWorkspaceContext";
 import { useThreadWorkspaceSnapshot } from "@/components/app/hooks/useThreadWorkspaceSnapshot";
 import { useUserDisplayName } from "@/components/app/hooks/useUserDisplayName";
+import { createExternalDiscoveryStore } from "@/components/app/logic/thread-workspace/externalDiscovery";
 import { threadDocumentTitle } from "@/components/app/logic/thread-workspace/changes";
 import type { ThreadWorkspaceCompositionProps, ThreadNavigationPorts, ThreadCenterPorts, ThreadTabsPorts } from "@/components/app/types/thread-workspace/ports.types";
 
@@ -22,8 +23,10 @@ export function ThreadWorkspaceComposition({ store, children }: ThreadWorkspaceC
       document.removeEventListener("visibilitychange", updateFocus);
     };
   }, [store]);
+  // Keyed to the store so discovered sessions survive sidebar remounts and workspace switches for the window's lifetime.
+  const externalSessions = useMemo(() => createExternalDiscoveryStore({ client: store.client }), [store]);
   const actions = useMemo(() => ({
-    client: store.client, resumeExternal: store.resumeExternal, pinExternal: store.pinExternal, setSettled: store.setSettled,
+    externalSessions, resumeExternal: store.resumeExternal, pinExternal: store.pinExternal, setSettled: store.setSettled,
     renameThread: store.renameThread,
     discardDraft: store.discardDraft,
     focusWorkspace: store.focusWorkspace,
@@ -35,7 +38,7 @@ export function ThreadWorkspaceComposition({ store, children }: ThreadWorkspaceC
     },
     setThreadVisible: store.setThreadVisible,
     togglePin: store.togglePin, refresh: () => { void store.refresh(); }
-  }), [store]);
+  }), [store, externalSessions]);
   const navigation = useMemo<ThreadNavigationPorts>(() => ({ state, ...actions }), [state, actions]);
   const center = useMemo<ThreadCenterPorts>(() => ({ state, store, userDisplayName }), [state, store, userDisplayName]);
   const tabs = useMemo<ThreadTabsPorts>(() => ({

@@ -102,3 +102,12 @@ test("initial routine inputs must belong to the newly created bot and its worksp
   await assert.rejects(applyBotRequest({ ...request, initialRoutines: [{ ...input, botId: "ada" }] }, s.store, s.deps), /available/);
   assert.deepEqual(s.settings.personalization.bots?.workspaces ?? {}, {});
 });
+
+test("an expected revision prevents a queued stale editor from overwriting a newer bot", async (t) => {
+  const s = setup(t);
+  const definition = bot("ada");
+  await applyBotRequest({ kind: "save-bot", bot: definition, previousScope: null }, s.store, s.deps);
+  await applyBotRequest({ kind: "save-bot", bot: { ...definition, name: "Newer" }, previousScope: definition.scope, expectedRevision: 1 }, s.store, s.deps);
+  await assert.rejects(applyBotRequest({ kind: "save-bot", bot: { ...definition, name: "Stale" }, previousScope: definition.scope, expectedRevision: 1 }, s.store, s.deps), /changed/);
+  assert.equal(s.settings.personalization.bots?.global[0].name, "Newer");
+});

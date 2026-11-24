@@ -78,8 +78,8 @@ export function ProjectSelectorScreen() {
                 <span className="inline-flex items-center gap-1">
                   {addWorkspaceShortcutParts.map(({ part, showPlus }, index) => (
                     <span key={`${part}-${index}`} className="inline-flex items-center gap-1">
-                      {showPlus ? <span className="text-[10px] text-muted-foreground">+</span> : null}
-                      <span className="rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5 font-mono text-[11px] leading-none text-foreground">
+                      {showPlus ? <span className="text-[9px] text-muted-foreground">+</span> : null}
+                      <span className="rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] leading-none text-foreground">
                         {part}
                       </span>
                     </span>
@@ -106,8 +106,8 @@ export function ProjectSelectorScreen() {
                       <span className="inline-flex items-center gap-1">
                         {(recentWorkspaceShortcutParts[index] ?? []).map(({ part, showPlus }, partIndex) => (
                           <span key={`${project.rootPath}-${part}-${partIndex}`} className="inline-flex items-center gap-1">
-                            {showPlus ? <span className="text-[10px] text-muted-foreground">+</span> : null}
-                            <span className="rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5 font-mono text-[11px] leading-none text-foreground">
+                            {showPlus ? <span className="text-[9px] text-muted-foreground">+</span> : null}
+                            <span className="rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] leading-none text-foreground">
                               {part}
                             </span>
                           </span>

@@ -60,7 +60,7 @@ function createPreservedTerminalSessionEntry(
     cursorBlink: true,
     disableStdin: false,
     fontFamily,
-    fontSize: 12,
+    fontSize: 11,
     lineHeight: 1.45,
     rows: 36,
     scrollback: 5000,

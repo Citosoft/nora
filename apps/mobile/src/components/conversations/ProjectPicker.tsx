@@ -37,5 +37,5 @@ export function ProjectMenu({ projects, selected, onSelect, disabled = false }: 
 const createStyles = (theme: Theme) => ({
   chip: { flexDirection: "row" as const, alignItems: "center" as const, gap: spacing.xs + 2, maxWidth: "100%" as const, height: 42, paddingHorizontal: spacing.sm },
   pressed: { opacity: 0.5 },
-  label: { ...type.body, fontSize: 18, color: theme.colors.textMuted, flexShrink: 1 }
+  label: { ...type.composer, color: theme.colors.textMuted, flexShrink: 1 }
 });

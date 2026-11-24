@@ -138,7 +138,7 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
     () => ({
       automaticLayout: true,
       minimap: { enabled: false },
-      fontSize: 13,
+      fontSize: 12,
       scrollBeyondLastLine: false,
       wordWrap: "on",
       smoothScrolling: true,

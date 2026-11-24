@@ -15,6 +15,12 @@ import { ThreadWorkspaceComposition } from "./ThreadWorkspaceComposition";
 import { SetupWindowShell } from "./SetupWindowShell";
 import type { NativeBoot, PersonalizationRequest } from "@shared/ipc/types/personalizationGateway.types";
 import type { NativeRuntimeProviderProps, NativeRuntimePorts, ThreadLaunchInput } from "@/components/app/types/thread-workspace/runtime.types";
+import type { FavoriteModelsPort } from "@/components/app/types/modelPicker.types";
+import type { ThreadModelDefault } from "@shared/types/personalization/threadModel.types";
+import { FavoriteModelsContext } from "@/components/app/context/favoriteModelsContext";
+import { InboxContext } from "@/components/app/context/inboxContext";
+
+const NO_FAVORITES: readonly ThreadModelDefault[] = [];
 
 /** Installs the native owner inside Nora's existing application, without rendering another shell. */
 export function NativeRuntimeProvider({ children }: NativeRuntimeProviderProps) {
@@ -47,7 +53,11 @@ export function NativeRuntimeProvider({ children }: NativeRuntimeProviderProps) 
     const text = [input.text, context].filter(Boolean).join("\n\n");
     return launchThreadDraft(store, { source: input.source, workspaceId: workspace.id, ...(text ? { text } : {}), ...(input.group ? { group: input.group } : {}), ...(input.provider ? { provider: input.provider } : {}) }, input.submit);
   }, [store, request]);
-  const ports = useMemo<NativeRuntimePorts | null>(() => store && boot ? { store, inbox, boot, request, launch } : null, [store, inbox, boot, request, launch]);
+  const ports = useMemo<NativeRuntimePorts | null>(() => store && boot ? { store, boot, request, launch } : null, [store, boot, request, launch]);
+  const favoriteModels = useMemo<FavoriteModelsPort>(() => ({
+    models: boot?.personalization.favoriteModels ?? NO_FAVORITES,
+    async setFavorite(model, favorite) { await request({ kind: "set-favorite-model", model, favorite }); }
+  }), [boot, request]);
   if (!boot || !ports) return <SetupWindowShell><div role={error ? "alert" : "status"} className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-sm"><p>{error ?? "Opening Nora…"}</p>{error && <Button onClick={reload}>Reconnect</Button>}</div></SetupWindowShell>;
   if (!boot.personalization.defaultRole) return <SetupWindowShell><RoleOnboarding busy={busy} error={error} onComplete={async (role) => {
     if (busy) return; setBusy(true); setError(null);
@@ -55,5 +65,7 @@ export function NativeRuntimeProvider({ children }: NativeRuntimeProviderProps) 
     catch (cause) { setError(cause instanceof Error ? cause.message : "Setup could not be saved. Try again."); }
     finally { setBusy(false); }
   }} /></SetupWindowShell>;
-  return <NativeRuntimeContext.Provider value={ports}><ThreadWorkspaceComposition store={ports.store}>{children}</ThreadWorkspaceComposition></NativeRuntimeContext.Provider>;
+  return <NativeRuntimeContext.Provider value={ports}><InboxContext.Provider value={inbox}><FavoriteModelsContext.Provider value={favoriteModels}>
+    <ThreadWorkspaceComposition store={ports.store}>{children}</ThreadWorkspaceComposition>
+  </FavoriteModelsContext.Provider></InboxContext.Provider></NativeRuntimeContext.Provider>;
 }

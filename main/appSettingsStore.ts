@@ -4,8 +4,7 @@ import {
   type AiSettings,
   type AppSettings,
   type TerminalPreset,
-  type TerminalQuickLaunchDefaults,
-  type VoiceSettings
+  type TerminalQuickLaunchDefaults
 } from "@shared/appTypes";
 import { safeStorageSecretCodec } from "@main/helpers/secretEncryption";
 import fsPromises from "node:fs/promises";
@@ -13,6 +12,7 @@ import path from "node:path";
 import { isNodeError } from "./nodeErrors";
 import { readPersonalization } from "@shared/personalization/settings";
 import { parseDesktopLifecycleSettings } from "@shared/desktop-lifecycle/settings";
+import { parseVoiceSettings } from "@shared/voice/settings";
 
 export class AppSettingsStore {
   constructor(private readonly filePath: string) {}
@@ -101,27 +101,6 @@ function parseAppSettings(raw: string): AppSettings {
   } catch {
     return DEFAULT_APP_SETTINGS;
   }
-}
-
-function parseVoiceSettings(candidate: AppSettings["voice"] | undefined): VoiceSettings {
-  if (!candidate || typeof candidate !== "object") {
-    return DEFAULT_APP_SETTINGS.voice;
-  }
-
-  const parsedSettings = candidate as Partial<VoiceSettings>;
-  const dictationProvider =
-    parsedSettings.dictationProvider === "openai" || parsedSettings.dictationProvider === "localWhisper"
-      ? parsedSettings.dictationProvider
-      : DEFAULT_APP_SETTINGS.voice.dictationProvider;
-  const localWhisperModelId =
-    parsedSettings.localWhisperModelId === "tiny.en" || parsedSettings.localWhisperModelId === "base.en"
-      ? parsedSettings.localWhisperModelId
-      : DEFAULT_APP_SETTINGS.voice.localWhisperModelId;
-
-  return {
-    dictationProvider,
-    localWhisperModelId
-  };
 }
 
 function parseAiSettings(candidate: AppSettings["ai"] | undefined): AiSettings {

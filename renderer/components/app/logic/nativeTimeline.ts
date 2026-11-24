@@ -4,7 +4,7 @@ import { askBotCall } from "./askBotCalls";
 import { rememberCall } from "./rememberCalls";
 import { mcpAppToolCall } from "./mcp-app/toolCall";
 import { toolOutputImages } from "./thread-workspace/outputs";
-import { nativeTurnActivity } from "./nativeTurnActivity";
+import { turnActivity } from "@shared/conversations/turnActivity";
 
 /**
  * Keep one stable tool activity row per turn and merge back-to-back reasoning into one row,
@@ -47,6 +47,16 @@ function entryRunId(entry: NativeTimelineEntry): string {
     : entry.kind === "images" ? entry.tool.runId : entry.runId;
 }
 
+function agentMessageRunId(entry: NativeTimelineEntry | undefined): string | null {
+  return entry?.kind === "item" && entry.item.kind === "message" && entry.item.role !== "user" ? entry.item.runId : null;
+}
+
+/** True when an agent message is followed directly by another agent message from the same turn. */
+function continuesIntoNextMessage(entry: NativeTimelineEntry, next: NativeTimelineEntry | undefined): boolean {
+  const runId = agentMessageRunId(entry);
+  return runId !== null && agentMessageRunId(next) === runId;
+}
+
 function entryKey(entry: NativeTimelineEntry): string {
   switch (entry.kind) {
     case "tools": return `tools:${entry.runId}`;
@@ -76,6 +86,7 @@ export function buildNativeTimeline(items: readonly TimelineItem[], runs: readon
     const startedAt = run?.startedAt ?? starts.get(runId);
     const last = lastEntries.get(runId) === index && run;
     return { key: entryKey(entry), entry, timing: last && startedAt ? { run, startedAt } : null,
-      activity: last ? nativeTurnActivity(run, latestItems.get(runId) ?? null) : null };
+      activity: last ? turnActivity(run, latestItems.get(runId) ?? null) : null,
+      continued: continuesIntoNextMessage(entry, entries[index + 1]) };
   });
 }

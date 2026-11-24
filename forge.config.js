@@ -109,6 +109,8 @@ module.exports = {
     executableName: "Nora",
     appBundleId: macBundleId,
     appCategoryType: "public.app-category.developer-tools",
+    // macOS refuses microphone access (composer voice input) to bundles without a usage description.
+    extendInfo: { NSMicrophoneUsageDescription: "Nora uses the microphone when you dictate a message with voice input." },
     icon:
       process.platform === "darwin"
         ? iconIcnsPath

@@ -3,6 +3,7 @@ import test from "node:test";
 import { normalizeCodexTool } from "@main/providers/codex/toolActivity";
 import { formatToolContent, formatToolInput } from "@main/providers/toolPresentation";
 import { normalizeCodexApproval } from "@main/providers/codex/approvals";
+import { codexAutoReviewPolicy, codexPermissionPolicy } from "@main/providers/codex/permissionPolicies";
 import { claudeApprovalDetails } from "@main/providers/claude/approvals";
 import type { JsonValue } from "@main/types/execution/rpc.types";
 import type { TimelineItem } from "@shared/types/conversation/contracts.types";
@@ -79,6 +80,24 @@ test("approval normalization retains command context, exact supported choices an
   assert.deepEqual(result.decisions["decision:1"], amendment);
   assert.equal(result.request.options[3].intent, "cancel");
   assert.throws(() => normalizeCodexApproval("item/commandExecution/requestApproval", { itemId: "x", turnId: "old" }, "turn", new Map(), "run"), /Stale/);
+});
+
+test("Codex approvals offer auto-review only when an accept decision and a matching auto-review policy exist", () => {
+  const params = { itemId: "command", turnId: "turn", command: "npm test", availableDecisions: ["accept", "decline"] };
+  const offered = normalizeCodexApproval("item/commandExecution/requestApproval", params, "turn", new Map(), "run", "auto");
+  assert.deepEqual(offered.request.options.map((option) => option.id), ["accept", "acceptAndAutoReview", "decline"]);
+  assert.equal(offered.request.options[1].switchesPolicy, "auto");
+  assert.equal(offered.decisions.acceptAndAutoReview, "accept");
+  const declineOnly = normalizeCodexApproval("item/commandExecution/requestApproval", { ...params, availableDecisions: ["decline"] }, "turn", new Map(), "run", "auto");
+  assert.deepEqual(declineOnly.request.options.map((option) => option.id), ["decline"]);
+  const manual = { approvalPolicy: "on-request", sandbox: "workspace-write" } as const;
+  const policies = { manual, auto: { ...manual, approvalsReviewer: "auto_review" }, readOnly: { approvalPolicy: "on-request", sandbox: "read-only" } } as const;
+  assert.equal(codexAutoReviewPolicy(policies, manual), "auto");
+  assert.equal(codexAutoReviewPolicy(policies, policies.auto), null);
+  assert.equal(codexAutoReviewPolicy(policies, policies.readOnly), null);
+  assert.equal(codexPermissionPolicy("auto", policies.auto).label, "Workspace edits · auto-review");
+  assert.equal(codexPermissionPolicy("auto", policies.auto).posture, "auto");
+  assert.equal(codexPermissionPolicy("readOnly", policies.readOnly).posture, "readOnly");
 });
 
 test("network and file approvals expose their actual target and affected paths", () => {

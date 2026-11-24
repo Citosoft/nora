@@ -79,6 +79,7 @@ export class ConversationEngine {
       }
       const decision = decideCommand(decisionCommand, { now, environmentId: this.deps.store.environmentId, state,
         steerFollowUp, providerTransition, providerConnection, bot, group, direct,
+        pinTarget: decisionCommand.kind === "set-message-pin" && decisionCommand.pinned ? transaction.item(decisionCommand.conversationId, decisionCommand.itemId) : undefined,
         writers: decisionCommand.kind === "create" ? transaction.writers(decisionCommand.workspace) : state ? transaction.writers(state.conversation.workspace) : [], effects: transaction.unfinishedEffects() });
       const created = decision.events.find((event) => event.kind === "conversation");
       const events = command.kind === "create" && externalTranscript && created?.kind === "conversation"

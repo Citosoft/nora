@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import test from "node:test";
 import { z } from "zod";
 import { ClaudeAdapter } from "@main/providers/claude/adapter";
+import { claudeAutoSwitchPolicy } from "@main/providers/claude/permissionPolicies";
 import { CodexAdapter } from "@main/providers/codex/adapter";
 import { StdioRpc } from "@main/providers/codex/stdioRpc";
 import { EffectWorker } from "@main/execution/effectWorker";
@@ -244,6 +245,40 @@ test("Claude receives a bot thread's guidance instead of the role's", async (t) 
   await registry.close();
 });
 
+test("a Claude bot thread skips account extras and connects only the account connectors its bot was given", async (t) => {
+  const f = fixture(t); f.create("conversation", "checkout", { ...provider, kind: "claude" }, { id: "research" });
+  const bot = snapshotBot({ id: "ada", name: "Ada", role: "Reviewer", instructions: "Review.", avatar: { seed: 1 }, scope: { kind: "global" }, revision: 1,
+    binding: { kind: "claude", instanceId: "account-a", model: provider.model, reasoning: null, permissionPolicy: null } });
+  f.engine.execute({ kind: "create", commandId: "create-bot", conversationId: "bot-thread", title: "Bot", parentId: null, botId: "ada", provider: { ...provider, kind: "claude" },
+    workspace: { environmentId: "local", projectId: "project", checkoutId: "checkout", path: "/test/checkout", branch: "main", access: "write" } }, { bot, role: { id: "research" } });
+  const gmail = { type: "claudeai-proxy" as const, url: "https://gmail.example/mcp", id: "mcpsrv_gmail" };
+  const resolved: string[][] = [];
+  const opened: ClaudeOpenInput[] = [];
+  const adapter = new ClaudeAdapter({ instanceId: "account-a", policies: { "native-default": "default" }, now, nextId: randomUUID, discover,
+    runContext: async (conversation) => ({ tools: null, connectors: [], guidance: null, turnNotes: null,
+      accountConnectors: conversation.bot ? ["claude.ai Gmail"] : [] }),
+    accountConnectors: { async resolve(_cwd, names) { resolved.push([...names]); return Object.fromEntries(names.filter((name) => name === "claude.ai Gmail").map((name) => [name, gmail])); } },
+    open(input) {
+      opened.push(input);
+      return { async interrupt() {}, close() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
+        yield { kind: "init", eventId: "init", sessionId: input.sessionId };
+        yield { kind: "finished", eventId: "done", status: "completed", failure: null, usage: { inputTokens: 0, outputTokens: 0 } };
+      } };
+    } });
+  const registry = new ProviderRegistry(); registry.register(adapter);
+  const worker = new EffectWorker(f.engine, registry);
+  f.submit("own thread"); await worker.runNext(); await worker.runNext(["review"]);
+  f.submit("hi", "bot-thread"); await worker.runNext(); await worker.runNext(["review"]);
+  const own = opened.find((input) => input.instruction === "own thread");
+  const botRun = opened.find((input) => input.instruction === "hi");
+  assert.equal(own?.accountExtras, true); assert.deepEqual(own?.accountConnectors, {});
+  assert.equal(botRun?.accountExtras, false); assert.deepEqual(botRun?.accountConnectors, { "claude.ai Gmail": gmail });
+  assert.equal(own?.promptSuggestions, true, "the user's own thread suggests replies by default");
+  assert.equal(botRun?.promptSuggestions, false, "a bot thread never pays for reply suggestions");
+  assert.deepEqual(resolved, [["claude.ai Gmail"]], "only the bot thread looks its connectors up");
+  await registry.close();
+});
+
 test("Codex RPC correlates replies, preserves split UTF-8 and rejects malformed frames without diagnostic leakage", async () => {
   const rpc = new StdioRpc({ process: spawn(process.execPath, [server]), onNotification() {},
     async onRequest() { return null; }, onDisconnect() {} });
@@ -332,6 +367,31 @@ test("Codex approval context falls back to its tool and returns the exact scoped
   } finally { await registry.close(); }
 });
 
+test("Codex offers to allow and switch to auto-review, and the next turn hands approvals to the reviewer", async (t) => {
+  const f = fixture(t); f.create(); f.submit();
+  const adapter = new CodexAdapter({ instanceId: "account-a", executable: process.execPath, arguments: [server],
+    environment: { NORA_CODEX_FIXTURE_MODE: "approval", NORA_CODEX_EXPECT_REVIEWERS: "user,auto_review" },
+    policies: { "native-default": { approvalPolicy: "on-request", sandbox: "workspace-write" },
+      "native-auto": { approvalPolicy: "on-request", sandbox: "workspace-write", approvalsReviewer: "auto_review" } }, now });
+  const registry = new ProviderRegistry(); registry.register(adapter);
+  const worker = new EffectWorker(f.engine, registry);
+  try {
+    const ready = waitFor(f.engine, "awaiting-approval"); await worker.runNext(); await ready;
+    const request = f.snapshot().requests[0];
+    if (request.kind !== "approval") throw new Error("Expected approval");
+    assert.deepEqual(request.options.map((option) => [option.id, option.switchesPolicy]), [["accept", undefined], ["acceptAndAutoReview", "native-auto"], ["decline", undefined]]);
+    const done = waitFor(f.engine, "completed");
+    f.command({ kind: "respond", commandId: "answer", conversationId: "conversation", requestId: request.id, response: { kind: "approval", optionId: "acceptAndAutoReview" } });
+    assert.equal(f.snapshot().conversation.provider.permissionPolicy, "native-auto");
+    await worker.runNext(); await done;
+    await worker.runNext(["review"]);
+    f.submit("second");
+    const second = waitFor(f.engine, "completed");
+    await worker.runNext(); await second;
+    assert.equal(f.snapshot().runs[1].state, "completed");
+  } finally { await registry.close(); }
+});
+
 test("Codex process loss remains recovering and exact native-turn recovery uses read rather than resubmit", async (t) => {
   const f = fixture(t); f.create(); f.submit();
   const adapter = new CodexAdapter({ instanceId: "account-a", executable: process.execPath, arguments: [server], environment: { NORA_CODEX_FIXTURE_MODE: "crash" },
@@ -380,7 +440,7 @@ test("Claude SDK lifecycle preserves native continuation and serves approval thr
       return { async interrupt() {}, close() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
         yield { kind: "init", sessionId: input.sessionId, eventId: "init" };
         yield { kind: "text", nativeId: "message", text: "Partial", complete: false, eventId: "delta" };
-        const answer = await input.onRequest({ kind: "approval", nativeId: "tool", title: "Run tests?", signal: new AbortController().signal });
+        const answer = await input.onRequest({ kind: "approval", nativeId: "tool", title: "Run tests?", permissionMode: "default", signal: new AbortController().signal });
         assert.deepEqual(answer, { kind: "approval", optionId: "allow" });
         yield { kind: "text", nativeId: "message", text: "Final", complete: true, eventId: "final" };
         yield { kind: "finished", eventId: "result", status: "completed", failure: null, usage: { inputTokens: 10, outputTokens: 2 } };
@@ -412,6 +472,51 @@ test("Claude SDK lifecycle preserves native continuation and serves approval thr
   await worker.runNext(); await second;
   assert.equal(opened[1].resume, true);
   assert.equal(opened[1].sessionId, opened[0].sessionId);
+});
+
+test("Claude offers to allow and switch to auto in manual mode, and later turns start in auto", async (t) => {
+  const f = fixture(t); f.create("conversation", "checkout", { ...provider, kind: "claude" }); f.submit();
+  const opened: ClaudeOpenInput[] = [];
+  const answers: unknown[] = [];
+  const adapter = new ClaudeAdapter({ instanceId: "account-a", policies: { "native-default": "default", "native-auto": "auto" }, now, nextId: randomUUID, discover,
+    open(input) {
+      opened.push(input);
+      return { async interrupt() {}, close() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
+        yield { kind: "init", sessionId: input.sessionId, eventId: "init" };
+        answers.push(await input.onRequest({ kind: "approval", nativeId: "tool", title: "Run tests?", permissionMode: input.permissionMode, signal: new AbortController().signal }));
+        yield { kind: "finished", eventId: "result", status: "completed", failure: null, usage: { inputTokens: 1, outputTokens: 1 } };
+      } };
+    } });
+  const registry = new ProviderRegistry(); registry.register(adapter);
+  const worker = new EffectWorker(f.engine, registry);
+  const awaiting = waitFor(f.engine, "awaiting-approval");
+  const running = worker.runNext();
+  await awaiting;
+  const request = f.snapshot().requests[0];
+  assert.ok(request.kind === "approval");
+  assert.deepEqual(request.options.map((option) => [option.id, option.switchesPolicy]), [["allow", undefined], ["allowAndAuto", "native-auto"], ["deny", undefined]]);
+  f.command({ kind: "respond", commandId: "answer", conversationId: "conversation", requestId: request.id, response: { kind: "approval", optionId: "allowAndAuto" } });
+  assert.equal(f.snapshot().conversation.provider.permissionPolicy, "native-auto");
+  await worker.runNext(); await running;
+  await worker.runNext(["review"]);
+  assert.deepEqual(answers, [{ kind: "approval", optionId: "allowAndAuto" }]);
+  f.submit("second");
+  const nextAwaiting = waitFor(f.engine, "awaiting-approval");
+  const second = worker.runNext();
+  await nextAwaiting;
+  assert.equal(opened[1].permissionMode, "auto");
+  const secondRequest = f.snapshot().requests.at(-1);
+  assert.ok(secondRequest?.kind === "approval");
+  assert.deepEqual(secondRequest.options.map((option) => option.id), ["allow", "deny"]);
+  f.command({ kind: "respond", commandId: "answer-2", conversationId: "conversation", requestId: secondRequest.id, response: { kind: "approval", optionId: "allow" } });
+  await worker.runNext(); await second;
+});
+
+test("Claude offers no auto switch when its runtime has no auto policy", () => {
+  assert.equal(claudeAutoSwitchPolicy({ "native-default": "default" }, "default"), null);
+  assert.equal(claudeAutoSwitchPolicy({ manual: "default", auto: "auto" }, "acceptEdits"), "auto");
+  assert.equal(claudeAutoSwitchPolicy({ manual: "default", auto: "auto" }, "plan"), null);
+  assert.equal(claudeAutoSwitchPolicy({ manual: "default", auto: "auto" }, "auto"), null);
 });
 
 test("Claude receives the thread's subagent model and stores reported agents with their model", async (t) => {
@@ -629,4 +734,23 @@ test("Codex read-only workers retain the native read-only sandbox on start and r
     for (const run of ["first", "resumed"]) { f.submit(run); const done = waitFor(f.engine, "completed"); await worker.runNext(["start"]); await done; await worker.runNext(["review"]); }
     assert.deepEqual(f.snapshot().runs.map((run) => run.state), ["completed", "completed"]);
   } finally { await registry.close(); }
+});
+
+test("turning suggested replies off stops Claude predicting the next message in the user's own threads", async (t) => {
+  const f = fixture(t); f.create("conversation", "checkout", { ...provider, kind: "claude" }, { id: "research" });
+  const opened: ClaudeOpenInput[] = [];
+  const adapter = new ClaudeAdapter({ instanceId: "account-a", policies: { "native-default": "default" }, now, nextId: randomUUID, discover,
+    promptSuggestions: () => false,
+    open(input) {
+      opened.push(input);
+      return { async interrupt() {}, close() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
+        yield { kind: "init", eventId: "init", sessionId: input.sessionId };
+        yield { kind: "finished", eventId: "done", status: "completed", failure: null, usage: { inputTokens: 0, outputTokens: 0 } };
+      } };
+    } });
+  const registry = new ProviderRegistry(); registry.register(adapter);
+  const worker = new EffectWorker(f.engine, registry);
+  f.submit("first"); await worker.runNext(); await worker.runNext(["review"]);
+  assert.equal(opened[0].promptSuggestions, false);
+  await registry.close();
 });

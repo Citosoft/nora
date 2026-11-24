@@ -3,15 +3,15 @@ import type { TimelineEntry } from "@/types/conversationState.types";
 import { ChangesItem, ConnectorSignInItem, MilestoneItem, PlanItem, ReasoningItem, ReviewItem } from "./CompactItems";
 import { MessageItem } from "./MessageItem";
 import { SubagentItem } from "./SubagentItem";
-import { ToolCard } from "./ToolCard";
+import { ToolHistory } from "./ToolHistory";
 
 export const TimelineEntryView = memo(function TimelineEntryView({ entry }: { entry: TimelineEntry }) {
+  if (entry.kind === "tools") return <ToolHistory items={entry.items} />;
+  if (entry.kind === "reasoning") return <ReasoningItem items={entry.items} />;
   if (entry.kind === "subagent") return <SubagentItem item={entry.item} children={entry.children} />;
   const item = entry.item;
   switch (item.kind) {
     case "message": return <MessageItem item={item} />;
-    case "reasoning": return <ReasoningItem item={item} />;
-    case "tool": return <ToolCard item={item} />;
     case "milestone": return <MilestoneItem item={item} />;
     case "plan": return <PlanItem item={item} />;
     case "changes": return <ChangesItem item={item} />;

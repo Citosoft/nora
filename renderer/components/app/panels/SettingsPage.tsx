@@ -80,7 +80,7 @@ export function SettingsPage({ initialGroup }: SettingsPageProps) {
           </TabsContent>
 
           <TabsContent value="threads" className="mt-0">
-            <ThreadsSettingsSection />
+            <ThreadsSettingsSection revealTarget={revealTarget} />
           </TabsContent>
 
           <TabsContent value="bots" className="mt-0">

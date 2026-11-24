@@ -11,7 +11,7 @@ export function ThreadConnectorList({ servers, source, logins }: ThreadConnector
   return <>
     <ul className="space-y-1.5">{servers.slice(0, PREVIEW_LIMIT).map((server) => <ThreadConnectorRow key={server.name} server={server} source={source} logins={logins} />)}</ul>
     {hidden > 0 && <Popover>
-      <PopoverTrigger asChild><Button variant="ghost" size="sm" className="mt-1 h-7 px-0 text-[11px] text-muted-foreground hover:text-foreground">
+      <PopoverTrigger asChild><Button variant="ghost" size="sm" className="mt-1 h-7 px-0 text-[10px] text-muted-foreground hover:text-foreground">
         Show {hidden} more<span className="sr-only"> connectors</span>
       </Button></PopoverTrigger>
       <PopoverContent side="left" align="start" className="w-72 p-0 text-xs" aria-label={`${source.label} connectors`}>

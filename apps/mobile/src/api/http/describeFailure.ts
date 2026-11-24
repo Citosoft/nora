@@ -1,4 +1,5 @@
 import type { RemoteService, RequestFailure } from "@/types/http.types";
+import { NORA_RELAY_NAME } from "@shared/remote-access/constants";
 
 const subject: Record<RemoteService, string> = {
   runtime: "your computer",
@@ -35,14 +36,14 @@ function describeApiCode(service: RemoteService, code: string, message: string):
       return "Your sign-in has expired. Sign in again to continue.";
     case "forbidden":
       return service === "runtime"
-        ? "This computer belongs to a different Nora account, or remote access was turned off on it."
+        ? `This computer belongs to a different Nora account, or ${NORA_RELAY_NAME} was turned off on it.`
         : "That isn't allowed for your account.";
     case "not-found":
       return service === "runtime" ? "That item no longer exists on your computer." : "That computer is no longer linked to your account.";
     case "rate-limited":
       return "Too many requests right now. Wait a moment and try again.";
     case "unavailable":
-      return "Remote access is paused on your computer, or Nora is shutting down.";
+      return `${NORA_RELAY_NAME} is paused on your computer, or Nora is shutting down.`;
     case "cursor-unavailable":
       return "Some updates are no longer available; reloading the latest state.";
     case "too-large":

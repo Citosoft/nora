@@ -3,7 +3,7 @@ import type { SplashScreenProps } from "@/components/app/types/component.types";
 export function SplashScreen({ title, subtitle, children }: SplashScreenProps) {
   return (
     <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center gap-6 bg-background/70 px-8 text-center backdrop-blur-[6px]">
-      <img src="./icon.svg" alt="Nora logo" className="h-16 w-16" />
+      <img src="./mark.svg" alt="Nora logo" className="h-16 w-16" />
       <div>
         <div className="text-lg font-semibold text-foreground">{title}</div>
         <div className="text-sm text-muted-foreground">{subtitle}</div>

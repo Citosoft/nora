@@ -4,6 +4,8 @@ import { BotRoutinePresets } from "./BotRoutinePresets";
 import { templateConnectorIds, templateConnectorMatches } from "@shared/bots/templateConnectors";
 import { useNoraConnectors } from "@/components/app/hooks/useNoraConnectors";
 import { BotConnectorFields } from "./BotConnectorFields";
+import { BotAccountConnectorFields } from "./BotAccountConnectorFields";
+import { useRuntimeAccountConnectors } from "@/components/app/hooks/useRuntimeAccountConnectors";
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
@@ -30,6 +32,7 @@ export function BotEditorDialog({ target, workspace, defaultScope, takenIds, tem
   const [draft, setDraft] = useState<BotEditorDraft>(() => existing ? botEditorDraft(existing)
     : template ? templateEditorDraft(template, defaultScope, boot.personalization.threadModel ?? null, randomBotAvatarSeed())
     : newBotEditorDraft(defaultScope, boot.personalization.threadModel ?? null, randomBotAvatarSeed()));
+  const accountConnectors = useRuntimeAccountConnectors(draft.model);
   const [connectorsChanged, setConnectorsChanged] = useState(false);
   const useTemplateConnectors = !!template && !existing && !connectorsChanged;
   const connectorWorkspaceId = draft.scope.kind === "workspace" ? draft.scope.workspaceId : workspace?.id ?? null;
@@ -104,6 +107,8 @@ export function BotEditorDialog({ target, workspace, defaultScope, takenIds, tem
                 recommendations={template ? templateConnectorMatches(template, []).map((match) => match.entry) : []}
                 workspaceId={connectorWorkspaceId} botId={existing?.id ?? null}
                 onChange={(connectorIds) => update({ connectorIds })} />
+              <BotAccountConnectorFields selected={draft.accountConnectors} state={accountConnectors} disabled={busy}
+                onChange={(names) => update({ accountConnectors: names })} />
               {matchingConnectors && <p role="status" className="text-xs text-muted-foreground">Matching template connectors…</p>}
               {useTemplateConnectors && connectors.loadError && <p role="alert" className="text-xs text-destructive">Template connectors could not be matched. You can choose them later.</p>}
               {template && !existing && <BotRoutinePresets template={template} selectedIds={routineIds} workspaces={boot.workspaces} workspaceId={routineWorkspaceId}

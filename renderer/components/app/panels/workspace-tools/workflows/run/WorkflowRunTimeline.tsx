@@ -13,7 +13,7 @@ export function WorkflowRunTimeline({ events, runStatus }: WorkflowRunTimelinePr
             <WorkflowRunStatusIcon status={loopRunEventStatus(entry.kind, entry.id === latestEventId, runStatus)} className="mt-0.5" />
             <div className="min-w-0">
               <p className="text-sm leading-5">{entry.message}</p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">{new Date(entry.createdAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</p>
+              <p className="mt-0.5 text-[10px] text-muted-foreground">{new Date(entry.createdAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</p>
             </div>
           </div>
         ))}

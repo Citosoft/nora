@@ -10,9 +10,10 @@ import {
 } from "@main/releaseDownloads";
 import { getLocalAiModelStatus, installLocalAiModel } from "@main/ai/localAiModels";
 import { getLocalAiRuntimeStatus, installLocalAiRuntime } from "@main/ai/localAiRuntime";
-import { getLocalVoiceModelStatus, installLocalVoiceModel } from "@main/ai/localVoiceModels";
-import { getLocalVoiceRuntimeStatus, installLocalVoiceRuntime } from "@main/ai/localVoiceRuntime";
+import { getLocalVoiceSetupStatus, installLocalVoiceModel } from "@main/ai/local-voice/setup";
+import { isLocalVoiceModelId } from "@shared/voice/localModels";
 import { transcribeVoiceInput } from "@main/ai/voiceTranscription";
+import { getVoiceInputReadiness } from "@main/ai/voiceInputReadiness";
 import type {
   AgentCompletionNotificationPayload,
   AnalyticsRuntimeConfig,
@@ -25,7 +26,7 @@ import type {
   BrowserDataImportResult,
   LatestReleaseAssetsResult,
   LocalLlmModelId,
-  LocalWhisperModelId,
+  LocalVoiceModelId,
   LocalTerminalState,
   LinuxAptSetupStatus,
   LinuxUpdateStatus,
@@ -101,14 +102,8 @@ export function registerSystemIpc({
     const browserSession = session.fromPartition("persist:nora-browser");
     return importChromeBrowserDataToSession(browserSession, process.platform, process.env, {}, profileId || "Default");
   });
-  ipcMain.handle("app:get-local-voice-model-status", (_event, modelId: LocalWhisperModelId) =>
-    getLocalVoiceModelStatus(modelId)
-  );
-  ipcMain.handle("app:get-local-voice-runtime-status", () => getLocalVoiceRuntimeStatus());
-  ipcMain.handle("app:install-local-voice-model", (_event, modelId: LocalWhisperModelId) =>
-    installLocalVoiceModel(modelId)
-  );
-  ipcMain.handle("app:install-local-voice-runtime", () => installLocalVoiceRuntime());
+  ipcMain.handle("app:get-local-voice-setup-status", (_event, modelId: unknown) => getLocalVoiceSetupStatus(requireLocalVoiceModelId(modelId)));
+  ipcMain.handle("app:install-local-voice-model", (_event, modelId: unknown) => installLocalVoiceModel(requireLocalVoiceModelId(modelId)));
   ipcMain.handle("app:get-local-ai-model-status", (_event, modelId: LocalLlmModelId) =>
     getLocalAiModelStatus(modelId)
   );
@@ -117,15 +112,7 @@ export function registerSystemIpc({
     installLocalAiModel(modelId)
   );
   ipcMain.handle("app:install-local-ai-runtime", () => installLocalAiRuntime());
-  ipcMain.handle("app:get-analytics-runtime-config", (): AnalyticsRuntimeConfig => ({
-    ...analyticsRuntimeConfig,
-    coarseLaunchContext: {
-      ...analyticsRuntimeConfig.coarseLaunchContext,
-      countryCode: app.getLocaleCountryCode() || null,
-      language: app.getLocale().split("-")[0] || null,
-      timezoneOffsetMinutes: new Date().getTimezoneOffset()
-    }
-  }));
+  ipcMain.handle("app:get-analytics-runtime-config", (): AnalyticsRuntimeConfig => ({ ...analyticsRuntimeConfig }));
   ipcMain.handle("app:get-linux-apt-setup-status", (): Promise<LinuxAptSetupStatus> => getLinuxAptSetupStatus());
   ipcMain.handle("app:install-linux-apt-updates", (): Promise<LinuxAptSetupStatus> => installLinuxAptUpdates());
   ipcMain.handle("app:get-linux-update-status", (): Promise<LinuxUpdateStatus> => getLinuxUpdateStatus());
@@ -203,7 +190,15 @@ export function registerSystemIpc({
   ipcMain.handle("app:open-project-in-ide", (_event, ideId: string, projectPath: string) =>
     openProjectInIde(ideId, projectPath)
   );
+  ipcMain.handle("app:get-voice-input-readiness", () => getVoiceInputReadiness(getAppSettings(), {
+    getLocalSetupStatus: getLocalVoiceSetupStatus
+  }));
   ipcMain.handle("app:transcribe-voice-input", (_event, payload: VoiceInputTranscriptionPayload) =>
     transcribeVoiceInput(getAppSettings(), payload)
   );
+}
+
+function requireLocalVoiceModelId(value: unknown): LocalVoiceModelId {
+  if (!isLocalVoiceModelId(value)) throw new Error("Unknown local voice model.");
+  return value;
 }

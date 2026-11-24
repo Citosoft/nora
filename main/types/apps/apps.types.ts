@@ -1,3 +1,4 @@
+import type { Conversation } from "@shared/types/conversation/contracts.types";
 import type { JsonValue } from "@main/jsonValue";
 import type { ConnectorService, ConnectorToolAccess } from "@main/types/connectors/connectors.types";
 import type { ConversationInvocation } from "@main/types/execution/gateway.types";
@@ -63,7 +64,15 @@ export interface AppServiceOptions {
 }
 export interface CreateAppInput { name: string; workspaceId: string; threadId: string | null; spec: AppSpecInput; suggestions?: readonly string[]; icon?: AppIcon; }
 /** An omitted icon keeps the app's current one. */
-export interface UpdateAppInput { id: string; spec: AppSpecInput; summary: string; suggestions?: readonly string[]; icon?: AppIcon; }
+export interface UpdateAppInput {
+  id: string;
+  /** The version the change was made against; when set, a newer saved version rejects it so edits the caller has not seen are never overwritten. */
+  baseVersion?: number;
+  spec: AppSpecInput;
+  summary: string;
+  suggestions?: readonly string[];
+  icon?: AppIcon;
+}
 /** A spec arriving from a file, with its connector ids already replaced by local ones. */
 export interface ImportAppInput { name: string; workspaceId: string; spec: AppSpecInput; icon?: AppIcon; }
 /** The OS dialogs an export or import goes through; null when the user cancels. */
@@ -127,3 +136,6 @@ export interface AppsIpcDeps {
   now(): string;
   isAllowedSender(event: ConversationInvocation): boolean;
 }
+
+/** The source of an app's builder thread. */
+export type AppThreadSource = Extract<NonNullable<Conversation["source"]>, { kind: "app" }>;

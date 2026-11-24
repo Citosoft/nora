@@ -1,41 +1,16 @@
 import { tokenizeForgeDiffCode } from "@/components/app/logic/forgeDiffSyntaxHighlight";
-import type { ForgeDiffCodeLineKind, ForgeDiffCodeLineProps } from "@/components/app/types/forgeDiffCodeLine.types";
+import { diffTextClass } from "@/components/app/logic/diffLineStyles";
+import type { DiffLineTone } from "@/components/app/types/diffLine.types";
+import type { ForgeDiffCodeLineProps } from "@/components/app/types/forgeDiffCodeLine.types";
 import type { ForgeDiffSyntaxTokenKind } from "@/components/app/types/forgeDiffSyntaxHighlight.types";
 import { cn } from "@/lib/utils";
 import { useMemo } from "react";
 
-function getDiffCodeLineKind(text: string): ForgeDiffCodeLineKind {
-  if (text.startsWith("+") && !text.startsWith("+++")) {
-    return "added";
-  }
-  if (text.startsWith("-") && !text.startsWith("---")) {
-    return "deleted";
-  }
-  if (text.startsWith(" ")) {
-    return "context";
-  }
-  return "meta";
+function getDiffCodeContent(text: string, tone: DiffLineTone): string {
+  return tone === "addition" || tone === "deletion" || tone === "context" ? text.slice(1) || " " : text || " ";
 }
 
-function getDiffCodeContent(text: string, kind: ForgeDiffCodeLineKind): string {
-  if (kind === "added" || kind === "deleted" || kind === "context") {
-    return text.slice(1) || " ";
-  }
-  return text || " ";
-}
-
-function getDiffMarker(text: string, kind: ForgeDiffCodeLineKind): string {
-  if (kind === "added") {
-    return "+";
-  }
-  if (kind === "deleted") {
-    return "-";
-  }
-  if (kind === "context") {
-    return " ";
-  }
-  return text.startsWith("@@") ? "@@" : " ";
-}
+const MARKERS: Partial<Record<DiffLineTone, string>> = { addition: "+", deletion: "-", context: " " };
 
 function getTokenClassName(tokenKind: ForgeDiffSyntaxTokenKind, resolvedTheme: ForgeDiffCodeLineProps["resolvedTheme"]): string {
   if (tokenKind === "comment") {
@@ -62,30 +37,18 @@ function getTokenClassName(tokenKind: ForgeDiffSyntaxTokenKind, resolvedTheme: F
   return "";
 }
 
-export function ForgeDiffCodeLine({ text, languageId, resolvedTheme }: ForgeDiffCodeLineProps) {
-  const kind = useMemo(() => getDiffCodeLineKind(text), [text]);
-  const marker = useMemo(() => getDiffMarker(text, kind), [kind, text]);
-  const content = useMemo(() => getDiffCodeContent(text, kind), [kind, text]);
-  const tokens = useMemo(
-    () => (kind === "meta" ? [{ text: content, kind: "plain" as const }] : tokenizeForgeDiffCode(content, languageId)),
-    [content, kind, languageId]
-  );
+export function ForgeDiffCodeLine({ text, tone, languageId, resolvedTheme }: ForgeDiffCodeLineProps) {
+  const marker = MARKERS[tone];
+  const content = getDiffCodeContent(text, tone);
+  const tokens = useMemo(() => (marker === undefined ? [] : tokenizeForgeDiffCode(content, languageId)), [content, marker, languageId]);
 
-  if (kind === "meta") {
-    return <span className="text-muted-foreground">{content}</span>;
+  if (marker === undefined) {
+    return <span className={diffTextClass(tone)}>{content}</span>;
   }
 
   return (
     <span className="grid min-w-0 grid-cols-[1.25rem_minmax(0,1fr)]">
-      <span
-        className={cn(
-          "select-none font-semibold",
-          kind === "added" ? "text-emerald-600 dark:text-emerald-300" : null,
-          kind === "deleted" ? "text-red-600 dark:text-red-300" : null,
-          kind === "context" ? "text-muted-foreground/70" : null
-        )}
-        aria-hidden
-      >
+      <span className={cn("select-none font-semibold", tone === "context" ? "text-muted-foreground/70" : diffTextClass(tone))} aria-hidden>
         {marker}
       </span>
       <span className="min-w-0">

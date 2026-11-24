@@ -35,6 +35,25 @@ WORK ACROSS COMPUTERS
 Sign in with the same account you use in Nora Desktop and your linked computers appear automatically. Switch between them at any time.
 
 PRIVATE BY DESIGN
-Your phone connects directly to your own computer through Nora Connect. Your code and conversations stay on your machine; Nora's servers only list which computers are linked to your account.
+Your phone connects directly to your own computer through Nora Relay. Your code and conversations stay on your machine; Nora's servers only list which computers are linked to your account.
 
 Requires Nora Desktop running on a Mac, Windows or Linux computer with remote access turned on. Get it at withnora.run.
+
+## TestFlight review: offline demo
+
+On the welcome screen, tap **Explore demo**. No credentials or linked computer are required. If the sign-in service is
+unavailable, the same button is available on the loading screen. A persistent “Demo mode · Simulated activity” bar
+identifies the preview and includes **Leave demo**, which resets its data.
+
+The demo uses the normal app screens with a simulated computer and local data. Reviewers can read and send chats,
+start new chats and bot chats, approve or decline a sample command, answer a sample question, stop a sample task,
+manage inbox updates, and edit sample bots and thread preferences. Responses and activity are simulated; the demo
+does not execute code, call an AI provider, or access a real computer. Live remote operation requires Nora Desktop
+running on the user's own computer with remote access enabled.
+
+## TestFlight: what to test
+
+Tap Explore demo on the welcome screen to test without signing in or connecting a computer. Try sending a message,
+starting a chat, chatting with a bot, answering the approval and question in Inbox, and stopping the running sample
+task in Activity. Open Settings to edit sample bots and thread preferences. Leave and re-enter demo mode to reset
+the scenarios. With your own Nora Desktop computer, also test sign-in, live updates, reconnection and approvals.

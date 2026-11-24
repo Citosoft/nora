@@ -21,11 +21,11 @@ export type DiffAnnotationIntroDialogProps = {
 
 function DiffAnnotationPreview() {
   return (
-    <div className="overflow-hidden rounded-lg border border-border/70 bg-background text-[12px] shadow-sm">
+    <div className="overflow-hidden rounded-lg border border-border/70 bg-background text-[11px] shadow-sm">
       <div className="border-b border-border/60 bg-muted/35 px-3 py-2">
         <div className="truncate text-xs font-medium text-foreground">renderer/components/app/panels/DiffViewer.tsx</div>
       </div>
-      <div className="terminal-text space-y-1 p-3 font-mono text-[12px] leading-6">
+      <div className="terminal-text space-y-1 p-3 font-mono text-[11px] leading-6">
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1 whitespace-pre-wrap rounded-md bg-emerald-500/10 px-2 text-emerald-600">
             + const canAnnotate = annotationsEnabled &amp;&amp; canAnnotateDiffLine(line);

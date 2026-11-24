@@ -8,6 +8,7 @@ import { SettingsSectionHeader } from "./settingsUi";
 import { BotList } from "./bots/BotList";
 import { BotEditorDialog } from "./bots/BotEditorDialog";
 import { MemorySettings } from "./bots/MemorySettings";
+import { ThreadModelDefaultSetting } from "./ThreadModelDefaultSetting";
 import type { BotDefinition, BotScope } from "@shared/types/bots/bots.types";
 import type { BotEditorTarget } from "@/components/app/types/botEditor.types";
 
@@ -55,6 +56,11 @@ export function BotsSettingsSection() {
       <BotList bots={local} emptyText="This workspace has no bots of its own." onEdit={edit} />
       {shared?.problems.map((problem) => <p key={problem.file} role="alert" className="text-xs text-destructive"><code>{problem.file}</code>: {problem.message}</p>)}
     </section>}
+    <section aria-labelledby="bots-nora" className="space-y-3">
+      <div><h2 id="bots-nora" className="text-sm font-medium">Nora</h2>
+        <p className="text-sm text-muted-foreground">Your built-in app assistant. Its chat in the Bots sidebar hands work to ordinary Nora threads.</p></div>
+      <ThreadModelDefaultSetting target="nora-chat" />
+    </section>
     <MemorySettings />
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     {editor && <BotEditorDialog key={editor.key} target={editor.target} workspace={workspace} defaultScope={editor.scope}

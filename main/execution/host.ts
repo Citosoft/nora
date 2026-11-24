@@ -27,7 +27,8 @@ import { DEFAULT_THREAD_PREFERENCES } from "@shared/personalization/threads";
 import { IdleSettlement } from "./idleSettlement";
 import { prepareProviderTransition } from "./provider-transition/prepare";
 import { snapshotBot } from "@shared/bots/snapshot";
-import type { BotSnapshot, DirectDescriptor, DirectRequest, GroupDescriptor, GroupRequest } from "@shared/types/bots/bots.types";
+import type { BotSnapshot, ChatBotProfile, DirectDescriptor, DirectRequest, GroupDescriptor, GroupRequest } from "@shared/types/bots/bots.types";
+import { chatBotFor } from "@shared/bots/noraChat";
 import { GROUP_HOP_LIMIT_DEFAULT } from "@shared/bots/contracts";
 
 /** The environment owner, independent of Electron windows, views and SSH connections. */
@@ -159,8 +160,12 @@ export class ExecutionHost {
     return { members, writer: request.writer, lead: request.lead, hopLimit: GROUP_HOP_LIMIT_DEFAULT };
   }
   /** One chat per bot: a second create for the same bot is refused while its chat exists, except a retry of the create that made it. */
+  /** Direct chats can also be with Nora, which every workspace has. */
+  private chatBot(workspaceId: string, botId: string): ChatBotProfile | null {
+    return chatBotFor((id, botIdToFind) => this.deps.botForWorkspace?.(id, botIdToFind) ?? null)(workspaceId, botId);
+  }
   private resolveDirect(request: DirectRequest, conversationId: string): DirectDescriptor {
-    const bot = this.deps.botForWorkspace?.(request.workspaceId, request.botId);
+    const bot = this.chatBot(request.workspaceId, request.botId);
     if (!bot) throw new ExecutionCommandError("invalid", "This bot is no longer available in this workspace. Choose another bot or Nora.");
     const scope = bot.scope.kind === "workspace" ? { kind: "workspace" as const, workspaceId: bot.scope.workspaceId } : { kind: "global" as const };
     const existing = this.deps.store.summaries().find(({ conversation }) => conversation.direct?.botId === bot.id
@@ -170,7 +175,7 @@ export class ExecutionHost {
   }
   private assertDirectWorkspace(conversationId: string, workspaceId: string): void {
     const direct = this.deps.store.header(conversationId)?.conversation.direct;
-    if (direct && !this.deps.botForWorkspace?.(workspaceId, direct.botId)) {
+    if (direct && !this.chatBot(workspaceId, direct.botId)) {
       throw new ExecutionCommandError("invalid", `${direct.name} is not available in that workspace.`);
     }
   }

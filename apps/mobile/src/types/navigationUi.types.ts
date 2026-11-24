@@ -27,6 +27,8 @@ export interface ScreenProps {
   title: string;
   /** iOS large title that collapses into the bar as the content scrolls. */
   largeTitle?: boolean;
+  /** A custom header in place of the large title (e.g. the dashboard greeting); the bar title fades in once it scrolls away. */
+  hero?: ReactNode;
   subtitle?: string | undefined;
   back?: BackAction;
   leading?: ReactNode;

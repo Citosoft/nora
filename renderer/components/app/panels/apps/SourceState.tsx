@@ -19,10 +19,10 @@ export function SourceState({ state, onSignIn, onLoadMore, children }: SourceSta
   const fetched = state.fetchedAt ? new Date(state.fetchedAt) : null;
   return <div className={state.status === "loading" ? "opacity-60 transition-opacity" : undefined} aria-busy={state.status === "loading"}>
     {children}
-    <p className="mt-2 flex flex-wrap items-center gap-x-2 text-[11px] text-muted-foreground">
+    <p className="mt-2 flex flex-wrap items-center gap-x-2 text-[10px] text-muted-foreground">
       <span>{state.status === "loading" ? "Refreshing…" : fetched ? `Updated ${relative(fetched, Math.max(now, fetched.getTime()))}` : null}
         {state.status === "ready" && state.truncated && " · showing the first rows; narrow the source to see everything"}</span>
-      {state.status === "ready" && state.hasMore && onLoadMore && <button type="button" onClick={onLoadMore} className="rounded border border-border/70 px-1.5 py-0.5 text-[11px] hover:bg-muted">Load more</button>}
+      {state.status === "ready" && state.hasMore && onLoadMore && <button type="button" onClick={onLoadMore} className="rounded border border-border/70 px-1.5 py-0.5 text-[10px] hover:bg-muted">Load more</button>}
     </p>
   </div>;
 }

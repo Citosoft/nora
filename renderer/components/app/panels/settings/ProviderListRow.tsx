@@ -8,7 +8,8 @@ export function ProviderListRow({ tool, accountView, loginMethods, connecting, o
     <AgentToolIcon connection={accountView?.status === "ready" ? accountView.connection : undefined} toolId={tool.id} label={tool.label} className="size-9 shrink-0" imageClassName="size-6 rounded-md" />
     <div className="min-w-0 flex-1">
       <div className="font-medium text-foreground">{tool.label}</div>
-      {accountView ? <ProviderAccountStatus providerLabel={tool.label} view={accountView} loginMethods={loginMethods} onSignIn={onSignIn} />
+      {!tool.enabled ? <p className="text-sm text-muted-foreground">Enable {tool.label} to check its sign-in.</p>
+        : accountView ? <ProviderAccountStatus providerLabel={tool.label} view={accountView} loginMethods={loginMethods} onSignIn={onSignIn} />
         : <p role="status" className="text-sm text-muted-foreground">{connecting ? `Connecting ${tool.label}…`
           : `Nora couldn't find ${tool.label}'s runtime. If it needs a separate ACP adapter, install that, then refresh.`}</p>}
     </div>

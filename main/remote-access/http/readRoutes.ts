@@ -1,3 +1,5 @@
+import { readProviderOptions } from "./providerOptions";
+import { readRemoteManagement } from "./management";
 import { RUNTIME_CAPABILITIES, runtimeInfoSchema, projectsResponseSchema, botsResponseSchema, conversationsResponseSchema, conversationsQuerySchema,
   conversationDetailResponseSchema, timelineResponseSchema, timelineQuerySchema, tasksResponseSchema, eventsQuerySchema, eventsResponseSchema, inboxResponseSchema } from "@shared/remote-access/runtimeApi";
 import { REMOTE_API_VERSION } from "@shared/remote-access/constants";
@@ -14,11 +16,13 @@ export function requireRemoteConversation(options: RuntimeApiOptions, id: string
 }
 
 /** Validates outbound shapes as well as incoming queries so provider additions cannot leak raw payloads. */
-export function readRuntimeRoute(options: RuntimeApiOptions, route: RuntimeRoute, query: URLSearchParams): Response {
+export async function readRuntimeRoute(options: RuntimeApiOptions, route: RuntimeRoute, query: URLSearchParams): Promise<Response> {
   const host = options.host;
   switch (route.kind) {
     case "info": return Response.json(runtimeInfoSchema.parse({ apiVersion: REMOTE_API_VERSION, runtimeVersion: options.runtimeVersion,
-      name: options.name(), environment: options.environment, environmentId: host.environmentId, capabilities: RUNTIME_CAPABILITIES, cursor: host.eventCursor() }));
+      name: options.name(), environment: options.environment, environmentId: host.environmentId, capabilities: RUNTIME_CAPABILITIES.filter((capability) => capability === "attachments.upload" ? Boolean(options.attachments) : options.management || (capability !== "settings.manage" && capability !== "bots.manage")), cursor: host.eventCursor() }));
+    case "settings": case "bot-settings": return readRemoteManagement(options, route.kind);
+    case "provider-options": return readProviderOptions(options, query);
     case "projects": return Response.json(projectsResponseSchema.parse({ projects: options.boot().workspaces.map(({ id, name, kind }) => ({ id, name, kind })) }));
     case "bots": return Response.json(botsResponseSchema.parse({ bots: listRemoteBots(options.boot(), host.summaries()) }));
     case "conversations": {

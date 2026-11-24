@@ -1,7 +1,7 @@
 import { isNodeError } from "@main/nodeErrors";
 import type { AccountSession } from "@main/types/account/session.types";
 import { runtimeNameSchema } from "@shared/remote-access/directory";
-import { REMOTE_WEB_APP_ORIGIN } from "@shared/remote-access/constants";
+import { NORA_RELAY_NAME, RELAY_RETENTION, REMOTE_WEB_APP_ORIGIN } from "@shared/remote-access/constants";
 import type { RemoteAccessStatus, RemoteAccessView } from "@shared/types/remote-access/remoteAccess.types";
 import type { RemoteAccessService } from "@main/types/remote-access/service.types";
 import type { RemoteCoordinatorOptions } from "@main/types/remote-access/coordinator.types";
@@ -34,10 +34,10 @@ export function createRemoteAccessService(options: RemoteCoordinatorOptions): Re
   const assertCurrent = (epoch: number, session?: AccountSession): void => {
     const current = options.session();
     if (disposed || epoch !== generation || controller.signal.aborted || (session && (current?.userId !== session.userId || current.sessionId !== session.sessionId))) {
-      throw new Error("Remote access changed before this operation finished.");
+      throw new Error(`${NORA_RELAY_NAME} changed before this operation finished.`);
     }
   };
-  const loaded = (): RemoteState => { if (!state) throw new Error("Remote access settings are unavailable. Retry to restore them."); return state; };
+  const loaded = (): RemoteState => { if (!state) throw new Error(`${NORA_RELAY_NAME} settings are unavailable. Retry to restore them.`); return state; };
   const save = (): Promise<void> => options.store.save(loaded());
   const stopTransport = async (): Promise<void> => {
     accepting = false;
@@ -51,7 +51,7 @@ export function createRemoteAccessService(options: RemoteCoordinatorOptions): Re
   const setFailure = (error: unknown, epoch: number): void => {
     if (disposed || generation !== epoch) return;
     accepting = false;
-    status = { status: "error", message: error instanceof Error ? error.message : "Remote access could not start. Retry to reconnect.", retryable: true };
+    status = { status: "error", message: error instanceof Error ? error.message : `${NORA_RELAY_NAME} could not start. Retry to reconnect.`, retryable: true };
     notify();
   };
   const cleanup = async (epoch: number): Promise<void> => {
@@ -101,6 +101,9 @@ export function createRemoteAccessService(options: RemoteCoordinatorOptions): Re
       local.port = opened.port;
       await save(); assertCurrent(epoch, session);
       let token: string | null = null;
+      // Old installations may have expired while this machine was away. Provision before using a cached token.
+      const registrationAge = local.runtime ? (options.now ?? Date.now)() - Date.parse(local.runtime.registeredAt) : 0;
+      if (registrationAge >= RELAY_RETENTION.runtimeExpiryMs) recover = true;
       if (!recover && !rotate && local.connectorSecret && local.runtime) {
         try { token = options.store.decrypt(local.connectorSecret); } catch { /* Re-provision recovers a lost OS keychain entry. */ }
       }
@@ -148,8 +151,8 @@ export function createRemoteAccessService(options: RemoteCoordinatorOptions): Re
       return enqueue(async () => {
         assertCurrent(epoch);
         const local = loaded(); const session = options.session();
-        if (!session) throw new Error("Sign in to your Nora account to enable remote access.");
-        if (local.enabled && local.ownerId !== session.userId) throw new Error("Disable the previous account's remote access before enabling it for this account.");
+        if (!session) throw new Error(`Sign in to your Nora account to enable ${NORA_RELAY_NAME}.`);
+        if (local.enabled && local.ownerId !== session.userId) throw new Error(`Turn off ${NORA_RELAY_NAME} for the previous account before turning it on for this account.`);
         // Remove a pending registration for this account before reusing its installation identity.
         await cleanup(epoch); assertCurrent(epoch, session);
         local.enabled = true; local.ownerId = session.userId;
@@ -191,7 +194,7 @@ export function createRemoteAccessService(options: RemoteCoordinatorOptions): Re
     },
     disconnectDevice(deviceId) {
       const local = loaded();
-      if (!local.enabled) return Promise.reject(new Error("Remote access is off, so no devices are connected."));
+      if (!local.enabled) return Promise.reject(new Error(`${NORA_RELAY_NAME} is off, so no devices are connected.`));
       // Refuse the session and close its sockets now; persisting can wait behind any running transport work.
       if (!local.revokedSessions.includes(deviceId)) local.revokedSessions = [...local.revokedSessions, deviceId].slice(-64);
       presence.disconnect(deviceId); notify();

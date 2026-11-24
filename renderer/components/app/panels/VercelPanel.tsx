@@ -238,7 +238,7 @@ export function VercelPanel({
                           ) : null}
                           {deployment.target ? <Badge variant="outline">{deployment.target}</Badge> : null}
                         </div>
-                        <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
                           <span>{new Date(deployment.createdAt).toLocaleString()}</span>
                           {deployment.creator ? <span>{deployment.creator}</span> : null}
                           {deployment.commitSha ? <span>{deployment.commitSha.slice(0, 7)}</span> : null}

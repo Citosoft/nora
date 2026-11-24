@@ -23,7 +23,7 @@ export function TerminalThemePreview({
       style={{ backgroundColor: palette.background, color: palette.foreground }}
     >
       <div
-        className="flex items-center justify-between border-b px-3 py-2 text-[11px]"
+        className="flex items-center justify-between border-b px-3 py-2 text-[10px]"
         style={{ borderColor: "rgba(255,255,255,0.08)" }}
       >
         <div className="flex items-center gap-1.5">
@@ -33,7 +33,7 @@ export function TerminalThemePreview({
         </div>
         <span className="font-medium opacity-80">terminal-preview</span>
       </div>
-      <div className="space-y-2 px-3 py-3 text-[11px] leading-5" style={{ fontFamily }}>
+      <div className="space-y-2 px-3 py-3 text-[10px] leading-5" style={{ fontFamily }}>
         <div>
           <span style={{ color: palette.green }}>you@nora</span>
           <span style={{ color: palette.foreground }}>:~$ </span>
@@ -136,20 +136,72 @@ export function ToggleButton({
       ].join(" ")}
     >
       <span className="text-sm">{label}</span>
-      <span
-        className={[
-          "relative inline-flex h-5 w-9 shrink-0 rounded-full transition",
-          checked ? "bg-primary" : "bg-muted"
-        ].join(" ")}
-      >
-        <span
-          className={[
-            "absolute top-0.5 size-4 rounded-full bg-white transition",
-            checked ? "left-[18px]" : "left-0.5"
-          ].join(" ")}
-        />
-      </span>
+      <SwitchTrack checked={checked} />
     </button>
+  );
+}
+
+function SwitchTrack({ checked }: { checked: boolean }) {
+  return (
+    <span className={["relative inline-flex h-5 w-9 shrink-0 rounded-full transition", checked ? "bg-primary" : "bg-muted"].join(" ")}>
+      <span className={["absolute top-0.5 size-4 rounded-full bg-white transition", checked ? "left-[18px]" : "left-0.5"].join(" ")} />
+    </span>
+  );
+}
+
+/** A bare switch for card rows, where the row title already says what it controls. */
+export function SettingsSwitch({
+  checked,
+  onChange,
+  accessibleName,
+  disabled = false
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  accessibleName: string;
+  disabled?: boolean;
+}) {
+  return (
+    <button type="button" role="switch" aria-checked={checked} aria-label={accessibleName} disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50">
+      <SwitchTrack checked={checked} />
+    </button>
+  );
+}
+
+/** A bordered group of `SettingsCardRow`s separated by hairlines. */
+export function SettingsCard({ children, label }: { children: ReactNode; label?: string }) {
+  return (
+    <section aria-label={label} className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border/70 bg-card">
+      {children}
+    </section>
+  );
+}
+
+export function SettingsCardRow({
+  title,
+  searchTitle,
+  description,
+  control
+}: {
+  title: ReactNode;
+  /** Search index title; defaults to `title` when it is a string. */
+  searchTitle?: string;
+  description?: ReactNode;
+  control?: ReactNode;
+}) {
+  return (
+    <div
+      {...settingAnchorAttributes(searchTitle ?? (typeof title === "string" ? title : undefined))}
+      className={`flex items-center justify-between gap-4 px-5 py-4 ${settingRevealHighlightClassName}`}
+    >
+      <div className="min-w-0">
+        <div className="text-sm font-medium text-foreground">{title}</div>
+        {description ? <div className="mt-0.5 text-sm text-muted-foreground">{description}</div> : null}
+      </div>
+      {control ? <div className="flex shrink-0 items-center gap-2">{control}</div> : null}
+    </div>
   );
 }
 

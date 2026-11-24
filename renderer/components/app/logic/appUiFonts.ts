@@ -10,6 +10,13 @@ export type UiFontOption = {
 
 export const UI_FONT_OPTIONS: readonly UiFontOption[] = [
   { id: "system", label: "System (default)", family: "var(--app-system-font)" },
+  // SF Pro is licensed for Apple platforms only, so it is not bundled: installed SF Pro faces are used
+  // when present, and -apple-system resolves to SF Pro on macOS otherwise.
+  {
+    id: "sf-pro",
+    label: "SF Pro",
+    family: "\"SF Pro Text\", \"SF Pro Display\", \"SF Pro\", -apple-system, BlinkMacSystemFont"
+  },
   { id: "inter", label: "Inter", family: "\"Inter\"" },
   { id: "geist", label: "Geist", family: "\"Geist\"" },
   { id: "manrope", label: "Manrope", family: "\"Manrope\"" },

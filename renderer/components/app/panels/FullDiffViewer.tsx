@@ -1,56 +1,35 @@
+import { useEffect, useRef, useState } from "react";
 import { DiffAnnotationIntroDialog } from "@/components/app/dialogs/DiffAnnotationIntroDialog";
 import { useDiffAnnotationIntroDialog } from "@/components/app/hooks/useDiffAnnotationIntroDialog";
-import { AnnotatedDiffLines } from "@/components/app/panels/diff-annotation/AnnotatedDiffLines";
-import type { ResolvedTheme } from "@/components/app/types";
-import { cn } from "@/lib/utils";
+import { DiffFileCard } from "@/components/app/panels/DiffFileCard";
+import type { DiffFileFocus, FullDiffViewerProps } from "@/components/app/types/centerDiff.types";
 import type { ChangeEntry } from "@shared/appTypes";
 
-function changeTone(status: ChangeEntry["status"]): string {
-  switch (status) {
-    case "added":
-      return "text-emerald-500";
-    case "deleted":
-      return "text-destructive";
-    case "modified":
-      return "text-primary";
-    case "renamed":
-    case "copied":
-      return "text-amber-500";
-    default:
-      return "text-muted-foreground";
-  }
+/** Scrolls to the focused file once per focus request, waiting for it to appear if the changes are still loading. */
+function useScrollToFocusedFile(scroller: HTMLElement | null, changes: ChangeEntry[], focus: DiffFileFocus | null) {
+  const handled = useRef<DiffFileFocus | null>(null);
+  useEffect(() => {
+    if (!focus || handled.current === focus) return;
+    const section = scroller?.querySelector(`[data-diff-path="${CSS.escape(focus.path)}"]`);
+    if (!section) return;
+    handled.current = focus;
+    section.scrollIntoView({ block: "start" });
+  }, [scroller, changes, focus]);
 }
 
-export function FullDiffViewer({
-  changes,
-  resolvedTheme
-}: {
-  changes: ChangeEntry[];
-  resolvedTheme: ResolvedTheme;
-}) {
+export function FullDiffViewer({ changes, resolvedTheme, focus = null }: FullDiffViewerProps) {
   const diffAnnotationIntroDialog = useDiffAnnotationIntroDialog();
+  const [scroller, setScroller] = useState<HTMLDivElement | null>(null);
+  useScrollToFocusedFile(scroller, changes, focus);
+  const focusMissing = focus !== null && !changes.some((change) => change.path === focus.path);
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       <DiffAnnotationIntroDialog {...diffAnnotationIntroDialog} />
-      <div className="terminal-text h-full min-h-0 flex-1 overflow-y-auto overflow-x-hidden text-[12px] leading-6">
-        {changes.map((change) => (
-          <section key={change.path} className="border-b border-border/40 last:border-b-0">
-            <div className="sticky top-0 z-10 border-y border-border/60 bg-background/95 px-4 py-2 backdrop-blur">
-              <div className="flex min-w-0 items-center justify-between gap-3">
-                <div className="truncate text-sm font-bold text-foreground" title={change.path}>{change.path}</div>
-                <div className="flex shrink-0 items-center gap-3 text-[11px] font-bold">
-                  <span className={cn("font-medium", changeTone(change.status))}>{change.status}</span>
-                  <span className="text-emerald-500">+{change.additions}</span>
-                  <span className="text-destructive">-{change.deletions}</span>
-                </div>
-              </div>
-            </div>
-            <div className="p-4">
-              <AnnotatedDiffLines diff={change.diff} filePath={change.path} resolvedTheme={resolvedTheme} />
-            </div>
-          </section>
-        ))}
+      {focusMissing && <p role="status" className="shrink-0 border-b border-border/60 px-4 py-2 text-sm text-muted-foreground">
+        <span className="font-medium text-foreground">{focus.path}</span> has no uncommitted changes in this workspace.</p>}
+      <div ref={setScroller} className="h-full min-h-0 flex-1 space-y-3 overflow-y-auto overflow-x-hidden p-4">
+        {changes.map((change) => <DiffFileCard key={change.path} change={change} resolvedTheme={resolvedTheme} scrollRoot={scroller} />)}
       </div>
     </div>
   );

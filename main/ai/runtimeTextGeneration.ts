@@ -5,6 +5,7 @@ import { findExecutableOnPath } from "@main/processLookup";
 import { buildProcessEnv } from "@main/processEnv";
 import { generateCodexText } from "@main/providers/codex/textGeneration";
 import { generateClaudeText } from "@main/providers/claude/textGeneration";
+import { runtimeTextModel } from "@shared/ai/settings";
 import type { GeneratedText, RuntimeTextProvider, TextGenerationRequest } from "@main/types/ai/textGeneration.types";
 
 export async function generateRuntimeText(provider: RuntimeTextProvider, request: TextGenerationRequest, model: string | null): Promise<GeneratedText> {
@@ -15,7 +16,7 @@ export async function generateRuntimeText(provider: RuntimeTextProvider, request
   // Never load workspace instructions, hooks or MCP configuration for a naming request.
   const cwd = await mkdtemp(join(tmpdir(), "nora-generation-"));
   try {
-    const input = { executable, cwd, environment: buildProcessEnv(process.env), request, model };
+    const input = { executable, cwd, environment: buildProcessEnv(process.env), request, model: runtimeTextModel(provider, model) };
     return await (provider === "codex" ? generateCodexText(input) : generateClaudeText(input));
   } catch {
     throw new Error(`${label} text generation failed. Check the runtime is up to date, signed in, and has available usage, or choose another source in Settings → AI.`);

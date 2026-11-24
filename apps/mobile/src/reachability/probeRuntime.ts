@@ -1,4 +1,4 @@
-import { REMOTE_API_VERSION } from "@shared/remote-access/constants";
+import { NORA_RELAY_NAME, REMOTE_API_VERSION } from "@shared/remote-access/constants";
 import { runtimeInfoSchema, runtimeApiErrorSchema, RUNTIME_ROUTES } from "@shared/remote-access/runtimeApi";
 import type { RuntimeApiErrorCode } from "@shared/types/remote-access/runtimeApi.types";
 import type { OfflineReason, ProbeOptions, RuntimeReachability } from "@/types/reachability.types";
@@ -42,7 +42,7 @@ export function describeReachability(reachability: RuntimeReachability): string 
       switch (reachability.reason) {
         case "timeout": return "Offline — not answering (asleep or offline?)";
         case "unreachable": return "Offline — computer is off, asleep or Nora isn't running";
-        case "unavailable": return "Remote access is paused on this computer";
+        case "unavailable": return `${NORA_RELAY_NAME} is paused on this computer`;
         case "unexpected-reply": return "Offline — unexpected reply";
       }
   }

@@ -1,3 +1,5 @@
+import { createDirectoryInventory } from "./clerk/inventory";
+import { cleanupTunnels } from "./maintenance/cleanup";
 import { createClerkVerifier } from "./auth";
 import { createClerkMetadataApi, createDirectoryStore } from "./clerk/directoryStore";
 import { createCloudflareClient } from "./cloudflare/client";
@@ -17,6 +19,20 @@ export default {
       // Last-resort guard (e.g. an undecodable publishable key or a failing rate-limit binding): fail closed, generically.
       return errorResponse("internal", "Unexpected server error.");
     }
+  },
+  async scheduled(_event: ScheduledController, env: WorkerBindings): Promise<void> {
+    const config = parseWorkerConfig(env);
+    if (config === null) throw new Error("Relay cleanup misconfigured");
+    const result = await cleanupTunnels({
+      inventory: createDirectoryInventory(config.clerkSecretKey),
+      store: createDirectoryStore(createClerkMetadataApi(config.clerkSecretKey)),
+      tunnels: createCloudflareClient({ apiToken: config.cloudflareApiToken, accountId: config.cloudflareAccountId,
+        zoneId: config.cloudflareZoneId, fetch: (input, init) => fetch(input, init) }),
+      hostnameSuffix: config.runtimeHostnameSuffix,
+      now: Date.now
+    });
+    console.log("Relay tunnel cleanup", result);
+    if (result.failed > 0) throw new Error(`Relay cleanup failed for ${result.failed} tunnels; retry next run`);
   }
 } satisfies ExportedHandler<WorkerBindings>;
 

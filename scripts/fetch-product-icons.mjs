@@ -3,6 +3,7 @@ import path from "node:path";
 import sharp from "sharp";
 
 const SOURCE_FILES = [
+  "renderer/components/app/constants/localVoiceVendorDomains.ts",
   "renderer/components/app/constants/projectScaffoldOptionLogos.ts",
   "renderer/components/app/constants/projectScaffoldRegistry.ts",
   "renderer/components/app/shared/Tooling.tsx",

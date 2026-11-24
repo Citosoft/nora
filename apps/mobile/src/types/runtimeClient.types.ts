@@ -1,10 +1,14 @@
+import type { RemoteAttachmentRequest } from "@shared/types/remote-access/attachments.types";
+import type { ComposerAttachment } from "@shared/types/agentInput.types";
+import type { BotDefinition } from "@shared/types/bots/bots.types";
+import type { RemoteSettings, RemoteSettingsPatch, SaveRemoteBot } from "@shared/types/remote-access/management.types";
 import type { InboxCommand, InboxSnapshot } from "@shared/types/inbox/inbox.types";
 import type { z } from "zod";
 import type { timelinePageSchema } from "@shared/conversations/gateway";
 import type { CommandReceipt } from "@shared/types/conversation/contracts.types";
 import type { ConversationEventPage, ConversationSummary } from "@shared/types/conversation/queries.types";
 import type { ActionDecisionRequest, CancelTaskRequest, ConversationDetailResponse, CreateBotChatRequest, CreateConversationRequest, RealtimeTicketResponse,
-  RemoteBot, RemoteProject, RemoteTask, RuntimeInfo, SendMessageRequest } from "@shared/types/remote-access/runtimeApi.types";
+  ProviderOptionsResponse, RemoteBot, RemoteProject, RemoteTask, RuntimeInfo, SendMessageRequest } from "@shared/types/remote-access/runtimeApi.types";
 import type { FetchLike, TokenProvider } from "./http.types";
 
 export type TimelinePage = z.infer<typeof timelinePageSchema>;
@@ -38,8 +42,14 @@ export interface EventsQuery {
 export interface RuntimeClient {
   readonly origin: string;
   info(): Promise<RuntimeInfo>;
+  uploadAttachment(request: RemoteAttachmentRequest): Promise<ComposerAttachment>;
+  providerOptions(projectId: string): Promise<ProviderOptionsResponse>;
   projects(): Promise<RemoteProject[]>;
   bots(): Promise<RemoteBot[]>;
+  settings(): Promise<RemoteSettings>;
+  updateSettings(patch: RemoteSettingsPatch): Promise<RemoteSettings>;
+  botSettings(): Promise<BotDefinition[]>;
+  saveBot(input: SaveRemoteBot): Promise<BotDefinition[]>;
   conversations(query?: ConversationListQuery): Promise<ConversationSummary[]>;
   conversation(conversationId: string): Promise<ConversationDetailResponse>;
   timeline(conversationId: string, query: TimelineQuery): Promise<TimelinePage>;

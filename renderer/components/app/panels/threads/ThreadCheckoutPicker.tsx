@@ -22,7 +22,7 @@ export function ThreadCheckoutPicker({ workspace, selectedCheckoutId, disabled, 
   const triggerContent = <>
     <GitBranch className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
     <span className="truncate text-xs">{label}</span>
-    {inWorktree && <span className="shrink-0 rounded bg-muted px-1 text-[10px] uppercase tracking-wide text-muted-foreground">Worktree</span>}
+    {inWorktree && <span className="shrink-0 rounded bg-muted px-1 text-[9px] uppercase tracking-wide text-muted-foreground">Worktree</span>}
   </>;
   if (disabled || (checkouts.length < 2 && !onCreateWorktree)) {
     return <span className="inline-flex min-w-0 items-center gap-1.5 px-2" title={selected.path}>{triggerContent}</span>;

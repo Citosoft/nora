@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Animated, Easing, Modal, Platform, Pressable, StyleSheet, Text } from "react-native";
+import { Animated, Easing, Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { RuntimeDirectoryEntry } from "@shared/types/remote-access/directory.types";
@@ -13,6 +13,8 @@ import { useRuntimeReachability } from "@/hooks/useRuntimeReachability";
 import { useTheme } from "@/hooks/useTheme";
 import { useThemedStyles } from "@/hooks/useThemedStyles";
 import { Icon } from "@/components/common/Icon";
+import { ListRow } from "@/components/common/ListRow";
+import { SectionHeader } from "@/components/common/SectionHeader";
 import { ComputerSummary } from "@/components/runtimes/ComputerSummary";
 
 const useNativeDriver = Platform.OS !== "web";
@@ -51,17 +53,18 @@ export function ComputerMenu({ currentRuntimeId, visible, onClose }: ComputerMen
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close computer list" />
       </Animated.View>
       <Animated.View accessibilityViewIsModal style={[styles.menu, { top: insets.top + layout.navBarHeight, opacity: progress, transform: [{ translateY }, { scaleY }] }]}>
-        <Text style={styles.header}>Computers</Text>
+        <SectionHeader title="Computers" />
         {state.status === "loading" ? <Text style={styles.note}>Finding your computers…</Text> : null}
         {state.status === "error" ? <Text style={styles.note}>{state.message}</Text> : null}
         {runtimes.map((runtime) => (
           <ComputerOption key={runtime.installationId} runtime={runtime} current={runtime.installationId === currentRuntimeId}
             onPick={() => (runtime.installationId === currentRuntimeId ? onClose() : go(routes.runtime(runtime.installationId)))} />
         ))}
-        <Pressable accessibilityRole="button" onPress={() => go(routes.home)} style={({ pressed }) => [styles.row, styles.manage, pressed && styles.pressed]}>
-          <Icon name="settings-outline" size={22} color={colors.text} />
-          <Text style={styles.name}>Manage computers</Text>
-        </Pressable>
+        <View style={styles.actions}>
+          <ListRow title="Computer settings" leading={<Icon name="settings-outline" size={22} color={colors.text} />} onPress={() => go(routes.runtimeSettings(currentRuntimeId))} />
+          <ListRow title="Manage bots" leading={<Icon name="people-outline" size={22} color={colors.text} />} onPress={() => go(routes.manageBots(currentRuntimeId))} />
+          <ListRow title="Manage computers" leading={<Icon name="desktop-outline" size={22} color={colors.text} />} onPress={() => go(routes.computers)} />
+        </View>
       </Animated.View>
     </Modal>
   );
@@ -85,10 +88,8 @@ const createStyles = (theme: Theme) => ({
   menu: { position: "absolute" as const, alignSelf: "center" as const, width: "92%" as const, maxWidth: 360, borderRadius: radii.xl,
     backgroundColor: theme.colors.elevated, paddingVertical: spacing.sm, transformOrigin: "top", boxShadow: `0px 12px 40px ${theme.colors.shadow}`,
     borderWidth: theme.scheme === "dark" ? hairline : 0, borderColor: theme.colors.separator },
-  header: { ...type.footnote, fontWeight: "600" as const, color: theme.colors.textMuted, paddingHorizontal: spacing.xl, paddingTop: spacing.xs, paddingBottom: spacing.sm },
-  note: { ...type.subheadline, color: theme.colors.textMuted, paddingHorizontal: spacing.xl, paddingVertical: spacing.sm },
-  row: { minHeight: 56, flexDirection: "row" as const, alignItems: "center" as const, gap: spacing.md + 2, paddingHorizontal: spacing.xl, paddingVertical: spacing.sm },
-  manage: { borderTopWidth: hairline, borderTopColor: theme.colors.separator, marginTop: spacing.xs },
-  pressed: { backgroundColor: theme.colors.pressed },
-  name: { ...type.body, color: theme.colors.text }
+  note: { ...type.subheadline, color: theme.colors.textMuted, paddingHorizontal: layout.gutter, paddingVertical: spacing.sm },
+  row: { minHeight: layout.rowHeight, flexDirection: "row" as const, alignItems: "center" as const, gap: spacing.md, paddingHorizontal: layout.gutter, paddingVertical: spacing.sm },
+  actions: { borderTopWidth: hairline, borderTopColor: theme.colors.separator, marginTop: spacing.xs, paddingTop: spacing.xs },
+  pressed: { backgroundColor: theme.colors.pressed }
 });

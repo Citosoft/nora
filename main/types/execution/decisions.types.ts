@@ -24,6 +24,8 @@ export interface DecisionContext {
   state: ConversationState | null;
   writers: string[];
   previousItem?: TimelineItem | null;
+  /** The message a set-message-pin command pins, looked up from the store. */
+  pinTarget?: TimelineItem | null;
   previousRequest?: RuntimeRequest | null;
   effects: ExecutionEffect[];
 }

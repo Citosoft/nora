@@ -1,5 +1,5 @@
 import { useAppDomainNavigation, useAppDomainWorkspaceModel, useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
-import { trackAnalyticsEvent, trackAppLaunchEvent } from "@/lib/analytics";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 import { useEffect, useRef } from "react";
 
 export function useAppAnalyticsLifecycle({
@@ -14,14 +14,6 @@ export function useAppAnalyticsLifecycle({
   const navigation = useAppDomainNavigation();
   const appLoadedRef = useRef(false);
   const appContextTrackedRef = useRef(false);
-
-  useEffect(() => {
-    if (!analyticsAllowedInCurrentRun) {
-      return;
-    }
-
-    trackAppLaunchEvent();
-  }, [analyticsAllowedInCurrentRun]);
 
   useEffect(() => {
     if (

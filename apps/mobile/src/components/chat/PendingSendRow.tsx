@@ -1,11 +1,12 @@
 import { Text, View } from "react-native";
 import type { PendingSendMessage } from "@/types/pendingCommand.types";
 import type { Theme } from "@/types/theme.types";
-import { radii, spacing, type } from "@/theme/tokens";
+import { spacing, type } from "@/theme/tokens";
 import { useTheme } from "@/hooks/useTheme";
 import { useThemedStyles } from "@/hooks/useThemedStyles";
 import { Button } from "@/components/common/Button";
 import { Icon } from "@/components/common/Icon";
+import { UserBubble } from "./UserBubble";
 
 interface PendingSendRowProps {
   command: PendingSendMessage;
@@ -20,10 +21,7 @@ export function PendingSendRow({ command, sending, onRetry, onDiscard }: Pending
   const { colors } = useTheme();
   const failed = !sending && Boolean(command.lastError);
   return (
-    <View style={styles.row}>
-      <View style={[styles.bubble, failed && styles.failedBubble]}>
-        <Text style={styles.text}>{command.instruction}</Text>
-      </View>
+    <UserBubble text={command.instruction} delivery={failed ? "failed" : "pending"}>
       <View style={styles.statusLine} accessibilityLiveRegion="polite">
         {failed ? <Icon name="alert-circle" size={14} color={colors.danger} /> : null}
         <Text style={[styles.status, failed && styles.failedText]}>{sending ? "Sending…" : command.lastError ? `Not delivered. ${command.lastError}` : "Waiting to send…"}</Text>
@@ -34,15 +32,11 @@ export function PendingSendRow({ command, sending, onRetry, onDiscard }: Pending
           <Button label="Retry" compact onPress={onRetry} accessibilityLabel="Retry sending this message" />
         </View>
       ) : null}
-    </View>
+    </UserBubble>
   );
 }
 
 const createStyles = (theme: Theme) => ({
-  row: { alignItems: "flex-end" as const, gap: spacing.xs, paddingLeft: 48 },
-  bubble: { borderRadius: radii.lg + 2, backgroundColor: theme.colors.userBubble, opacity: 0.6, paddingHorizontal: spacing.md + 2, paddingVertical: spacing.sm + 2 },
-  failedBubble: { opacity: 1, borderWidth: 1, borderColor: theme.colors.danger },
-  text: { ...type.body, color: theme.colors.userBubbleText },
   statusLine: { flexDirection: "row" as const, alignItems: "center" as const, gap: spacing.xs },
   status: { ...type.footnote, color: theme.colors.textMuted, textAlign: "right" as const },
   failedText: { color: theme.colors.danger },

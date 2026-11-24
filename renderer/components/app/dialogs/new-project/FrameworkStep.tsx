@@ -34,7 +34,7 @@ export function FrameworkStep({ wizard }: WizardStepProps) {
             <h3 id="favorite-stacks-heading" className="text-xs font-semibold">
               Favorite stacks
             </h3>
-            <span className="text-[11px] tabular-nums text-muted-foreground">
+            <span className="text-[10px] tabular-nums text-muted-foreground">
               {favoriteStacks.length}
             </span>
           </div>
@@ -97,7 +97,7 @@ export function FrameworkStep({ wizard }: WizardStepProps) {
                         </div>
                       ))}
                       {hiddenComponentCount > 0 ? (
-                        <span className="grid size-6 place-items-center rounded-sm bg-muted text-[9px] font-medium text-muted-foreground">
+                        <span className="grid size-6 place-items-center rounded-sm bg-muted text-[8px] font-medium text-muted-foreground">
                           +{hiddenComponentCount}
                         </span>
                       ) : null}
@@ -106,7 +106,7 @@ export function FrameworkStep({ wizard }: WizardStepProps) {
                       <div className="truncate text-xs font-medium">
                         {favorite.name}
                       </div>
-                      <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                      <div className="mt-0.5 truncate text-[10px] text-muted-foreground">
                         {framework?.label ?? "Unavailable framework"}
                       </div>
                     </div>
@@ -199,7 +199,7 @@ export function FrameworkStep({ wizard }: WizardStepProps) {
                     <div className="font-medium">{framework.label}</div>
                     <div>{framework.description}</div>
                     {framework.starterCommand ? (
-                      <div className="pt-1 font-mono text-[11px]">
+                      <div className="pt-1 font-mono text-[10px]">
                         {framework.starterCommand}
                       </div>
                     ) : null}

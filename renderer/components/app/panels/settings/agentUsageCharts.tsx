@@ -76,7 +76,7 @@ const DailyTooltip = ({ active, payload, variant }: TooltipLike & { variant: "cl
   const cacheLabel = variant === "codex" ? "Cached in" : "Cache read";
 
   return (
-    <div className="rounded-md border border-border/80 bg-popover/95 px-2.5 py-2 text-[11px] shadow-md backdrop-blur-sm">
+    <div className="rounded-md border border-border/80 bg-popover/95 px-2.5 py-2 text-[10px] shadow-md backdrop-blur-sm">
       <div className="font-semibold text-foreground">{row.fullDay}</div>
       <dl className="mt-1 space-y-0.5 text-muted-foreground">
         <div className="flex justify-between gap-4">
@@ -151,12 +151,12 @@ export const AgentUsageDailyTrendChart = ({
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.55} vertical={false} />
           <XAxis
             dataKey="label"
-            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
+            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 9 }}
             axisLine={{ stroke: "hsl(var(--border))" }}
             tickLine={false}
           />
           <YAxis
-            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 9 }}
+            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 8 }}
             axisLine={false}
             tickLine={false}
             tickFormatter={(v: number) => formatTokens(v)}
@@ -167,7 +167,7 @@ export const AgentUsageDailyTrendChart = ({
             content={({ active: a, payload: pl }) => <DailyTooltip active={a} payload={pl} variant={variant} />}
           />
           <Legend
-            wrapperStyle={{ fontSize: 10, paddingTop: 4, cursor: "pointer" }}
+            wrapperStyle={{ fontSize: 9, paddingTop: 4, cursor: "pointer" }}
             formatter={(value, entry) => (
               <span style={{ opacity: entry?.dataKey && hidden[entry.dataKey as SeriesKey] ? 0.45 : 1 }}>{value}</span>
             )}
@@ -183,7 +183,7 @@ export const AgentUsageDailyTrendChart = ({
           <Bar dataKey="fourth" name={fourthName} stackId="tok" fill={palette.fourth} hide={Boolean(hidden.fourth)} radius={[0, 0, 2, 2]} />
         </BarChart>
       </ResponsiveContainer>
-      <p className="mt-1 text-center text-[10px] text-muted-foreground">Legend: click a series to show or hide it.</p>
+      <p className="mt-1 text-center text-[9px] text-muted-foreground">Legend: click a series to show or hide it.</p>
     </div>
   );
 };
@@ -198,7 +198,7 @@ const PieTooltip = ({ active, payload }: TooltipLike) => {
   const name = typeof item.name === "string" ? item.name : "—";
   const value = typeof item.value === "number" ? item.value : 0;
   return (
-    <div className="rounded-md border border-border/80 bg-popover/95 px-2 py-1.5 text-[11px] shadow-md">
+    <div className="rounded-md border border-border/80 bg-popover/95 px-2 py-1.5 text-[10px] shadow-md">
       <span className="font-medium text-foreground">{name}</span>
       <span className="ml-2 tabular-nums text-muted-foreground">{formatTokens(value)}</span>
     </div>
@@ -259,7 +259,7 @@ export const AgentUsageTotalsRing = ({
   if (pieData.length === 0) {
     return (
       <div
-        className={`mx-auto flex ${compact ? "size-24" : "size-28"} items-center justify-center rounded-full border border-dashed border-border/60 bg-muted/15 text-[10px] text-muted-foreground`}
+        className={`mx-auto flex ${compact ? "size-24" : "size-28"} items-center justify-center rounded-full border border-dashed border-border/60 bg-muted/15 text-[9px] text-muted-foreground`}
         role="img"
         aria-label="No totals breakdown"
       >
@@ -272,12 +272,12 @@ export const AgentUsageTotalsRing = ({
     return (
       <div className={compact ? "flex w-[min(100%,11rem)] flex-col items-stretch gap-2" : "flex flex-col items-center gap-2 sm:flex-row sm:gap-4"}>
         <div
-          className={`mx-auto flex ${compact ? "h-20 w-20" : "h-28 w-28"} items-center justify-center rounded-full border border-dashed border-border/60 bg-muted/15 text-center text-[10px] text-muted-foreground`}
+          className={`mx-auto flex ${compact ? "h-20 w-20" : "h-28 w-28"} items-center justify-center rounded-full border border-dashed border-border/60 bg-muted/15 text-center text-[9px] text-muted-foreground`}
           role="status"
         >
           All segments hidden — use the list below to show again.
         </div>
-        <ul className={compact ? "text-[10px]" : "text-[11px]"}>
+        <ul className={compact ? "text-[9px]" : "text-[10px]"}>
           {pieData.map((s) => (
             <li key={s.name}>
               <button
@@ -324,7 +324,7 @@ export const AgentUsageTotalsRing = ({
         </ResponsiveContainer>
       </div>
       <div className="text-center">
-        <div className={`font-medium text-muted-foreground ${compact ? "text-[8px]" : "text-[9px]"}`}>
+        <div className={`font-medium text-muted-foreground ${compact ? "text-[7px]" : "text-[8px]"}`}>
           Total
         </div>
         <div className={`font-semibold tabular-nums text-foreground ${compact ? "text-xs" : "text-sm"}`}>
@@ -334,8 +334,8 @@ export const AgentUsageTotalsRing = ({
       <ul
         className={
           compact
-            ? "max-h-[5.5rem] min-w-0 space-y-1 overflow-y-auto pr-0.5 text-[10px]"
-            : "min-w-0 max-w-[200px] space-y-1.5 text-[11px] sm:max-w-none"
+            ? "max-h-[5.5rem] min-w-0 space-y-1 overflow-y-auto pr-0.5 text-[9px]"
+            : "min-w-0 max-w-[200px] space-y-1.5 text-[10px] sm:max-w-none"
         }
       >
         {pieData.map((s) => (
@@ -356,7 +356,7 @@ export const AgentUsageTotalsRing = ({
           </li>
         ))}
       </ul>
-      <p className="text-center text-[9px] text-muted-foreground">Click a slice label to toggle.</p>
+      <p className="text-center text-[8px] text-muted-foreground">Click a slice label to toggle.</p>
     </div>
   );
 };
@@ -381,7 +381,7 @@ const WorktreeTooltip = ({ active, payload, variant }: TooltipLike & { variant: 
   const fourthLabel = variant === "codex" ? "Reasoning" : "Cache write";
   const cacheLabel = variant === "codex" ? "Cached in" : "Cache read";
   return (
-    <div className="max-w-xs rounded-md border border-border/80 bg-popover/95 px-2.5 py-2 text-[11px] shadow-md">
+    <div className="max-w-xs rounded-md border border-border/80 bg-popover/95 px-2.5 py-2 text-[10px] shadow-md">
       <div className="font-medium text-foreground">{row.fullName}</div>
       <dl className="mt-1 space-y-0.5 text-muted-foreground">
         <div className="flex justify-between gap-4">
@@ -445,12 +445,12 @@ export const AgentUsageWorktreeBarList = ({
       <ResponsiveContainer width="100%" height={chartHeight}>
         <BarChart layout="horizontal" data={data} margin={{ top: 4, right: 12, left: 4, bottom: 4 }} barCategoryGap={10}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.45} horizontal={false} />
-          <XAxis type="number" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => formatTokens(v)} />
+          <XAxis type="number" tick={{ fontSize: 8, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => formatTokens(v)} />
           <YAxis
             type="category"
             dataKey="name"
             width={148}
-            tick={{ fontSize: 10, fill: "hsl(var(--foreground))" }}
+            tick={{ fontSize: 9, fill: "hsl(var(--foreground))" }}
             axisLine={{ stroke: "hsl(var(--border))" }}
             tickLine={false}
           />
@@ -458,7 +458,7 @@ export const AgentUsageWorktreeBarList = ({
             content={({ active: a, payload: pl }) => <WorktreeTooltip active={a} payload={pl} variant={variant} />}
             cursor={{ fill: "hsl(var(--muted) / 0.1)" }}
           />
-          <Legend wrapperStyle={{ fontSize: 10 }} iconType="square" />
+          <Legend wrapperStyle={{ fontSize: 9 }} iconType="square" />
           <Bar dataKey="input" name="Input" stackId="w" fill={palette.input} radius={[0, 2, 2, 0]} />
           <Bar dataKey="output" name="Output" stackId="w" fill={palette.output} />
           <Bar dataKey="cacheRead" name={cacheName} stackId="w" fill={palette.cacheRead} />

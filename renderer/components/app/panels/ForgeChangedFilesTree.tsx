@@ -132,7 +132,7 @@ export function ForgeChangedFilesTree({
           <ListTree className="size-4 text-primary" />
           <div className="min-w-0">
             <div className="text-xs font-medium text-muted-foreground">Files</div>
-            <div className="text-[11px] text-muted-foreground">{changes.length} changed file{changes.length === 1 ? "" : "s"}</div>
+            <div className="text-[10px] text-muted-foreground">{changes.length} changed file{changes.length === 1 ? "" : "s"}</div>
           </div>
         </div>
         <Button variant="ghost" size="icon" className="size-7 rounded-md" onClick={onClose} aria-label="Close file tree">

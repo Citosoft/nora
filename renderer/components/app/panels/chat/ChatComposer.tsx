@@ -3,9 +3,12 @@ import { Button } from "@/components/ui/button";
 import { NativeComposerInput } from "@/components/app/panels/conversations/NativeComposerInput";
 import type { ChatComposerProps } from "@/components/app/types/chatPanels.types";
 import { rememberPrompt } from "@/components/app/logic/composer-prompts/promptHistory";
+import { useComposerVoiceInput } from "@/components/app/hooks/useComposerVoiceInput";
+import { VoiceInputButton } from "@/components/app/panels/conversations/VoiceInputButton";
 
-/** A messaging-app composer: just the message, Send (or Stop) and, for a direct chat, where it works. */
+/** A messaging-app composer: just the message, voice input, Send (or Stop) and, for a direct chat, where it works. */
 export function ChatComposer({ inputRef, value, placeholder, disabled, canSend, stop, sendLabel, mentions, footer, onChange, onSubmit }: ChatComposerProps) {
+  const voice = useComposerVoiceInput({ value, disabled, inputRef, onChange });
   const send = (): void => {
     if (!canSend) return;
     rememberPrompt(value);
@@ -18,11 +21,13 @@ export function ChatComposer({ inputRef, value, placeholder, disabled, canSend, 
         <NativeComposerInput inputRef={inputRef} value={value} disabled={disabled} placeholder={placeholder} suggestion={null}
           onChange={onChange} onSubmit={send} mentions={mentions} />
       </div>
+      <VoiceInputButton voice={voice} />
       {stop ? <Button type="button" size="icon" className="size-8 shrink-0 rounded-full" disabled={stop.disabled} aria-label={stop.label} onClick={stop.onStop}>
           <Square className="size-3 fill-current" aria-hidden="true" /></Button>
         : <Button type="submit" size="icon" className="size-8 shrink-0 rounded-full" disabled={!canSend} aria-label={sendLabel}>
           <ArrowUp className="size-4" aria-hidden="true" /></Button>}
     </div>
+    {voice.error && <p role="alert" className="mt-1 px-2 text-xs text-destructive">{voice.error}</p>}
     {footer && <div className="mt-1 flex min-w-0 items-center">{footer}</div>}
   </form>;
 }

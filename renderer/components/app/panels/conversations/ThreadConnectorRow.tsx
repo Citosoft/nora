@@ -13,7 +13,7 @@ export function ThreadConnectorRow({ server, source, logins }: ThreadConnectorRo
     <McpServerLogo logo={server.logo} />
     <span className="min-w-0 flex-1 truncate">{server.name}</span>
     {server.canLogin || signingIn ? <McpLoginButton server={server} source={source} logins={logins} compact />
-      : server.status === "connected" ? <span className="shrink-0 tabular-nums text-[10px] text-muted-foreground">{tools}</span>
-      : <Badge variant={status.variant} className="shrink-0 whitespace-nowrap px-1.5 py-0 text-[10px]">{status.label}</Badge>}
+      : server.status === "connected" ? <span className="shrink-0 tabular-nums text-[9px] text-muted-foreground">{tools}</span>
+      : <Badge variant={status.variant} className="shrink-0 whitespace-nowrap px-1.5 py-0 text-[9px]">{status.label}</Badge>}
   </li>;
 }

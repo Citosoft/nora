@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { connectorClient } from "@/components/app/clients/connectorClient";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { NoraConnectorsContext } from "@/components/app/context/noraConnectorsContext";
 import type { Connector } from "@shared/types/connectors/connectors.types";
 import type { ConnectorRequest } from "@shared/ipc/types/connectorGateway.types";
-import type { NoraConnectorAction, NoraConnectors, NoraConnectorsClient } from "@/components/app/types/noraConnectors.types";
+import type { NoraConnectorAction, NoraConnectors } from "@/components/app/types/noraConnectors.types";
 
 const errorText = (error: unknown, fallback: string): string => error instanceof Error && error.message ? error.message : fallback;
 const withEntry = <T,>(map: ReadonlyMap<string, T>, id: string, value: T | undefined): ReadonlyMap<string, T> => {
@@ -15,7 +15,8 @@ const withEntry = <T,>(map: ReadonlyMap<string, T>, id: string, value: T | undef
  * Connectors added in Nora: the stored list, kept current by main's change notifications, plus per-connector pending actions and
  * failures. Replies and notifications both carry the whole list, so whichever arrives last is the truth.
  */
-export function useNoraConnectors(client: NoraConnectorsClient = connectorClient): NoraConnectors {
+export function useNoraConnectors(): NoraConnectors {
+  const client = useContext(NoraConnectorsContext);
   const [connectors, setConnectors] = useState<readonly Connector[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [pending, setPending] = useState<ReadonlyMap<string, NoraConnectorAction>>(() => new Map());

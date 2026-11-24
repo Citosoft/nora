@@ -215,7 +215,7 @@ export const NORA_TOOLS = {
     audience: ["nora"],
     title: "How to build a Nora app",
     description: "Read the guide for building apps: dashboards and mini apps over the user's connectors that live in Nora's Apps section. "
-      + "It lists every UI component and action an app may use and how sources, select expressions and actions fit together. Read it before create_app or update_app unless this thread's guidance already includes it."
+      + "It lists every UI component and action an app may use and how sources, select expressions and actions fit together. Read it before create_app or update_app."
   },
   list_connector_tools: {
     audience: ["nora"],
@@ -244,7 +244,8 @@ export const NORA_TOOLS = {
     audience: ["nora"],
     title: "Update a Nora app",
     description: "Replace an app's spec with a new complete version and describe the change in one line; the previous version is kept and can be restored. "
-      + "Read the current spec with read_app first and change only what the user asked for."
+      + "Start from the app's current spec (the one you last saved in this thread, or read_app when you have not seen it) and change only what the user asked for. "
+      + "Pass that spec's version as base_version; if the app has changed since, the save is refused so nothing is overwritten."
   },
   read_app: {
     audience: ["nora"],

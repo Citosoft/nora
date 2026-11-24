@@ -3,23 +3,24 @@ const { app } = require('electron');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const { join } = require('node:path');
-const { createFixtureHost } = require('./ui/fixtureHost.cjs');
+const { createFixtureHost, COMPOSER } = require('./ui/fixtureHost.cjs');
 let host;
 (async () => {
   host = await createFixtureHost('tests/ui/ThreadWorkspaceHarness.tsx');
-  const { evaluate, wait, click, byText, window, pause } = host;
-  const visibleComposer = 'section[aria-label="New thread"] textarea';
+  const { evaluate, wait, click, byText, window, pause, typeIn, textOf } = host;
+  const composer = JSON.stringify(COMPOSER);
+  const visibleComposer = `section[aria-label="New thread"] ${COMPOSER}`;
+  const threadComposer = `section[aria-label="Thread"] ${COMPOSER}`;
+  // The thread row's tooltip lists the title, then a "workspace · status" line, model and last activity.
+  const rowTooltipShows = status => `!![...document.querySelectorAll('.pointer-events-none.fixed span')].find(e=>e.textContent.split(' · ').includes(${JSON.stringify(status)}))`;
   const state = async () => JSON.parse(await evaluate(`document.getElementById('thread-fixture-state').textContent`));
-  const type = async (selector, text) => {
-    await click(selector); window.webContents.insertText(text); await pause(100);
-  };
   await wait(`!!document.querySelector('button[aria-label="Send instruction"]:not(:disabled)') || !!document.querySelector(${JSON.stringify(visibleComposer)})`);
   await wait(`document.body.textContent.includes('First model')`);
   const greeting = 'section[aria-label="New thread"] h1';
-  assert.equal(await evaluate(`document.querySelector(${JSON.stringify(greeting)}).textContent`), 'What would you like to work on?');
+  assert.equal(await evaluate(`document.querySelector(${JSON.stringify(greeting)}).textContent`), 'What would you like to work on in Personal?');
   await evaluate(`localStorage.setItem('nora-user-display-name','  Daniel Smith  ');window.dispatchEvent(new StorageEvent('storage',{key:'nora-user-display-name',storageArea:localStorage}));`);
-  await wait(`document.querySelector(${JSON.stringify(greeting)}).textContent==='What would you like to work on, Daniel?'`);
-  assert.equal(await evaluate(`document.querySelector(${JSON.stringify(greeting)}).querySelector('span').textContent`), 'Daniel');
+  await wait(`document.querySelector(${JSON.stringify(greeting)}).textContent==='What would you like to work on in Personal, Daniel?'`);
+  assert.equal(await evaluate(`document.querySelector(${JSON.stringify(greeting)}).querySelector('span:last-child').textContent`), 'Daniel');
   for (const theme of ['light', 'dark']) {
     await evaluate(`document.documentElement.dataset.theme='${theme}';document.documentElement.classList.toggle('dark','${theme}'==='dark')`);
     assert.equal(await evaluate(`(()=>{const heading=document.querySelector(${JSON.stringify(greeting)});return getComputedStyle(heading).color!==getComputedStyle(heading.querySelector('span')).color})()`), true);
@@ -28,7 +29,7 @@ let host;
     assert.deepEqual(inputSurface, { background: 'rgba(0, 0, 0, 0)', border: '0px' }, 'Chat input must blend into the composer while hovered and focused');
   }
   await evaluate(`localStorage.removeItem('nora-user-display-name');window.dispatchEvent(new StorageEvent('storage',{key:'nora-user-display-name',storageArea:localStorage}));`);
-  await wait(`document.querySelector(${JSON.stringify(greeting)}).textContent==='What would you like to work on?'`);
+  await wait(`document.querySelector(${JSON.stringify(greeting)}).textContent==='What would you like to work on in Personal?'`);
   if (process.env.NORA_UI_EVIDENCE_DIR) {
     await fs.mkdir(process.env.NORA_UI_EVIDENCE_DIR, { recursive: true });
     await fs.writeFile(join(process.env.NORA_UI_EVIDENCE_DIR, 'new-thread.png'), (await window.webContents.capturePage()).toPNG());
@@ -36,14 +37,14 @@ let host;
   await click('#focus-window'); // Offscreen hosts have no OS window focus.
   await click('#run-background');
   await wait(`!!document.querySelector('section[aria-label="Threads"] [aria-label="Working"]')`);
-  const activityPosition = await evaluate(`(()=>{const icon=document.querySelector('section[aria-label="Threads"] [aria-label="Working"]');const row=icon.closest('button');const title=row.querySelector('span');return {x:icon.parentElement.getBoundingClientRect().x,rightOfTitle:icon.getBoundingClientRect().left>=title.getBoundingClientRect().right}})()`);
+  const activityPosition = await evaluate(`(()=>{const icon=document.querySelector('section[aria-label="Threads"] [aria-label="Working"]');const row=icon.closest('button');const title=row.querySelector('.thread-title');return {x:icon.parentElement.getBoundingClientRect().x,rightOfTitle:icon.getBoundingClientRect().left>=title.getBoundingClientRect().right}})()`);
   assert.equal(activityPosition.rightOfTitle, true, 'Activity appears to the right of the title');
   await click('#request-input');
   await wait(`!!document.querySelector('section[aria-label="Threads"] svg[aria-label="Needs input"]')`);
   assert.equal(await evaluate(`document.querySelector('section[aria-label="Threads"] svg[aria-label="Needs input"]').closest('button').textContent.includes('Needs input')`), false, 'Needs input uses an icon without visible status text');
   const inputIcon = await evaluate(`(()=>{const r=document.querySelector('section[aria-label="Threads"] svg[aria-label="Needs input"]').getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()`);
   window.webContents.sendInputEvent({ type: 'mouseMove', ...inputIcon });
-  await wait(`!![...document.querySelectorAll('.pointer-events-none.fixed')].find(e=>e.textContent==='Needs input')`);
+  await wait(rowTooltipShows('Needs input'));
   const attentionStates = [
     ['awaiting-approval', 'Needs approval', 'lucide-shield-question'],
     ['failed', 'Failed', 'lucide-circle-alert'],
@@ -58,7 +59,7 @@ let host;
     assert.equal(await evaluate(`document.querySelector(${JSON.stringify(selector)}).parentElement.getBoundingClientRect().x`), activityPosition.x);
     const point = await evaluate(`(()=>{const r=document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()`);
     window.webContents.sendInputEvent({ type: 'mouseMove', ...point });
-    await wait(`!![...document.querySelectorAll('.pointer-events-none.fixed')].find(e=>e.textContent===${JSON.stringify(label)})`);
+    await wait(rowTooltipShows(label));
   }
   await click('#pause-queue');
   await wait(`!!document.querySelector('section[aria-label="Threads"] svg[aria-label="Queue paused"]')`);
@@ -67,7 +68,7 @@ let host;
   const completedRow = 'button[aria-label="Open A long background thread title that must stay on one row, unread completion"]';
   await wait(`!!document.querySelector(${JSON.stringify(completedRow)})`);
   assert.equal(await evaluate(`!!document.querySelector(${JSON.stringify(completedRow)}).querySelector('[aria-label="Unread completion"]')`), true);
-  const rowGeometry = await evaluate(`(()=>{const row=document.querySelector(${JSON.stringify(completedRow)});const title=row.querySelector('span');return {height:row.getBoundingClientRect().height,truncated:title.scrollWidth>title.clientWidth}})()`);
+  const rowGeometry = await evaluate(`(()=>{const row=document.querySelector(${JSON.stringify(completedRow)});const title=row.querySelector('.thread-title');return {height:row.getBoundingClientRect().height,truncated:title.dataset.overflow==='true'}})()`);
   assert.equal(await evaluate(`document.querySelector('[aria-label="Unread completion"]').parentElement.getBoundingClientRect().x`), activityPosition.x, 'Activity and unread use the same slot');
   assert.ok(rowGeometry.height <= 40, 'Thread rows must remain a single compact line');
   assert.equal(rowGeometry.truncated, true, 'Long titles truncate');
@@ -76,20 +77,20 @@ let host;
   await click('button[aria-label="Close A long background thread title that must stay on one row view"]');
   await click('#return-draft');
   const initialId = (await state()).layout.activeId;
-  await type(visibleComposer, 'A draft to keep');
+  await typeIn(visibleComposer, 'A draft to keep');
   await click('button[aria-label="New thread"]');
-  await wait(`document.querySelectorAll('textarea').length===2`);
+  await wait(`document.querySelectorAll(${composer}).length===2`);
   const secondId = (await state()).layout.activeId;
   assert.notEqual(initialId, secondId);
   assert.equal((await state()).commands.length, 0, 'Draft creation must not call native execution');
   await byText('Draft something');
-  await wait(`(()=>{const e=[...document.querySelectorAll('textarea')].find(e=>!e.closest('[inert]'));return e?.value==='Draft something'})()`);
+  await wait(`[...document.querySelectorAll(${composer})].find(e=>!e.closest('[inert]'))?.textContent==='Draft something'`);
   await click('button[aria-label="Close Draft something view"]');
   assert.equal((await state()).layout.activeId, initialId);
-  assert.equal(await evaluate(`document.querySelector('textarea').value`), 'A draft to keep');
+  assert.equal(await textOf(COMPOSER), 'A draft to keep');
   await click('button[aria-label="Open Draft something"]');
   assert.equal((await state()).layout.activeId, secondId, 'Closed drafts reopen from sidebar');
-  assert.equal(await evaluate(`(()=>{const inactive=document.querySelector('[inert]');const t=inactive?.querySelector('textarea');t?.focus();return !!inactive&&!inactive.contains(document.activeElement)})()`), true);
+  assert.equal(await evaluate(`(()=>{const inactive=document.querySelector('[inert]');const t=inactive?.querySelector(${composer});t?.focus();return !!inactive&&!inactive.contains(document.activeElement)})()`), true);
   await click('#lose-reply');
   await wait(`!![...document.querySelectorAll('button[aria-label="Send instruction"]')].find(e=>!e.disabled&&!e.closest('[inert]'))`);
   await evaluate(`(()=>{const e=[...document.querySelectorAll('button[aria-label="Send instruction"]')].find(e=>!e.closest('[inert]'));e.click()})()`);
@@ -99,11 +100,11 @@ let host;
   await wait(`JSON.parse(document.getElementById('thread-fixture-state').textContent).layout.documents.find(d=>d.id===${JSON.stringify(secondId)}).target.kind==='thread'`);
   const sent = await state(); assert.equal(sent.layout.activeId, secondId); assert.equal(sent.accepted, 2);
   assert.deepEqual(sent.commands.slice(0, 2), sent.commands.slice(2), 'Retry must use saved command IDs');
-  await wait(`!!document.querySelector('section[aria-label="Thread"] textarea')`);
-  await type('section[aria-label="Thread"] textarea', 'Follow-up draft');
+  await wait(`!!document.querySelector(${JSON.stringify(threadComposer)})`);
+  await typeIn(threadComposer, 'Follow-up draft');
   await click('button[aria-label="Close Draft something view"]');
   await click('button[aria-label="Open Draft something"]');
-  await wait(`document.querySelector('section[aria-label="Thread"] textarea')?.value==='Follow-up draft'`);
+  await wait(`document.querySelector(${JSON.stringify(threadComposer)})?.textContent==='Follow-up draft'`);
   await wait(`!document.querySelector('section[aria-label="Thread"] button[aria-label="Send instruction"]')?.disabled`);
   await wait(`!!document.querySelector('.thread-insights')`);
   for (const width of [1280, 900]) {

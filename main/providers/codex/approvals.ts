@@ -3,6 +3,7 @@ import type { CodexApproval } from "@main/types/execution/codex.types";
 import type { JsonValue } from "@main/types/execution/rpc.types";
 import type { ApprovalRequest, TimelineItem } from "@shared/types/conversation/contracts.types";
 import { formatToolInput } from "../toolPresentation";
+import { CODEX_ALLOW_AND_AUTO_REVIEW } from "./permissionPolicies";
 
 const decisionSchema = z.union([
   z.enum(["accept", "acceptForSession", "decline", "cancel"]),
@@ -14,7 +15,9 @@ const approvalSchema = z.object({ turnId: z.string(), itemId: z.string(), comman
   networkApprovalContext: z.object({ host: z.string(), protocol: z.string() }).nullable().optional(),
   additionalPermissions: z.json().optional(), availableDecisions: z.array(z.json()).nullable().optional() });
 
-export function normalizeCodexApproval(method: string, params: JsonValue, turnId: string | null, items: ReadonlyMap<string, TimelineItem>, runId: string): CodexApproval {
+/** `autoReviewPolicy` is the policy an extra "allow and switch" option moves the thread to; Codex applies it from the next turn. */
+export function normalizeCodexApproval(method: string, params: JsonValue, turnId: string | null, items: ReadonlyMap<string, TimelineItem>, runId: string,
+  autoReviewPolicy: string | null = null): CodexApproval {
   const native = approvalSchema.parse(params);
   if (native.turnId !== turnId) throw new Error("Stale approval");
   const item = items.get(JSON.stringify([runId, native.itemId]));
@@ -42,6 +45,12 @@ export function normalizeCodexApproval(method: string, params: JsonValue, turnId
       options.push({ id, intent: amendment.action === "allow" ? "allow" : "deny", scope: "persistent",
         label: amendment.action === "allow" ? "Always allow this host" : "Always deny this host", description: `Save a network rule for ${amendment.host}.` });
     }
+  }
+  if (autoReviewPolicy && decisions.accept === "accept") {
+    decisions[CODEX_ALLOW_AND_AUTO_REVIEW] = "accept";
+    options.splice(options.findIndex((option) => option.id === "accept") + 1, 0, { id: CODEX_ALLOW_AND_AUTO_REVIEW, intent: "allow",
+      label: "Allow and switch to auto-review", switchesPolicy: autoReviewPolicy,
+      description: "Allow this action. From the next turn, a Codex reviewer agent approves or denies requests instead of asking you." });
   }
   if (!options.length) throw new Error("Unsupported native approval options");
   const command = native.command ?? (item?.kind === "tool" ? item.details?.input : undefined);

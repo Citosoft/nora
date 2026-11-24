@@ -6,7 +6,7 @@ import type { AgentCatalogEntry, ToolUsageInfo } from "@shared/appTypes";
 export type AppToolsProps = Pick<TitleBarProps,
   "resolvedTheme" | "onToggleTheme" | "onOpenSettings" | "onOpenKeyboardShortcuts" | "onOpenAbout" |
   "onSubmitIssue" | "onOpenStartupDependencies" | "onOpenResourceMonitor" | "onOpenOnboarding"
-> & { collapsed?: boolean; settingsActive?: boolean; onOpenHomeTerminal?(): void; onOpenConnectionsSettings?(): void; };
+> & { collapsed?: boolean; settingsActive?: boolean; onOpenHomeTerminal?(): void; };
 
 export interface WorkspaceStatusInput {
   entries: StatusBarEntry[];
@@ -25,7 +25,7 @@ export interface WorkspaceUtilitiesInput {
 
 export interface WorkspaceUtilitiesProps { collapsed: boolean; }
 export type WorkspaceUtilitiesViewProps = WorkspaceUtilitiesProps & WorkspaceUtilitiesInput;
-export type ModelUsageProps = Pick<WorkspaceStatusInput, "tools" | "onInstallTool" | "onSwitchToolAccount"> & WorkspaceUtilitiesProps;
+export type ModelUsageInput = Pick<WorkspaceStatusInput, "tools" | "onInstallTool" | "onSwitchToolAccount">;
 export interface UtilityPanelProps { onClose(): void; }
 export interface UsageDetailsProps {
   tool: AgentCatalogEntry;

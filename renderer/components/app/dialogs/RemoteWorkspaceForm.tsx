@@ -77,7 +77,7 @@ export function RemoteWorkspaceForm({ connection }: RemoteWorkspaceFormProps) {
               />
               <span className="min-w-0">
                 <span className="block text-xs font-medium">{label}</span>
-                <span className="mt-1 block text-[11px] leading-4 text-muted-foreground">
+                <span className="mt-1 block text-[10px] leading-4 text-muted-foreground">
                   {supported || isLoading ? detail : "Setup required"}
                 </span>
               </span>

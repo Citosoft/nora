@@ -228,6 +228,7 @@ test("worker threads are not served the orchestration tools, so delegation never
   const f = noraFixture();
   f.conversations.set("worker", conversation("worker", { parentId: "plain", source: { kind: "worker" } }));
   f.conversations.set("bot-worker", conversation("bot-worker", { parentId: "bot", source: { kind: "worker" }, bot: snapshotBot(bot("ada")) }));
+  f.conversations.set("builder", conversation("builder", { source: { kind: "app", appId: null } }));
   const server = createNoraToolServer(f.deps);
   t.after(() => server.close());
   const names = async (id: string): Promise<string[]> => {
@@ -245,6 +246,10 @@ test("worker threads are not served the orchestration tools, so delegation never
   const botWorker = await names("bot-worker");
   for (const name of orchestration) { assert.ok(plain.includes(name)); assert.ok(botTools.includes(name)); assert.ok(!worker.includes(name)); assert.ok(!botWorker.includes(name)); }
   assert.ok(worker.includes("list_threads"));
+  // The builder's guidance already holds the whole guide, so offering the tool only invites re-reading it.
+  const builder = await names("builder");
+  assert.ok(builder.includes("update_app") && !builder.includes("app_builder_guide"));
+  assert.ok(plain.includes("app_builder_guide"));
 });
 
 test("task lifecycle uses a stable id, preserves assignments, and can be retried and reopened", async () => {

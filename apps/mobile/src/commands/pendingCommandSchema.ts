@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { requestResponseSchema } from "@shared/conversations/contracts";
+import { providerBindingSchema, submitConversationCommandSchema, requestResponseSchema } from "@shared/conversations/contracts";
 import { botIdSchema } from "@shared/bots/contracts";
 import { remoteBotScopeSchema } from "@shared/remote-access/runtimeApi";
 
@@ -18,8 +18,8 @@ const firstMessage = z.object({ commandId: id, runId: id, instruction: z.string(
 
 /** Validates commands read back from device storage; anything malformed is dropped rather than replayed. */
 export const pendingCommandSchema = z.discriminatedUnion("kind", [
-  z.object({ ...base, kind: z.literal("send-message"), commandId: id, runId: id, instruction: z.string().min(1) }).strict(),
-  z.object({ ...base, kind: z.literal("create-conversation"), commandId: id, projectId: id, title: z.string().min(1),
+  z.object({ ...base, kind: z.literal("send-message"), commandId: id, runId: id, instruction: z.string().min(1), providerChange: submitConversationCommandSchema.shape.providerChange }).strict(),
+  z.object({ ...base, kind: z.literal("create-conversation"), commandId: id, projectId: id, title: z.string().min(1), provider: providerBindingSchema.optional(),
     /** Set once the create receipt arrived, so a retry only resends the first message. */
     created: z.boolean(),
     message: firstMessage }).strict(),

@@ -61,8 +61,8 @@ export interface MobileRemoteDemoBubbleProps {
   at: number;
 }
 
-/** One numbered step of how Nora Connect links a phone to this computer; the number matches its badge in the diagram. */
-export interface NoraConnectStep {
+/** One numbered step of how Nora Relay links a phone to this computer; the number matches its badge in the diagram. */
+export interface NoraRelayStep {
   title: string;
   body: string;
 }
@@ -99,4 +99,10 @@ export interface MobileRemoteDevicesProps {
   /** Disables Disconnect while another remote access change is running. */
   pending: boolean;
   onDisconnect(deviceId: string): void;
+}
+
+export interface NoraRelayLinkAnimationProps {
+  /** Packets move only while the link is live; otherwise the lanes are drawn dashed and still. */
+  active: boolean;
+  className?: string;
 }

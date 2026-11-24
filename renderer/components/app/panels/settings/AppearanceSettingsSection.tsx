@@ -100,7 +100,7 @@ export function AppearanceSettingsSection() {
       />
       <SettingRow
         title="UI Font"
-        description={`Choose the typeface used across ${APP_SHORT_NAME}'s interface. System uses your device's native font. Inter and Geist are bundled locally; other choices use web fonts when available.`}
+        description={`Choose the typeface used across ${APP_SHORT_NAME}'s interface. System uses your device's native font. SF Pro uses Apple's San Francisco font where available. Inter and Geist are bundled locally; other choices use web fonts when available.`}
         control={
           <div className="space-y-3">
             <Select value={uiFontId} onChange={(event) => updateUiFont(event.target.value as UiFontId)}>

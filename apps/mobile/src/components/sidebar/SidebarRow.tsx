@@ -5,6 +5,7 @@ import { radii, spacing, type } from "@/theme/tokens";
 import { useTheme } from "@/hooks/useTheme";
 import { useThemedStyles } from "@/hooks/useThemedStyles";
 import { Icon } from "@/components/common/Icon";
+import { sidebarTextInset } from "./SidebarHeading";
 
 /** A sidebar destination: outline icon, label, optional detail; the current one sits on a soft highlight. */
 export function SidebarRow({ label, icon, leading, selected = false, onPress, detail, trailing, accessibilityLabel }: SidebarRowProps) {
@@ -26,7 +27,7 @@ export function SidebarRow({ label, icon, leading, selected = false, onPress, de
 const createStyles = (theme: Theme) => ({
   row: { flexDirection: "row" as const, alignItems: "center" as const, borderRadius: radii.sm + 2, paddingRight: spacing.xs },
   selected: { backgroundColor: theme.colors.sidebarSelected },
-  main: { flex: 1, minHeight: 46, flexDirection: "row" as const, alignItems: "center" as const, gap: spacing.md + 2, paddingHorizontal: spacing.md + 2 },
+  main: { flex: 1, minHeight: 46, flexDirection: "row" as const, alignItems: "center" as const, gap: spacing.md + 2, paddingHorizontal: sidebarTextInset },
   pressed: { opacity: 0.55 },
   label: { ...type.body, flex: 1, color: theme.colors.text },
   detail: { ...type.subheadline, color: theme.colors.textMuted }

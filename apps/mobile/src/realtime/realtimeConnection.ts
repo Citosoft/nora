@@ -1,4 +1,4 @@
-import { REALTIME_CLOSE_CODES, REMOTE_LIMITS } from "@shared/remote-access/constants";
+import { NORA_RELAY_NAME, REALTIME_CLOSE_CODES, REMOTE_LIMITS } from "@shared/remote-access/constants";
 import { realtimeServerMessageSchema } from "@shared/remote-access/runtimeApi";
 import type { ConversationEvent } from "@shared/types/conversation/contracts.types";
 import type { RealtimeClientMessage, RealtimeServerMessage } from "@shared/types/remote-access/runtimeApi.types";
@@ -216,7 +216,7 @@ export function createRealtimeConnection(deps: RealtimeDeps, listener: RealtimeL
       // The socket's auth lapsed: get a fresh ticket right away rather than backing off.
       void connect();
     } else if (code === REALTIME_CLOSE_CODES.unavailable) {
-      scheduleReconnect("Remote access is paused on this computer");
+      scheduleReconnect(`${NORA_RELAY_NAME} is paused on this computer`);
     } else if (code === REALTIME_CLOSE_CODES.overloaded) {
       scheduleReconnect("Your computer has too many open connections");
     } else {

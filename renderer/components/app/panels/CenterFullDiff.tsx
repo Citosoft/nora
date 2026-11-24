@@ -8,5 +8,5 @@ export function CenterFullDiff({ snapshotChanges, resolvedTheme }: CenterFullDif
   const source = useOptionalCenterDiffPorts()?.source;
   return source?.kind === "branch"
     ? <ThreadBranchDiffView key={`${source.target.projectId}\n${source.target.checkoutPath}`} target={source.target} resolvedTheme={resolvedTheme} />
-    : <FullDiffViewer changes={snapshotChanges} resolvedTheme={resolvedTheme} />;
+    : <FullDiffViewer changes={snapshotChanges} resolvedTheme={resolvedTheme} focus={source?.focus ?? null} />;
 }

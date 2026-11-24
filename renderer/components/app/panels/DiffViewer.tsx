@@ -1,7 +1,11 @@
 import { DiffAnnotationIntroDialog } from "@/components/app/dialogs/DiffAnnotationIntroDialog";
+import { useDiffLineLimit } from "@/components/app/hooks/useDiffLineLimit";
 import { useDiffAnnotationIntroDialog } from "@/components/app/hooks/useDiffAnnotationIntroDialog";
 import { AnnotatedDiffLines } from "@/components/app/panels/diff-annotation/AnnotatedDiffLines";
 import type { ResolvedTheme } from "@/components/app/types";
+import { DiffCounts } from "@/components/app/panels/conversations/DiffCounts";
+import { ChangeStatusBadge } from "@/components/app/shared/ChangeStatusBadge";
+import { FilePathLabel } from "@/components/app/shared/FilePathLabel";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ChangeEntry } from "@shared/appTypes";
@@ -21,18 +25,7 @@ export function DiffViewer({
   onExpand?: () => void;
 }) {
   const diffAnnotationIntroDialog = useDiffAnnotationIntroDialog();
-  const changeTone = (status: ChangeEntry["status"]) => {
-    switch (status) {
-      case "added":
-        return "text-emerald-500";
-      case "deleted":
-        return "text-destructive";
-      case "modified":
-        return "text-primary";
-      default:
-        return "text-muted-foreground";
-    }
-  };
+  const lineLimit = useDiffLineLimit(change.path);
 
   return (
     <div className={cn("flex min-h-0 flex-1 flex-col", expanded ? "h-full" : "")}>
@@ -44,14 +37,11 @@ export function DiffViewer({
               <FolderGit2 className="size-3.5" />
               {expanded ? "Expanded diff" : "Selected file"}
             </div>
-            <div className="mt-1 truncate text-sm font-medium" title={change.path}>
-              {change.path}
-            </div>
+            <FilePathLabel path={change.path} className="mt-1 block text-sm font-medium" />
           </div>
           <div className="flex items-center gap-3">
-            <div className={cn("shrink-0 text-xs font-medium", changeTone(change.status))}>
-              {change.status}
-            </div>
+            <ChangeStatusBadge status={change.status} />
+            <DiffCounts counts={{ additions: change.additions, deletions: change.deletions }} />
             {expanded && onClose ? (
               <Button variant="outline" size="sm" onClick={onClose}>
                 Close
@@ -66,8 +56,8 @@ export function DiffViewer({
           </div>
         </div>
       </div>
-      <div className={cn("terminal-text min-h-0 flex-1 overflow-auto text-[12px] leading-6", expanded ? "p-5" : "p-4")}>
-        <AnnotatedDiffLines diff={change.diff} filePath={change.path} resolvedTheme={resolvedTheme} />
+      <div className="min-h-0 flex-1 overflow-auto py-2">
+        <AnnotatedDiffLines diff={change.diff} filePath={change.path} resolvedTheme={resolvedTheme} lineLimit={lineLimit} />
       </div>
     </div>
   );

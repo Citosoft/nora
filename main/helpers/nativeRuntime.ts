@@ -11,8 +11,11 @@ import { PersonalizationService } from "@main/personalization/service";
 import { discoverNativeProviders } from "@main/helpers/nativeProviderDiscovery";
 import { buildProcessEnv } from "@main/processEnv";
 import { effectiveRole } from "@shared/personalization/profiles";
-import { connectorIdsForBot } from "@shared/bots/connectorSelection";
+import { accountConnectorsForBot, connectorIdsForBot } from "@shared/bots/connectorSelection";
 import { findEffectiveBot } from "@shared/bots/catalog";
+import { noraChatModel } from "@shared/bots/noraChat";
+import { defaultProviderBinding } from "@main/execution/defaultBinding";
+import type { ProviderBinding, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import { createSharedBotLibrary } from "@main/bots/sharedBotLibrary";
 import { createNoraToolServer } from "@main/nora-tools/server";
 import { createNoraToolOperations } from "@main/nora-tools/operations/index";
@@ -122,7 +125,8 @@ export async function openNativeRuntime(options: NativeRuntimeOptions): Promise<
     ...(options.tasks ? { tasks: options.tasks } : {}),
     ...(options.workflows ? { workflows: options.workflows } : {})
   }), () => personalization?.publish());
-  const runContextSource = createRunContext(noraTools, memory, connectors);
+  const runContextSource = createRunContext(noraTools, memory, connectors,
+    (subject) => accountConnectorsForBot(options.readSettings().personalization.bots, bots.list(), subject));
   const runContext = runContextSource.resolve;
   await bots.refresh(catalog.list());
   host = await openLocalHost({ runContext, environmentId, databasePath: join(options.stateDirectory, "execution.sqlite"), gitExecutable: "git", instances,
@@ -132,8 +136,16 @@ export async function openNativeRuntime(options: NativeRuntimeOptions): Promise<
     registrations: () => catalog.registrations(), roleForWorkspace: (id) => effectiveRole(options.readSettings().personalization, id),
     botForWorkspace: botIn,
     onFailure: (failure) => console.error(`Native execution: ${failure.message}`) });
+  const noraModel = () => noraChatModel(options.readSettings().personalization);
+  // Nora's chat has no bot definition; its work threads start like any new thread, on Nora's chat model.
+  const noraBinding = async (workspace: WorkspaceRef): Promise<ProviderBinding> => {
+    const result = await defaultProviderBinding({ providers: started(personalization).state().providers,
+      catalog: (kind, instanceId, at) => started(host).catalog(kind, instanceId, at), preferred: noraModel(), subagentModel: readThreadPreferences().subagentModel }, workspace);
+    if (!result.ok) throw new Error(`Nora's chat model is unavailable: ${result.message}`);
+    return result.binding;
+  };
   host.adoptProvider(new GroupCoordinator({ host: lazyHost, nextId: randomUUID, now, bot: botIn, route: createGroupRouter(() => options.readSettings().ai) }));
-  host.adoptProvider(new DirectCoordinator({ host: lazyHost, nextId: randomUUID, now, bot: botIn, route: createDirectRouter(() => options.readSettings().ai),
+  host.adoptProvider(new DirectCoordinator({ host: lazyHost, nextId: randomUUID, now, bot: botIn, noraBinding, route: createDirectRouter(() => options.readSettings().ai),
     workspaces: () => catalog.list().map((entry) => ({ id: entry.id, name: entry.name, workspace: entry.workspace })) }));
   personalization = new PersonalizationService({ read: options.readSettings,
     update: options.updateSettings }, catalog, { environmentId, providers, cursor: () => host.eventCursor(),
@@ -164,8 +176,8 @@ export async function openNativeRuntime(options: NativeRuntimeOptions): Promise<
   routines.start();
   const chatWorkspaces = () => catalog.list().map((entry) => ({ id: entry.id, name: entry.name, workspace: entry.workspace }));
   const nameBranch = (message: string) => generateBranchName(options.readSettings().ai, message);
-  const startBranch = (request: ChatBranchRequest) => startChatBranch({ host: lazyHost, nextId: randomUUID, bot: botIn, workspaces: chatWorkspaces, name: nameBranch }, request);
-  const previewContext = (request: DirectContextRequest) => previewDirectContext({ host: lazyHost, bot: botIn, workspaces: chatWorkspaces, now,
+  const startBranch = (request: ChatBranchRequest) => startChatBranch({ host: lazyHost, nextId: randomUUID, bot: botIn, noraBinding, workspaces: chatWorkspaces, name: nameBranch }, request);
+  const previewContext = (request: DirectContextRequest) => previewDirectContext({ host: lazyHost, bot: botIn, noraModel, workspaces: chatWorkspaces, now,
     runContext: runContextSource.preview, routerModel: () => simpleTaskModelLabel(options.readSettings().ai) }, request);
   const openedHost = host;
   return { host: openedHost, personalization, catalog, memory, memoryReviewLog, routines, connectors, secrets, apps, startBranch, nameBranch, previewDirectContext: previewContext,

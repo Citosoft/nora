@@ -30,7 +30,7 @@ test("problems offer the matching recovery", () => {
 test("the status line explains each step and stays quiet while loading or connected", () => {
   assert.equal(mobileRemoteSetupMessage({ kind: "loading" }), "");
   assert.equal(mobileRemoteSetupMessage({ kind: "connected" }), "");
-  assert.match(mobileRemoteSetupMessage({ kind: "enable" }), /Remote access is off/);
+  assert.match(mobileRemoteSetupMessage({ kind: "enable" }), /Nora Relay is off/);
   assert.equal(mobileRemoteSetupMessage({ kind: "starting", label: "Connecting…", detail: null }), "Connecting…");
   assert.equal(mobileRemoteSetupMessage({ kind: "attention", label: "Needs attention", detail: "Tunnel failed", recovery: "retry" }), "Needs attention · Tunnel failed");
 });

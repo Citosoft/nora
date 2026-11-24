@@ -33,6 +33,7 @@ import { normalizeCodexTool, codexToolState } from "./toolActivity";
 import { normalizeCodexSubagents } from "./subagentActivity";
 import { nativeItemEnvelopeSchema, terminalInteractionSchema, toolProgressSchema } from "./toolSchemas";
 import { normalizeCodexApproval } from "./approvals";
+import { CODEX_ALLOW_AND_AUTO_REVIEW, codexAutoReviewPolicy, codexPermissionPolicy } from "./permissionPolicies";
 import { codexUsageReset } from "./usageReset";
 import { codexContextReading } from "./contextUsage";
 import { readRolloutContext, readRolloutTotalUsage } from "./rolloutContext";
@@ -102,7 +103,7 @@ export class CodexAdapter implements ExecutionProvider {
       const account = await rpc.request("account/read", { refreshToken: false }, accountSchema);
       const models = await readCodexModels(rpc);
       return { status: "available", catalog: { kind: this.kind, instanceId: this.instanceId, capabilities: this.capabilities,
-        models, policies: Object.entries(this.options.policies).map(([id, policy]) => ({ id, label: `${policy.approvalPolicy} · ${policy.sandbox}` })),
+        models, policies: Object.entries(this.options.policies).map(([id, policy]) => codexPermissionPolicy(id, policy)),
         authentication: account.account || !account.requiresOpenaiAuth ? "present" : "required" } };
     } catch {
       return { status: "unavailable", failure: { code: "provider", message: "Codex model discovery is unavailable; check the configured runtime and authentication", retryable: true } };
@@ -174,7 +175,7 @@ export class CodexAdapter implements ExecutionProvider {
     let rejectReady: CodexActive["rejectReady"] = () => {};
     const ready = new Promise<string>((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
     void ready.catch(() => {});
-    const active: CodexActive = { ...execution, emit, items: new Map(), usage: null, usageBaseline: null, nativeTurnId: null, ready, resolveReady, rejectReady };
+    const active: CodexActive = { ...execution, emit, items: new Map(), usage: null, usageBaseline: null, nativeTurnId: null, ready, resolveReady, rejectReady, autoReviewChosen: false };
     this.byAttempt.set(run.attemptId, active);
     const fail = (eventId: string, failure: ExecutionFailure): void => {
       emit({ ...base, eventId, kind: "finished", status: "failed", usage: null, failure });
@@ -215,7 +216,9 @@ export class CodexAdapter implements ExecutionProvider {
     const toolScope = threadToolScope(snapshot.conversation);
     const scopedConfig = toolScope === "full" ? {} : await codexWithoutUserMcpServers(rpc, snapshot.conversation.workspace.path);
     // Codex cannot drop its shell, so a builder keeps a read-only sandbox and every command asks, which onRequest declines.
-    const scopedPolicy = isReadOnlyToolScope(toolScope) ? { sandbox: "read-only", approvalPolicy: "never" } : toolScope === "apps" ? { sandbox: "read-only", approvalPolicy: "untrusted" } : policy;
+    // The reviewer is always sent for a full thread so switching back from auto-review reaches a resumed thread.
+    const scopedPolicy = isReadOnlyToolScope(toolScope) ? { sandbox: "read-only", approvalPolicy: "never" } : toolScope === "apps" ? { sandbox: "read-only", approvalPolicy: "untrusted" }
+      : { ...policy, approvalsReviewer: policy.approvalsReviewer ?? "user" };
     const params = { model: snapshot.conversation.provider.model, cwd: snapshot.conversation.workspace.path, ...scopedPolicy,
       config: { "features.default_mode_request_user_input": true, ...outputConfig, ...scopedConfig, ...codexMcpServersConfig(isReadOnlyToolScope(toolScope)
         ? snapshot.conversation.source?.kind === "workflow" ? workflowReviewMcpServers(runContext) : []
@@ -414,7 +417,9 @@ export class CodexAdapter implements ExecutionProvider {
         text: question.question, options: question.options?.map((option) => option.label) ?? [], multiple: false,
         allowOther: question.isOther ?? false })) };
     } else if (method === "item/commandExecution/requestApproval" || method === "item/fileChange/requestApproval") {
-      const normalized = normalizeCodexApproval(method, params, active.nativeTurnId, active.items, active.run.id);
+      const policy = this.options.policies[active.snapshot.conversation.provider.permissionPolicy];
+      const autoReview = policy && !active.autoReviewChosen ? codexAutoReviewPolicy(this.options.policies, policy) : null;
+      const normalized = normalizeCodexApproval(method, params, active.nativeTurnId, active.items, active.run.id, autoReview);
       decisions = normalized.decisions;
       request = { ...common, kind: "approval", ...normalized.request };
     } else throw new Error("Unsupported native request");
@@ -440,6 +445,10 @@ export class CodexAdapter implements ExecutionProvider {
     if (response.kind === "approval" && decision === undefined) throw new Error("Unsupported approval decision");
     const result: JsonValue = response.kind === "approval" ? { decision: decision ?? response.optionId }
       : { answers: Object.fromEntries(Object.entries(response.answers).map(([key, answers]) => [key, { answers }])) };
+    if (response.kind === "approval" && response.optionId === CODEX_ALLOW_AND_AUTO_REVIEW) {
+      const active = this.byAttempt.get(execution.run.attemptId);
+      if (active) active.autoReviewChosen = true;
+    }
     pending.resolve(result); this.requests.delete(request.id);
     // Resolution is recorded only after serverRequest/resolved, not after writing to stdin.
     void emit;
@@ -463,7 +472,7 @@ export class CodexAdapter implements ExecutionProvider {
     if (!turn) throw new Error("Cannot confirm the submitted native turn");
     if (turn.status === "inProgress") throw new Error("Turn is active in another owner; a read does not reconnect its live requests");
     const active: CodexActive = { ...execution, emit, nativeTurnId: turn.id, items: new Map(), usage: null, usageBaseline: null,
-      ready: Promise.resolve(turn.id), resolveReady() {}, rejectReady() {} };
+      ready: Promise.resolve(turn.id), resolveReady() {}, rejectReady() {}, autoReviewChosen: false };
     for (const item of turn.items) this.onRecoveredItem(active, threadId, turn.id, item);
     this.finish(active, turn.id, turn.status, turn.error?.codexErrorInfo);
   }

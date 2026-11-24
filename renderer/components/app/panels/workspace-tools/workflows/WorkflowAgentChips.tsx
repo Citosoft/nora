@@ -7,7 +7,7 @@ export function WorkflowAgentChips({ agents }: WorkflowAgentChipsProps) {
     {agents.map((agent) => {
       const model = agent.model ?? "Default model";
       return <li key={agent.id} title={`${agent.kind === "writer" ? "Work" : "Review"} · ${agent.toolLabel} · ${model}`}
-        className="inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-md border bg-background py-0.5 pl-0.5 pr-2 text-[11px]">
+        className="inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-md border bg-background py-0.5 pl-0.5 pr-2 text-[10px]">
         <WorkflowAgentAvatar agent={agent} size={20} />
         <span className="truncate font-medium">{agent.name}</span>
         <span className="truncate text-muted-foreground">{agent.botId ? agent.toolLabel : model}</span>

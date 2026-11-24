@@ -1,6 +1,8 @@
+import { REMOTE_ATTACHMENT_ROUTE } from "./attachments";
 import { z } from "zod";
+import { catalogResultSchema } from "@shared/conversations/catalog";
 import { botAvatarSchema, botIdSchema, BOT_NAME_MAX, BOT_ROLE_MAX } from "@shared/bots/contracts";
-import { commandReceiptSchema, conversationEventSchema, providerBindingSchema, requestResponseSchema, runSchema } from "@shared/conversations/contracts";
+import { submitConversationCommandSchema, commandReceiptSchema, conversationEventSchema, providerBindingSchema, requestResponseSchema, runSchema } from "@shared/conversations/contracts";
 import { conversationSummarySchema, eventPageSchema, headerSchema, timelinePageSchema } from "@shared/conversations/gateway";
 import { REMOTE_LIMITS } from "./constants";
 import { inboxCommandSchema, inboxSnapshotSchema } from "@shared/inbox/contracts";
@@ -14,7 +16,7 @@ const id = z.string().min(1).max(512);
 const cursor = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 
 export const RUNTIME_CAPABILITIES = ["conversations.read", "conversations.create", "messages.send", "actions.decide",
-  "tasks.cancel", "tasks.list", "events.replay", "realtime", "bots.chat", "inbox.read", "inbox.update"] as const;
+  "tasks.cancel", "tasks.list", "events.replay", "realtime", "bots.chat", "inbox.read", "inbox.update", "settings.manage", "bots.manage", "providers.configure", "attachments.upload"] as const;
 /** Unknown capabilities from newer runtimes are tolerated by clients; they only act on the ones they know. */
 export const runtimeCapabilitySchema = z.string().min(1).max(64);
 
@@ -51,6 +53,12 @@ export const conversationsResponseSchema = z.object({ conversations: z.array(con
 export const conversationDetailResponseSchema = z.object({ header: headerSchema, timeline: timelinePageSchema }).strict();
 export const timelineResponseSchema = z.object({ page: timelinePageSchema }).strict();
 
+export const providerOptionsQuerySchema = z.object({ projectId: id }).strict();
+export const providerOptionsResponseSchema = z.object({
+  providers: z.array(z.object({ label: z.string(), result: catalogResultSchema }).strict()),
+  defaultBinding: providerBindingSchema.nullable()
+}).strict();
+
 export const createConversationRequestSchema = z.object({
   commandId: id, conversationId: id, projectId: id, title: z.string().trim().min(1).max(200),
   /** Omitted: the runtime resolves the same default model binding the desktop uses for a new thread. */
@@ -58,7 +66,8 @@ export const createConversationRequestSchema = z.object({
 }).strict();
 /** Body for `POST /v1/bots/:botId/chat`; the runtime resolves the bot's home workspace, provider and title. */
 export const createBotChatRequestSchema = z.object({ commandId: id, conversationId: id, scope: remoteBotScopeSchema }).strict();
-export const sendMessageRequestSchema = z.object({ commandId: id, runId: id, instruction: z.string().trim().min(1).max(100_000) }).strict();
+export const sendMessageRequestSchema = z.object({ commandId: id, runId: id, instruction: z.string().trim().min(1).max(100_000),
+  providerChange: submitConversationCommandSchema.shape.providerChange }).strict();
 export const actionDecisionRequestSchema = z.object({ commandId: id, conversationId: id, response: requestResponseSchema }).strict();
 export const cancelTaskRequestSchema = z.object({ commandId: id, conversationId: id }).strict();
 export const commandResponseSchema = z.object({ receipt: commandReceiptSchema }).strict();
@@ -113,9 +122,13 @@ export const realtimeServerMessageSchema = z.discriminatedUnion("type", [
 ]);
 
 export const RUNTIME_ROUTES = Object.freeze({
+  attachments: REMOTE_ATTACHMENT_ROUTE,
   info: "/v1/runtime/info",
   projects: "/v1/projects",
+  providerOptions: "/v1/provider-options",
   bots: "/v1/bots",
+  settings: "/v1/settings",
+  botSettings: "/v1/bot-settings",
   botChat: (botId: string) => `/v1/bots/${encodeURIComponent(botId)}/chat`,
   conversations: "/v1/conversations",
   conversation: (conversationId: string) => `/v1/conversations/${encodeURIComponent(conversationId)}`,

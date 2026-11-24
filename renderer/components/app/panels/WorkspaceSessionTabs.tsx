@@ -84,8 +84,8 @@ export function WorkspaceSessionTabs({
                   className={cn(
                     "h-8 min-w-0 flex-none justify-start gap-2 rounded-md border-0 px-3 text-xs",
                     isActive
-                      ? "bg-secondary text-foreground hover:bg-secondary"
-                      : "bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
+                      ? "bg-foreground/[0.1] text-foreground hover:bg-foreground/[0.1]"
+                      : "bg-foreground/[0.03] text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground"
                   )}
                   onClick={() => onSelect(tab)}
                 >
@@ -134,7 +134,7 @@ export function WorkspaceSessionTabs({
                   onSelect={() => runCloseAction(closeTabTargets, onCloseMany)}
                 >
                   Close Tab
-                  <span className="ml-auto text-[11px] text-muted-foreground">{closeTabShortcut}</span>
+                  <span className="ml-auto text-[10px] text-muted-foreground">{closeTabShortcut}</span>
                 </ContextMenuItem>
                 <ContextMenuItem
                   disabled={closeOtherTabTargets.length === 0}
@@ -175,22 +175,22 @@ export function WorkspaceSessionTabs({
         >
           <DropdownMenuItem onSelect={onCreateThread}>
             <MessageSquare className="size-4" /><span className="whitespace-nowrap">New thread</span>
-            <span className="ml-auto text-[11px] text-muted-foreground">{newAgentShortcut}</span>
+            <span className="ml-auto text-[10px] text-muted-foreground">{newAgentShortcut}</span>
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={onCreateTerminalFromDefaults}>
             <TerminalSquare className="size-4" />
             <span className="whitespace-nowrap">New terminal (defaults)</span>
-            <span className="ml-auto text-[11px] text-muted-foreground">{newTerminalShortcut}</span>
+            <span className="ml-auto text-[10px] text-muted-foreground">{newTerminalShortcut}</span>
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={onCreateTerminal}>
             <TerminalSquare className="size-4" />
             <span className="whitespace-nowrap">New terminal…</span>
-            <span className="ml-auto text-[11px] text-muted-foreground">{newTerminalShortcut}</span>
+            <span className="ml-auto text-[10px] text-muted-foreground">{newTerminalShortcut}</span>
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={onCreateBrowser}>
             <Globe className="size-4" />
             <span className="whitespace-nowrap">New browser</span>
-            <span className="ml-auto text-[11px] text-muted-foreground">{newBrowserShortcut}</span>
+            <span className="ml-auto text-[10px] text-muted-foreground">{newBrowserShortcut}</span>
           </DropdownMenuItem>
 
         </DropdownMenu>

@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { AccountAction } from "@shared/types/account/account.types";
 import { AccountAvatarImage } from "@/components/app/shared/AccountAvatarImage";
 import { SettingsSyncControls } from "./SettingsSyncControls";
+import { SignInRelayHint } from "./SignInRelayHint";
 
 export function SidebarUserAvatar() {
   const localName = useUserDisplayName();
@@ -20,11 +21,14 @@ export function SidebarUserAvatar() {
     setError(null); setOpen(false);
     void accountClient.open(action).catch(() => { setError("Account services could not open. Try again."); setOpen(true); });
   };
+  const tooltip = account.status === "signed-out"
+    ? <SignInRelayHint />
+    : name || "Your account";
   return <Popover open={open} onOpenChange={setOpen}><PopoverTrigger asChild>
-    <Button variant="ghost" size="icon" aria-label={account.status === "signed-in" ? `Account: ${name}` : "Your account"}
+    <Button variant="ghost" size="icon" aria-label={account.status === "signed-in" ? `Account: ${name}` : account.status === "signed-out" ? "Sign in for remote control with Nora Relay and settings sync" : "Your account"}
       onClick={(event) => { if (account.status === "signed-out") { event.preventDefault(); act("manage"); } }}
-      tooltip={name || "Your account"} className="size-8 rounded-full">
-      <span className="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary text-[10px] font-semibold text-secondary-foreground">
+      tooltip={tooltip} className="size-8 rounded-full">
+      <span className="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary text-[9px] font-semibold text-secondary-foreground">
         <AccountAvatarImage fallback={initial || <UserRound className="size-3.5" aria-hidden="true" />} />
       </span>
     </Button>

@@ -13,7 +13,7 @@ export function RoutineEditorStepRail({ steps, current, reachable, onSelect }: R
           <button type="button" aria-current={active ? "step" : undefined} disabled={!reachable(step.id)} onClick={() => onSelect(step.id)}
             className={cn("flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50",
               active ? "bg-background shadow-sm" : "hover:bg-background/60")}>
-            <span className={cn("mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border text-[11px]",
+            <span className={cn("mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border text-[10px]",
               active ? "border-primary bg-primary text-primary-foreground" : done ? "border-primary text-primary" : "text-muted-foreground")}>
               {done ? <Check className="size-3" aria-hidden="true" /> : index + 1}</span>
             <span className="min-w-0">

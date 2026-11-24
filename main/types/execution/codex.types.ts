@@ -14,6 +14,8 @@ export interface CodexUsageUpdate { baseline: ExecutionUsage | null; usage: Exec
 export interface CodexPolicy {
   approvalPolicy: "untrusted" | "on-failure" | "on-request" | "never";
   sandbox: "read-only" | "workspace-write" | "danger-full-access";
+  /** Who answers approval requests; `auto_review` hands them to Codex's reviewer agent. Defaults to the user. */
+  approvalsReviewer?: "user" | "auto_review";
 }
 export interface CodexOptions {
   /** Nora's per-run additions: its tool server and run guidance such as a bot's notes. */
@@ -36,6 +38,8 @@ export interface CodexActive extends ProviderExecution {
   ready: Promise<string>;
   resolveReady: (id: string) => void;
   rejectReady: (error: Error) => void;
+  /** The user chose to switch this thread to auto-review; it takes effect from the next turn, so later prompts stop offering it. */
+  autoReviewChosen: boolean;
 }
 export interface CodexPendingRequest {
   attemptId: string;

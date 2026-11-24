@@ -27,8 +27,8 @@ export const AppCalendar: ComponentFn<AppCatalog, "Calendar"> = ({ props }) => {
   const move = (delta: number): void => setCursor(({ year, month: current }) => { const next = new Date(year, current + delta, 1); return { year: next.getFullYear(), month: next.getMonth() }; });
   const entry = (row: AppRow, index: number) => {
     const label = formatAppValue(cellValue(row, title));
-    const content = <><span className="block truncate">{label}</span>{subtitle && <span className="block truncate text-[10px] text-muted-foreground">{formatAppValue(cellValue(row, subtitle))}</span>}</>;
-    const className = cn("w-full rounded px-1 py-0.5 text-left text-[11px] leading-tight", onRow ? "bg-primary/10 hover:bg-primary/20" : "bg-muted/60", sameRow(selected, row) && "ring-1 ring-primary");
+    const content = <><span className="block truncate">{label}</span>{subtitle && <span className="block truncate text-[9px] text-muted-foreground">{formatAppValue(cellValue(row, subtitle))}</span>}</>;
+    const className = cn("w-full rounded px-1 py-0.5 text-left text-[10px] leading-tight", onRow ? "bg-primary/10 hover:bg-primary/20" : "bg-muted/60", sameRow(selected, row) && "ring-1 ring-primary");
     return onRow ? <button key={index} type="button" title={label} className={className} onClick={() => onRow(row)}>{content}</button> : <div key={index} title={label} className={className}>{content}</div>;
   };
   return <div className="flex min-w-0 flex-col gap-2">
@@ -39,11 +39,11 @@ export const AppCalendar: ComponentFn<AppCatalog, "Calendar"> = ({ props }) => {
     </div>
     {!rows.length && <p className="text-xs text-muted-foreground">{propText(props.emptyText) || "Nothing scheduled."}</p>}
     <div className="grid grid-cols-7 gap-px overflow-hidden rounded-md border border-border/60 bg-border/60 text-xs">
-      {WEEKDAYS.map((day) => <div key={day} className="bg-card px-1.5 py-1 text-center text-[11px] font-medium text-muted-foreground">{day}</div>)}
+      {WEEKDAYS.map((day) => <div key={day} className="bg-card px-1.5 py-1 text-center text-[10px] font-medium text-muted-foreground">{day}</div>)}
       {month.weeks.flat().map((day) => <div key={day.key} className={cn("flex min-h-[4.5rem] flex-col gap-0.5 bg-card p-1", !day.inMonth && "bg-muted/30 text-muted-foreground")}>
-        <span className={cn("mb-0.5 self-end rounded-full px-1 text-[11px] tabular-nums", day.today && "bg-primary text-primary-foreground")}>{day.day}</span>
+        <span className={cn("mb-0.5 self-end rounded-full px-1 text-[10px] tabular-nums", day.today && "bg-primary text-primary-foreground")}>{day.day}</span>
         {day.rows.slice(0, SHOWN_PER_DAY).map(entry)}
-        {day.rows.length > SHOWN_PER_DAY && <span className="px-1 text-[10px] text-muted-foreground">+{day.rows.length - SHOWN_PER_DAY} more</span>}
+        {day.rows.length > SHOWN_PER_DAY && <span className="px-1 text-[9px] text-muted-foreground">+{day.rows.length - SHOWN_PER_DAY} more</span>}
       </div>)}
     </div>
   </div>;

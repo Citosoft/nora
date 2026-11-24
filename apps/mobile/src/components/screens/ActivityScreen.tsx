@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { layout } from "@/theme/tokens";
 import { RefreshControl } from "react-native";
 import { router } from "expo-router";
 import { routes } from "@/navigation/routes";
@@ -27,7 +28,7 @@ export function ActivityScreen({ runtimeId }: { runtimeId: string }) {
   const refreshing = state.status === "ready" && state.refreshing;
   return (
     <RuntimeScreen runtimeId={runtimeId} largeTitle title={() => "Activity"} subtitle={(runtime) => runtime.name}
-      back={{ label: "chat", fallbackHref: routes.runtime(runtimeId) }}
+      back={{ label: "Chat", fallbackHref: routes.runtime(runtimeId) }}
       trailing={() => <NavButton icon="refresh" label="Refresh" busy={refreshing} onPress={activity.refresh} />}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={activity.refresh} />}>
       {() => (
@@ -35,11 +36,11 @@ export function ActivityScreen({ runtimeId }: { runtimeId: string }) {
           {state.status === "loading" ? <StateView kind="loading" message="Loading activity…" /> : null}
           {state.status === "error" ? <Inset><Banner tone="danger" title="Couldn't load activity" message={state.message} /></Inset> : null}
           {list ? (
-            <ListSection header="Running now" separatorInset={58} footer={list.active.length === 0 ? "Nothing is running right now." : undefined}>
+            <ListSection header="Running now" separatorInset={layout.iconRowInset} footer={list.active.length === 0 ? "Nothing is running right now." : undefined}>
               {list.active.map((entry) => <ActivityRow key={entry.run.id} entry={entry} now={now} onOpen={open} />)}
             </ListSection>
           ) : null}
-          <ListSection header="Recent" separatorInset={58}>
+          <ListSection header="Recent" separatorInset={layout.iconRowInset}>
             {list?.recent.map((entry) => <ActivityRow key={entry.run.id} entry={entry} now={now} onOpen={open} />)}
           </ListSection>
         </>

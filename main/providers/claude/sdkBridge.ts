@@ -9,7 +9,10 @@ import { claudeApprovalDetails } from "./approvals";
 import type { ClaudeOpenInput, ClaudeSession, ClaudeRuntimeOptions } from "@main/types/execution/claude.types";
 import type { ClaudeToolOutputOptions } from "@main/types/execution/toolOutput.types";
 import { claudeOutputOptions } from "./outputBudget";
+import { claudeSessionSettings } from "./sessionSettings";
+import { claudeAccountConnectorOptions } from "./accountConnectors";
 import { claudeMcpAppLookup } from "./mcpApps";
+import { CLAUDE_ALLOW_AND_AUTO } from "./permissionPolicies";
 
 const questionInputSchema = z.object({ questions: z.array(z.object({ question: z.string(), header: z.string(), options: z.array(z.object({ label: z.string() })), multiSelect: z.boolean().optional() })) });
 
@@ -26,24 +29,27 @@ function openClaudeSession(input: ClaudeOpenInput, runtime: ClaudeRuntimeOptions
       message: { role: "user", content: input.instruction }, parent_tool_use_id: null };
     await keepInputOpen;
   }
-  const outputOptions = claudeOutputOptions(toolOutput);
+  const { settings: outputSettings, ...outputOptions } = claudeOutputOptions(toolOutput);
+  const settings = claudeSessionSettings(input, outputSettings);
+  const account = claudeAccountConnectorOptions(input);
+  const scope = claudeToolScopeOptions(input.toolScope, input.mcpServers, input.cwd);
+  const mcpServers = { ...scope.mcpServers, ...account.mcpServers };
   // The runtime has one MCP call limit, so the longest any server needs applies to all of them.
   const toolTimeoutSeconds = Math.max(0, ...input.mcpServers.map((server) => server.toolTimeoutSeconds ?? 0));
+  let permissionMode = input.permissionMode;
   const native = query({ prompt: prompt(), options: {
     ...outputOptions,
     cwd: input.cwd, model: input.model, permissionMode: input.permissionMode,
-    ...(input.autoCompactTokens || outputOptions.settings ? { settings: { ...(typeof outputOptions.settings === "object" ? outputOptions.settings : {}),
-      ...(input.autoCompactTokens ? { autoCompactEnabled: true, autoCompactWindow: input.autoCompactTokens,
-        modelSettings: { [input.model]: { autoCompactWindow: input.autoCompactTokens } } } : {}) } } : {}),
+    ...(settings ? { settings } : {}),
     systemPrompt: { type: "preset", preset: "claude_code", append: questionGuidance("AskUserQuestion", input.guidance) },
     ...(input.effort ? { effort: input.effort } : {}),
     pathToClaudeCodeExecutable: runtime.executablePath,
-    env: { ...process.env, ...runtime.environment, ...(input.subagentModel ? { CLAUDE_CODE_SUBAGENT_MODEL: input.subagentModel } : {}),
+    env: { ...process.env, ...runtime.environment, ...account.env, ...(input.subagentModel ? { CLAUDE_CODE_SUBAGENT_MODEL: input.subagentModel } : {}),
       ...(toolTimeoutSeconds ? { MCP_TOOL_TIMEOUT: String(toolTimeoutSeconds * 1000) } : {}) },
     ...(input.resume ? { resume: input.sessionId } : { sessionId: input.sessionId }),
-    ...claudeToolScopeOptions(input.toolScope, input.mcpServers, input.cwd),
+    ...scope, ...(Object.keys(mcpServers).length ? { mcpServers } : {}),
     includePartialMessages: true,
-    promptSuggestions: true,
+    promptSuggestions: input.promptSuggestions,
     canUseTool: async (name, toolInput, options) => {
       if (!claudeToolAllowed(input.toolScope, name)) return { behavior: "deny", message: isReadOnlyToolScope(input.toolScope)
         ? "This thread has read-only access. File edits and unsandboxed actions are unavailable."
@@ -59,8 +65,12 @@ function openClaudeSession(input: ClaudeOpenInput, runtime: ClaudeRuntimeOptions
           answers: Object.fromEntries(Object.entries(response.answers).map(([question, answers]) => [question, answers.join(", ")])) } };
       }
       const response = await input.onRequest({ kind: "approval", nativeId: options.toolUseID,
-        title: options.title ?? `Allow ${name}?`, signal: options.signal,
+        title: options.title ?? `Allow ${name}?`, signal: options.signal, permissionMode,
         details: claudeApprovalDetails(name, z.json().parse(toolInput), input.cwd, options.decisionReason, options.blockedPath) });
+      if (response.kind === "approval" && response.optionId === CLAUDE_ALLOW_AND_AUTO) {
+        permissionMode = "auto";
+        return { behavior: "allow", updatedInput: toolInput, updatedPermissions: [{ type: "setMode", mode: "auto", destination: "session" }] };
+      }
       return response.kind === "approval" && response.optionId === "allow"
         ? { behavior: "allow", updatedInput: toolInput }
         : { behavior: "deny", message: "Declined in Nora" };

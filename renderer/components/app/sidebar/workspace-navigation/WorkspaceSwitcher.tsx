@@ -42,7 +42,7 @@ export function WorkspaceSwitcher({ workspaces, activeId, collapsed, recentWorks
           return <div key={entry.project.id} className={`flex items-center rounded-md ${entry.project.id === activeId ? "bg-secondary" : "hover:bg-muted"}`}>
             <WorkspaceColorPicker workspace={entry.project} />
             <button type="button" onClick={() => choose(() => onSelect(entry.project.id))} aria-current={entry.project.id === activeId ? "page" : undefined} className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-              <span className="min-w-0 flex-1"><span className="block truncate text-sm">{entry.project.name}</span><span className="block truncate text-[11px] text-muted-foreground">{attention ? `${attention} need attention` : running ? `${running} running` : entry.project.rootPath}</span></span>
+              <span className="min-w-0 flex-1"><span className="block truncate text-sm">{entry.project.name}</span><span className="block truncate text-[10px] text-muted-foreground">{attention ? `${attention} need attention` : running ? `${running} running` : entry.project.rootPath}</span></span>
               {entry.project.id === activeId && <Check className="size-3.5 shrink-0" aria-hidden="true" />}
             </button>
             <WorkspacePinButton workspace={entry.project} />
@@ -52,8 +52,8 @@ export function WorkspaceSwitcher({ workspaces, activeId, collapsed, recentWorks
           <WorkspaceColorPicker workspace={{ id: entry.shellProjectId ?? entry.id, name: entry.name }} />
           <span className="min-w-0 flex-1 truncate px-2 py-2 text-sm">{entry.name}</span>
         </div>)}
-        {!!recent.length && <p className="px-2 pb-1 pt-3 text-[11px] text-muted-foreground">Recent workspaces</p>}
-        {recent.map((entry) => <button type="button" key={entry.rootPath} onClick={() => choose(() => onOpenRecent(entry.rootPath, entry.name))} className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><WorkspaceAvatar workspace={{ id: entry.rootPath, name: entry.name }} /><span className="min-w-0 flex-1"><span className="block truncate text-sm">{entry.name}</span><span className="block truncate text-[11px] text-muted-foreground">{entry.rootPath}</span></span></button>)}
+        {!!recent.length && <p className="px-2 pb-1 pt-3 text-[10px] text-muted-foreground">Recent workspaces</p>}
+        {recent.map((entry) => <button type="button" key={entry.rootPath} onClick={() => choose(() => onOpenRecent(entry.rootPath, entry.name))} className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><WorkspaceAvatar workspace={{ id: entry.rootPath, name: entry.name }} /><span className="min-w-0 flex-1"><span className="block truncate text-sm">{entry.name}</span><span className="block truncate text-[10px] text-muted-foreground">{entry.rootPath}</span></span></button>)}
         {!visible.length && !recent.length && !additionalWorkspaces.length && <p className="px-2 py-4 text-xs text-muted-foreground">No matching workspaces.</p>}
       </div>
       <Button variant="ghost" className="mt-2 h-9 w-full justify-start text-xs" onClick={() => choose(onAdd)}><Plus className="size-4" aria-hidden="true" />Add workspace</Button>

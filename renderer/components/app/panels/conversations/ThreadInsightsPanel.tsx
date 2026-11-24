@@ -12,11 +12,12 @@ import { ThreadSubagents } from "./ThreadSubagents";
 import { ThreadSkills } from "./ThreadSkills";
 import { ThreadBranchSection } from "./ThreadBranchSection";
 import { ThreadOutputs } from "./ThreadOutputs";
+import { ThreadPinnedMessages } from "./ThreadPinnedMessages";
 import { ThreadInsightsSectionsContextMenu } from "./ThreadInsightsSectionsContextMenu";
 import { ThreadInsightsSectionsDropdown } from "./ThreadInsightsSectionsDropdown";
 import { useThreadInsightsSections } from "@/components/app/hooks/useThreadInsightsSections";
 
-export function ThreadInsightsPanel({ header, providerLabel, connectors, skills, changes, subagents, outputs, branch, expanded, busy, canSettle, hasOlderHistory, onToggle, onLoadHistory, onOpenOutput, onSettleChange }: ThreadInsightsPanelProps) {
+export function ThreadInsightsPanel({ header, providerLabel, connectors, skills, changes, subagents, outputs, branch, pins, expanded, busy, canSettle, hasOlderHistory, onToggle, onLoadHistory, onOpenOutput, onSettleChange }: ThreadInsightsPanelProps) {
   const detailsId = useId();
   const sections = useThreadInsightsSections();
   const show = sections.isVisible;
@@ -44,15 +45,16 @@ export function ThreadInsightsPanel({ header, providerLabel, connectors, skills,
         <p className="text-muted-foreground">{conversation.archivedAt ? "Settled" : active ? active.state.replaceAll("-", " ") : "Ready"} · {conversation.provider.model}</p>
         {conversation.workspace.branch && <p className="flex min-w-0 items-center gap-1.5 text-muted-foreground"><GitBranch className="size-3 shrink-0" aria-hidden="true" /><span className="truncate" title={conversation.workspace.branch}>{conversation.workspace.branch}</span></p>}
       </div>}
-      {show("ide") && <ThreadIdePicker key={conversation.id} workspace={conversation.workspace} />}
+      {show("pinned") && <ThreadPinnedMessages pins={pins} />}
+      {show("ide") &&<ThreadIdePicker key={conversation.id} workspace={conversation.workspace} />}
       {show("subagents") && subagents.agents.length > 0 && <ThreadSubagents summary={subagents} />}
       {show("changes") && <div className="space-y-2 border-t border-border/50 pt-3">
         <p className="font-medium">Reviewed changes</p>
         {changes.status === "ready" ? <>
           <div className="flex items-center justify-between gap-2 tabular-nums"><span>{changes.files} {changes.files === 1 ? "file" : "files"}</span>{changes.scope === "turn" && changes.additions !== null && changes.deletions !== null && <DiffCounts counts={{ additions: changes.additions, deletions: changes.deletions }} />}</div>
-          <p className="text-[10px] leading-relaxed text-muted-foreground">{changes.scope === "workspace" ? "Workspace snapshot; thread-specific counts unavailable." : `${changes.partial ? "Partial totals from" : "Observed edits across"} ${changes.reviews} reviewed ${changes.reviews === 1 ? "turn" : "turns"}.`}</p>
+          <p className="text-[9px] leading-relaxed text-muted-foreground">{changes.scope === "workspace" ? "Workspace snapshot; thread-specific counts unavailable." : `${changes.partial ? "Partial totals from" : "Observed edits across"} ${changes.reviews} reviewed ${changes.reviews === 1 ? "turn" : "turns"}.`}</p>
         </> : <p className="text-muted-foreground">{changes.status === "pending" ? "Changes appear after a turn is reviewed." : "Review evidence is unavailable."}</p>}
-        {hasOlderHistory && <Button variant="ghost" size="sm" className="h-7 px-0 text-[11px]" onClick={onLoadHistory}>Include earlier messages</Button>}
+        {hasOlderHistory && <Button variant="ghost" size="sm" className="h-7 px-0 text-[10px]" onClick={onLoadHistory}>Include earlier messages</Button>}
       </div>}
       {show("outputs") && <ThreadOutputs outputs={outputs} partial={hasOlderHistory} onOpen={onOpenOutput} />}
       {show("branch") && <ThreadBranchSection branch={branch} />}
@@ -60,7 +62,7 @@ export function ThreadInsightsPanel({ header, providerLabel, connectors, skills,
       {/* Group and direct chats run on Nora's coordinators, which get no connectors. */}
       {show("nora-connectors") && !conversation.group && !conversation.direct && <NoraThreadConnectors subject={connectorSubjectOf(conversation)} />}
       {show("skills") && skills && <ThreadSkills skills={skills} />}
-      <div className="flex items-center justify-between gap-2 border-t border-border/50 pt-3 text-[10px] text-muted-foreground"><span className="truncate">{providerLabel} · {conversation.provider.permissionPolicy}</span><Button size="sm" variant="ghost" className="h-7 px-2 text-[11px]" disabled={busy || !canSettle} onClick={onSettleChange}>{conversation.archivedAt ? "Reopen" : "Settle"}</Button></div>
+      <div className="flex items-center justify-between gap-2 border-t border-border/50 pt-3 text-[9px] text-muted-foreground"><span className="truncate">{providerLabel} · {conversation.provider.permissionPolicy}</span><Button size="sm" variant="ghost" className="h-7 px-2 text-[10px]" disabled={busy || !canSettle} onClick={onSettleChange}>{conversation.archivedAt ? "Reopen" : "Settle"}</Button></div>
     </div>}
   </aside></ThreadInsightsSectionsContextMenu>;
 }

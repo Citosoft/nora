@@ -9,6 +9,6 @@ export function BotAvatarStack({ members, size, label, className }: BotAvatarSta
   return <span role="img" aria-label={label} className={`flex shrink-0 items-center ${className ?? ""}`}>
     {members.slice(0, SHOWN).map((member, index) => <span key={member.botId} className={index ? "-ml-[35%]" : ""} style={{ zIndex: SHOWN - index }}>
       <BotAvatar avatar={member.avatar} size={size} /></span>)}
-    {extra > 0 && <span aria-hidden="true" className="ml-0.5 text-[10px] tabular-nums text-muted-foreground">+{extra}</span>}
+    {extra > 0 && <span aria-hidden="true" className="ml-0.5 text-[9px] tabular-nums text-muted-foreground">+{extra}</span>}
   </span>;
 }

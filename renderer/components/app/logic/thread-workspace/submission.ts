@@ -1,4 +1,4 @@
-import { buildComposerInstruction } from "@/components/app/logic/composerAttachments";
+import { buildComposerInstruction } from "@shared/conversations/composerInstruction";
 import { applyThreadSettlement } from "./settlement";
 import type { ThreadWorkspaceInternals } from "@/components/app/types/thread-workspace/internals.types";
 import type { ThreadWorkspaceStore } from "@/components/app/types/thread-workspace/state.types";

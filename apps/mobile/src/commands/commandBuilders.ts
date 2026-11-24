@@ -1,3 +1,5 @@
+import type { ProviderBinding } from "@shared/types/conversation/contracts.types";
+import type { SendMessageRequest } from "@shared/types/remote-access/runtimeApi.types";
 import type { RequestResponse } from "@shared/types/conversation/contracts.types";
 import type { RemoteBot } from "@shared/types/remote-access/runtimeApi.types";
 import type { CommandFactoryDeps, PendingCancelTask, PendingCreateBotChat, PendingCreateConversation, PendingDecideAction, PendingSendMessage } from "@/types/pendingCommand.types";
@@ -10,21 +12,21 @@ export const pendingCommandKeys = Object.freeze({
   cancel: (runtimeId: string, runId: string) => `${runtimeId}/cancel/${runId}`
 });
 
-export function buildSendMessage(deps: CommandFactoryDeps, input: { runtimeId: string; conversationId: string; instruction: string }): PendingSendMessage {
+export function buildSendMessage(deps: CommandFactoryDeps, input: { runtimeId: string; conversationId: string; instruction: string; providerChange?: SendMessageRequest["providerChange"] }): PendingSendMessage {
   const runId = deps.createId();
   return {
     kind: "send-message", key: pendingCommandKeys.send(input.runtimeId, input.conversationId, runId), runtimeId: input.runtimeId,
-    conversationId: input.conversationId, commandId: deps.createId(), runId, instruction: input.instruction.trim(),
+    conversationId: input.conversationId, commandId: deps.createId(), runId, instruction: input.instruction.trim(), ...(input.providerChange ? { providerChange: input.providerChange } : {}),
     createdAt: deps.now().toISOString(), lastError: null
   };
 }
 
 export function buildCreateConversation(deps: CommandFactoryDeps,
-  input: { runtimeId: string; projectId: string; title: string; instruction: string }): PendingCreateConversation {
+  input: { runtimeId: string; projectId: string; title: string; instruction: string; provider?: ProviderBinding }): PendingCreateConversation {
   const conversationId = deps.createId();
   return {
     kind: "create-conversation", key: pendingCommandKeys.create(input.runtimeId, conversationId), runtimeId: input.runtimeId,
-    conversationId, commandId: deps.createId(), projectId: input.projectId, title: input.title.trim(), created: false,
+    conversationId, commandId: deps.createId(), projectId: input.projectId, title: input.title.trim(), created: false, ...(input.provider ? { provider: input.provider } : {}),
     message: { commandId: deps.createId(), runId: deps.createId(), instruction: input.instruction.trim() },
     createdAt: deps.now().toISOString(), lastError: null
   };

@@ -2,7 +2,7 @@ import { reviewCommentSurfaceClass, reviewComposerSurfaceClass } from "@/compone
 import { formatDiffPreview, getInlineCommentKey, parseDiffLines } from "@/components/app/logic/forgePanelDiff";
 import { formatForgeReviewLineLabel } from "@/components/app/logic/forgeReviewHandoff";
 import { resolveMonacoLanguageId } from "@/components/app/logic/fileEditorMonaco";
-import { diffLineClass } from "@/components/app/logic/utils";
+import { diffRowClass } from "@/components/app/logic/diffLineStyles";
 import { ForgeDiffCodeLine } from "@/components/app/panels/ForgeDiffCodeLine";
 import { MarkdownRenderer } from "@/components/app/shared/MarkdownRenderer";
 import type { ForgeChangedFileProps, ForgeInlineComposerTarget } from "@/components/app/types/forgeChangedFile.types";
@@ -49,12 +49,12 @@ export function ForgeChangedFile({
         <span className="shrink-0 text-red-600 dark:text-red-300">-{change.deletions}</span>
       </button>
       {change.previousPath ? (
-        <div className="border-t border-border/40 px-8 py-1.5 text-[11px] text-muted-foreground">
+        <div className="border-t border-border/40 px-8 py-1.5 text-[10px] text-muted-foreground">
           Renamed from {change.previousPath}
         </div>
       ) : null}
       {expanded ? (
-        <div className="terminal-text overflow-x-auto whitespace-pre border-t border-border/50 bg-background p-2 text-[11px] leading-5">
+        <div className="terminal-text overflow-x-auto whitespace-pre border-t border-border/50 bg-background p-2 text-[10px] leading-5">
           {lines.map((line) => {
             const inlineKey = getInlineCommentKey(change.path, line.oldLine, line.newLine);
             const inlineComments = commentsByLine.get(inlineKey) ?? [];
@@ -62,11 +62,11 @@ export function ForgeChangedFile({
             return (
               <div key={`${change.id}-${line.key}`} className="space-y-1">
                 <div className="group flex items-start gap-2">
-                  <div className="mt-[1px] w-16 shrink-0 text-[10px] text-muted-foreground/80">
+                  <div className="mt-[1px] w-16 shrink-0 text-[9px] text-muted-foreground/80">
                     {line.oldLine ?? " "} | {line.newLine ?? " "}
                   </div>
-                  <div className={cn("min-w-0 flex-1 whitespace-pre-wrap break-words px-1", diffLineClass(line.text, resolvedTheme))}>
-                    <ForgeDiffCodeLine text={line.text} languageId={languageId} resolvedTheme={resolvedTheme} />
+                  <div className={cn("min-w-0 flex-1 whitespace-pre-wrap break-words px-1", diffRowClass(line.tone))}>
+                    <ForgeDiffCodeLine text={line.text} tone={line.tone} languageId={languageId} resolvedTheme={resolvedTheme} />
                   </div>
                   {canCommentInline ? (
                     <Button
@@ -98,7 +98,7 @@ export function ForgeChangedFile({
                           <span>{new Date(comment.createdAt).toLocaleString()}</span>
                         </div>
                         {comment.body.trim() ? (
-                          <MarkdownRenderer allowHtml className="space-y-2 text-[13px] leading-5 text-foreground/90">{comment.body}</MarkdownRenderer>
+                          <MarkdownRenderer allowHtml className="space-y-2 text-[12px] leading-5 text-foreground/90">{comment.body}</MarkdownRenderer>
                         ) : (
                           <div className="text-sm text-muted-foreground">No comment body provided.</div>
                         )}
@@ -124,7 +124,7 @@ export function ForgeChangedFile({
                     <div className="space-y-2 p-3">
                       <Textarea value={inlineCommentDraft} onChange={(event) => setInlineCommentDraft(event.target.value)} aria-label="Pull request review comment" placeholder="Leave a review comment on this line" className="min-h-24 resize-y text-sm leading-5" disabled={commentLoading} />
                       <div className="flex items-center justify-between gap-3">
-                        <div className="font-sans text-[11px] text-muted-foreground">Posts as a review comment on the pull request diff.</div>
+                        <div className="font-sans text-[10px] text-muted-foreground">Posts as a review comment on the pull request diff.</div>
                         <div className="flex shrink-0 items-center gap-2">
                           <Button variant="ghost" size="sm" className="h-8 rounded-md" onClick={closeComposer} disabled={commentLoading}>Cancel</Button>
                           <Button

@@ -1,6 +1,7 @@
 import { noraToolsStatus } from "@shared/nora-tools/catalog";
 import { useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { FixturePortsProvider } from "./FixturePortsProvider";
 import { NativeProviderPicker } from "@/components/app/panels/conversations/NativeProviderPicker";
 import type { ConversationClient } from "@/components/app/types/conversationClient.types";
 import type { ProviderBinding } from "@shared/types/conversation/contracts.types";
@@ -36,6 +37,8 @@ export function ModelPickerHarness() {
     async header() { return null; }, async summaries() { return []; },
     async mcp() { return { kind: "unavailable", message: "No MCP in this fixture" }; },
     async skills() { return { kind: "unavailable", message: "No skills in this fixture" }; },
+    async outputs() { return []; }, async outputFile() { return null; },
+    async openOutputFile() { throw new Error("No output files in this fixture"); },
     async history() { throw new Error("No conversation history in this fixture"); }, subscribe() { return () => {}; }
   }), []);
   return <main className="mx-auto max-w-3xl px-4 py-8">
@@ -55,4 +58,4 @@ export function ModelPickerHarness() {
 
 const root = document.getElementById("app");
 if (!root) throw new Error("Model picker acceptance root is missing");
-createRoot(root).render(<ModelPickerHarness />);
+createRoot(root).render(<FixturePortsProvider><ModelPickerHarness /></FixturePortsProvider>);

@@ -113,7 +113,7 @@
   }
 
   body {
-    @apply overflow-hidden bg-background text-foreground antialiased;
+    @apply overflow-hidden bg-background text-base text-foreground antialiased;
     background-image:
       radial-gradient(circle at top left, var(--body-gradient-a), transparent 22%),
       radial-gradient(circle at bottom right, var(--body-gradient-b), transparent 24%);
@@ -125,7 +125,8 @@
   .thread-conversation { container-type: inline-size; }
 
   @container (min-width: 800px) {
-    .thread-insights { position: absolute; top: 1rem; right: 1rem; margin: 0; }
+    /* Lifted above the transcript, a later positioned sibling that would otherwise paint over it and take its clicks. */
+    .thread-insights { position: absolute; top: 1rem; right: 1rem; z-index: 20; margin: 0; }
     /* Reserve the expanded panel's column so neither the transcript nor the composer runs under it. */
     [data-thread-insights="expanded"] .thread-transcript,
     [data-thread-insights="expanded"] .thread-composer { padding-right: 20rem; }
@@ -407,14 +408,14 @@
 
   .workspace-sidebar-section-title {
     color: hsl(var(--muted-foreground) / 0.82);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
     letter-spacing: 0;
   }
 
   .workspace-sidebar-section-detail {
     color: hsl(var(--muted-foreground) / 0.7);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
   }
 
@@ -764,20 +765,21 @@
 @media (prefers-reduced-motion: reduce) { .mobile-remote-progress { display: none; } .mobile-remote-phone { transition: none; } }
 @media (max-height: 640px) { .mobile-remote-phone { transform: scale(0.85) var(--mobile-remote-tilt); transform-origin: top center; margin-bottom: -83px; } }
 
-/* Nora Connect diagram: nodes and links follow the theme; packets travel the HTTPS link and the tunnel unless motion is reduced. */
-.nora-connect-diagram { overflow: visible; }
-.nora-connect-node { fill: hsl(var(--background)); stroke: hsl(var(--border)); stroke-width: 1; }
-.nora-connect-node-accent { fill: hsl(var(--primary) / 0.08); stroke: hsl(var(--primary) / 0.45); }
-.nora-connect-title { font-size: 13px; font-weight: 600; fill: hsl(var(--foreground)); }
-.nora-connect-label { font-size: 11px; fill: hsl(var(--muted-foreground)); }
-.nora-connect-link { stroke: hsl(var(--muted-foreground) / 0.6); stroke-width: 1.5; }
-.nora-connect-link-dashed { fill: none; stroke: hsl(var(--muted-foreground) / 0.5); stroke-width: 1.25; stroke-dasharray: 4 4; }
-.nora-connect-tunnel { stroke: hsl(var(--primary) / 0.7); stroke-width: 2; }
-.nora-connect-badge { fill: hsl(var(--primary)); }
-.nora-connect-badge-text { font-size: 11px; font-weight: 600; fill: hsl(var(--primary-foreground)); }
-.nora-connect-packet { fill: hsl(var(--primary)); opacity: 0; }
-.nora-connect-packet-reply { fill: #10b981; }
-@keyframes noraConnectPacket { 0% { offset-distance: 0%; opacity: 0; } 10%, 90% { opacity: 1; } 100% { offset-distance: 100%; opacity: 0; } }
+/* Nora Relay diagram: nodes and links follow the theme; packets travel the HTTPS link and the tunnel unless motion is reduced. */
+.nora-relay-diagram { overflow: visible; }
+.nora-relay-node { fill: hsl(var(--background)); stroke: hsl(var(--border)); stroke-width: 1; }
+.nora-relay-node-accent { fill: hsl(var(--primary) / 0.08); stroke: hsl(var(--primary) / 0.45); }
+.nora-relay-title { font-size: 12px; font-weight: 600; fill: hsl(var(--foreground)); }
+.nora-relay-label { font-size: 10px; fill: hsl(var(--muted-foreground)); }
+.nora-relay-link { stroke: hsl(var(--muted-foreground) / 0.6); stroke-width: 1.5; }
+.nora-relay-link-dashed { fill: none; stroke: hsl(var(--muted-foreground) / 0.5); stroke-width: 1.25; stroke-dasharray: 4 4; }
+.nora-relay-tunnel { stroke: hsl(var(--primary) / 0.7); stroke-width: 2; }
+.nora-relay-badge { fill: hsl(var(--primary)); }
+.nora-relay-badge-text { font-size: 10px; font-weight: 600; fill: hsl(var(--primary-foreground)); }
+.nora-relay-packet { fill: hsl(var(--primary)); opacity: 0; }
+/* Neutral so replies stay distinct from requests whatever hue the theme gives --primary. */
+.nora-relay-packet-reply { fill: hsl(var(--foreground)); }
+@keyframes noraRelayPacket { 0% { offset-distance: 0%; opacity: 0; } 10%, 90% { opacity: 1; } 100% { offset-distance: 100%; opacity: 0; } }
 @media (prefers-reduced-motion: no-preference) {
-  .nora-connect-packet { animation: noraConnectPacket 2.8s linear infinite both; }
+  .nora-relay-packet { animation: noraRelayPacket 2.8s linear infinite both; }
 }

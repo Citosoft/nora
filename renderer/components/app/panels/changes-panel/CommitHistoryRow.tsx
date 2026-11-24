@@ -8,9 +8,9 @@ export function CommitHistoryRow({ entry, timestamp, selected, onInspect }: Comm
       selected ? "bg-secondary" : "hover:bg-muted/60")}>
     <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-muted/70 text-muted-foreground"><GitCommitHorizontal className="size-3.5" aria-hidden="true" /></span>
     <span className="min-w-0 flex-1">
-      <span className="block truncate text-[12.5px]">{entry.subject}</span>
-      <span className="block truncate text-[11px] text-muted-foreground">{entry.author} · {timestamp}</span>
+      <span className="block truncate text-[11.5px]">{entry.subject}</span>
+      <span className="block truncate text-[10px] text-muted-foreground">{entry.author} · {timestamp}</span>
     </span>
-    <span className="shrink-0 font-mono text-[10.5px] text-muted-foreground">{entry.shortHash}</span>
+    <span className="shrink-0 font-mono text-[9.5px] text-muted-foreground">{entry.shortHash}</span>
   </button>;
 }

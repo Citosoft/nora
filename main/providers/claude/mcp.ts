@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { homedir } from "node:os";
 import type { AccountInfo, McpServerStatus } from "@anthropic-ai/claude-agent-sdk";
-import type { ClaudeMcpLoginRunner, ClaudeRuntimeOptions, McpSettleOptions } from "@main/types/execution/claude.types";
+import type { ClaudeAccountConnectorDirectory, ClaudeMcpLoginRunner, ClaudeRuntimeOptions, McpSettleOptions } from "@main/types/execution/claude.types";
 import type { McpAction, McpResult, McpServer } from "@shared/types/provider/mcp.types";
 import { resolveMcpServerLogo } from "@main/providers/mcpLogo";
 import { claudeLogin } from "./authentication";
@@ -47,6 +47,11 @@ export function claudeAccountConnectorNotice(account: AccountInfo): string | und
  * pending will not finish and must not be presented as connecting.
  */
 export async function settleClaudeMcp(read: () => Promise<McpServerStatus[]>, options: McpSettleOptions = {}): Promise<McpServer[]> {
+  return normalizeSettledClaudeMcp(await readSettledClaudeMcp(read, options), options.budgetMs);
+}
+
+/** The runtime's own statuses once none are pending or the settle budget runs out. */
+export async function readSettledClaudeMcp(read: () => Promise<McpServerStatus[]>, options: McpSettleOptions = {}): Promise<McpServerStatus[]> {
   const { budgetMs = MCP_SETTLE_BUDGET_MS, intervalMs = MCP_SETTLE_INTERVAL_MS, sleep = defaultSleep, now = Date.now } = options;
   const deadline = now() + budgetMs;
   let servers = await read();
@@ -54,6 +59,10 @@ export async function settleClaudeMcp(read: () => Promise<McpServerStatus[]>, op
     await sleep(intervalMs);
     servers = await read();
   }
+  return servers;
+}
+
+function normalizeSettledClaudeMcp(servers: readonly McpServerStatus[], budgetMs = MCP_SETTLE_BUDGET_MS): McpServer[] {
   return servers.map((server) => server.status === "pending"
     ? { ...normalizeClaudeMcp(server), status: "unknown", message: `Claude Code had not finished connecting to this server after ${Math.round(budgetMs / 1000)} seconds. Refresh to check again.` }
     : normalizeClaudeMcp(server));
@@ -94,13 +103,16 @@ export function createClaudeMcpLoginRunner(runtime: ClaudeRuntimeOptions): Claud
 }
 
 /** Without a workspace, discovery runs from the home directory so only user, plugin, account and managed servers are relevant. */
-export function createClaudeMcp(runtime: ClaudeRuntimeOptions, runLogin: ClaudeMcpLoginRunner = createClaudeMcpLoginRunner(runtime)): (cwd: string | null, action: McpAction) => Promise<McpResult> {
+export function createClaudeMcp(runtime: ClaudeRuntimeOptions, runLogin: ClaudeMcpLoginRunner = createClaudeMcpLoginRunner(runtime),
+  accountConnectors?: Pick<ClaudeAccountConnectorDirectory, "remember">): (cwd: string | null, action: McpAction) => Promise<McpResult> {
   const read = async (directory: string): Promise<McpResult> => {
     try {
       return await withClaudeControlSession(runtime, directory, async (session) => {
-        const [servers, account] = await Promise.all([settleClaudeMcp(() => session.mcpServerStatus()), session.accountInfo().catch(() => null)]);
+        const [statuses, account] = await Promise.all([readSettledClaudeMcp(() => session.mcpServerStatus()), session.accountInfo().catch(() => null)]);
+        // Every listing names the account's connectors, so bot threads can reach the ones they were given without rediscovering them.
+        accountConnectors?.remember(statuses);
         const notice = account ? claudeAccountConnectorNotice(account) : undefined;
-        return { kind: "servers", servers, ...(notice ? { notice } : {}) };
+        return { kind: "servers", servers: normalizeSettledClaudeMcp(statuses), ...(notice ? { notice } : {}) };
       });
     } catch (error) {
       console.warn(`Claude MCP discovery failed in ${directory}: ${error instanceof Error ? error.message : String(error)}`);

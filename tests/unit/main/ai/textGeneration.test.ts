@@ -3,7 +3,8 @@ import test from "node:test";
 import { DEFAULT_APP_SETTINGS } from "@shared/appTypes";
 import type { AiSimpleTaskProvider, ChangeEntry } from "@shared/appTypes";
 import type { TextGenerationRequest, TextGenerators } from "@main/types/ai/textGeneration.types";
-import { generateMemoryReviewText, generateSimpleText } from "@main/ai/simpleTextGeneration";
+import { generateMemoryReviewText, generateSimpleText, simpleTaskModelLabel } from "@main/ai/simpleTextGeneration";
+import { runtimeTextModel } from "@shared/ai/settings";
 import { generateCommitMessageFromChanges } from "@main/ai/commitMessageGenerator";
 import { generateThreadName } from "@main/ai/threadNameGenerator";
 import { generateBranchName } from "@main/ai/branchNameGenerator";
@@ -97,4 +98,11 @@ test("branch names come from the simple AI tasks model, cleaned and shorter than
   assert.deepEqual(fake.calls, ["claude"]);
   assert.match(fake.prompts[0].system, /Do not answer it/);
   assert.equal((await generateBranchName(settings, "x", undefined, sources("y".repeat(90)).generators)).length, 40);
+});
+
+test("background Claude text tasks default to Haiku rather than the plan's default model; a chosen model wins", () => {
+  assert.equal(runtimeTextModel("claude", null), "haiku");
+  assert.equal(runtimeTextModel("claude", "claude-sonnet-5-5"), "claude-sonnet-5-5");
+  assert.equal(runtimeTextModel("codex", null), null, "Codex keeps its own default");
+  assert.equal(simpleTaskModelLabel({ ...DEFAULT_APP_SETTINGS.ai, simpleTaskProvider: "claude" }), "claude · Haiku");
 });

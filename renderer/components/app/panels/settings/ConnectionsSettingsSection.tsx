@@ -32,7 +32,7 @@ export function ConnectionsSettingsSection() {
                 className="flex items-center gap-2 rounded-lg border border-border/60 bg-background px-2 py-1.5"
               >
                 <span
-                  className="w-16 shrink-0 truncate rounded-md border border-border/60 bg-background px-1.5 py-0.5 text-center text-[11px] tabular-nums text-muted-foreground"
+                  className="w-16 shrink-0 truncate rounded-md border border-border/60 bg-background px-1.5 py-0.5 text-center text-[10px] tabular-nums text-muted-foreground"
                   title={localMount || "Ssh"}
                 >
                   {formatRemoteMountBadgeLabel(localMount)}

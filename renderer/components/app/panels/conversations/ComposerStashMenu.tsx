@@ -22,7 +22,7 @@ export function ComposerStashMenu({ entries, disabled, shortcut, onRestore, onRe
           <button type="button" className="min-w-0 flex-1 rounded-md px-2 py-1.5 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             onClick={() => { onRestore(entry.id); setOpen(false); }}>
             <span className="line-clamp-2 whitespace-pre-wrap break-words text-sm">{entry.text}</span>
-            <time dateTime={entry.stashedAt} className="text-[11px] text-muted-foreground">{new Date(entry.stashedAt).toLocaleString()}</time>
+            <time dateTime={entry.stashedAt} className="text-[10px] text-muted-foreground">{new Date(entry.stashedAt).toLocaleString()}</time>
           </button>
           <Button type="button" variant="ghost" size="icon" className="mt-1 size-6 shrink-0 text-muted-foreground" aria-label="Delete stashed prompt"
             onClick={() => onRemove(entry.id)}><X className="size-3.5" aria-hidden="true" /></Button>

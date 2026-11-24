@@ -3,8 +3,8 @@ import { createMemoryDelivery } from "@main/bots/memory/delivery";
 import type { BotMemoryStore } from "@main/types/bots/memory.types";
 import { joinGuidance } from "@main/nora-tools/endpoint";
 import { connectorSubjectOf } from "@shared/connectors/access";
-import type { NoraRunContextSource, NoraToolServer, RunContextConnectors, RunContextSubject } from "@main/types/nora-tools/noraTools.types";
-import { appBuilderGuide } from "@main/apps/builderGuide";
+import type { NoraRunContextSource, NoraToolServer, RunContextAccountConnectors, RunContextConnectors, RunContextSubject } from "@main/types/nora-tools/noraTools.types";
+import { appBuilderGuide, guidanceCarriesAppBuilderGuide } from "@main/apps/builderGuide";
 
 const MEMORY_DIGEST_CHARS = 4000;
 const NORA_GUIDANCE = "You are Nora, the user's assistant inside the Nora app. Nora's own tools (server \"nora\") manage the app: "
@@ -32,11 +32,14 @@ const SECRETS_GUIDANCE = "Never ask the user to paste a password, API key, token
   + "Ask for it with request_secret, which opens a secure dialog and stores the value in the system keychain without showing it to you, "
   + "then use it by name with run_with_secrets. Check list_secrets before asking for one that may already be saved.";
 
+/** The thread's own create_app or update_app already holds the current spec, so read_app is only for a spec the thread has not seen. */
+const APP_CHANGE_GUIDANCE = "Change only what was asked, then save with update_app, passing the version you last saw as base_version. "
+  + "Call read_app only when this thread has not seen the app's current spec, or update_app says the app changed.";
 const APP_BUILDER_GUIDANCE = "This thread builds one app for the user. Their first message describes it: discover and sample the connectors it needs, then call create_app. "
-  + "Later messages ask for changes to that app: read_app, change only what was asked, then update_app. Keep replies short; the app itself is on screen beside this chat.";
+  + `Later messages ask for changes to that app. ${APP_CHANGE_GUIDANCE} Keep replies short; the app itself is on screen beside this chat.`;
 /** A thread opened from an app that already exists only ever changes it, so create_app is off the table from the first message. */
 const appBuilderGuidance = (appId: string | null): string => appId
-  ? `This thread changes the user's existing app (id ${appId}), which is on screen beside this chat. Every message asks for a change to it: read_app, change only what was asked, then update_app with that id. Never call create_app here. Keep replies short.`
+  ? `This thread changes the user's existing app (id ${appId}), which is on screen beside this chat. Every message asks for a change to it, made with update_app and that id. ${APP_CHANGE_GUIDANCE} Never call create_app here. Keep replies short.`
   : APP_BUILDER_GUIDANCE;
 
 /** Tool guidance for a thread that has Nora's tools: Nora's own, or a bot's, plus how continuity works. */
@@ -45,7 +48,7 @@ function toolGuidance(conversation: RunContextSubject): string {
     return "This is a read-only workflow review. Inspect using read-only tools, then call report_workflow_stage with your outcome and summary. App changes, memory writes and delegation tools are unavailable in review stages.";
   }
   // An app's builder has only the app tools and its connectors, so it carries the full guide (stable across turns) and none of the guidance about tools it lacks.
-  if (conversation.source?.kind === "app") return [appBuilderGuidance(conversation.source.appId), SECRETS_GUIDANCE, appBuilderGuide()].join("\n\n");
+  if (guidanceCarriesAppBuilderGuide(conversation)) return [appBuilderGuidance(conversation.source.appId), SECRETS_GUIDANCE, appBuilderGuide()].join("\n\n");
   const worker = conversation.source?.kind === "worker";
   const workerAccess = worker && conversation.workspace.access === "read"
     ? "You have read-only access. You may inspect files and run commands that do not change the checkout, including read-only checks and waits. "
@@ -65,7 +68,8 @@ const coordinated = (conversation: RunContextSubject): boolean => !!conversation
  * per thread in the guidance and later changes ride with the turn (see createMemoryDelivery), so the guidance stays cacheable.
  * `preview` describes the next run's additions without resolving an endpoint or freezing notes, for the context inspector.
  */
-export function createRunContext(server: NoraToolServer, memory: BotMemoryStore, connectors: RunContextConnectors): NoraRunContextSource {
+export function createRunContext(server: NoraToolServer, memory: BotMemoryStore, connectors: RunContextConnectors,
+  accountConnectors: RunContextAccountConnectors = () => []): NoraRunContextSource {
   const delivery = createMemoryDelivery();
   const digest = (conversation: RunContextSubject) => memory.digest(memoryOwnerOf(conversation), conversation.workspace.projectId, MEMORY_DIGEST_CHARS);
   return {
@@ -76,7 +80,8 @@ export function createRunContext(server: NoraToolServer, memory: BotMemoryStore,
         connectors.endpoints(connectorSubjectOf(conversation), connectorsChosenBy(conversation)).catch((error: unknown) => { console.error("Connectors are unavailable for this turn", error); return []; })
       ]);
       const notes = delivery.forRun(conversation.id, digest(conversation));
-      return { tools, connectors: endpoints, guidance: joinGuidance(tools ? toolGuidance(conversation) : null, notes.guidance) ?? null, turnNotes: notes.turnNotes };
+      return { tools, connectors: endpoints, accountConnectors: accountConnectors(connectorSubjectOf(conversation)),
+        guidance: joinGuidance(tools ? toolGuidance(conversation) : null, notes.guidance) ?? null, turnNotes: notes.turnNotes };
     },
     preview(conversation) {
       if (coordinated(conversation)) return { tools: false, connectors: 0, toolGuidance: null, notesGuidance: null, turnNotes: null };

@@ -5,11 +5,11 @@ import { useThreadCenterPorts } from "@/components/app/hooks/useThreadCenterPort
 import { createModelCatalogStore } from "@/components/app/logic/modelCatalogStore";
 import { SettingRow } from "@/components/app/panels/settings/settingsUi";
 import { Select } from "@/components/ui/select";
+import { RUNTIME_TEXT_DEFAULT_MODEL } from "@shared/ai/settings";
 import { ProviderOptionLabel } from "./ProviderOptionLabel";
 import type { RuntimeTaskModelFieldsProps, RuntimeTaskModelSelectProps, RuntimeTaskModelSettingProps } from "@/components/app/types/modelPicker.types";
 
 const RUNTIME_LABELS: Record<RuntimeTaskModelSettingProps["provider"], string> = { codex: "Codex", claude: "Claude" };
-const DEFAULT_OPTION = "Runtime default";
 
 /** Which of the runtime's own models simple tasks use; the list comes from the same catalog as the thread model picker. */
 export function RuntimeTaskModelSetting({ title, description, ...props }: RuntimeTaskModelSettingProps) {
@@ -43,7 +43,7 @@ function RuntimeTaskModelFields({ provider, value, onChange, native, workspace }
 function ModelSelect({ provider, value, onChange, models = [] }: RuntimeTaskModelSelectProps) {
   return <Select aria-label={`${RUNTIME_LABELS[provider]} model for simple tasks`} className="w-full" value={value ?? ""}
     onChange={(event) => onChange(event.target.value || null)}>
-    <option value=""><ProviderOptionLabel kind={provider} label={DEFAULT_OPTION} /></option>
+    <option value=""><ProviderOptionLabel kind={provider} label={`${RUNTIME_TEXT_DEFAULT_MODEL[provider].label} (default)`} /></option>
     {models.map((model) => <option key={model.id} value={model.id}><ProviderOptionLabel kind={provider} label={model.name || model.id} /></option>)}
     {value && !models.some((model) => model.id === value) && <option value={value}><ProviderOptionLabel kind={provider} label={`${value} (not listed)`} /></option>}
   </Select>;

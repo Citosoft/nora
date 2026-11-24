@@ -1,13 +1,8 @@
-import { RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import type { ExternalThreadControlsProps } from "@/components/app/types/externalSessions.types";
 
 export function ExternalThreadControls({ state }: ExternalThreadControlsProps) {
+  if (!state.loading && !state.errors.length) return null;
   return <div className="space-y-1">
-    <div className="flex items-center gap-1 px-1">
-      <Button variant="ghost" size="icon" className="ml-auto size-6 text-muted-foreground" aria-label="Refresh resumable threads"
-        disabled={state.loading || state.busy} onClick={state.refresh}><RefreshCw className={`size-3 ${state.loading ? "animate-spin" : ""}`} aria-hidden="true" /></Button>
-    </div>
     {state.loading && <p role="status" className="px-2 text-xs text-muted-foreground">Finding threads…</p>}
     {state.errors.map((message) => <p key={message} role="alert" className="px-2 py-1 text-xs text-destructive">{message}</p>)}
   </div>;

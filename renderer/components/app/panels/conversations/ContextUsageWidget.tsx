@@ -43,12 +43,12 @@ export function ContextUsageWidget({ context, compaction }: ContextUsageWidgetPr
         </div>
         <div className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-1 text-sm">
           {rows.map((row) => <Fragment key={row.label}>
-            <div className="text-[11px] text-muted-foreground">{row.label}</div>
+            <div className="text-[10px] text-muted-foreground">{row.label}</div>
             <div className="min-w-0 truncate text-right tabular-nums text-foreground">{row.value}</div>
           </Fragment>)}
         </div>
-        <p className="text-[11px] text-muted-foreground">Updated {formatTime(context.updatedAt)}</p>
-        <p className="text-[11px] text-muted-foreground">Cached tokens reuse prior processing and still count toward the context window.</p>
+        <p className="text-[10px] text-muted-foreground">Updated {formatTime(context.updatedAt)}</p>
+        <p className="text-[10px] text-muted-foreground">Cached tokens reuse prior processing and still count toward the context window.</p>
       </> : <p role="status" className="text-xs text-muted-foreground">{summary}.</p>}
       {compaction && <div className="space-y-2 border-t pt-3">
         <p className="text-xs text-muted-foreground">Compacting summarizes earlier conversation so the agent keeps working with more room.</p>
@@ -56,7 +56,7 @@ export function ContextUsageWidget({ context, compaction }: ContextUsageWidgetPr
           {compaction.state === "compacting" ? <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" /> : <Shrink className="size-3.5" aria-hidden="true" />}
           {compaction.state === "compacting" ? "Compacting context…" : "Compact context"}
         </Button>
-        {compaction.state === "blocked" && <p className="text-[11px] text-muted-foreground">Available once the current turn finishes.</p>}
+        {compaction.state === "blocked" && <p className="text-[10px] text-muted-foreground">Available once the current turn finishes.</p>}
       </div>}
     </PopoverContent>
   </Popover>;

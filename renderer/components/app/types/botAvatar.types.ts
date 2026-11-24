@@ -45,3 +45,5 @@ export type BotAvatarPart =
   | { kind: "seed" };
 export interface BotAvatarPartPreviewProps { part: BotAvatarPart; size: number; }
 export type { BotAvatarShape };
+/** A chat speaker's face: Nora shows the app's mark; every other bot its own avatar. */
+export interface SpeakerAvatarProps extends BotAvatarProps { botId: string; }

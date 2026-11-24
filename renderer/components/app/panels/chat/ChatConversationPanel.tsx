@@ -9,7 +9,8 @@ import { chatBranchOrigin } from "@shared/bots/branches/origin";
 import { ChatBranchView } from "./ChatBranchView";
 import { ChatCloseThreadDialog } from "./ChatCloseThreadDialog";
 import { DIRECT_BINDING, GROUP_BINDING } from "@shared/bots/chats";
-import { effectiveBots, findEffectiveBot } from "@shared/bots/catalog";
+import { effectiveBots } from "@shared/bots/catalog";
+import { findChatBot, isNoraChat } from "@shared/bots/noraChat";
 import { useNativeConversationPorts } from "@/components/app/hooks/useNativeConversationPorts";
 import { useNativeConversation } from "@/components/app/hooks/useNativeConversation";
 import { useThreadLinks } from "@/components/app/hooks/useThreadLinks";
@@ -92,7 +93,7 @@ export function ChatConversationPanel() {
     detail: member.role || undefined, icon: <BotAvatar avatar={member.avatar} size={20} /> })) : undefined, [participants]);
   const direct = participants?.kind === "direct" ? participants.bot : null;
   const chatWorkspaces = useMemo(() => direct ? ports.state.workspaces.filter((entry) => entry.workspace.environmentId === ports.state.environmentId
-    && !!findEffectiveBot(ports.state.personalization.bots, entry.id, ports.state.sharedBots, direct.botId)) : [],
+    && !!findChatBot(ports.state.personalization.bots, entry.id, ports.state.sharedBots, direct.botId)) : [],
   [direct, ports.state.workspaces, ports.state.environmentId, ports.state.personalization.bots, ports.state.sharedBots]);
   const savedDirect = header?.conversation.direct;
   useDirectChatFollowsWorkspace(header?.conversation ?? null, document.workspaceId, chatWorkspaces, execute);
@@ -102,7 +103,8 @@ export function ChatConversationPanel() {
   const contextRevision = `${header?.cursor ?? 0}:${ports.workThreads.map((thread) => `${thread.id}@${thread.updatedAt}`).join(",")}`;
   const context = useMemo(() => ({ chatId: savedDirect ? conversationId : null, draft: document.text, revision: contextRevision }),
     [savedDirect, conversationId, document.text, contextRevision]);
-  const connectorSubject = useMemo(() => direct ? { workspaceId: workingWorkspaceId, botId: direct.botId } : null, [direct, workingWorkspaceId]);
+  // Nora has no connector selection of its own; its threads use the account's connectors like any other Nora thread.
+  const connectorSubject = useMemo(() => direct && !isNoraChat(direct.botId) ? { workspaceId: workingWorkspaceId, botId: direct.botId } : null, [direct, workingWorkspaceId]);
   const footer = direct ? <ChatWorkspacePicker workspaces={chatWorkspaces} selectedId={workingWorkspaceId}
     fixed={!savedDirect || savedDirect.scope.kind === "workspace"} disabled={busy || settled}
     onSelect={(workspaceId) => { if (header) void execute({ kind: "set-direct-workspace", commandId: crypto.randomUUID(), conversationId: header.conversation.id, workspaceId }); }} /> : undefined;
@@ -133,7 +135,7 @@ export function ChatConversationPanel() {
         <ChatTranscript entries={entries} workThreads={workThreads} onOpenThread={ports.openThread} onLinkClick={onLinkClick}
           onBranch={conversationId ? branchFromMessage : undefined} />
         {header && <ChatRequests conversationId={header.conversation.id} />}
-        {active && speaker && <ChatTyping name={speaker.name} avatar={speaker.avatar} workspaceName={current?.workspaceName ?? null} waiting={!!current?.waiting} />}
+        {active && speaker && <ChatTyping botId={speaker.botId} name={speaker.name} avatar={speaker.avatar} workspaceName={current?.workspaceName ?? null} waiting={!!current?.waiting} />}
       </div>
     </div>
     </TranscriptHistory>
