@@ -13,6 +13,13 @@ export const cloudflareTunnelSchema = z.looseObject({
   deleted_at: z.string().nullable().optional()
 });
 
+export const tunnelInspectionSchema = cloudflareTunnelSchema.extend({
+  status: z.enum(["inactive", "down", "healthy", "degraded"]).nullable().optional(),
+  created_at: z.string().datetime({ offset: true }).nullable().optional(),
+  conns_inactive_at: z.string().datetime({ offset: true }).nullable().optional()
+});
+export const tunnelInspectionListSchema = z.array(tunnelInspectionSchema);
+
 export const cloudflareTunnelListSchema = z.array(cloudflareTunnelSchema);
 export const cloudflareTunnelTokenSchema = z.string().min(1).max(4096);
 export const cloudflareDnsRecordSchema = z.looseObject({ id: z.string().min(1), name: z.string(), content: z.string().optional() });

@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { RuntimeDirectoryEntry } from "@shared/types/remote-access/directory.types";
 import { errorMessage } from "@/api/http/remoteRequestError";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { NORA_RELAY_NAME } from "@shared/remote-access/constants";
 
 interface RemoveRuntimeDialogProps {
   runtime: RuntimeDirectoryEntry | null;
@@ -28,7 +29,7 @@ export function RemoveRuntimeDialog({ runtime, onRemove, onClose }: RemoveRuntim
   };
   return (
     <ConfirmDialog visible={runtime !== null} title={`Remove ${runtime?.name ?? "computer"}?`}
-      message={"This unlinks the computer from your Nora account and turns off its remote address. You won't be able to reach it from here until you turn on Remote access again in Nora Desktop. Nothing on the computer is deleted."}
+      message={`This unlinks the computer from your Nora account and turns off its remote address. You won't be able to reach it from here until you turn on ${NORA_RELAY_NAME} again in Nora Desktop. Nothing on the computer is deleted.`}
       confirmLabel="Remove" destructive busy={busy} error={error}
       onConfirm={() => void confirm()} onCancel={() => { setError(null); onClose(); }} />
   );

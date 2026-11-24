@@ -3,6 +3,7 @@ import type { ThreadInsightsSectionDefinition } from "@/components/app/types/thr
 /** Menu order matches the order the sections render in the panel. */
 export const THREAD_INSIGHTS_SECTIONS: readonly ThreadInsightsSectionDefinition[] = [
   { id: "overview", label: "Overview" },
+  { id: "pinned", label: "Pinned messages" },
   { id: "ide", label: "Open in IDE" },
   { id: "subagents", label: "Subagents" },
   { id: "changes", label: "Reviewed changes" },

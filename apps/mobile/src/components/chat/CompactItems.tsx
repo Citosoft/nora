@@ -21,11 +21,13 @@ function QuietLabel({ icon, text }: { icon: IconName; text: string }) {
   );
 }
 
-export function ReasoningItem({ item }: { item: ItemOf<"reasoning"> }) {
+export function ReasoningItem({ items }: { items: readonly ItemOf<"reasoning">[] }) {
   const styles = useThemedStyles(createStyles);
+  const visible = items.filter((item) => item.text.trim());
+  if (!visible.length) return null;
   return (
-    <Disclosure label="Show the agent's thinking" summary={<QuietLabel icon="sparkles-outline" text={item.complete ? "Thought it through" : "Thinking…"} />}>
-      <Text style={styles.muted} selectable>{item.text}</Text>
+    <Disclosure label="Show the agent's thinking" summary={<QuietLabel icon="sparkles-outline" text={visible.every((item) => item.complete) ? "Thought it through" : "Thinking…"} />}>
+      {visible.map((item) => <Text key={item.id} style={styles.muted} selectable>{item.text}</Text>)}
     </Disclosure>
   );
 }
@@ -93,5 +95,5 @@ const createStyles = (theme: Theme) => ({
   step: { flexDirection: "row" as const, alignItems: "flex-start" as const, gap: spacing.sm + 2 },
   stepText: { ...type.subheadline, flex: 1, color: theme.colors.text },
   stepDone: { color: theme.colors.textMuted },
-  path: { fontFamily: monospaceFont, fontSize: 12, lineHeight: 17, color: theme.colors.text }
+  path: { ...type.code, fontFamily: monospaceFont, color: theme.colors.text }
 });

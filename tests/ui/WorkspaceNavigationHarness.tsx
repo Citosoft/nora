@@ -8,6 +8,7 @@ import { appStateFromAppDomainState } from "@/components/app/logic/appStateFromA
 import { getEmptyAppDomainState } from "@/components/app/logic/hydrateAppDomainState";
 import { createThreadWorkspaceStore } from "@/components/app/logic/thread-workspace/store";
 import { ThreadWorkspaceComposition } from "@/components/app/views/ThreadWorkspaceComposition";
+import { FixturePortsProvider } from "./FixturePortsProvider";
 import { ThreadWorkspaceCenter } from "@/components/app/panels/threads/ThreadWorkspaceCenter";
 import { SessionTabPane, SessionTabStack } from "@/components/app/panels/SessionTabStack";
 import type { ProjectSummary } from "@shared/appTypes";
@@ -52,4 +53,4 @@ function NavigationControls() {
 }
 const root = document.getElementById("app");
 if (!root) throw new Error("Missing fixture root");
-createRoot(root).render(<StrictMode><AppRootStateProvider initialUiState={{ ...appRootInitialUiState, snapshot }}><ThreadWorkspaceComposition store={store}><WorkspaceNavigationProvider><NavigationControls /></WorkspaceNavigationProvider></ThreadWorkspaceComposition></AppRootStateProvider></StrictMode>);
+createRoot(root).render(<StrictMode><AppRootStateProvider initialUiState={{ ...appRootInitialUiState, snapshot }}><ThreadWorkspaceComposition store={store}><WorkspaceNavigationProvider><FixturePortsProvider><NavigationControls /></FixturePortsProvider></WorkspaceNavigationProvider></ThreadWorkspaceComposition></AppRootStateProvider></StrictMode>);

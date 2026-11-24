@@ -1,3 +1,4 @@
+import { useThreadAccountConnectorAccess } from "@/components/app/hooks/useThreadAccountConnectorAccess";
 import { TranscriptHistory } from "@/components/app/shared/TranscriptHistory";
 import type { ComposerEditorHandle } from "@/components/app/types/composerEditor.types";
 import { executionFailureMessage } from "@/components/app/logic/executionFailureMessage";
@@ -13,12 +14,15 @@ import { buildConnectorAccessChoices } from "@/components/app/logic/connectorAcc
 import { NativeThreadReferenceChips } from "./NativeThreadReferenceChips";
 import { useComposerAttachments } from "@/components/app/hooks/useComposerAttachments";
 import { NativeComposerInput } from "./NativeComposerInput";
+import { VoiceInputButton } from "./VoiceInputButton";
+import { useComposerVoiceInput } from "@/components/app/hooks/useComposerVoiceInput";
 import { rememberPrompt } from "@/components/app/logic/composer-prompts/promptHistory";
 import { selectPromptSuggestion } from "@/components/app/logic/promptSuggestion";
 import { useNativeConversationPorts } from "@/components/app/hooks/useNativeConversationPorts";
 import { useNativeConversation } from "@/components/app/hooks/useNativeConversation";
 import { useThreadInsights } from "@/components/app/hooks/useThreadInsights";
 import { useThreadLinks } from "@/components/app/hooks/useThreadLinks";
+import { useMessagePins } from "@/components/app/hooks/useMessagePins";
 import { useThreadConnectors } from "@/components/app/hooks/useThreadConnectors";
 import { threadConnectorsTarget } from "@/components/app/logic/threadConnectors";
 import { useThreadSkills } from "@/components/app/hooks/useThreadSkills";
@@ -70,14 +74,20 @@ export function NativeConversationPanel() {
   const onLinkClick = useThreadLinks(header?.conversation.workspace.path ?? workspace.workspace.path);
   const insights = useThreadInsights({ header, items: view?.items ?? [], workspace, hasOlderHistory: !!view?.nextBefore, forge: ports.threadForge });
   const providerLabel = header ? nativeProviderLabel(ports.state.providers, header.conversation.provider) : null;
+  const pins = useMessagePins({ conversation: header?.conversation ?? null, items: view?.items ?? NO_ITEMS, execute, scrollRef: transcript.ref,
+    hasOlderHistory: !!view?.nextBefore, loadOlder: older, onNavigate: transcript.pauseFollowing });
+  const { isPinned, toggle: togglePin } = pins;
+  const hasThread = !!header;
+  const pinControls = useMemo(() => hasThread ? { isPinned, toggle: togglePin } : undefined, [hasThread, isPinned, togglePin]);
   // Restored tabs stay mounted while hidden; each discovery starts a provider runtime, so only shown threads discover.
   const discover = useOnceVisible(ports.visible);
   // Drafts discover too, so the composer shows the runtime's connectors before the first message.
   const connectorTarget = threadConnectorsTarget(header?.conversation ?? null,
     { provider: document.provider ?? null, readyBinding: runtime.readyBinding, workspace: workspace.workspace });
   const connectorProviderLabel = connectorTarget ? nativeProviderLabel(ports.state.providers, connectorTarget.provider) : null;
+  const accountConnectorAccess = useThreadAccountConnectorAccess(header?.conversation ?? null);
   const connectors = useThreadConnectors(client, discover && connectorTarget && connectorProviderLabel !== null
-    ? { conversation: connectorTarget, providerLabel: connectorProviderLabel } : null);
+    ? { conversation: connectorTarget, providerLabel: connectorProviderLabel, accountConnectors: accountConnectorAccess } : null);
   const skills = useThreadSkills(client, discover && header ? { conversation: header.conversation, items: view?.items ?? NO_ITEMS } : null);
   useConnectorSignInRefresh(header?.conversation.id ?? null, view?.items ?? NO_ITEMS, connectors);
   const active = header?.activeRuns[0];
@@ -128,6 +138,7 @@ export function NativeConversationPanel() {
     rememberPrompt(pending?.submit.instruction ?? document.text);
     void submit();
   };
+  const voice = useComposerVoiceInput({ value: document.text, disabled: !!pending || settled, inputRef: composer, onChange: setText });
   const chooseStarter = (text: string): void => { setText(text); composer.current?.focus(); };
   const mcpApps = useMcpAppHost(client, header ? { id: header.conversation.id, environmentId: header.conversation.workspace.environmentId } : null, chooseStarter);
   const toolOutputs = useOutputHost(client, header?.conversation.id ?? null);
@@ -136,19 +147,19 @@ export function NativeConversationPanel() {
     data-thread-insights={header ? insightsExpanded ? "expanded" : "collapsed" : undefined}>
     {/* A new thread sizes the transcript to its greeting so the composer sits directly beneath it. */}
     <div className={cn("relative flex min-h-0 flex-col", conversationId ? "flex-1" : "flex-initial")}>
-    {header && providerLabel !== null && <ThreadInsightsPanel header={header} providerLabel={providerLabel} connectors={connectors} skills={skills} changes={insights.changes} subagents={insights.subagents} outputs={insights.outputs} branch={insights.branch} expanded={insightsExpanded} busy={busy}
+    {header && providerLabel !== null && <ThreadInsightsPanel header={header} providerLabel={providerLabel} connectors={connectors} skills={skills} changes={insights.changes} subagents={insights.subagents} outputs={insights.outputs} branch={insights.branch} pins={pins} expanded={insightsExpanded} busy={busy}
       canSettle={!active && !header.queuedRuns.length} hasOlderHistory={!!view?.nextBefore}
       onToggle={() => setInsightsExpanded((current) => !current)} onLoadHistory={() => void older()} onOpenOutput={openOutput}
       onSettleChange={() => void execute({ kind: settled ? "unarchive" : "archive", commandId: crypto.randomUUID(), conversationId: header.conversation.id })} />}
     <TranscriptHistory scrollRef={transcript.ref} onNavigate={transcript.pauseFollowing} className={!conversationId ? "flex-initial" : undefined}>
     <div className={cn("thread-transcript min-h-0 overflow-y-auto overscroll-contain pl-10 pr-5 py-7", conversationId ? "flex-1" : "flex-initial")} ref={transcript.ref}
       onWheel={transcript.onWheel} onScroll={transcript.onScroll}>
-      <div className="mx-auto max-w-[800px] space-y-5 text-[15px]">
+      <div className="mx-auto max-w-[800px] space-y-5 text-[14px]">
         {loadError && <div role="alert"><p>{loadError}</p><Button onClick={reload}>Reload thread</Button></div>}
         {view?.nextBefore && <Button variant="ghost" onClick={() => void older()}>Load older messages</Button>}
         {conversationId && !view && !loadError && <p className="text-muted-foreground">Loading thread…</p>}
         {view && <NativeTimeline items={view.items} runs={view.runHistory.runs} onLinkClick={onLinkClick} connectors={connectors}
-          resolveBot={resolveBot} onOpenThread={openThread} mcpApps={mcpApps} toolOutputs={toolOutputs} onOpenOutput={openOutput} />}
+          resolveBot={resolveBot} onOpenThread={openThread} mcpApps={mcpApps} toolOutputs={toolOutputs} onOpenOutput={openOutput} pins={pinControls} />}
         {!conversationId && <div className="mx-auto flex w-full flex-col items-center gap-7 pb-2 text-center">
           <div className="space-y-3"><p className="text-xs font-medium text-muted-foreground">{profile?.label ?? "Your workspace"}</p>
             <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">What would you like to work on in <span className="text-primary">{workspace.name}</span>{firstName && <>, <span className="whitespace-nowrap text-primary">{firstName}</span></>}?</h1></div>
@@ -165,6 +176,7 @@ export function NativeConversationPanel() {
       {header && <NativeRequestStack key={header.conversation.id} requests={header.pendingRequests} busy={busy} visible={ports.visible} onRespond={(requestId, response) => execute({ kind: "respond", commandId: crypto.randomUUID(), conversationId: header.conversation.id, requestId, response })} />}
       {conversationId && <SecretPromptStack conversationId={conversationId} />}
       {active?.state === "recovering" && <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void execute({ kind: "reconcile", commandId: crypto.randomUUID(), conversationId: active.conversationId, runId: active.id })}>Check native status</Button>}
+      {voice.error && <p role="alert" className="text-sm text-destructive">{voice.error}</p>}
       {(runtime.error || ports.storageError || executionFailure || pending) && <p role="alert" className="text-sm text-destructive">{runtime.error ?? ports.storageError ?? (executionFailure ? executionFailureMessage(executionFailure) : "Delivery is unconfirmed. Retry checks the same saved instruction.")}</p>}
       <div>
       {header && <NativeQueue conversationId={header.conversation.id} runs={header.queuedRuns} paused={header.conversation.queuePaused} busy={busy} execute={execute}
@@ -201,6 +213,7 @@ export function NativeConversationPanel() {
             allowChange={canChangeModel} startEditing={botModelRevert > 0}
             initial={botModelRevert && botModelSeed ? botModelSeed : document.provider} locked={header?.conversation.provider ?? (conversationId ? document.provider : pending?.create?.provider) ?? null} onBinding={setBinding} onCapabilities={setCapabilities} /></div>
           <ThreadContextUsage header={header ?? null} capabilities={capabilities} ready={!busy && !pending && !settled} compact={ports.compact} client={client} />
+          <VoiceInputButton voice={voice} className="rounded-md" />
           <Button type={showStop ? "button" : "submit"} size={pending ? "sm" : "icon"} className="shrink-0 rounded-md" disabled={showStop ? busy || active?.state === "stopping" : !canSend}
             onClick={showStop && active ? () => void execute({ kind: "interrupt", commandId: crypto.randomUUID(), conversationId: active.conversationId, runId: active.id }) : undefined}
             aria-label={actionLabel}>

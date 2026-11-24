@@ -17,7 +17,7 @@ export function BotNavigationRow({ item, expanded, now, onToggle, onStart, onOpe
   const hasThreads = threads.length > 0;
   const hidden = threads.length - VISIBLE_THREADS;
   return <li>
-    <BotRowContextMenu id={item.id} name={name} hasThreads={hasThreads} expanded={expanded} onToggle={onToggle} onStart={onStart} onShowInfo={onShowInfo} onEdit={onEdit} onDelete={onDelete}>
+    <BotRowContextMenu name={name} hasThreads={hasThreads} expanded={expanded} onToggle={onToggle} onStart={onStart} onShowInfo={onShowInfo} onEdit={onEdit} onDelete={onDelete}>
     <div className={`group flex items-center rounded-md ${expanded ? "bg-muted/50" : "hover:bg-muted"}`}>
       <button type="button" onClick={onStart} aria-label={botStartLabel(item)}
         className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md py-1.5 pl-1.5 pr-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
@@ -30,7 +30,7 @@ export function BotNavigationRow({ item, expanded, now, onToggle, onStart, onOpe
         aria-label={`${name} info`} tooltip={`${name} info`} onClick={onShowInfo}><Info className="size-3.5" aria-hidden="true" /></Button>}
       {hasThreads && <button type="button" onClick={onToggle} aria-expanded={expanded}
         aria-label={`${expanded ? "Hide" : "Show"} ${name}'s ${threads.length} ${threads.length === 1 ? "thread" : "threads"}`}
-        className="mr-1 flex h-7 shrink-0 items-center gap-0.5 rounded px-1 text-[10px] tabular-nums text-muted-foreground hover:bg-background/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        className="mr-1 flex h-7 shrink-0 items-center gap-0.5 rounded px-1 text-[9px] tabular-nums text-muted-foreground hover:bg-background/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
         {threads.length}<ChevronRight aria-hidden="true" className={`size-3 transition-transform ${expanded ? "rotate-90" : ""}`} /></button>}
     </div>
     </BotRowContextMenu>

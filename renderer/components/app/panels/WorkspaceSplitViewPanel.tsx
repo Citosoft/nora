@@ -463,7 +463,7 @@ export function WorkspaceSplitViewPanel({ view }: WorkspaceSplitViewPanelProps) 
                     onClick={focusTile}
                   >
                     <div className="truncate text-sm font-medium text-foreground">{title}</div>
-                    <div className="text-[11px] font-medium text-muted-foreground">
+                    <div className="text-[10px] font-medium text-muted-foreground">
                       {subtitle}
                     </div>
                   </button>

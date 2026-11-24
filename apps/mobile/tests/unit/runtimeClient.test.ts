@@ -1,3 +1,4 @@
+import { demoProviderOptions } from "@/demo/providerOptions";
 import { describe, expect, it } from "vitest";
 import { createRuntimeClient } from "@/api/runtime/runtimeClient";
 import { RemoteRequestError } from "@/api/http/remoteRequestError";
@@ -25,6 +26,27 @@ async function failureOf(promise: Promise<unknown>): Promise<RemoteRequestError>
 }
 
 describe("runtimeClient", () => {
+  it("reads and patches remote preferences through the validated management API", async () => {
+    const settings = { automaticTitles: true, automaticMemory: false, followUp: "queue", toolOutputBudget: "compact" };
+    const { fetch, calls } = fakeFetch(() => json(200, settings));
+    const runtime = client(fetch);
+    expect(await runtime.settings()).toEqual(settings);
+    expect(await runtime.updateSettings({ automaticMemory: false })).toEqual(settings);
+    expect(calls[1]).toMatchObject({ method: "POST", url: "https://abc123.remote.withnora.run/v1/settings", body: { automaticMemory: false } });
+  });
+
+  it("retains bot revisions and scope when sending a save and validates bot replies", async () => {
+    const input = { id: "helper", name: "Helper", role: "Review", instructions: "Review work", avatar: { seed: 4 },
+      scope: { kind: "global" as const }, revision: 3 };
+    const { fetch, calls } = fakeFetch(() => json(200, { bots: [] }));
+    const runtime = client(fetch);
+    expect(await runtime.botSettings()).toEqual([]);
+    expect(await runtime.saveBot(input)).toEqual([]);
+    expect(calls[1]).toMatchObject({ method: "POST", url: "https://abc123.remote.withnora.run/v1/bot-settings", body: input });
+    const invalid = fakeFetch(() => json(200, { bots: [{ id: "partial" }] }));
+    expect((await failureOf(client(invalid.fetch).botSettings())).failure.kind).toBe("invalid-response");
+  });
+
   it("sends a fresh bearer token with every request to the runtime origin", async () => {
     const { fetch, calls } = fakeFetch(() => json(200, info));
     const runtime = client(fetch);
@@ -114,4 +136,13 @@ describe("runtimeClient", () => {
     expect(() => createRuntimeClient({ hostname: "evil.example/path", fetch: fakeFetch(() => json(200, {})).fetch, timeoutMs: 1,
       commandTimeoutMs: 1, getToken: async () => "t" })).toThrow();
   });
+});
+
+it("loads and validates project-specific model catalogs", async () => {
+  const { fetch, calls } = fakeFetch(() => json(200, demoProviderOptions));
+  expect(await client(fetch).providerOptions("project / one")).toEqual(demoProviderOptions);
+  expect(new URL(calls[0]!.url).pathname).toBe("/v1/provider-options");
+  expect(new URL(calls[0]!.url).searchParams.get("projectId")).toBe("project / one");
+  const invalid = fakeFetch(() => json(200, { providers: [], defaultBinding: { model: "invalid" } }));
+  expect((await failureOf(client(invalid.fetch).providerOptions("project"))).failure.kind).toBe("invalid-response");
 });

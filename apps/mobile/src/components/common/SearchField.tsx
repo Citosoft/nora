@@ -31,6 +31,6 @@ export function SearchField({ value, onChange, placeholder }: SearchFieldProps) 
 
 const createStyles = (theme: Theme) => ({
   field: { height: 38, flexDirection: "row" as const, alignItems: "center" as const, gap: spacing.xs + 2, paddingHorizontal: spacing.md - 2,
-    borderRadius: radii.sm + 2, backgroundColor: theme.scheme === "dark" ? theme.colors.surface : "rgba(118, 118, 128, 0.12)" },
+    borderRadius: radii.sm + 2, backgroundColor: theme.colors.searchFill },
   input: { ...type.body, flex: 1, minWidth: 0, color: theme.colors.text, paddingVertical: 0, outlineWidth: 0 }
 });

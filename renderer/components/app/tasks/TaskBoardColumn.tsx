@@ -86,7 +86,7 @@ export function TaskBoardColumn({
               <h2 className="truncate text-xs font-medium" title={section.title}>
                 {section.title}
               </h2>
-              <span className="text-[11px] tabular-nums text-muted-foreground">{count}</span>
+              <span className="text-[10px] tabular-nums text-muted-foreground">{count}</span>
             </div>
             <div className="flex items-center gap-0.5">
               <Button

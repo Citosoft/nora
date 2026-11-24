@@ -52,9 +52,9 @@ function buildMarkdownComponents(onLinkClick?: MarkdownRendererLinkClickHandler)
   tr: ({ children }: { children?: ReactNode }) => <tr className="border-b border-border/40 last:border-b-0">{children}</tr>,
   th: ({ children, style }) => <th style={style} className="px-3 py-2 font-medium text-foreground">{children}</th>,
   td: ({ children, style }) => <td style={style} className="px-3 py-2 align-top text-foreground">{children}</td>,
-  code: ({ children, className }) => <code className={cn("rounded bg-muted px-1.5 py-0.5 font-mono text-[13px] text-foreground", className)}>{children}</code>,
+  code: ({ children, className }) => <code className={cn("rounded bg-muted px-1.5 py-0.5 font-mono text-[12px] text-foreground", className)}>{children}</code>,
   // The pre element identifies every fenced block, including fences without a language.
-  pre: ({ children }) => <pre className="mt-3 max-w-full overflow-x-auto rounded-md border bg-muted/50 px-4 py-3 text-[13px] leading-6 first:mt-0 [&>code]:block [&>code]:rounded-none [&>code]:bg-transparent [&>code]:p-0">{children}</pre>,
+  pre: ({ children }) => <pre className="mt-3 max-w-full overflow-x-auto rounded-md border bg-muted/50 px-4 py-3 text-[12px] leading-6 first:mt-0 [&>code]:block [&>code]:rounded-none [&>code]:bg-transparent [&>code]:p-0">{children}</pre>,
   input: ({ checked, disabled, type }: { checked?: boolean; disabled?: boolean; type?: string }) => {
     if (type !== "checkbox") {
       return null;

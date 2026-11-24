@@ -14,7 +14,7 @@ export function WorkspaceColorSwatches({ selectedColor, onChoose, compact = fals
       </button>;
     })}
     {compact && <button type="button" aria-pressed={!selectedColor} onClick={() => onChoose(null)}
-      className={cn("h-5 rounded-md px-1.5 text-[11px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", selectedColor ? "text-muted-foreground hover:bg-accent/60" : "bg-accent/60 text-popover-foreground")}>
+      className={cn("h-5 rounded-md px-1.5 text-[10px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", selectedColor ? "text-muted-foreground hover:bg-accent/60" : "bg-accent/60 text-popover-foreground")}>
       Auto
     </button>}
   </div>;

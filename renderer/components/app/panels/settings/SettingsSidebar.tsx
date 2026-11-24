@@ -1,4 +1,4 @@
-import { SETTINGS_GROUP_ITEMS } from "@/components/app/constants/settingsGroups";
+import { SETTINGS_CATEGORIES, SETTINGS_GROUP_ITEMS } from "@/components/app/constants/settingsGroups";
 import { SETTINGS_SEARCH_INDEX } from "@/components/app/constants/settingsSearchIndex";
 import { searchSettings } from "@/components/app/logic/settingsSearch";
 import type { SettingsGroup } from "@/components/app/types/settings.types";
@@ -8,7 +8,8 @@ import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search } from "lucide-react";
 import { useMemo, useState, type KeyboardEvent } from "react";
 
-const NAV_ITEM_CLASS_NAME = "flex w-full items-center justify-start gap-2 rounded-[3px] px-3 py-2 text-sm";
+const NAV_ITEM_CLASS_NAME =
+  "flex w-full items-center justify-start gap-2 rounded-[3px] px-3 py-2 text-sm transition hover:bg-accent/60 hover:text-foreground";
 
 function GroupLabel({ item }: { item: SettingsGroupItem }) {
   const Icon = item.icon;
@@ -43,7 +44,7 @@ function SettingsSearchResults({
             type="button"
             onClick={() => onSelectGroup(group.value)}
             aria-current={group.value === activeGroup ? "page" : undefined}
-            className={`${NAV_ITEM_CLASS_NAME} font-medium text-muted-foreground transition hover:text-foreground aria-[current=page]:bg-accent aria-[current=page]:text-foreground`}
+            className={`${NAV_ITEM_CLASS_NAME} font-medium text-muted-foreground aria-[current=page]:bg-accent aria-[current=page]:text-foreground`}
           >
             <GroupLabel item={group} />
           </button>
@@ -121,15 +122,22 @@ export function SettingsSidebar({
           onRevealSetting={onRevealSetting}
         />
       ) : (
-        <TabsList className="flex w-full flex-col items-stretch gap-1 border-0 bg-transparent p-0">
-          {SETTINGS_GROUP_ITEMS.map((item) => (
-            <TabsTrigger
-              key={item.value}
-              value={item.value}
-              className={`${NAV_ITEM_CLASS_NAME} data-[state=active]:bg-accent data-[state=active]:text-foreground`}
-            >
-              <GroupLabel item={item} />
-            </TabsTrigger>
+        <TabsList aria-label="Settings sections" className="flex w-full flex-col items-stretch gap-4 border-0 bg-transparent p-0">
+          {SETTINGS_CATEGORIES.map((category) => (
+            <div key={category.label} role="group" aria-label={category.label} className="flex flex-col gap-1">
+              <div className="px-3 pb-1 text-xs font-medium text-muted-foreground" aria-hidden="true">
+                {category.label}
+              </div>
+              {category.items.map((item) => (
+                <TabsTrigger
+                  key={item.value}
+                  value={item.value}
+                  className={`${NAV_ITEM_CLASS_NAME} data-[state=active]:bg-accent data-[state=active]:text-foreground`}
+                >
+                  <GroupLabel item={item} />
+                </TabsTrigger>
+              ))}
+            </div>
           ))}
         </TabsList>
       )}

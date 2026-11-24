@@ -21,12 +21,12 @@ export function ChangedFileRow({ change, selected, annotationCount, workingTree,
     </span>}
     <button type="button" onClick={onSelect} title={`${change.path}\n${change.status} · +${change.additions} · -${change.deletions}`}
       className="flex min-w-0 flex-1 items-center gap-2 rounded py-0.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-      <span className={cn("w-3 shrink-0 text-center font-mono text-[10px] font-semibold", changeTone(change.status))}>{changeGlyph(change.status)}</span>
+      <span className={cn("w-3 shrink-0 text-center font-mono text-[9px] font-semibold", changeTone(change.status))}>{changeGlyph(change.status)}</span>
       <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
-        <span className="shrink-0 truncate text-[12.5px]">{name}</span>
-        {directory && <span className="min-w-0 truncate text-[11px] text-muted-foreground">{directory}</span>}
+        <span className="shrink-0 truncate text-[11.5px]">{name}</span>
+        {directory && <span className="min-w-0 truncate text-[10px] text-muted-foreground">{directory}</span>}
       </span>
-      <span className="flex shrink-0 items-center gap-1.5 text-[10.5px] tabular-nums">
+      <span className="flex shrink-0 items-center gap-1.5 text-[9.5px] tabular-nums">
         {change.additions > 0 && <span className="text-emerald-500">+{change.additions}</span>}
         {change.deletions > 0 && <span className="text-destructive">−{change.deletions}</span>}
       </span>

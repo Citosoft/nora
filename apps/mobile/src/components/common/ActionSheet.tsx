@@ -1,4 +1,5 @@
-import { Modal, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { useRef } from "react";
+import { Modal, Platform, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { ActionSheetProps } from "@/types/listUi.types";
 import type { Theme } from "@/types/theme.types";
@@ -10,12 +11,17 @@ import { Icon } from "./Icon";
 
 /** iOS action sheet: grouped choices rising from the bottom with a separate Cancel button. Picking an option closes it. */
 export function ActionSheet({ visible, title, message, options, onClose }: ActionSheetProps) {
+  const afterDismiss = useRef<(() => void) | null>(null);
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} onDismiss={() => {
+      const action = afterDismiss.current;
+      afterDismiss.current = null;
+      action?.();
+    }}>
       <View style={styles.backdrop}>
         <Pressable style={styles.dismiss} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close" />
         <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]} accessibilityViewIsModal>
@@ -29,9 +35,12 @@ export function ActionSheet({ visible, title, message, options, onClose }: Actio
             <ScrollView style={{ maxHeight: height * 0.6 }} bounces={false}>
               {options.map((option, index) => (
                 <Pressable key={`${index}:${option.label}`} accessibilityRole="button" accessibilityState={{ selected: option.selected === true }}
-                  onPress={() => { onClose(); option.onPress(); }}
+                  onPress={() => {
+                    if (option.afterDismiss && Platform.OS === "ios") { afterDismiss.current = option.onPress; onClose(); }
+                    else { onClose(); option.onPress(); }
+                  }}
                   style={({ pressed }) => [styles.option, (index > 0 || Boolean(title || message)) && styles.separated, pressed && styles.pressed]}>
-                  {option.icon ? <Icon name={option.icon} size={20} color={option.destructive ? colors.danger : colors.accent} /> : null}
+                  {option.leading ?? (option.icon ? <Icon name={option.icon} size={20} color={option.destructive ? colors.danger : colors.accent} /> : null)}
                   <Text style={[styles.label, option.destructive && styles.destructive]} numberOfLines={1}>{option.label}</Text>
                   {option.selected ? <Icon name="checkmark" size={20} color={colors.accent} /> : null}
                 </Pressable>
@@ -59,7 +68,7 @@ const createStyles = (theme: Theme) => ({
     paddingHorizontal: layout.gutter },
   separated: { borderTopWidth: hairline, borderTopColor: theme.colors.separator },
   pressed: { backgroundColor: theme.colors.pressed },
-  label: { fontSize: 20, lineHeight: 25, color: theme.colors.accent, flexShrink: 1 },
+  label: { ...type.title3, fontWeight: "400" as const, letterSpacing: 0, color: theme.colors.accent, flexShrink: 1 },
   destructive: { color: theme.colors.danger },
   cancel: { fontWeight: "600" as const }
 });

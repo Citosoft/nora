@@ -75,6 +75,18 @@ export const conversationSourceSchema = z.discriminatedUnion("kind", [
 ]);
 /** What finished looks like for a work thread, in a sentence or two; given to its agent and shown to the user. */
 export const doneCriteriaSchema = z.string().trim().min(1).max(1_000);
+/** Most messages one thread keeps pinned, and how much of each one's text the pin keeps. */
+export const PINNED_MESSAGES_LIMIT = 50;
+export const PINNED_MESSAGE_TEXT_LIMIT = 600;
+/** A message the user pinned, copied when pinned so it shows even while that part of the transcript is not loaded. */
+export const pinnedMessageSchema = z.object({
+  itemId: id,
+  role: z.enum(["user", "assistant"]),
+  text: z.string().max(PINNED_MESSAGE_TEXT_LIMIT),
+  author: botAuthorSchema.optional(),
+  messageAt: time,
+  pinnedAt: time
+}).strict();
 export const conversationSchema = z.object({
   id,
   origin: externalSessionOriginSchema.optional(),
@@ -104,6 +116,8 @@ export const conversationSchema = z.object({
   createdAt: time,
   updatedAt: time,
   queuePaused: z.boolean(),
+  /** Messages the user pinned, oldest pin first; absent until the first pin. */
+  pinnedMessages: z.array(pinnedMessageSchema).max(PINNED_MESSAGES_LIMIT).optional(),
   /** Latest native context occupancy; null once compaction leaves it unknown, absent when never reported. */
   context: contextUsageSchema.nullable().optional()
 }).strict();
@@ -183,7 +197,9 @@ const requestBase = {
 export const requestSchema = z.discriminatedUnion("kind", [
   z.object({ ...requestBase, kind: z.literal("approval"), details: approvalDetailsSchema.optional(),
     options: z.array(z.object({ id, label: z.string().min(1), intent: z.enum(["allow", "deny", "cancel"]).optional(),
-      scope: z.enum(["once", "session", "persistent"]).optional(), description: z.string().optional() }).strict()).min(1) }).strict(),
+      scope: z.enum(["once", "session", "persistent"]).optional(), description: z.string().optional(),
+      /** Choosing this option also moves the thread to this permission policy, for the rest of the turn and later turns. */
+      switchesPolicy: id.optional() }).strict()).min(1) }).strict(),
   z.object({ ...requestBase, kind: z.literal("question"), questions: z.array(z.object({ id, text: z.string(), options: z.array(z.string()), multiple: z.boolean(), allowOther: z.boolean().optional() }).strict()).min(1) }).strict()
 ]);
 export const requestResponseSchema = z.discriminatedUnion("kind", [
@@ -223,7 +239,9 @@ export const conversationCommandSchema = z.discriminatedUnion("kind", [
   /** Retitles a thread, settled or not. */
   z.object({ ...commandBase, kind: z.literal("rename"), title: z.string().trim().min(1).max(200) }).strict(),
   /** Chooses where a direct chat starts new tasks. */
-  z.object({ ...commandBase, kind: z.literal("set-direct-workspace"), workspaceId: id }).strict()
+  z.object({ ...commandBase, kind: z.literal("set-direct-workspace"), workspaceId: id }).strict(),
+  /** Pins or unpins one of the thread's messages, settled or not. */
+  z.object({ ...commandBase, kind: z.literal("set-message-pin"), itemId: id, pinned: z.boolean() }).strict()
 ]);
 export const commandReceiptSchema = z.object({
   commandId: id,

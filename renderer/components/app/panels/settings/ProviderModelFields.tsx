@@ -6,12 +6,13 @@ import type { ProviderModelFieldsProps } from "@/components/app/types/modelPicke
 import { Select } from "@/components/ui/select";
 import { ProviderOptionLabel } from "./ProviderOptionLabel";
 
-export function ProviderModelFields({ workspace, value, onChange, labels, disabled = false, error = null, unsupportedReason }: ProviderModelFieldsProps) {
+export function ProviderModelFields({ workspace, value, onChange, labels, disabled = false, error = null, unsupportedReason, providerKinds }: ProviderModelFieldsProps) {
   const { boot, store } = useNativeRuntimePorts();
+  const providers = providerKinds ? boot.providers.filter((entry) => providerKinds.includes(entry.kind)) : boot.providers;
   const savedKey = value ? nativeProviderKey(value) : "";
   const [providerKey, setProviderKey] = useState(savedKey);
   const catalogs = useMemo(() => createModelCatalogStore({ client: store.client, workspace }), [store.client, workspace]);
-  const provider = boot.providers.find((entry) => nativeProviderKey(entry) === providerKey) ?? null;
+  const provider = providers.find((entry) => nativeProviderKey(entry) === providerKey) ?? null;
   const catalog = useNativeModelCatalog(catalogs, provider);
   const models = catalog.status === "available" ? catalog.catalog.models : [];
   const connection = catalog.status === "available" ? catalog.catalog.connection : undefined;
@@ -23,18 +24,18 @@ export function ProviderModelFields({ workspace, value, onChange, labels, disabl
   if (provider && (catalog.status === "idle" || catalog.status === "loading")) {
     return <div aria-busy="true" className="min-h-9"><p role="status" className="text-sm text-muted-foreground">Loading provider and model options…</p></div>;
   }
-  if (!boot.providers.length && !value) return <p role="status" className="text-sm text-muted-foreground">No providers are available.</p>;
+  if (!providers.length && !value) return <p role="status" className="text-sm text-muted-foreground">No providers are available.</p>;
   return <div className="space-y-2">
     <Select aria-label={labels.provider} className="w-full" value={providerKey} disabled={disabled}
       onChange={(event) => { setProviderKey(event.target.value); if (!event.target.value) onChange(null); }}>
       {labels.clear ? <option value="">{labels.clear}</option> : <option value="" disabled>Choose a provider</option>}
-      {boot.providers.map((entry) => {
+      {providers.map((entry) => {
         const key = nativeProviderKey(entry);
         const cached = catalogs.get(key);
         return <option key={key} value={key}><ProviderOptionLabel kind={entry.kind} label={entry.label}
           connection={cached.status === "available" ? cached.catalog.connection : undefined} /></option>;
       })}
-      {value && !boot.providers.some((entry) => nativeProviderKey(entry) === savedKey) && <option value={savedKey}><ProviderOptionLabel kind={value.kind} label={`${value.kind} (unavailable)`} /></option>}
+      {value && !providers.some((entry) => nativeProviderKey(entry) === savedKey) && <option value={savedKey}><ProviderOptionLabel kind={value.kind} label={`${value.kind} (unavailable)`} /></option>}
     </Select>
     {provider && catalog.status === "available" && !unsupported && models.length > 0 && <Select aria-label={labels.model} className="w-full" value={modelId} disabled={disabled}
       onChange={(event) => { if (event.target.value) onChange({ kind: provider.kind, instanceId: provider.instanceId, model: event.target.value }); }}>

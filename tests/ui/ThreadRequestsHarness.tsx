@@ -14,6 +14,7 @@ let linked = true;
 let reads = 0;
 const forge: ThreadForgeClient = {
   connections: { github: true, gitlab: false },
+  readIssues: async () => [],
   readBranchRequest: async (_projectId, branch) => {
     reads++;
     return linked ? { branch, branchExistsOnRemote: true, state: "open", label: "Open", pullRequestNumber: 42, webUrl: "https://example.com/pulls/42" } : null;

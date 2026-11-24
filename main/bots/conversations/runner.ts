@@ -25,17 +25,29 @@ export async function runnableBinding(deps: BotRunnerDeps, binding: BotBinding, 
   return { ...binding, permissionPolicy: policy };
 }
 
+/** Creates a child of `parent` (top-level when null); without `botId` it is an ordinary Nora thread. Callers that must survive a retry pass their own `ids`. */
+async function createChildThread(deps: BotRunnerDeps, parent: Conversation | null, workspace: WorkspaceRef, title: string, provider: ProviderBinding,
+  options: BotThreadOptions, botId?: string): Promise<string> {
+  const receipt = await deps.host.execute({ kind: "create", commandId: options.ids?.commandId ?? deps.nextId(), conversationId: options.ids?.conversationId ?? deps.nextId(),
+    ...(options.initialInstruction ? { initialInstruction: options.initialInstruction } : {}),
+    title, workspace, provider, parentId: parent?.id ?? null, ...(botId ? { botId } : {}),
+    ...(options.chatBranch ? { chatBranch: options.chatBranch } : {}), ...(options.done ? { done: options.done } : {}), ...(options.source ? { source: options.source } : {}) });
+  return receipt.conversationId;
+}
+
 /**
  * Creates a thread that runs as the bot, with the bot's own model, in the given workspace; a child of `parent`, or top-level when null.
- * Callers that must survive a retry pass their own `ids`; a `chatBranch` is a side chat the user started from `parent`.
+ * A `chatBranch` is a side chat the user started from `parent`.
  */
 export async function createBotThread(deps: BotRunnerDeps, parent: Conversation | null, bot: BotDefinition, workspace: WorkspaceRef, title: string,
   options: BotThreadOptions = {}): Promise<string> {
-  const receipt = await deps.host.execute({ kind: "create", commandId: options.ids?.commandId ?? deps.nextId(), conversationId: options.ids?.conversationId ?? deps.nextId(),
-    ...(options.initialInstruction ? { initialInstruction: options.initialInstruction } : {}),
-    title: title.slice(0, 100) || bot.name, workspace, provider: await runnableBinding(deps, bot.binding, workspace, `${bot.name}'s`), parentId: parent?.id ?? null, botId: bot.id,
-    ...(options.chatBranch ? { chatBranch: options.chatBranch } : {}), ...(options.done ? { done: options.done } : {}), ...(options.source ? { source: options.source } : {}) });
-  return receipt.conversationId;
+  return createChildThread(deps, parent, workspace, title.slice(0, 100) || bot.name, await runnableBinding(deps, bot.binding, workspace, `${bot.name}'s`), options, bot.id);
+}
+
+/** Creates an ordinary Nora thread under `parent` on the given binding, for work Nora's direct chat takes on. */
+export async function createNoraThread(deps: BotRunnerDeps, parent: Conversation, workspace: WorkspaceRef, title: string, provider: ProviderBinding,
+  options: BotThreadOptions = {}): Promise<string> {
+  return createChildThread(deps, parent, workspace, title.slice(0, 100) || "Nora", provider, options);
 }
 
 /** Finds the bot's unsettled child thread under `parent` (never a branch the user started), or creates one in the parent's workspace with the given access. */

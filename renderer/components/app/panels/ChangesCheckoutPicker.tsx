@@ -27,7 +27,7 @@ export function ChangesCheckoutPicker({ options, selectedPath, disabled, onSelec
         aria-label={`Changes checkout: ${label}`} title={selectedPath}>
         <GitBranch className="size-3.5 shrink-0" aria-hidden="true" />
         <span className="truncate">{label}</span>
-        {selected?.kind === "worktree" && <span className="shrink-0 rounded bg-muted px-1 text-[10px] uppercase tracking-wide">Worktree</span>}
+        {selected?.kind === "worktree" && <span className="shrink-0 rounded bg-muted px-1 text-[9px] uppercase tracking-wide">Worktree</span>}
         <ChevronDown className="size-3.5 shrink-0" aria-hidden="true" />
       </Button>
     </PopoverTrigger>

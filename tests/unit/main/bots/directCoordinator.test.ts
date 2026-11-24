@@ -4,7 +4,8 @@ import { DirectCoordinator } from "@main/bots/direct/coordinator";
 import { resolveDirectRoute, taskTitle } from "@main/bots/direct/routing";
 import { parseDirectRoute } from "@main/bots/direct/router";
 import { directPrompt } from "@main/bots/direct/prompt";
-import type { ConversationRun, TimelineItem, WorkspaceRef } from "@shared/types/conversation/contracts.types";
+import type { ConversationRun, ProviderBinding, TimelineItem, WorkspaceRef } from "@shared/types/conversation/contracts.types";
+import { NORA_CHAT } from "@shared/bots/noraChat";
 import type { DirectDescriptor } from "@shared/types/bots/bots.types";
 import type { ProviderUpdate } from "@main/types/execution/provider.types";
 import type { DirectRouter } from "@main/types/bots/chats.types";
@@ -19,14 +20,17 @@ const direct: DirectDescriptor = { botId: "ada", name: "Ada", role: ada.role, av
 const message = (id: string, text: string, extra: Partial<Extract<TimelineItem, { kind: "message" }>> = {}): TimelineItem =>
   ({ kind: "message", id, runId: "r", createdAt: "2026-11-13T00:00:00.000Z", role: "user", text, complete: true, ...extra });
 
-async function runChat(instruction: string, route: DirectRouter, setup?: (fake: ReturnType<typeof fakeHost>) => void, interruptAfterMs?: number, workspaceId?: string) {
+const noraProvider: ProviderBinding = { kind: "claude", instanceId: "claude", model: "opus", reasoning: null, permissionPolicy: "default" };
+
+async function runChat(instruction: string, route: DirectRouter, setup?: (fake: ReturnType<typeof fakeHost>) => void, interruptAfterMs?: number, workspaceId?: string,
+  descriptor: DirectDescriptor = direct) {
   const fake = fakeHost([ada], () => instruction.includes("think forever") ? null : `done: ${instruction}`);
-  const chat = conversation("dm", { title: "Ada", provider: { kind: "nora", instanceId: "direct", model: "direct", reasoning: null, permissionPolicy: "direct" }, direct });
+  const chat = conversation("dm", { title: descriptor.name, provider: { kind: "nora", instanceId: "direct", model: "direct", reasoning: null, permissionPolicy: "direct" }, direct: descriptor });
   fake.add(chat);
   setup?.(fake);
   let sequence = 0;
   const coordinator = new DirectCoordinator({ host: fake.host, nextId: () => `id${++sequence}`, now: () => "2026-11-13T00:00:00.000Z",
-    bot: (workspaceId, botId) => botId === "ada" && workspaceId !== "hidden" ? ada : null, workspaces: () => workspaces, route });
+    bot: (workspaceId, botId) => botId === "ada" && workspaceId !== "hidden" ? ada : null, noraBinding: async () => noraProvider, workspaces: () => workspaces, route });
   const updates: ProviderUpdate[] = [];
   const run = { id: "run", conversationId: "dm", instruction, state: "starting", attemptId: "a", ...(workspaceId ? { workspaceId } : {}) } as ConversationRun;
   const execution = { snapshot: { conversation: chat, runs: [run], items: [], requests: [] } as never, run };
@@ -47,6 +51,16 @@ test("a new task starts a write-enabled work thread in the routed workspace and 
   assert.deepEqual([thread.title, thread.workspace.projectId, thread.workspace.access, thread.bot?.botId], ["Footer fix", "site", "write", "ada"]);
   assert.deepEqual(result.replies, [["Ada", "done: Fix the footer on the site", thread.id]]);
   assert.equal(result.status, "completed");
+});
+
+test("Nora's chat starts ordinary Nora work threads on its chat model, in any workspace, and replies as Nora", async () => {
+  const noraDirect: DirectDescriptor = { botId: NORA_CHAT.id, name: NORA_CHAT.name, role: NORA_CHAT.role, avatar: NORA_CHAT.avatar, scope: { kind: "global" }, workspaceId: "app" };
+  const result = await runChat("Tidy the site styles", async () => ({ kind: "new", workspaceId: "site", title: "Style tidy", done: null }), undefined, undefined, undefined, noraDirect);
+  assert.equal(result.threads.length, 1);
+  const [thread] = result.threads;
+  assert.deepEqual([thread.title, thread.workspace.projectId, thread.workspace.access, thread.bot], ["Style tidy", "site", "write", undefined]);
+  assert.deepEqual(thread.provider, noraProvider);
+  assert.deepEqual(result.replies, [["Nora", "done: Tidy the site styles", thread.id]]);
 });
 
 test("a new task carries the router's done criteria on its thread and in its first prompt", async () => {

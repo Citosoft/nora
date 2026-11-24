@@ -1,3 +1,7 @@
+import type { DirectDescriptor } from "@shared/types/bots/bots.types";
+import type { ExecutionState } from "./conversationState.types";
+import type { Href } from "expo-router";
+import type { ConversationSummary } from "@shared/types/conversation/queries.types";
 import type { ReactNode } from "react";
 import type { RemoteProject } from "@shared/types/remote-access/runtimeApi.types";
 import type { IconName } from "./icon.types";
@@ -40,4 +44,19 @@ export interface WorkspaceSwitcherProps {
   /** The workspace whose chats are shown; null shows chats from every workspace. */
   selectedId: string | null;
   onSelect: (workspaceId: string | null) => void;
+}
+
+export interface SidebarBotsProps {
+  runtimeId: string;
+  projectId: string | null;
+  activeConversationId: string | null;
+  summaries: readonly ConversationSummary[];
+  onNavigate(href: Href, mode?: "push" | "replace"): void;
+}
+
+export interface ChatTitleProps {
+  title: string;
+  status: ExecutionState | null;
+  bot?: Pick<DirectDescriptor, "name" | "avatar"> | null;
+  onEditBot?: () => void;
 }

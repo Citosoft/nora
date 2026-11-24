@@ -5,6 +5,7 @@ import { ACCOUNT_ORIGIN, accountAssetPath } from "@main/account/assets";
 test("app origin serves built renderer assets", () => {
   assert.equal(accountAssetPath(`${ACCOUNT_ORIGIN}/`), "index.html");
   assert.equal(accountAssetPath(`${ACCOUNT_ORIGIN}/bundle.js`), "bundle.js");
+  assert.equal(accountAssetPath(`${ACCOUNT_ORIGIN}/mark.svg`), "mark.svg");
   assert.equal(accountAssetPath(`${ACCOUNT_ORIGIN}/product-icons/github.svg`), "product-icons/github.svg");
   assert.equal(accountAssetPath(`${ACCOUNT_ORIGIN}/product-icons/react.dev.png`), "product-icons/react.dev.png");
   assert.equal(accountAssetPath(`${ACCOUNT_ORIGIN}/fonts/Inter-Variable.woff2`), "fonts/Inter-Variable.woff2");

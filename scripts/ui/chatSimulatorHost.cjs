@@ -3,11 +3,28 @@ const { build } = require('esbuild');
 const fs = require('node:fs/promises');
 const { join, resolve } = require('node:path');
 const { tmpdir } = require('node:os');
-const { createFixtureHost } = require('./fixtureHost.cjs');
+const { createFixtureHost, removeDirectory } = require('./fixtureHost.cjs');
 
 /** Must match SIMULATOR_APP_SCHEME in tests/simulator/main/host.ts; privileged schemes are registered before app ready. */
 const WIDGET_SCHEME = 'nora-simulator';
 if (!app.isReady()) protocol.registerSchemesAsPrivileged([{ scheme: WIDGET_SCHEME, privileges: { standard: true, secure: true } }]);
+
+/** Packages that load native binaries relative to their own files, so they cannot be bundled. */
+const NATIVE_PACKAGES = ['sharp'];
+
+/**
+ * Keeps native packages out of the bundle and points them at the repo's node_modules by absolute path,
+ * because the bundle is written to a temp directory where bare requires would not resolve.
+ */
+function nativeModulesFromRoot(root) {
+  const filter = new RegExp(`^(${NATIVE_PACKAGES.join('|')})$`);
+  return {
+    name: 'native-modules-from-root',
+    setup(pluginBuild) {
+      pluginBuild.onResolve({ filter }, args => ({ path: require.resolve(args.path, { paths: [root] }), external: true }));
+    },
+  };
+}
 
 /** Separate process and temp database; production providers and credentials are never loaded. */
 async function createChatSimulator(options = {}) {
@@ -19,10 +36,11 @@ async function createChatSimulator(options = {}) {
     if (closed) return; closed = true;
     unregister?.(); unregisterSecrets?.(); unhandle?.(); ipcMain.removeHandler('simulator:boot');
     await runtime?.host.shutdown(); await fixture?.close();
-    await fs.rm(directory, { recursive: true, force: true });
+    await removeDirectory(directory);
   };
   try {
-    const common = { bundle: true, platform: 'node', format: 'cjs', external: ['electron'], tsconfig: join(root, 'tsconfig.json') };
+    const common = { bundle: true, platform: 'node', format: 'cjs', external: ['electron'], plugins: [nativeModulesFromRoot(root)],
+      tsconfig: join(root, 'tsconfig.json') };
     await build({ ...common, entryPoints: [join(root, 'tests/simulator/main/host.ts')], outfile: join(directory, 'host.cjs') });
     await build({ ...common, entryPoints: [join(root, 'tests/simulator/main/preload.ts')], outfile: join(directory, 'preload.cjs') });
     // The MCP App scenario's widget, read by the simulated provider from the simulator directory.

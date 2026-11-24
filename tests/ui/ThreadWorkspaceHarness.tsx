@@ -6,6 +6,7 @@ import { useThreadWorkspaceSnapshot } from "@/components/app/hooks/useThreadWork
 import { ThreadWorkspaceComposition } from "@/components/app/views/ThreadWorkspaceComposition";
 import { ThreadNavigation } from "@/components/app/panels/threads/ThreadNavigation";
 import { ThreadTabs } from "@/components/app/panels/threads/ThreadTabs";
+import { FixturePortsProvider } from "./FixturePortsProvider";
 import { ThreadWorkspaceCenter } from "@/components/app/panels/threads/ThreadWorkspaceCenter";
 import { threadWorkspaceFixture } from "../unit/renderer/threadWorkspaceFixtures";
 
@@ -46,6 +47,8 @@ function FixtureControls() {
     <button id="finish-background" onClick={() => {
       fixture.summaries[0].conversation.title = "A long background thread title that must stay on one row";
       fixture.summaries[0].latestRun = { id: "background-run", state: "completed", createdAt: fixture.deps.now(), updatedAt: fixture.deps.now(), failure: null };
+      // Unread updates come from the inbox, which marks a background thread that finishes.
+      fixture.unread.set([fixture.summaries[0].conversation.id]);
       void store.refresh();
     }}>Finish background thread</button>
     <button id="focus-window" onClick={() => store.setWindowFocused(true)}>Focus app</button>
@@ -64,4 +67,4 @@ export function ThreadWorkspaceHarness() {
 }
 const root = document.getElementById("app");
 if (!root) throw new Error("Thread acceptance root is missing");
-createRoot(root).render(<ThreadWorkspaceHarness />);
+createRoot(root).render(<FixturePortsProvider><ThreadWorkspaceHarness /></FixturePortsProvider>);

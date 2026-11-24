@@ -107,7 +107,7 @@ export function NativeComposerInput({ inputRef, value: savedValue, disabled, pla
     {open && <ComposerSuggestionList label={suggestions.label} message={suggestions.message} loading={suggestions.loading} onRetry={suggestions.retry} id={listId} options={matches} activeIndex={Math.min(activeIndex, matches.length - 1)} onPick={pick} onHover={setActiveIndex} />}
     {ghost && <>
       <div aria-hidden="true" className={`pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words px-2 py-2 text-sm text-muted-foreground/60 ${trailingAction ? "pr-10" : ""}`}>
-        {ghost.text}<kbd className="ml-2 inline-flex rounded border border-border/70 px-1 py-0.5 align-middle font-sans text-[10px] leading-none text-muted-foreground">Tab</kbd>
+        {ghost.text}<kbd className="ml-2 inline-flex rounded border border-border/70 px-1 py-0.5 align-middle font-sans text-[9px] leading-none text-muted-foreground">Tab</kbd>
       </div>
       <span id={`${id}-suggestion`} role="status" className="sr-only">Suggested follow-up: {ghost.text} Press Tab to use this draft, or Escape to dismiss.</span>
     </>}

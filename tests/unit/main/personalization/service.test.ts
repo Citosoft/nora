@@ -105,6 +105,34 @@ test("set-thread-model saves, replaces and clears the new-thread default without
   assert.equal(settings.personalization.defaultRole?.id, "developer");
 });
 
+test("set-thread-model with the nora-chat target saves and clears Nora's chat model apart from the new-thread default", async () => {
+  let settings = structuredClone(DEFAULT_APP_SETTINGS);
+  settings.personalization.threadModel = { kind: "claude", instanceId: "local", model: "opus" };
+  const catalog: WorkspaceCatalog = { list: () => [], registrations: () => [], async bindProject() { throw new Error("unused"); }, async setProjectCheckouts() { return false; },
+    async ensurePersonal() { throw new Error("unused"); }, async addFolder() { throw new Error("unused"); } };
+  const service = new PersonalizationService({ read: () => settings, async update(change) { settings = change(settings); return settings; } }, catalog,
+    { environmentId: "local", providers: [], cursor: () => 0, async chooseFolder() { return null; }, async openFolder() {} });
+  await service.request({ kind: "set-thread-model", target: "nora-chat", model: { kind: "codex", instanceId: "local", model: "gpt" } });
+  assert.deepEqual(settings.personalization.noraChatModel, { kind: "codex", instanceId: "local", model: "gpt" });
+  assert.equal(settings.personalization.threadModel?.kind, "claude");
+  await service.request({ kind: "set-thread-model", target: "nora-chat", model: null });
+  assert.equal("noraChatModel" in settings.personalization, false);
+  assert.equal(settings.personalization.threadModel?.kind, "claude");
+});
+
+test("set-favorite-model adds and removes favourites and drops the field once empty", async () => {
+  let settings = structuredClone(DEFAULT_APP_SETTINGS);
+  const catalog: WorkspaceCatalog = { list: () => [], registrations: () => [], async bindProject() { throw new Error("unused"); }, async setProjectCheckouts() { return false; },
+    async ensurePersonal() { throw new Error("unused"); }, async addFolder() { throw new Error("unused"); } };
+  const service = new PersonalizationService({ read: () => settings, async update(change) { settings = change(settings); return settings; } }, catalog,
+    { environmentId: "local", providers: [], cursor: () => 0, async chooseFolder() { return null; }, async openFolder() {} });
+  const opus = { kind: "claude" as const, instanceId: "local", model: "opus" };
+  const state = await service.request({ kind: "set-favorite-model", model: opus, favorite: true });
+  assert.deepEqual(state.personalization.favoriteModels, [opus]);
+  await service.request({ kind: "set-favorite-model", model: opus, favorite: false });
+  assert.equal("favoriteModels" in settings.personalization, false);
+});
+
 test("sync-checkouts registers the project's worktrees; background syncs publish only when they change", async () => {
   let settings = structuredClone(DEFAULT_APP_SETTINGS);
   const calls: Array<{ projectId: string; paths: readonly string[] }> = [];

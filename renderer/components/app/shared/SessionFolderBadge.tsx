@@ -17,7 +17,7 @@ export function SessionFolderBadge({ workspace, className }: SessionFolderBadgeP
       <Badge
         variant="outline"
         className={cn(
-          "max-w-[14rem] gap-1 border-border/70 bg-muted/50 text-[11px] font-medium leading-none text-foreground",
+          "max-w-[14rem] gap-1 border-border/70 bg-muted/50 text-[10px] font-medium leading-none text-foreground",
           "dark:border-border/90 dark:bg-muted/25 dark:text-foreground/95",
           className
         )}

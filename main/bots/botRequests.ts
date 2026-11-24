@@ -1,3 +1,4 @@
+import { BotRevisionConflict } from "./errors";
 import { botDefinitionSchema } from "@shared/bots/contracts";
 import { putStoredBot, removeStoredBot, sameBotScope, setBotHidden, storedBot } from "@shared/bots/settingsMutations";
 import type { AppSettings } from "@shared/appTypes";
@@ -47,6 +48,7 @@ export async function applyBotRequest(request: BotRequest, settings: Personaliza
       const previous = previousScope ? existingBot(deps, settings.read(), previousScope, input.id) : null;
       if (previousScope && !previous) throw new Error("This bot changed or was removed. Reload bots and try again.");
       if (!previousScope && existingBot(deps, settings.read(), input.scope, input.id)) throw new Error("A bot with this id already exists here");
+      if (request.expectedRevision !== undefined && previous?.revision !== request.expectedRevision) throw new BotRevisionConflict();
       const bot: BotDefinition = { ...input, revision: previous ? previous.revision + 1 : 1 };
       if (workspace && bot.scope.kind === "workspace" && bot.scope.storage === "shared") await deps.library.write(workspace, bot);
       else await settings.update((current) => ({ ...current, personalization: { ...current.personalization, bots: putStoredBot(current.personalization.bots, bot) } }));

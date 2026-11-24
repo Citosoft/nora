@@ -1,6 +1,6 @@
 import { GitBranch, SquareArrowOutUpRight } from "lucide-react";
 import { MarkdownRenderer } from "@/components/app/shared/MarkdownRenderer";
-import { BotAvatar } from "@/components/app/shared/BotAvatar";
+import { SpeakerAvatar } from "@/components/app/shared/SpeakerAvatar";
 import { BotInfoTrigger } from "@/components/app/shared/BotInfoTrigger";
 import { cn } from "@/lib/utils";
 import { chatTime } from "@/components/app/logic/chatTimeline";
@@ -23,7 +23,7 @@ export function ChatMessage({ entry, workThread, onOpenThread, onBranch, onLinkC
   const name = entry.author?.name ?? "Nora";
   return <div data-history-output={entry.text} className={cn("flex gap-3", entry.continued ? "mt-1" : "mt-4")}>
     <div className="shrink-0" style={{ width: AVATAR }}>{!entry.continued && entry.author && <BotInfoTrigger botId={entry.author.botId} name={name} className="block rounded-full">
-      <BotAvatar avatar={entry.author.avatar} size={AVATAR} /></BotInfoTrigger>}</div>
+      <SpeakerAvatar botId={entry.author.botId} avatar={entry.author.avatar} size={AVATAR} /></BotInfoTrigger>}</div>
     <div className="flex min-w-0 max-w-[80%] flex-col items-start gap-1">
       {!entry.continued && <p className="flex items-baseline gap-2 text-sm">{entry.author ? <BotInfoTrigger botId={entry.author.botId} name={name} className="font-medium hover:underline">{name}</BotInfoTrigger>
         : <span className="font-medium">{name}</span>}<time className="text-xs text-muted-foreground" dateTime={entry.createdAt}>{time}</time></p>}

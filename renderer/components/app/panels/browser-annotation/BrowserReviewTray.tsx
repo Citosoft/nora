@@ -64,7 +64,7 @@ export function BrowserReviewTray({ reviewState }: BrowserReviewTrayProps) {
           <div className="flex min-w-0 flex-1 items-center gap-2 text-xs font-medium text-foreground">
             <MessageSquare className="size-3.5 shrink-0" />
             <span className="whitespace-nowrap">Browser review</span>
-            <Badge variant="secondary" className="h-5 px-1.5 text-[11px]">
+            <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
               {annotationCount}
             </Badge>
           </div>
@@ -113,7 +113,7 @@ export function BrowserReviewTray({ reviewState }: BrowserReviewTrayProps) {
                         <Badge
                           variant="outline"
                           title={elementLabel}
-                          className="mt-0.5 max-w-[40%] shrink-0 truncate border-border/60 px-1.5 font-mono text-[11px] text-muted-foreground"
+                          className="mt-0.5 max-w-[40%] shrink-0 truncate border-border/60 px-1.5 font-mono text-[10px] text-muted-foreground"
                         >
                           {elementLabel}
                         </Badge>

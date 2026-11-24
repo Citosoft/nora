@@ -49,7 +49,7 @@ export function BrowserCommentComposer({ target, onSave, onCancel, disabled = fa
                 {target.textPreview}
               </div>
             ) : null}
-            <div className="truncate text-[11px] text-muted-foreground" title={target.pageUrl}>
+            <div className="truncate text-[10px] text-muted-foreground" title={target.pageUrl}>
               {target.pageTitle || target.pageUrl}
             </div>
           </div>

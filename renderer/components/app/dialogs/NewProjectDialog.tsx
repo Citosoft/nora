@@ -16,7 +16,7 @@ function buildScaffoldOptionTooltip(option: ProjectScaffoldOption) {
       <div className="font-medium">{option.label}</div>
       <div>{option.description}</div>
       {option.recommended ? (
-        <div className="pt-1 text-[11px] text-muted-foreground">
+        <div className="pt-1 text-[10px] text-muted-foreground">
           Recommended starter choice
         </div>
       ) : null}
@@ -88,7 +88,7 @@ export function NewProjectDialog(props: NewProjectDialogProps) {
                       >
                         {group.label}
                       </h3>
-                      <span className="text-[11px] tabular-nums text-muted-foreground">
+                      <span className="text-[10px] tabular-nums text-muted-foreground">
                         {group.options.length}
                       </span>
                     </div>

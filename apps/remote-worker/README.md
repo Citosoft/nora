@@ -183,8 +183,19 @@ Check a build without deploying: `npx wrangler deploy --dry-run --outdir dist/dr
 
 - **Tunnel capacity:** a Cloudflare account allows **1,000 tunnels**. Each runtime uses one. Failed provisions clean
   up best-effort, and leftover tunnels are named deterministically (`nora-<clerkUserId>-<installationId>`) so the next
-  provision for that installation reuses them. Tunnels for installations that never return are **not** cleaned up
-  automatically.
+  provision for that installation reuses them. A daily Cron Trigger at **03:17 UTC** cleans up abandoned tunnels.
+- **Automatic cleanup:** disconnected orphan tunnels have a **7-day grace period**; registered installations expire
+  after **90 days continuously offline**. Cloudflare's connector status and disconnection timestamp act as the
+  heartbeat, so a connected computer is preserved even if nobody opens it from a phone. Never-connected tunnels
+  age from creation. Missing activity timestamps, malformed directory entries, ambiguous ownership and dependency
+  failures fail closed. Each candidate is rechecked before deletion; cleanup never force-drops connections.
+  DNS cleanup only removes Nora runtime CNAMEs still pointing to the expired tunnel, and directory cleanup checks
+  the tunnel ID again before removing an entry. Soft-deleted tunnels remain in the inventory so partial DNS or
+  directory cleanup retries on the next run. The Worker logs aggregate scanned/removed/failed counts and marks
+  runs with failures as failed. Returning desktops with registrations at least 90 days old provision before using
+  their cached connector token, recreating expired resources at their stable hostname. This recovery behavior
+  requires the desktop version containing this change; older versions can use Relay's Retry action.
+  Deploy with `npm run deploy` to install the handler and cron together; no new bindings or secrets are required.
 - **Manual cleanup:** list tunnels with
   `GET /accounts/{account_id}/cfd_tunnel?is_deleted=false&include_prefix=nora-`, compare against users' Clerk
   `privateMetadata.noraRuntimes`, then for each orphan: `DELETE …/cfd_tunnel/{id}/connections`,

@@ -24,7 +24,7 @@ export function WorkspaceHomeTasks({ projectId }: WorkspaceHomeTasksProps) {
       {tasks.map((entry) => <li key={entry.task.path} className="group flex items-center gap-1 border-b last:border-0 hover:bg-muted/50">
         <button type="button" onClick={() => open(entry)} className="min-w-0 flex-1 px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring">
           <span className="block truncate text-sm" title={entry.task.title}>{entry.task.title}</span>
-          <span className="block text-[11px] text-muted-foreground">{entry.sectionTitle}</span>
+          <span className="block text-[10px] text-muted-foreground">{entry.sectionTitle}</span>
         </button>
         <Button type="button" variant="ghost" size="icon" className="mr-1 size-7 shrink-0 text-muted-foreground" disabled={!!starting}
           aria-label={`Start a thread on ${entry.task.title}`} tooltip="Start a thread on this task" onClick={() => void run(entry)}>

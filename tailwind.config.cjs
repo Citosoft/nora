@@ -1,3 +1,5 @@
+const defaultTheme = require("tailwindcss/defaultTheme");
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: ["class"],
@@ -6,6 +8,13 @@ module.exports = {
     "./dist/renderer/index.html"
   ],
   theme: {
+    // Reduce text by one pixel without changing rem-based spacing or controls.
+    fontSize: Object.fromEntries(
+      Object.entries(defaultTheme.fontSize).map(([name, [size, options]]) => [
+        name,
+        [`calc(${size} - 1px)`, options]
+      ])
+    ),
     container: {
       center: true,
       padding: "1rem",

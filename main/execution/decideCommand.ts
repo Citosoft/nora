@@ -7,6 +7,7 @@ import { NORA_PROVIDER_KIND } from "@shared/providers/providerKinds";
 import { areQuestionAnswersComplete } from "@shared/conversations/questionAnswers";
 import { steeringTarget } from "./steeringAdmission";
 import { sameProviderBinding } from "@shared/conversations/providerBinding";
+import { applyMessagePin } from "./messagePins";
 
 /** A workspace a direct chat may work in: any for a global bot's chat, only its own for a workspace bot's. */
 function assertDirectWorkspaceScope(direct: Conversation["direct"], workspaceId: string): NonNullable<Conversation["direct"]> {
@@ -26,6 +27,12 @@ export function validateResponse(request: RuntimeRequest, response: RequestRespo
     if (keys.length === request.questions.length && areQuestionAnswersComplete(request.questions, response.answers)) return;
   }
   throw new ExecutionCommandError("invalid", "Response is not one of this request's supported choices");
+}
+
+/** The permission policy an approval answer moves the thread to, if the chosen option switches one. */
+function respondedPolicySwitch(request: RuntimeRequest, response: RequestResponse): string | null {
+  if (request.kind !== "approval" || response.kind !== "approval") return null;
+  return request.options.find((option) => option.id === response.optionId)?.switchesPolicy ?? null;
 }
 
 export function decideCommand(command: ConversationCommand, context: DecisionContext): Decision {
@@ -84,6 +91,13 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
     const direct = assertDirectWorkspaceScope(state.conversation.direct, command.workspaceId);
     // Like renaming, this is bookkeeping and leaves `updatedAt` alone.
     if (direct.workspaceId !== command.workspaceId) add({ kind: "conversation", conversation: { ...state.conversation, direct: { ...direct, workspaceId: command.workspaceId } } });
+    return decision;
+  }
+  if (command.kind === "set-message-pin") {
+    // Pinning is bookkeeping too, so it works on settled threads and leaves `updatedAt` alone.
+    const outcome = applyMessagePin(state.conversation, command, context.pinTarget ?? null, context.now);
+    if (outcome.kind === "invalid") throw new ExecutionCommandError("invalid", outcome.reason);
+    if (outcome.kind === "changed") add({ kind: "conversation", conversation: { ...state.conversation, pinnedMessages: outcome.pins } });
     return decision;
   }
   if (command.kind === "unarchive") {
@@ -205,6 +219,9 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
         throw new ExecutionCommandError("expired", "This native request is no longer answerable");
       }
       validateResponse(request, command.response);
+      const switched = respondedPolicySwitch(request, command.response);
+      if (switched) add({ kind: "conversation", conversation: { ...initial.conversation,
+        provider: { ...initial.conversation.provider, permissionPolicy: switched }, updatedAt: context.now } });
       add({ kind: "request", request: { ...request, status: "responding" } });
       decision.effects.push({ id: JSON.stringify([request.attemptId, request.id, "respond"]), conversationId: command.conversationId,
         runId: request.runId, attemptId: request.attemptId, status: "pending",

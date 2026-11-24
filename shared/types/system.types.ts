@@ -2,6 +2,7 @@ import type { AiSettings } from "./ai.types";
 import type { AnalyticsConsentStatus } from "./analytics.types";
 import type { FileEditorThemeId } from "./fileEditorTheme.types";
 import type { VoiceSettings } from "./voice.types";
+import { DEFAULT_VOICE_SETTINGS } from "../voice/settings";
 import type { Personalization } from "./personalization/roles.types";
 
 export type Screen = "project-selector" | "workspace";
@@ -348,10 +349,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
     runtimeModelByProvider: { codex: null, claude: null },
     memoryReview: { provider: "claude", runtimeModel: null }
   },
-  voice: {
-    dictationProvider: "openai",
-    localWhisperModelId: "base.en"
-  }
+  voice: DEFAULT_VOICE_SETTINGS
 };
 
 export type BrowserDataImportResult =

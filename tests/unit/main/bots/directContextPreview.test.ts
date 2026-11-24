@@ -3,6 +3,7 @@ import test from "node:test";
 import { previewDirectContext } from "@main/bots/direct/contextPreview";
 import { createMemoryDelivery } from "@main/bots/memory/delivery";
 import { snapshotBot } from "@shared/bots/snapshot";
+import { NORA_CHAT } from "@shared/bots/noraChat";
 import type { ContextUsage, TimelineItem, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { DirectDescriptor } from "@shared/types/bots/bots.types";
 import type { DirectContextPreviewDeps } from "@main/types/bots/chats.types";
@@ -27,7 +28,7 @@ function setup(threads: "none" | "open" = "none") {
     provider: { kind: "claude", instanceId: "claude", model: "opus", reasoning: null, permissionPolicy: "default" } }));
   const subjects: RunContextSubject[] = [];
   const deps: DirectContextPreviewDeps = { host: fake.host, workspaces: () => workspaces, now: () => "2026-11-13T00:00:00.000Z", routerModel: () => "cloud",
-    bot: (_workspaceId, botId) => botId === "ada" ? ada : null,
+    bot: (_workspaceId, botId) => botId === "ada" ? ada : null, noraModel: () => ({ kind: "claude", instanceId: "claude", model: "opus" }),
     runContext: (subject) => { subjects.push(subject); return { tools: true, connectors: 0, toolGuidance: "TOOLS", notesGuidance: "NOTES", turnNotes: null }; } };
   return { fake, deps, subjects };
 }
@@ -79,4 +80,16 @@ test("peeking at saved-note delivery never freezes a thread's notes or uses up i
   assert.match(peeked.turnNotes ?? "", /Prefers spaces/);
   assert.deepEqual(delivery.peek("t", changed), peeked, "peeking twice changes nothing");
   assert.deepEqual(delivery.forRun("t", changed), peeked, "the run still receives the change");
+});
+
+test("Nora's chat previews a new work thread on its chat model, with no bot persona, in any workspace", () => {
+  const { fake, deps } = setup();
+  fake.add(conversation("nora-dm", { title: "Nora", provider: { kind: "nora", instanceId: "direct", model: "direct", reasoning: null, permissionPolicy: "direct" },
+    direct: { botId: NORA_CHAT.id, name: NORA_CHAT.name, role: NORA_CHAT.role, avatar: NORA_CHAT.avatar, scope: { kind: "global" }, workspaceId: "app" } }));
+  const preview = previewDirectContext(deps, { chatId: "nora-dm", draft: "Tidy the styles", target: { kind: "new", workspaceId: "site" } });
+  assert.deepEqual(preview.targets.map((option) => option.target), [{ kind: "new", workspaceId: "app" }, { kind: "new", workspaceId: "site" }]);
+  const work = preview.requests[1];
+  assert.equal(work.model, "claude · opus");
+  assert.ok(!work.sections.some((section) => section.id === "bot"));
+  assert.match(work.purpose, /^Nora does the work and writes the reply in Site\./);
 });

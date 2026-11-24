@@ -32,8 +32,8 @@ function Field({ label, value }: { label: string; value: string }) {
 const createStyles = (theme: Theme) => ({
   box: { gap: spacing.md },
   field: { gap: spacing.xs },
-  label: { ...type.caption, fontWeight: "600" as const, color: theme.colors.textMuted, letterSpacing: 0.3 },
+  label: { ...type.eyebrow, color: theme.colors.textMuted },
   text: { ...type.subheadline, color: theme.colors.text },
-  code: { fontFamily: monospaceFont, fontSize: 13, lineHeight: 18, color: theme.colors.text, backgroundColor: theme.colors.codeBackground,
+  code: { ...type.code, fontFamily: monospaceFont, color: theme.colors.text, backgroundColor: theme.colors.codeBackground,
     padding: spacing.md - 2, borderRadius: radii.sm }
 });

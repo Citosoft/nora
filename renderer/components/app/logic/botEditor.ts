@@ -6,19 +6,19 @@ import type { BotDefinition, BotScope, BotTemplate } from "@shared/types/bots/bo
 import type { ThreadModelDefault } from "@shared/types/personalization/threadModel.types";
 import type { BotEditorDraft, BotEditorResult } from "@/components/app/types/botEditor.types";
 
-const FIELD_LABELS: Readonly<Record<string, string>> = { name: "Name", role: "Role", instructions: "Instructions", connectorIds: "Connectors", binding: "Model", avatar: "Avatar", scope: "Where it's available" };
+const FIELD_LABELS: Readonly<Record<string, string>> = { name: "Name", role: "Role", instructions: "Instructions", connectorIds: "Connectors", accountConnectors: "Account connectors", binding: "Model", avatar: "Avatar", scope: "Where it's available" };
 
 export function newBotEditorDraft(scope: BotScope, model: ThreadModelDefault | null, seed: number): BotEditorDraft {
-  return { name: "", role: "", instructions: "", connectorIds: undefined, model, avatar: { seed }, scope };
+  return { name: "", role: "", instructions: "", connectorIds: undefined, accountConnectors: [], model, avatar: { seed }, scope };
 }
 
 /** A new bot prefilled from a template; the template's face is pinned, the seed still varies for future rerolls. */
 export function templateEditorDraft(template: BotTemplate, scope: BotScope, model: ThreadModelDefault | null, seed: number, connectors: readonly Connector[] = [], subject?: ConnectorSubject): BotEditorDraft {
-  return { name: template.name, role: template.role, instructions: template.instructions, connectorIds: templateConnectorIds(template, connectors, subject), model, scope, avatar: { seed, ...template.avatar } };
+  return { name: template.name, role: template.role, instructions: template.instructions, connectorIds: templateConnectorIds(template, connectors, subject), accountConnectors: [], model, scope, avatar: { seed, ...template.avatar } };
 }
 
 export function botEditorDraft(bot: BotDefinition): BotEditorDraft {
-  return { name: bot.name, role: bot.role, instructions: bot.instructions, connectorIds: bot.connectorIds, avatar: bot.avatar, scope: bot.scope,
+  return { name: bot.name, role: bot.role, instructions: bot.instructions, connectorIds: bot.connectorIds, accountConnectors: [...(bot.accountConnectors ?? [])], avatar: bot.avatar, scope: bot.scope,
     model: { kind: bot.binding.kind, instanceId: bot.binding.instanceId, model: bot.binding.model } };
 }
 
@@ -30,6 +30,7 @@ export function botFromEditorDraft(draft: BotEditorDraft, existing: BotDefinitio
   const parsed = botDefinitionSchema.safeParse({
     id: existing?.id ?? newBotId(draft.name, takenIds), name: draft.name, role: draft.role, instructions: draft.instructions,
     ...(draft.connectorIds !== undefined ? { connectorIds: draft.connectorIds } : {}),
+    ...(draft.accountConnectors.length ? { accountConnectors: draft.accountConnectors } : {}),
     binding: { ...draft.model, reasoning: sameProvider ? existing.binding.reasoning : null, permissionPolicy: sameProvider ? existing.binding.permissionPolicy : null },
     avatar: draft.avatar, scope: draft.scope, revision: existing?.revision ?? 1
   });

@@ -1,14 +1,15 @@
+import type { ConversationCommand } from "@shared/types/conversation/contracts.types";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { runtimeFixture } from "./runtimeFixture";
 import { createRuntimeApi } from "@main/remote-access/http/handler";
-import { botsResponseSchema, commandResponseSchema, conversationDetailResponseSchema, conversationsResponseSchema, runtimeInfoSchema, runtimeApiErrorSchema } from "@shared/remote-access/runtimeApi";
+import { providerOptionsResponseSchema, botsResponseSchema, commandResponseSchema, conversationDetailResponseSchema, conversationsResponseSchema, runtimeInfoSchema, runtimeApiErrorSchema } from "@shared/remote-access/runtimeApi";
 
 const create = { commandId: "create-remote", conversationId: "remote", projectId: "project", title: "Remote thread" };
 
 test("every runtime read requires a verified owning account and an approved browser origin", async (t) => {
   const f = runtimeFixture(t);
-  for (const path of ["/v1/runtime/info", "/v1/projects", "/v1/conversations", "/v1/tasks", "/v1/events?after=0"]) {
+  for (const path of ["/v1/runtime/info", "/v1/projects", "/v1/provider-options?projectId=project", "/v1/conversations", "/v1/tasks", "/v1/events?after=0"]) {
     assert.equal((await f.request(path, undefined, { Authorization: "" })).status, 401);
     assert.equal((await f.request(path, undefined, { Authorization: "Bearer invalid.token.signature" })).status, 401);
     assert.equal((await f.request(path, undefined, { Authorization: "Bearer other.token.signature" })).status, 403);
@@ -60,8 +61,8 @@ test("remote callers cannot inject paths, unsupported permissions, unknown field
   const f = runtimeFixture(t);
   assert.equal((await f.request("/v1/conversations", { ...create, workspace: { path: "/etc" } })).status, 400);
   assert.equal((await f.request("/v1/conversations", { ...create, projectId: "../../etc" })).status, 404);
-  const provider = { kind: "codex", instanceId: "account-a", model: "test-model", reasoning: null, permissionPolicy: "dangerous" };
-  assert.equal((await f.request("/v1/conversations", { ...create, provider })).status, 403);
+  const provider = { kind: "codex", instanceId: "account-a", model: "test-model", reasoning: null, permissionPolicy: "unsupported" };
+  assert.equal((await f.request("/v1/conversations", { ...create, provider })).status, 400);
   await f.request("/v1/conversations", create);
   assert.equal((await f.request("/v1/actions/not-a-live-action/decision", { commandId: "answer", conversationId: "remote", response: { kind: "approval", optionId: "accept" } })).status >= 400, true);
   assert.equal((await f.request("/v1/events?after=999999")).status, 410);
@@ -125,4 +126,32 @@ test("remote clients list bots and start each bot's direct chat on the runtime's
 
   assert.equal((await f.request("/v1/bots/missing/chat", { ...body, commandId: "other", conversationId: "other" })).status, 404);
   assert.equal((await f.request("/v1/bots/reviewer/chat", { ...body, commandId: "other", conversationId: "other", workspace: { path: "/etc" } })).status, 400);
+});
+
+test("remote model options use the project's catalogs and accept supported permission choices", async (t) => {
+  const f = runtimeFixture(t);
+  const options = providerOptionsResponseSchema.parse(await (await f.request("/v1/provider-options?projectId=project")).json());
+  assert.equal(options.providers[0]?.label, "Codex");
+  assert.equal(options.defaultBinding?.model, "test-model");
+  assert.equal((await f.request("/v1/provider-options?projectId=missing")).status, 404);
+  const provider = { ...options.defaultBinding!, permissionPolicy: "dangerous" };
+  assert.equal((await f.request("/v1/conversations", { ...create, provider })).status, 200);
+  assert.equal(f.execution.store.header("remote")?.conversation.provider.permissionPolicy, "dangerous");
+});
+
+test("remote messages validate and forward provider changes with the expected binding", async (t) => {
+  const f = runtimeFixture(t);
+  await f.request("/v1/conversations", create);
+  const expected = f.execution.store.header("remote")!.conversation.provider;
+  const providerChange = { expected, next: { ...expected, permissionPolicy: "dangerous" } };
+  const commands: ConversationCommand[] = [];
+  f.options.host.execute = async command => {
+    commands.push(command);
+    return { commandId: command.commandId, conversationId: command.conversationId, cursor: 1, acceptedAt: "2026-11-16T10:00:00.000Z" };
+  };
+  assert.equal((await f.request("/v1/conversations/remote/messages", { commandId: "change", runId: "changed-run", instruction: "Continue", providerChange })).status, 200);
+  assert.deepEqual(commands[0], { kind: "submit", conversationId: "remote", commandId: "change", runId: "changed-run", instruction: "Continue", providerChange });
+  const invalid = { ...providerChange, next: { ...providerChange.next, reasoning: "unsupported" } };
+  assert.equal((await f.request("/v1/conversations/remote/messages", { commandId: "invalid", runId: "invalid-run", instruction: "Continue", providerChange: invalid })).status, 400);
+  assert.equal(commands.length, 1);
 });

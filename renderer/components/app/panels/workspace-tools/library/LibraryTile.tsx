@@ -37,12 +37,12 @@ export function LibraryTile({ entry, grouping, selected, thumbnails, onOpen }: L
           ? <img src={preview.dataUrl} alt="" className="size-full object-cover transition duration-300 group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100" />
           : <span className="flex size-full flex-col items-center justify-center gap-2">
             <WorkspaceFileIcon path={entry.name} className="size-9" />
-            <span className="rounded-md bg-background/70 px-1.5 py-0.5 font-mono text-[10px] font-medium tracking-wide text-muted-foreground">{extension(entry.name)}</span>
+            <span className="rounded-md bg-background/70 px-1.5 py-0.5 font-mono text-[9px] font-medium tracking-wide text-muted-foreground">{extension(entry.name)}</span>
           </span>}
       </span>
       <span className="min-w-0 px-0.5">
-        <span className="block truncate text-[13px] font-medium">{entry.name}</span>
-        <span className="block truncate text-[11px] text-muted-foreground">{caption(entry, grouping)}</span>
+        <span className="block truncate text-[12px] font-medium">{entry.name}</span>
+        <span className="block truncate text-[10px] text-muted-foreground">{caption(entry, grouping)}</span>
       </span>
     </button>
   </li>;

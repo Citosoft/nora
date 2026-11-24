@@ -39,12 +39,12 @@ export async function executePendingCommand(client: RuntimeClient, store: Pendin
 async function send(client: RuntimeClient, store: PendingCommandStore, command: PendingCommand): Promise<CommandReceipt> {
   switch (command.kind) {
     case "send-message":
-      return client.sendMessage(command.conversationId, { commandId: command.commandId, runId: command.runId, instruction: command.instruction });
+      return client.sendMessage(command.conversationId, { commandId: command.commandId, runId: command.runId, instruction: command.instruction, ...(command.providerChange ? { providerChange: command.providerChange } : {}) });
     case "create-conversation": {
       const saved = store.get(command.key);
       if (!(saved?.kind === "create-conversation" && saved.created)) {
         await client.createConversation({ commandId: command.commandId, conversationId: command.conversationId, projectId: command.projectId,
-          title: command.title });
+          title: command.title, ...(command.provider ? { provider: command.provider } : {}) });
         await store.put({ ...command, created: true });
       }
       return client.sendMessage(command.conversationId, { commandId: command.message.commandId, runId: command.message.runId,

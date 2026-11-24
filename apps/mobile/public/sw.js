@@ -9,8 +9,33 @@ const CACHE_NAME = CACHE_PREFIX + BUILD.id;
 // Compare normalised pathnames: bundle names can contain characters (`[`, `+`) that URLs may encode.
 const SHELL = new Set(BUILD.shell.map((path) => new URL(path, self.location.origin).pathname));
 
+// What each shell file must be served as. Right after a deploy the host can briefly answer a not-yet-propagated bundle
+// with the single-page-app fallback (index.html, status 200); caching that as JavaScript would leave the app blank until
+// the next build, so install refuses any response whose type doesn't match and the browser retries on a later load.
+const EXPECTED_TYPES = [[/\.js$/, "javascript"], [/\.css$/, "css"], [/\.png$/, "image/"], [/\.ico$/, "image/"],
+  [/\.webmanifest$/, "json"], [/(^\/$|\.html$)/, "text/html"]];
+
+function expectedType(path) {
+  const match = EXPECTED_TYPES.find(([pattern]) => pattern.test(path));
+  return match ? match[1] : null;
+}
+
+async function fetchShellFile(path) {
+  const response = await fetch(path, { cache: "reload" });
+  const type = response.headers.get("content-type") || "";
+  const expected = expectedType(new URL(path, self.location.origin).pathname);
+  if (!response.ok || (expected && !type.includes(expected))) throw new Error(`Unexpected ${response.status} ${type} for ${path}`);
+  return response;
+}
+
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(BUILD.shell)).then(() => self.skipWaiting()));
+  event.waitUntil((async () => {
+    // Fetch and check every file before caching any, so a bad deploy window never leaves a half-poisoned cache.
+    const responses = await Promise.all(BUILD.shell.map(fetchShellFile));
+    const cache = await caches.open(CACHE_NAME);
+    await Promise.all(BUILD.shell.map((path, index) => cache.put(path, responses[index])));
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener("activate", (event) => {

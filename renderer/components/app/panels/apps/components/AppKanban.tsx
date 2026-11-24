@@ -54,7 +54,7 @@ export const AppKanban: ComponentFn<AppCatalog, "Kanban"> = ({ props }) => {
           <div className="mt-1.5 flex items-center justify-between gap-2">
             {meta ? <span className="truncate text-xs tabular-nums text-muted-foreground">{formatAppValue(cellValue(row, meta), asFormat(props.metaFormat))}</span> : <span />}
             {moveAction && columns.length > 1 && <select aria-label={`Move ${formatAppValue(cellValue(row, title))} to`} value={column.value} onClick={(event) => event.stopPropagation()}
-              onChange={(event) => move(row, event.target.value)} className="h-6 max-w-[7rem] rounded border border-border/60 bg-background px-1 text-[11px] text-muted-foreground">
+              onChange={(event) => move(row, event.target.value)} className="h-6 max-w-[7rem] rounded border border-border/60 bg-background px-1 text-[10px] text-muted-foreground">
               {columns.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>}
           </div>
         </article>)}

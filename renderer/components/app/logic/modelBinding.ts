@@ -45,3 +45,9 @@ export function resolveModelBinding(input: ModelBindingInput): ModelBindingResol
   const problem = providerBindingProblem(binding, catalog.catalog);
   return problem ? { status: "blocked", message: problem } : { status: "ready", binding };
 }
+
+/** Explains when a model, permission or reasoning change takes effect, shared by the composer's pickers. */
+export function bindingChangeHint(locked: boolean, continuation: boolean): string {
+  if (locked) return "Use Change beside the model picker when the chat is idle.";
+  return continuation ? "Changes apply with your next send in a fresh session with saved context." : "Settings apply to this new thread.";
+}

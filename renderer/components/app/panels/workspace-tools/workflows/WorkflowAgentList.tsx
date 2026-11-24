@@ -9,7 +9,7 @@ export function WorkflowAgentList({ agents }: WorkflowAgentListProps) {
         <p className="truncate text-sm font-medium">{agent.name}</p>
         <p className="truncate text-xs text-muted-foreground">{agent.model ? `${agent.toolLabel} · ${agent.model}` : agent.toolLabel}</p>
       </div>
-      <span className="shrink-0 rounded bg-muted px-1.5 text-[11px] text-muted-foreground">{agent.kind === "writer" ? "Work" : "Review"}</span>
+      <span className="shrink-0 rounded bg-muted px-1.5 text-[10px] text-muted-foreground">{agent.kind === "writer" ? "Work" : "Review"}</span>
     </li>)}
   </ul>;
 }

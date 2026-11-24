@@ -4,7 +4,15 @@ import type { RemoteBot } from "@shared/types/remote-access/runtimeApi.types";
 export const routes = Object.freeze({
   home: "/" as const,
   signIn: "/sign-in" as const,
+  computers: "/computers" as const,
   settings: "/settings" as const,
+  about: "/about" as const,
+  manageBots: (runtimeId: string) => `/runtimes/${encodeURIComponent(runtimeId)}/bots`,
+  createBot: (runtimeId: string, workspaceId: string | null = null) =>
+    `/runtimes/${encodeURIComponent(runtimeId)}/bots?create=1${workspaceId ? `&workspaceId=${encodeURIComponent(workspaceId)}` : ""}`,
+  editBot: (runtimeId: string, botId: string, scope: RemoteBot["scope"]) =>
+    `/runtimes/${encodeURIComponent(runtimeId)}/bots?botId=${encodeURIComponent(botId)}${scope.kind === "workspace" ? `&workspaceId=${encodeURIComponent(scope.workspaceId)}` : ""}`,
+  runtimeSettings: (runtimeId: string) => `/runtimes/${encodeURIComponent(runtimeId)}/settings`,
   runtime: (runtimeId: string) => `/runtimes/${encodeURIComponent(runtimeId)}`,
   newConversation: (runtimeId: string, projectId?: string | null) =>
     `/runtimes/${encodeURIComponent(runtimeId)}/new${projectId ? `?projectId=${encodeURIComponent(projectId)}` : ""}`,

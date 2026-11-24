@@ -2,7 +2,7 @@ import type { z } from "zod";
 import type {
   initialInstructionSchema, chatBranchOriginSchema, chatBranchSchema, conversationSourceSchema, commandReceiptSchema, conversationCommandSchema, conversationEventSchema, conversationSchema,
   eventPayloadSchema, failureSchema, providerBindingSchema, requestResponseSchema, requestSchema,
-  runSchema, runActionSchema, contextUsageSchema, snapshotSchema, timelineItemSchema, usageSchema, workspaceRefSchema, toolDetailsSchema, toolStateSchema, approvalDetailsSchema
+  runSchema, runActionSchema, contextUsageSchema, snapshotSchema, pinnedMessageSchema, timelineItemSchema, usageSchema, workspaceRefSchema, toolDetailsSchema, toolStateSchema, approvalDetailsSchema
 } from "@shared/conversations/contracts";
 
 export type ProviderBinding = z.infer<typeof providerBindingSchema>;
@@ -16,6 +16,7 @@ export type ContextUsage = z.infer<typeof contextUsageSchema>;
 export type ContextReading = Omit<ContextUsage, "updatedAt">;
 export type RunAction = z.infer<typeof runActionSchema>;
 export type Conversation = z.infer<typeof conversationSchema>;
+export type PinnedMessage = z.infer<typeof pinnedMessageSchema>;
 export type ConversationRun = z.infer<typeof runSchema>;
 export type TimelineItem = z.infer<typeof timelineItemSchema>;
 export type ToolActivity = Extract<TimelineItem, { kind: "tool" }>;

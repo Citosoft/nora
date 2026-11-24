@@ -1,5 +1,6 @@
+import type { TurnActivity } from "@shared/types/conversation/turnActivity.types";
 import type { BotAvatar } from "@shared/types/bots/bots.types";
-import type { ApprovalRequest, RequestResponse, TimelineItem, ToolActivity, ToolState } from "@shared/types/conversation/contracts.types";
+import type { ApprovalRequest, RequestResponse, TimelineItem, ToolActivity } from "@shared/types/conversation/contracts.types";
 import type { NativeTurnTimeProps } from "./nativeConversation.types";
 import type { McpAppToolCall } from "./mcpApp.types";
 
@@ -31,13 +32,17 @@ export interface NativeAskBotCardProps {
   onOpenThread?: (conversationId: string) => void;
 }
 /**
- * What a running turn is doing when nothing else in the thread shows it: specific when the runtime says
- * so (`thinking`, `starting`, `stopping`), or a light `waiting` phrase while the model is between steps.
+ * Provider-reported work, with a light `waiting` phrase while the model is between steps.
  */
-export interface NativeTurnActivity { kind: "starting" | "thinking" | "waiting" | "stopping"; label: string; }
-export interface NativeTurnActivityProps { activity: NativeTurnActivity; }
-export interface NativeTimelineRow { key: string; entry: NativeTimelineEntry; timing: NativeTurnTimeProps | null; activity: NativeTurnActivity | null; }
-export interface NativeToolHistorySummary { label: string; state: ToolState; count: number; failedCount: number; }
+export interface NativeTurnActivityProps { activity: TurnActivity; }
+export interface NativeTimelineRow {
+  key: string;
+  entry: NativeTimelineEntry;
+  timing: NativeTurnTimeProps | null;
+  activity: TurnActivity | null;
+  /** An agent message followed directly by another agent message in the same turn, laid out tight against it. */
+  continued: boolean;
+}
 export interface NativeApprovalProps {
   request: ApprovalRequest;
   disabled: boolean;

@@ -15,6 +15,6 @@ export function WorkspaceHomeThreadRow({ row, providerLabel, now, onOpen }: Work
         {row.waitingOn && <ShieldQuestion className="size-3 shrink-0" aria-hidden="true" />}<span className="truncate">{detail}</span></span>
     </span>
     <ThreadStatusIcon row={row} />
-    <ThreadAge updatedAt={row.updatedAt} now={now} className="w-8 text-right text-[11px]" />
+    <ThreadAge updatedAt={row.updatedAt} now={now} className="w-8 text-right text-[10px]" />
   </button>;
 }

@@ -10,7 +10,7 @@ export function WorkspaceAvatar({ workspace, size = "default" }: WorkspaceAvatar
   const selectedColor = useWorkspaceAvatarColor(workspace.id);
   const source = useWorkspaceAvatarSource(workspace.id);
   const [failedLogo, setFailedLogo] = useState<string | null>(null);
-  const sizeClass = size === "small" ? "size-5 text-[9px]" : "size-7 text-[10px]";
+  const sizeClass = size === "small" ? "size-5 text-[8px]" : "size-7 text-[9px]";
   const frame = `inline-flex shrink-0 select-none overflow-hidden rounded-md ${sizeClass}`;
   if (source.kind === "personal") return <span aria-hidden="true" title={workspace.name} data-workspace-avatar={workspace.id} className={frame}>
     <AccountAvatarImage fallback={<PersonalWorkspaceArt className="size-full" />} />

@@ -34,7 +34,7 @@ export function ComputerPill({ runtimeId }: { runtimeId: string }) {
 
 const createStyles = (theme: Theme) => ({
   pill: { height: 40, maxWidth: "100%" as const, flexDirection: "row" as const, alignItems: "center" as const, gap: spacing.sm, paddingHorizontal: spacing.lg + 2,
-    borderRadius: radii.pill, backgroundColor: theme.scheme === "dark" ? "#1A1A1A" : theme.colors.fill },
+    borderRadius: radii.pill, backgroundColor: theme.scheme === "dark" ? theme.colors.composer : theme.colors.fill },
   pressed: { opacity: 0.6 },
   label: { ...type.headline, color: theme.colors.text, flexShrink: 1 }
 });

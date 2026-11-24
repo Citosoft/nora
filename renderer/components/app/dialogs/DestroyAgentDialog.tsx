@@ -53,7 +53,7 @@ export function DestroyAgentDialog({
         }
       >
         <DialogBody className="space-y-4 pt-6">
-          <DialogDescription className="text-[13px] leading-relaxed">{description}</DialogDescription>
+          <DialogDescription className="text-[12px] leading-relaxed">{description}</DialogDescription>
 
           {agent ? (
             <>

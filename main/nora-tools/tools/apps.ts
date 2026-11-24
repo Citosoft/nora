@@ -12,6 +12,7 @@ import { connectorIdSchema } from "@shared/connectors/contracts";
 import type { AppDefinition, AppRenderData } from "@shared/types/apps/apps.types";
 import type { NoraToolContext, NoraToolDeps } from "@main/types/nora-tools/noraTools.types";
 import { runTool } from "./result";
+import { guidanceCarriesAppBuilderGuide } from "@main/apps/builderGuide";
 
 const SAMPLE_SHOWN_CHARS = 12_000;
 const appId = z.string().trim().min(1).max(128).describe("App id from create_app or read_app");
@@ -29,7 +30,9 @@ const describeApp = (app: AppDefinition, data: AppRenderData): string => [
 ].join("\n");
 
 export function registerAppBuilderTools(server: McpServer, context: NoraToolContext, deps: NoraToolDeps): void {
-  server.registerTool("app_builder_guide", { ...NORA_TOOLS.app_builder_guide, annotations: { readOnlyHint: true, openWorldHint: false } }, () => runTool(() => deps.apps.guide()));
+  if (!guidanceCarriesAppBuilderGuide(context.conversation)) {
+    server.registerTool("app_builder_guide", { ...NORA_TOOLS.app_builder_guide, annotations: { readOnlyHint: true, openWorldHint: false } }, () => runTool(() => deps.apps.guide()));
+  }
   server.registerTool("list_connector_tools", { ...NORA_TOOLS.list_connector_tools,
     inputSchema: { connector_id: connectorIdSchema.optional().describe("Show one connector's tools with their input schemas") },
     annotations: { readOnlyHint: true, openWorldHint: false }
@@ -60,13 +63,13 @@ export function registerAppBuilderTools(server: McpServer, context: NoraToolCont
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false }
   }, (input) => runTool(async () => {
     const app = await deps.apps.create({ name: input.name, spec: input.spec, suggestions: input.suggestions, icon: input.icon }, context);
-    return `Created app ${app.name} (id ${app.id}). It is open beside this chat and its sources are loading. Describe what it shows and ask the user what to change; use update_app with this id for changes.`;
+    return `Created app ${app.name} (id ${app.id}, version ${app.version}). It is open beside this chat and its sources are loading. Describe what it shows and ask the user what to change; use update_app with this id for changes.`;
   }));
   server.registerTool("update_app", { ...NORA_TOOLS.update_app,
-    inputSchema: { id: appId, spec: appSpecInputSchema, summary: z.string().trim().min(1).max(500).describe("One line describing the change, shown in the app's version history"), suggestions, icon: icon.describe("The app's icon: repeat the current one (read_app shows it) unless it is layout-dashboard or the app's purpose changed, then pick one that fits") },
+    inputSchema: { id: appId, base_version: z.number().int().positive().describe("The app version this change was made against: from create_app, your last update_app or read_app"), spec: appSpecInputSchema, summary: z.string().trim().min(1).max(500).describe("One line describing the change, shown in the app's version history"), suggestions, icon: icon.describe("The app's icon: repeat the current one (read_app shows it) unless it is layout-dashboard or the app's purpose changed, then pick one that fits") },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false }
   }, (input) => runTool(async () => {
-    const app = await deps.apps.update({ id: input.id, spec: input.spec, summary: input.summary, suggestions: input.suggestions, icon: input.icon }, context);
+    const app = await deps.apps.update({ id: input.id, baseVersion: input.base_version, spec: input.spec, summary: input.summary, suggestions: input.suggestions, icon: input.icon }, context);
     return `Saved version ${app.version} of ${app.name}. The app refreshed beside this chat.`;
   }));
   server.registerTool("read_app", { ...NORA_TOOLS.read_app, inputSchema: { id: appId }, annotations: { readOnlyHint: true, openWorldHint: false } },

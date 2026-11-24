@@ -2,6 +2,7 @@ import type { HookCallback, Options } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
 import { budgetToolOutput, TOOL_OUTPUT_INLINE_BYTES } from "@main/execution/tool-output/budget";
 import type { ClaudeToolOutputOptions } from "@main/types/execution/toolOutput.types";
+import type { ClaudeFlagSettings } from "@main/types/execution/claude.types";
 
 const shellSchema = z.object({ stdout: z.string(), stderr: z.string(), interrupted: z.boolean(), isImage: z.boolean().optional(),
   persistedOutputPath: z.string().optional(), rawOutputPath: z.string().optional(),
@@ -39,7 +40,7 @@ export function createClaudeOutputHook(directory: string): HookCallback {
   };
 }
 
-export function claudeOutputOptions(options?: ClaudeToolOutputOptions): Pick<Options, "hooks" | "settings"> {
+export function claudeOutputOptions(options?: ClaudeToolOutputOptions): Pick<Options, "hooks"> & { settings?: ClaudeFlagSettings } {
   return options?.enabled() ? { settings: { bashOutputMaxChars: TOOL_OUTPUT_INLINE_BYTES },
     hooks: { PostToolUse: [{ hooks: [createClaudeOutputHook(options.directory)], timeout: 5 }] } } : {};
 }

@@ -28,7 +28,8 @@ export interface BotNavigationProps {
   collapsed: boolean;
   /** Starts a thread with a bot, or with Nora when the id is null. */
   /** Opens a bot's chat, or starts a Nora thread for null. */
-  onStart(botId: string | null): void;
+  /** Opens the bot's direct chat; Nora's too. */
+  onStart(botId: string): void;
   onNavigate(): void;
   /** Switches the sidebar to Threads, where every thread is listed. */
   onShowThreads(): void;
@@ -53,7 +54,6 @@ export interface BotNavigationRowProps {
 }
 export interface BotRowContextMenuProps extends Pick<BotNavigationRowProps, "expanded" | "onToggle" | "onStart" | "onShowInfo" | "onEdit" | "onDelete"> {
   children: ReactNode;
-  id: string;
   name: string;
   hasThreads: boolean;
 }

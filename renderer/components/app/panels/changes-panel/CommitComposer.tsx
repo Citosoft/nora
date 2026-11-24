@@ -8,7 +8,7 @@ export function CommitComposer({ message, committing, canCommit, selectionLabel,
   return <div className="space-y-2">
     <div className="rounded-xl border border-border/70 bg-background/60 transition-colors focus-within:border-ring/50">
       <Textarea variant="embedded" rows={2} value={message} aria-label="Commit message" placeholder="Commit message"
-        className="min-h-[3.25rem] resize-none px-3 pb-1 pt-2.5 text-[12.5px]"
+        className="min-h-[3.25rem] resize-none px-3 pb-1 pt-2.5 text-[11.5px]"
         onChange={(event) => onMessageChange(event.target.value)}
         onKeyDown={(event) => {
           if ((event.metaKey || event.ctrlKey) && event.key === "Enter") { event.preventDefault(); onCommit(); }
@@ -18,7 +18,7 @@ export function CommitComposer({ message, committing, canCommit, selectionLabel,
           onClick={ai.onGenerate} tooltip={ai.generating ? "Writing commit message…" : "Write commit message with AI"} aria-label="Write commit message with AI">
           <Sparkles className={`size-3.5 ${ai.generating ? "animate-pulse" : ""}`} aria-hidden="true" />
         </Button>}
-        <span className="min-w-0 flex-1 truncate px-1 text-[11px] text-muted-foreground">{selectionLabel}</span>
+        <span className="min-w-0 flex-1 truncate px-1 text-[10px] text-muted-foreground">{selectionLabel}</span>
         {actions}
         <Button type="button" size="sm" className="ml-1 h-7 shrink-0 px-3 text-xs" disabled={!canCommit || committing} onClick={onCommit} tooltip="Commit (⌘↵)">
           {committing ? "Committing…" : "Commit"}

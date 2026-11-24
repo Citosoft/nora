@@ -106,7 +106,7 @@ const ProviderCard = ({
     <div className="min-w-0 rounded-lg border border-border/60 bg-card/30 p-3 sm:p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2 gap-y-1">
         <div className="text-sm font-semibold text-foreground">{title}</div>
-        <div className="text-[11px] tabular-nums text-muted-foreground">
+        <div className="text-[10px] tabular-nums text-muted-foreground">
           {filesLabel}: {fileCount}
         </div>
       </div>
@@ -148,7 +148,7 @@ const ProviderCard = ({
         <summary className="cursor-pointer list-none text-xs font-medium text-muted-foreground marker:content-none hover:text-foreground [&::-webkit-details-marker]:hidden">
           <span className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-muted/30 px-2 py-1 transition group-open:border-primary/30 group-open:bg-primary/5">
             Numeric table
-            <span className="text-[10px] text-muted-foreground/80">(expand)</span>
+            <span className="text-[9px] text-muted-foreground/80">(expand)</span>
           </span>
         </summary>
         <div className="mt-3">

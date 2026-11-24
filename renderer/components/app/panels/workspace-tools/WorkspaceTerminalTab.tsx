@@ -22,7 +22,7 @@ export function WorkspaceTerminalTab({ terminal, selected }: WorkspaceTerminalTa
     <TabsTrigger value={terminal.id} className="max-w-48 truncate px-3 py-2 text-xs">{terminal.name}{terminal.isBusy && <span className="ml-2 size-1.5 shrink-0 rounded-full bg-primary" aria-label="Busy" />}</TabsTrigger>
     <DropdownMenu trigger={<Button variant="ghost" size="icon" className="size-6" aria-label={`Actions for ${terminal.name}`}><Ellipsis className="size-3" aria-hidden="true" /></Button>}>
       <DropdownMenuItem onSelect={() => { setName(terminal.name); setError(null); setEditing(true); }}>Rename</DropdownMenuItem>
-      <div className="space-y-1 border-t px-3 py-2 text-[11px] text-muted-foreground"><p className="break-all">{terminal.currentWorkingDirectory ?? terminal.workspace}</p><p>{terminal.shellLabel} · {terminal.status} · PID {terminal.pid ?? "—"}</p>{terminal.branch && <p>{terminal.branch}</p>}</div>
+      <div className="space-y-1 border-t px-3 py-2 text-[10px] text-muted-foreground"><p className="break-all">{terminal.currentWorkingDirectory ?? terminal.workspace}</p><p>{terminal.shellLabel} · {terminal.status} · PID {terminal.pid ?? "—"}</p>{terminal.branch && <p>{terminal.branch}</p>}</div>
       <DropdownMenuItem destructive onSelect={() => { void actions.onDestroyTerminal(terminal.id); }}>Stop and close terminal</DropdownMenuItem>
     </DropdownMenu>
     <Button variant="ghost" size="icon" className="mr-1 size-6" aria-label={`Stop and close terminal ${terminal.name}`} onClick={() => { void actions.onDestroyTerminal(terminal.id); }}><X className="size-3" aria-hidden="true" /></Button>

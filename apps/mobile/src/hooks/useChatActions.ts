@@ -1,3 +1,4 @@
+import type { SendMessageRequest } from "@shared/types/remote-access/runtimeApi.types";
 import { useCallback, useState } from "react";
 import type { CommandRunner } from "@/types/pendingCommand.types";
 import { buildCancelTask, buildSendMessage, pendingCommandKeys } from "@/commands/commandBuilders";
@@ -8,8 +9,9 @@ export function useChatActions(runner: CommandRunner, runtimeId: string, convers
   const { commandDeps } = useRemoteAccess();
   const [stopError, setStopError] = useState<string | null>(null);
 
-  const send = useCallback(async (instruction: string): Promise<void> => {
-    await runner.run(buildSendMessage(commandDeps, { runtimeId, conversationId, instruction }));
+  const send = useCallback(async (instruction: string, providerChange?: SendMessageRequest["providerChange"]): Promise<void> => {
+    const outcome = await runner.run(buildSendMessage(commandDeps, { runtimeId, conversationId, instruction, providerChange }));
+    if (outcome.status === "rejected") throw outcome.error;
   }, [commandDeps, conversationId, runner, runtimeId]);
 
   const stop = useCallback(async (runId: string): Promise<void> => {

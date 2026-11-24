@@ -1,3 +1,3 @@
-import { SignInScreen } from "@/components/screens/SignInScreen";
+import { WelcomeScreen } from "@/components/screens/WelcomeScreen";
 
-export default SignInScreen;
+export default WelcomeScreen;

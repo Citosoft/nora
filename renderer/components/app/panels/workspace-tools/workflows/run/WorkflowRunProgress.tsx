@@ -52,7 +52,7 @@ export function WorkflowRunProgress({ stages, onOpenThread }: WorkflowRunProgres
                 ) : null}
               </div>
               <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{stage.description}</p>
-              {stage.role ? <p className="mt-1 text-[11px] text-muted-foreground/80">{stage.role.botSnapshot?.name ?? stage.role.toolId} · {stage.role.kind === "writer" ? "Work" : "Review"}</p> : null}
+              {stage.role ? <p className="mt-1 text-[10px] text-muted-foreground/80">{stage.role.botSnapshot?.name ?? stage.role.toolId} · {stage.role.kind === "writer" ? "Work" : "Review"}</p> : null}
               {stage.role?.conversationId ? <Button variant="ghost" size="sm" className="h-auto px-0 py-1 text-xs"
                 onClick={() => { if (stage.role?.conversationId) onOpenThread(stage.role.conversationId); }}
                 aria-label={`Open ${stage.title} thread`}>Open thread</Button> : null}

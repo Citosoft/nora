@@ -19,7 +19,7 @@ export const WorkspaceSidebarChildSectionLabel = ({
 }: WorkspaceSidebarChildSectionLabelProps) => {
   const shouldShowCount = typeof count === "number" && count > 0;
   const className = cn(
-    "workspace-sidebar-child-section-label flex min-w-0 items-center gap-3.5 text-[13px] font-medium tracking-normal text-muted-foreground",
+    "workspace-sidebar-child-section-label flex min-w-0 items-center gap-3.5 text-[12px] font-medium tracking-normal text-muted-foreground",
     onOpenCenter &&
       "rounded-md px-1 py-0.5 -mx-1 transition hover:bg-accent/35 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
   );

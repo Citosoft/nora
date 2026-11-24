@@ -2,6 +2,7 @@ import type { ConversationSummary } from "@shared/types/conversation/queries.typ
 import type { NativeWorkspace } from "@shared/types/personalization/workspaces.types";
 import type { ChatWorkThread } from "@/components/app/types/chatPanels.types";
 
+import { isNoraChat } from "@shared/bots/noraChat";
 import { canSettleThread } from "./thread-workspace/settlement";
 import { chatWorkPhase } from "./chatWorkGroups";
 
@@ -57,7 +58,10 @@ export function buildChatWorkThreads(summaries: readonly ConversationSummary[], 
 /** The bot's side panel follows work across chats, excluding the threads that power those chats themselves. */
 export function buildBotWorkThreads(summaries: readonly ConversationSummary[], botId: string, environmentId: string, workspaces: readonly NativeWorkspace[]): ChatWorkThread[] {
   const local = summaries.filter(({ conversation }) => conversation.workspace.environmentId === environmentId);
-  const roots = local.filter(({ conversation }) => conversation.bot?.botId === botId).map(({ conversation }) => conversation.id);
+  // Nora's own work is every ordinary thread: no bot runs it and it is not itself a chat.
+  const owned = isNoraChat(botId) ? (conversation: ConversationSummary["conversation"]) => !conversation.bot && !conversation.direct && !conversation.group
+    : (conversation: ConversationSummary["conversation"]) => conversation.bot?.botId === botId;
+  const roots = local.filter(({ conversation }) => owned(conversation)).map(({ conversation }) => conversation.id);
   const ids = workTree(local, roots);
   const chats = new Set(local.filter(({ conversation }) => conversation.direct || conversation.group).map(({ conversation }) => conversation.id));
   return workThreads(local.filter(({ conversation }) => {

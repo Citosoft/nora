@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createThreadWorkspaceStore } from "@/components/app/logic/thread-workspace/store";
-import { buildComposerInstruction } from "@/components/app/logic/composerAttachments";
+import { buildComposerInstruction } from "@shared/conversations/composerInstruction";
 import { threadWorkspaceFixture, threadBinding } from "./threadWorkspaceFixtures";
 
 test("chat references persist independently across drafts and retries send only the saved index reference", async () => {

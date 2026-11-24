@@ -38,7 +38,7 @@ export function ProviderUsageWidget({ provider, connection }: ProviderUsageWidge
       <UsageSummaryGrid info={info} />
       {info.notice && <p role="status" className="text-xs text-muted-foreground">{info.notice}</p>}
       {entry.error && <p role="alert" className="text-xs text-destructive">{entry.error}</p>}
-      <p className="text-[11px] text-muted-foreground">Updated {formatUpdatedAt(info.fetchedAt)}</p>
+      <p className="text-[10px] text-muted-foreground">Updated {formatUpdatedAt(info.fetchedAt)}</p>
     </PopoverContent>
   </Popover>;
 }

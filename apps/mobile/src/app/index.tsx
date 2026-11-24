@@ -1,3 +1,3 @@
-import { RuntimesScreen } from "@/components/screens/RuntimesScreen";
+import { HomeScreen } from "@/components/screens/HomeScreen";
 
-export default RuntimesScreen;
+export default HomeScreen;

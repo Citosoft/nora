@@ -7,9 +7,9 @@ import { routes } from "@/navigation/routes";
 
 export default function NotFoundRoute() {
   return (
-    <Screen title="Not found" back={{ label: "Computers", fallbackHref: routes.home }}>
+    <Screen title="Not found" back={{ label: "Home", fallbackHref: routes.home }}>
       <StateView kind="empty" icon="compass-outline" title="This page doesn't exist" />
-      <Inset><Button label="Go to your computers" variant="ghost" onPress={() => router.replace(routes.home)} /></Inset>
+      <Inset><Button label="Go home" variant="ghost" onPress={() => router.replace(routes.home)} /></Inset>
     </Screen>
   );
 }

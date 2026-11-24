@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import type { ConversationShellProps } from "@/types/sidebar.types";
 import { routes } from "@/navigation/routes";
@@ -20,14 +20,14 @@ export function ConversationShell({ runtimeId, activeConversationId, center, chi
   const wide = useIsWideLayout();
   const ready = lookup.status === "ready";
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={[styles.fill, { backgroundColor: colors.background }]}>
       <SidebarFrame runtimeId={runtimeId} runtimeName={ready ? lookup.name : null} activeConversationId={activeConversationId}>
         <ChatTopBar center={center} wide={wide} sidebarDisabled={!ready} onOpenSidebar={() => setSidebarOpen(true)}
           onNewChat={() => router.replace(routes.newConversation(runtimeId))} />
         {ready ? (
           <>
             <ConnectionBanner session={lookup.session} snapshot={lookup.snapshot} runtimeName={lookup.name} />
-            <View style={{ flex: 1 }}>{children}</View>
+            <View style={styles.fill}>{children}</View>
             {wide ? null : (
               <Sidebar runtimeId={runtimeId} runtimeName={lookup.name} activeConversationId={activeConversationId} visible={sidebarOpen}
                 onClose={() => setSidebarOpen(false)} />
@@ -38,3 +38,5 @@ export function ConversationShell({ runtimeId, activeConversationId, center, chi
     </View>
   );
 }
+
+const styles = StyleSheet.create({ fill: { flex: 1 } });

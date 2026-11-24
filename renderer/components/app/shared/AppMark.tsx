@@ -5,7 +5,7 @@ export function AppMark({
 }) {
   return (
     <img
-      src="./icon.svg"
+      src="./mark.svg"
       alt=""
       aria-hidden="true"
       draggable={false}

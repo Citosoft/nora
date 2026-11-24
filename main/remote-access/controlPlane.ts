@@ -1,9 +1,10 @@
 import { DIRECTORY_ROUTES, provisionRuntimeResponseSchema, runtimeResponseSchema, directoryErrorSchema, deleteRuntimeResponseSchema } from "@shared/remote-access/directory";
 import type { ControlPlaneOptions, RemoteControlPlane } from "@main/types/remote-access/controlPlane.types";
+import { NORA_RELAY_NAME } from "@shared/remote-access/constants";
 
 export function createRemoteControlPlane(options: ControlPlaneOptions): RemoteControlPlane {
   const origin = new URL(options.origin);
-  if (origin.protocol !== "https:" || origin.origin !== options.origin) throw new Error("Remote access requires a secure control-plane origin.");
+  if (origin.protocol !== "https:" || origin.origin !== options.origin) throw new Error(`${NORA_RELAY_NAME} requires a secure control-plane origin.`);
   const request = async (session: Parameters<RemoteControlPlane["remove"]>[0], path: string, method: string, signal: AbortSignal, body?: string) => {
     const timeout = AbortSignal.any([signal, AbortSignal.timeout(20_000)]);
     const token = await options.sessionToken(session, timeout);
@@ -14,7 +15,7 @@ export function createRemoteControlPlane(options: ControlPlaneOptions): RemoteCo
     if (!response.ok) {
       if (method === "DELETE" && response.status === 404) return null;
       const failure = directoryErrorSchema.safeParse(input);
-      throw new Error(failure.success ? failure.data.error.message : "The remote access service could not complete this request.");
+      throw new Error(failure.success ? failure.data.error.message : `The ${NORA_RELAY_NAME} service could not complete this request.`);
     }
     return input;
   };

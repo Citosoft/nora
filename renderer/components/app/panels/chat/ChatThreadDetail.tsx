@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { ArrowLeft, SquareArrowOutUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { BotAvatar } from "@/components/app/shared/BotAvatar";
+import { SpeakerAvatar } from "@/components/app/shared/SpeakerAvatar";
 import { useNativeConversationPorts } from "@/components/app/hooks/useNativeConversationPorts";
 import { useNativeConversation } from "@/components/app/hooks/useNativeConversation";
 import { useTranscriptFollow } from "@/components/app/hooks/useTranscriptFollow";
@@ -53,12 +53,12 @@ export function ChatThreadDetail({ thread, bot, botInHeader, chatId, onBack, onO
         <h2 className="break-words text-base font-semibold leading-snug">{thread.title}</h2>
         <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
           <span className="flex items-center gap-1.5 font-medium text-foreground"><span aria-hidden="true" className={`size-2 rounded-full ${TONE_DOTS[status.tone]}`} />{status.label}</span>
-          {!botInHeader && <span className="flex items-center gap-1"><BotAvatar avatar={bot.avatar} size={14} />{bot.name}</span>}
+          {!botInHeader && <span className="flex items-center gap-1"><SpeakerAvatar botId={bot.botId} avatar={bot.avatar} size={14} />{bot.name}</span>}
           <span>{thread.branch ? "Branch" : "Task"} · Started {formatChatMoment(thread.createdAt)}</span>
         </p>
       </header>
       <div className="space-y-6 px-4 py-4">
-        <dl className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-[13px]">
+        <dl className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-[12px]">
           {details.map(([label, value]) => value ? <div key={label} className="contents"><dt className="text-muted-foreground">{label}</dt>
             <dd className={label === "Done means" ? "line-clamp-3 break-words" : "truncate"} title={value}>{value}</dd></div> : null)}
         </dl>

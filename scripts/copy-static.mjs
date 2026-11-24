@@ -9,6 +9,7 @@ const indexHtml = await readFile("renderer/index.html", "utf8");
 await writeFile("dist/renderer/index.html", indexHtml.replaceAll("__APP_SHORT_NAME__", appShortName));
 await cp("package.json", "dist/package.json");
 await cp("renderer/icon.svg", "dist/renderer/icon.svg");
+await cp("renderer/mark.svg", "dist/renderer/mark.svg");
 await cp("renderer/icon.png", "dist/renderer/icon.png");
 await cp("renderer/icon.icns", "dist/renderer/icon.icns");
 await cp("renderer/icon.ico", "dist/renderer/icon.ico");

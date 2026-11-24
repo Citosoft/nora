@@ -14,8 +14,8 @@ test("buildDiffAnnotationKey matches inline comment keys", () => {
 });
 
 test("canAnnotateDiffLine allows changed lines only", () => {
-  assert.equal(canAnnotateDiffLine({ key: "add", text: "+foo", oldLine: null, newLine: 12 }), true);
-  assert.equal(canAnnotateDiffLine({ key: "hunk", text: "@@", oldLine: null, newLine: null }), false);
+  assert.equal(canAnnotateDiffLine({ key: "add", text: "+foo", tone: "addition", oldLine: null, newLine: 12 }), true);
+  assert.equal(canAnnotateDiffLine({ key: "hunk", text: "@@", tone: "hunk", oldLine: null, newLine: null }), false);
 });
 
 test("buildDiffReviewPrompt groups comments by file with diff context", () => {

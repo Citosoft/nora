@@ -7,6 +7,7 @@ import type { BotSnapshot, GroupMember } from "@shared/types/bots/bots.types";
 import type { NativeWorkspace } from "@shared/types/personalization/workspaces.types";
 import type { ThreadDocument, ThreadWorkspaceStore, ThreadWorkspaceSnapshot } from "./state.types";
 import type { ThreadGrouping } from "./navigation.types";
+import type { ExternalDiscoveryStore } from "@/components/app/types/externalSessions.types";
 import type { WorkspaceAvatarIdentity } from "@/components/app/types/workspaceAvatar.types";
 
 export type ThreadNavigationFilter = "all" | "active" | "attention" | "settled";
@@ -45,6 +46,8 @@ export interface ThreadNavigationRow {
   title: string;
   workspaceId: string;
   providerKind: ProviderBinding["kind"] | null;
+  /** Bound model identifier, absent when the source does not report a model. */
+  model?: string | null;
   /** The bot the thread runs as, shown in place of the provider icon. */
   bot?: Pick<BotSnapshot, "botId" | "name" | "avatar"> | null;
   /** Members of a group chat, shown as stacked avatars. */
@@ -67,7 +70,8 @@ export interface ThreadNavigationRow {
   updatedAt: string;
 }
 export interface ThreadNavigationPorts {
-  client: ThreadWorkspaceStore["client"];
+  /** Sessions found outside Nora, scanned once per window and on explicit refresh. */
+  externalSessions: ExternalDiscoveryStore;
   resumeExternal: ThreadWorkspaceStore["resumeExternal"];
   pinExternal: ThreadWorkspaceStore["pinExternal"];
   setSettled: ThreadWorkspaceStore["setSettled"];

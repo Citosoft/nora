@@ -1,3 +1,5 @@
+import { readAnalyticsConfig } from "./helpers/analytics/config";
+import { trackInstallationLaunch } from "./helpers/analytics/launch";
 import { createAppInstallRequests } from "./apps/installRequests";
 import { APP_INSTALL_SCHEME } from "@shared/apps/installLink";
 import { appsInstallRequestedChannel } from "@shared/apps/gateway";
@@ -196,16 +198,7 @@ const analyticsRuntimeConfig: AnalyticsRuntimeConfig = {
   isDevelopmentMode,
   devModeAnalyticsSwitch: DEV_ANALYTICS_SWITCH,
   devModeAnalyticsEnabled,
-  analyticsAllowedInCurrentRun: !isDevelopmentMode || devModeAnalyticsEnabled,
-  coarseLaunchContext: {
-    appVersion: app.getVersion(),
-    environment: isDevelopmentMode ? "development" : "production",
-    platform: process.platform,
-    architecture: process.arch,
-    countryCode: null,
-    language: null,
-    timezoneOffsetMinutes: new Date().getTimezoneOffset()
-  }
+  analyticsAllowedInCurrentRun: !isDevelopmentMode || devModeAnalyticsEnabled
 };
 
 function configureMediaPermissions(): void {
@@ -625,6 +618,13 @@ function registerIpc(): void {
 }
 
 async function bootstrap(): Promise<void> {
+  void trackInstallationLaunch({
+    allowed: analyticsRuntimeConfig.analyticsAllowedInCurrentRun,
+    config: readAnalyticsConfig(path.join(__dirname, "..", "runtime", "analytics-config.json")),
+    statePath: path.join(app.getPath("userData"), "analytics-installation.json"),
+    context: { appVersion: app.getVersion(), environment: isDevelopmentMode ? "development" : "production",
+      platform: process.platform, countryCode: app.getLocaleCountryCode() || null }
+  }).catch(() => console.warn("[analytics] Could not send app launch count."));
   appSettings = await appSettingsStore.load();
   configureMediaPermissions();
   applyMacDockIcon();
@@ -748,7 +748,7 @@ async function bootstrap(): Promise<void> {
     workspaceForProject: (projectId) => nativeRuntime.personalization.state().workspaces.find((entry) => entry.shellProjectId === projectId)?.id ?? null,
     connectors: () => nativeRuntime.connectors.list(), alerts: () => nativeRuntime.apps.activeAlerts() });
   remoteAccess = createDesktopRemoteAccess({ directory: getStateDir(), runtimeVersion: app.getVersion(), name: os.hostname(),
-    account: accountRuntime, host: nativeRuntime.host, inbox: inbox.service, boot: () => nativeRuntime.personalization.state(),
+    management: nativeRuntime.personalization, account: accountRuntime, host: nativeRuntime.host, inbox: inbox.service, boot: () => nativeRuntime.personalization.state(),
     onChanged: (view) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(remoteAccessChangedChannel, view); }
   });
   desktopLifecycle.attachRemoteAccess(remoteAccess);

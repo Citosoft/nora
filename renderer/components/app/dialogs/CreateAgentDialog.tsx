@@ -609,7 +609,7 @@ export function CreateAgentDialog({
                         </p>
                         {selectedPreparePreset ? (
                           <div className="rounded-md border border-border bg-muted/20 px-3 py-2.5 font-mono text-xs text-muted-foreground">
-                            <span className="font-sans text-[11px] font-medium text-foreground">
+                            <span className="font-sans text-[10px] font-medium text-foreground">
                               {selectedPreparePreset.sourceLabel}: {selectedPreparePreset.preset.name.trim() || "Preset"}
                             </span>
                             <div className="mt-1 truncate">{selectedPreparePreset.command}</div>

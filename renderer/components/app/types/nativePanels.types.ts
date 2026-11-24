@@ -17,14 +17,22 @@ import type { BindingOrigin } from "./modelPicker.types";
 import type { MarkdownRendererLinkClickHandler } from "./markdownRenderer.types";
 import type { ThreadConnectorsState } from "./threadConnectors.types";
 import type { ThreadReferenceChoice } from "./threadReferences.types";
+import type { MessagePinControls } from "./messagePins.types";
 
 export type NativeMessageItem = Extract<TimelineItem, { kind: "message" }>;
 export interface NativeMessageProps {
   item: NativeMessageItem;
   onLinkClick?: MarkdownRendererLinkClickHandler;
+  /** Absent where messages cannot be pinned, such as before a thread exists. */
+  pins?: MessagePinControls;
+  /** Where the hover toolbar sits; `overlay` takes no layout space, for messages continued by another. */
+  actions?: NativeMessageActionsPlacement;
 }
+export type NativeMessageActionsPlacement = "inline" | "overlay";
 export interface NativeMessageActionsProps {
   item: NativeMessageItem;
+  pin?: { pinned: boolean; onToggle(): void };
+  placement: NativeMessageActionsPlacement;
 }
 export interface NativeTimelineProps {
   items: readonly TimelineItem[];
@@ -41,6 +49,7 @@ export interface NativeTimelineProps {
   toolOutputs?: OutputHost | null;
   /** Opens an output file in the file viewer, or with the operating system when the viewer can't show it. */
   onOpenOutput?: (target: ThreadOutputTarget) => Promise<void>;
+  pins?: MessagePinControls;
 }
 export interface NativeReviewProps { result: ConversationReview; }
 export interface NativeRequestProps {

@@ -14,8 +14,8 @@ export function BotList({ bots, emptyText, onEdit, hide }: BotListProps) {
         <BotAvatar avatar={bot.avatar} size={36} />
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-2 text-sm font-medium"><span className="truncate">{bot.name}</span>
-            <span className="shrink-0 rounded bg-muted px-1.5 text-[11px] font-normal text-muted-foreground">{ORIGIN_LABELS[origin]}</span>
-            {overrides.length > 0 && <span className="shrink-0 text-[11px] font-normal text-muted-foreground">overrides {overrides.map((entry) => ORIGIN_LABELS[entry].toLowerCase()).join(", ")}</span>}</p>
+            <span className="shrink-0 rounded bg-muted px-1.5 text-[10px] font-normal text-muted-foreground">{ORIGIN_LABELS[origin]}</span>
+            {overrides.length > 0 && <span className="shrink-0 text-[10px] font-normal text-muted-foreground">overrides {overrides.map((entry) => ORIGIN_LABELS[entry].toLowerCase()).join(", ")}</span>}</p>
           <p className="truncate text-xs text-muted-foreground">{[bot.role, bot.binding.model].filter(Boolean).join(" · ")}</p>
         </div>
         {hide && <Button type="button" variant="ghost" size="sm" aria-pressed={hidden} onClick={() => hide.onToggle(bot.id, !hidden)}

@@ -131,7 +131,7 @@ export function AgentContextPicker({
                   </div>
                 </div>
               </div>
-              <div className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
+              <div className="shrink-0 text-[10px] text-muted-foreground tabular-nums">
                 {countSelectedAgentContextGroupsForSource(source, selections)} selected
               </div>
             </div>
@@ -163,11 +163,11 @@ export function AgentContextPicker({
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
                         <span className="text-sm font-medium text-foreground">{group.title}</span>
-                        <span className="text-[11px] text-muted-foreground">
+                        <span className="text-[10px] text-muted-foreground">
                           {group.entryCount} entr{group.entryCount === 1 ? "y" : "ies"} · ~{group.estimate.estimatedTokens.toLocaleString()} tok
                         </span>
                       </div>
-                      <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">{formatTimestamp(group.lastUpdatedAt)}</span>
+                      <span className="shrink-0 text-[10px] text-muted-foreground tabular-nums">{formatTimestamp(group.lastUpdatedAt)}</span>
                     </div>
                     <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">{group.latestPreview}</div>
                   </div>

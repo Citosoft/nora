@@ -1,4 +1,4 @@
-import { BotAvatar } from "@/components/app/shared/BotAvatar";
+import { SpeakerAvatar } from "@/components/app/shared/SpeakerAvatar";
 import { BotAvatarStack } from "@/components/app/shared/BotAvatarStack";
 import { BotInfoTrigger } from "@/components/app/shared/BotInfoTrigger";
 import { memberList } from "@/components/app/logic/botThreads";
@@ -20,7 +20,7 @@ export function ChatHeader({ participants, state, tabs, drafts, onNewBranch, onC
   return <header className="flex min-w-0 items-center gap-3 border-b px-4 py-2">
     {participants.kind === "direct"
       ? <BotInfoTrigger botId={participants.bot.botId} name={participants.bot.name} className="flex min-w-0 max-w-[40%] shrink-0 items-center gap-2 pr-1">
-        <BotAvatar avatar={participants.bot.avatar} state={state} size={28} /><h1 className="truncate text-sm font-semibold">{name}</h1></BotInfoTrigger>
+        <SpeakerAvatar botId={participants.bot.botId} avatar={participants.bot.avatar} state={state} size={28} /><h1 className="truncate text-sm font-semibold">{name}</h1></BotInfoTrigger>
       : <div className="flex min-w-0 max-w-[40%] shrink-0 items-center gap-2" title={subtitle || undefined}>
         <BotAvatarStack members={participants.members} size={22} label={`Group: ${name}`} /><h1 className="truncate text-sm font-semibold">{name}</h1></div>}
     <TabsList aria-label="Chat and work threads" className="flex min-w-0 flex-1 justify-start gap-1 overflow-x-auto border-0 bg-transparent p-0 [scrollbar-width:none]">

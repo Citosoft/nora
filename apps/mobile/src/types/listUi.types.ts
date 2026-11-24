@@ -42,6 +42,9 @@ export interface ListSectionProps {
 }
 
 export interface ActionSheetOption {
+  leading?: ReactNode;
+  /** Wait for the iOS sheet to close before presenting another native picker. */
+  afterDismiss?: boolean;
   label: string;
   onPress: () => void;
   icon?: IconName;

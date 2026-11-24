@@ -1,14 +1,15 @@
+import { runtimeBodyLimit } from "@shared/remote-access/attachments";
 import { createServer } from "node:http";
 import type { IncomingMessage } from "node:http";
 import type { Socket } from "node:net";
 import { WebSocketServer, WebSocket } from "ws";
-import { REALTIME_CLOSE_CODES, REMOTE_LIMITS } from "@shared/remote-access/constants";
+import { NORA_RELAY_NAME, REALTIME_CLOSE_CODES, REMOTE_LIMITS } from "@shared/remote-access/constants";
 import type { RuntimeServer, RuntimeServerOptions } from "@main/types/remote-access/http/runtime.types";
 import { createRuntimeApi } from "./handler";
 import { attachRuntimeRealtime } from "./realtime";
 import { RuntimeFailure, describeRuntimeFailure } from "./failure";
 
-async function incomingBody(request: IncomingMessage): Promise<ArrayBuffer> {
+async function incomingBody(request: IncomingMessage, maxBytes: number): Promise<ArrayBuffer> {
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const input of request.iterator({ destroyOnReturn: false })) {
@@ -17,7 +18,7 @@ async function incomingBody(request: IncomingMessage): Promise<ArrayBuffer> {
     if (!Buffer.isBuffer(chunk) && typeof chunk !== "string") throw new RuntimeFailure("invalid", "Invalid request body.");
     const buffer = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
     size += buffer.byteLength;
-    if (size > REMOTE_LIMITS.maxBodyBytes) throw new RuntimeFailure("too-large", "This request is too large.");
+    if (size > maxBytes) throw new RuntimeFailure("too-large", "This request is too large.");
     chunks.push(buffer);
   }
   return Uint8Array.from(Buffer.concat(chunks)).buffer;
@@ -40,12 +41,12 @@ export async function startRuntimeServer(options: RuntimeServerOptions): Promise
     const hostname = options.hostname();
     return options.origins.includes(origin) || (!!hostname && origin === `https://${hostname}`);
   };
-  const server = createServer({ maxHeaderSize: 16_384, requestTimeout: 15_000, headersTimeout: 10_000 }, (incoming, outgoing) => {
+  const server = createServer({ maxHeaderSize: 16_384, requestTimeout: 120_000, headersTimeout: 10_000 }, (incoming, outgoing) => {
     void (async () => {
       try {
         if (closing || !allowedHost(incoming.headers.host)) throw new RuntimeFailure("forbidden", "This host is not allowed.");
         const method = incoming.method ?? "GET";
-        const body = method === "GET" || method === "OPTIONS" ? undefined : await incomingBody(incoming);
+        const body = method === "GET" || method === "OPTIONS" ? undefined : await incomingBody(incoming, runtimeBodyLimit(method, new URL(incoming.url ?? "/", "http://runtime").pathname));
         const headers = new Headers();
         for (const [key, value] of Object.entries(incoming.headers)) {
           if (Array.isArray(value)) for (const item of value) headers.append(key, item);
@@ -102,7 +103,7 @@ export async function startRuntimeServer(options: RuntimeServerOptions): Promise
     server.listen(port, "127.0.0.1", () => { server.removeListener("error", reject); resolve(); });
   }).catch((error: unknown) => { websocket.close(); throw error; });
   const address = server.address();
-  if (!address || typeof address === "string") throw new Error("Remote access could not open its loopback listener.");
+  if (!address || typeof address === "string") throw new Error(`${NORA_RELAY_NAME} could not open its loopback listener.`);
   port = address.port;
   server.on("error", () => { void close(); });
   async function close(): Promise<void> {

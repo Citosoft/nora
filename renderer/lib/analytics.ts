@@ -1,6 +1,6 @@
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import type { EventProperties } from "@/lib/types/analytics.types";
-import type { AnalyticsCoarseLaunchContext, AnalyticsConsentStatus } from "@shared/appTypes";
+import type { AnalyticsConsentStatus } from "@shared/appTypes";
 import posthog from "posthog-js";
 
 const posthogToken =
@@ -10,21 +10,11 @@ const posthogToken =
 const posthogHost =
   __NORA_POSTHOG_HOST__?.trim() ||
   __VITE_PUBLIC_POSTHOG_HOST__?.trim() ||
-  "https://app.posthog.com";
+  "https://us.i.posthog.com";
 
-let runtimeAllowsAnalytics = __NORA_IS_PRODUCTION__;
-let coarseLaunchContext: AnalyticsCoarseLaunchContext = {
-  appVersion: __NPM_PACKAGE_VERSION__ ?? "0.0.0",
-  environment: __NORA_IS_PRODUCTION__ ? "production" : "development",
-  platform: navigator.platform,
-  architecture: "unknown",
-  countryCode: null,
-  language: navigator.language.split("-")[0] || null,
-  timezoneOffsetMinutes: new Date().getTimezoneOffset()
-};
+let runtimeAllowsAnalytics = false;
 let analyticsConsentStatus: AnalyticsConsentStatus = "unknown";
 let posthogInitialized = false;
-let appLaunchEventTracked = false;
 
 function logToMain(level: "debug" | "info" | "warn" | "error", message: string): void {
   if (typeof window === "undefined") {
@@ -48,12 +38,8 @@ function isTrackingEnabled(): boolean {
   return hasPostHogConfig() && runtimeAllowsAnalytics && isConsentGranted();
 }
 
-function isCoarseLaunchTrackingEnabled(): boolean {
-  return hasPostHogConfig() && runtimeAllowsAnalytics;
-}
-
 function ensurePosthogInitialized(): void {
-  if (posthogInitialized || !hasPostHogConfig()) {
+  if (posthogInitialized || !isTrackingEnabled()) {
     return;
   }
 
@@ -61,9 +47,16 @@ function ensurePosthogInitialized(): void {
     api_host: posthogHost,
     autocapture: false,
     capture_pageview: false,
+    capture_pageleave: false,
+    capture_dead_clicks: false,
+    capture_performance: false,
+    capture_exceptions: false,
+    person_profiles: "never",
+    disable_persistence: true,
+    disable_external_dependency_loading: true,
+    advanced_disable_feature_flags: true,
     disable_session_recording: true
   });
-  posthog.clear_opt_in_out_capturing();
   posthogInitialized = true;
   logToMain("info", `PostHog initialized (host=${posthogHost})`);
 }
@@ -74,9 +67,11 @@ function applyAnalyticsTrackingState(): void {
     return;
   }
 
-  ensurePosthogInitialized();
-  if (!posthogInitialized) {
-    return;
+  if (isTrackingEnabled()) {
+    ensurePosthogInitialized();
+    if (posthogInitialized) posthog.opt_in_capturing({ captureEventName: false });
+  } else if (posthogInitialized) {
+    posthog.opt_out_capturing();
   }
 
   logToMain("debug", isTrackingEnabled() ? "Detailed analytics tracking enabled" : "Detailed analytics tracking disabled");
@@ -85,10 +80,6 @@ function applyAnalyticsTrackingState(): void {
 export function setAnalyticsRuntimeAllowed(allowed: boolean): void {
   runtimeAllowsAnalytics = allowed;
   applyAnalyticsTrackingState();
-}
-
-export function setAnalyticsCoarseLaunchContext(context: AnalyticsCoarseLaunchContext): void {
-  coarseLaunchContext = context;
 }
 
 export function setAnalyticsConsentStatus(status: AnalyticsConsentStatus): void {
@@ -103,32 +94,6 @@ export function trackAnalyticsEvent(name: string, properties?: EventProperties):
   }
 
   capturePostHogEvent(name, properties);
-}
-
-export function trackAppLaunchEvent(): void {
-  if (appLaunchEventTracked) {
-    return;
-  }
-
-  if (!isCoarseLaunchTrackingEnabled()) {
-    logToMain("debug", "Analytics unavailable, skipping app.launched");
-    return;
-  }
-
-  appLaunchEventTracked = true;
-  capturePostHogEvent("app.launched", buildCoarseLaunchEventProperties(coarseLaunchContext));
-}
-
-function buildCoarseLaunchEventProperties(context: AnalyticsCoarseLaunchContext): EventProperties {
-  return {
-    appVersion: context.appVersion,
-    environment: context.environment,
-    platform: context.platform,
-    architecture: context.architecture,
-    countryCode: context.countryCode,
-    language: context.language,
-    timezoneOffsetMinutes: context.timezoneOffsetMinutes
-  };
 }
 
 function capturePostHogEvent(name: string, properties?: EventProperties): void {

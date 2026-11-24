@@ -8,6 +8,7 @@ import { RuntimeFailure, describeRuntimeFailure } from "./failure";
 import { remoteProviderBinding } from "./defaultBinding";
 import { requireRemoteConversation } from "./readRoutes";
 import { botChatCommand } from "./botChats";
+import { NORA_RELAY_NAME } from "@shared/remote-access/constants";
 
 export async function executeRemoteCommand(options: RuntimeApiOptions, route: RuntimeRoute, body: unknown, identity: RemoteIdentity): Promise<Response> {
   let action: RemoteAuditEntry["action"] | null = null;
@@ -44,7 +45,11 @@ export async function executeRemoteCommand(options: RuntimeApiOptions, route: Ru
       case "send": {
         action = "send-message"; conversationId = route.id;
         const input = sendMessageRequestSchema.parse(body); targetId = input.runId;
-        requireRemoteConversation(options, route.id);
+        const header = requireRemoteConversation(options, route.id);
+        if (input.providerChange) {
+          if (header.conversation.direct || header.conversation.group) throw new RuntimeFailure("invalid", "Bot and group chats use their configured models.");
+          await remoteProviderBinding(options, header.conversation.workspace, input.providerChange.next);
+        }
         command = { ...input, kind: "submit", conversationId: route.id };
         break;
       }
@@ -65,7 +70,7 @@ export async function executeRemoteCommand(options: RuntimeApiOptions, route: Ru
       }
       default: throw new RuntimeFailure("not-found", "This runtime endpoint does not exist.");
     }
-    if (!options.permits(identity) || identity.expiresAt <= options.now()) throw new RuntimeFailure("forbidden", "Remote access is no longer available.");
+    if (!options.permits(identity) || identity.expiresAt <= options.now()) throw new RuntimeFailure("forbidden", `${NORA_RELAY_NAME} is no longer available.`);
     const receipt = await options.host.execute(command);
     record("accepted", null);
     return Response.json(commandResponseSchema.parse({ receipt }));

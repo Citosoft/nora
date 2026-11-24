@@ -118,3 +118,25 @@ describe("pending commands", () => {
     expect(store.list()).toEqual([valid]);
   });
 });
+
+it("persists selected settings and provider changes through reloads and uncertain retries", async () => {
+  const provider = { kind: "codex" as const, instanceId: "account", model: "model", reasoning: "high", permissionPolicy: "full" };
+  const commands = [
+    buildCreateConversation(idSequence(), { runtimeId: "rt", projectId: "proj", title: "Title", instruction: "Hi", provider }),
+    buildSendMessage(idSequence(), { runtimeId: "rt", conversationId: "conv", instruction: "Hi",
+      providerChange: { expected: { ...provider, reasoning: null }, next: provider } })
+  ];
+  for (const command of commands) {
+    const storage = memoryStorage();
+    const store = createPendingCommandStore(storage);
+    const { fetch, calls } = fakeFetch(networkError, receiptFor, receiptFor);
+    expect((await executePendingCommand(runtimeClient(fetch), store, command)).status).toBe("uncertain");
+    const reloaded = createPendingCommandStore(storage);
+    await reloaded.load();
+    const saved = reloaded.get(command.key);
+    expect(saved).toBeDefined();
+    expect((await executePendingCommand(runtimeClient(fetch), reloaded, saved!)).status).toBe("accepted");
+    expect(calls[0]?.body).toEqual(calls[1]?.body);
+    expect(calls[1]?.body).toMatchObject(command.kind === "create-conversation" ? { provider } : { providerChange: command.providerChange });
+  }
+});

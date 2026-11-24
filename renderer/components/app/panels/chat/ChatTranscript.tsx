@@ -4,7 +4,7 @@ import { ChatMessage } from "./ChatMessage";
 import type { ChatTranscriptProps } from "@/components/app/types/chatPanels.types";
 
 export const ChatTranscript = memo(function ChatTranscript({ entries, workThreads, onOpenThread, onBranch, onLinkClick }: ChatTranscriptProps) {
-  return <div className="text-[15px]">{entries.map((entry) => {
+  return <div className="text-[14px]">{entries.map((entry) => {
     if (entry.kind === "message") return <ChatMessage key={entry.id} entry={entry}
       workThread={entry.workThreadId ? workThreads.get(entry.workThreadId) ?? null : null}
       onOpenThread={onOpenThread} onBranch={onBranch} onLinkClick={onLinkClick} />;

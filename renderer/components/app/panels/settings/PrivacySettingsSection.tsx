@@ -17,11 +17,15 @@ export function PrivacySettingsSection() {
         description="Control how diagnostic and usage data is handled."
         icon={Shield}
       />
+      <p className="mb-4 text-sm text-muted-foreground">
+        Nora counts app launches using a random installation ID, app version, operating system and country from your region setting,
+        even when optional usage analytics is disabled. The ID is separate from your account.
+      </p>
       <SettingRow
         title="Usage Analytics"
         description={
           analyticsAllowedInCurrentRun
-            ? "Allow anonymous usage analytics to help improve Nora. You can change this anytime."
+            ? "Allow optional usage analytics to help improve Nora. You can change this anytime."
             : `Analytics capture is disabled for this run. In development mode, relaunch with --${analyticsDevModeSwitch} to enable analytics capture while testing.`
         }
         control={

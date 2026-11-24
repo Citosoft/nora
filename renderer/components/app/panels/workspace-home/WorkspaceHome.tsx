@@ -16,7 +16,7 @@ export function WorkspaceHome({ workspace, activity, requests, providerLabels, l
           </div>
           {workspace && <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
             {branchStatus}
-            <span className="min-w-0 truncate font-mono text-[11px]" title={workspace.workspace.path}>{workspace.kind === "personal" ? "A space for ideas and everyday work" : workspace.workspace.path}</span>
+            <span className="min-w-0 truncate font-mono text-[10px]" title={workspace.workspace.path}>{workspace.kind === "personal" ? "A space for ideas and everyday work" : workspace.workspace.path}</span>
           </div>}
         </div>
         <WorkspaceHomeComposer disabled={!workspace} onStart={onNewThread} />

@@ -8,9 +8,11 @@ import { ThreadNavigation } from "@/components/app/panels/threads/ThreadNavigati
 import { ThreadTabs } from "@/components/app/panels/threads/ThreadTabs";
 import { ThreadWorkspaceCenter } from "@/components/app/panels/threads/ThreadWorkspaceCenter";
 import type { ThreadWorkspaceStore } from "@/components/app/types/thread-workspace/state.types";
+import { FixturePortsProvider, emptyInbox } from "../../ui/FixturePortsProvider";
 import { simulatorScenarios } from "../scenarios";
 import type { SimulatorProps } from "../types/renderer.types";
 import type {} from "../types/bridge.types";
+import { ThinkingOrbsGallery } from "./ThinkingOrbsGallery";
 
 export function Simulator({ store }: SimulatorProps) {
   return <ThreadWorkspaceComposition store={store}><main className="flex h-screen min-h-0 flex-col overflow-hidden bg-background text-foreground">
@@ -22,6 +24,7 @@ export function Simulator({ store }: SimulatorProps) {
         localStorage.setItem("nora-simulator-theme", dark ? "dark" : "light");
       }}>Toggle theme</Button>
     </header>
+    <ThinkingOrbsGallery />
     <div className="flex min-h-0 flex-1 overflow-hidden"><aside className="flex min-h-0 w-60 shrink-0 flex-col overflow-hidden border-r p-3">
       <section aria-label="Simulator scenarios" className="flex max-h-[55%] min-h-0 shrink-0 flex-col">
       <p className="mb-2 shrink-0 px-2 text-xs font-medium text-muted-foreground">SCENARIOS</p>
@@ -41,12 +44,11 @@ async function mount(): Promise<void> {
   const boot = await window.noraChatSimulator.boot();
   const store: ThreadWorkspaceStore = createThreadWorkspaceStore({ boot,
     client: createConversationClient(window.noraChatSimulator.conversations, boot.environmentId),
-    // The simulator has no inbox, so nothing is ever unread.
-    unread: { unreadThreadIds: () => [], markThreadRead: () => {}, subscribe: () => () => {} },
+    unread: emptyInbox,
     persistence: createThreadLayoutPersistence(localStorage, boot.environmentId), nextId: () => crypto.randomUUID(), now: () => new Date().toISOString() });
   store.focusWorkspace("simulator");
   if (!store.snapshot().layout.activeId) store.openDraft({ workspaceId: "simulator", text: "/tour" });
   const root = document.getElementById("app"); if (!root) throw new Error("Simulator root is missing");
-  createRoot(root).render(<Simulator store={store} />);
+  createRoot(root).render(<FixturePortsProvider><Simulator store={store} /></FixturePortsProvider>);
 }
 void mount().catch((cause: unknown) => { const root = document.getElementById("app"); if (root) root.textContent = cause instanceof Error ? cause.message : "The chat simulator could not start."; });

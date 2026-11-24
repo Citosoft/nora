@@ -2,6 +2,13 @@
  * Remote access constants shared by the desktop runtime, the hosted control-plane Worker and the web/mobile app.
  * Keep this file free of Node and Electron imports.
  */
+/** The product name for reaching this computer from a phone: the account directory, the Cloudflare tunnel and the apps at each end. */
+export const NORA_RELAY_NAME = "Nora Relay";
+/** Offline retention also bounds how long the desktop may trust a cached connector token. */
+export const RELAY_RETENTION = Object.freeze({
+  orphanGraceMs: 7 * 24 * 60 * 60 * 1000,
+  runtimeExpiryMs: 90 * 24 * 60 * 60 * 1000
+});
 export const REMOTE_API_VERSION = 1;
 export const DEFAULT_CONTROL_PLANE_URL = "https://remote-api.withnora.run";
 export const REMOTE_WEB_APP_ORIGIN = "https://app.withnora.run";

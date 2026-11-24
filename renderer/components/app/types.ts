@@ -30,6 +30,7 @@ export type ResolvedTheme = "light" | "dark";
 
 export type UiFontId =
   | "system"
+  | "sf-pro"
   | "inter"
   | "geist"
   | "manrope"

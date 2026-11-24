@@ -15,8 +15,8 @@ export function RoleOnboarding({ busy, error, onComplete }: RoleOnboardingProps)
           <div className="mb-8 text-center">
             <AppMark className="role-enter-logo mx-auto mb-6 size-12" />
             <div className="role-enter-copy">
-              <h1 className="text-[26px] font-normal leading-tight tracking-tight sm:text-[28px]">What type of work do you do?</h1>
-              <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
+              <h1 className="text-[25px] font-normal leading-tight tracking-tight sm:text-[27px]">What type of work do you do?</h1>
+              <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground">
                 Customize Nora to fit the way you work
               </p>
             </div>

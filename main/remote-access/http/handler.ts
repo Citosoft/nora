@@ -1,4 +1,7 @@
-import { REMOTE_LIMITS } from "@shared/remote-access/constants";
+import { runtimeBodyLimit } from "@shared/remote-access/attachments";
+import { uploadRemoteAttachment } from "./attachments";
+import { updateRemoteManagement } from "./management";
+import { NORA_RELAY_NAME, REMOTE_CLIENT_HEADER } from "@shared/remote-access/constants";
 import { realtimeTicketResponseSchema } from "@shared/remote-access/runtimeApi";
 import type { RuntimeApi, RuntimeApiOptions } from "@main/types/remote-access/http/runtime.types";
 import { bearerToken } from "../auth";
@@ -10,9 +13,8 @@ import { readRuntimeRoute } from "./readRoutes";
 import { executeRemoteCommand } from "./commands";
 import { applyRemoteInboxCommand } from "./inbox";
 import { describeRemoteClient } from "./clientLabel";
-import { REMOTE_CLIENT_HEADER } from "@shared/remote-access/constants";
 
-async function readJson(request: Request): Promise<unknown> {
+async function readJson(request: Request, maxBytes: number): Promise<unknown> {
   if (request.headers.get("Content-Type")?.split(";")[0].trim().toLowerCase() !== "application/json") throw new RuntimeFailure("invalid", "Send a JSON request body.");
   const reader = request.body?.getReader();
   if (!reader) throw new RuntimeFailure("invalid", "Send a JSON request body.");
@@ -23,7 +25,7 @@ async function readJson(request: Request): Promise<unknown> {
       const chunk = await reader.read();
       if (chunk.done) break;
       size += chunk.value.byteLength;
-      if (size > REMOTE_LIMITS.maxBodyBytes) { await reader.cancel(); throw new RuntimeFailure("too-large", "This request is too large."); }
+      if (size > maxBytes) { await reader.cancel(); throw new RuntimeFailure("too-large", "This request is too large."); }
       chunks.push(chunk.value);
     }
   } finally { reader.releaseLock(); }
@@ -52,18 +54,20 @@ export function createRuntimeApi(options: RuntimeApiOptions): RuntimeApi {
       if (!token) throw new RuntimeFailure("unauthenticated", "Sign in to access this runtime.");
       const identity = await options.verifier.verify(token).catch(() => { throw new RuntimeFailure("unauthenticated", "Sign in to access this runtime."); });
       if (options.presence.revoked(identity.sessionId)) throw new RuntimeFailure("forbidden", "This device was disconnected from the computer. Sign out of Nora on this device and sign in again to reconnect.");
-      if (!options.permits(identity) || identity.expiresAt <= options.now()) throw new RuntimeFailure("forbidden", "Remote access is not available for this account.");
+      if (!options.permits(identity) || identity.expiresAt <= options.now()) throw new RuntimeFailure("forbidden", `${NORA_RELAY_NAME} is not available for this account.`);
       if (!allow(identity.sessionId)) throw new RuntimeFailure("rate-limited", "Too many requests. Try again shortly.");
       options.presence.seen(identity, describeRemoteClient(request.headers));
       const url = new URL(request.url);
       const route = matchRuntimeRoute(request.method, url.pathname);
-      if (request.method === "GET") response = readRuntimeRoute(options, route, url.searchParams);
+      if (request.method === "GET") response = await readRuntimeRoute(options, route, url.searchParams);
       else {
-        const body = await readJson(request);
+        const body = await readJson(request, runtimeBodyLimit(request.method, url.pathname));
         request.signal.throwIfAborted();
-        if (!options.permits(identity) || identity.expiresAt <= options.now()) throw new RuntimeFailure("forbidden", "Remote access is no longer available.");
+        if (!options.permits(identity) || identity.expiresAt <= options.now()) throw new RuntimeFailure("forbidden", `${NORA_RELAY_NAME} is no longer available.`);
         response = route.kind === "ticket" ? Response.json(realtimeTicketResponseSchema.parse(tickets.issue(identity)))
+          : route.kind === "attachment-upload" ? await uploadRemoteAttachment(options, body)
           : route.kind === "inbox-command" ? applyRemoteInboxCommand(options, body)
+          : route.kind === "settings-update" || route.kind === "bot-save" ? await updateRemoteManagement(options, route.kind, body)
           : await executeRemoteCommand(options, route, body, identity);
       }
     } catch (error) {

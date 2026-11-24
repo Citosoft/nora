@@ -36,5 +36,8 @@
     { "name": "PROVISION_RATE_LIMITER", "namespace_id": "4102", "simple": { "limit": 6, "period": 60 } }
   ],
 
+  // Daily at 03:17 UTC. The handler uses Cloudflare connector activity to expire abandoned installations.
+  "triggers": { "crons": ["17 3 * * *"] },
+
   "observability": { "enabled": true }
 }

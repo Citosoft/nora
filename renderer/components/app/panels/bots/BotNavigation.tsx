@@ -3,7 +3,7 @@ import { useBotInfo } from "@/components/app/hooks/useBotInfo";
 import { useThreadNavigationPorts } from "@/components/app/hooks/useThreadNavigationPorts";
 import { useThreadTime } from "@/components/app/hooks/useThreadTime";
 import { useWorkspaceBotRoster } from "@/components/app/hooks/useWorkspaceBotRoster";
-import { botStartLabel, buildBotNavigation, NORA_ASSISTANT } from "@/components/app/logic/botNavigation";
+import { botStartLabel, buildBotNavigation } from "@/components/app/logic/botNavigation";
 import { AppMark } from "@/components/app/shared/AppMark";
 import { BotAvatar } from "@/components/app/shared/BotAvatar";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,6 @@ export function BotNavigation({ workspaceId, workspaceName, query, collapsed, on
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
   const botInfo = useBotInfo();
   const { bots, rows } = useWorkspaceBotRoster(ports.state, workspaceId);
-  const startWith = (id: string): void => onStart(id === NORA_ASSISTANT.id ? null : id);
   const groups = useMemo(() => buildBotNavigation(bots, rows, query, workspaceName), [bots, rows, query, workspaceName]);
   const groupThreads = useMemo(() => rows.filter((row) => row.group && (!query.trim() || `${row.title} ${row.group.map((member) => member.name).join(" ")}`
     .toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)), [rows, query]);
@@ -43,22 +42,22 @@ export function BotNavigation({ workspaceId, workspaceName, query, collapsed, on
   if (collapsed) {
     return <nav aria-label="Bots" className="flex min-h-0 flex-1 flex-col items-center gap-1 overflow-y-auto py-1">
       {groups.flatMap((group) => group.items).map(({ id, name, avatar, state }) => <Button key={id} type="button" variant="ghost" size="icon" className="size-9"
-        aria-label={botStartLabel({ id, name })} tooltip={name} onClick={() => startWith(id)}>
+        aria-label={botStartLabel({ name })} tooltip={name} onClick={() => onStart(id)}>
         {avatar ? <BotAvatar avatar={avatar} state={state} size={28} /> : <AppMark className="size-6 shrink-0" />}</Button>)}
     </nav>;
   }
   return <nav aria-label="Bots" className="min-h-0 flex-1 space-y-3 overflow-y-auto px-1.5 pb-2">
     {groups.map((group) => <section key={group.id} aria-labelledby={group.label ? `bot-group-${group.id}` : undefined} aria-label={group.label ? undefined : "Nora"}>
-      {group.label && <h3 id={`bot-group-${group.id}`} className="flex items-center gap-2 px-2 pb-1 pt-2 text-[11px] font-medium text-muted-foreground">
-        <span className="min-w-0 flex-1 truncate">{group.label}</span><span className="text-[10px] tabular-nums">{group.items.length}</span></h3>}
+      {group.label && <h3 id={`bot-group-${group.id}`} className="flex items-center gap-2 px-2 pb-1 pt-2 text-[10px] font-medium text-muted-foreground">
+        <span className="min-w-0 flex-1 truncate">{group.label}</span><span className="text-[9px] tabular-nums">{group.items.length}</span></h3>}
       <ul className="space-y-0.5">{group.items.map((item) => <BotNavigationRow key={item.id} item={item} now={now} expanded={expanded.has(item.id)}
-        onToggle={() => toggle(item.id)} onStart={() => startWith(item.id)} onOpen={open} onTogglePin={togglePin} onShowAllThreads={onShowThreads}
+        onToggle={() => toggle(item.id)} onStart={() => onStart(item.id)} onOpen={open} onTogglePin={togglePin} onShowAllThreads={onShowThreads}
         onShowInfo={botInfo ? () => botInfo.show(item.id) : undefined}
         onEdit={item.origin === "built-in" || !botInfo ? undefined : () => botInfo.edit(item.id)}
         onDelete={item.origin === "built-in" || !botInfo ? undefined : () => botInfo.remove(item.id)} />)}</ul>
     </section>)}
     {(groupThreads.length > 0 || (onNewGroup && bots.length >= GROUP_MEMBERS_MIN && !query)) && <section aria-labelledby="bot-group-chats">
-      <h3 id="bot-group-chats" className="flex items-center gap-2 px-2 pb-1 pt-2 text-[11px] font-medium text-muted-foreground">
+      <h3 id="bot-group-chats" className="flex items-center gap-2 px-2 pb-1 pt-2 text-[10px] font-medium text-muted-foreground">
         <span className="min-w-0 flex-1 truncate">Groups</span>
         {groupThreads.length > 0 && <WorkThreadsToggle compact />}
         {onNewGroup && <Button type="button" variant="ghost" size="icon" className="size-5 text-muted-foreground" aria-label="New group" tooltip="New group" onClick={onNewGroup}>

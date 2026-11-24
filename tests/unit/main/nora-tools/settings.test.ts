@@ -90,7 +90,7 @@ test("all persisted settings are exposed and nested AI, voice, terminal and pers
   const before = structuredClone(f.settings);
   const updated = await f.deps.settings.update({ general: {
     ai: { apiKeys: { openai: "test-key" }, modelByProvider: { openai: "test-model" }, simpleTaskProvider: "codex" },
-    voice: { localWhisperModelId: "tiny.en" }, lifecycle: { launchAtLogin: true }, terminalQuickLaunchDefaults: { name: "Dev" }, analyticsConsentStatus: "declined",
+    voice: { localModelId: "whisper-tiny.en" }, lifecycle: { launchAtLogin: true }, terminalQuickLaunchDefaults: { name: "Dev" }, analyticsConsentStatus: "declined",
     terminalPresets: [{ id: "dev", name: "Dev", workingDirectory: "/workspace", commands: ["npm run dev"] }]
   }, personalization: { defaultRole: { id: "developer" }, workspaceRoles: { w: { id: "designer" } } } });
   assert.equal(updated.general.ai.apiKeys.openai, "test-key");

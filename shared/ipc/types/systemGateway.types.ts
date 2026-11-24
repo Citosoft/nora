@@ -12,9 +12,9 @@ import type {
   LocalAiModelStatus,
   LocalAiRuntimeStatus,
   LocalLlmModelId,
-  LocalVoiceModelStatus,
-  LocalVoiceRuntimeStatus,
-  LocalWhisperModelId,
+  LocalVoiceModelId,
+  LocalVoiceSetupStatus,
+  VoiceInputReadiness,
   ForgeOAuthDevicePrompt,
   InstalledIde,
   LinuxAptSetupStatus,
@@ -54,7 +54,7 @@ export interface RemoteMountOutputPayload {
 }
 
 export interface VoiceInputTranscriptionPayload {
-  audioData: number[];
+  audioData: Uint8Array;
   mimeType: string;
 }
 
@@ -99,14 +99,14 @@ export interface SystemBridge {
   onRemoteMountOutput: (listener: (payload: RemoteMountOutputPayload) => void) => () => void;
   listChromeCookieProfiles: () => Promise<BrowserCookieProfileSummary[]>;
   importChromeBrowserData: (profileId?: string) => Promise<BrowserDataImportResult>;
-  getLocalVoiceModelStatus: (modelId: LocalWhisperModelId) => Promise<LocalVoiceModelStatus>;
-  getLocalVoiceRuntimeStatus: () => Promise<LocalVoiceRuntimeStatus>;
-  installLocalVoiceModel: (modelId: LocalWhisperModelId) => Promise<LocalVoiceModelStatus>;
-  installLocalVoiceRuntime: () => Promise<LocalVoiceRuntimeStatus>;
+  getLocalVoiceSetupStatus: (modelId: LocalVoiceModelId) => Promise<LocalVoiceSetupStatus>;
+  /** Installs the model's runtime when missing, then downloads the model. */
+  installLocalVoiceModel: (modelId: LocalVoiceModelId) => Promise<LocalVoiceSetupStatus>;
   getLocalAiModelStatus: (modelId: LocalLlmModelId) => Promise<LocalAiModelStatus>;
   getLocalAiRuntimeStatus: () => Promise<LocalAiRuntimeStatus>;
   installLocalAiModel: (modelId: LocalLlmModelId) => Promise<LocalAiModelStatus>;
   installLocalAiRuntime: () => Promise<LocalAiRuntimeStatus>;
+  getVoiceInputReadiness: () => Promise<VoiceInputReadiness>;
   transcribeVoiceInput: (payload: VoiceInputTranscriptionPayload) => Promise<string>;
   readComposerAttachmentThumbnail: (filePath: string) => Promise<string | null>;
   saveComposerAttachment: (payload: SaveComposerAttachmentPayload) => Promise<ComposerAttachment>;

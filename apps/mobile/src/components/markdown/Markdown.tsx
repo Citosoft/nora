@@ -49,7 +49,7 @@ function Block({ block }: { block: MarkdownBlock }) {
             {[block.header, ...block.rows].map((row, rowIndex) => (
               <View key={rowIndex} style={[styles.tableRow, rowIndex === 0 && styles.tableHeader]}>
                 {row.map((cell, cellIndex) => (
-                  <Text key={cellIndex} style={[styles.text, styles.tableCell, rowIndex === 0 && { fontWeight: "700" }]} selectable>
+                  <Text key={cellIndex} style={[styles.text, styles.tableCell, rowIndex === 0 && styles.tableHeaderText]} selectable>
                     <MarkdownInline nodes={cell} />
                   </Text>
                 ))}
@@ -69,12 +69,13 @@ const createStyles = (theme: Theme) => ({
   muted: { color: theme.colors.textMuted },
   flex: { flex: 1 },
   codeBlock: { backgroundColor: theme.colors.codeBackground, borderRadius: radii.md, padding: spacing.md + 2 },
-  code: { fontFamily: monospaceFont, color: theme.colors.text, fontSize: 13, lineHeight: 19 },
+  code: { ...type.code, fontFamily: monospaceFont, color: theme.colors.text },
   listRow: { flexDirection: "row" as const, gap: spacing.sm },
   quote: { borderLeftWidth: 3, borderLeftColor: theme.colors.separator, paddingLeft: spacing.md },
   table: { borderWidth: hairline, borderColor: theme.colors.separator, borderRadius: radii.sm, overflow: "hidden" as const },
   tableRow: { flexDirection: "row" as const, borderTopWidth: hairline, borderTopColor: theme.colors.separator },
   tableHeader: { borderTopWidth: 0, backgroundColor: theme.colors.codeBackground },
+  tableHeaderText: { fontWeight: "700" as const },
   tableCell: { minWidth: 96, maxWidth: 260, padding: spacing.sm },
   rule: { height: hairline, backgroundColor: theme.colors.separator }
 });

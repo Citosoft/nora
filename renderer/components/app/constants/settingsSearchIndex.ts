@@ -1,9 +1,10 @@
 import type { SettingsSearchEntry } from "@/components/app/types/settingsSearch.types";
 
 export const SETTINGS_SEARCH_INDEX: readonly SettingsSearchEntry[] = [
-  { group: "remoteAccess", title: "Enable remote access", keywords: ["phone", "mobile", "cloudflare", "tunnel", "internet"] },
+  { group: "remoteAccess", title: "Enable Nora Relay", keywords: ["remote access", "phone", "mobile", "cloudflare", "tunnel", "internet"] },
   { group: "remoteAccess", title: "Runtime name", keywords: ["rename", "computer", "device"] },
-  { group: "remoteAccess", title: "Open on phone", keywords: ["qr", "link", "copy", "mobile"] },
+  { group: "remoteAccess", title: "Open on phone", keywords: ["link", "copy", "mobile", "url"] },
+  { group: "remoteAccess", title: "Get the iPhone app", keywords: ["qr", "testflight", "install", "beta", "ios"] },
   { group: "remoteAccess", title: "Reset connection", keywords: ["rotate", "credentials", "disconnect"] },
   { group: "remoteAccess", title: "Keep Nora running in the background", keywords: ["tray", "menu bar", "close"] },
   { group: "remoteAccess", title: "Launch at login", keywords: ["startup", "autostart", "boot"] },
@@ -46,7 +47,8 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingsSearchEntry[] = [
   { group: "threads", title: "Tool output budget", keywords: ["tokens", "logs", "output", "truncate", "context", "claude", "codex"] },
   { group: "threads", title: "Automatic thread titles", keywords: ["name", "title", "generate", "automatic"] },
   { group: "threads", title: "Idle thread settlement", keywords: ["archive", "settled", "inactive", "automatic", "days"] },
-  { group: "threads", title: "Claude compaction threshold", keywords: ["context", "tokens", "compact", "window", "limit"] },
+  { group: "threads", title: "Suggested replies", keywords: ["claude", "prompt", "suggestions", "next message", "tokens", "predict"] },
+  { group: "threads", title: "Compaction threshold", keywords: ["claude", "context", "tokens", "compact", "window", "limit"] },
   { group: "threads", title: "Idle chat compaction", keywords: ["context", "cache", "expiry", "tokens", "compact", "claude", "idle", "auto"] },
   { group: "cli", title: "Providers", keywords: ["enable", "disable", "installed", "install", "available", "sign in", "account", "status", "agents", "acp"] },
   { group: "agentUsage", title: "Claude Code", keywords: ["tokens", "usage"] },
@@ -66,7 +68,7 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingsSearchEntry[] = [
   { group: "ai", title: "Google API Key", keywords: ["gemini", "key"] },
   { group: "ai", title: "Anthropic API Key", keywords: ["claude", "key"] },
   { group: "voice", title: "Dictation Engine", keywords: ["microphone", "transcription", "speech"] },
-  { group: "voice", title: "Local Whisper", keywords: ["whisper.cpp", "offline", "speech"] },
+  { group: "voice", title: "Local model", keywords: ["offline", "speech", "whisper", "on-device"] },
   { group: "privacy", title: "Usage Analytics", keywords: ["telemetry", "tracking", "diagnostics"] },
   { group: "system", title: "Hardware Acceleration", keywords: ["gpu", "rendering"] },
   { group: "dev", title: "Onboarding Flow", keywords: ["first run"] },

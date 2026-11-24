@@ -136,3 +136,42 @@ describe("cloudflare client", () => {
     await expect(client.getTunnelToken(TUNNEL_ID)).rejects.toSatisfy((error: unknown) => error instanceof Error && !error.message.includes("cf-token"));
   });
 });
+
+describe("cleanup adaptor", () => {
+  it("paginates the complete inventory including deleted tunnels before cleanup", async () => {
+    const record = tunnel({ created_at: "2026-01-01T00:00:00Z", conns_inactive_at: "2026-01-02T00:00:00Z", status: "down" });
+    const { calls, client } = fakeFetch([ok(Array.from({ length: 100 }, (_, index) => ({ ...record, id: String(index) }))),
+      ok([]), ok([{ ...record, id: "deleted", deleted_at: "2026-10-01T00:00:00Z" }])]);
+    const result = await client.listForCleanup();
+    expect(result).toHaveLength(101);
+    expect(result[100]?.deleted).toBe(true);
+    expect(result[0]?.disconnectedAt).toBe("2026-01-02T00:00:00Z");
+    expect(calls.map((call) => call.url.searchParams.get("page"))).toEqual(["1", "2", "1"]);
+    expect(calls.map((call) => call.url.searchParams.get("is_deleted"))).toEqual(["false", "false", "true"]);
+    expect(calls[0]?.url.searchParams.get("include_prefix")).toBe("nora-");
+  });
+
+  it("normalizes absent activity conservatively", async () => {
+    const { client } = fakeFetch([ok(tunnel())]);
+    expect(await client.inspect(TUNNEL_ID)).toMatchObject({ status: null, createdAt: null, disconnectedAt: null, deleted: false });
+  });
+
+  it("deletes only Nora runtime DNS still pointing to this tunnel", async () => {
+    const name = `${"a".repeat(32)}.withnora.run`;
+    const matching = { id: "dns", name, content: `${TUNNEL_ID}.cfargotunnel.com` };
+    const { calls, client } = fakeFetch([ok([matching, { ...matching, id: "other", name: "app.withnora.run" },
+      { ...matching, id: "zone", name: `${"a".repeat(32)}.other.run` }]), ok([matching]), ok({})]);
+    await client.deleteTunnelDns(TUNNEL_ID, "withnora.run");
+    expect(calls.filter((call) => call.method === "DELETE").map((call) => call.url.pathname)).toEqual([
+      `/client/v4/zones/${ZONE}/dns_records/dns`
+    ]);
+    expect(calls[0]?.url.searchParams.get("content.exact")).toBe(`${TUNNEL_ID}.cfargotunnel.com`);
+  });
+
+  it("preserves DNS repointed to a replacement during cleanup", async () => {
+    const matching = { id: "dns", name: `${"a".repeat(32)}.withnora.run`, content: `${TUNNEL_ID}.cfargotunnel.com` };
+    const { calls, client } = fakeFetch([ok([matching]), ok([{ ...matching, content: "new.cfargotunnel.com" }])]);
+    await client.deleteTunnelDns(TUNNEL_ID, "withnora.run");
+    expect(calls.some((call) => call.method === "DELETE")).toBe(false);
+  });
+});

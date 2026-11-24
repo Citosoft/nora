@@ -34,9 +34,9 @@ export function buildBotNavigation(bots: readonly EffectiveBot[], rows: readonly
   ];
 }
 
-/** Nora starts a new thread; any other bot opens its one chat. */
-export function botStartLabel(item: Pick<BotNavigationItem, "id" | "name">): string {
-  return item.id === NORA_ASSISTANT.id ? `New thread with ${item.name}` : `Message ${item.name}`;
+/** Every bot, Nora included, opens its one chat. */
+export function botStartLabel(item: Pick<BotNavigationItem, "name">): string {
+  return `Message ${item.name}`;
 }
 
 /** Keep children beside their parent even when activity sorting puts a child first; missing parents remain visible as roots. */

@@ -5,7 +5,7 @@ import type { SidebarSectionHeaderProps } from "@/components/app/types/changesPa
 export function SidebarSectionHeader({ title, count, actions, collapse }: SidebarSectionHeaderProps) {
   const label = <>
     <span className="truncate">{title}</span>
-    {count !== undefined && <span className="text-[11px] font-normal tabular-nums text-muted-foreground">{count}</span>}
+    {count !== undefined && <span className="text-[10px] font-normal tabular-nums text-muted-foreground">{count}</span>}
   </>;
   return <div className="flex min-h-8 items-center gap-2 px-4 pt-3">
     {collapse ? <button type="button" aria-expanded={!collapse.collapsed} onClick={collapse.onToggle}

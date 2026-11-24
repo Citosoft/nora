@@ -8,7 +8,7 @@ export const EMPTY_WORKSPACE_BOTS: Readonly<WorkspaceBotSettings> = { private: [
 export function emptyBotSettings(): BotSettings { return { global: [], workspaces: {} }; }
 
 export function workspaceBotSettings(settings: BotSettings | undefined, workspaceId: string): WorkspaceBotSettings {
-  return settings && Object.hasOwn(settings.workspaces, workspaceId) ? settings.workspaces[workspaceId] : EMPTY_WORKSPACE_BOTS;
+  return settings && Object.hasOwn(settings.workspaces, workspaceId) ? settings.workspaces[workspaceId] ?? EMPTY_WORKSPACE_BOTS : EMPTY_WORKSPACE_BOTS;
 }
 
 /**

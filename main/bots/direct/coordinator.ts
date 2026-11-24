@@ -1,6 +1,8 @@
 import { NORA_PROVIDER_KIND } from "@shared/providers/providerKinds";
 import { DIRECT_BINDING } from "@shared/bots/chats";
-import { askBotThread, authorOf, createBotThread } from "@main/bots/conversations/runner";
+import { askBotThread, authorOf } from "@main/bots/conversations/runner";
+import { chatBotFor } from "@shared/bots/noraChat";
+import { directWorker } from "./worker";
 import { reconcileChatRun, startChatRun } from "@main/bots/chats/chatRun";
 import { directPrompt } from "./prompt";
 import { resolveDirectRoute } from "./routing";
@@ -39,7 +41,7 @@ export class DirectCoordinator implements ExecutionProvider {
     this.active.set(execution.run.id, controller);
     try {
       const pinned = execution.run.workspaceId ?? null;
-      const placement = directPlacement(direct, this.options.workspaces(), this.options.bot, pinned);
+      const placement = directPlacement(direct, this.options.workspaces(), chatBotFor(this.options.bot), pinned);
       if (!placement) {
         chat.milestone(pinned ? `${direct.name} is not available in the workspace this message is for.` : `${direct.name} is not available in any open workspace.`);
         chat.finish("completed"); return;
@@ -53,15 +55,15 @@ export class DirectCoordinator implements ExecutionProvider {
       const route = resolveDirectRoute({ route: proposal, message: execution.run.instruction, threads, workspaces, defaultWorkspaceId });
       const workspaceId = route.kind === "new" ? route.workspaceId : threads.find((thread) => thread.id === route.threadId)?.workspaceId ?? defaultWorkspaceId;
       const workspace = workspaces.find((entry) => entry.id === workspaceId) ?? workspaces[0];
-      const bot = this.options.bot(workspace.id, direct.botId);
-      if (!bot) { chat.milestone(`${direct.name} is no longer available in ${workspace.name}.`); chat.finish("completed"); return; }
-      const deps = { host: this.options.host, nextId: this.options.nextId };
+      const worker = directWorker(this.options, workspace.id, direct.botId);
+      if (!worker) { chat.milestone(`${direct.name} is no longer available in ${workspace.name}.`); chat.finish("completed"); return; }
+      const bot = worker.profile;
       const threadId = route.kind === "continue" ? route.threadId
-        : await createBotThread(deps, conversation, bot, { ...workspace.workspace, access: "write" }, route.title, route.done ? { done: route.done } : {});
-      const reply = await askBotThread(deps, { conversationId: threadId, signal: controller.signal, timeoutMs: this.options.replyTimeoutMs ?? REPLY_TIMEOUT_MS,
+        : await worker.start(conversation, { ...workspace.workspace, access: "write" }, route.title, route.done ? { done: route.done } : {});
+      const reply = await askBotThread(this.options, { conversationId: threadId, signal: controller.signal, timeoutMs: this.options.replyTimeoutMs ?? REPLY_TIMEOUT_MS,
         instruction: directPrompt(direct, items, threadId, workspace.name, route.kind === "new" ? route.done : null), chatText: execution.run.instruction,
         onWaiting: () => chat.milestone(`${bot.name} is waiting for you.`) });
-      if (reply.text) chat.reply(authorOf(bot), reply.text, threadId);
+      if (reply.text) chat.reply(authorOf({ botId: bot.id, name: bot.name, avatar: bot.avatar }), reply.text, threadId);
       else if (reply.status !== "interrupted") chat.milestone(`${bot.name} could not reply${reply.failure ? `: ${reply.failure}` : reply.status === "timed-out" ? " in time" : ""}.`);
       chat.finish(controller.signal.aborted ? "interrupted" : "completed");
     } catch (error) {

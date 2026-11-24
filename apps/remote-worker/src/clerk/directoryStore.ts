@@ -16,8 +16,11 @@ const directoryRecordSchema = z.record(z.string(), z.unknown());
  */
 export function parseDirectory(privateMetadata: unknown): RuntimeDirectorySnapshot {
   const metadata = directoryRecordSchema.safeParse(privateMetadata);
-  const raw = metadata.success ? directoryRecordSchema.safeParse(metadata.data[DIRECTORY_METADATA_KEY]) : null;
-  if (raw === null || !raw.success) return { entries: [], invalidKeys: [] };
+  if (!metadata.success) return { entries: [], invalidKeys: [], malformed: true };
+  const value = metadata.data[DIRECTORY_METADATA_KEY];
+  if (value === undefined || value === null) return { entries: [], invalidKeys: [] };
+  const raw = directoryRecordSchema.safeParse(value);
+  if (!raw.success) return { entries: [], invalidKeys: [], malformed: true };
 
   const entries: RuntimeDirectoryEntry[] = [];
   const invalidKeys: string[] = [];

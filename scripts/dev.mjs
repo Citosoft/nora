@@ -1,3 +1,4 @@
+import { writeAnalyticsBuildConfig } from "./analytics-build-config.mjs";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { access, cp, mkdir, rm } from "node:fs/promises";
@@ -19,6 +20,7 @@ const tailwindCli = path.join(root, "node_modules", "tailwindcss", "lib", "cli.j
 const generateOAuthBuildConfigScript = path.join(root, "scripts", "generate-oauth-build-config.mjs");
 const rendererDir = path.join(root, "renderer");
 const rendererIconSvgPath = path.join(root, "renderer", "icon.svg");
+const rendererMarkSvgPath = path.join(root, "renderer", "mark.svg");
 const rendererIconPngPath = path.join(root, "renderer", "icon.png");
 const rendererIcon256Path = path.join(root, "renderer", "icon-256.png");
 const rendererIconIcoPath = path.join(root, "renderer", "icon.ico");
@@ -106,12 +108,14 @@ function runCommand(command, args, label, extraEnv = {}) {
 
 async function copyStatic() {
   await writeAccountBuildConfig();
+  await writeAnalyticsBuildConfig();
   await mkdir(path.join(root, "dist", "renderer"), { recursive: true });
   await mkdir(path.join(root, "dist", "runtime"), { recursive: true });
   await cp(path.join(root, "skills"), path.join(root, "dist", "skills"), { recursive: true });
   await runCommand(nodeExe, [generateOAuthBuildConfigScript], "oauth-build-config");
   await cp(path.join(root, "renderer", "index.html"), path.join(root, "dist", "renderer", "index.html"));
   await cp(rendererIconSvgPath, path.join(root, "dist", "renderer", "icon.svg"));
+  await cp(rendererMarkSvgPath, path.join(root, "dist", "renderer", "mark.svg"));
   await cp(rendererIconPngPath, path.join(root, "dist", "renderer", "icon.png"));
   await cp(rendererIcon256Path, path.join(root, "dist", "renderer", "icon-256.png"));
   await cp(rendererIconIcoPath, path.join(root, "dist", "renderer", "icon.ico"));
@@ -151,7 +155,8 @@ function watchStatic() {
 
   const staticFiles = [
     "index.html",
-    "icon.svg"
+    "icon.svg",
+    "mark.svg"
   ];
   const cleanupFns = staticFiles.map((filename) =>
     watchPolledFile(path.join(rendererDir, filename), () => {

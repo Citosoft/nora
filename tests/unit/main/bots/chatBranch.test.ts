@@ -23,7 +23,8 @@ function setup() {
   fake.add(conversation("dm", { title: "Ada", provider: nora, direct }));
   fake.items.set("dm", [said("u1", "user", "Plan the launch"), said("a1", "assistant", "Here is a plan"), said("u2", "user", "Unrelated later")]);
   const names: string[] = [];
-  const deps = { name: async (message: string) => { names.push(message); return "Launch timeline"; }, host: fake.host, nextId: () => "unused", bot: (_: string, botId: string) => botId === "ada" ? ada : botId === "grace" ? grace : null, workspaces: () => workspaces };
+  const deps = { name: async (message: string) => { names.push(message); return "Launch timeline"; }, host: fake.host, nextId: () => "unused", bot: (_: string, botId: string) => botId === "ada" ? ada : botId === "grace" ? grace : null,
+    noraBinding: async () => ({ kind: "claude" as const, instanceId: "claude", model: "opus", reasoning: null, permissionPolicy: "default" }), workspaces: () => workspaces };
   return { fake, deps, names };
 }
 

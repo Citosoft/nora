@@ -32,7 +32,7 @@ export function AgentContextCard({
             {state?.contextFilePath || "Loading context file..."}
           </div>
           {state ? (
-            <div className="mt-1 text-[11px] text-muted-foreground">
+            <div className="mt-1 text-[10px] text-muted-foreground">
               {state.entries.length} entr{state.entries.length === 1 ? "y" : "ies"} · {state.estimate.characters.toLocaleString()} chars · ~{state.estimate.estimatedTokens.toLocaleString()} tokens
             </div>
           ) : null}
@@ -88,19 +88,19 @@ export function AgentContextCard({
               <div key={entry.id} className="rounded-md border border-border/60 bg-background p-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="text-sm font-medium text-foreground">{entry.title}</div>
-                  <span className="rounded-full border border-border/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  <span className="rounded-full border border-border/60 px-2 py-0.5 text-[9px] font-medium text-muted-foreground">
                     {entry.precision}
                   </span>
-                  <span className="text-[11px] text-muted-foreground">{entry.kind}</span>
-                  <span className="text-[11px] text-muted-foreground">~{entry.estimate.estimatedTokens.toLocaleString()} tok</span>
+                  <span className="text-[10px] text-muted-foreground">{entry.kind}</span>
+                  <span className="text-[10px] text-muted-foreground">~{entry.estimate.estimatedTokens.toLocaleString()} tok</span>
                 </div>
                 {entry.references.length > 0 ? (
                   <div className="mt-2 space-y-1">
                     {entry.references.map((reference) => (
-                      <div key={`${entry.id}-${reference.label}-${reference.value}`} className="flex items-center justify-between gap-3 rounded-md bg-background px-2 py-1 text-[11px] text-muted-foreground">
+                      <div key={`${entry.id}-${reference.label}-${reference.value}`} className="flex items-center justify-between gap-3 rounded-md bg-background px-2 py-1 text-[10px] text-muted-foreground">
                         <span className="min-w-0 truncate">{reference.label}: {reference.value}</span>
                         {(reference.kind === "bundle-file" || reference.kind === "workspace-path") ? (
-                          <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => onCopyReference(reference.value)}>
+                          <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px]" onClick={() => onCopyReference(reference.value)}>
                             Copy
                           </Button>
                         ) : null}
@@ -121,7 +121,7 @@ export function AgentContextCard({
         )}
       </div>
       {state ? (
-        <div className="border-t border-border/60 px-4 py-2 text-[11px] text-muted-foreground">
+        <div className="border-t border-border/60 px-4 py-2 text-[10px] text-muted-foreground">
           Raw stream: {state.terminalStreamPath} · Events: {state.contextEventsPath}
         </div>
       ) : null}

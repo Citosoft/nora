@@ -14,6 +14,6 @@ export function AppVersionsMenu({ load, restore, currentVersion }: AppVersionsMe
     {versions === null ? <DropdownMenuItem disabled>Loading…</DropdownMenuItem>
       : versions.slice(0, SHOWN).map((version) => <DropdownMenuItem key={version.version} disabled={version.version === currentVersion} onSelect={() => { void restore(version.version); }}>
         <span className="flex min-w-0 flex-col"><span className="truncate">v{version.version}{version.version === currentVersion ? " (current)" : ""} · {version.summary}</span>
-          <span className="text-[11px] text-muted-foreground">{new Date(version.createdAt).toLocaleString()}</span></span></DropdownMenuItem>)}
+          <span className="text-[10px] text-muted-foreground">{new Date(version.createdAt).toLocaleString()}</span></span></DropdownMenuItem>)}
   </>;
 }

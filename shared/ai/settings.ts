@@ -25,6 +25,21 @@ export function parseRuntimeModelByProvider(value: unknown): Record<AiRuntimeTas
   return { codex: runtimeModel(record.codex), claude: runtimeModel(record.claude) };
 }
 
+/**
+ * What a runtime's background text tasks (memory reviews, titles, routing) run on when no model is chosen. They are short
+ * summaries and classifications, so Claude uses its smallest model rather than the plan's default, which can be Opus;
+ * Codex keeps its own default, as Nora knows no stable small-model alias for it.
+ */
+export const RUNTIME_TEXT_DEFAULT_MODEL: Readonly<Record<AiRuntimeTaskProvider, { id: string | null; label: string }>> = {
+  claude: { id: "haiku", label: "Haiku" },
+  codex: { id: null, label: "Runtime default" }
+};
+
+/** The model a background text task asks the runtime for; null leaves the choice to the runtime. */
+export function runtimeTextModel(provider: AiRuntimeTaskProvider, chosen: string | null): string | null {
+  return chosen ?? RUNTIME_TEXT_DEFAULT_MODEL[provider].id;
+}
+
 export function canGenerateSimpleText(settings: AiSettings): boolean {
   return settings.simpleTaskProvider !== "cloud" || Object.values(settings.apiKeys).some((key) => key.trim().length > 0);
 }

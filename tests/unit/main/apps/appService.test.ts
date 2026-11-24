@@ -49,6 +49,16 @@ test("creating an app needs a sample, keeps the sample under the app, loads its 
   assert.deepEqual(service.versions(app.id).map((version) => version.version), [3, 2, 1]);
 });
 
+test("a change made against an older version is refused so it never overwrites the newer one", async (t) => {
+  const { service, sampled } = serviceFixture(t);
+  await sampled("stale-thread");
+  const app = await service.create({ name: "CRM", workspaceId: WORKSPACE_ID, threadId: "stale-thread", spec: spec() });
+  const newer = await service.update({ id: app.id, baseVersion: app.version, spec: spec(), summary: "Changed elsewhere" });
+  await assert.rejects(service.update({ id: app.id, baseVersion: app.version, spec: spec(), summary: "Stale" }), /now at version 2, not 1.*read_app/);
+  assert.equal((await service.update({ id: app.id, baseVersion: newer.version, spec: spec(), summary: "Current" })).version, 3);
+  assert.deepEqual(service.versions(app.id).map((version) => version.version), [3, 2, 1]);
+});
+
 test("panel moves save restorable versions, broadcast the layout and preserve live data", async (t) => {
   const { service, connectors, changes, sampled, ready } = serviceFixture(t);
   await sampled("layout-thread");

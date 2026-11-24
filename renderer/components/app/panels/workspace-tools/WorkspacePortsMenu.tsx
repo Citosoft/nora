@@ -22,7 +22,7 @@ export function WorkspacePortsMenu({ projectId, terminalId }: WorkspacePortsMenu
       <p className="text-xs font-medium">Development servers</p>
       {!ports.length && <p className="text-xs text-muted-foreground">Run a development server in this workspace’s terminal to preview it here.</p>}
       {ports.map((port) => <div key={`${port.terminalId}:${port.port}`} className="flex items-center gap-2 rounded-md border border-border/60 p-2">
-        <div className="min-w-0 flex-1"><p className="truncate text-xs font-medium">{port.url}</p><p className="truncate text-[11px] text-muted-foreground">{port.terminalName}</p></div>
+        <div className="min-w-0 flex-1"><p className="truncate text-xs font-medium">{port.url}</p><p className="truncate text-[10px] text-muted-foreground">{port.terminalName}</p></div>
         <Button variant="ghost" size="icon" className="size-7" aria-label={`Preview ${port.url}`} onClick={() => {
           model?.openInAppBrowser(port); openTool(projectId, "browser"); setOpen(false);
         }}><Globe className="size-3.5" aria-hidden="true" /></Button>

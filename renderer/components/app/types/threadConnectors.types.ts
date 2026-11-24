@@ -15,9 +15,12 @@ export interface ThreadConnectorsDraft {
   workspace: WorkspaceRef;
 }
 
+/** Which of the runtime account's connectors a thread gets: all of them, or only the named ones (a bot's choice; none for chats). */
+export type AccountConnectorAccess = { kind: "all" } | { kind: "only"; names: readonly string[] };
 export interface ThreadConnectorsInput {
   conversation: Pick<Conversation, "provider" | "workspace">;
   providerLabel: string;
+  accountConnectors: AccountConnectorAccess;
 }
 
 

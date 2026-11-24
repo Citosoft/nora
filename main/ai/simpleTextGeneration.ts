@@ -1,5 +1,6 @@
 import type { AiSettings, AiSimpleTaskProvider } from "@shared/appTypes";
 import type { TextGenerationRequest, TextGenerationResult, TextGenerators } from "@main/types/ai/textGeneration.types";
+import { RUNTIME_TEXT_DEFAULT_MODEL } from "@shared/ai/settings";
 import { generateCloudText } from "./cloudTextGeneration";
 import { generateLocalText } from "./localTextGeneration";
 import { generateRuntimeText } from "./runtimeTextGeneration";
@@ -36,6 +37,6 @@ export function simpleTaskModelLabel(settings: AiSettings): string {
     case "cloud": return "Nora cloud";
     case "local": return `On-device · ${settings.localLlmModelId}`;
     case "codex":
-    case "claude": return `${source} · ${settings.runtimeModelByProvider[source] ?? "default model"}`;
+    case "claude": return `${source} · ${settings.runtimeModelByProvider[source] ?? RUNTIME_TEXT_DEFAULT_MODEL[source].label}`;
   }
 }

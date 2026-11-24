@@ -22,7 +22,7 @@ export function ChatActivityTimeline({ events, onOpenThread }: ChatActivityTimel
         title={description} aria-label={description}
         className="min-w-0 flex-1 truncate rounded text-left hover:underline focus-visible:outline focus-visible:outline-ring">{event.title}</button>
         : <p title={description} className="min-w-0 flex-1 truncate">{event.title}</p>}
-      <time dateTime={event.createdAt} title={new Date(event.createdAt).toLocaleString()} className="shrink-0 whitespace-nowrap text-[10px] text-muted-foreground">
+      <time dateTime={event.createdAt} title={new Date(event.createdAt).toLocaleString()} className="shrink-0 whitespace-nowrap text-[9px] text-muted-foreground">
         {new Date(event.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
       </time>
     </li>;

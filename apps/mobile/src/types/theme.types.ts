@@ -3,7 +3,7 @@ import type { StatusTone } from "./conversationState.types";
 
 export type ColorScheme = "light" | "dark";
 
-/** iOS semantic colours (system backgrounds, labels, fills and separators) plus Nora's tint. */
+/** iOS semantic colours (system backgrounds, labels, fills and separators) plus Nora's monochrome tint. */
 export interface ThemeColors {
   /** Plain screens such as a chat (systemBackground). */
   background: string;
@@ -41,6 +41,12 @@ export interface ThemeColors {
   shadow: string;
   /** Alerts and action sheets floating above a dimmed screen. */
   elevated: string;
+  /** Hairline border around cards that float above a grouped background. */
+  cardBorder: string;
+  /** A barely-there tint for see-through panels over artwork (the web sign-in form). */
+  glassFill: string;
+  /** Fill of search fields (tertiarySystemFill). */
+  searchFill: string;
   tones: Record<StatusTone, { background: string; text: string; solid: string }>;
 }
 

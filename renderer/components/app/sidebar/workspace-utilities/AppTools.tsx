@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Activity, BookOpen, CircleHelp, Compass, Keyboard, Moon, Settings, Sun, TerminalSquare, Unplug, Wrench } from "lucide-react";
+import { Activity, BookOpen, CircleHelp, Compass, Keyboard, Moon, Settings, Sun, TerminalSquare, Wrench } from "lucide-react";
 import { APP_DOCS_URL } from "@shared/appMeta";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { AppMark } from "@/components/app/shared/AppMark";
@@ -9,9 +9,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 
 export function AppTools({ collapsed = false, settingsActive = false, ...actions }: AppToolsProps) {
   const [open, setOpen] = useState(false);
-  const buttonSize = collapsed ? "size-8" : "h-8 w-full min-w-0";
+  const buttonSize = "size-8";
   const helpActions = [
     { label: "Documentation", icon: BookOpen, run: () => { void noraSystemClient.openExternalUrl(APP_DOCS_URL); } },
+    { label: "Keyboard shortcuts", icon: Keyboard, run: actions.onOpenKeyboardShortcuts },
     { label: "Startup dependencies", icon: Wrench, run: actions.onOpenStartupDependencies },
     { label: "Resource monitor", icon: Activity, run: actions.onOpenResourceMonitor },
     { label: "Open onboarding", icon: Compass, run: actions.onOpenOnboarding },
@@ -20,9 +21,7 @@ export function AppTools({ collapsed = false, settingsActive = false, ...actions
   const run = (action?: () => void): void => { setOpen(false); action?.(); };
   const themeLabel = `Switch to ${actions.resolvedTheme === "dark" ? "light" : "dark"} theme`;
   const footerActions = [
-    { label: "Connections", icon: Unplug, run: actions.onOpenConnectionsSettings },
     { label: "Home terminal", icon: TerminalSquare, run: actions.onOpenHomeTerminal },
-    { label: "Keyboard shortcuts", icon: Keyboard, run: actions.onOpenKeyboardShortcuts },
     { label: themeLabel, icon: actions.resolvedTheme === "dark" ? Sun : Moon, run: actions.onToggleTheme }
   ];
   return <nav aria-label="App tools" className={collapsed ? "flex flex-col items-center gap-1" : "contents"}>

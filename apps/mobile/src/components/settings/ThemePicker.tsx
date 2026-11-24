@@ -1,4 +1,5 @@
 import type { ThemePreference } from "@/types/preferences.types";
+import { layout } from "@/theme/tokens";
 import type { IconTileSpec } from "@/types/listUi.types";
 import { useTheme } from "@/hooks/useTheme";
 import { usePreferences } from "@/hooks/usePreferences";
@@ -15,7 +16,7 @@ export function ThemePicker() {
   const { preferences, update } = usePreferences();
   const { colors } = useTheme();
   return (
-    <ListSection header="Appearance" separatorInset={58}>
+    <ListSection header="Appearance" separatorInset={layout.iconRowInset}>
       {choices.map((choice) => (
         <ListRow key={choice.value} title={choice.label} icon={{ icon: choice.icon, color: colors.tones.neutral.solid }}
           accessory={preferences.theme === choice.value ? "checkmark" : "none"} onPress={() => void update((current) => ({ ...current, theme: choice.value }))} />

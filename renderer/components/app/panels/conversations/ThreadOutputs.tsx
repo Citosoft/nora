@@ -25,11 +25,11 @@ export function ThreadOutputs({ outputs, partial, onOpen }: ThreadOutputsProps) 
           title={detail} aria-label={`Open ${output.name}`} onClick={() => open(output)}>
           <WorkspaceFileIcon path={output.name} className="size-3.5 shrink-0" />
           <span className="min-w-0 flex-1"><span className="block truncate">{output.name}</span>
-            <span className="block truncate text-[10px] text-muted-foreground">{detail}</span></span>
+            <span className="block truncate text-[9px] text-muted-foreground">{detail}</span></span>
         </button>
       </li>;
     })}</ul> : <p className="text-muted-foreground">Images and files the agent makes, other than code, appear here.</p>}
     {error && <p role="alert" className="text-destructive">{error}</p>}
-    {partial && outputs.length > 0 && <p className="text-[10px] text-muted-foreground">Earlier messages may hold more outputs.</p>}
+    {partial && outputs.length > 0 && <p className="text-[9px] text-muted-foreground">Earlier messages may hold more outputs.</p>}
   </div>;
 }

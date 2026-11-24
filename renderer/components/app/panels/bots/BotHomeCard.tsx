@@ -16,7 +16,7 @@ export function BotHomeCard({ item, onStart, onShowInfo, onEdit }: BotHomeCardPr
         className="shrink-0 rounded-full hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{face}</button> : face}
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-2"><span className="truncate font-medium">{item.name}</span>
-          <span className="shrink-0 rounded bg-muted px-1.5 text-[11px] text-muted-foreground">{BOT_ORIGIN_LABELS[item.origin]}</span></p>
+          <span className="shrink-0 rounded bg-muted px-1.5 text-[10px] text-muted-foreground">{BOT_ORIGIN_LABELS[item.origin]}</span></p>
         {item.role && <p className="truncate text-sm text-muted-foreground">{item.role}</p>}
         <p className="mt-1 truncate text-xs text-muted-foreground">{[item.model ?? (item.avatar ? null : "Uses each thread's model"), `${threads} ${threads === 1 ? "thread" : "threads"}`].filter(Boolean).join(" · ")}</p>
       </div>

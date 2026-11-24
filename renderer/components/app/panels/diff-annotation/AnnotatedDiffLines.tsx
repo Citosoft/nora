@@ -1,7 +1,10 @@
 import { useDiffAnnotations } from "@/components/app/context/diffAnnotationContext";
 import { buildDiffAnnotationKey, canAnnotateDiffLine } from "@/components/app/logic/diffAnnotation";
-import { parseDiffLines } from "@/components/app/logic/forgePanelDiff";
-import { diffLineClass } from "@/components/app/logic/utils";
+import { diffGutterClass, diffRowClass } from "@/components/app/logic/diffLineStyles";
+import { DIFF_LINE_PAGE } from "@/components/app/logic/diffRenderBudget";
+import { resolveMonacoLanguageId } from "@/components/app/logic/fileEditorMonaco";
+import { parseDiffLines, withoutFileHeader } from "@/components/app/logic/forgePanelDiff";
+import { ForgeDiffCodeLine } from "@/components/app/panels/ForgeDiffCodeLine";
 import {
   reviewRemoveButtonClass,
   reviewCommentBodyClass,
@@ -11,17 +14,20 @@ import {
   reviewComposerTextareaClass
 } from "@/components/app/logic/reviewStyles";
 import type { ResolvedTheme } from "@/components/app/types";
+import type { DiffLineLimit } from "@/components/app/types/diffLine.types";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { DiffAnnotationLineTarget } from "@shared/appTypes";
 import { MessageSquarePlus, Plus, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
 type AnnotatedDiffLinesProps = {
   diff: string;
   filePath: string;
   resolvedTheme: ResolvedTheme;
+  /** Rendering budget for this file; lines past the limit stay unrendered until asked for. */
+  lineLimit: DiffLineLimit;
   className?: string;
 };
 
@@ -120,7 +126,7 @@ const AnnotationCard = ({
   </div>
 );
 
-export function AnnotatedDiffLines({ diff, filePath, resolvedTheme, className }: AnnotatedDiffLinesProps) {
+export function AnnotatedDiffLines({ diff, filePath, resolvedTheme, lineLimit, className }: AnnotatedDiffLinesProps) {
   const {
     annotationsEnabled,
     composerTarget,
@@ -131,7 +137,9 @@ export function AnnotatedDiffLines({ diff, filePath, resolvedTheme, className }:
     getAnnotationsForLine
   } = useDiffAnnotations();
 
-  const lines = parseDiffLines(diff);
+  const lines = useMemo(() => withoutFileHeader(parseDiffLines(diff)), [diff]);
+  const languageId = useMemo(() => resolveMonacoLanguageId(filePath), [filePath]);
+  const hiddenCount = Math.max(0, lines.length - lineLimit.limit);
 
   const handleOpenComposer = useCallback(
     (target: DiffAnnotationLineTarget) => {
@@ -141,32 +149,39 @@ export function AnnotatedDiffLines({ diff, filePath, resolvedTheme, className }:
   );
 
   return (
-    <div className={className}>
-      {lines.map((line) => {
+    <div className={cn("font-mono text-sm leading-6", className)}>
+      {lines.slice(0, lineLimit.limit).map((line, index) => {
         const inlineKey = buildDiffAnnotationKey(filePath, line.oldLine, line.newLine);
         const lineAnnotations = getAnnotationsForLine(filePath, line.oldLine, line.newLine);
         const canAnnotate = annotationsEnabled && canAnnotateDiffLine(line);
         const isComposerOpen = composerTarget?.key === inlineKey;
         const hasExtraContent = lineAnnotations.length > 0 || isComposerOpen;
 
+        const { tone } = line;
+
         return (
-          <div key={`${filePath}-${line.key}`} className={hasExtraContent ? "space-y-1" : undefined}>
-            <div className="group flex items-start gap-2">
-              <div
-                className={cn(
-                  "min-w-0 flex-1 whitespace-pre-wrap break-words px-2 font-mono text-[12px] leading-6",
-                  lineAnnotations.length > 0 && "ring-1 ring-inset ring-primary/25",
-                  diffLineClass(line.text, resolvedTheme)
-                )}
-              >
-                {line.text || " "}
+          <div key={`${filePath}-${line.key}`}>
+            {tone === "hunk" ? (
+              <div className={cn("px-4 py-1", index > 0 && "mt-2", diffRowClass(tone))}>{line.text}</div>
+            ) : (
+            <div
+              className={cn(
+                "group relative grid grid-cols-[3rem_3rem_minmax(0,1fr)]",
+                diffRowClass(tone),
+                lineAnnotations.length > 0 && "ring-1 ring-inset ring-primary/25"
+              )}
+            >
+              <span className={cn("select-none px-2 text-right tabular-nums", diffGutterClass(tone))} aria-hidden="true">{line.oldLine ?? ""}</span>
+              <span className={cn("select-none px-2 text-right tabular-nums", diffGutterClass(tone))} aria-hidden="true">{line.newLine ?? ""}</span>
+              <div className="min-w-0 whitespace-pre-wrap break-words pl-2 pr-9">
+                <ForgeDiffCodeLine text={line.text} tone={tone} languageId={languageId} resolvedTheme={resolvedTheme} />
               </div>
               {canAnnotate ? (
                 <Button
                   variant="ghost"
                   size="icon"
                   className={cn(
-                    "size-5 shrink-0 text-muted-foreground opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100",
+                    "absolute right-1.5 top-0.5 size-5 text-muted-foreground opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100",
                     isComposerOpen && "opacity-100",
                     lineAnnotations.length > 0 && "text-primary opacity-100"
                   )}
@@ -184,7 +199,9 @@ export function AnnotatedDiffLines({ diff, filePath, resolvedTheme, className }:
                 </Button>
               ) : null}
             </div>
+            )}
 
+            {hasExtraContent ? <div className="space-y-1 py-1 pl-[6.5rem] pr-3">
             {lineAnnotations.map((annotation) => (
               <AnnotationCard key={annotation.id} body={annotation.body} onRemove={() => removeAnnotation(annotation.id)} />
             ))}
@@ -192,9 +209,19 @@ export function AnnotatedDiffLines({ diff, filePath, resolvedTheme, className }:
             {isComposerOpen && composerTarget ? (
               <InlineComposer onSave={(body) => addAnnotation(composerTarget, body)} onCancel={closeComposer} />
             ) : null}
+            </div> : null}
           </div>
         );
       })}
+      {hiddenCount > 0 ? (
+        <div className="flex flex-wrap items-center gap-3 border-t border-border/60 px-4 py-2 font-sans text-sm text-muted-foreground">
+          <span>{hiddenCount.toLocaleString()} more {hiddenCount === 1 ? "line" : "lines"} not shown</span>
+          <Button variant="outline" size="sm" onClick={() => lineLimit.showMore(lines.length)}>
+            Show {Math.min(hiddenCount, DIFF_LINE_PAGE).toLocaleString()} more
+          </Button>
+          {hiddenCount > DIFF_LINE_PAGE ? <Button variant="ghost" size="sm" onClick={() => lineLimit.showAll(lines.length)}>Show all</Button> : null}
+        </div>
+      ) : null}
     </div>
   );
 }

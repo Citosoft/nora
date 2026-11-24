@@ -1,4 +1,4 @@
-import { BotAvatar } from "@/components/app/shared/BotAvatar";
+import { SpeakerAvatar } from "@/components/app/shared/SpeakerAvatar";
 import { BotAvatarStack } from "@/components/app/shared/BotAvatarStack";
 import { BotInfoTrigger } from "@/components/app/shared/BotInfoTrigger";
 import { memberList } from "@/components/app/logic/botThreads";
@@ -9,7 +9,7 @@ export function ChatGreeting({ participants }: ChatGreetingProps) {
   if (participants.kind === "direct") {
     const { bot } = participants;
     return <div className="flex flex-col items-center gap-3 py-10 text-center">
-      <BotInfoTrigger botId={bot.botId} name={bot.name} className="rounded-full"><BotAvatar avatar={bot.avatar} size={84} /></BotInfoTrigger>
+      <BotInfoTrigger botId={bot.botId} name={bot.name} className="rounded-full"><SpeakerAvatar botId={bot.botId} avatar={bot.avatar} size={84} /></BotInfoTrigger>
       <h2 className="text-2xl font-medium tracking-tight">Message <span className="text-primary">{bot.name}</span></h2>
       <p className="max-w-md text-sm text-muted-foreground">{bot.role ? `${bot.role}. ` : ""}Ask for anything; each task runs in its own thread you can open from the reply.</p>
     </div>;

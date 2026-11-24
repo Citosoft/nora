@@ -13,7 +13,7 @@ export function providerBindingProblem(binding: ProviderBinding, catalog: Provid
   if (catalog.authentication === "required") return "Sign in using this provider's CLI, then refresh its models. Your draft is preserved.";
   const model = catalog.models.find((entry) => entry.id === binding.model);
   if (!model) return catalog.models.length ? "The selected model is unavailable. Choose an available model before sending." : "This runtime has no available models.";
-  if (!catalog.policies.some((entry) => entry.id === binding.permissionPolicy)) return "Choose a supported permission policy in the model picker before sending.";
+  if (!catalog.policies.some((entry) => entry.id === binding.permissionPolicy)) return "Choose a supported permission policy in the permissions picker before sending.";
   if (binding.reasoning !== null && (!catalog.capabilities.reasoning || !model.reasoningEfforts.includes(binding.reasoning))) return "The selected reasoning effort is unavailable for this model.";
   if (binding.subagentModel !== undefined && (!catalog.capabilities.subagentModel || !catalog.models.some((entry) => entry.id === binding.subagentModel))) return "The selected subagent model is unavailable. Choose another in the model picker before sending.";
   return null;

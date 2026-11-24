@@ -126,7 +126,7 @@ export function TaskBoardPanel(props: TaskBoardPanelProps) {
                   <div className="mb-2 flex items-center gap-2 px-4 sm:px-6">
                     <span className="size-1.5 rounded-full bg-muted-foreground/50" aria-hidden="true" />
                     <h2 className="text-xs font-medium">{section.title}</h2>
-                    <span className="text-[11px] tabular-nums text-muted-foreground">{tasks.length}</span>
+                    <span className="text-[10px] tabular-nums text-muted-foreground">{tasks.length}</span>
                   </div>
                   <div className="border-y border-border/50">
                     {tasks.map((task) => (

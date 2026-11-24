@@ -1,3 +1,4 @@
+import type { TurnActivity } from "@shared/types/conversation/turnActivity.types";
 import type { ConversationRun, TimelineItem } from "@shared/types/conversation/contracts.types";
 import type { ConversationSummary } from "@shared/types/conversation/queries.types";
 import type { RemoteTask } from "@shared/types/remote-access/runtimeApi.types";
@@ -32,7 +33,9 @@ export interface ActivityList {
 
 /** Timeline entries ready to render: subagent activity is nested under its subagent instead of interleaved. */
 export type TimelineEntry =
-  | { kind: "item"; item: Exclude<TimelineItem, { kind: "subagent" }> }
+  | { kind: "tools"; runId: string; items: TimelineItemOf<"tool">[] }
+  | { kind: "reasoning"; runId: string; items: TimelineItemOf<"reasoning">[] }
+  | { kind: "item"; item: Exclude<TimelineItem, { kind: "subagent" | "tool" | "reasoning" }> }
   | { kind: "subagent"; item: Extract<TimelineItem, { kind: "subagent" }>; children: Extract<TimelineItem, { kind: "tool" }>[] };
 
 export type ActivitySource = { tasks: readonly RemoteTask[]; summaries: readonly ConversationSummary[] };
@@ -45,3 +48,5 @@ export interface ChatsOverview {
   /** Conversations whose agent is working right now. */
   working: number;
 }
+
+export interface TurnStatus { activity: TurnActivity | null; label: string | null; }

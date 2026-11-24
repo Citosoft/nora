@@ -1,16 +1,20 @@
 import { useId, useState } from "react";
 import { ChevronDown, FileDiff, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FilePathLabel } from "@/components/app/shared/FilePathLabel";
+import { useOptionalCenterDiffPorts } from "@/components/app/context/centerDiffContext";
 import { patchLineCounts, sumPatchLineCounts } from "@shared/conversations/diff";
 import type { TurnChangesCardProps } from "@/components/app/types/nativeDiff.types";
 import { DiffCounts } from "./DiffCounts";
 import { NativeDiff } from "./NativeDiff";
+import { UnpreviewedChange } from "./UnpreviewedChange";
 
 const previewLimit = 3;
 
 export function TurnChangesCard({ review }: TurnChangesCardProps) {
   const [showAll, setShowAll] = useState(false);
   const [viewChanges, setViewChanges] = useState(false);
+  const openFileDiff = useOptionalCenterDiffPorts()?.openWorkspaceFileDiff ?? null;
   const filesId = useId();
   const noteId = useId();
   const count = review.changes.length;
@@ -31,14 +35,13 @@ export function TurnChangesCard({ review }: TurnChangesCardProps) {
       </div>
     </header>
     <div id={filesId} className="min-w-0">{visible.map((change) => {
-      const separator = change.path.lastIndexOf("/");
       return <details key={change.path} open={viewChanges || undefined} className="group/file min-w-0">
-        <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&::-webkit-details-marker]:hidden" title={change.path}>
-          <span className="min-w-0 flex-1 truncate"><span className="text-muted-foreground">{change.path.slice(0, separator + 1)}</span><span>{change.path.slice(separator + 1)}</span></span>
+        <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+          <FilePathLabel path={change.path} className="flex-1" />
           <DiffCounts counts={patchLineCounts(change.patch)} />
           {!change.patch && <span className="shrink-0 text-xs text-muted-foreground">{change.presentation === "binary" ? "Binary" : "Diff unavailable"}</span>}
         </summary>
-        <div className="px-4 pb-3">{change.patch ? <NativeDiff patch={change.patch} /> : <p className="text-xs text-muted-foreground">{change.presentation === "binary" ? "Binary file changed." : "Patch exceeds the preview limit."}</p>}</div>
+        <div className="px-4 pb-3">{change.patch ? <NativeDiff patch={change.patch} /> : <UnpreviewedChange change={change} onOpenFileDiff={openFileDiff} />}</div>
       </details>;
     })}</div>
     {hiddenCount > 0 && !viewChanges && <button type="button" className="flex w-full items-center gap-2 border-t bg-muted/30 px-4 py-3 text-left hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" aria-expanded={showAll} aria-controls={filesId} onClick={() => setShowAll((current) => !current)}>

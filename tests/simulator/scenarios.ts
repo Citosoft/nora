@@ -6,6 +6,7 @@ import { mcpAppSteps } from "./mcpApp";
 
 export const simulatorScenarios: readonly SimulatorScenario[] = [
   { id: "tour", label: "Full chat loop", description: "Streaming, tools, a question, an approval and a final answer." },
+  { id: "thinking-orbs", label: "Thinking orbs", description: "Watch the orb follow thinking, searching, integrations, commands and reply streaming; toggle the theme while it works." },
   { id: "tools", label: "Tool gallery", description: "Commands, integrations, searches, images, agents and failure states." },
   { id: "markdown", label: "Markdown gallery", description: "Stream headings, emphasis, lists, tables, quotes and code blocks." },
   { id: "questions", label: "Questions", description: "Single choice, multiple choices and a free-text answer." },
@@ -155,6 +156,21 @@ const backgroundRequests: SimulatorStep[] = [
 export function stepsForScenario(instruction: string): SimulatorStep[] {
   const id = instruction.trim().split(/\s/)[0].replace(/^\//, "");
   switch (id) {
+    case "thinking-orbs": return [
+      { kind: "pause", milliseconds: 5000 },
+      { kind: "display", id: "orb-reasoning", item: { kind: "reasoning", text: "Comparing the available approaches.", complete: false } },
+      { kind: "pause", milliseconds: 5000 },
+      { kind: "display", id: "orb-reasoning", item: { kind: "reasoning", text: "Comparing the available approaches.", complete: true } },
+      { kind: "tool", native: { id: "orb-search", type: "webSearch", query: "Example documentation" }, complete: false },
+      { kind: "pause", milliseconds: 5000 },
+      { kind: "tool", native: { id: "orb-search", type: "webSearch", query: "Example documentation" }, complete: true },
+      { kind: "tool", native: { id: "orb-integration", type: "mcpToolCall", server: "Team documents", tool: "Read documentation", status: "inProgress" }, complete: false },
+      { kind: "pause", milliseconds: 5000 },
+      { kind: "tool", native: { id: "orb-integration", type: "mcpToolCall", server: "Team documents", tool: "Read documentation", status: "completed" }, complete: true },
+      { kind: "tool", native: { id: "orb-command", type: "commandExecution", command: "npm test", status: "inProgress" }, complete: false },
+      { kind: "pause", milliseconds: 5000 },
+      { kind: "tool", native: { id: "orb-command", type: "commandExecution", command: "npm test", status: "completed", exitCode: 0 }, complete: true },
+      { kind: "text", text: "The orb follows the provider's activity: solving during reasoning, searching during searches, connecting during integration calls, working during commands and composing while this reply streams. Silent gaps use working. It disappears when the turn finishes." }];
     case "output-budget": return [{ kind: "output-budget" }];
     case "tools": return tools;
     case "markdown": return [{ kind: "text", text: simulatedMarkdown }];

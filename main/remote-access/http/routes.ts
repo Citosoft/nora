@@ -1,3 +1,4 @@
+import { REMOTE_ATTACHMENT_ROUTE } from "@shared/remote-access/attachments";
 import type { RuntimeRoute } from "@main/types/remote-access/http/routes.types";
 import { RuntimeFailure } from "./failure";
 
@@ -5,7 +6,10 @@ export function matchRuntimeRoute(method: string, pathname: string): RuntimeRout
   if (method === "GET") {
     switch (pathname) {
       case "/v1/runtime/info": return { kind: "info" };
+      case "/v1/provider-options": return { kind: "provider-options" };
       case "/v1/projects": return { kind: "projects" };
+      case "/v1/settings": return { kind: "settings" };
+      case "/v1/bot-settings": return { kind: "bot-settings" };
       case "/v1/bots": return { kind: "bots" };
       case "/v1/conversations": return { kind: "conversations" };
       case "/v1/tasks": return { kind: "tasks" };
@@ -16,6 +20,9 @@ export function matchRuntimeRoute(method: string, pathname: string): RuntimeRout
     if (match) return { kind: match[2] ? "timeline" : "conversation", id: decodeURIComponent(match[1]) };
   }
   if (method === "POST") {
+    if (pathname === REMOTE_ATTACHMENT_ROUTE) return { kind: "attachment-upload" };
+    if (pathname === "/v1/settings") return { kind: "settings-update" };
+    if (pathname === "/v1/bot-settings") return { kind: "bot-save" };
     if (pathname === "/v1/conversations") return { kind: "create" };
     if (pathname === "/v1/realtime/ticket") return { kind: "ticket" };
     if (pathname === "/v1/inbox") return { kind: "inbox-command" };

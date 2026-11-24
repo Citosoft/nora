@@ -1,15 +1,25 @@
-import { botConnectorIdsSchema } from "./connectorSelection";
+import { botAccountConnectorsSchema, botConnectorIdsSchema } from "./connectorSelection";
 import { botDefinitionSchema, botIdSchema } from "./contracts";
 import type { BotDefinition } from "@shared/types/bots/bots.types";
-import type { BotFileField, BotFileParse } from "@shared/types/bots/botFile.types";
+import type { z } from "zod";
+import type { BotFileField, BotFileJsonField, BotFileParse } from "@shared/types/bots/botFile.types";
 
 /** Shared workspace bots live at `.nora/bots/<id>.md`: simple `key: value` front matter, then the instructions as the body. */
 export const SHARED_BOT_DIRECTORY = ".nora/bots";
 export const SHARED_BOT_EXTENSION = ".md";
 export const SHARED_BOT_MAX_BYTES = 64 * 1024;
 
-const FIELDS: readonly BotFileField[] = ["connectors", "name", "role", "provider", "instance", "model", "reasoning", "permission", "shape", "palette", "eyes", "seed", "revision"];
+const FIELDS: readonly BotFileField[] = ["connectors", "account-connectors", "name", "role", "provider", "instance", "model", "reasoning", "permission", "shape", "palette", "eyes", "seed", "revision"];
 const isField = (key: string): key is BotFileField => (FIELDS as readonly string[]).includes(key);
+
+/** A front-matter field holding a JSON array; absent fields stay absent so the bot keeps its default. */
+function parseJsonField<T>(fields: ReadonlyMap<BotFileField, string>, key: BotFileField, schema: z.ZodType<T>, noun: string): BotFileJsonField<T> {
+  if (!fields.has(key)) return { kind: "absent" };
+  try {
+    const parsed = schema.safeParse(JSON.parse(fields.get(key) ?? ""));
+    return parsed.success ? { kind: "value", value: parsed.data } : { kind: "invalid", message: `${key}: Enter a JSON array of unique ${noun}` };
+  } catch { return { kind: "invalid", message: `${key}: Enter a JSON array of ${noun}` }; }
+}
 
 export function sharedBotFileName(botId: string): string { return `${botIdSchema.parse(botId)}${SHARED_BOT_EXTENSION}`; }
 
@@ -24,7 +34,7 @@ export function parseSharedBotFile(fileName: string, text: string, workspaceId: 
   const fields = new Map<BotFileField, string>();
   for (const [index, line] of lines.slice(1, end).entries()) {
     if (!line.trim()) continue;
-    const match = /^([a-z]+):\s?(.*)$/.exec(line);
+    const match = /^([a-z]+(?:-[a-z]+)*):\s?(.*)$/.exec(line);
     if (!match) return { ok: false, message: `Line ${index + 2} is not a "key: value" pair` };
     const [, key, value] = match;
     if (!isField(key)) return { ok: false, message: `Unknown field "${key}" on line ${index + 2}` };
@@ -36,16 +46,13 @@ export function parseSharedBotFile(fileName: string, text: string, workspaceId: 
     const value = field(key);
     return value === undefined ? fallback : /^\d+$/.test(value) ? Number(value) : Number.NaN;
   };
-  let connectorIds: string[] | undefined;
-  if (fields.has("connectors")) {
-    try {
-      const parsedIds = botConnectorIdsSchema.safeParse(JSON.parse(fields.get("connectors") ?? ""));
-      if (!parsedIds.success) return { ok: false, message: "connectors: Enter a JSON array of unique connector IDs" };
-      connectorIds = parsedIds.data;
-    } catch { return { ok: false, message: "connectors: Enter a JSON array of connector IDs" }; }
-  }
+  const connectorIds = parseJsonField(fields, "connectors", botConnectorIdsSchema, "connector IDs");
+  if (connectorIds.kind === "invalid") return { ok: false, message: connectorIds.message };
+  const accountConnectors = parseJsonField(fields, "account-connectors", botAccountConnectorsSchema, "account connector names");
+  if (accountConnectors.kind === "invalid") return { ok: false, message: accountConnectors.message };
   const parsed = botDefinitionSchema.safeParse({
-    ...(connectorIds !== undefined ? { connectorIds } : {}),
+    ...(connectorIds.kind === "value" ? { connectorIds: connectorIds.value } : {}),
+    ...(accountConnectors.kind === "value" ? { accountConnectors: accountConnectors.value } : {}),
     id: id.data, name: fields.get("name") ?? "", role: fields.get("role") ?? "",
     instructions: lines.slice(end + 1).join("\n").trim(),
     binding: { kind: field("provider"), instanceId: field("instance") ?? field("provider"), model: field("model"),
@@ -72,5 +79,6 @@ export function serializeSharedBotFile(bot: BotDefinition): string {
     ...line("shape", bot.avatar.shape), ...line("palette", bot.avatar.palette), ...line("eyes", bot.avatar.eyes), ...line("seed", bot.avatar.seed),
     ...line("revision", bot.revision),
     ...(bot.connectorIds !== undefined ? line("connectors", JSON.stringify(bot.connectorIds)) : []),
+    ...(bot.accountConnectors !== undefined ? line("account-connectors", JSON.stringify(bot.accountConnectors)) : []),
     "---", "", bot.instructions, ""].join("\n");
 }

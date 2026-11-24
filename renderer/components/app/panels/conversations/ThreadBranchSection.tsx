@@ -34,7 +34,7 @@ export function ThreadBranchSection({ branch }: ThreadBranchSectionProps) {
         </div>
         {centerDiff && diffTarget && summary.files > 0 && <Button size="sm" variant="ghost" className="h-7 w-full justify-start gap-1.5 px-0 text-xs" onClick={() => centerDiff.openBranchDiff(diffTarget)}>
           <FileDiff className="size-3.5 shrink-0" aria-hidden="true" />View diff</Button>}
-        {(summary.uncommittedFiles > 0 || summary.partial) && <p className="text-[10px] leading-relaxed text-muted-foreground">
+        {(summary.uncommittedFiles > 0 || summary.partial) && <p className="text-[9px] leading-relaxed text-muted-foreground">
           {summary.uncommittedFiles > 0 && `${summary.uncommittedFiles} uncommitted ${summary.uncommittedFiles === 1 ? "file is" : "files are"} not in the ${noun} until committed. `}
           {summary.partial && "Line totals skip some untracked files."}
         </p>}

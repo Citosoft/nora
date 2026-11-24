@@ -22,7 +22,7 @@ export function AttentionTray({ excludedWorkspaceId = null }: AttentionTrayProps
   return <section aria-label={label} aria-live="polite" className="fixed bottom-4 right-4 z-[9990] w-[min(400px,calc(100vw-2rem))] overflow-hidden rounded-lg border bg-popover shadow-popover">
     <div className="flex items-center gap-2 border-b px-3 py-1.5">
       <ShieldQuestion className="size-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden="true" />
-      <h2 className="min-w-0 flex-1 truncate text-[13px] font-medium">{label}</h2>
+      <h2 className="min-w-0 flex-1 truncate text-[12px] font-medium">{label}</h2>
       <Button type="button" variant="ghost" size="icon" className="size-7 text-muted-foreground" aria-expanded aria-label="Collapse waiting requests" onClick={() => setCollapsed(true)}>
         <ChevronDown className="size-4" aria-hidden="true" /></Button>
     </div>

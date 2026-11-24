@@ -12,6 +12,6 @@ export function ThreadConnectorsStatus({ connectors, layout }: ThreadConnectorsS
       : !summary.servers.length ? <p className="text-muted-foreground">No connectors enabled for {source.label}.</p>
       : layout === "preview" ? <ThreadConnectorList servers={summary.servers} source={source} logins={logins} />
       : <ul className="space-y-1.5">{summary.servers.map((server) => <ThreadConnectorRow key={server.name} server={server} source={source} logins={logins} />)}</ul>}
-    {summary.status === "ready" && summary.notice && <p className="mt-1.5 text-[10px] leading-relaxed text-muted-foreground">{summary.notice}</p>}
+    {summary.status === "ready" && summary.notice && <p className="mt-1.5 text-[9px] leading-relaxed text-muted-foreground">{summary.notice}</p>}
   </div>;
 }

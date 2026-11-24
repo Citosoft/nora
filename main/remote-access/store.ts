@@ -3,6 +3,7 @@ import path from "node:path";
 import { remoteStateSchema } from "./stateSchema";
 import { isNodeError } from "@main/nodeErrors";
 import type { RemoteState, RemoteStateStore, RemoteStoreOptions } from "@main/types/remote-access/store.types";
+import { NORA_RELAY_NAME } from "@shared/remote-access/constants";
 
 /** Device-local opt-in and encrypted connector credentials; never included in portable settings. */
 export function createRemoteStateStore(options: RemoteStoreOptions): RemoteStateStore {
@@ -13,7 +14,7 @@ export function createRemoteStateStore(options: RemoteStoreOptions): RemoteState
         const input: unknown = JSON.parse(await readFile(options.path, "utf8"));
         return remoteStateSchema.parse(input);
       } catch (error) {
-        if (!isNodeError(error) || error.code !== "ENOENT") throw new Error("Remote access settings could not be restored. Your existing registration has been preserved.");
+        if (!isNodeError(error) || error.code !== "ENOENT") throw new Error(`${NORA_RELAY_NAME} settings could not be restored. Your existing registration has been preserved.`);
         return { version: 1, installationId: options.nextId(), name: options.name.trim().slice(0, 64) || "Nora",
           enabled: false, ownerId: null, port: null, runtime: null, connectorSecret: null, cleanup: [], revokedSessions: [] };
       }

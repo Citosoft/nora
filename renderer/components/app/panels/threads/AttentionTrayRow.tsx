@@ -38,8 +38,8 @@ export function AttentionTrayRow({ toast, onRespond, onOpen, onDismiss, menuItem
       {conversation.bot ? <BotAvatar avatar={conversation.bot.avatar} state="waiting" size={22} className="shrink-0" />
         : <span className="flex size-[22px] shrink-0 items-center justify-center"><AppMark className="size-4" /></span>}
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-medium" title={`${notice.title}: ${notice.body}`}>{notice.who} · {question ? question.text : request.title}</p>
-        <p className={`truncate text-xs text-muted-foreground ${detail ? "font-mono text-[11px]" : ""}`} title={subline}>{subline}</p>
+        <p className="truncate text-[12px] font-medium" title={`${notice.title}: ${notice.body}`}>{notice.who} · {question ? question.text : request.title}</p>
+        <p className={`truncate text-xs text-muted-foreground ${detail ? "font-mono text-[10px]" : ""}`} title={subline}>{subline}</p>
       </div>
       {busy && <LoaderCircle className="size-3.5 shrink-0 text-muted-foreground motion-safe:animate-spin" aria-label="Sending" />}
       {approval ? <>

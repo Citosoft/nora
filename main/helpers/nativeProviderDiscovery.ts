@@ -45,7 +45,8 @@ export async function discoverNativeProviders(environment: NodeJS.ProcessEnv): P
   const discovered: NativeProviderDiscovery[] = [];
   if (codex) {
     const instance: NativeInstance = { kind: "codex", options: { instanceId: "local", executable: codex, arguments: ["app-server", "--listen", "stdio://"], environment,
-      policies: { "read-only": { approvalPolicy: "on-request", sandbox: "read-only" }, "workspace-write": { approvalPolicy: "on-request", sandbox: "workspace-write" } } } };
+      policies: { "read-only": { approvalPolicy: "on-request", sandbox: "read-only" }, "workspace-write": { approvalPolicy: "on-request", sandbox: "workspace-write" },
+        "workspace-write-auto-review": { approvalPolicy: "on-request", sandbox: "workspace-write", approvalsReviewer: "auto_review" } } } };
     discovered.push({ instance, provider: { kind: "codex", instanceId: "local", label: "Codex", reportsMcp: true } });
   }
   if (claude) {

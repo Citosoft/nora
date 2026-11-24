@@ -9,9 +9,24 @@ const { promisify } = require('node:util');
 const { startLiveReload } = require('./liveReload.cjs');
 const root = resolve(__dirname, '../..');
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+/** The thread composer's editor: ComposerEditor renders a contenteditable textbox, not a textarea. */
+const COMPOSER = '[role="textbox"][aria-multiline="true"]';
+/** Chromium can still be flushing session files right after a window closes, so removal retries briefly. */
+const removeDirectory = directory => fs.rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+let ownsLifetime = false;
+/**
+ * Checks decide when to exit. Without a listener Electron quits with code 0 as soon as the last window closes,
+ * which happens inside close() before a failing check reaches app.exit(1).
+ */
+function keepAppAliveWithoutWindows() {
+  if (ownsLifetime) return;
+  ownsLifetime = true;
+  app.on('window-all-closed', () => {});
+}
 
 /** Isolated, no-preload Chromium host shared by component acceptance suites. */
 async function createFixtureHost(entry, options = {}) {
+  keepAppAliveWithoutWindows();
   const directory = await fs.mkdtemp(join(tmpdir(), 'nora-component-ui-'));
   app.setPath('userData', join(directory, 'electron'));
   let window;
@@ -33,8 +48,12 @@ async function createFixtureHost(entry, options = {}) {
     await app.whenReady();
     window = new BrowserWindow({ show: options.visible ?? false, width: options.width ?? 1024, height: 900,
       title: options.title ?? 'Nora UI fixture', webPreferences: { offscreen: !options.visible, nodeIntegration: false, contextIsolation: true, preload: options.preload } });
+    // Renderer crashes otherwise only surface as an unexplained timeout in the check.
+    window.webContents.on('console-message', event => { if (event.level === 'error') console.error(`[renderer] ${event.message}`); });
     options.onWindow?.(window);
-    const evaluate = code => window.webContents.executeJavaScript(code, true);
+    // Chromium's own error names no source, so failures carry the start of the snippet that threw.
+    const evaluate = code => window.webContents.executeJavaScript(code, true)
+      .catch(error => { throw new Error(`${error.message}\n  in: ${code.slice(0, 200)}`, { cause: error }); });
     const wait = async code => { for (let i = 0; i < 120; i++) { if (await evaluate(code)) return; await pause(40); } throw new Error('UI condition timed out: ' + code); };
     const click = async selector => {
       const point = await evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e)throw Error('Missing control: '+${JSON.stringify(selector)});e.scrollIntoView({block:'nearest'});const r=e.getBoundingClientRect();return {x:Math.round(r.left+r.width/2),y:Math.round(r.top+r.height/2)}})()`);
@@ -48,11 +67,19 @@ async function createFixtureHost(entry, options = {}) {
       await evaluate(`(()=>{const e=[...document.querySelectorAll('button,[role="option"]')].find(e=>e.textContent.trim()===${JSON.stringify(text)}&&!e.closest('[inert]'));if(!e)throw Error('Missing text control: '+${JSON.stringify(text)});e.setAttribute('data-acceptance-target','yes');})()`);
       await click(selector); await evaluate(`document.querySelector('[data-acceptance-target]')?.removeAttribute('data-acceptance-target')`);
     };
+    const textOf = selector => evaluate(`document.querySelector(${JSON.stringify(selector)})?.textContent ?? null`);
+    /** Types into a field the way a user does; `replace` selects its current contents first. */
+    const typeIn = async (selector, text, { replace = false } = {}) => {
+      await click(selector);
+      if (replace) await evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});const range=document.createRange();range.selectNodeContents(e);const selection=getSelection();selection.removeAllRanges();selection.addRange(range)})()`);
+      window.webContents.insertText(text);
+      await pause(100);
+    };
     await window.loadFile(join(directory, 'index.html'));
     if (options.watch) stopWatching = await startLiveReload({ buildOptions, compileStyles,
       stylePaths: [stylesInput, join(root, 'tailwind.config.cjs'), join(root, 'scripts/ui/tailwind.config.cjs')],
       reload: () => { if (!window.isDestroyed()) window.webContents.reloadIgnoringCache(); } });
-    return { window, evaluate, wait, click, byText, pause, async close() { await stopWatching(); if (!window.isDestroyed()) window.destroy(); await fs.rm(directory, { recursive: true, force: true }); } };
-  } catch (error) { await stopWatching(); window?.destroy(); await fs.rm(directory, { recursive: true, force: true }); throw error; }
+    return { window, evaluate, wait, click, byText, pause, textOf, typeIn, async close() { await stopWatching(); if (!window.isDestroyed()) window.destroy(); await removeDirectory(directory); } };
+  } catch (error) { await stopWatching(); window?.destroy(); await removeDirectory(directory); throw error; }
 }
-module.exports = { createFixtureHost };
+module.exports = { createFixtureHost, removeDirectory, COMPOSER };

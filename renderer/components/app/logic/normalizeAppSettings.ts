@@ -1,5 +1,6 @@
 import { DEFAULT_APP_SETTINGS, type AppSettings } from "@shared/appTypes";
 import { parseDesktopLifecycleSettings } from "@shared/desktop-lifecycle/settings";
+import { parseVoiceSettings } from "@shared/voice/settings";
 import { parseAiSimpleTaskProvider, parseMemoryReviewSettings, parseRuntimeModelByProvider } from "@shared/ai/settings";
 
 export function normalizeAppSettings(candidate: AppSettings): AppSettings {
@@ -37,15 +38,6 @@ export function normalizeAppSettings(candidate: AppSettings): AppSettings {
       runtimeModelByProvider: parseRuntimeModelByProvider(candidate.ai?.runtimeModelByProvider),
       memoryReview: parseMemoryReviewSettings(candidate.ai?.memoryReview, parseAiSimpleTaskProvider(candidate.ai?.simpleTaskProvider))
     },
-    voice: {
-      dictationProvider:
-        candidate.voice?.dictationProvider === "openai" || candidate.voice?.dictationProvider === "localWhisper"
-          ? candidate.voice.dictationProvider
-          : DEFAULT_APP_SETTINGS.voice.dictationProvider,
-      localWhisperModelId:
-        candidate.voice?.localWhisperModelId === "tiny.en" || candidate.voice?.localWhisperModelId === "base.en"
-          ? candidate.voice.localWhisperModelId
-          : DEFAULT_APP_SETTINGS.voice.localWhisperModelId
-    }
+    voice: parseVoiceSettings(candidate.voice)
   };
 }

@@ -5,7 +5,7 @@ import test from "node:test";
 test("ui font options include system, bundled and modern web font choices", () => {
   assert.deepEqual(
     UI_FONT_OPTIONS.map((option) => option.id),
-    ["system", "inter", "geist", "manrope", "dm-sans", "space-grotesk", "outfit", "plus-jakarta-sans"]
+    ["system", "sf-pro", "inter", "geist", "manrope", "dm-sans", "space-grotesk", "outfit", "plus-jakarta-sans"]
   );
 });
 
@@ -15,6 +15,8 @@ test("ui font helpers validate ids and return families", () => {
   assert.equal(getUiFontFamily(DEFAULT_UI_FONT_ID), "var(--app-system-font)");
   assert.equal(isUiFontId("geist"), true);
   assert.equal(isUiFontId("unknown-font"), false);
+  assert.equal(isUiFontId("sf-pro"), true);
+  assert.equal(getUiFontFamily("sf-pro").startsWith("\"SF Pro Text\""), true);
   assert.equal(getUiFontFamily("inter"), "\"Inter\"");
   assert.equal(getUiFontFamily("plus-jakarta-sans"), "\"Plus Jakarta Sans\"");
 });

@@ -4,7 +4,7 @@ import type { ExternalSessionReader } from "./externalSessions.types";
 import type { ProviderAccountAction, ProviderAccountResult, ProviderLoginMethod } from "@shared/types/provider/account.types";
 import type { McpAction, McpResult } from "@shared/types/provider/mcp.types";
 import type { SkillsResult } from "@shared/types/provider/skills.types";
-import type { EffortLevel, PermissionMode, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { EffortLevel, McpClaudeAIProxyServerConfig, McpServerStatus, Options, PermissionMode, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { randomUUID } from "node:crypto";
 import type { ApprovalDetails, ContextReading, Conversation, ExecutionFailure, ExecutionUsage, RequestResponse, RuntimeRequest, ToolDetails, ToolState } from "@shared/types/conversation/contracts.types";
 import type { EmitProviderUpdate, ProviderExecution } from "./provider.types";
@@ -20,12 +20,15 @@ export type ClaudeFrame =
   | { kind: "context"; eventId: string; context: ContextReading | null }
   | { kind: "finished"; eventId: string; status: "completed" | "failed" | "interrupted"; failure: ExecutionFailure | null; usage: ExecutionUsage };
 export type ClaudePrompt =
-  | { kind: "approval"; nativeId: string; title: string; details?: ApprovalDetails; signal: AbortSignal }
+  /** `permissionMode` is the session's live mode when Claude asked, which an earlier answer may have changed. */
+  | { kind: "approval"; nativeId: string; title: string; details?: ApprovalDetails; permissionMode: PermissionMode; signal: AbortSignal }
   | { kind: "question"; nativeId: string; title: string; questions: Extract<RuntimeRequest, { kind: "question" }>["questions"]; signal: AbortSignal };
 export interface ClaudeSession extends AsyncIterable<ClaudeFrame> {
   interrupt(): Promise<void>;
   close(): void | Promise<void>;
 }
+/** The settings object a session passes as its flag-level settings (the SDK also accepts a file path, which Nora never uses). */
+export type ClaudeFlagSettings = Exclude<Options["settings"], string | undefined>;
 export interface ClaudeMessageStream extends AsyncIterable<SDKMessage> { close(): void; }
 export interface ClaudeOpenInput {
   autoCompactTokens?: number;
@@ -38,6 +41,12 @@ export interface ClaudeOpenInput {
   model: string;
   permissionMode: PermissionMode;
   toolScope: ThreadToolScope;
+  /** False leaves out claude.ai connectors and synced plugins and skills; see `threadLoadsAccountExtras`. */
+  accountExtras: boolean;
+  /** Whether the runtime predicts the user's next message after the turn. */
+  promptSuggestions: boolean;
+  /** claude.ai connectors added back by name when `accountExtras` is false: the ones a bot was given. */
+  accountConnectors: ClaudeAccountConnectors;
   effort: EffortLevel | null;
   /** Default model for subagents; per-agent definitions and explicit Agent call models still take precedence. */
   subagentModel?: string;
@@ -45,10 +54,22 @@ export interface ClaudeOpenInput {
   mcpServers: readonly RunMcpServer[];
   onRequest: (prompt: ClaudePrompt) => Promise<RequestResponse>;
 }
+/** claude.ai connectors keyed by the name the runtime lists them under, as the proxy configs that connect them explicitly. */
+export type ClaudeAccountConnectors = Readonly<Record<string, McpClaudeAIProxyServerConfig>>;
+/** Remembers how to reach the account's claude.ai connectors, so a run can connect only the ones it was given. */
+export interface ClaudeAccountConnectorDirectory {
+  /** Replaces what is known with a full listing of the runtime's MCP servers. */
+  remember(servers: readonly McpServerStatus[]): void;
+  /** The named connectors that exist; names it does not know trigger a fresh listing, and ones still unknown are left out. */
+  resolve(cwd: string, names: readonly string[]): Promise<ClaudeAccountConnectors>;
+}
 export interface ClaudeOptions {
+  accountConnectors?: Pick<ClaudeAccountConnectorDirectory, "resolve">;
   /** Nora's per-run additions: its tool server and run guidance such as a bot's notes. */
   runContext?: NoraRunContextResolver;
   autoCompactTokens?: () => number | null;
+  /** The user's suggested-replies preference, read per turn; absent means on. */
+  promptSuggestions?: () => boolean;
   externalSessions?: ExternalSessionReader;
   instanceId: string;
   policies: Readonly<Record<string, PermissionMode>>;

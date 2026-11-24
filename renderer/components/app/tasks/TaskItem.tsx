@@ -58,20 +58,20 @@ export function TaskItem({
           >
             {task.title}
           </span>
-          <span className="mt-1 block truncate font-mono text-[10px] text-muted-foreground/70" title={task.path}>
+          <span className="mt-1 block truncate font-mono text-[9px] text-muted-foreground/70" title={task.path}>
             {task.path}
           </span>
         </button>
         {(isBoard || assignmentCount > 0) && (
           <div className={cn("mt-2 flex items-center gap-2", !isBoard && "mt-1")}>
             {assignmentCount > 0 && (
-              <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+              <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
                 <Users className="size-3" aria-hidden="true" />
                 {assignmentCount} {assignmentCount === 1 ? "agent" : "agents"}
               </span>
             )}
             {isBoard && (
-              <span className="text-[11px] text-muted-foreground">{task.completed ? "Completed" : "Open"}</span>
+              <span className="text-[10px] text-muted-foreground">{task.completed ? "Completed" : "Open"}</span>
             )}
             {isBoard && <div className="flex-1" />}
             {isBoard && (

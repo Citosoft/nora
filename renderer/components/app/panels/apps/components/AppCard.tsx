@@ -53,7 +53,7 @@ export const AppCard: ComponentFn<AppCatalog, "Card"> = ({ props, children }) =>
       {title && <h3 className="text-sm font-semibold leading-tight">{title}</h3>}
       {description && <p className="text-xs text-muted-foreground">{description}</p>}
     </header>}
-    {(pickable || movable) && <div className="absolute right-2 top-2 flex items-center gap-1 rounded-full border border-border/70 bg-background/90 px-1 py-0.5 text-[11px] text-muted-foreground opacity-0 shadow-sm transition focus-within:opacity-100 group-hover/card:opacity-100">
+    {(pickable || movable) && <div className="absolute right-2 top-2 flex items-center gap-1 rounded-full border border-border/70 bg-background/90 px-1 py-0.5 text-[10px] text-muted-foreground opacity-0 shadow-sm transition focus-within:opacity-100 group-hover/card:opacity-100">
       {movable && <button type="button" draggable={!layout.saving} aria-disabled={layout.saving} aria-label={`Move ${label}`}
         aria-description="Drag onto another panel, or use arrow keys to move within this layout. Changes save automatically."
         aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight"

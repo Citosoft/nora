@@ -3,7 +3,7 @@ import type { ChatThreadStepProps } from "@/components/app/types/chatThreadDetai
 
 /** One step on the timeline: an icon on the rail, a line of text, an optional detail and its time. */
 export function ChatThreadStep({ icon: Icon, iconClass, spin, at, children, detail }: ChatThreadStepProps) {
-  return <li className="relative flex gap-3 pb-3 text-[13px] last:pb-0">
+  return <li className="relative flex gap-3 pb-3 text-[12px] last:pb-0">
     <span className="relative z-10 flex h-5 w-4 shrink-0 items-center justify-center bg-background">
       <Icon aria-hidden="true" className={`size-3.5 ${iconClass ?? "text-muted-foreground"} ${spin ? "motion-safe:animate-spin" : ""}`} /></span>
     <div className="min-w-0 flex-1">

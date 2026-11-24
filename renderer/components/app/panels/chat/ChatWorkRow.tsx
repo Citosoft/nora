@@ -35,7 +35,7 @@ export function ChatWorkRow({ thread, now, onOpenThread, onSettleThread }: ChatW
         className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs focus-visible:outline focus-visible:outline-ring">
         <Icon aria-hidden="true" className={`size-3.5 shrink-0 ${color} ${spinning ? "motion-safe:animate-spin" : ""}`} />
         <span className="min-w-0 flex-1 truncate">{thread.title}</span>
-        <span className="flex min-w-0 max-w-[40%] items-center gap-1 text-[10px] text-muted-foreground" title={thread.model}>
+        <span className="flex min-w-0 max-w-[40%] items-center gap-1 text-[9px] text-muted-foreground" title={thread.model}>
           <AgentToolIcon connection={thread.connection} toolId={thread.providerKind} label={thread.providerKind} className="size-4 shrink-0" imageClassName="size-3.5" />
           <span className="truncate">{thread.model}</span>
         </span>

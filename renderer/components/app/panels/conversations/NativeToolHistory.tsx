@@ -1,12 +1,12 @@
 import { Check, ChevronRight, CircleHelp, LoaderCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { summarizeNativeToolHistory } from "@/components/app/logic/nativeToolHistory";
+import { summarizeToolHistory } from "@shared/conversations/toolHistory";
 import type { NativeToolHistoryProps } from "@/components/app/types/nativeActivity.types";
 import { toolStateLabel } from "@/components/app/logic/toolStateLabel";
 import { NativeToolActivity } from "./NativeToolActivity";
 
 export function NativeToolHistory({ items }: NativeToolHistoryProps) {
-  const summary = summarizeNativeToolHistory(items);
+  const summary = summarizeToolHistory(items);
   const running = summary.state === "running";
   const Icon = running ? LoaderCircle : summary.state === "completed" ? Check : summary.state === "unconfirmed" ? CircleHelp : X;
   const status = toolStateLabel(summary.state);

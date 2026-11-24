@@ -1,7 +1,7 @@
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { shouldOpenAnalyticsConsentDialog } from "@/components/app/logic/startupDialogVisibility";
 import type { UseAnalyticsConsentPromptArgs, UseAnalyticsConsentPromptResult } from "@/components/app/types/component.types";
-import { setAnalyticsCoarseLaunchContext, setAnalyticsConsentStatus, setAnalyticsRuntimeAllowed } from "@/lib/analytics";
+import { setAnalyticsConsentStatus, setAnalyticsRuntimeAllowed } from "@/lib/analytics";
 import { useCallback, useEffect, useState } from "react";
 
 export function useAnalyticsConsentPrompt({
@@ -23,7 +23,6 @@ export function useAnalyticsConsentPrompt({
       }
 
       setAnalyticsRuntimeConfig(nextConfig);
-      setAnalyticsCoarseLaunchContext(nextConfig.coarseLaunchContext);
       setAnalyticsRuntimeAllowed(nextConfig.analyticsAllowedInCurrentRun);
     }).catch(captureError);
 

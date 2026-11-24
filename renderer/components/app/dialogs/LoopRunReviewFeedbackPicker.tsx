@@ -111,7 +111,7 @@ export function LoopRunReviewFeedbackPicker({ reviewFeedback }: LoopRunReviewFee
                       <span>{formatForgeReviewLineLabel(comment.oldLine, comment.newLine)}</span>
                       <span>{comment.author || "Unknown"}</span>
                     </div>
-                    <div className="terminal-text mt-2 overflow-x-auto rounded-md border border-border/40 bg-background px-2 py-1 text-[11px] leading-5">
+                    <div className="terminal-text mt-2 overflow-x-auto rounded-md border border-border/40 bg-background px-2 py-1 text-[10px] leading-5">
                       {comment.lineText || "(line context unavailable)"}
                     </div>
                     <div className="mt-2 whitespace-pre-wrap text-sm leading-5 text-foreground/85">

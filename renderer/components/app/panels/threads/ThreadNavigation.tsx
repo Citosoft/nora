@@ -9,6 +9,8 @@ import { useCallback, useMemo, useState } from "react";
 import { ThreadRow } from "./ThreadRow";
 import { SettledThreadsSection } from "./SettledThreadsSection";
 import { ThreadToolbar } from "./ThreadToolbar";
+import { BulkSettleDialog } from "./BulkSettleDialog";
+import { canBulkSettleThread } from "@/components/app/logic/thread-workspace/bulkSettlement";
 import { useThreadPullRequests } from "@/components/app/hooks/useThreadPullRequests";
 import { useOptionalWorkspaceSidebarPorts } from "@/components/app/hooks/useWorkspaceSidebarPorts";
 import { Button } from "@/components/ui/button";
@@ -19,6 +21,7 @@ import { buildThreadGroups, resolveThreadGrouping } from "@/components/app/logic
 import type { WorkspaceAvatarIdentity } from "@/components/app/types/workspaceAvatar.types";
 import type { ThreadGrouping } from "@/components/app/types/thread-workspace/navigation.types";
 import type { ThreadNavigationFilter, ThreadNavigationProps } from "@/components/app/types/thread-workspace/ports.types";
+import type { ThreadRefreshControl } from "@/components/app/types/thread-workspace/toolbar.types";
 
 export function ThreadNavigation({ workspaceId: scope, onNew, query = "", unified = false, onNavigate, grouping: savedGrouping, onGroupingChange, sourceFilter: savedSourceFilter, onSourceFilterChange, sort: savedSort, onSortChange }: ThreadNavigationProps = {}) {
   const ports = useThreadNavigationPorts();
@@ -28,6 +31,7 @@ export function ThreadNavigation({ workspaceId: scope, onNew, query = "", unifie
   const [localSource, setLocalSource] = useState<ThreadSourceFilter>("all");
   const sourceFilter = savedSourceFilter ?? localSource;
   const [filter, setFilter] = useState<ThreadNavigationFilter>("all");
+  const [bulkSettleOpen, setBulkSettleOpen] = useState(false);
   const [allWorkspaces, setAllWorkspaces] = useState(false);
   const [localGrouping, setLocalGrouping] = useState<ThreadGrouping>("none");
   const workspaceId = allWorkspaces ? null : scope === undefined ? ports.state.layout.focusedWorkspaceId : scope;
@@ -80,19 +84,26 @@ export function ThreadNavigation({ workspaceId: scope, onNew, query = "", unifie
       if (entry.target.kind === "external") void resumable.pin(entry.target.entry);
       else if (entry.target.kind === "thread") ports.togglePin(entry.target.conversationId);
     }} />;
+  const refreshControl: ThreadRefreshControl = {
+    loading: ports.state.loading || resumable.controls.loading,
+    disabled: ports.state.loading || resumable.controls.loading || resumable.controls.busy,
+    onRefresh: () => { ports.refresh(); if (canDiscover) resumable.controls.refresh(); }
+  };
   return <section className="flex min-h-0 flex-1 flex-col" aria-label="Threads">
-    <ThreadToolbar sort={sort} onSortChange={onSortChange ?? setLocalSort} sourceFilter={sourceFilter} onSourceFilterChange={onSourceFilterChange ?? setLocalSource} canGroupByWorkspace={showWorkspaces} filter={filter} grouping={grouping} onFilterChange={setFilter} onGroupingChange={onGroupingChange ?? setLocalGrouping}
+    <ThreadToolbar refresh={refreshControl} onBulkSettle={() => setBulkSettleOpen(true)} bulkSettleDisabled={refreshControl.disabled || !rows.some(canBulkSettleThread)} sort={sort} onSortChange={onSortChange ?? setLocalSort} sourceFilter={sourceFilter} onSourceFilterChange={onSourceFilterChange ?? setLocalSource} canGroupByWorkspace={showWorkspaces} filter={filter} grouping={grouping} onFilterChange={setFilter} onGroupingChange={onGroupingChange ?? setLocalGrouping}
       allWorkspaces={unified ? allWorkspaces : undefined} onScopeChange={setAllWorkspaces} newDisabled={!workspaceId && !onNew}
       onNew={unified ? undefined : () => { onNavigate?.(); if (onNew) onNew(); else if (workspaceId) ports.openDraft(workspaceId); }} />
     {ports.state.error && <div role="alert" className="px-3 pb-2 text-xs"><p>{ports.state.error}</p><Button variant="ghost" size="sm" onClick={ports.refresh}>Retry</Button></div>}
-    <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 pb-2">{groups.map((group) => <div key={group.id} role={group.label ? "group" : undefined} aria-label={group.label ?? undefined} className="space-y-0.5">
+    <div className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 pb-2">{groups.map((group) => <div key={group.id} role={group.label ? "group" : undefined} aria-label={group.label ?? undefined} className="space-y-0.5">
       <ThreadGroupHeader group={group} collapsed={collapsedGroups.has(groupKey(group.id))} onToggle={() => toggleKey(setCollapsedGroups, group.id)} />
       {!(group.label && collapsedGroups.has(groupKey(group.id))) && <ThreadGroupRows group={group} expanded={expandedGroups.has(groupKey(group.id))}
         onToggle={() => toggleKey(setExpandedGroups, group.id)} renderRow={renderRow} />}
     </div>)}
       {!rows.length && <p role="status" className="px-2 py-4 text-xs text-muted-foreground">{ports.state.loading || (canDiscover && resumable.controls.loading) ? "Loading threads…" : query ? settledRows.length ? "Only settled threads match." : "No matching threads." : filter === "all" ? "Start a thread to begin." : "No threads in this view."}</p>}
-      {canDiscover ? <ExternalThreadControls state={resumable.controls} /> : resumable.controls.errors.map((message) => <p key={message} role="alert" className="px-2 py-1 text-xs text-destructive">{message}</p>)}
+      <ExternalThreadControls state={resumable.controls} />
     </div>
     <SettledThreadsSection rows={settledRows} expanded={settledExpanded} onExpandedChange={setSettledExpanded} renderRow={renderRow} />
+    {bulkSettleOpen && <BulkSettleDialog rows={rows} workspaces={workspaces} onClose={() => setBulkSettleOpen(false)}
+      onSettle={async (row) => { if (row.target.kind !== "draft") await ports.setSettled(row.target, true); }} />}
   </section>;
 }

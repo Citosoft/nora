@@ -2,10 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { TOOL_USAGE_POLL_INTERVAL_MS } from "@/components/app/constants/toolUsage";
 import { appToolUsageStore } from "@/components/app/logic/appToolUsageStore";
 import { getEnabledUsageTools, getUsagePollingToolIds } from "@/components/app/logic/modelUsageTools";
-import type { ModelUsageProps } from "@/components/app/types/workspaceUtilities.types";
+import type { ModelUsageInput } from "@/components/app/types/workspaceUtilities.types";
 import { useToolUsageSnapshot } from "./useToolUsageSnapshot";
 
-export function useModelUsage({ tools, onInstallTool, onSwitchToolAccount }: Omit<ModelUsageProps, "collapsed">) {
+export function useModelUsage({ tools, onInstallTool, onSwitchToolAccount }: ModelUsageInput) {
   const visibleTools = useMemo(() => getEnabledUsageTools(tools), [tools]);
   const pollingIds = useMemo(() => getUsagePollingToolIds(visibleTools), [visibleTools]);
   const usageByToolId = useToolUsageSnapshot();

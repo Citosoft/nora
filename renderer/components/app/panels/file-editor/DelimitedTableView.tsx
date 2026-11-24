@@ -24,7 +24,7 @@ export function DelimitedTableView({ content, delimiter }: DelimitedTableViewPro
         </tr>)}</tbody>
       </table>
     </div>
-    <p className="shrink-0 border-t border-border/50 px-3 py-1.5 text-[11px] text-muted-foreground">
+    <p className="shrink-0 border-t border-border/50 px-3 py-1.5 text-[10px] text-muted-foreground">
       {table.truncated ? `Showing ${table.rows.length.toLocaleString()} of ${table.totalRows.toLocaleString()} rows${table.header.length >= 200 ? " and the first 200 columns" : ""}. Switch to Text to see everything.`
         : `${table.totalRows.toLocaleString()} ${table.totalRows === 1 ? "row" : "rows"} · ${table.header.length} ${table.header.length === 1 ? "column" : "columns"}`}
     </p>

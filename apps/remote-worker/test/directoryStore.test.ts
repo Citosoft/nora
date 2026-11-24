@@ -28,7 +28,7 @@ describe("parseDirectory", () => {
   });
 
   it.each([undefined, null, "x", { [DIRECTORY_METADATA_KEY]: [] }, { [DIRECTORY_METADATA_KEY]: "x" }])("tolerates %j", (metadata) => {
-    expect(parseDirectory(metadata)).toEqual({ entries: [], invalidKeys: [] });
+    expect(parseDirectory(metadata)).toEqual({ entries: [], invalidKeys: [], malformed: true });
   });
 });
 

@@ -12,6 +12,7 @@ export type PendingCommandKind = PendingCommand["kind"];
 export type PendingSendMessage = Extract<PendingCommand, { kind: "send-message" }>;
 export type PendingCreateConversation = Extract<PendingCommand, { kind: "create-conversation" }>;
 export type PendingCreateBotChat = Extract<PendingCommand, { kind: "create-bot-chat" }>;
+export type PendingCreateCommand = PendingCreateConversation | PendingCreateBotChat;
 export type PendingDecideAction = Extract<PendingCommand, { kind: "decide-action" }>;
 export type PendingCancelTask = Extract<PendingCommand, { kind: "cancel-task" }>;
 

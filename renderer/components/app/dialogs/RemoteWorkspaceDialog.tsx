@@ -80,7 +80,7 @@ export function RemoteWorkspaceDialog(props: RemoteWorkspaceDialogProps) {
               <div
                 role="log"
                 aria-label="Connection activity"
-                className="max-h-28 overflow-auto whitespace-pre-wrap break-all font-mono text-[11px] leading-5 text-muted-foreground"
+                className="max-h-28 overflow-auto whitespace-pre-wrap break-all font-mono text-[10px] leading-5 text-muted-foreground"
               >
                 {mountOutput.length
                   ? mountOutput.map((line, index) => (

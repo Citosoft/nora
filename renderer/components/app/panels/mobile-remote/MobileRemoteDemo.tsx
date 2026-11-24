@@ -6,7 +6,7 @@ import { MobileRemoteDemoScreen } from "./MobileRemoteDemoScreen";
 export function MobileRemoteDemo({ scene }: MobileRemoteDemoProps) {
   return <div className="mobile-remote-phone" aria-hidden="true">
     <div className="mobile-remote-screen flex flex-col">
-      <div className="relative flex h-10 shrink-0 items-center justify-between px-6 text-[11px] font-semibold">
+      <div className="relative flex h-10 shrink-0 items-center justify-between px-6 text-[10px] font-semibold">
         <span>9:41</span>
         <span className="mobile-remote-island absolute left-1/2 top-2 -translate-x-1/2" />
         <Wifi className="size-3" />

@@ -123,18 +123,18 @@ export function ForgeWorkflowRunPanel({
                   <h2 className="text-lg font-semibold leading-snug tracking-tight text-foreground">{detail.name}</h2>
                   <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
                     {detail.branch ? (
-                      <span className="inline-flex max-w-full items-center gap-1 rounded-md bg-muted/55 px-2 py-0.5 text-[11px] font-medium text-foreground/80">
+                      <span className="inline-flex max-w-full items-center gap-1 rounded-md bg-muted/55 px-2 py-0.5 text-[10px] font-medium text-foreground/80">
                         <GitBranch className="size-3 shrink-0 opacity-70" aria-hidden />
                         <span className="truncate">{detail.branch}</span>
                       </span>
                     ) : null}
                     {detail.event ? (
-                      <span className="inline-flex items-center gap-1 rounded-md bg-muted/55 px-2 py-0.5 text-[11px] font-medium text-foreground/80">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-muted/55 px-2 py-0.5 text-[10px] font-medium text-foreground/80">
                         <Zap className="size-3 shrink-0 opacity-70" aria-hidden />
                         {detail.event.replace(/_/g, " ")}
                       </span>
                     ) : null}
-                    <span className="inline-flex items-center gap-1 text-[11px] tabular-nums">
+                    <span className="inline-flex items-center gap-1 text-[10px] tabular-nums">
                       <Clock3 className="size-3 shrink-0 opacity-60" aria-hidden />
                       Updated {new Date(detail.updatedAt).toLocaleString()}
                     </span>

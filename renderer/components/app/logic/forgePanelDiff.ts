@@ -1,12 +1,7 @@
 import type { ForgeWorkItemComment } from "@shared/appTypes";
 import { MAX_FORGE_DIFF_PREVIEW_CHARS } from "@shared/forgeDiff";
+import type { DiffLineTone, ParsedDiffLine } from "@/components/app/types/diffLine.types";
 
-export type ParsedDiffLine = {
-  key: string;
-  text: string;
-  oldLine: number | null;
-  newLine: number | null;
-};
 
 export function formatDiffPreview(diff: string): string {
   const normalized = diff.trim();
@@ -21,48 +16,53 @@ export function formatDiffPreview(diff: string): string {
   return `${normalized.slice(0, MAX_FORGE_DIFF_PREVIEW_CHARS)}\n\n… Diff truncated for display`;
 }
 
+/**
+ * Drops the `diff --git`/`index`/`---`/`+++` preamble that a file card already shows, plus the trailing blank line.
+ * Patches with no hunk (binary or mode-only changes) keep their header lines, since that is all they have.
+ */
+export function withoutFileHeader(lines: ParsedDiffLine[]): ParsedDiffLine[] {
+  const firstHunk = lines.findIndex((line) => line.tone === "hunk");
+  const body = firstHunk > 0 ? lines.slice(firstHunk) : lines;
+  return body.at(-1)?.text === "" ? body.slice(0, -1) : body;
+}
+
+const KEY_PREFIX: Record<DiffLineTone, string> = { hunk: "hunk", addition: "add", deletion: "del", context: "ctx", metadata: "meta" };
+
+/** File headers (`---`/`+++`) only appear before the first hunk; inside one, a `---value` line is a deleted `--value`. */
+function lineTone(line: string, inHunk: boolean): DiffLineTone {
+  if (line.startsWith("@@")) return "hunk";
+  if (!inHunk) return "metadata";
+  if (line.startsWith("+")) return "addition";
+  if (line.startsWith("-")) return "deletion";
+  if (line.startsWith(" ")) return "context";
+  return "metadata";
+}
+
 export function parseDiffLines(diff: string): ParsedDiffLine[] {
-  const lines = diff.split("\n");
   let oldLine: number | null = null;
   let newLine: number | null = null;
-  return lines.map((line, index) => {
-    if (line.startsWith("@@")) {
-      const match = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(line);
+  let inHunk = false;
+  return diff.split("\n").map((text, index) => {
+    if (text.startsWith("diff --git ")) inHunk = false;
+    const tone = lineTone(text, inHunk);
+    const key = `${KEY_PREFIX[tone]}-${index}`;
+    if (tone === "hunk") {
+      const match = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(text);
+      inHunk = match !== null;
       if (match) {
         oldLine = Number(match[1]);
         newLine = Number(match[2]);
       }
-      return { key: `hunk-${index}`, text: line, oldLine: null, newLine: null };
+      return { key, text, tone, oldLine: null, newLine: null };
     }
-
-    if (line.startsWith("+") && !line.startsWith("+++")) {
-      const row: ParsedDiffLine = { key: `add-${index}`, text: line, oldLine: null, newLine };
-      if (newLine !== null) {
-        newLine += 1;
-      }
-      return row;
-    }
-
-    if (line.startsWith("-") && !line.startsWith("---")) {
-      const row: ParsedDiffLine = { key: `del-${index}`, text: line, oldLine, newLine: null };
-      if (oldLine !== null) {
-        oldLine += 1;
-      }
-      return row;
-    }
-
-    if (line.startsWith(" ")) {
-      const row: ParsedDiffLine = { key: `ctx-${index}`, text: line, oldLine, newLine };
-      if (oldLine !== null) {
-        oldLine += 1;
-      }
-      if (newLine !== null) {
-        newLine += 1;
-      }
-      return row;
-    }
-
-    return { key: `meta-${index}`, text: line, oldLine: null, newLine: null };
+    const row: ParsedDiffLine = {
+      key, text, tone,
+      oldLine: tone === "deletion" || tone === "context" ? oldLine : null,
+      newLine: tone === "addition" || tone === "context" ? newLine : null
+    };
+    if (row.oldLine !== null) oldLine = row.oldLine + 1;
+    if (row.newLine !== null) newLine = row.newLine + 1;
+    return row;
   });
 }
 

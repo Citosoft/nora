@@ -3,6 +3,7 @@ import type { NativeBoot, NativeProvider, PersonalizationRequest } from "@shared
 import type { WorkspaceCatalog, PersonalizationSettings } from "@main/types/personalization/services.types";
 import type { PersonalizationServiceOptions } from "@main/types/personalization/runtime.types";
 import { applyBotRequest, isBotRequest } from "@main/bots/botRequests";
+import { withFavoriteModel } from "@shared/personalization/favoriteModels";
 import { noraToolsStatus } from "@shared/nora-tools/catalog";
 
 export class PersonalizationService {
@@ -90,10 +91,22 @@ export class PersonalizationService {
       }
       case "set-thread-model": {
         const model = input.model ? threadModelDefaultSchema.parse(input.model) : null;
+        const key = input.target === "nora-chat" ? "noraChatModel" : "threadModel";
         await this.settings.update((current) => {
           const personalization = structuredClone(current.personalization);
-          if (model) personalization.threadModel = model;
-          else delete personalization.threadModel;
+          if (model) personalization[key] = model;
+          else delete personalization[key];
+          return { ...current, personalization };
+        });
+        break;
+      }
+      case "set-favorite-model": {
+        const model = threadModelDefaultSchema.parse(input.model);
+        await this.settings.update((current) => {
+          const personalization = structuredClone(current.personalization);
+          const favorites = withFavoriteModel(personalization.favoriteModels ?? [], model, input.favorite);
+          if (favorites.length) personalization.favoriteModels = favorites;
+          else delete personalization.favoriteModels;
           return { ...current, personalization };
         });
         break;

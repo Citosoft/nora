@@ -17,21 +17,22 @@ const chromeFadeIn = { inputRange: [0, 12], outputRange: [0, 1], extrapolate: "c
  * Page frame modelled on a UIKit navigation stack: a floating frosted bar over scrolling content, an optional large title
  * that collapses into the bar, and an optional dock (composer) pinned above the home indicator.
  */
-export function Screen({ title, largeTitle = false, subtitle, back, leading, trailing, variant = "grouped", scroll = true, refreshControl, dock, children }: ScreenProps) {
+export function Screen({ title, largeTitle = false, hero, subtitle, back, leading, trailing, variant = "grouped", scroll = true, refreshControl, dock, children }: ScreenProps) {
   const styles = useThemedStyles(createStyles);
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const maxWidth = useContentWidth();
   const scrollY = useRef(new Animated.Value(0)).current;
   const [dockHeight, setDockHeight] = useState(0);
-  const titleOpacity = useMemo(() => (largeTitle && scroll ? scrollY.interpolate(largeTitleCollapse) : 1), [largeTitle, scroll, scrollY]);
+  const collapsingHeader = (largeTitle || Boolean(hero)) && scroll;
+  const titleOpacity = useMemo(() => (collapsingHeader ? scrollY.interpolate(largeTitleCollapse) : 1), [collapsingHeader, scrollY]);
   const chromeOpacity = useMemo(() => (scroll ? scrollY.interpolate(chromeFadeIn) : 0), [scroll, scrollY]);
   const onScroll = useMemo(() => Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: Platform.OS !== "web" }), [scrollY]);
   const onDockLayout = (event: LayoutChangeEvent): void => setDockHeight(event.nativeEvent.layout.height);
   const background = variant === "grouped" ? colors.groupedBackground : colors.background;
   const barHeight = insets.top + layout.navBarHeight;
 
-  const bar = <NavBar title={title} subtitle={largeTitle ? undefined : subtitle} back={back} leading={leading} trailing={trailing}
+  const bar = <NavBar title={title} subtitle={collapsingHeader ? undefined : subtitle} back={back} leading={leading} trailing={trailing}
     titleOpacity={titleOpacity} chromeOpacity={chromeOpacity} floating={scroll} />;
   const dockView = dock ? (
     <View onLayout={onDockLayout} style={[scroll ? styles.floatingDock : null, scroll ? glassStyle : null, scroll ? styles.dockChrome : { backgroundColor: background },
@@ -55,12 +56,12 @@ export function Screen({ title, largeTitle = false, subtitle, back, leading, tra
         contentContainerStyle={{ paddingTop: barHeight, paddingBottom: (dock ? dockHeight : insets.bottom) + spacing.xxl }}
         scrollIndicatorInsets={{ top: barHeight }}>
         <View style={[styles.column, { maxWidth }]}>
-          {largeTitle ? (
+          {hero ?? (largeTitle ? (
             <View style={styles.largeTitleBlock}>
               <Text style={styles.largeTitle} accessibilityRole="header" numberOfLines={2}>{title}</Text>
               {subtitle ? <Text style={styles.largeSubtitle} numberOfLines={1}>{subtitle}</Text> : null}
             </View>
-          ) : <View style={styles.topGap} />}
+          ) : <View style={styles.topGap} />)}
           <View style={styles.content}>{children}</View>
         </View>
       </Animated.ScrollView>

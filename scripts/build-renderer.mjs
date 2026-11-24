@@ -1,3 +1,4 @@
+import { writeAnalyticsBuildConfig } from "./analytics-build-config.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { build } from "esbuild";
@@ -40,6 +41,7 @@ function loadEnvFile() {
 
 loadEnvFile();
 await writeAccountBuildConfig();
+await writeAnalyticsBuildConfig();
 
 const result = await build({
   entryPoints: ["renderer/main.tsx"],

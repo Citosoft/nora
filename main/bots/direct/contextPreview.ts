@@ -1,4 +1,5 @@
 import { snapshotBot } from "@shared/bots/snapshot";
+import { chatBotFor, isNoraChat } from "@shared/bots/noraChat";
 import { questionGuidance, questionToolOf } from "@main/execution/questionGuidance";
 import { directPrompt } from "./prompt";
 import { directRouterPrompt, directRouterRecent } from "./router";
@@ -34,13 +35,17 @@ function sameTarget(a: DirectContextTarget, b: DirectContextTarget): boolean {
 }
 
 function previewThread(deps: DirectContextPreviewDeps, direct: DirectDescriptor, target: DirectContextTarget, workspaces: readonly ChatWorkspace[]): DirectPreviewThread {
+  const nora = isNoraChat(direct.botId);
   if (target.kind === "continue") {
     const thread = deps.host.header(target.threadId)?.conversation;
-    if (!thread?.bot) throw new Error("That work thread is no longer open.");
+    if (!thread || (!thread.bot && !nora)) throw new Error("That work thread is no longer open.");
     const workspaceName = workspaces.find((entry) => entry.id === thread.workspace.projectId)?.name ?? thread.workspace.projectId;
-    return { id: thread.id, workspaceName, bot: thread.bot, provider: thread.provider, subject: thread, lastRequest: thread.context ?? null };
+    return { id: thread.id, workspaceName, bot: thread.bot ?? null, provider: thread.provider, subject: thread, lastRequest: thread.context ?? null };
   }
   const workspace = workspaces.find((entry) => entry.id === target.workspaceId);
+  if (workspace && nora) {
+    return { id: NEW_THREAD_ID, workspaceName: workspace.name, bot: null, provider: deps.noraModel(), subject: { id: NEW_THREAD_ID, workspace: workspace.workspace }, lastRequest: null };
+  }
   const definition = workspace ? deps.bot(workspace.id, direct.botId) : null;
   if (!workspace || !definition) throw new Error(`${direct.name} is not available in that workspace.`);
   const bot = snapshotBot(definition);
@@ -54,12 +59,13 @@ function section(id: string, label: string, placement: DirectContextSection["pla
 /** The work thread's request in the order providers assemble it: system guidance, the session so far, then this turn. */
 function workThreadRequest(deps: DirectContextPreviewDeps, direct: DirectDescriptor, thread: DirectPreviewThread, items: readonly TimelineItem[]): DirectContextModelRequest {
   const run = deps.runContext(thread.subject);
-  const tool = questionToolOf(thread.provider.kind);
+  const tool = thread.provider ? questionToolOf(thread.provider.kind) : null;
+  const runtime = thread.provider?.kind ?? "The runtime";
   const continuing = thread.id !== NEW_THREAD_ID;
   const sections = [
     ...section("provider-base", "Provider base prompt and tool schemas", "system", null,
-      `${thread.provider.kind} adds its own system prompt${run.tools ? " and the definitions of its tools and Nora's" : " and tool definitions"}; Nora cannot see them, so they are not counted here.`),
-    ...section("bot", "Bot persona and instructions", "system", thread.bot.guidance),
+      `${runtime} adds its own system prompt${run.tools ? " and the definitions of its tools and Nora's" : " and tool definitions"}; Nora cannot see them, so they are not counted here.`),
+    ...(thread.bot ? section("bot", "Bot persona and instructions", "system", thread.bot.guidance) : []),
     ...section("tools", "Nora tool guidance", "system", run.toolGuidance),
     ...section("notes", continuing ? "Saved notes (frozen for this thread)" : "Saved notes", "system", run.notesGuidance),
     ...(tool ? section("runtime", "Runtime guidance (bounded reads, question widgets)", "system", questionGuidance(tool)) : []),
@@ -70,8 +76,8 @@ function workThreadRequest(deps: DirectContextPreviewDeps, direct: DirectDescrip
       directPrompt(direct, items, thread.id, thread.workspaceName))
   ];
   return { id: "work-thread", title: continuing ? "Work thread (continuing)" : "Work thread (new)",
-    purpose: `${thread.bot.name} does the work and writes the reply in ${thread.workspaceName}.${tool ? "" : " Runtimes without a system prompt option receive the system guidance at the start of the first message."}`,
-    model: `${thread.provider.kind} · ${thread.provider.model}`, sections, lastRequest: thread.lastRequest };
+    purpose: `${thread.bot?.name ?? direct.name} does the work and writes the reply in ${thread.workspaceName}.${tool ? "" : " Runtimes without a system prompt option receive the system guidance at the start of the first message."}`,
+    model: thread.provider ? `${thread.provider.kind} · ${thread.provider.model}` : "The first available provider and model", sections, lastRequest: thread.lastRequest };
 }
 
 /**
@@ -82,7 +88,7 @@ export function previewDirectContext(deps: DirectContextPreviewDeps, request: Di
   const chat = deps.host.header(request.chatId)?.conversation;
   const direct = chat?.direct;
   if (!chat || !direct) throw new Error("This is not a direct chat.");
-  const placement = directPlacement(direct, deps.workspaces(), deps.bot, null);
+  const placement = directPlacement(direct, deps.workspaces(), chatBotFor(deps.bot), null);
   if (!placement) throw new Error(`${direct.name} is not available in any open workspace.`);
   const { workspaces, defaultWorkspaceId } = placement;
   const threads = openDirectThreads(deps.host.summaries(), chat, workspaces);

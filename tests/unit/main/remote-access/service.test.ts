@@ -132,3 +132,16 @@ test("disconnecting a device refuses its session, survives a restart and is forg
   assert.deepEqual(resumed.state().revokedSessions, []);
   await resumed.service.shutdown();
 });
+
+test("returning installations reprovision before starting an expired cached connector", async () => {
+  const f = serviceFixture();
+  await f.service.start(); await f.service.enable(); await f.service.shutdown();
+  const saved = f.state();
+  assert.ok(saved.runtime);
+  saved.runtime.registeredAt = new Date(Date.now() - 91 * 86400000).toISOString();
+  const resumed = serviceFixture(saved);
+  await resumed.service.start();
+  assert.equal(resumed.counts().provisioned, 1);
+  assert.equal(resumed.service.view().status.status, "connected");
+  await resumed.service.shutdown();
+});

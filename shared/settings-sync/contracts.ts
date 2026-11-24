@@ -5,7 +5,7 @@ import { providerKindSchema } from "@shared/providers/providerKinds";
 const model = z.object({ kind: providerKindSchema, model: z.string().min(1).max(512) }).strict().nullable();
 export const appearanceSchema = z.object({
   themeMode: z.enum(["system", "light", "dark"]), accentColor: z.enum(["silver", "green", "blue", "amber", "rose", "violet"]),
-  uiFontId: z.enum(["system", "inter", "geist", "manrope", "dm-sans", "space-grotesk", "outfit", "plus-jakarta-sans"]),
+  uiFontId: z.enum(["system", "sf-pro", "inter", "geist", "manrope", "dm-sans", "space-grotesk", "outfit", "plus-jakarta-sans"]),
   terminalThemeId: z.enum(["app", "vscode-dark", "dracula", "solarized-dark", "solarized-light"]),
   terminalFontId: z.enum(["ibm-plex-mono", "jetbrains-mono", "fira-code", "cascadia-mono", "source-code-pro", "space-mono"]),
   userDisplayName: z.string().trim().max(256)

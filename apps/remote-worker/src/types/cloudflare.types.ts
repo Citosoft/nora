@@ -13,6 +13,20 @@ export interface DnsUpsertResult {
   readonly created: boolean;
 }
 
+export interface TunnelInspection extends CloudflareTunnel {
+  readonly status: "inactive" | "down" | "healthy" | "degraded" | null;
+  readonly createdAt: string | null;
+  readonly disconnectedAt: string | null;
+  readonly deleted: boolean;
+}
+
+export interface TunnelMaintenanceProvider {
+  listForCleanup(): Promise<readonly TunnelInspection[]>;
+  inspect(tunnelId: string): Promise<TunnelInspection | null>;
+  deleteTunnel(tunnelId: string): Promise<void>;
+  deleteTunnelDns(tunnelId: string, hostnameSuffix: string): Promise<void>;
+}
+
 export interface CloudflareClientConfig {
   readonly apiToken: string;
   readonly accountId: string;

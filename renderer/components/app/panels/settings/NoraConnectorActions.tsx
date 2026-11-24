@@ -8,9 +8,9 @@ export function NoraConnectorActions({ connector, controls, compact = false, men
   const pending = controls.pending(connector.id);
   const failure = controls.failure(connector.id);
   const oauth = connector.auth.kind === "oauth";
-  const size = compact ? "h-6 px-2 text-[10px]" : "";
+  const size = compact ? "h-6 px-2 text-[9px]" : "";
   const primary = pending === "sign-in"
-    ? <span role="status" className={`inline-flex shrink-0 items-center gap-1 text-muted-foreground ${compact ? "text-[10px]" : "text-xs"}`}>
+    ? <span role="status" className={`inline-flex shrink-0 items-center gap-1 text-muted-foreground ${compact ? "text-[9px]" : "text-xs"}`}>
       <LoaderCircle className="size-3 motion-safe:animate-spin" aria-hidden="true" />Finish in browser…</span>
     : oauth && connector.enabled && connector.status === "needs-auth"
     ? <Button variant="outline" size="sm" className={`shrink-0 ${size}`} title={failure} disabled={!!pending}

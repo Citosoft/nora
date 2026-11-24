@@ -7,6 +7,11 @@ export interface SettingsGroupItem {
   icon: LucideIcon;
 }
 
+export interface SettingsCategory {
+  label: string;
+  items: readonly SettingsGroupItem[];
+}
+
 /** One searchable setting. `title` must match the rendered `SettingRow` title so search can reveal the row. */
 export interface SettingsSearchEntry {
   group: SettingsGroup;

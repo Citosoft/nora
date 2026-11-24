@@ -1,3 +1,5 @@
+import type { Conversation } from "@shared/types/conversation/contracts.types";
+import type { AppThreadSource } from "@main/types/apps/apps.types";
 import { z } from "zod";
 import { appCatalog } from "@shared/apps/catalog";
 import { APP_SAMPLE_MAX_BYTES, APP_SOURCE_MIN_INTERVAL_SECONDS, APP_SOURCE_ROW_LIMIT } from "@shared/apps/contracts";
@@ -38,6 +40,11 @@ const actions = (): string => Object.entries(appCatalog.data.actions).map(([name
  * What the agent is told about building apps: the shape of a spec, how data flows from connectors to components, and the catalog.
  * Derived from the catalog so the components the model is offered and the ones the window renders never drift.
  */
+/** An app's builder thread carries the whole guide in its guidance, so it is never also offered the guide tool. */
+export function guidanceCarriesAppBuilderGuide<T extends Pick<Conversation, "source">>(conversation: T): conversation is T & { source: AppThreadSource } {
+  return conversation.source?.kind === "app";
+}
+
 export function appBuilderGuide(): string {
   return `# Building apps
 

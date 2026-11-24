@@ -7,6 +7,7 @@ import type { ThreadSubagentSummary } from "./threadSubagents.types";
 import type { ThreadSkillsState } from "./threadSkills.types";
 import type { ThreadBranchInsights, ThreadForgeClient } from "./threadForge.types";
 import type { ThreadOutput, ThreadOutputTarget } from "./threadOutputs.types";
+import type { MessagePins } from "./messagePins.types";
 
 export type ThreadChangeSummary =
   | { status: "pending" | "unavailable" }
@@ -27,6 +28,7 @@ export interface ThreadInsightsPanelProps {
   subagents: ThreadSubagentSummary;
   outputs: readonly ThreadOutput[];
   branch: ThreadBranchInsights;
+  pins: MessagePins;
   expanded: boolean;
   busy: boolean;
   canSettle: boolean;
@@ -46,7 +48,7 @@ export interface ThreadIdePickerProps {
 }
 
 /** Hideable blocks of the floating thread details panel; the header and settle footer always show. */
-export type ThreadInsightsSectionId = "overview" | "ide" | "subagents" | "changes" | "outputs" | "branch" | "connectors" | "nora-connectors" | "skills";
+export type ThreadInsightsSectionId = "overview" | "pinned" | "ide" | "subagents" | "changes" | "outputs" | "branch" | "connectors" | "nora-connectors" | "skills";
 export interface ThreadInsightsSectionDefinition {
   id: ThreadInsightsSectionId;
   label: string;

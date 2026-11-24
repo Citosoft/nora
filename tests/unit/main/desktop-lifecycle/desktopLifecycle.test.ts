@@ -44,7 +44,7 @@ test("remote changes force background retention and reveal the window when disab
   assert.equal(f.lifecycle.retainWindowOnClose(), true);
   assert.equal(f.state().visible, false);
   assert.equal(f.lifecycle.shouldQuitWhenWindowsClosed(), false);
-  assert.deepEqual(f.state().menu[1], { kind: "status", label: "Remote access: Connected" });
+  assert.deepEqual(f.state().menu[1], { kind: "status", label: "Nora Relay: Connected" });
   f.changeRemote(false);
   assert.equal(f.state().visible, true);
   assert.equal(f.state().shown, 1);

@@ -1,5 +1,7 @@
 import { createContext, useEffect, useMemo, useRef, type ReactNode } from "react";
-import { useAuth } from "@clerk/expo";
+import { useAppAccount } from "@/hooks/useAppAccount";
+import { useDemoMode } from "@/hooks/useDemoMode";
+import { createDemoServices } from "@/demo/services";
 import type { RemoteAccessServices } from "@/types/remoteAccess.types";
 import { appConfig } from "@/config/appConfig";
 import { usePreferencesStore } from "@/hooks/usePreferences";
@@ -12,21 +14,22 @@ export const RemoteAccessContext = createContext<RemoteAccessServices | null>(nu
 
 /** Provides signed-in services for the current Clerk user, or null while signed out. */
 export function RemoteAccessProvider({ children }: { children: ReactNode }) {
-  const { isSignedIn, userId, getToken } = useAuth();
+  const { status, userId, getToken } = useAppAccount();
+  const demo = useDemoMode();
   const preferences = usePreferencesStore();
   // Clerk's `getToken` returns a fresh (auto-refreshed) session token; keep the latest function without rebuilding services.
   const getTokenRef = useRef(getToken);
   getTokenRef.current = getToken;
-  const activeUserId = isSignedIn && userId ? userId : null;
+  const activeUserId = status === "signed-in" && userId ? userId : null;
 
-  const services = useMemo(() => activeUserId ? createRemoteAccessServices({
+  const services = useMemo(() => demo.active ? createDemoServices(demo.storage, preferences, createId) : activeUserId ? createRemoteAccessServices({
     userId: activeUserId,
     getToken: () => getTokenRef.current(),
     controlPlaneUrl: appConfig.controlPlaneUrl,
     storage: keyValueStorage,
     preferences,
     createId
-  }) : null, [activeUserId, preferences]);
+  }) : null, [activeUserId, demo.active, demo.storage, preferences]);
 
   useEffect(() => {
     if (!services) return undefined;

@@ -54,7 +54,7 @@ export function ProjectScaffoldCompactTile({
         </div>
         <div className="min-w-0 flex-1">
           <div className="truncate text-xs font-medium">{label}</div>
-          {subtitle ? <div className="mt-1 truncate text-[11px] text-muted-foreground">{subtitle}</div> : null}
+          {subtitle ? <div className="mt-1 truncate text-[10px] text-muted-foreground">{subtitle}</div> : null}
         </div>
         {selected ? <Check className="size-4 shrink-0 text-primary" /> : null}
       </button>

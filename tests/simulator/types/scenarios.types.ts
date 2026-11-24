@@ -2,9 +2,9 @@ import type { JsonValue } from "@main/types/execution/rpc.types";
 import type { ApprovalDetails, ApprovalRequest, ExecutionFailure, QuestionRequest, RequestResponse, SubagentActivity, TimelineItem, ToolActivity, ToolDetails } from "@shared/types/conversation/contracts.types";
 import type { EmitProviderUpdate, ProviderExecution } from "@main/types/execution/provider.types";
 
-export type ScenarioId = "tour" | "tools" | "markdown" | "questions" | "approvals" | "approval-stack" | "background-requests" | "suggestions" | "connector-sign-in" | "failure" | "usage-limit" | "recovery" | "expired" | "long-output" | "slow" | "subagents" | "skills" | "provider-switch" | "output-budget" | "mcp-app" | "secrets";
+export type ScenarioId = "tour" | "thinking-orbs" | "tools" | "markdown" | "questions" | "approvals" | "approval-stack" | "background-requests" | "suggestions" | "connector-sign-in" | "failure" | "usage-limit" | "recovery" | "expired" | "long-output" | "slow" | "subagents" | "skills" | "provider-switch" | "output-budget" | "mcp-app" | "secrets";
 export interface SimulatorScenario { id: ScenarioId; label: string; description: string; }
-type SimulatorDisplayKind = "plan" | "subagent" | "changes" | "milestone" | "connector-sign-in";
+type SimulatorDisplayKind = "plan" | "subagent" | "changes" | "milestone" | "connector-sign-in" | "reasoning";
 export type SimulatorDisplayItem = { [Kind in SimulatorDisplayKind]: Omit<Extract<TimelineItem, { kind: Kind }>, "id" | "runId" | "createdAt"> }[SimulatorDisplayKind];
 export interface SimulatorApprovalStep { kind: "approval"; title: string; details: ApprovalDetails; options: ApprovalRequest["options"]; }
 export type SimulatorStep =

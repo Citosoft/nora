@@ -4,7 +4,7 @@ import { setThreadSettlement } from "./settlement";
 import { createThreadReferences } from "./references";
 import { importExternalSession, pinExternalSession } from "./externalSessions";
 import { effectiveRole } from "@shared/personalization/profiles";
-import { findEffectiveBot } from "@shared/bots/catalog";
+import { findChatBot } from "@shared/bots/noraChat";
 import { threadLayoutSchema } from "./schema";
 import { findDirectChat } from "@shared/bots/directChats";
 import { emptyThreadLayout } from "./persistence";
@@ -141,7 +141,7 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
       save(focusThreadDocument({ ...state.layout, documents: [...state.layout.documents, document] }, document)); publish({ ...state, focusRevision: state.focusRevision + 1 }); return document.id;
     },
     openDirect(workspaceId, botId) {
-      const bot = findEffectiveBot(state.boot.personalization.bots, workspaceId, state.boot.sharedBots, botId);
+      const bot = findChatBot(state.boot.personalization.bots, workspaceId, state.boot.sharedBots, botId);
       if (!bot) { publish({ ...state, error: "This bot is not available in this workspace." }); return null; }
       const chat = findDirectChat(state.summaries, bot);
       if (chat) return store.openThread(chat.conversation.id);

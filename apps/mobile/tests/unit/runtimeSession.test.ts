@@ -23,7 +23,8 @@ function setup(info: RuntimeInfo | Error) {
       if (info instanceof Error) throw info;
       return info;
     },
-    projects: unused, bots: unused, createBotChat: unused, conversations: unused, conversation: unused, timeline: unused, tasks: unused, events: unused,
+    uploadAttachment: unused, settings: unused, updateSettings: unused, botSettings: unused, saveBot: unused,
+    providerOptions: unused, projects: unused, bots: unused, createBotChat: unused, conversations: unused, conversation: unused, timeline: unused, tasks: unused, events: unused,
     realtimeTicket: unused, realtimeUrl: unused, createConversation: unused, sendMessage: unused, decideAction: unused, cancelTask: unused, inbox: unused, updateInbox: unused
   };
   const session = createRuntimeSession({

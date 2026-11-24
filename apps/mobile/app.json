@@ -3,14 +3,14 @@
     "name": "Nora",
     "slug": "nora",
     "owner": "citosoft",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "scheme": "nora",
     "orientation": "default",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/icon-ios.png",
     "userInterfaceStyle": "automatic",
-    "backgroundColor": "#0D1410",
+    "backgroundColor": "#000000",
     "ios": {
-      "bundleIdentifier": "run.withnora.app",
+      "bundleIdentifier": "com.citosoft.nora",
       "icon": "./assets/icon-ios.png",
       "supportsTablet": true,
       "config": {
@@ -20,8 +20,8 @@
     "android": {
       "package": "run.withnora.app",
       "adaptiveIcon": {
-        "backgroundColor": "#0D1410",
-        "foregroundImage": "./assets/icon.png"
+        "backgroundColor": "#000000",
+        "foregroundImage": "./assets/icon-ios.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -33,8 +33,8 @@
       "shortName": "Nora",
       "description": "Chat with your Nora agents, follow their progress and approve actions from your phone.",
       "lang": "en",
-      "themeColor": "#0D1410",
-      "backgroundColor": "#0D1410"
+      "themeColor": "#000000",
+      "backgroundColor": "#000000"
     },
     "plugins": [
       "expo-router",
@@ -46,17 +46,35 @@
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",
-          "imageWidth": 200,
+          "imageWidth": 102,
           "resizeMode": "contain",
-          "backgroundColor": "#0D1410"
+          "backgroundColor": "#FFFFFF",
+          "dark": {
+            "image": "./assets/splash-icon-dark.png",
+            "backgroundColor": "#000000"
+          }
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Choose photos to attach to your Nora messages.",
+          "cameraPermission": "Take photos to attach to your Nora messages.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "extra": {
       "eas": {
         "projectId": "1211afdd-95ba-4d2b-bc7c-e4e980af97fd"
       }
+    },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/1211afdd-95ba-4d2b-bc7c-e4e980af97fd"
     }
   }
 }

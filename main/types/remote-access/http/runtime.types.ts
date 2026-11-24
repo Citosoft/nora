@@ -1,7 +1,8 @@
+import type { ComposerAttachment, SaveComposerAttachmentPayload } from "@shared/types/agentInput.types";
 import type { RuntimeEnvironment } from "@shared/types/remote-access/directory.types";
 import type { ExecutionHost } from "@main/execution/host";
 import type { InboxService } from "@main/types/inbox/inbox.types";
-import type { NativeBoot } from "@shared/ipc/types/personalizationGateway.types";
+import type { PersonalizationBridge, NativeBoot } from "@shared/ipc/types/personalizationGateway.types";
 import type { RemoteIdentity, RemoteTokenVerifier } from "../auth.types";
 import type { RemotePresenceRecorder } from "../presence.types";
 import type { RemoteAuditEntry } from "@shared/types/remote-access/remoteAccess.types";
@@ -12,6 +13,8 @@ export interface RuntimeApiOptions {
   host: RemoteExecutionHost;
   inbox: Pick<InboxService, "snapshot" | "execute">;
   boot(): NativeBoot;
+  management?: Pick<PersonalizationBridge, "request">;
+  attachments?: { save(payload: SaveComposerAttachmentPayload): Promise<ComposerAttachment> };
   runtimeVersion: string;
   environment: RuntimeEnvironment;
   name(): string;

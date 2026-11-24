@@ -5,7 +5,9 @@ import type {
   CloudflareRequestOptions,
   CloudflareTunnel,
   HttpMethod,
-  TunnelProvider
+  TunnelProvider,
+  TunnelMaintenanceProvider,
+  TunnelInspection
 } from "../types/cloudflare.types";
 import {
   cloudflareDnsRecordListSchema,
@@ -14,13 +16,15 @@ import {
   cloudflareTunnelListSchema,
   cloudflareTunnelSchema,
   cloudflareTunnelTokenSchema,
-  ignoredResultSchema
+  ignoredResultSchema,
+  tunnelInspectionSchema,
+  tunnelInspectionListSchema
 } from "./envelope";
 
 const DEFAULT_BASE_URL = "https://api.cloudflare.com/client/v4";
 
 /** Creates the fetch-based Cloudflare adaptor. Responses are parsed into internal shapes; raw payloads never escape. */
-export function createCloudflareClient(config: CloudflareClientConfig): TunnelProvider {
+export function createCloudflareClient(config: CloudflareClientConfig): TunnelProvider & TunnelMaintenanceProvider {
   const baseUrl = config.baseUrl ?? DEFAULT_BASE_URL;
   const accountPath = `/accounts/${encodeURIComponent(config.accountId)}/cfd_tunnel`;
   const zonePath = `/zones/${encodeURIComponent(config.zoneId)}/dns_records`;
@@ -61,6 +65,48 @@ export function createCloudflareClient(config: CloudflareClientConfig): TunnelPr
   }
 
   return {
+    async listForCleanup() {
+      // Collect all pages before deleting anything: deleting while paging can shift subsequent pages.
+      const result: TunnelInspection[] = [];
+      // Explicitly request both sets: Cloudflare now excludes deleted tunnels when this filter is omitted.
+      for (const deleted of [false, true]) {
+        for (let page = 1; ; page += 1) {
+          const batch = await requireResult("GET", accountPath, tunnelInspectionListSchema, {
+            query: { include_prefix: "nora-", is_deleted: String(deleted), per_page: "100", page: String(page) }
+          });
+          result.push(...batch.filter((tunnel) => tunnel.name.startsWith("nora-")).map(toInspection));
+          if (batch.length < 100) break;
+        }
+      }
+      return result;
+    },
+
+    async inspect(tunnelId) {
+      const tunnel = await request("GET", tunnelPath(tunnelId), tunnelInspectionSchema, { allowNotFound: true });
+      return tunnel === null ? null : toInspection(tunnel);
+    },
+
+    async deleteTunnelDns(tunnelId, hostnameSuffix) {
+      const target = `${tunnelId}.cfargotunnel.com`;
+      const records: z.infer<typeof cloudflareDnsRecordSchema>[] = [];
+      for (let page = 1; ; page += 1) {
+        const batch = await requireResult("GET", zonePath, cloudflareDnsRecordListSchema, {
+          query: { type: "CNAME", "content.exact": target, per_page: "100", page: String(page) }
+        });
+        records.push(...batch);
+        if (batch.length < 100) break;
+      }
+      for (const record of records) {
+        const label = record.name.slice(0, -(hostnameSuffix.length + 1));
+        if (record.content !== target || !record.name.endsWith(`.${hostnameSuffix}`) || !/^[a-z2-7]{32}$/.test(label)) continue;
+        // Re-read: provisioning may have repointed the hostname to a replacement tunnel since the inventory.
+        const current = await findCname(record.name);
+        if (current?.id === record.id && current.content === target) {
+          await request("DELETE", `${zonePath}/${encodeURIComponent(record.id)}`, ignoredResultSchema, { allowNotFound: true });
+        }
+      }
+    },
+
     async getTunnel(tunnelId) {
       const tunnel = await request("GET", tunnelPath(tunnelId), cloudflareTunnelSchema, { allowNotFound: true });
       return tunnel === null || isDeleted(tunnel) ? null : toTunnel(tunnel);
@@ -145,4 +191,9 @@ function isDeleted(tunnel: z.infer<typeof cloudflareTunnelSchema>): boolean {
 
 function toTunnel(tunnel: z.infer<typeof cloudflareTunnelSchema>): CloudflareTunnel {
   return { id: tunnel.id, name: tunnel.name };
+}
+
+function toInspection(tunnel: z.infer<typeof tunnelInspectionSchema>): TunnelInspection {
+  return { ...toTunnel(tunnel), status: tunnel.status ?? null, createdAt: tunnel.created_at ?? null,
+    disconnectedAt: tunnel.conns_inactive_at ?? null, deleted: isDeleted(tunnel) };
 }

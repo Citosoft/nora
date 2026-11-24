@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Check, Clock3, LoaderCircle, ShieldCheck, Square, X } from "lucide-react";
+import { Check, Clock3, LoaderCircle, ShieldCheck, Square, X, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { groupApprovalActions } from "@/components/app/logic/approvalActions";
@@ -15,7 +15,7 @@ export function NativeApprovalActions({ request, disabled, onRespond }: NativeAp
     const primary = action === groups.primary;
     const quiet = intent === "deny" || intent === "cancel";
     const Icon = sending === option.id ? LoaderCircle : intent === "cancel" ? Square : intent === "deny" ? X
-      : primary ? Check : option.scope === "session" || option.id === "acceptForSession" ? Clock3 : ShieldCheck;
+      : primary ? Check : option.switchesPolicy ? Zap : option.scope === "session" || option.id === "acceptForSession" ? Clock3 : ShieldCheck;
     return <Button key={option.id} type="button" size="sm" variant={quiet || primary ? "ghost" : "outline"}
       disabled={disabled || sending !== null} aria-label={option.label} aria-description={option.description}
       tooltip={<><span className="font-medium">{option.label}</span>{option.description && <span className="mt-1 block text-muted-foreground">{option.description}</span>}</>}

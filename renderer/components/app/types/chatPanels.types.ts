@@ -96,7 +96,7 @@ export interface ChatBranchViewProps {
   chatWorkspaceName: string | null;
 }
 export interface ChatGreetingProps { participants: ChatParticipants; }
-export interface ChatTypingProps { name: string; avatar: BotAvatar; workspaceName: string | null; waiting: boolean; }
+export interface ChatTypingProps { botId: string; name: string; avatar: BotAvatar; workspaceName: string | null; waiting: boolean; }
 export interface ChatWorkspacePickerProps {
   workspaces: readonly NativeWorkspace[];
   selectedId: string;

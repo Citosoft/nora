@@ -55,7 +55,8 @@ export function SidebarRail({ runtimeId, activeConversationId, onExpand }: Sideb
           </RailButton>
         ))}
       </ScrollView>
-      {destination("desktop-outline", "Computers", routes.home)}
+      {destination("home-outline", "Home", routes.home)}
+      {destination("desktop-outline", "Computers", routes.computers)}
       {destination("settings-outline", "Settings", routes.settings)}
     </View>
   );

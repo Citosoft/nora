@@ -24,6 +24,11 @@ export interface ResolvedBotAvatar {
   eyes: BotAvatarEyes;
   seed: number;
 }
+/**
+ * Who a direct chat can be with: a configured bot, or Nora, which has no definition but chats on its own model setting.
+ * Only what the chat itself needs; starting work threads is up to the runtime.
+ */
+export type ChatBotProfile = Pick<BotDefinition, "id" | "name" | "role" | "avatar" | "scope">;
 /** Where a bot in the effective catalog came from, for settings and override explanations. */
 export type BotOrigin = "global" | "shared" | "private";
 export interface EffectiveBot {

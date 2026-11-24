@@ -1,3 +1,4 @@
+import type { providerOptionsResponseSchema } from "@shared/remote-access/runtimeApi";
 import type { z } from "zod";
 import type { actionDecisionRequestSchema, anonymousRuntimeInfoSchema, botsResponseSchema, cancelTaskRequestSchema, createBotChatRequestSchema, commandResponseSchema, conversationDetailResponseSchema,
   conversationsResponseSchema, createConversationRequestSchema, eventsResponseSchema, projectsResponseSchema, realtimeClientMessageSchema,
@@ -28,3 +29,5 @@ export type RuntimeApiErrorCode = z.infer<typeof runtimeApiErrorCodeSchema>;
 export type RuntimeApiError = z.infer<typeof runtimeApiErrorSchema>;
 export type RealtimeClientMessage = z.infer<typeof realtimeClientMessageSchema>;
 export type RealtimeServerMessage = z.infer<typeof realtimeServerMessageSchema>;
+
+export type ProviderOptionsResponse = z.infer<typeof providerOptionsResponseSchema>;

@@ -13,7 +13,7 @@ function ProviderUpdatesButton({ notices, onUpdate, collapsed }: ProviderUpdates
   const label = notices.length === 1 ? `${notices[0].label} update available` : `${notices.length} provider updates available`;
   return <Popover open={open} onOpenChange={setOpen}>
     <PopoverTrigger asChild>
-      <Button variant="ghost" size="icon" aria-label={label} tooltip={label} className={`relative ${collapsed ? "size-8" : "h-8 w-full min-w-0"} text-muted-foreground`}>
+      <Button variant="ghost" size="icon" aria-label={label} tooltip={label} className="relative size-8 text-muted-foreground">
         <CircleArrowUp className="size-4" aria-hidden="true" /><IndicatorDot />
       </Button>
     </PopoverTrigger>
@@ -24,7 +24,7 @@ function ProviderUpdatesButton({ notices, onUpdate, collapsed }: ProviderUpdates
           <AgentToolIcon toolId={notice.toolId} label="" className="size-6 shrink-0 rounded-md bg-muted/80" imageClassName="size-4" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-medium">{notice.label}</p>
-            <p className="truncate text-[11px] text-muted-foreground">{notice.installedVersion} → {notice.latestVersion}</p>
+            <p className="truncate text-[10px] text-muted-foreground">{notice.installedVersion} → {notice.latestVersion}</p>
           </div>
           <Button variant="secondary" size="sm" className="h-7 px-2.5 text-xs" aria-label={`Update ${notice.label}`}
             onClick={() => { setOpen(false); onUpdate(notice.toolId); }}>Update</Button>
@@ -45,7 +45,7 @@ function noraUpdateLabel(state: NoraUpdateState): string {
   }
 }
 
-function NoraUpdateButton({ state, onInstall, onOpenRelease, collapsed }: NoraUpdateIndicator & { collapsed: boolean }) {
+function NoraUpdateButton({ state, onInstall, onOpenRelease }: NoraUpdateIndicator) {
   const label = noraUpdateLabel(state);
   const busy = state.phase === "downloading" || state.phase === "installing";
   // While busy the button stays focusable so its tooltip still explains the in-progress state.
@@ -54,7 +54,7 @@ function NoraUpdateButton({ state, onInstall, onOpenRelease, collapsed }: NoraUp
     else if (state.phase === "manual") onOpenRelease();
   };
   return <Button variant="ghost" size="icon" aria-label={label} aria-disabled={busy} tooltip={label}
-    className={`relative ${collapsed ? "size-8" : "h-8 w-full min-w-0"} ${busy ? "cursor-default opacity-70" : ""}`} onClick={run}>
+    className={`relative size-8 ${busy ? "cursor-default opacity-70" : ""}`} onClick={run}>
     <AppMark className={`size-4 shrink-0 ${busy ? "motion-safe:animate-pulse" : ""}`} />
     {!busy && <IndicatorDot />}
   </Button>;
@@ -64,7 +64,7 @@ function NoraUpdateButton({ state, onInstall, onOpenRelease, collapsed }: NoraUp
 export function UpdateIndicators({ providers, nora, collapsed }: UpdateIndicatorsInput & { collapsed: boolean }) {
   if (!providers && !nora) return null;
   return <div role="group" aria-label="Available updates" className={collapsed ? "flex flex-col items-center gap-1" : "contents"}>
-    {nora && <NoraUpdateButton {...nora} collapsed={collapsed} />}
+    {nora && <NoraUpdateButton {...nora} />}
     {providers && <ProviderUpdatesButton {...providers} collapsed={collapsed} />}
   </div>;
 }

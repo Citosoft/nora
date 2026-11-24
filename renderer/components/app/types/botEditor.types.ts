@@ -1,5 +1,6 @@
 import type { ConnectorGalleryEntry } from "@shared/types/connectors/gallery.types";
 import type { Connector } from "@shared/types/connectors/connectors.types";
+import type { McpServerLogo } from "@shared/types/provider/mcp.types";
 import type { BotAvatarPart } from "./botAvatar.types";
 import type { BotAvatar, BotDefinition, BotScope, BotTemplate, EffectiveBot } from "@shared/types/bots/bots.types";
 import type { ThreadModelDefault } from "@shared/types/personalization/threadModel.types";
@@ -10,6 +11,7 @@ export interface BotEditorDraft {
   role: string;
   instructions: string;
   connectorIds: string[] | undefined;
+  accountConnectors: string[];
   model: ThreadModelDefault | null;
   avatar: BotAvatar;
   scope: BotScope;
@@ -64,4 +66,19 @@ export interface BotRoutinePresetsProps {
   disabled: boolean;
   onSelect(ids: string[]): void;
   onWorkspace(id: string): void;
+}
+
+/** One connector the bot's runtime account offers; `connected` is false for ones the user never connected, which cannot be used. */
+export interface BotAccountConnectorChoice { name: string; connected: boolean; logo?: McpServerLogo; }
+/** The bot's runtime account connectors, or why there are none to choose from. */
+export type BotAccountConnectorsState =
+  | { status: "loading" }
+  | { status: "unsupported" }
+  | { status: "unavailable"; message: string }
+  | { status: "loaded"; connectors: readonly BotAccountConnectorChoice[]; notice?: string };
+export interface BotAccountConnectorFieldsProps {
+  selected: readonly string[];
+  state: BotAccountConnectorsState;
+  disabled: boolean;
+  onChange(names: string[]): void;
 }

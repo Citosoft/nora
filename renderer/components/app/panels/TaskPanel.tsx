@@ -79,19 +79,19 @@ export function TaskPanel() {
                 {completed ? "Completed" : "Open"}
               </Badge>
             </div>
-            <div className="mt-1 truncate text-[11px] text-muted-foreground" title={path}>
+            <div className="mt-1 truncate text-[10px] text-muted-foreground" title={path}>
               {path}
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <Badge variant="outline">{projectName}</Badge>
               {boardSectionTitle ? <Badge variant="outline">{boardSectionTitle}</Badge> : null}
               {updatedAt ? (
-                <span className="text-[11px] text-muted-foreground">
+                <span className="text-[10px] text-muted-foreground">
                   Updated {new Date(updatedAt).toLocaleString()}
                 </span>
               ) : null}
             </div>
-            <div className="mt-1 text-[11px] text-muted-foreground">
+            <div className="mt-1 text-[10px] text-muted-foreground">
               {isCreating ? "Creating task..." : isLoading ? "Loading task..." : isSaving ? "Saving task..." : isDirty ? "Unsaved changes" : "Saved"}
             </div>
             {assignedAgents.length ? (
@@ -222,7 +222,7 @@ export function TaskPanel() {
                   options={{
                     automaticLayout: true,
                     minimap: { enabled: false },
-                    fontSize: 13,
+                    fontSize: 12,
                     scrollBeyondLastLine: false,
                     wordWrap: "on",
                     smoothScrolling: true,
