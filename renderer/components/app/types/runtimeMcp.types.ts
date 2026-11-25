@@ -32,6 +32,7 @@ export interface McpServerTableProps {
 export interface NoraMcpServerRowProps { status: NoraToolsStatus; }
 export interface McpToolsToggleProps { count: number; expanded: boolean; controls: string; serverName: string; onToggle(): void; }
 export interface McpToolDetailsRowProps { id: string; message?: string; tools: readonly { name: string; description?: string }[]; }
+export interface McpConnectionErrorRowProps { message: string | undefined; }
 export interface McpServerTableRowProps extends DiscoveredMcpServer { logins: McpLoginControls; }
 export interface McpLoginButtonProps extends DiscoveredMcpServer { logins: McpLoginControls; compact?: boolean; }
 export interface McpProviderNoticeProps { entry: RuntimeMcpEntry; }

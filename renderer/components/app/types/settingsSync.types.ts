@@ -13,4 +13,4 @@ export interface SettingsSyncController {
   setEnabled(enabled: boolean): void;
   sync(): void;
 }
-export type PortableAppKeys = Pick<AppSettings, "defaultSplitViewGridColumns" | "defaultSplitViewGridRows" | "rememberLastSplitViewPerWorkspace" | "confirmSplitViewDelete" | "showWorkspaceSessionTabs" | "agentCompletionNotificationsEnabled" | "openInternalBrowserOnNewPortDetection" | "fileEditorThemeId">;
+export type PortableAppKeys = Pick<AppSettings, "defaultSplitViewGridColumns" | "defaultSplitViewGridRows" | "rememberLastSplitViewPerWorkspace" | "confirmSplitViewDelete" | "showWorkspaceSessionTabs" | "agentCompletionNotificationsEnabled" | "openInternalBrowserOnNewPortDetection" | "fileEditorThemeId" | "threadBackdrop">;

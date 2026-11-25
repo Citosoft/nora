@@ -238,8 +238,12 @@ export const conversationCommandSchema = z.discriminatedUnion("kind", [
   z.object({ ...commandBase, kind: z.literal("unarchive") }).strict(),
   /** Retitles a thread, settled or not. */
   z.object({ ...commandBase, kind: z.literal("rename"), title: z.string().trim().min(1).max(200) }).strict(),
+  /** Switches a thread between read-only and writable workspace access when it is idle. */
+  z.object({ ...commandBase, kind: z.literal("set-access"), access: z.enum(["read", "write"]) }).strict(),
   /** Chooses where a direct chat starts new tasks. */
   z.object({ ...commandBase, kind: z.literal("set-direct-workspace"), workspaceId: id }).strict(),
+  /** Settles a direct chat and retires it, so the bot's next message starts a fresh chat; refused while it has active or queued work. */
+  z.object({ ...commandBase, kind: z.literal("reset-direct") }).strict(),
   /** Pins or unpins one of the thread's messages, settled or not. */
   z.object({ ...commandBase, kind: z.literal("set-message-pin"), itemId: id, pinned: z.boolean() }).strict()
 ]);

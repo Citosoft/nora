@@ -6,6 +6,7 @@ import type {
 } from "@/components/app/types/appShellSignedInAssemblySources.types";
 import type { ResolvedTheme, TerminalFontId, TerminalThemeId } from "@/components/app/types";
 import type { ForgeItemsPorts } from "./forge-items/ports.types";
+import type { ThreadBackdropSettings } from "@shared/types/threadBackdrop.types";
 
 /** Read surface for session center (tabs, editor host, split views, terminal dock theming) — assembly-backed. */
 export type SessionCenterPorts = {
@@ -19,6 +20,7 @@ export type SessionCenterPorts = {
   resolvedTheme: ResolvedTheme;
   terminalThemeId: TerminalThemeId;
   terminalFontId: TerminalFontId;
+  threadBackdrop: ThreadBackdropSettings;
   /** Same payload as former `CenterContentBuildProvider`; derived from assembly in one place. */
   centerContentBuild: AppCenterContentValueArgs;
 };

@@ -1,7 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { conversationSchema, requestSchema, runSchema, timelineItemSchema } from "@shared/conversations/contracts";
-import type { ConversationSnapshot, TimelineItem, WorkspaceRef } from "@shared/types/conversation/contracts.types";
+import type { Conversation, ConversationSnapshot, TimelineItem, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import { workspacesOverlap } from "./workspaceConflict";
 import { loadCheckpoint } from "./checkpoints/storage";
 import { readJsonRow } from "./sqliteRows";
@@ -14,7 +14,7 @@ import { ExecutionCommandError } from "./errors";
 const headSchema = z.object({ cursor: z.number().int().nonnegative(), json: z.string() });
 const idRowSchema = z.object({ id: z.string() });
 const positionRowSchema = z.object({ position: z.number().int().positive(), json: z.string() });
-const countRowSchema = z.object({ count: z.number().int().nonnegative() });
+const summaryRowSchema = z.object({ latest: z.string().nullable(), queuedCount: z.number().int().nonnegative(), pendingRequestCount: z.number().int().nonnegative() });
 const outputRowSchema = z.object({ conversationId: z.string(), json: z.string() });
 // These literals come exclusively from the domain enum, never command or provider input.
 const activeSql = activeRunStates.map((state) => `'${state}'`).join(", ");
@@ -101,18 +101,28 @@ export class SqliteQueries {
       .all().filter((row) => workspacesOverlap(readJsonRow(row, conversationSchema).workspace, workspace))
       .map((row) => idRowSchema.parse(row).id);
   }
+  maintenanceConversations(scope: "workers" | "claude" | "all"): Conversation[] {
+    const scopeFilter = scope === "workers" ? "AND json_extract(json, '$.source.kind') = 'worker'"
+      : scope === "claude" ? "AND json_extract(json, '$.provider.kind') = 'claude'" : "";
+    return this.database.prepare(`SELECT json FROM conversation_heads
+      WHERE json_extract(json, '$.archivedAt') IS NULL AND NOT coalesce(json_extract(json, '$.queuePaused'), 0) ${scopeFilter}
+      ORDER BY rowid`).all().map((row) => readJsonRow(row, conversationSchema));
+  }
+
   summaries(projectId?: string): ConversationSummary[] {
-    const heads = projectId === undefined
-      ? this.database.prepare("SELECT id, json FROM conversation_heads ORDER BY rowid").all()
-      : this.database.prepare("SELECT id, json FROM conversation_heads WHERE project_id = ? ORDER BY rowid").all(projectId);
-    return heads.map((row) => {
-      const id = idRowSchema.parse(row).id;
+    const statement = this.database.prepare(`SELECT h.json,
+      (SELECT r.json FROM conversation_runs r WHERE r.conversation_id = h.id
+        ORDER BY CASE WHEN r.state IN (${activeSql}) THEN 0 WHEN r.state = 'queued' THEN 2 ELSE 1 END,
+          r.position DESC LIMIT 1) AS latest,
+      (SELECT count(*) FROM conversation_runs r WHERE r.conversation_id = h.id AND r.state = 'queued') AS queuedCount,
+      (SELECT count(*) FROM conversation_requests q WHERE q.conversation_id = h.id AND q.status = 'pending') AS pendingRequestCount
+      FROM conversation_heads h ${projectId === undefined ? "" : "WHERE h.project_id = ?"} ORDER BY h.rowid`);
+    const rows = projectId === undefined ? statement.iterate() : statement.iterate(projectId);
+    return Array.from(rows, (row) => {
+      const { latest, queuedCount, pendingRequestCount } = summaryRowSchema.parse(row);
       const conversation = readJsonRow(row, conversationSchema);
-      const latest = this.database.prepare(`SELECT json FROM conversation_runs WHERE conversation_id = ?
-        ORDER BY CASE WHEN state IN (${activeSql}) THEN 0 WHEN state = 'queued' THEN 2 ELSE 1 END, position DESC LIMIT 1`).get(id);
-      const queuedCount = this.count("SELECT count(*) AS count FROM conversation_runs WHERE conversation_id = ? AND state = 'queued'", id);
-      const pendingRequestCount = this.count("SELECT count(*) AS count FROM conversation_requests WHERE conversation_id = ? AND status = 'pending'", id);
-      return { ...summarizeConversation({ conversation, runs: latest ? [readJsonRow(latest, runSchema)] : [], requests: [] }), queuedCount, pendingRequestCount };
+      const runs = latest === null ? [] : [runSchema.parse(JSON.parse(latest))];
+      return { ...summarizeConversation({ conversation, runs, requests: [] }), queuedCount, pendingRequestCount };
     });
   }
   outputItems(projectId: string, limit: number): { conversationId: string; item: TimelineItem }[] {
@@ -123,7 +133,6 @@ export class SqliteQueries {
       ORDER BY i.rowid DESC LIMIT ?`).all(projectId, limit);
     return rows.reverse().map((row) => ({ conversationId: outputRowSchema.parse(row).conversationId, item: readJsonRow(row, timelineItemSchema) }));
   }
-  private count(sql: string, id: string): number { return countRowSchema.parse(this.database.prepare(sql).get(id)).count; }
 
   header(conversationId: string): ConversationHeader | null {
     const state = this.state(conversationId);

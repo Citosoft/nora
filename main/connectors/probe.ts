@@ -4,6 +4,7 @@ import { resolveMcpServerLogo } from "@main/providers/mcpLogo";
 import type { ConnectorCredentials, ConnectorProbe, StoredConnector } from "@main/types/connectors/connectors.types";
 import type { McpServer } from "@shared/types/provider/mcp.types";
 import { toolInputSchemaOf } from "@shared/providers/mcp";
+import { connectorConnectionError } from "./connectionError";
 
 const PROBE_TIMEOUT_MS = 20_000;
 const MAX_TOOL_PAGES = 20;
@@ -11,6 +12,8 @@ const isUnauthorized = (error: unknown): boolean => error instanceof StreamableH
 
 /** Converts a connection failure into a message the user can act on, without exposing raw transport details. */
 function failureMessage(connector: StoredConnector, error: unknown): string {
+  const connectionError = connectorConnectionError(error, connector.url);
+  if (connectionError) return connectionError;
   if (error instanceof StreamableHTTPError) {
     if (error.code === 404) return "The server did not answer at this URL. Check that it is the server's MCP endpoint (often ending in /mcp).";
     if (error.code === 405) return "This server does not support Streamable HTTP, which Nora connectors require.";
@@ -54,7 +57,7 @@ export async function probeConnector(connector: StoredConnector, credentials: Co
     try { return { status: "connected", ...await listTools(connector, headers, fetchFn) }; }
     catch (error) {
       if (connector.auth.kind === "oauth" && isUnauthorized(error)) {
-        if (attempt > 0) return needsAuth;
+        if (attempt > 0) { credentials.requireSignIn(connector); return needsAuth; }
         headers = await credentials(connector, { forceRefresh: true });
         if (!headers) return needsAuth;
         continue;

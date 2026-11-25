@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { LoaderCircle, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { WorkspaceHomeHeading } from "./WorkspaceHomeHeading";
 import { useWorkspaceHomeTasks } from "@/components/app/hooks/useWorkspaceHomeTasks";
 import type { UpcomingTask, WorkspaceHomeTasksProps } from "@/components/app/types/workspace-home/tasks.types";
 
@@ -15,12 +16,10 @@ export function WorkspaceHomeTasks({ projectId }: WorkspaceHomeTasksProps) {
     try { await start(task); } catch (cause) { setStartError(cause instanceof Error ? cause.message : "The thread could not be started."); } finally { setStarting(null); }
   };
   return <section aria-labelledby="home-tasks-title">
-    <div className="mb-2 flex items-center justify-between gap-2">
-      <h2 id="home-tasks-title" className="text-sm font-medium">Next up</h2>
-      <Button type="button" variant="ghost" size="sm" className="h-6 px-1.5 text-xs text-muted-foreground" onClick={openBoard}>{more > 0 ? `All tasks (+${more})` : "Task board"}</Button>
-    </div>
+    <WorkspaceHomeHeading id="home-tasks-title" count={tasks.length ? tasks.length + more : undefined}
+      action={<Button type="button" variant="ghost" size="sm" className="h-6 px-1.5 text-xs text-muted-foreground" onClick={openBoard}>{more > 0 ? `All tasks (+${more})` : "Task board"}</Button>}>Next up</WorkspaceHomeHeading>
     {error && <p role="alert" className="mb-2 text-xs text-destructive">{error}</p>}
-    {tasks.length ? <ul className="overflow-hidden rounded-lg border">
+    {tasks.length ? <ul className="overflow-hidden rounded-xl border bg-card/40">
       {tasks.map((entry) => <li key={entry.task.path} className="group flex items-center gap-1 border-b last:border-0 hover:bg-muted/50">
         <button type="button" onClick={() => open(entry)} className="min-w-0 flex-1 px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring">
           <span className="block truncate text-sm" title={entry.task.title}>{entry.task.title}</span>

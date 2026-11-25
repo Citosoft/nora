@@ -31,20 +31,18 @@ test("submission requires a valid answer for every question", () => {
   assert.equal(areQuestionAnswersComplete(questions, { ...answers, targets: [] }), false);
   assert.equal(areQuestionAnswersComplete(questions, { ...answers, details: ["  "] }), false);
   assert.equal(areQuestionAnswersComplete(questions, { ...answers, approach: ["A", "B"] }), false);
-  assert.equal(areQuestionAnswersComplete(questions, { ...answers, approach: ["invalid"] }), false);
+  assert.equal(areQuestionAnswersComplete(questions, { ...answers, approach: ["Custom"] }), true);
   assert.equal(areQuestionAnswersComplete(questions, {}), false);
 });
 
-test("Other answers require text and coexist with multiple selections only when allowed", () => {
-  const question = { ...multiple, allowOther: true };
-  const pending = setOtherQuestionAnswer(question, ["B"], "");
+test("Other answers require text and coexist with multiple selections", () => {
+  const pending = setOtherQuestionAnswer(multiple, ["B"], "");
   assert.deepEqual(pending, ["B", ""]);
-  assert.equal(areQuestionAnswersComplete([question], { targets: pending }), false);
-  const answers = setOtherQuestionAnswer(question, pending, "Custom answer");
-  assert.deepEqual(selectQuestionOption(question, answers, "C", true), ["B", "C", "Custom answer"]);
-  assert.equal(areQuestionAnswersComplete([question], { targets: answers }), true);
-  assert.equal(areQuestionAnswersComplete([multiple], { targets: answers }), false);
-  assert.deepEqual(setOtherQuestionAnswer({ ...single, allowOther: true }, ["B"], "Custom"), ["Custom"]);
+  assert.equal(areQuestionAnswersComplete([multiple], { targets: pending }), false);
+  const answers = setOtherQuestionAnswer(multiple, pending, "Custom answer");
+  assert.deepEqual(selectQuestionOption(multiple, answers, "C", true), ["B", "C", "Custom answer"]);
+  assert.equal(areQuestionAnswersComplete([multiple], { targets: answers }), true);
+  assert.deepEqual(setOtherQuestionAnswer(single, ["B"], "Custom"), ["Custom"]);
 });
 
 test("selected answers match the execution response contract for mixed question types", () => {

@@ -120,6 +120,10 @@ import { createLoopRunner } from "./loops/loopRunner";
 import { createLoopThreadRuntime } from "./loops/threadRuntime";
 import type { LoopRunner } from "./types/loopRunner.types";
 import { createWorktreeCheckoutSync, readyWorktreePaths } from "./helpers/worktreeCheckoutSync";
+import { applyAppProfile } from "./helpers/appProfile";
+
+// First statement: everything below reads Nora state paths or Electron userData.
+applyAppProfile(app, { homeDirectory: os.homedir(), productName: APP_SHORT_NAME });
 
 let mainWindow: BrowserWindow | null = null;
 let orchestrator: OrchestratorFacade;

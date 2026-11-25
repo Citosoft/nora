@@ -28,6 +28,7 @@ import { ChatTranscript } from "./ChatTranscript";
 import { ChatTyping } from "./ChatTyping";
 import { ChatRequests } from "./ChatRequests";
 import { ChatComposer } from "./ChatComposer";
+import { canForceEndThread } from "@/components/app/logic/threadStopControl";
 import { SecretPromptStack } from "@/components/app/panels/conversations/SecretPromptStack";
 import { ChatWorkspacePicker } from "./ChatWorkspacePicker";
 import { useDirectChatFollowsWorkspace } from "@/components/app/hooks/useDirectChatFollowsWorkspace";
@@ -88,7 +89,10 @@ export function ChatConversationPanel() {
   const avatarState: BotAvatarState = settled ? "settled" : current?.waiting ? "waiting" : active ? "thinking" : executionFailure ? "failed" : "idle";
   const text = pending?.submit.instruction ?? document.text;
   const canSend = !busy && !settled && (!conversationId || !!header) && (!!pending || (!!runtime.readyBinding && !!document.text.trim()));
-  const stoppable = !!active && active.state !== "recovering" && !pending && !document.text.trim();
+  const stoppable = !!active && !canForceEndThread(active.state) && !pending && !document.text.trim();
+  const endTurn = active && canForceEndThread(active.state)
+    ? () => void execute({ kind: "interrupt", commandId: crypto.randomUUID(), conversationId: active.conversationId, runId: active.id })
+    : null;
   const mentions = useMemo(() => participants?.kind === "group" ? participants.members.map((member) => ({ id: member.botId, name: member.name,
     detail: member.role || undefined, icon: <BotAvatar avatar={member.avatar} size={20} /> })) : undefined, [participants]);
   const direct = participants?.kind === "direct" ? participants.bot : null;
@@ -114,13 +118,15 @@ export function ChatConversationPanel() {
   const botOf = (botId: string | null) => participants.kind === "direct" ? participants.bot : participants.members.find((member) => member.botId === botId) ?? null;
   const branchTarget = tabThread ? { kind: "thread" as const, thread: tabThread } : tabDraft ? { kind: "draft" as const, draft: tabDraft } : null;
   const branchBot = tabThread ? tabThread.author ?? botOf(tabThread.botId) : tabDraft ? botOf(tabDraft.botId) : null;
+  // Only a saved, current chat can be reset; a reset one is settled history, and a draft has nothing to reset.
+  const reset = savedDirect && !savedDirect.retiredAt ? { disabled: busy || !!active || !!pending, run: ports.resetDirectChat } : null;
   const sidebarThreads: ChatSidebarThreads = { chatId: conversationId, onOpenFull: ports.openThread, resolve: (threadId) => {
     const thread = workThreads.get(threadId);
     const bot = thread ? thread.author ?? botOf(thread.botId) : null;
     return thread && bot ? { thread, bot } : null;
   } };
   return <Tabs value={tab} onValueChange={chatTabs.select} asChild><section className="flex min-h-0 min-w-0 flex-1 flex-col" aria-label={participants.kind === "direct" ? `Chat with ${participants.bot.name}` : "Group chat"}>
-    <ChatHeader participants={participants} state={avatarState} tabs={chatTabs.tabs} drafts={chatTabs.drafts}
+    <ChatHeader participants={participants} tabs={chatTabs.tabs} drafts={chatTabs.drafts}
       onNewBranch={conversationId ? (botId) => chatTabs.startDraft(botId) : undefined} onCloseDraft={chatTabs.closeDraft} onCloseThread={setClosing} />
     <ChatCloseThreadDialog thread={closing ? workThreads.get(closing) ?? null : null} onCancel={() => setClosing(null)} onConfirm={confirmClose} />
     <TabsContent value={CHAT_TAB} className="flex min-h-0 flex-1">
@@ -146,18 +152,22 @@ export function ChatConversationPanel() {
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       {/* Bots answer a chat from their own threads, so their secret prompts surface here, where the user is. */}
       {conversationId && <SecretPromptStack conversationId={conversationId} />}
-      {active?.state === "recovering" && <Button type="button" size="sm" variant="outline" disabled={busy}
-        onClick={() => void execute({ kind: "reconcile", commandId: crypto.randomUUID(), conversationId: active.conversationId, runId: active.id })}>Check status</Button>}
+      {endTurn && <div className="flex flex-wrap items-center gap-2">
+        {active?.state === "recovering" && <Button type="button" size="sm" variant="outline" disabled={busy}
+          onClick={() => void execute({ kind: "reconcile", commandId: crypto.randomUUID(), conversationId: active.conversationId, runId: active.id })}>Check status</Button>}
+        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={endTurn}
+          aria-label={active?.state === "stopping" ? "End turn that is still stopping" : "End turn whose outcome is unconfirmed"}>End turn</Button>
+      </div>}
       {header && <NativeQueue conversationId={header.conversation.id} runs={header.queuedRuns} paused={header.conversation.queuePaused} busy={busy} execute={execute} />}
       <ChatComposer inputRef={composer} value={text} disabled={!!pending || settled} canSend={canSend} mentions={mentions} footer={footer}
         placeholder={settled ? "Reopen this chat to continue" : `Message ${name}`}
         sendLabel={pending ? "Retry saved message" : active ? "Queue message" : "Send message"}
-        stop={stoppable && active ? { label: active.state === "stopping" ? "Stopping" : "Stop", disabled: busy || active.state === "stopping",
+        stop={stoppable && active ? { label: "Stop", disabled: busy,
           onStop: () => void execute({ kind: "interrupt", commandId: crypto.randomUUID(), conversationId: active.conversationId, runId: active.id }) } : null}
         onChange={setText} onSubmit={() => void submit()} />
     </div>
     </div>
-    <ChatSidebar bot={direct ? { bot: direct, state: avatarState } : null} context={context} connectors={connectorSubject} threads={sidebarThreads}
+    <ChatSidebar bot={direct ? { bot: direct, state: avatarState, reset } : null} context={context} connectors={connectorSubject} threads={sidebarThreads}
       work={{ activity, threads: ports.botWorkThreads, onSettleThread: ports.settleThread }} />
     </TabsContent>
     {branchTarget && branchBot && <TabsContent value={tab} className="flex min-h-0 flex-1 flex-col">

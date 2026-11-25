@@ -41,6 +41,8 @@ export interface ThreadWorkspaceStore {
   removeThreadReference(documentId: string, referenceId: string): void;
   readonly client: ConversationClient;
   setSettled(target: ThreadSettlementTarget, settled: boolean): Promise<void>;
+  /** Settles and retires a saved direct chat, then opens a fresh one with its bot; rejects with a user-meaningful message. */
+  resetDirectChat(documentId: string): Promise<void>;
   /** Retitles a stored thread; rejects with a user-meaningful message. */
   renameThread(conversationId: string, title: string): Promise<void>;
   resumeExternal(workspaceId: string, session: ExternalSession): Promise<void>;

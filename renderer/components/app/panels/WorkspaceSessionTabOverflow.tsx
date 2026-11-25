@@ -16,7 +16,7 @@ export function WorkspaceSessionTabOverflow({ tabs, activeTabId, onSelect }: Wor
         <Button
           variant="ghost"
           style={{ width: SESSION_TAB_MORE_WIDTH }}
-          className="h-8 shrink-0 rounded-md px-2 text-xs text-muted-foreground hover:bg-muted"
+          className="app-no-drag h-8 shrink-0 rounded-md px-2 text-xs text-muted-foreground hover:bg-muted"
           aria-label={`More tabs (${tabs.length})`}
         >
           More ({tabs.length})<ChevronDown className="size-3.5 shrink-0" />

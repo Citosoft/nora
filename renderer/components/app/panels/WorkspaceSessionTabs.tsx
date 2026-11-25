@@ -63,8 +63,8 @@ export function WorkspaceSessionTabs({
   }, []);
 
   return (
-    <div ref={containerRef} className="workspace-shell-surface min-w-0 shrink-0 overflow-hidden border-b border-border/60 bg-background">
-      <div className="flex min-h-[46px] min-w-0 items-center gap-1 px-3 py-1.5">
+    <div ref={containerRef} className="flex h-full min-w-0 flex-1 overflow-hidden">
+      <div className="flex min-w-0 items-center gap-1 px-3">
         {visibleTabs.map((tab) => {
           const isActive = tab.id === activeTabId;
           const isBusyAgent = tab.kind === "agent" && isAgentBusyAt(tab, now);
@@ -82,7 +82,7 @@ export function WorkspaceSessionTabs({
                   title={tab.name}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "h-8 min-w-0 flex-none justify-start gap-2 rounded-md border-0 px-3 text-xs",
+                    "app-no-drag h-8 min-w-0 flex-none justify-start gap-2 rounded-md border-0 px-3 text-xs",
                     isActive
                       ? "bg-foreground/[0.1] text-foreground hover:bg-foreground/[0.1]"
                       : "bg-foreground/[0.03] text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground"
@@ -166,7 +166,7 @@ export function WorkspaceSessionTabs({
             <Button
               variant="ghost"
               size="icon"
-              className="size-8 shrink-0 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="app-no-drag size-8 shrink-0 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
               aria-label="New session tab"
             >
               <Plus className="size-4" />

@@ -1,3 +1,4 @@
+import type { RuntimeSession } from "../types/internal.types";
 import type { AgentContextPreview, AgentSession, AppState, TerminalSession } from "@shared/appTypes";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -20,8 +21,8 @@ type AgentTerminalActionsDependencies = {
   clearAgentContextFile: (agent: AgentSession) => Promise<void>;
 };
 
-const previousTerminalWorkspaces = new Map<string, string>();
-const terminalInputBuffers = new Map<string, string>();
+const previousTerminalWorkspaces = new WeakMap<Pick<RuntimeSession, "write">, string>();
+const terminalInputBuffers = new WeakMap<Pick<RuntimeSession, "write">, string>();
 
 export async function clearAgentContext(
   deps: AgentTerminalActionsDependencies,
@@ -124,9 +125,10 @@ export async function sendTerminalInput(
   if (!session) {
     throw new Error("Terminal session is not running.");
   }
-  const currentInputBuffer = `${terminalInputBuffers.get(sessionId) ?? ""}${input}`;
-  const { commands, remainingInput } = getSubmittedCommandsFromInput(currentInputBuffer);
-  terminalInputBuffers.set(sessionId, remainingInput);
+  session.write(input);
+  const { commands, remainingInput } = getSubmittedCommandsFromInput(input, terminalInputBuffers.get(session));
+  if (remainingInput) terminalInputBuffers.set(session, remainingInput);
+  else terminalInputBuffers.delete(session);
   if (shouldMarkBusy) {
     const terminal = deps.getSnapshot().terminals.find((item) => item.id === sessionId) ?? null;
     let nextWorkspace: string | null = null;
@@ -136,10 +138,10 @@ export async function sendTerminalInput(
         const resolvedWorkspace = resolveTerminalWorkspaceFromCommand(
           command,
           workspaceCursor,
-          previousTerminalWorkspaces.get(sessionId) ?? null
+          previousTerminalWorkspaces.get(session) ?? null
         );
         if (resolvedWorkspace && resolvedWorkspace !== workspaceCursor) {
-          previousTerminalWorkspaces.set(sessionId, workspaceCursor);
+          previousTerminalWorkspaces.set(session, workspaceCursor);
           workspaceCursor = resolvedWorkspace;
         }
       }
@@ -151,5 +153,4 @@ export async function sendTerminalInput(
       lastEventAt: deps.nowIso()
     });
   }
-  session.write(input);
 }

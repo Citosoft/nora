@@ -4,7 +4,7 @@ import type { StoreReader } from "./store.types";
 import type { ProviderResolver } from "./provider.types";
 
 export interface IdleCompactionDependencies {
-  store: Pick<StoreReader, "summaries" | "header" | "history" | "hasBackgroundActivity" | "writers" | "checkpointReservations">;
+  store: Pick<StoreReader, "maintenanceConversations" | "header" | "history" | "hasBackgroundActivity" | "writers" | "checkpointReservations">;
   providers: ProviderResolver;
   mode(): IdleCompactionMode;
   now(): string;

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNativeModelCatalog } from "@/components/app/hooks/useNativeModelCatalog";
 import { useNativeRuntimePorts } from "@/components/app/hooks/useNativeRuntimePorts";
-import { createModelCatalogStore, nativeProviderKey } from "@/components/app/logic/modelCatalogStore";
+import { checkoutModelCatalog, nativeProviderKey } from "@/components/app/logic/modelCatalogStore";
 import type { ProviderModelFieldsProps } from "@/components/app/types/modelPicker.types";
 import { Select } from "@/components/ui/select";
 import { ProviderOptionLabel } from "./ProviderOptionLabel";
@@ -11,7 +11,7 @@ export function ProviderModelFields({ workspace, value, onChange, labels, disabl
   const providers = providerKinds ? boot.providers.filter((entry) => providerKinds.includes(entry.kind)) : boot.providers;
   const savedKey = value ? nativeProviderKey(value) : "";
   const [providerKey, setProviderKey] = useState(savedKey);
-  const catalogs = useMemo(() => createModelCatalogStore({ client: store.client, workspace }), [store.client, workspace]);
+  const catalogs = useMemo(() => checkoutModelCatalog({ client: store.client, workspace }), [store.client, workspace]);
   const provider = providers.find((entry) => nativeProviderKey(entry) === providerKey) ?? null;
   const catalog = useNativeModelCatalog(catalogs, provider);
   const models = catalog.status === "available" ? catalog.catalog.models : [];

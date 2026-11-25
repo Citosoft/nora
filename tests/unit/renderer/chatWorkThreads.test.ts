@@ -109,7 +109,7 @@ test("the DM work groups show only the ten most recent completed threads and kee
 });
 
 test("the DM work panel hides chat execution parents while retaining their pending and completed workers", () => {
-  const chat = conversation("dm", { direct: { botId: "ada", name: "Ada", role: "Helper", avatar: ada.avatar, scope: { kind: "global" }, workspaceId: "w" } });
+  const chat = conversation("dm", { direct: { botId: "ada", name: "Ada", role: "Helper", avatar: ada.avatar, scope: { kind: "global" }, workspaceId: "w", retiredAt: null } });
   const parent = workSummary("running");
   parent.conversation.parentId = chat.id;
   const pending = workSummary("queued");

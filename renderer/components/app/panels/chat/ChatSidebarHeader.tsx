@@ -1,14 +1,19 @@
-import { Settings2 } from "lucide-react";
+import { useState } from "react";
+import { RotateCcw, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SpeakerAvatar } from "@/components/app/shared/SpeakerAvatar";
 import { BotInfoTrigger } from "@/components/app/shared/BotInfoTrigger";
 import { useBotInfo } from "@/components/app/hooks/useBotInfo";
 import { useNativeConversationPorts } from "@/components/app/hooks/useNativeConversationPorts";
 import { isNoraChat } from "@shared/bots/noraChat";
+import { ChatResetDialog } from "./ChatResetDialog";
 import type { ChatSidebarBot } from "@/components/app/types/chatPanels.types";
 
-/** The direct chat's bot above the sidebar tabs: its face, name and role (opening its info), and a shortcut to configure it. */
-export function ChatSidebarHeader({ bot, state }: ChatSidebarBot) {
+const ICON_BUTTON = "size-8 shrink-0 text-muted-foreground hover:text-foreground";
+
+/** The direct chat's bot above the sidebar tabs: its face, name and role (opening its info), resetting the chat, and a shortcut to configure the bot. */
+export function ChatSidebarHeader({ bot, state, reset }: ChatSidebarBot) {
+  const [confirmingReset, setConfirmingReset] = useState(false);
   const botInfo = useBotInfo();
   const { openBotSettings } = useNativeConversationPorts();
   // Nora has no bot definition to edit; its chat model is set in Bots settings.
@@ -21,8 +26,12 @@ export function ChatSidebarHeader({ bot, state }: ChatSidebarBot) {
         {bot.role && <span className="block truncate text-xs leading-tight text-muted-foreground">{bot.role}</span>}
       </span>
     </BotInfoTrigger>
-    {configure && <Button type="button" variant="ghost" size="icon" className="size-8 shrink-0 text-muted-foreground hover:text-foreground"
+    {reset && <Button type="button" variant="ghost" size="icon" className={ICON_BUTTON} disabled={reset.disabled}
+      aria-label="Reset chat" tooltip={reset.disabled ? "Reset chat once its work finishes" : "Reset chat"} onClick={() => setConfirmingReset(true)}>
+      <RotateCcw className="size-4" aria-hidden="true" /></Button>}
+    {configure && <Button type="button" variant="ghost" size="icon" className={ICON_BUTTON}
       aria-label={`Configure ${bot.name}`} tooltip={`Configure ${bot.name}`} onClick={configure}>
       <Settings2 className="size-4" aria-hidden="true" /></Button>}
+    {reset && <ChatResetDialog open={confirmingReset} name={bot.name} onCancel={() => setConfirmingReset(false)} onConfirm={reset.run} />}
   </header>;
 }

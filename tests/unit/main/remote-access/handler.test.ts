@@ -112,7 +112,7 @@ test("remote clients list bots and start each bot's direct chat on the runtime's
   f.boot.personalization.bots = { global: [reviewer], workspaces: {} };
   // The fixture's bare engine has no bot resolver, so supply the descriptor the real execution host derives from the bot's settings.
   f.options.host.execute = async (command) => f.execution.engine.execute(command, command.kind === "create" && command.direct
-    ? { direct: { botId: reviewer.id, name: reviewer.name, role: reviewer.role, avatar: reviewer.avatar, scope: reviewer.scope, workspaceId: command.direct.workspaceId } } : {});
+    ? { direct: { botId: reviewer.id, name: reviewer.name, role: reviewer.role, avatar: reviewer.avatar, scope: reviewer.scope, workspaceId: command.direct.workspaceId, retiredAt: null } } : {});
   const before = botsResponseSchema.parse(await (await f.request("/v1/bots")).json());
   assert.deepEqual(before.bots.map(({ id, scope, chatConversationId }) => ({ id, scope, chatConversationId })), [{ id: "reviewer", scope: { kind: "global" }, chatConversationId: null }]);
 

@@ -4,6 +4,7 @@ export interface SessionTabStackProps { children: ReactNode; className?: string;
 export interface SessionTabPaneProps {
   /** Hidden panes retain their DOM and scroll position but cannot receive input or focus. */
   visible: boolean;
+  deferMount?: boolean;
   children: ReactNode;
   className?: string;
 }

@@ -81,7 +81,7 @@ test("task tools list by column, create with details and move by column title", 
 
 test("Nora and bot threads get their own tool sets; group and direct chats and unknown threads get none", () => {
   const f = noraFixture();
-  f.conversations.set("dm", conversation("dm", { direct: { botId: "ada", name: "Ada", role: "", avatar: { seed: 1 }, scope: { kind: "global" }, workspaceId: "w" } }));
+  f.conversations.set("dm", conversation("dm", { direct: { botId: "ada", name: "Ada", role: "", avatar: { seed: 1 }, scope: { kind: "global" }, workspaceId: "w", retiredAt: null } }));
   f.conversations.set("work", conversation("work", { parentId: "dm", bot: snapshotBot(bot("ada")) }));
   assert.equal(f.deps.context("dm"), null);
   assert.equal(f.deps.context("work")?.chat?.id, "dm");

@@ -1,12 +1,12 @@
 import type { AppSettings } from "@shared/appTypes";
 import type { PortableAppearance, PortableSettings } from "@shared/types/settings-sync/sync.types";
 import { appearanceSchema } from "@shared/settings-sync/contracts";
-import { readStoredAccentColor, readStoredTerminalFontId, readStoredTerminalThemeId, readStoredThemeMode, readStoredUiFontId } from "@/components/app/logic/appPersistence";
+import { readStoredAccentColor, readStoredColorTheme, readStoredTerminalFontId, readStoredTerminalThemeId, readStoredThemeMode, readStoredUiFontId } from "@/components/app/logic/appPersistence";
 import { readUserDisplayName } from "@/components/app/logic/userDisplayName";
 import type { PortableAppKeys } from "@/components/app/types/settingsSync.types";
 
 export function readPortableAppearance(): PortableAppearance {
-  return { themeMode: readStoredThemeMode(), accentColor: readStoredAccentColor(), terminalFontId: readStoredTerminalFontId(),
+  return { themeMode: readStoredThemeMode(), colorTheme: readStoredColorTheme(), accentColor: readStoredAccentColor(), terminalFontId: readStoredTerminalFontId(),
     terminalThemeId: readStoredTerminalThemeId(), uiFontId: readStoredUiFontId(), userDisplayName: readUserDisplayName() };
 }
 export function mergeAppearance(current: PortableAppearance, values: Partial<PortableSettings>, expected: PortableSettings): PortableAppearance {
@@ -17,10 +17,12 @@ export function mergeAppearance(current: PortableAppearance, values: Partial<Por
   }
   return next;
 }
+/** Settings compare by their synced encoding so object-valued settings such as `threadBackdrop` match structurally. */
+const sameSetting = (left: unknown, right: unknown): boolean => JSON.stringify(left) === JSON.stringify(right);
 export function mergeAppPreferences(settings: AppSettings, values: Partial<PortableSettings>, expected: PortableSettings): AppSettings {
   const next = { ...settings };
-  const keys: readonly (keyof PortableAppKeys)[] = ["defaultSplitViewGridColumns", "defaultSplitViewGridRows", "rememberLastSplitViewPerWorkspace", "confirmSplitViewDelete", "showWorkspaceSessionTabs", "agentCompletionNotificationsEnabled", "openInternalBrowserOnNewPortDetection", "fileEditorThemeId"];
+  const keys: readonly (keyof PortableAppKeys)[] = ["defaultSplitViewGridColumns", "defaultSplitViewGridRows", "rememberLastSplitViewPerWorkspace", "confirmSplitViewDelete", "showWorkspaceSessionTabs", "agentCompletionNotificationsEnabled", "openInternalBrowserOnNewPortDetection", "fileEditorThemeId", "threadBackdrop"];
   const set = <K extends keyof PortableAppKeys>(key: K, value: AppSettings[K]): void => { next[key] = value; };
-  for (const key of keys) { const value = values[key]; if (value !== undefined && settings[key] === expected[key]) set(key, value); }
+  for (const key of keys) { const value = values[key]; if (value !== undefined && sameSetting(settings[key], expected[key])) set(key, value); }
   return next;
 }

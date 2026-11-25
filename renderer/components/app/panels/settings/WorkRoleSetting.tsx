@@ -1,6 +1,6 @@
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { roleProfile } from "@shared/personalization/profiles";
+import { roleSelectionLabel } from "@shared/personalization/profiles";
 import type { RoleSelection } from "@shared/types/personalization/roles.types";
 import { useNativeRuntimePorts } from "@/components/app/hooks/useNativeRuntimePorts";
 import { RolePicker } from "@/components/app/panels/personalization/RolePicker";
@@ -32,7 +32,7 @@ export function WorkRoleSetting() {
   return <Dialog.Root open={open} onOpenChange={changeOpen}>
     <SettingRow title="Work role" description="Personalize Nora for the work you do. Applies to new conversations. Existing conversations keep their role."
       control={<div className="space-y-2">
-        <p className="text-sm">{saved ? saved.id === "custom" ? "Custom role" : roleProfile(saved).label : "No role selected"}</p>
+        <p className="text-sm">{saved ? roleSelectionLabel(saved) : "No role selected"}</p>
         {saved?.id === "custom" && <p className="whitespace-pre-wrap break-words text-xs text-muted-foreground">{saved.description}</p>}
         <Dialog.Trigger asChild><Button type="button" variant="outline" size="sm">Change role</Button></Dialog.Trigger>
       </div>} />

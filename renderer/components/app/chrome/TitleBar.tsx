@@ -1,5 +1,8 @@
 import { TitleBarControls } from "@/components/app/chrome/TitleBarControls";
+import { TitleBarRoleSwitcher } from "@/components/app/chrome/TitleBarRoleSwitcher";
 import { TitleBarWorkspaceQuickSearch } from "@/components/app/chrome/TitleBarWorkspaceQuickSearch";
+import { useTitleBarContentInset } from "@/components/app/hooks/useTitleBarContentInset";
+import { useTitleBarLayout } from "@/components/app/hooks/useTitleBarLayout";
 import { AppMark } from "@/components/app/shared/AppMark";
 import type { TitleBarProps } from "@/components/app/types/component.types";
 import { DropdownMenu, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuSub } from "@/components/ui/dropdown-menu";
@@ -37,42 +40,28 @@ export function TitleBar({
   workspaceQuickSearch
 }: TitleBarProps) {
   const titleBarRef = useRef<HTMLDivElement | null>(null);
-  const leftControlsRef = useRef<HTMLDivElement | null>(null);
-  const rightControlsRef = useRef<HTMLDivElement | null>(null);
   const [titleBarWidth, setTitleBarWidth] = useState(0);
-  const [leftControlsWidth, setLeftControlsWidth] = useState(0);
-  const [rightControlsWidth, setRightControlsWidth] = useState(0);
+  const titleBarLayout = useTitleBarLayout();
+  const [middleRegion, setMiddleRegion] = useState<HTMLDivElement | null>(null);
+  const contentInset = useTitleBarContentInset(titleBarLayout?.contentColumn ?? null, middleRegion);
 
   useEffect(() => {
     const titleBarElement = titleBarRef.current;
-    const leftControlsElement = leftControlsRef.current;
-    const rightControlsElement = rightControlsRef.current;
-    if (!titleBarElement || !leftControlsElement || !rightControlsElement) {
+    if (!titleBarElement) {
       return;
     }
-    const updateWidths = () => {
+    const updateWidth = () => {
       setTitleBarWidth(titleBarElement.clientWidth);
-      setLeftControlsWidth(leftControlsElement.clientWidth);
-      setRightControlsWidth(rightControlsElement.clientWidth);
     };
-    updateWidths();
-    const observer = new ResizeObserver(updateWidths);
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
     observer.observe(titleBarElement);
-    observer.observe(leftControlsElement);
-    observer.observe(rightControlsElement);
     return () => {
       observer.disconnect();
     };
   }, []);
 
-  const isCompactTitleBar = titleBarWidth > 0 && titleBarWidth <= 1360;
   const isNarrowTitleBar = titleBarWidth > 0 && titleBarWidth <= 1200;
-  const centeredSearchAvailableWidth = Math.max(
-    0,
-    titleBarWidth - (Math.max(leftControlsWidth, rightControlsWidth) * 2 + 24)
-  );
-  const shouldUseAbsoluteCenteredSearch = centeredSearchAvailableWidth >= 208;
-  const absoluteCenteredSearchWidth = Math.min(384, centeredSearchAvailableWidth);
   const showCustomTitleMenus = !useMacTitleBarChrome;
 
   const dedupedRecentWorkspaces = useMemo(() => {
@@ -95,7 +84,7 @@ export function TitleBar({
         useMacTitleBarChrome ? "pl-0" : "pl-1.5"
       ].join(" ")}
     >
-      <div ref={leftControlsRef} className="flex min-w-0 items-center gap-2 pr-2">
+      <div className="flex shrink-0 items-center gap-2 pr-2">
         {useMacTitleBarChrome ? (
           <TitleBarControls useMacTitleBarChrome isMaximized={windowUiState.isMaximized} iconToneClass={titleBarIconToneClass} />
         ) : null}
@@ -255,45 +244,21 @@ export function TitleBar({
           </>
         ) : null}
       </div>
-      {!shouldUseAbsoluteCenteredSearch ? (
-        <div
-          className={cn(
-            "app-no-drag flex min-w-0 flex-1 justify-center",
-            workspaceQuickSearch
-              ? isNarrowTitleBar
-                ? "w-[13rem] px-1"
-                : isCompactTitleBar
-                  ? "w-[16rem] px-1.5"
-                  : "w-[min(100%,24rem)] max-w-md px-2"
-              : "w-0 overflow-hidden p-0"
-          )}
-        >
-          {workspaceQuickSearch ? (
-            <TitleBarWorkspaceQuickSearch
-              source={workspaceQuickSearch.source}
-              openRequestId={workspaceQuickSearch.openRequestId}
-              resolvedTheme={workspaceQuickSearch.resolvedTheme}
-              openShortcutLabel={workspaceQuickSearch.openShortcutLabel}
-              onPick={workspaceQuickSearch.onPick}
-            />
-          ) : null}
-        </div>
-      ) : null}
-      {workspaceQuickSearch && shouldUseAbsoluteCenteredSearch ? (
-        <div
-          className="app-no-drag absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 justify-center px-2"
-          style={{ width: `${absoluteCenteredSearchWidth}px` }}
-        >
-          <TitleBarWorkspaceQuickSearch
-            source={workspaceQuickSearch.source}
-            openRequestId={workspaceQuickSearch.openRequestId}
-            resolvedTheme={workspaceQuickSearch.resolvedTheme}
-            openShortcutLabel={workspaceQuickSearch.openShortcutLabel}
-            onPick={workspaceQuickSearch.onPick}
-          />
-        </div>
-      ) : null}
-      <div ref={rightControlsRef} className="app-no-drag ml-auto flex min-w-0 items-center justify-end gap-0">
+      <div ref={setMiddleRegion} className="relative flex h-full min-w-0 flex-1 items-center">
+        {/* Continues the content column's left border up into the chrome, stopping short of the top and bottom edges. */}
+        {contentInset > 0 ? (
+          <div aria-hidden className="pointer-events-none absolute -bottom-1.5 -top-1.5 py-2.5" style={{ left: contentInset }}>
+            <div className="h-full w-px bg-border/70" />
+          </div>
+        ) : null}
+        {/* The session panel portals the workspace tab row here; empty space around the tabs still drags the window. */}
+        <div ref={titleBarLayout?.setTabSlot} className="flex h-full min-w-0 flex-1 items-center" style={{ marginLeft: contentInset }} />
+      </div>
+      <div className="app-no-drag ml-auto flex shrink-0 items-center justify-end gap-0">
+        {workspaceQuickSearch ? (
+          <TitleBarWorkspaceQuickSearch {...workspaceQuickSearch} iconToneClass={titleBarIconToneClass} />
+        ) : null}
+        <TitleBarRoleSwitcher compact={isNarrowTitleBar} iconToneClass={titleBarIconToneClass} />
         <button
           type="button"
           className={`grid h-8 w-11 shrink-0 place-items-center ${titleBarIconToneClass} transition hover:bg-accent hover:text-foreground`}

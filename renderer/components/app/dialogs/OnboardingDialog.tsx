@@ -10,6 +10,7 @@ import { Field } from "@/components/app/shared/Field";
 import { AppMark } from "@/components/app/shared/AppMark";
 import { WizardProgress } from "@/components/app/shared/WizardProgress";
 import { AgentToolIcon, ToolPopover, WorkspaceProjectIcon } from "@/components/app/shared/Tooling";
+import { ACCENT_COLOR_OPTIONS } from "@/components/app/logic/accentColors";
 import type { AccentColor, ThemeMode, ToolPopoverState } from "@/components/app/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -75,15 +76,6 @@ export type OnboardingDialogProps = {
   onInstallNoraSkill: () => Promise<void>;
 };
 
-const ACCENT_OPTIONS: AccentColor[] = ["silver", "green", "blue", "amber", "rose", "violet"];
-const ACCENT_OPTION_CLASSES: Record<AccentColor, string> = {
-  silver: "bg-[hsl(220_9%_46%)]",
-  green: "bg-[hsl(161_67%_37%)]",
-  blue: "bg-[hsl(213_79%_47%)]",
-  amber: "bg-[hsl(32_95%_45%)]",
-  rose: "bg-[hsl(346_78%_47%)]",
-  violet: "bg-[hsl(262_73%_54%)]"
-};
 const THEME_OPTIONS: ThemeMode[] = ["system", "light", "dark"];
 const THEME_OPTION_LABELS: Record<ThemeMode, string> = {
   system: "System",
@@ -675,18 +667,18 @@ export function OnboardingDialog({
                   <div className="space-y-2 md:pl-4">
                     <div className="text-sm font-medium text-foreground">Accent color</div>
                     <div className="flex justify-center pt-3">
-                      <div className="grid grid-cols-6 gap-2 rounded-lg border border-border/70 bg-card p-2">
-                        {ACCENT_OPTIONS.map((option) => (
+                      <div className="grid grid-cols-7 gap-2 rounded-lg border border-border/70 bg-card p-2">
+                        {ACCENT_COLOR_OPTIONS.map(({ id: option, label, swatchClassName }) => (
                           <button
                             key={option}
                             type="button"
                             onClick={() => onAccentColorChange(option)}
-                            aria-label={`Use ${option} accent color`}
+                            aria-label={`Use ${label} accent color`}
                             aria-pressed={accentColor === option}
-                            title={option}
+                            title={label}
                             className={[
                               "grid h-9 w-9 place-items-center rounded-full border transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                              ACCENT_OPTION_CLASSES[option],
+                              swatchClassName,
                               accentColor === option
                                 ? "border-foreground shadow-[0_0_0_2px_hsl(var(--background)),0_0_0_4px_hsl(var(--foreground))]"
                                 : "border-border/70 hover:scale-105"

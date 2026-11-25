@@ -4,6 +4,7 @@ import type { ComposerEditorHandle } from "@/components/app/types/composerEditor
 import { executionFailureMessage } from "@/components/app/logic/executionFailureMessage";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowUp, ArrowDown, Settings, Square } from "lucide-react";
+import { canForceEndThread, threadStopLabel } from "@/components/app/logic/threadStopControl";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { NativeComposerAttachments } from "./NativeComposerAttachments";
@@ -37,6 +38,8 @@ import { getGreetingFirstName } from "@/components/app/logic/thread-workspace/gr
 import { ThreadWorkspacePicker } from "../threads/ThreadWorkspacePicker";
 import { ThreadCheckoutPicker } from "../threads/ThreadCheckoutPicker";
 import { NativeProviderPicker } from "./NativeProviderPicker";
+import { ThreadBackdrop } from "./ThreadBackdrop";
+import { showsThreadBackdrop } from "@shared/thread-backdrop/settings";
 import { NativeTimeline } from "./NativeTimeline";
 import { NativeRequestStack } from "./NativeRequestStack";
 import { SecretPromptStack } from "./SecretPromptStack";
@@ -51,6 +54,7 @@ import { effectiveBots } from "@shared/bots/catalog";
 import { botModelRevertSeed, isBotModelOverride } from "@/components/app/logic/botThreads";
 import { botConversationState } from "@/components/app/logic/botConversationState";
 import { ThreadBotBadge } from "../threads/ThreadBotBadge";
+import { ThreadAccessBadge } from "../threads/ThreadAccessBadge";
 import { BotAvatar } from "@/components/app/shared/BotAvatar";
 
 const NO_ITEMS: readonly TimelineItem[] = [];
@@ -101,7 +105,7 @@ export function NativeConversationPanel() {
   const connectorChoices = useMemo(() => buildConnectorAccessChoices(ports.state), [ports.state]);
   // "Use the bot's model": reopen the model picker set to the bot's saved model; the next send switches with the usual handoff.
   const [botModelRevert, setBotModelRevert] = useState(0);
-  const threadProvider = header?.conversation.provider ?? null;
+  const threadProvider = header?.conversation.provider ?? (conversationId ? document.provider : document.pending?.create?.provider) ?? null;
   const threadProviderKey = JSON.stringify(threadProvider);
   useEffect(() => { setBotModelRevert(0); }, [threadProviderKey]);
   const canChangeModel = !!header && !header.activeRuns.length && !header.queuedRuns.length && !header.pendingRequests.length && !runtime.busy && !document.pending && !header.conversation.archivedAt;
@@ -127,12 +131,15 @@ export function NativeConversationPanel() {
   const hasContent = !!document.text.trim() || attachments.length > 0 || references.length > 0;
   const canSend = !attachmentInput.saving && !busy && !settled && (!conversationId || !!header)
     && (!!pending || (!!runtime.readyBinding && hasContent));
-  const showStop = !attachmentInput.saving && !!active && active.state !== "recovering" && !pending && !hasContent;
+  const showStop = !attachmentInput.saving && !!active && !canForceEndThread(active.state) && !pending && !hasContent;
   const steerFollowUp = threadPreferences(ports.state.personalization).followUp === "steer" && !!capabilities?.steering
     && active?.state === "running" && !active.action && !header?.pendingRequests.length;
   const sendLabel = pending ? "Retry saved instruction" : active ? steerFollowUp ? "Steer instruction" : "Queue instruction" : "Send instruction";
-  const stopLabel = active?.state === "stopping" ? "Stopping turn" : "Stop turn";
+  const stopLabel = active ? threadStopLabel(active.state) : "Stop turn";
   const actionLabel = showStop ? stopLabel : busy ? "Sending instruction" : sendLabel;
+  const endTurn = active && canForceEndThread(active.state)
+    ? () => void execute({ kind: "interrupt", commandId: crypto.randomUUID(), conversationId: active.conversationId, runId: active.id })
+    : null;
   const send = (): void => {
     if (!canSend) return;
     rememberPrompt(pending?.submit.instruction ?? document.text);
@@ -143,14 +150,23 @@ export function NativeConversationPanel() {
   const mcpApps = useMcpAppHost(client, header ? { id: header.conversation.id, environmentId: header.conversation.workspace.environmentId } : null, chooseStarter);
   const toolOutputs = useOutputHost(client, header?.conversation.id ?? null);
   const openOutput = useThreadOutputOpener(header?.conversation.workspace.path ?? workspace.workspace.path, toolOutputs);
-  return <section className={cn("thread-conversation flex min-h-0 min-w-0 flex-1 flex-col", !conversationId && "justify-center pb-[12vh]")} aria-label={conversationId ? "Thread" : "New thread"}
+  const access = header?.conversation.workspace.access ?? workspace.workspace.access;
+  const accessMutable = !!header && !header.conversation.group && !header.conversation.direct && header.conversation.source?.kind !== "workflow";
+  const canToggleAccess = accessMutable && !active && !header.queuedRuns.length && !busy && !pending;
+  const toggleAccess = accessMutable
+    ? () => void execute({ kind: "set-access", commandId: crypto.randomUUID(), conversationId: header.conversation.id,
+      access: header.conversation.workspace.access === "read" ? "write" : "read" })
+    : undefined;
+  return <section className={cn("thread-conversation relative isolate flex min-h-0 min-w-0 flex-1 flex-col", !conversationId && "justify-center pb-[12vh]")} aria-label={conversationId ? "Thread" : "New thread"}
     data-thread-insights={header ? insightsExpanded ? "expanded" : "collapsed" : undefined}>
+    {ports.threadBackdrop && showsThreadBackdrop(ports.threadBackdrop, !!conversationId) && <ThreadBackdrop variant={conversationId ? "conversation" : "greeting"} />}
     {/* A new thread sizes the transcript to its greeting so the composer sits directly beneath it. */}
     <div className={cn("relative flex min-h-0 flex-col", conversationId ? "flex-1" : "flex-initial")}>
     {header && providerLabel !== null && <ThreadInsightsPanel header={header} providerLabel={providerLabel} connectors={connectors} skills={skills} changes={insights.changes} subagents={insights.subagents} outputs={insights.outputs} branch={insights.branch} pins={pins} expanded={insightsExpanded} busy={busy}
       canSettle={!active && !header.queuedRuns.length} hasOlderHistory={!!view?.nextBefore}
       onToggle={() => setInsightsExpanded((current) => !current)} onLoadHistory={() => void older()} onOpenOutput={openOutput}
-      onSettleChange={() => void execute({ kind: settled ? "unarchive" : "archive", commandId: crypto.randomUUID(), conversationId: header.conversation.id })} />}
+      onSettleChange={() => void execute({ kind: settled ? "unarchive" : "archive", commandId: crypto.randomUUID(), conversationId: header.conversation.id })}
+      accessToggle={toggleAccess ? { disabled: !canToggleAccess, onToggle: toggleAccess } : undefined} />}
     <TranscriptHistory scrollRef={transcript.ref} onNavigate={transcript.pauseFollowing} className={!conversationId ? "flex-initial" : undefined}>
     <div className={cn("thread-transcript min-h-0 overflow-y-auto overscroll-contain pl-10 pr-5 py-7", conversationId ? "flex-1" : "flex-initial")} ref={transcript.ref}
       onWheel={transcript.onWheel} onScroll={transcript.onScroll}>
@@ -161,8 +177,7 @@ export function NativeConversationPanel() {
         {view && <NativeTimeline items={view.items} runs={view.runHistory.runs} onLinkClick={onLinkClick} connectors={connectors}
           resolveBot={resolveBot} onOpenThread={openThread} mcpApps={mcpApps} toolOutputs={toolOutputs} onOpenOutput={openOutput} pins={pinControls} />}
         {!conversationId && <div className="mx-auto flex w-full flex-col items-center gap-7 pb-2 text-center">
-          <div className="space-y-3"><p className="text-xs font-medium text-muted-foreground">{profile?.label ?? "Your workspace"}</p>
-            <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">What would you like to work on in <span className="text-primary">{workspace.name}</span>{firstName && <>, <span className="whitespace-nowrap text-primary">{firstName}</span></>}?</h1></div>
+          <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">What would you like to work on in <span className="text-primary">{workspace.name}</span>{firstName && <>, <span className="whitespace-nowrap text-primary">{firstName}</span></>}?</h1>
           <div className="flex flex-wrap justify-center gap-2">{profile?.starters.map((starter) => <Button key={starter} variant="outline" className="h-auto max-w-full rounded-full px-4 py-2 text-left font-normal whitespace-normal"
             disabled={!!pending} onClick={() => chooseStarter(starter)}>{starter}</Button>)}</div>
         </div>}
@@ -175,13 +190,20 @@ export function NativeConversationPanel() {
     <div className="mx-auto w-full max-w-[848px] space-y-3 px-4 pb-5 sm:px-6">
       {header && <NativeRequestStack key={header.conversation.id} requests={header.pendingRequests} busy={busy} visible={ports.visible} onRespond={(requestId, response) => execute({ kind: "respond", commandId: crypto.randomUUID(), conversationId: header.conversation.id, requestId, response })} />}
       {conversationId && <SecretPromptStack conversationId={conversationId} />}
-      {active?.state === "recovering" && <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void execute({ kind: "reconcile", commandId: crypto.randomUUID(), conversationId: active.conversationId, runId: active.id })}>Check native status</Button>}
+      {endTurn && <div className="flex flex-wrap items-center gap-2">
+        {active?.state === "recovering" && <Button type="button" size="sm" variant="outline" disabled={busy}
+          onClick={() => void execute({ kind: "reconcile", commandId: crypto.randomUUID(), conversationId: active.conversationId, runId: active.id })}>Check native status</Button>}
+        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={endTurn}
+          aria-label={active?.state === "stopping" ? "End turn that is still stopping" : "End turn whose outcome is unconfirmed"}>End turn</Button>
+      </div>}
       {voice.error && <p role="alert" className="text-sm text-destructive">{voice.error}</p>}
       {(runtime.error || ports.storageError || executionFailure || pending) && <p role="alert" className="text-sm text-destructive">{runtime.error ?? ports.storageError ?? (executionFailure ? executionFailureMessage(executionFailure) : "Delivery is unconfirmed. Retry checks the same saved instruction.")}</p>}
       <div>
       {header && <NativeQueue conversationId={header.conversation.id} runs={header.queuedRuns} paused={header.conversation.queuePaused} busy={busy} execute={execute}
         steerTarget={capabilities?.steering && active?.state === "running" && active.nativeTurnId && !header.pendingRequests.length && !header.queuedRuns.some((run) => run.steering === "pending") ? active.id : null} />}
-      <form className="relative space-y-2 rounded-lg border bg-card p-3 shadow-sm focus-within:ring-1 focus-within:ring-ring/30" onSubmit={(event) => { event.preventDefault(); send(); }}
+      <form className={cn("relative space-y-2 rounded-lg border p-3 shadow-sm focus-within:ring-1 focus-within:ring-ring/30",
+        // A new thread's composer lets the pixel terrain show through faintly.
+        conversationId ? "bg-card" : "bg-card/80 backdrop-blur-sm")} onSubmit={(event) => { event.preventDefault(); send(); }}
         onDragOver={(event) => { if (event.dataTransfer.types.includes("Files")) { event.preventDefault(); event.dataTransfer.dropEffect = pending || settled || busy || attachmentInput.saving ? "none" : "copy"; } }}
         onDrop={(event) => { if (event.dataTransfer.files.length) { event.preventDefault(); void attachmentInput.addFiles(Array.from(event.dataTransfer.files)); } }}>
         <NativeComposerInput inputRef={composer} value={pending?.submit.instruction ?? document.text} disabled={!!pending || settled}
@@ -206,15 +228,16 @@ export function NativeConversationPanel() {
           <ThreadWorkspacePicker workspace={workspace} workspaces={ports.state.workspaces} disabled={!!conversationId || !!pending || busy} onSelect={ports.selectWorkspace} />
           <ThreadCheckoutPicker workspace={ports.baseWorkspace} selectedCheckoutId={workspace.workspace.checkoutId} disabled={!!conversationId || !!pending || busy}
             onSelect={ports.selectCheckout} onCreateWorktree={ports.createWorktree} />
+          <ThreadAccessBadge access={access} disabled={!canToggleAccess} onToggle={toggleAccess} />
           <span className="ml-auto truncate px-2 text-xs text-muted-foreground" title={workspace.workspace.environmentId}>{workspace.workspace.environmentId}</span>
         </div>
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0 flex-1"><NativeProviderPicker key={`${workspace.id}:${workspace.workspace.checkoutId}:${threadProviderKey}:${botModelRevert}`} state={ports.state} workspace={workspace} client={client}
             allowChange={canChangeModel} startEditing={botModelRevert > 0}
-            initial={botModelRevert && botModelSeed ? botModelSeed : document.provider} locked={header?.conversation.provider ?? (conversationId ? document.provider : pending?.create?.provider) ?? null} onBinding={setBinding} onCapabilities={setCapabilities} /></div>
+            initial={botModelRevert && botModelSeed ? botModelSeed : document.provider} locked={threadProvider} onBinding={setBinding} onCapabilities={setCapabilities} /></div>
           <ThreadContextUsage header={header ?? null} capabilities={capabilities} ready={!busy && !pending && !settled} compact={ports.compact} client={client} />
           <VoiceInputButton voice={voice} className="rounded-md" />
-          <Button type={showStop ? "button" : "submit"} size={pending ? "sm" : "icon"} className="shrink-0 rounded-md" disabled={showStop ? busy || active?.state === "stopping" : !canSend}
+          <Button type={showStop ? "button" : "submit"} size={pending ? "sm" : "icon"} className="shrink-0 rounded-md" disabled={showStop ? busy : !canSend}
             onClick={showStop && active ? () => void execute({ kind: "interrupt", commandId: crypto.randomUUID(), conversationId: active.conversationId, runId: active.id }) : undefined}
             aria-label={actionLabel}>
             {showStop ? <Square className="size-3.5 fill-current" aria-hidden="true" /> : pending ? "Retry saved instruction" : <ArrowUp className="size-4" aria-hidden="true" />}</Button>

@@ -9,6 +9,7 @@ import type { WorkspaceHomeCommandsProps } from "@/components/app/types/workspac
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { WorkspaceHomeHeading } from "./WorkspaceHomeHeading";
 
 export function WorkspaceHomeCommands({ projectId }: WorkspaceHomeCommandsProps) {
   const snapshot = useCanonicalAppSnapshot();
@@ -23,8 +24,8 @@ export function WorkspaceHomeCommands({ projectId }: WorkspaceHomeCommandsProps)
   const selected = scripts.find((script) => script.id === selectedId) ?? scripts[0];
   const matching = scripts.filter((script) => script.command.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   return <section aria-labelledby="home-commands-title">
-    <h2 id="home-commands-title" className="text-sm font-medium">Project commands</h2>
-    <div className="mt-3 flex max-w-lg items-center gap-2">
+    <WorkspaceHomeHeading id="home-commands-title" count={scripts.length}>Project commands</WorkspaceHomeHeading>
+    <div className="flex max-w-lg items-center gap-2">
       <Popover open={open} onOpenChange={(next) => { setOpen(next); if (!next) setQuery(""); }}>
         <PopoverTrigger asChild><Button variant="outline" className="h-9 min-w-0 flex-1 justify-between gap-2 font-normal" aria-label={`Choose project command, selected ${selected.command}`}>
           <span className="truncate font-mono text-xs" title={selected.command}>{selected.command}</span><ChevronDown className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />

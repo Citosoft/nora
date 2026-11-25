@@ -58,7 +58,6 @@ export interface ChatTranscriptProps {
 }
 export interface ChatHeaderProps {
   participants: ChatParticipants;
-  state: BotAvatarState;
   tabs: readonly ChatWorkThread[];
   drafts: readonly ChatBranchDraft[];
   /** Absent until the chat exists, since a branch starts from a saved chat. */
@@ -67,6 +66,7 @@ export interface ChatHeaderProps {
   /** Settles a work thread or branch, removing its tab. */
   onCloseThread(threadId: string): void;
 }
+export interface ChatGroupIdentityProps { group: Extract<ChatParticipants, { kind: "group" }>; }
 export interface ChatTabProps { thread: ChatWorkThread; onClose(): void; }
 /** `thread` is the one being closed; the dialog is open while it is set. `onConfirm` rejects with a reason when the thread cannot settle. */
 export interface ChatCloseThreadDialogProps { thread: ChatWorkThread | null; onCancel(): void; onConfirm(threadId: string): Promise<void>; }
@@ -144,5 +144,8 @@ export interface ChatSidebarProps {
   context: ChatContextInspectorInput;
 }
 /** The bot a direct chat's sidebar is headed by, with its live face state. */
-export interface ChatSidebarBot { bot: ChatBranchBot; state: BotAvatarState; }
+/** Resetting a saved direct chat; `disabled` while it has work in flight, which the reset would refuse. */
+export interface ChatResetControl { disabled: boolean; run(): Promise<void>; }
+export interface ChatSidebarBot { bot: ChatBranchBot; state: BotAvatarState; reset: ChatResetControl | null; }
+export interface ChatResetDialogProps { open: boolean; name: string; onCancel(): void; onConfirm(): Promise<void>; }
 export interface ChatConnectorsPanelProps { subject: ConnectorSubject; }

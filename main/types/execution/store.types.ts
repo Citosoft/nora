@@ -1,6 +1,6 @@
 import type { z } from "zod";
 import type { effectSchema } from "@main/execution/effectSchema";
-import type { CommandReceipt, ConversationEvent, ConversationSnapshot, EventPayload, RuntimeRequest, TimelineItem, WorkspaceRef } from "@shared/types/conversation/contracts.types";
+import type { Conversation, CommandReceipt, ConversationEvent, ConversationSnapshot, EventPayload, RuntimeRequest, TimelineItem, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ConversationHeader, ConversationHistoryPage, ConversationSummary, HistoryQuery } from "@shared/types/conversation/queries.types";
 import type { StoredCheckpoint } from "./checkpoints.types";
 
@@ -23,6 +23,7 @@ export interface StoreReader {
   checkpoint(conversationId: string, runId: string): StoredCheckpoint | null;
   checkpointReservations(): WorkspaceRef[];
   writers(workspace: WorkspaceRef): string[];
+  maintenanceConversations(scope: "workers" | "claude" | "all"): Conversation[];
   summaries(projectId?: string): ConversationSummary[];
   /** The newest items in a project that can carry outputs: tool calls with output files and reviewed turns, oldest first. */
   outputItems(projectId: string, limit: number): { conversationId: string; item: TimelineItem }[];

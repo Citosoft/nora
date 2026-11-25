@@ -6,12 +6,16 @@ import type { WaitingThread } from "@/components/app/types/thread-workspace/port
  * Lets the visible parent row say so even when the waiting child is hidden from the sidebar.
  */
 export function waitingDescendants(summaries: readonly ConversationSummary[]): Map<string, WaitingThread> {
+  const result = new Map<string, WaitingThread>();
+  if (!summaries.some(({ conversation, pendingRequestCount }) => conversation.parentId && !conversation.archivedAt && pendingRequestCount > 0)) return result;
   const children = new Map<string, ConversationSummary[]>();
   for (const summary of summaries) {
     const parent = summary.conversation.parentId;
-    if (parent && !summary.conversation.archivedAt) children.set(parent, [...(children.get(parent) ?? []), summary]);
+    if (!parent || summary.conversation.archivedAt) continue;
+    const siblings = children.get(parent);
+    if (siblings) siblings.push(summary);
+    else children.set(parent, [summary]);
   }
-  const result = new Map<string, WaitingThread>();
   const find = (conversationId: string, seen: Set<string>): WaitingThread | null => {
     for (const child of children.get(conversationId) ?? []) {
       const id = child.conversation.id;

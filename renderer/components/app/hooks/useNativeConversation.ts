@@ -14,6 +14,7 @@ export function useNativeConversation({ client, conversationId }: NativeConversa
     setView(null); setError(null);
     if (conversationId) void (async () => {
       const [header, history] = await Promise.all([client.header(conversationId), client.history({ conversationId, scope: "timeline", limit: 100 })]);
+      if (disposed) return;
       if (!header) throw new Error("Conversation was not found on its execution host");
       if (history.scope !== "timeline") throw new Error("Incompatible conversation history");
       const runHistory = await loadNativeRunHistory(client, conversationId, history.items);

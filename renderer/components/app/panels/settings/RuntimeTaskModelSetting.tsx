@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useNativeModelCatalog } from "@/components/app/hooks/useNativeModelCatalog";
 import { useNativeRuntimePorts } from "@/components/app/hooks/useNativeRuntimePorts";
 import { useThreadCenterPorts } from "@/components/app/hooks/useThreadCenterPorts";
-import { createModelCatalogStore } from "@/components/app/logic/modelCatalogStore";
+import { checkoutModelCatalog } from "@/components/app/logic/modelCatalogStore";
 import { SettingRow } from "@/components/app/panels/settings/settingsUi";
 import { Select } from "@/components/ui/select";
 import { RUNTIME_TEXT_DEFAULT_MODEL } from "@shared/ai/settings";
@@ -29,7 +29,7 @@ export function RuntimeTaskModelSetting({ title, description, ...props }: Runtim
 
 function RuntimeTaskModelFields({ provider, value, onChange, native, workspace }: RuntimeTaskModelFieldsProps) {
   const { store } = useNativeRuntimePorts();
-  const catalogs = useMemo(() => createModelCatalogStore({ client: store.client, workspace }), [store.client, workspace]);
+  const catalogs = useMemo(() => checkoutModelCatalog({ client: store.client, workspace }), [store.client, workspace]);
   const catalog = useNativeModelCatalog(catalogs, native);
   const models = catalog.status === "available" ? catalog.catalog.models : [];
   const status = catalog.status === "idle" || catalog.status === "loading" ? "Loading models…"

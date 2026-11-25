@@ -1,3 +1,4 @@
+import { readCheckoutModelCatalog } from "../modelCatalogStore";
 import { resolveModelBinding } from "@/components/app/logic/modelBinding";
 import type { ThreadWorkspaceStore } from "@/components/app/types/thread-workspace/state.types";
 import type { ThreadHandoffResult } from "@/components/app/types/thread-workspace/handoff.types";
@@ -16,7 +17,7 @@ export async function handoffThread(store: ThreadWorkspaceStore, conversationId:
   const header = await store.client.header(conversationId);
   if (!header || header.conversation.archivedAt) throw new Error("This thread is unavailable or settled. The context is retained as a draft.");
   const provider = header.conversation.provider;
-  const catalog = await store.client.catalog(provider.kind, provider.instanceId, header.conversation.workspace);
+  const catalog = await readCheckoutModelCatalog({ client: store.client, workspace: header.conversation.workspace }, provider);
   const resolution = resolveModelBinding({ provider, catalog, locked: provider,
     modelId: provider.model, policyId: provider.permissionPolicy, reasoning: provider.reasoning, subagentModel: provider.subagentModel ?? null });
   if (resolution.status !== "ready") return { kind: "draft", reason: resolution.message ?? "The model is unavailable; the context is retained as a draft." };

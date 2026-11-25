@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createModelCatalogStore, nativeProviderKey } from "@/components/app/logic/modelCatalogStore";
+import { checkoutModelCatalog, createModelCatalogStore, nativeProviderKey, readCheckoutModelCatalog } from "@/components/app/logic/modelCatalogStore";
 import { pickerWorkspace, codexProvider, claudeProvider, pickerCatalog, deferredCatalog } from "./modelPickerFixtures";
 
 test("committed and browsing views share discovery while provider kinds and accounts stay isolated", async () => {
@@ -20,16 +20,40 @@ test("committed and browsing views share discovery while provider kinds and acco
   assert.equal(calls, 1); assert.equal(store.get(codexKey), snapshot);
 });
 
-test("refresh supersedes a late request without leaking raw discovery failures", async () => {
-  const old = deferredCatalog(), newer = deferredCatalog(); let calls = 0;
-  const store = createModelCatalogStore({ workspace: pickerWorkspace, client: { async catalog() { return ++calls === 1 ? old.promise : newer.promise; } } });
+test("refresh keeps the loaded catalog visible and shares an in-flight request", async () => {
+  const next = deferredCatalog();
+  let calls = 0;
+  const initial = pickerCatalog();
+  const store = createModelCatalogStore({ workspace: pickerWorkspace, client: { async catalog() { return ++calls === 1 ? initial : next.promise; } } });
   const key = nativeProviderKey(codexProvider);
-  let events = 0; const unsubscribe = store.subscribe(() => { events++; });
-  const first = store.load(codexProvider), refresh = store.load(codexProvider, true);
-  const result = pickerCatalog(); result.catalog.models = [];
-  newer.resolve(result); await refresh; old.resolve(pickerCatalog()); await first;
-  assert.deepEqual(store.get(key), result);
-  const before = events; unsubscribe(); await store.load(codexProvider, true); assert.equal(events, before);
+  await store.load(codexProvider);
+  const refresh = store.load(codexProvider, true);
+  assert.equal(store.load(codexProvider, true), refresh);
+  assert.equal(store.load(codexProvider), refresh);
+  assert.equal(store.get(key), initial);
+  const result = pickerCatalog();
+  result.catalog.models = [];
+  next.resolve(result);
+  await refresh;
+  assert.equal(store.get(key), result);
+  assert.equal(calls, 2);
+});
+
+test("checkout cache shares equivalent workspace reads without crossing clients or checkouts", async () => {
+  let calls = 0;
+  const client = { async catalog() { calls++; return pickerCatalog(); } };
+  const deps = { client, workspace: pickerWorkspace };
+  const original = checkoutModelCatalog(deps);
+  const equivalent = { client, workspace: { ...pickerWorkspace } };
+  assert.equal(checkoutModelCatalog(equivalent), original);
+  assert.notEqual(checkoutModelCatalog({ ...deps, client: { ...client } }), original);
+  assert.notEqual(checkoutModelCatalog({ ...deps, workspace: { ...pickerWorkspace, checkoutId: "other" } }), original);
+  await Promise.all([original.load(codexProvider), readCheckoutModelCatalog(equivalent, codexProvider)]);
+  assert.equal(calls, 1);
+});
+
+test("raw model discovery errors stay out of the picker", async () => {
+  const key = nativeProviderKey(codexProvider);
   const broken = createModelCatalogStore({ workspace: pickerWorkspace, client: { async catalog() { throw new Error("secret token details"); } } });
   await broken.load(codexProvider);
   const failure = broken.get(key); assert.equal(failure.status, "unavailable");

@@ -138,3 +138,8 @@ export interface BotThreadTreeProps extends Pick<BotNavigationRowProps, "now" | 
 export interface BotThreadTreeRowProps extends Omit<BotThreadTreeProps, "nodes"> {
   node: BotThreadNode;
 }
+
+export interface SidebarProjectToolsProps extends SidebarModeStripProps {
+  projectId: string;
+  git: boolean;
+}

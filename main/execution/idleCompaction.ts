@@ -23,7 +23,7 @@ export class IdleCompaction {
   tick(): void {
     if (this.deps.mode() !== "before-expiry") return;
     const now = Date.parse(this.deps.now());
-    for (const { conversation } of this.deps.store.summaries()) {
+    for (const conversation of this.deps.store.maintenanceConversations("claude")) {
       if (conversation.provider.kind !== "claude" || conversation.archivedAt || conversation.queuePaused || !conversation.nativeConversationId
         || cacheCompactionAdvice(conversation.context, now) !== "expiring") continue;
       // Leave startup time for the provider request; never rush an almost-expired cache.

@@ -1,4 +1,3 @@
-import { auth } from "@modelcontextprotocol/sdk/client/auth.js";
 import { CONNECTOR_OAUTH_CALLBACK_PORT, isAllowedConnectorUrl } from "@shared/connectors/contracts";
 import { availableConnectors, CONNECTOR_ACCESS_ALL, connectorSelectedFor } from "@shared/connectors/access";
 import type { Connector, ConnectorInput, ConnectorSubject } from "@shared/types/connectors/connectors.types";
@@ -10,6 +9,9 @@ import { openOAuthCallback } from "./oauthCallback";
 import { probeConnector } from "./probe";
 import { createConnectorToolClient } from "./toolClient";
 import { ConnectorToolError } from "./toolError";
+import { authorizeConnector } from "./authorize";
+import { connectorConnectionError } from "./connectionError";
+import { createConnectorNetwork } from "./network";
 import { uniqueServerName } from "./serverName";
 
 /** Browser sign-in waits on the user; give up after this so an abandoned sign-in releases its callback port. */
@@ -24,7 +26,9 @@ const errorText = (error: unknown): string => error instanceof Error && error.me
  * gateway. Status comes from Nora connecting to each server, re-checked on change, refresh and when the gateway sees a rejection.
  */
 export function createConnectorService(options: ConnectorServiceOptions): ConnectorService {
-  const { store, fetch: fetchFn } = options;
+  const { store } = options;
+  const network = options.fetch ? null : createConnectorNetwork();
+  const fetchFn = options.fetch ?? network?.fetch;
   const credentials = createConnectorCredentials({ store, ...(fetchFn ? { fetch: fetchFn } : {}) });
   const states = new Map<string, ConnectorRuntimeState>();
   const checks = new Map<string, number>();
@@ -82,7 +86,6 @@ export function createConnectorService(options: ConnectorServiceOptions): Connec
           if (!isAllowedConnectorUrl(url.href)) throw new Error("The server's sign-in page is not a secure address.");
           await options.openExternal(url.href);
         } });
-      const fetchOption = fetchFn ? { fetchFn } : {};
       // Listen before the browser opens: the redirect can return before auth() does.
       const waiting = new AbortController();
       const stop = () => waiting.abort(signal.reason);
@@ -90,9 +93,7 @@ export function createConnectorService(options: ConnectorServiceOptions): Connec
       const code = callback.waitForCode(client.state(), waiting.signal);
       code.catch(() => undefined);
       try {
-        if (await auth(client, { serverUrl: connector.url, ...fetchOption }) === "REDIRECT") {
-          await auth(client, { serverUrl: connector.url, authorizationCode: await code, ...fetchOption });
-        }
+        await authorizeConnector(connector.url, client, code, signal, fetchFn);
       } finally {
         signal.removeEventListener("abort", stop);
         waiting.abort(new Error("The sign-in finished."));
@@ -143,11 +144,15 @@ export function createConnectorService(options: ConnectorServiceOptions): Connec
       signIns.set(id, controller);
       const timer = setTimeout(() => controller.abort(new Error("The sign-in timed out.")), SIGN_IN_TIMEOUT_MS);
       // An explicit sign-in always starts fresh, so the browser opens even when old tokens are still stored.
-      store.updateSecrets(id, { tokens: undefined });
-      try { await runSignIn(connector, controller.signal); }
+      store.updateSecrets(id, { tokens: undefined, discovery: undefined });
+      try {
+        await runSignIn(connector, controller.signal);
+        store.updateSecrets(id, { requiresSignIn: undefined });
+      }
       catch (error) {
-        if (store.get(id)) setState(id, NEEDS_AUTH);
-        throw new Error(`Sign-in to ${connector.name} did not complete: ${errorText(error)}`);
+        const message = `Sign-in to ${connector.name} did not complete: ${connectorConnectionError(error, connector.url) ?? errorText(error)}`;
+        if (store.get(id)) setState(id, { ...NEEDS_AUTH, message });
+        throw new Error(message);
       } finally {
         clearTimeout(timer);
         if (signIns.get(id) === controller) signIns.delete(id);
@@ -156,9 +161,9 @@ export function createConnectorService(options: ConnectorServiceOptions): Connec
       return list();
     },
     async signOut(id) {
-      existing(id);
+      const connector = existing(id);
       signIns.get(id)?.abort(new Error("Signed out."));
-      store.updateSecrets(id, { tokens: undefined });
+      credentials.requireSignIn(connector);
       forgetSession(id);
       checks.set(id, (checks.get(id) ?? 0) + 1);
       setState(id, NEEDS_AUTH);
@@ -182,6 +187,7 @@ export function createConnectorService(options: ConnectorServiceOptions): Connec
     async close() {
       for (const controller of signIns.values()) controller.abort(new Error("Nora is closing."));
       await Promise.all([gateway.close(), toolClient.close()]);
+      await network?.close();
     }
   };
 }

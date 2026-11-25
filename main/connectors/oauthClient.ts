@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import type { OAuthClientProvider } from "@modelcontextprotocol/sdk/client/auth.js";
+import type { OAuthClientProvider, OAuthDiscoveryState } from "@modelcontextprotocol/sdk/client/auth.js";
 import type { OAuthClientInformationMixed, OAuthClientMetadata, OAuthTokens } from "@modelcontextprotocol/sdk/shared/auth.js";
 import type { ConnectorOAuthSession, ConnectorStore, StoredConnector } from "@main/types/connectors/connectors.types";
 
@@ -53,7 +53,11 @@ export class ConnectorOAuthClient implements OAuthClientProvider {
 
   tokens(): OAuthTokens | undefined { return this.store.secrets(this.connector.id).tokens?.tokens; }
 
-  saveTokens(tokens: OAuthTokens): void { this.store.updateSecrets(this.connector.id, { tokens: { tokens, savedAt: this.now() } }); }
+  saveTokens(tokens: OAuthTokens): void { this.store.updateSecrets(this.connector.id, { tokens: { tokens, savedAt: this.now() }, requiresSignIn: undefined }); }
+
+  discoveryState(): OAuthDiscoveryState | undefined { return this.store.secrets(this.connector.id).discovery; }
+
+  saveDiscoveryState(discovery: OAuthDiscoveryState): void { this.store.updateSecrets(this.connector.id, { discovery }); }
 
   async redirectToAuthorization(authorizationUrl: URL): Promise<void> {
     this.signInRequired = true;
@@ -69,8 +73,8 @@ export class ConnectorOAuthClient implements OAuthClientProvider {
 
   invalidateCredentials(scope: "all" | "client" | "tokens" | "verifier" | "discovery"): void {
     if (scope === "verifier") { this.verifier = null; return; }
-    if (scope === "discovery") return;
     this.store.updateSecrets(this.connector.id, {
+      ...(scope === "all" || scope === "discovery" ? { discovery: undefined } : {}),
       ...(scope === "all" || scope === "tokens" ? { tokens: undefined } : {}),
       ...(scope === "all" || scope === "client" ? { client: undefined } : {})
     });

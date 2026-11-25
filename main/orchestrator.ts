@@ -1214,6 +1214,7 @@ export class Orchestrator implements OrchestratorFacade {
   }
 
   private createAgentTerminalActionsDependencies() {
+    if (this.agentTerminalActionsDependenciesCache) return this.agentTerminalActionsDependenciesCache;
     this.agentTerminalActionsDependenciesCache = createCachedAgentTerminalActionsDependencies(
       this.agentTerminalActionsDependenciesCache,
       createAgentTerminalActionDependencyMap({

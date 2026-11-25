@@ -48,49 +48,31 @@ export function createTerminalStateHelpers(deps: TerminalStateHelperDeps): Termi
   function updateTerminal(terminalId: string, partial: Partial<TerminalSession>): void {
     deps.updateState((state) => {
       let nextTerminalSnapshot: TerminalSession | null = null;
-      const terminals = state.terminals.map((terminal) => {
-        if (terminal.id !== terminalId) {
-          return terminal;
+      const patchTerminals = (entries: TerminalSession[]): TerminalSession[] => {
+        const index = entries.findIndex((terminal) => terminal.id === terminalId);
+        if (index < 0) return entries;
+        const terminal = { ...entries[index], ...partial };
+        if ((terminal.status === "stopped" || terminal.status === "error") &&
+          !("detectedLocalUrl" in partial) && !("detectedLocalPort" in partial)) {
+          terminal.detectedLocalUrl = null;
+          terminal.detectedLocalPort = null;
         }
-        const nextTerminal = {
-          ...terminal,
-          ...partial
-        };
-        if (
-          (nextTerminal.status === "stopped" || nextTerminal.status === "error") &&
-          !("detectedLocalUrl" in partial) &&
-          !("detectedLocalPort" in partial)
-        ) {
-          nextTerminal.detectedLocalUrl = null;
-          nextTerminal.detectedLocalPort = null;
-        }
-        nextTerminalSnapshot = nextTerminal;
-        return nextTerminalSnapshot;
-      });
-      const workspaces = state.workspaces.map((workspace) => ({
-        ...workspace,
-        terminals: workspace.terminals.map((terminal) => {
-          if (terminal.id !== terminalId) {
-            return terminal;
-          }
-          const nextTerminal = {
-            ...terminal,
-            ...partial
-          };
-          nextTerminalSnapshot = nextTerminal;
-          return nextTerminal;
-        })
-      }));
-
-      if (nextTerminalSnapshot) {
-        deps.setLiveTerminalSnapshot(terminalId, nextTerminalSnapshot);
-      }
-
-      return {
-        ...state,
-        terminals,
-        workspaces
+        nextTerminalSnapshot = terminal;
+        const next = entries.slice();
+        next[index] = terminal;
+        return next;
       };
+      const terminals = patchTerminals(state.terminals);
+      let workspaces = state.workspaces;
+      state.workspaces.forEach((workspace, index) => {
+        const updated = patchTerminals(workspace.terminals);
+        if (updated === workspace.terminals) return;
+        if (workspaces === state.workspaces) workspaces = state.workspaces.slice();
+        workspaces[index] = { ...workspace, terminals: updated };
+      });
+      if (!nextTerminalSnapshot) return state;
+      deps.setLiveTerminalSnapshot(terminalId, nextTerminalSnapshot);
+      return { ...state, terminals, workspaces };
     });
   }
 
@@ -235,6 +217,7 @@ export function createTerminalStateHelpers(deps: TerminalStateHelperDeps): Termi
     const existing = deps.getTerminalBuffer(terminalId);
     const nextOutput = capTerminalOutput(`${existing}${chunk}`);
     deps.setTerminalBuffer(terminalId, nextOutput);
+    deps.emitTerminalData(terminalId, chunk);
     const currentTerminal = deps.getSnapshot().terminals.find((item) => item.id === terminalId) || null;
     const osc7Input = `${terminalIncompleteOsc7Sequences.get(terminalId) ?? ""}${chunk}`;
     const osc7Workspace = extractOsc7WorkingDirectory(osc7Input);
@@ -258,21 +241,11 @@ export function createTerminalStateHelpers(deps: TerminalStateHelperDeps): Termi
         currentTerminal?.lastTerminalLine ||
         ""
       : (currentTerminal?.lastTerminalLine || "");
-    const shouldClearDetectedPort =
-      !!(currentTerminal?.detectedLocalUrl || currentTerminal?.detectedLocalPort) &&
-      deps.didReturnToShellPrompt(chunk);
-    const returnedToPrompt =
-      deps.didReturnToShellPrompt(chunk) ||
-      deps.didReturnToShellPrompt(nextOutput.slice(-4000));
-    const nextIsBusy = returnedToPrompt
-      ? false
-      : (
-        (currentTerminal?.isBusy ?? false) ||
-        (
-          currentTerminal?.status === "starting" &&
-          !deps.didReturnToShellPrompt(nextOutput.slice(-4000))
-        )
-      );
+    const hasDetectedPort = !!(currentTerminal?.detectedLocalUrl || currentTerminal?.detectedLocalPort);
+    const mayBeBusy = currentTerminal?.isBusy === true || currentTerminal?.status === "starting";
+    const chunkReturnedToPrompt = (hasDetectedPort || mayBeBusy) && deps.didReturnToShellPrompt(chunk);
+    const shouldClearDetectedPort = hasDetectedPort && chunkReturnedToPrompt;
+    const nextIsBusy = mayBeBusy && !chunkReturnedToPrompt && !deps.didReturnToShellPrompt(nextOutput.slice(-4000));
     const nextDetectedLocalUrl = shouldClearDetectedPort ? null : (detectedLocal.url || currentTerminal?.detectedLocalUrl || null);
     const nextDetectedLocalPort = shouldClearDetectedPort ? null : (detectedLocal.port || currentTerminal?.detectedLocalPort || null);
     const nextCurrentWorkingDirectory =
@@ -305,7 +278,6 @@ export function createTerminalStateHelpers(deps: TerminalStateHelperDeps): Termi
       });
       terminalLastStateUpdateAt.set(terminalId, now);
     }
-    deps.emitTerminalData(terminalId, chunk);
   }
 
   function appendLocalTerminalOutput(chunk: string): void {
@@ -316,6 +288,7 @@ export function createTerminalStateHelpers(deps: TerminalStateHelperDeps): Termi
     const existing = deps.getTerminalBuffer(localTerminal.id);
     const nextOutput = capTerminalOutput(`${existing}${chunk}`);
     deps.setTerminalBuffer(localTerminal.id, nextOutput);
+    deps.emitTerminalData(localTerminal.id, chunk);
     const shouldRescanMetadata = shouldRescanTerminalMetadata(chunk);
     const detectedLocal = shouldRescanMetadata
       ? deps.detectLocalUrlFromOutput(nextOutput.slice(-12000), "localhost")
@@ -353,7 +326,6 @@ export function createTerminalStateHelpers(deps: TerminalStateHelperDeps): Termi
       });
       localTerminalLastStateUpdateAt.set(localTerminal.id, now);
     }
-    deps.emitTerminalData(localTerminal.id, chunk);
   }
 
   async function resetAgentTranscript(agent: AgentSession): Promise<void> {

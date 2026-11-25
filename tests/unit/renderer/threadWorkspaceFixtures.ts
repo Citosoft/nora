@@ -73,6 +73,10 @@ export function threadWorkspaceFixture() {
         const summary = summaries.find((entry) => entry.conversation.id === command.conversationId);
         if (summary) summary.conversation.archivedAt = command.kind === "archive" ? "2026-11-09T11:00:00.000Z" : null;
       }
+      if (command.kind === "reset-direct") {
+        const conversation = summaries.find((entry) => entry.conversation.id === command.conversationId)?.conversation;
+        if (conversation?.direct) Object.assign(conversation, { archivedAt: "2026-11-09T11:00:00.000Z", direct: { ...conversation.direct, retiredAt: "2026-11-09T11:00:00.000Z" } });
+      }
       if (loseReply && command.kind === "submit") { loseReply = false; throw new Error("Reply lost"); }
       return { commandId: command.commandId, conversationId: command.conversationId, acceptedAt: "2026-11-09T11:00:00.000Z", cursor: accepted.size };
     },

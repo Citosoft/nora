@@ -59,7 +59,8 @@ function openClaudeSession(input: ClaudeOpenInput, runtime: ClaudeRuntimeOptions
         const parsed = questionInputSchema.parse(toolInput);
         const response = await input.onRequest({ kind: "question", nativeId: options.toolUseID, signal: options.signal,
           title: "Claude needs input", questions: parsed.questions.map((question) => ({ id: question.question,
-            text: question.question, options: question.options.map((option) => option.label), multiple: question.multiSelect ?? false })) });
+            text: question.question, options: question.options.map((option) => option.label), multiple: question.multiSelect ?? false,
+            allowOther: question.options.length > 0 })) });
         if (response.kind !== "question") return { behavior: "deny", message: "Question was not answered" };
         return { behavior: "allow", updatedInput: { ...toolInput,
           answers: Object.fromEntries(Object.entries(response.answers).map(([question, answers]) => [question, answers.join(", ")])) } };

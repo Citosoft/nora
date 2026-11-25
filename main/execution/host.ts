@@ -19,6 +19,7 @@ import { ExecutionCommandError } from "./errors";
 import { itemOutputFile, readItemOutputFile } from "./itemOutputs";
 import { readWorkspaceOutputs } from "./workspaceOutputs";
 import { botSnapshotSchema } from "@shared/bots/contracts";
+import { findDirectChat } from "@shared/bots/directChats";
 import { conversationCommandSchema } from "@shared/conversations/contracts";
 import { ConversationNaming } from "./conversationNaming";
 import { isActiveRun } from "./projection";
@@ -168,10 +169,9 @@ export class ExecutionHost {
     const bot = this.chatBot(request.workspaceId, request.botId);
     if (!bot) throw new ExecutionCommandError("invalid", "This bot is no longer available in this workspace. Choose another bot or Nora.");
     const scope = bot.scope.kind === "workspace" ? { kind: "workspace" as const, workspaceId: bot.scope.workspaceId } : { kind: "global" as const };
-    const existing = this.deps.store.summaries().find(({ conversation }) => conversation.direct?.botId === bot.id
-      && JSON.stringify(conversation.direct.scope) === JSON.stringify(scope));
+    const existing = findDirectChat(this.deps.store.summaries(), bot);
     if (existing && existing.conversation.id !== conversationId) throw new ExecutionCommandError("conflict", `You already have a chat with ${bot.name}. Open it from Bots.`);
-    return { botId: bot.id, name: bot.name, role: bot.role, avatar: bot.avatar, scope, workspaceId: request.workspaceId };
+    return { botId: bot.id, name: bot.name, role: bot.role, avatar: bot.avatar, scope, workspaceId: request.workspaceId, retiredAt: null };
   }
   private assertDirectWorkspace(conversationId: string, workspaceId: string): void {
     const direct = this.deps.store.header(conversationId)?.conversation.direct;

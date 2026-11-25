@@ -53,6 +53,10 @@ export function fakeHost(bots: readonly BotDefinition[], reply: (botId: string, 
         });
       }
       if (command.kind === "interrupt") emit(command.conversationId, { kind: "run", run: run(command.conversationId, command.runId, "interrupted") });
+      if (command.kind === "archive") {
+        const found = conversations.get(command.conversationId);
+        if (found) conversations.set(command.conversationId, { ...found, archivedAt: "2026-11-13T00:00:00.000Z" });
+      }
       return { commandId: command.commandId, conversationId: command.conversationId, cursor, acceptedAt: "" };
     },
     header: (id) => { const found = conversations.get(id); return found ? ({ conversation: found, activeRuns: (runs.get(id) ?? []).filter((entry) => !terminal.has(entry.state)),

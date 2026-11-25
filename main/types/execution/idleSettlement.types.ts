@@ -3,7 +3,7 @@ import type { IdleThreadStore } from "./idleThread.types";
 import type { StoreReader } from "./store.types";
 
 export interface IdleSettlementDependencies {
-  store: IdleThreadStore & Pick<StoreReader, "summaries">;
+  store: IdleThreadStore & Pick<StoreReader, "maintenanceConversations">;
   days(): number | null;
   now(): string;
   dispatch(command: ConversationCommand): void;

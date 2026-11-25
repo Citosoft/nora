@@ -5,7 +5,7 @@ import { snapshotBot } from "@shared/bots/snapshot";
 import type { NativeBoot } from "@shared/ipc/types/personalizationGateway.types";
 import { noraToolsStatus } from "@shared/nora-tools/catalog";
 import { bot } from "../../shared/bots/fixtures";
-import { conversation } from "../nora-tools/fixture";
+import { conversation, workspace } from "../nora-tools/fixture";
 import { fakeHost } from "./fakeHost";
 
 const bots = [bot("ada"), bot("rex"), bot("moss")];
@@ -19,7 +19,7 @@ const setup = (reply: Parameters<typeof fakeHost>[1]) => {
 };
 const signal = new AbortController().signal;
 
-test("ask_bot runs the bot in a read-only child thread, frames who is asking, and continues the same thread next time", async () => {
+test("ask_bot runs the bot with the caller's workspace access, frames who is asking, and continues the same thread next time", async () => {
   const { fake, asks } = setup((botId, instruction) => `${botId} heard: ${instruction.split("\n").at(-1)}`);
   const parent = conversation("parent", { title: "Release" });
   fake.add(parent);
@@ -27,11 +27,42 @@ test("ask_bot runs the bot in a read-only child thread, frames who is asking, an
   assert.equal(first.botName, "Rex");
   assert.equal(first.reply, "rex heard: Is the build green?");
   const child = fake.conversations.get(first.conversationId);
-  assert.deepEqual([child?.parentId, child?.bot?.botId, child?.workspace.access, child?.provider.permissionPolicy], ["parent", "rex", "read", "default"]);
+  assert.deepEqual([child?.parentId, child?.bot?.botId, child?.workspace.access, child?.provider.permissionPolicy], ["parent", "rex", "write", "default"]);
   const submit = fake.commands.find((command) => command.kind === "submit");
   assert.match(submit?.kind === "submit" ? submit.instruction : "", /^Nora, on the user's behalf asks you \(in thread "Release"\)/);
   const second = await asks.ask("rex", "And now?", { conversation: parent, audience: "nora" }, signal);
   assert.equal(second.conversationId, first.conversationId);
+});
+
+test("ask_bot gives global bots write access even when the caller only reads", async () => {
+  const { fake, asks } = setup(() => "ok");
+  const parent = conversation("review", { workspace: { ...workspace, access: "read" } });
+  fake.add(parent);
+  const result = await asks.ask("ada", "Fix the typo", { conversation: parent, audience: "nora" }, signal);
+  assert.equal(fake.conversations.get(result.conversationId)?.workspace.access, "write");
+});
+
+test("ask_bot keeps a workspace bot within the caller's read access", async () => {
+  const local = bot("quill", { kind: "workspace", workspaceId: "w", storage: "private" });
+  const bootWithLocal = { ...boot, personalization: { ...boot.personalization, bots: { global: bots, workspaces: { w: { private: [local], hidden: [] } } } } } as NativeBoot;
+  const fake = fakeHost([...bots, local], () => "ok");
+  let sequence = 0;
+  const asks = createAskOperations({ host: fake.host, nextId: () => `id${++sequence}`, boot: () => bootWithLocal, saveBot: async () => {}, memory: {} as never, secrets: {} as never, apps: {} as never, connectorTools: {} as never });
+  const parent = conversation("review", { workspace: { ...workspace, access: "read" } });
+  fake.add(parent);
+  const result = await asks.ask("quill", "What looks wrong?", { conversation: parent, audience: "nora" }, signal);
+  assert.equal(fake.conversations.get(result.conversationId)?.workspace.access, "read");
+});
+
+test("ask_bot promotes a leftover read-only child to a write thread when the caller can write", async () => {
+  const { fake, asks } = setup(() => "done");
+  const parent = conversation("parent");
+  fake.add(parent);
+  fake.add(conversation("old-rex", { parentId: "parent", bot: snapshotBot(bots[1]), workspace: { ...workspace, access: "read" }, title: "Rex: old" }));
+  const result = await asks.ask("rex", "Edit the footer", { conversation: parent, audience: "nora" }, signal);
+  assert.notEqual(result.conversationId, "old-rex");
+  assert.equal(fake.conversations.get("old-rex")?.archivedAt, "2026-11-13T00:00:00.000Z");
+  assert.equal(fake.conversations.get(result.conversationId)?.workspace.access, "write");
 });
 
 test("ask_bot refuses unknown bots, self-asks, loops and over-long chains", async () => {

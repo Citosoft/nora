@@ -1,10 +1,12 @@
 import { z } from "zod";
 import { idleCompactionModeSchema, roleSelectionSchema, threadPreferencesSchema } from "@shared/personalization/contracts";
 import { providerKindSchema } from "@shared/providers/providerKinds";
+import { COLOR_THEME_IDS } from "@shared/appearance/colorThemes";
+import { ACCENT_COLOR_IDS } from "@shared/appearance/accentColors";
 
 const model = z.object({ kind: providerKindSchema, model: z.string().min(1).max(512) }).strict().nullable();
 export const appearanceSchema = z.object({
-  themeMode: z.enum(["system", "light", "dark"]), accentColor: z.enum(["silver", "green", "blue", "amber", "rose", "violet"]),
+  themeMode: z.enum(["system", "light", "dark"]), colorTheme: z.enum(COLOR_THEME_IDS), accentColor: z.enum(ACCENT_COLOR_IDS),
   uiFontId: z.enum(["system", "sf-pro", "inter", "geist", "manrope", "dm-sans", "space-grotesk", "outfit", "plus-jakarta-sans"]),
   terminalThemeId: z.enum(["app", "vscode-dark", "dracula", "solarized-dark", "solarized-light"]),
   terminalFontId: z.enum(["ibm-plex-mono", "jetbrains-mono", "fira-code", "cascadia-mono", "source-code-pro", "space-mono"]),
@@ -17,6 +19,7 @@ export const portableSettingsSchema = appearanceSchema.extend({
   rememberLastSplitViewPerWorkspace: z.boolean(), confirmSplitViewDelete: z.boolean(), showWorkspaceSessionTabs: z.boolean(),
   agentCompletionNotificationsEnabled: z.boolean(), openInternalBrowserOnNewPortDetection: z.boolean(),
   fileEditorThemeId: z.enum(["default", "high-contrast"]),
+  threadBackdrop: z.object({ animated: z.boolean(), scope: z.enum(["new", "all"]) }).strict(),
   defaultRole: roleSelectionSchema.nullable(), idleCompaction: idleCompactionModeSchema,
   threadModel: model, subagentModel: model,
   ...threadPreferencesSchema.omit({ subagentModel: true }).shape

@@ -14,7 +14,7 @@ import type { ConversationClient } from "./conversationClient.types";
 export type ModelCatalogState = { status: "idle" } | { status: "loading" } | ProviderCatalogResult;
 export interface ModelCatalogStore {
   get(key: string): ModelCatalogState;
-  load(provider: NativeProvider, refresh?: boolean): Promise<void>;
+  load(provider: Pick<NativeProvider, "kind" | "instanceId">, refresh?: boolean): Promise<void>;
   subscribe(listener: () => void): () => void;
 }
 export interface ModelCatalogDeps {

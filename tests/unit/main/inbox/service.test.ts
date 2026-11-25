@@ -102,3 +102,18 @@ test("workflow runs are read at start and followed after, and marks wait for the
   assert.deepEqual(service.snapshot().items, []);
   assert.deepEqual(f.saved?.marks, {});
 });
+
+test("connector and alert changes reuse thread reads until a conversation event invalidates them", (t) => {
+  const f = inboxFixture();
+  const summaries = t.mock.method(f.deps.host, "summaries");
+  const service = createInboxService(f.deps);
+  const stop = service.start();
+  service.refreshConnectors();
+  service.refreshAlerts();
+  f.flush();
+  assert.equal(summaries.mock.callCount(), 1);
+  f.emit("run");
+  f.flush();
+  assert.equal(summaries.mock.callCount(), 2);
+  stop();
+});

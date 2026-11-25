@@ -1,3 +1,4 @@
+import { startVisiblePolling } from "@/components/app/logic/visiblePolling";
 import { useCallback, useEffect } from "react";
 import { TOOL_USAGE_POLL_INTERVAL_MS } from "@/components/app/constants/toolUsage";
 import { appToolUsageStore } from "@/components/app/logic/appToolUsageStore";
@@ -9,9 +10,7 @@ export function useToolUsage(toolId: string | null): { entry: ToolUsageEntry | n
   const snapshot = useToolUsageSnapshot();
   useEffect(() => {
     if (!toolId) return;
-    void appToolUsageStore.load(toolId);
-    const interval = window.setInterval(() => { void appToolUsageStore.load(toolId); }, TOOL_USAGE_POLL_INTERVAL_MS);
-    return () => { window.clearInterval(interval); };
+    return startVisiblePolling(() => { void appToolUsageStore.load(toolId); }, TOOL_USAGE_POLL_INTERVAL_MS);
   }, [toolId]);
   const load = useCallback((force = false) => {
     if (toolId) void appToolUsageStore.load(toolId, { force });

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { availableWorkspaceTools, DEFAULT_WORKSPACE_TOOL_PINS, toggleWorkspaceToolPin, workspaceToolPins } from "@/components/app/logic/workspace-navigation/tools";
+import { availableWorkspaceTools, defaultWorkspaceToolPins, toggleWorkspaceToolPin, workspaceToolLabels, workspaceToolPins } from "@/components/app/logic/workspace-navigation/tools";
 import { parseSidebarPreferences } from "@/components/app/logic/workspace-navigation/preferences";
 import { resolveWorkspaceToolRoute } from "@/components/app/logic/workspace-navigation/routes";
 import { workspaceActivity } from "@/components/app/logic/workspace-navigation/activity";
@@ -14,29 +14,38 @@ test("workspace tools expose every tool and restrict worktrees to git projects",
   assert.deepEqual(availableWorkspaceTools(false), ["documents", "library", "tasks", "terminals", "browser", "workflows"]);
 });
 
-test("tool pins default to common tools, respect saved order and allow hiding every tool", () => {
+const NO_ROLE = defaultWorkspaceToolPins(null);
+
+test("tool pins default to the work role's tools, respect saved order and allow hiding every tool", () => {
   const available = availableWorkspaceTools(true);
-  assert.deepEqual(workspaceToolPins(available), ["terminals", "browser", "documents", "library"]);
-  assert.deepEqual(workspaceToolPins(available, []), []);
-  assert.deepEqual(workspaceToolPins(available, ["tasks", "browser", "tasks"]), ["tasks", "browser"]);
+  assert.deepEqual(workspaceToolPins(available, undefined, NO_ROLE), ["terminals", "browser", "documents", "library"]);
+  assert.deepEqual(workspaceToolPins(available, undefined, defaultWorkspaceToolPins("developer")), ["terminals", "merge-requests", "issues", "browser"]);
+  assert.deepEqual(workspaceToolPins(available, undefined, defaultWorkspaceToolPins("writing")), ["documents", "library"]);
+  assert.deepEqual(workspaceToolPins(available, [], defaultWorkspaceToolPins("developer")), []);
+  assert.deepEqual(workspaceToolPins(available, ["tasks", "browser", "tasks"], defaultWorkspaceToolPins("writing")), ["tasks", "browser"]);
+});
+
+test("role defaults drop tools a workspace lacks and name the tools they pin", () => {
+  assert.deepEqual(workspaceToolPins(availableWorkspaceTools(false), undefined, defaultWorkspaceToolPins("developer")), ["terminals", "browser"]);
+  assert.deepEqual(workspaceToolLabels(defaultWorkspaceToolPins("product")), ["Tasks", "Issues", "Documents", "Workflows"]);
 });
 
 test("pinning is reversible and preserves unavailable pins without mutating saved choices", () => {
   const saved = ["worktrees", "documents"] as const;
-  assert.deepEqual(workspaceToolPins(availableWorkspaceTools(false), saved), ["documents"]);
+  assert.deepEqual(workspaceToolPins(availableWorkspaceTools(false), saved, NO_ROLE), ["documents"]);
   const updated = toggleWorkspaceToolPin(saved, "browser");
   assert.deepEqual(updated, ["worktrees", "documents", "browser"]);
   assert.deepEqual(toggleWorkspaceToolPin(updated, "documents"), ["worktrees", "browser"]);
   assert.deepEqual(saved, ["worktrees", "documents"]);
-  assert.deepEqual(toggleWorkspaceToolPin(DEFAULT_WORKSPACE_TOOL_PINS, "browser"), ["terminals", "documents", "library"]);
+  assert.deepEqual(toggleWorkspaceToolPin(NO_ROLE, "browser"), ["terminals", "documents", "library"]);
 });
 
 test("every available tool can be pinned and persisted independently per workspace", () => {
   const all = availableWorkspaceTools(true);
   const pins = all.reduce<WorkspaceToolId[]>((current, tool) => toggleWorkspaceToolPin(current, tool), []);
   const saved = parseSidebarPreferences(JSON.stringify({ pinnedWorkspaceIds: [], toolPins: { a: pins, b: [] } }));
-  assert.deepEqual(workspaceToolPins(all, saved.toolPins.a), all);
-  assert.deepEqual(workspaceToolPins(all, saved.toolPins.b), []);
+  assert.deepEqual(workspaceToolPins(all, saved.toolPins.a, NO_ROLE), all);
+  assert.deepEqual(workspaceToolPins(all, saved.toolPins.b, NO_ROLE), []);
   assert.deepEqual(parseSidebarPreferences(JSON.stringify(saved)), saved);
 });
 

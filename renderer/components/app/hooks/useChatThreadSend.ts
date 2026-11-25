@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { newBranchIds, sendBranchMessage } from "@/components/app/logic/chatBranchSend";
 import { chatBranchClient } from "@/components/app/clients/chatBranchClient";
+import { canForceEndThread } from "@/components/app/logic/threadStopControl";
 import type { ChatThreadSend, ChatThreadSendInput } from "@/components/app/types/chatThreadDetail.types";
 
 /** Sending to one of a chat's work threads (or starting a draft branch), with retry-safe identities, and stopping its turn. */
@@ -22,8 +23,12 @@ export function useChatThreadSend({ client, target, chatId, composer, onComposer
       setError(cause instanceof Error ? cause.message : "Delivery was not confirmed. Retry sends the same message.");
     } finally { setSending(false); }
   };
-  const stop = active && !composer.text.trim() ? { label: active.state === "stopping" ? "Stopping" : "Stop", disabled: active.state === "stopping",
+  const forceEnd = active ? canForceEndThread(active.state) : false;
+  const stop = active && (forceEnd || !composer.text.trim()) ? {
+    label: forceEnd ? "End turn" : "Stop",
+    disabled: false,
     onStop: () => void client.execute({ kind: "interrupt", commandId: crypto.randomUUID(), conversationId: active.conversationId, runId: active.id })
-      .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "The reply could not be stopped.")) } : null;
+      .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "The reply could not be stopped."))
+  } : null;
   return { sending, error, send, stop };
 }

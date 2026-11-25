@@ -3,6 +3,7 @@ import { normalizeAppSettings } from "@/components/app/logic/normalizeAppSetting
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import {
   readStoredAccentColor,
+  readStoredColorTheme,
   readStoredDefaultIdeId,
   readStoredForceMacTitleBarPreview,
   readStoredGithubAccountLabel,
@@ -13,12 +14,14 @@ import {
   readStoredTerminalFontId,
   readStoredTerminalThemeId,
   readStoredThemeMode,
+  readStoredThemeSelection,
   readStoredUiFontId,
   readStoredVercelAccountLabel,
   readStoredVercelToken,
   readStoredVercelWorkspaceLinks,
   writeStoredAccentColor,
   writeStoredAccountLabel,
+  writeStoredColorTheme,
   writeStoredDefaultIdeId,
   writeStoredForceMacTitleBarPreview,
   writeStoredGithubToken,
@@ -47,12 +50,16 @@ import type {
   UiFontId
 } from "@/components/app/types";
 import type { AppPreferences } from "@/components/app/types/component.types";
+import type { ColorThemeId } from "@shared/types/appearance/colorTheme.types";
+import { DEFAULT_COLOR_THEME_ID } from "@shared/appearance/colorThemes";
+import { DEFAULT_ACCENT_COLOR } from "@shared/appearance/accentColors";
 import { DEFAULT_APP_SETTINGS, type AiProvider, type AiSimpleTaskSettings, type AppSettings } from "@shared/appTypes";
 import { useEffect, useRef, useState } from "react";
 
 export function useAppPreferences(): AppPreferences {
   const [themeMode, setThemeMode] = useState<ThemeMode>("system");
-  const [accentColor, setAccentColor] = useState<AccentColor>("silver");
+  const [accentColor, setAccentColor] = useState<AccentColor>(DEFAULT_ACCENT_COLOR);
+  const [colorTheme, setColorTheme] = useState<ColorThemeId>(DEFAULT_COLOR_THEME_ID);
   const [terminalThemeId, setTerminalThemeId] = useState<TerminalThemeId>("app");
   const [terminalFontId, setTerminalFontId] = useState<TerminalFontId>("ibm-plex-mono");
   const [uiFontId, setUiFontId] = useState<UiFontId>(DEFAULT_UI_FONT_ID);
@@ -79,13 +86,13 @@ export function useAppPreferences(): AppPreferences {
   }), []);
   const [appearanceLoaded, setAppearanceLoaded] = useState(false);
   useSyncedAppearance({ loaded: appearanceLoaded && isAppSettingsLoaded,
-    appearance: { themeMode, accentColor, terminalThemeId, terminalFontId, uiFontId, userDisplayName },
+    appearance: { themeMode, colorTheme, accentColor, terminalThemeId, terminalFontId, uiFontId, userDisplayName },
     apply(next) {
-      writeStoredThemeMode(next.themeMode); writeStoredAccentColor(next.accentColor); writeStoredTerminalThemeId(next.terminalThemeId);
+      writeStoredThemeMode(next.themeMode); writeStoredColorTheme(next.colorTheme); writeStoredAccentColor(next.accentColor); writeStoredTerminalThemeId(next.terminalThemeId);
       writeStoredTerminalFontId(next.terminalFontId); writeStoredUiFontId(next.uiFontId); writeUserDisplayName(next.userDisplayName);
-      setThemeMode(next.themeMode); setAccentColor(next.accentColor); setTerminalThemeId(next.terminalThemeId);
+      setThemeMode(next.themeMode); setColorTheme(next.colorTheme); setAccentColor(next.accentColor); setTerminalThemeId(next.terminalThemeId);
       setTerminalFontId(next.terminalFontId); setUiFontId(next.uiFontId);
-      setResolvedTheme(applyTheme(next.themeMode, next.accentColor)); applyUiFont(next.uiFontId);
+      setResolvedTheme(applyTheme(next)); applyUiFont(next.uiFontId);
     },
     applySettings(values, expected) {
       const next = mergeAppPreferences(appSettingsRef.current, values, expected);
@@ -97,6 +104,7 @@ export function useAppPreferences(): AppPreferences {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const storedMode = readStoredThemeMode();
     const storedAccentColor = readStoredAccentColor();
+    const storedColorTheme = readStoredColorTheme();
     const storedTerminalThemeId = readStoredTerminalThemeId();
     const storedTerminalFontId = readStoredTerminalFontId();
     const storedUiFontId = readStoredUiFontId();
@@ -113,6 +121,7 @@ export function useAppPreferences(): AppPreferences {
 
     setThemeMode(storedMode);
     setAccentColor(storedAccentColor);
+    setColorTheme(storedColorTheme);
     setTerminalThemeId(storedTerminalThemeId);
     setTerminalFontId(storedTerminalFontId);
     setUiFontId(storedUiFontId);
@@ -126,12 +135,12 @@ export function useAppPreferences(): AppPreferences {
     setGithubAccountLabel(storedGithubAccountLabel);
     setGitlabAccountLabel(storedGitlabAccountLabel);
     setVercelAccountLabel(storedVercelAccountLabel);
-    setResolvedTheme(applyTheme(storedMode, storedAccentColor));
+    setResolvedTheme(applyTheme({ themeMode: storedMode, colorTheme: storedColorTheme, accentColor: storedAccentColor }));
     applyUiFont(storedUiFontId);
     setAppearanceLoaded(true);
 
     const handleSystemThemeChange = () => {
-      setResolvedTheme(applyTheme(readStoredThemeMode(), readStoredAccentColor()));
+      setResolvedTheme(applyTheme(readStoredThemeSelection()));
     };
 
     mediaQuery.addEventListener("change", handleSystemThemeChange);
@@ -173,19 +182,28 @@ export function useAppPreferences(): AppPreferences {
     const nextMode: ThemeMode = resolvedTheme === "dark" ? "light" : "dark";
     writeStoredThemeMode(nextMode);
     setThemeMode(nextMode);
-    setResolvedTheme(applyTheme(nextMode, accentColor));
+    setResolvedTheme(applyTheme({ ...readStoredThemeSelection(), themeMode: nextMode }));
   };
 
   const updateThemeMode = (nextMode: ThemeMode) => {
     writeStoredThemeMode(nextMode);
     setThemeMode(nextMode);
-    setResolvedTheme(applyTheme(nextMode, readStoredAccentColor()));
+    setResolvedTheme(applyTheme({ ...readStoredThemeSelection(), themeMode: nextMode }));
   };
 
   const updateAccentColor = (nextAccentColor: AccentColor) => {
     writeStoredAccentColor(nextAccentColor);
     setAccentColor(nextAccentColor);
-    setResolvedTheme(applyTheme(readStoredThemeMode(), nextAccentColor));
+    setResolvedTheme(applyTheme({ ...readStoredThemeSelection(), accentColor: nextAccentColor }));
+  };
+
+  // Picking a theme brings its own accent back, replacing any fixed accent chosen before.
+  const updateColorTheme = (nextColorTheme: ColorThemeId) => {
+    writeStoredColorTheme(nextColorTheme);
+    writeStoredAccentColor("theme");
+    setColorTheme(nextColorTheme);
+    setAccentColor("theme");
+    setResolvedTheme(applyTheme({ ...readStoredThemeSelection(), colorTheme: nextColorTheme, accentColor: "theme" }));
   };
 
   const updateTerminalTheme = (nextThemeId: TerminalThemeId) => {
@@ -286,6 +304,13 @@ export function useAppPreferences(): AppPreferences {
     await saveAppSettings((current) => ({
       ...current,
       fileEditorThemeId
+    }));
+  };
+
+  const updateThreadBackdrop = async (patch: Partial<AppSettings["threadBackdrop"]>) => {
+    await saveAppSettings((current) => ({
+      ...current,
+      threadBackdrop: { ...current.threadBackdrop, ...patch }
     }));
   };
 
@@ -448,7 +473,7 @@ export function useAppPreferences(): AppPreferences {
   };
 
   useAgentWindowSettings({
-    themeMode: updateThemeMode, accentColor: updateAccentColor, terminalThemeId: updateTerminalTheme,
+    themeMode: updateThemeMode, colorTheme: updateColorTheme, accentColor: updateAccentColor, terminalThemeId: updateTerminalTheme,
     terminalFontId: updateTerminalFont, uiFontId: updateUiFont, userDisplayName: updateUserDisplayName,
     defaultIdeId: updateDefaultIde, forceMacTitleBarPreview: updateForceMacTitleBarPreview,
     githubToken: updateGithubToken, gitlabToken: updateGitlabToken, gitlabHost: updateGitlabHost, vercelToken: updateVercelToken,
@@ -458,6 +483,7 @@ export function useAppPreferences(): AppPreferences {
 
   return {
     themeMode,
+    colorTheme,
     accentColor,
     terminalThemeId,
     terminalFontId,
@@ -479,6 +505,7 @@ export function useAppPreferences(): AppPreferences {
     toggleTheme,
     updateThemeMode,
     updateAccentColor,
+    updateColorTheme,
     updateTerminalTheme,
     updateTerminalFont,
     updateUiFont,
@@ -494,6 +521,7 @@ export function useAppPreferences(): AppPreferences {
     updateGitlabAccountLabel,
     updateVercelAccountLabel,
     updateFileEditorThemeId,
+    updateThreadBackdrop,
     updateHardwareAccelerationEnabled,
     updateWorkspaceStateStorageMode,
     updateDefaultAgentLaunchTarget,

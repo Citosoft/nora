@@ -1,3 +1,4 @@
+import type { ColorThemeId } from "@shared/types/appearance/colorTheme.types";
 import type {
 AccentColor,
 AiChatTabState,
@@ -300,6 +301,7 @@ export type UseAppBootstrapResult = {
 
 export type AppPreferences = {
   themeMode: ThemeMode;
+  colorTheme: ColorThemeId;
   accentColor: AccentColor;
   terminalThemeId: TerminalThemeId;
   terminalFontId: TerminalFontId;
@@ -321,6 +323,7 @@ export type AppPreferences = {
   toggleTheme: () => void;
   updateThemeMode: (nextMode: ThemeMode) => void;
   updateAccentColor: (nextAccentColor: AccentColor) => void;
+  updateColorTheme: (nextColorTheme: ColorThemeId) => void;
   updateTerminalTheme: (nextThemeId: TerminalThemeId) => void;
   updateTerminalFont: (nextFontId: TerminalFontId) => void;
   updateUiFont: (nextUiFontId: UiFontId) => void;
@@ -336,6 +339,7 @@ export type AppPreferences = {
   updateGitlabAccountLabel: (nextLabel: string | null) => void;
   updateVercelAccountLabel: (nextLabel: string | null) => void;
   updateFileEditorThemeId: (themeId: AppSettings["fileEditorThemeId"]) => Promise<void>;
+  updateThreadBackdrop: (patch: Partial<AppSettings["threadBackdrop"]>) => Promise<void>;
   updateHardwareAccelerationEnabled: (enabled: boolean) => Promise<void>;
   updateWorkspaceStateStorageMode: (mode: AppSettings["workspaceStateStorageMode"]) => Promise<void>;
   updateDefaultAgentLaunchTarget: (launchTarget: AppSettings["defaultAgentLaunchTarget"]) => Promise<void>;

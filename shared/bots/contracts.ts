@@ -112,7 +112,9 @@ export const directSchema = z.object({
     z.object({ kind: z.literal("workspace"), workspaceId: id }).strict()
   ]),
   /** Where new tasks start unless the message clearly belongs elsewhere; the chat's "Working in" choice. */
-  workspaceId: id
+  workspaceId: id,
+  /** Set when the user reset the chat: it stays as settled history and no longer counts as the bot's chat, so a new one replaces it. */
+  retiredAt: z.string().datetime().nullable().default(null)
 }).strict();
 export const directRequestSchema = z.object({ botId: botIdSchema, workspaceId: id }).strict();
 export const botMemoryEntrySchema = z.object({

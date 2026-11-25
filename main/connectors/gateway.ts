@@ -87,7 +87,7 @@ export function createConnectorGateway({ store, credentials, onNeedsAuth, fetch:
       reply(response, 401, `${connector.name} needs you to sign in again in Nora's MCP Servers settings.`);
       return;
     }
-    if (upstream.status === 401 && connector.auth.kind === "oauth") onNeedsAuth(connector.id);
+    if (upstream.status === 401 && connector.auth.kind === "oauth") { credentials.requireSignIn(connector); onNeedsAuth(connector.id); }
     const headers: Record<string, string> = {};
     for (const name of FORWARDED_RESPONSE_HEADERS) {
       const value = upstream.headers.get(name);

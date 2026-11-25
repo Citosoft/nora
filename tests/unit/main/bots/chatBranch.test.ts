@@ -13,7 +13,7 @@ const ada = bot("ada");
 const grace = bot("grace");
 const ref = (projectId: string): WorkspaceRef => ({ projectId, environmentId: "local", checkoutId: projectId, path: `/${projectId}`, branch: "main", access: "read" });
 const workspaces = [{ id: "app", name: "App", workspace: ref("app") }, { id: "site", name: "Site", workspace: ref("site") }];
-const direct: DirectDescriptor = { botId: "ada", name: "Ada", role: ada.role, avatar: ada.avatar, scope: { kind: "global" }, workspaceId: "site" };
+const direct: DirectDescriptor = { botId: "ada", name: "Ada", role: ada.role, avatar: ada.avatar, scope: { kind: "global" }, workspaceId: "site", retiredAt: null };
 const nora = { kind: "nora", instanceId: "direct", model: "direct", reasoning: null, permissionPolicy: "direct" } as const;
 const said = (id: string, role: "user" | "assistant", text: string): TimelineItem => ({ kind: "message", id, runId: id, createdAt: "", role, text, complete: true });
 const ids = { createCommandId: "c1", conversationId: "side", submitCommandId: "s1", runId: "r1" };

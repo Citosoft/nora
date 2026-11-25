@@ -1,7 +1,8 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { z } from "zod";
-import { OAuthClientInformationFullSchema, OAuthClientInformationSchema, OAuthTokensSchema } from "@modelcontextprotocol/sdk/shared/auth.js";
+import { OAuthClientInformationFullSchema, OAuthClientInformationSchema, OAuthTokensSchema,
+  OAuthMetadataSchema, OAuthProtectedResourceMetadataSchema, OpenIdProviderMetadataSchema } from "@modelcontextprotocol/sdk/shared/auth.js";
 import { connectorAccessSchema, connectorIdSchema, connectorServerNameSchema } from "@shared/connectors/contracts";
 import { CONNECTOR_ACCESS_ALL } from "@shared/connectors/access";
 import { isNodeError } from "@main/nodeErrors";
@@ -17,8 +18,12 @@ const storedConnectorSchema = z.object({ id: connectorIdSchema, name: z.string()
 const fileSchema = z.object({ version: z.literal(1), connectors: z.array(storedConnectorSchema) });
 /** Each part is checked on its own, so one unreadable value (say, tokens from an older format) costs only a sign-in, not the connector. */
 const secretsSchema = z.object({
+  requiresSignIn: z.boolean().optional().catch(undefined),
   headerValue: z.string().optional().catch(undefined),
   clientSecret: z.string().optional().catch(undefined),
+  discovery: z.object({ authorizationServerUrl: z.string().url(), resourceMetadataUrl: z.string().url().optional(),
+    authorizationServerMetadata: z.union([OAuthMetadataSchema, OpenIdProviderMetadataSchema]).optional(),
+    resourceMetadata: OAuthProtectedResourceMetadataSchema.optional() }).optional().catch(undefined),
   client: z.object({ information: z.union([OAuthClientInformationFullSchema, OAuthClientInformationSchema]), redirectUri: z.string() }).optional().catch(undefined),
   tokens: z.object({ tokens: OAuthTokensSchema, savedAt: z.number() }).optional().catch(undefined)
 });
@@ -26,9 +31,9 @@ type StoredRecord = z.infer<typeof storedConnectorSchema>;
 
 /** Drops keys explicitly set to undefined, which is how a patch removes a secret. */
 function compact(secrets: ConnectorSecrets): ConnectorSecrets {
-  const { headerValue, clientSecret, client, tokens } = secrets;
+  const { headerValue, clientSecret, client, tokens, discovery, requiresSignIn } = secrets;
   return { ...(headerValue !== undefined ? { headerValue } : {}), ...(clientSecret !== undefined ? { clientSecret } : {}),
-    ...(client ? { client } : {}), ...(tokens ? { tokens } : {}) };
+    ...(client ? { client } : {}), ...(tokens ? { tokens } : {}), ...(discovery ? { discovery } : {}), ...(requiresSignIn ? { requiresSignIn } : {}) };
 }
 
 /**

@@ -5,6 +5,7 @@ import { rolePresentation } from "@/components/app/constants/rolePresentation";
 import { roleProfiles } from "@shared/personalization/profiles";
 import type { RolePickerProps } from "@/components/app/types/personalization.types";
 import { presetRoleSchema } from "@shared/personalization/contracts";
+import { defaultWorkspaceToolPins, workspaceToolLabels } from "@/components/app/logic/workspace-navigation/tools";
 
 export function RolePicker({ value, onChange, disabled, variant = "cards" }: RolePickerProps) {
   const compact = variant === "compact";
@@ -59,7 +60,7 @@ export function RolePicker({ value, onChange, disabled, variant = "cards" }: Rol
       <div className="min-w-0">
         <p className="text-xs font-medium">Your starting point · {profile?.label}</p>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{profile?.starters.join(" · ")}</p>
-        <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">Suggested tools: {profile?.tools.join(", ")}. Availability depends on your workspace and provider.</p>
+        <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">Pinned in your sidebar: {workspaceToolLabels(defaultWorkspaceToolPins(profile?.id ?? null)).join(", ")}. Tools a workspace lacks are left out.</p>
       </div>
     </div>}
   </div>;

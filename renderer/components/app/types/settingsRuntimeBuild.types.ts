@@ -17,6 +17,8 @@ export type BuildSettingsRuntimeValueDeps = {
   setActiveView: Dispatch<SetStateAction<"main" | "settings">>;
   themeMode: SettingsRuntimeValue["themeMode"];
   updateThemeMode: SettingsRuntimeValue["updateThemeMode"];
+  colorTheme: SettingsRuntimeValue["colorTheme"];
+  updateColorTheme: SettingsRuntimeValue["updateColorTheme"];
   accentColor: SettingsRuntimeValue["accentColor"];
   updateAccentColor: SettingsRuntimeValue["updateAccentColor"];
   uiFontId: SettingsRuntimeValue["uiFontId"];
@@ -50,6 +52,7 @@ export type BuildSettingsRuntimeValueDeps = {
   disconnectVercelAccount: () => void;
   appSettings: AppSettings;
   updateFileEditorThemeId: (themeId: AppSettings["fileEditorThemeId"]) => Promise<void>;
+  updateThreadBackdrop: (patch: Partial<AppSettings["threadBackdrop"]>) => Promise<void>;
   updateHardwareAccelerationEnabled: (enabled: boolean) => Promise<void>;
   updateWorkspaceStateStorageMode: (mode: AppSettings["workspaceStateStorageMode"]) => Promise<void>;
   updateDefaultAgentLaunchTarget: (defaultAgentLaunchTarget: AppSettings["defaultAgentLaunchTarget"]) => Promise<void>;

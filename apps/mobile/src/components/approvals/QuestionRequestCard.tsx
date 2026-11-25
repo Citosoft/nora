@@ -25,7 +25,6 @@ export function QuestionRequestCard({ request, disabled, busy, onDecide }: Quest
     <View style={styles.body}>
       {request.questions.map((question) => {
         const entry = draft[question.id] ?? { selected: [], other: "" };
-        const freeText = question.allowOther === true || question.options.length === 0;
         return (
           <View key={question.id} style={styles.question}>
             <Text style={styles.text}>{question.text}</Text>
@@ -35,11 +34,9 @@ export function QuestionRequestCard({ request, disabled, busy, onDecide }: Quest
                 options={question.options}
                 onToggle={(option) => setDraft((current) => toggleOption(current, question.id, option, question.multiple))} />
             ) : null}
-            {freeText ? (
-              <TextField label={question.options.length ? "Other answer" : "Your answer"} value={entry.other} multiline
-                hint={question.options.length && !question.multiple ? "Typing here replaces the choice above." : undefined}
-                onChangeText={(other) => setDraft((current) => ({ ...current, [question.id]: { ...entry, other } }))} />
-            ) : null}
+            <TextField label={question.options.length ? "Other answer" : "Your answer"} value={entry.other} multiline
+              hint={question.options.length && !question.multiple ? "Typing here replaces the choice above." : undefined}
+              onChangeText={(other) => setDraft((current) => ({ ...current, [question.id]: { ...entry, other } }))} />
           </View>
         );
       })}

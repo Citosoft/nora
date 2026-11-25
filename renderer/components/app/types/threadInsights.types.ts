@@ -37,6 +37,8 @@ export interface ThreadInsightsPanelProps {
   onLoadHistory(): void;
   onOpenOutput(output: ThreadOutputTarget): Promise<void>;
   onSettleChange(): void;
+  /** Switches workspace access when the thread can change mode; omit for a static badge. */
+  accessToggle?: { disabled: boolean; onToggle(): void };
 }
 
 export interface ThreadBranchSectionProps {

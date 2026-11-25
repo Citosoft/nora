@@ -1,3 +1,4 @@
+import type { ThreadBackdropSettings } from "@shared/types/threadBackdrop.types";
 import type { ChatWorkThread } from "./chatPanels.types";
 import type { McpAppHost } from "./mcpApp.types";
 import type { OutputHost } from "./toolImage.types";
@@ -77,6 +78,8 @@ export interface NativeConversationPorts {
   openThread(conversationId: string): void;
   /** Settles another thread, such as one of a chat's branches. */
   settleThread(conversationId: string): Promise<void>;
+  /** Retires this direct chat and opens a fresh one with its bot; rejects with a user-meaningful message. */
+  resetDirectChat(): Promise<void>;
   visible: boolean;
   userDisplayName: string;
   threadForge: ThreadForgeClient | null;
@@ -100,6 +103,8 @@ export interface NativeConversationPorts {
   selectCheckout(checkoutId: string | null): void;
   /** Creates a worktree and runs this draft in it; null where the workspace isn't an open Git project. */
   createWorktree: ((branch: string) => Promise<void>) | null;
+  /** Null where the view is hosted outside the session center, such as the app builder drawer. */
+  threadBackdrop: ThreadBackdropSettings | null;
 }
 export interface NativeProviderPickerProps {
   allowChange?: boolean;

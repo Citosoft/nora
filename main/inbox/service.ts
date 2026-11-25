@@ -1,6 +1,6 @@
-import { inboxTier, projectInbox } from "@shared/inbox/projection";
+import { finishedRuns, inboxTier, projectInbox } from "@shared/inbox/projection";
 import { SNOOZE_MAX_MS } from "@shared/inbox/contracts";
-import type { InboxCommand, InboxItem, InboxLedger, InboxMark, InboxSnapshot, InboxWorkflowSource } from "@shared/types/inbox/inbox.types";
+import type { InboxCommand, InboxItem, InboxLedger, InboxMark, InboxSnapshot, InboxSources, InboxWorkflowSource } from "@shared/types/inbox/inbox.types";
 import type { InboxService, InboxServiceDeps } from "@main/types/inbox/inbox.types";
 import { readRequestSources, refreshPreviews, toWorkflowSource } from "./sources";
 
@@ -22,6 +22,8 @@ export function createInboxService(deps: InboxServiceDeps): InboxService {
   const listeners = new Set<(snapshot: InboxSnapshot) => void>();
   // Until stored workflow runs are read, their items are missing; marks for them must not be pruned meanwhile.
   let workflowsLoaded = false;
+  let followingThreads = false;
+  let threadSources: Pick<InboxSources, "summaries" | "requests"> | null = null;
   let snapshot: InboxSnapshot = { items: [] };
   let signature = "";
   let pending: { cancel(): void } | null = null;
@@ -33,9 +35,13 @@ export function createInboxService(deps: InboxServiceDeps): InboxService {
   const rebuild = (): void => {
     pending?.cancel(); pending = null;
     const now = deps.now();
-    const summaries = deps.host.summaries();
+    if (!followingThreads || !threadSources) {
+      const summaries = deps.host.summaries();
+      threadSources = { summaries: finishedRuns(summaries, ledger.baselineAt, now), requests: readRequestSources(deps.host, summaries) };
+    }
+    const { summaries } = threadSources;
     refreshPreviews(deps.host, previews, summaries, ledger.baselineAt, now);
-    const projection = projectInbox({ summaries, requests: readRequestSources(deps.host, summaries), workflows: [...workflows.values()],
+    const projection = projectInbox({ ...threadSources, workflows: [...workflows.values()],
       connectors: deps.connectors(), alerts: deps.alerts(), previews }, ledger, now);
     if (workflowsLoaded && Object.keys(projection.marks).length !== Object.keys(ledger.marks).length) save({ ...ledger, marks: projection.marks });
     snapshot = projection.snapshot;
@@ -103,17 +109,19 @@ export function createInboxService(deps: InboxServiceDeps): InboxService {
     refreshConnectors: schedule,
     refreshAlerts: schedule,
     start() {
+      threadSources = null;
+      followingThreads = true;
       let stopped = false;
-      const unsubscribe = deps.host.subscribe({ after: deps.host.eventCursor(), onError: (error) => console.error("The inbox stopped following threads", error),
+      const unsubscribe = deps.host.subscribe({ after: deps.host.eventCursor(), onError: (error) => { followingThreads = false; console.error("The inbox stopped following threads", error); },
         // Streamed timeline items do not change the inbox; runs, requests and threads do.
-        onEvent: (event) => { if (event.payload.kind !== "item") schedule(); } });
+        onEvent: (event) => { if (event.payload.kind !== "item") { threadSources = null; schedule(); } } });
       deps.listWorkflowRuns()
         .then((runs) => { if (stopped) return; for (const run of runs) if (!workflows.has(run.id)) workflows.set(run.id, toWorkflowSource(run, deps.workspaceForProject(run.projectId))); })
         .catch((error: unknown) => console.error("Workflow runs could not be read for the inbox", error))
         .finally(() => { if (stopped) return; workflowsLoaded = true; schedule(); });
       if (!stored) save(ledger);
       rebuild();
-      return () => { stopped = true; unsubscribe(); pending?.cancel(); wake?.cancel(); pending = null; wake = null; };
+      return () => { stopped = true; followingThreads = false; threadSources = null; unsubscribe(); pending?.cancel(); wake?.cancel(); pending = null; wake = null; };
     }
   };
 }

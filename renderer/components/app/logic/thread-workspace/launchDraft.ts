@@ -1,3 +1,4 @@
+import { readCheckoutModelCatalog } from "../modelCatalogStore";
 import { inheritedModelId, inheritedNativeProvider, inheritedSubagentModel, resolveModelBinding } from "@/components/app/logic/modelBinding";
 import type { OpenThreadDraft, ThreadWorkspaceStore } from "@/components/app/types/thread-workspace/state.types";
 import { threadPreferences } from "@shared/personalization/threads";
@@ -14,7 +15,7 @@ export async function launchThreadDraft(store: ThreadWorkspaceStore, input: Open
     ? boot.providers.find((entry) => entry.kind === input.provider?.kind && entry.instanceId === input.provider.instanceId)
     : inheritedNativeProvider(boot.providers, boot.personalization.threadModel ?? null);
   if (!provider) throw new Error("Choose a configured provider before starting. Your draft has been retained.");
-  const catalog = await store.client.catalog(provider.kind, provider.instanceId, workspace.workspace);
+  const catalog = await readCheckoutModelCatalog({ client: store.client, workspace: workspace.workspace }, provider);
   const resolution = resolveModelBinding({
     provider,
     catalog,

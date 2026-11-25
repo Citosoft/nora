@@ -2,7 +2,7 @@ import type { ProviderConnectionKind } from "@shared/types/provider/account.type
 import type { BotSnapshot, DirectDescriptor, GroupDescriptor } from "@shared/types/bots/bots.types";
 import type { ExecutionEffect } from "@main/types/execution/store.types";
 import type { EventPayload, RuntimeRequest, TimelineItem } from "@shared/types/conversation/contracts.types";
-import type { ConversationState } from "./store.types";
+import type { ConversationState, StoreReader } from "./store.types";
 import type { PreparedProviderTransition } from "./providerTransition.types";
 
 export interface Decision {
@@ -22,10 +22,9 @@ export interface DecisionContext {
   now: string;
   environmentId: string;
   state: ConversationState | null;
-  writers: string[];
+  admission: Pick<StoreReader, "writers" | "unfinishedEffects" | "execution" | "header">;
   previousItem?: TimelineItem | null;
   /** The message a set-message-pin command pins, looked up from the store. */
   pinTarget?: TimelineItem | null;
   previousRequest?: RuntimeRequest | null;
-  effects: ExecutionEffect[];
 }

@@ -1,5 +1,7 @@
+import { ACCENT_COLOR_OPTIONS } from "@/components/app/logic/accentColors";
 import { getUiFontFamily, UI_FONT_OPTIONS } from "@/components/app/logic/appUiFonts";
 import { useSettingsRuntime } from "@/components/app/hooks/useSettingsRuntime";
+import { ColorThemePicker } from "@/components/app/panels/settings/ColorThemePicker";
 import { SettingRow, SettingsSectionHeader, TerminalThemePreview, ToggleButton } from "@/components/app/panels/settings/settingsUi";
 import type { AccentColor, TerminalFontId, TerminalThemeId, UiFontId } from "@/components/app/types";
 import { Select } from "@/components/ui/select";
@@ -23,6 +25,7 @@ export function AppearanceSettingsSection() {
     updateTerminalFont,
     appSettings,
     updateFileEditorThemeId,
+    updateThreadBackdrop,
     resolvedTheme,
     canPreviewMacTitleBarChrome,
     forceMacTitleBarPreview,
@@ -49,8 +52,13 @@ export function AppearanceSettingsSection() {
         }
       />
       <SettingRow
-        title="Color Theme"
-        description={`Choose whether ${APP_SHORT_NAME} follows the system appearance or uses a fixed light or dark theme.`}
+        title="Theme"
+        description="Choose the color palette for backgrounds, text and borders. Every theme has a light and dark variant."
+        control={<ColorThemePicker />}
+      />
+      <SettingRow
+        title="Mode"
+        description={`Choose whether ${APP_SHORT_NAME} follows the system appearance or always uses your theme's light or dark variant.`}
         control={
           <Select value={themeMode} onChange={(event) => updateThemeMode(event.target.value as "system" | "light" | "dark")}>
             <option value="system">System</option>
@@ -61,37 +69,27 @@ export function AppearanceSettingsSection() {
       />
       <SettingRow
         title="Accent Color"
-        description="Control the app-wide accent used for active states, primary actions, highlights, icons, and focus rings."
+        description="Control the app-wide accent used for active states, primary actions, highlights, icons, and focus rings. Theme uses the selected theme's own accent, and picking a theme switches back to it."
         control={
           <div className="space-y-3">
             <Select value={accentColor} onChange={(event) => updateAccentColor(event.target.value as AccentColor)}>
-              <option value="silver">Silver</option>
-              <option value="green">Green</option>
-              <option value="blue">Blue</option>
-              <option value="amber">Amber</option>
-              <option value="rose">Rose</option>
-              <option value="violet">Violet</option>
+              {ACCENT_COLOR_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>{option.label}</option>
+              ))}
             </Select>
             <div className="flex flex-wrap gap-2">
-              {[
-                { value: "silver", className: "bg-[hsl(220_9%_46%)]" },
-                { value: "green", className: "bg-[hsl(161_67%_37%)]" },
-                { value: "blue", className: "bg-[hsl(213_79%_47%)]" },
-                { value: "amber", className: "bg-[hsl(32_95%_45%)]" },
-                { value: "rose", className: "bg-[hsl(346_78%_47%)]" },
-                { value: "violet", className: "bg-[hsl(262_73%_54%)]" }
-              ].map((option) => (
+              {ACCENT_COLOR_OPTIONS.map((option) => (
                 <button
-                  key={option.value}
+                  key={option.id}
                   type="button"
-                  onClick={() => updateAccentColor(option.value as AccentColor)}
+                  onClick={() => updateAccentColor(option.id)}
                   className={[
                     "h-8 w-8 rounded-full border transition",
-                    option.className,
-                    accentColor === option.value ? "border-foreground scale-105" : "border-border/70"
+                    option.swatchClassName,
+                    accentColor === option.id ? "border-foreground scale-105" : "border-border/70"
                   ].join(" ")}
-                  aria-label={`Use ${option.value} accent color`}
-                  title={option.value}
+                  aria-label={`Use ${option.label} accent color`}
+                  title={option.label}
                 />
               ))}
             </div>
@@ -119,6 +117,33 @@ export function AppearanceSettingsSection() {
           </div>
         }
       />
+      <SettingRow
+        title="Animated thread background"
+        description="Draw a slowly drifting pixel terrain behind threads. Pauses when the window is hidden and stays still with reduced motion."
+        control={
+          <ToggleButton
+            checked={appSettings.threadBackdrop.animated}
+            onChange={(animated) => updateThreadBackdrop({ animated })}
+            label={appSettings.threadBackdrop.animated ? "Enabled" : "Disabled"}
+            accessibleName="Animated thread background"
+          />
+        }
+      />
+      {appSettings.threadBackdrop.animated ? (
+        <SettingRow
+          title="Show background on"
+          description="New threads only keeps the terrain behind the greeting; all threads also show it behind conversations."
+          control={
+            <Select
+              value={appSettings.threadBackdrop.scope}
+              onChange={(event) => updateThreadBackdrop({ scope: event.target.value === "all" ? "all" : "new" })}
+            >
+              <option value="new">New threads</option>
+              <option value="all">All threads</option>
+            </Select>
+          }
+        />
+      ) : null}
       <SettingRow
         title="File Editor Theme"
         description="Choose the Monaco theme family used by the file editor. The editor stays in sync with the app's current light or dark mode."

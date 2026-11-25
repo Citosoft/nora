@@ -41,7 +41,8 @@ export function useAppBuilderState(documentId: string): AppBuilderState {
   const [draft, setDraft] = useState<AppBuilderDraft | null>(null);
   const pick = useCallback<AppBuilderPickHandler>((cardTitle) => { setDraft({ text: changeCardPrefix(cardTitle), at: Date.now() }); }, []);
   const runState = run?.state ?? null;
-  const stoppable = !!conversationId && !!runId && (runState === "queued" || runState === "starting" || runState === "running" || runState === "awaiting-approval" || runState === "awaiting-input");
+  const stoppable = !!conversationId && !!runId && (runState === "queued" || runState === "starting" || runState === "running"
+    || runState === "awaiting-approval" || runState === "awaiting-input" || runState === "stopping" || runState === "recovering");
   const stop = useCallback(() => {
     if (!conversationId || !runId) return;
     // The run settles a moment after the interrupt is accepted; read the summaries again then so the scene gives way to the app.
@@ -59,6 +60,6 @@ export function useAppBuilderState(documentId: string): AppBuilderState {
   }, [store, documentId]);
 
   return useMemo<AppBuilderState>(() => ({ documentId, app, phase, step, startedAt: run?.createdAt ?? null, threadOpen, setThreadOpen, send, draft, pick,
-    stop: stoppable ? stop : null, stopping: runState === "stopping" }),
+    stop: stoppable ? stop : null, stopping: runState === "stopping" && !stoppable }),
     [documentId, app, phase, step, run?.createdAt, threadOpen, send, draft, pick, stoppable, stop, runState]);
 }

@@ -80,7 +80,7 @@ export class ConversationEngine {
       const decision = decideCommand(decisionCommand, { now, environmentId: this.deps.store.environmentId, state,
         steerFollowUp, providerTransition, providerConnection, bot, group, direct,
         pinTarget: decisionCommand.kind === "set-message-pin" && decisionCommand.pinned ? transaction.item(decisionCommand.conversationId, decisionCommand.itemId) : undefined,
-        writers: decisionCommand.kind === "create" ? transaction.writers(decisionCommand.workspace) : state ? transaction.writers(state.conversation.workspace) : [], effects: transaction.unfinishedEffects() });
+        admission: transaction });
       const created = decision.events.find((event) => event.kind === "conversation");
       const events = command.kind === "create" && externalTranscript && created?.kind === "conversation"
         ? externalImportEvents(created.conversation, externalTranscript) : decision.events;
@@ -123,7 +123,7 @@ export class ConversationEngine {
       if (!snapshot) throw new ExecutionCommandError("missing", "Provider update has no owning conversation");
       const now = this.deps.now();
       const decision = decideUpdate(snapshot, update, { now, environmentId: this.deps.store.environmentId, state: snapshot,
-        writers: transaction.writers(snapshot.conversation.workspace), effects: transaction.unfinishedEffects(),
+        admission: transaction,
         previousItem: update.kind === "item" ? transaction.item(update.conversationId, update.item.id) : null,
         previousRequest: update.kind === "request" ? transaction.request(update.conversationId, update.request.id) : null });
       if (decision.events.some((payload) => payload.kind === "run" && payload.run.state === "recovering")) {

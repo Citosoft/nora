@@ -13,7 +13,7 @@ export interface WorkspaceAvatarIdentity {
 
 export interface WorkspaceAvatarProps {
   workspace: WorkspaceAvatarIdentity;
-  size?: "small" | "default";
+  size?: "small" | "default" | "large";
 }
 
 export interface WorkspaceColorPickerProps {

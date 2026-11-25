@@ -11,11 +11,12 @@ export interface FakeMcpServer {
   validTokens: Set<string>;
   registrations: number;
   refreshes: number;
+  tokenRequests: number;
   /** Headers the MCP endpoint last received. */
   lastHeaders: IncomingMessage["headers"] | null;
   close(): Promise<void>;
 }
-export interface FakeMcpServerOptions { auth: "oauth" | "header" | "none"; headerValue?: string; }
+export interface FakeMcpServerOptions { auth: "oauth" | "header" | "none"; headerValue?: string; resourceMetadataPath?: string; }
 
 function readBody(request: IncomingMessage): Promise<string> {
   return new Promise((resolve) => { const chunks: Buffer[] = []; request.on("data", (chunk: Buffer) => chunks.push(chunk)); request.on("end", () => resolve(Buffer.concat(chunks).toString("utf8"))); });
@@ -33,7 +34,7 @@ export async function startFakeMcpServer(options: FakeMcpServerOptions): Promise
   let sequence = 0;
   const codes = new Map<string, { challenge: string; redirectUri: string }>();
   const refreshTokens = new Set<string>();
-  const state: FakeMcpServer = { url: "", validTokens: new Set(), registrations: 0, refreshes: 0, lastHeaders: null, close: async () => {} };
+  const state: FakeMcpServer = { url: "", validTokens: new Set(), registrations: 0, refreshes: 0, tokenRequests: 0, lastHeaders: null, close: async () => {} };
   const issue = () => {
     sequence += 1;
     const access = `access-${sequence}`, refresh = `refresh-${sequence}`;
@@ -50,11 +51,11 @@ export async function startFakeMcpServer(options: FakeMcpServerOptions): Promise
   const server = createServer((request, response) => {
     void (async () => {
       const url = new URL(request.url ?? "/", base);
-      if (url.pathname.startsWith("/.well-known/oauth-protected-resource")) {
-        json(response, 200, { resource: `${base}/mcp`, authorization_servers: [base] }); return;
+      if (url.pathname === options.resourceMetadataPath || (!options.resourceMetadataPath && url.pathname.startsWith("/.well-known/oauth-protected-resource"))) {
+        json(response, 200, { resource: `${base}/mcp`, authorization_servers: [options.resourceMetadataPath ? `${base}/auth` : base] }); return;
       }
-      if (url.pathname.startsWith("/.well-known/oauth-authorization-server")) {
-        json(response, 200, { issuer: base, authorization_endpoint: `${base}/authorize`, token_endpoint: `${base}/token`,
+      if (options.resourceMetadataPath ? url.pathname === "/.well-known/oauth-authorization-server/auth" : url.pathname.startsWith("/.well-known/oauth-authorization-server")) {
+        json(response, 200, { issuer: options.resourceMetadataPath ? `${base}/auth` : base, authorization_endpoint: `${base}/authorize`, token_endpoint: `${base}/token`,
           registration_endpoint: `${base}/register`, response_types_supported: ["code"], code_challenge_methods_supported: ["S256"],
           grant_types_supported: ["authorization_code", "refresh_token"], token_endpoint_auth_methods_supported: ["none"] }); return;
       }
@@ -72,6 +73,7 @@ export async function startFakeMcpServer(options: FakeMcpServerOptions): Promise
         response.writeHead(302, { location: target.href }); response.end(); return;
       }
       if (url.pathname === "/token") {
+        state.tokenRequests += 1;
         const form = new URLSearchParams(await readBody(request));
         if (form.get("grant_type") === "authorization_code") {
           const pending = codes.get(form.get("code") ?? "");
@@ -89,7 +91,7 @@ export async function startFakeMcpServer(options: FakeMcpServerOptions): Promise
         state.lastHeaders = request.headers;
         if (!authorized(request)) {
           json(response, 401, { error: "unauthorized" }, options.auth === "oauth"
-            ? { "www-authenticate": `Bearer resource_metadata="${base}/.well-known/oauth-protected-resource"` } : {}); return;
+            ? { "www-authenticate": `Bearer resource_metadata="${base}${options.resourceMetadataPath ?? "/.well-known/oauth-protected-resource"}"` } : {}); return;
         }
         if (request.method !== "POST") { json(response, 405, { error: "method not allowed" }); return; }
         const mcp = new McpServer({ name: "fake", version: "1.0.0", websiteUrl: "https://fake.example.com" });

@@ -15,6 +15,22 @@ const ANY_THREAD: ConnectorSubject = { workspaceId: "w", botId: null };
 let ids = 0;
 const nextId = () => `00000000-0000-4000-8000-${String(++ids).padStart(12, "0")}`;
 
+test("DNS failures reach both the connection status and sign-in reply without opening the browser", async (t) => {
+  const { store } = storeFixture(t);
+  let opened = false;
+  const service = createConnectorService({ store, nextId, callbackPort: 0, onChanged: () => {},
+    openExternal: async () => { opened = true; },
+    fetch: async () => { throw new TypeError("fetch failed", { cause: Object.assign(new Error("getaddrinfo"), { code: "ENOTFOUND" }) }); } });
+  t.after(() => service.close());
+  const [connector] = await service.create({ name: "Staging", url: "https://mcp.example.com/mcp", auth: { kind: "oauth" } });
+  assert.ok(connector);
+  await until(() => service.list()[0]?.status !== "checking", "DNS check");
+  assert.match(service.list()[0]?.message ?? "", /could not resolve mcp\.example\.com/);
+  await assert.rejects(service.signIn(connector.id), /Sign-in to Staging did not complete: Nora could not resolve mcp\.example\.com/);
+  assert.match(service.list()[0]?.message ?? "", /could not resolve mcp\.example\.com/);
+  assert.equal(opened, false);
+});
+
 function serviceFixture(t: test.TestContext, connectorIdsForBot?: ConnectorServiceOptions["connectorIdsForBot"]) {
   const { store } = storeFixture(t);
   const changes: Connector[][] = [];
@@ -39,8 +55,8 @@ async function callEcho(endpoint: RunMcpServer, text: string): Promise<string> {
   } finally { await client.close(); }
 }
 
-test("an OAuth connector signs in through the browser, then threads use it through the gateway without seeing the token", async (t) => {
-  const upstream = await startFakeMcpServer({ auth: "oauth" });
+test("an OAuth connector follows its authentication challenge to sign in through the browser, then refreshes through the gateway", async (t) => {
+  const upstream = await startFakeMcpServer({ auth: "oauth", resourceMetadataPath: "/auth/resource" });
   t.after(() => upstream.close());
   const { service, store, opened, status, settled } = serviceFixture(t);
   const [created] = await service.create({ name: "Fake", url: upstream.url, auth: { kind: "oauth" } });
@@ -71,6 +87,10 @@ test("an OAuth connector signs in through the browser, then threads use it throu
   assert.equal(upstream.refreshes, 1);
   assert.equal(store.secrets(created.id).tokens?.tokens.refresh_token, "refresh-2");
 
+  await service.signIn(created.id);
+  assert.equal(opened.length, 2, "an explicit retry opens the browser even when tokens are saved");
+  assert.equal(status(created.id), "connected");
+
   await service.signOut(created.id);
   assert.equal(status(created.id), "needs-auth");
   assert.deepEqual(await service.endpoints(ANY_THREAD), []);
@@ -93,6 +113,14 @@ test("a rejected refresh marks the connector as needing sign-in instead of faili
   assert.equal(response.status, 401);
   assert.equal(response.headers.get("www-authenticate"), null, "runtimes never get a reason to start their own sign-in");
   assert.equal(status(created.id), "needs-auth");
+  assert.equal(store.secrets(created.id).requiresSignIn, true);
+  const attempts = upstream.tokenRequests;
+  await service.refresh(created.id);
+  await service.refresh(created.id);
+  assert.equal(upstream.tokenRequests, attempts, "connection checks do not retry permanently rejected credentials");
+  await service.signIn(created.id);
+  assert.equal(status(created.id), "connected");
+  assert.equal(store.secrets(created.id).requiresSignIn, undefined);
 });
 
 test("header connectors send their header upstream; the gateway refuses callers without its token", async (t) => {
@@ -133,12 +161,17 @@ test("a wrong header or an unreachable server is reported with a reason", async 
 test("servers without sign-in connect directly and connector names stay unique", async (t) => {
   const upstream = await startFakeMcpServer({ auth: "none" });
   t.after(() => upstream.close());
-  const { service, settled } = serviceFixture(t);
+  const { service, settled, opened } = serviceFixture(t);
   await service.create({ name: "Open", url: upstream.url, auth: { kind: "oauth" } });
   const list = await service.create({ name: "Open", url: upstream.url, auth: { kind: "oauth" } });
   await Promise.all(list.map((connector) => settled(connector.id)));
   assert.deepEqual(service.list().map((connector) => [connector.serverName, connector.status]), [["open", "connected"], ["open_2", "connected"]]);
   assert.equal(service.activeCount(ANY_THREAD), 2);
+  await service.signIn(list[0]!.id);
+  assert.deepEqual(opened, [], "a public MCP server does not need OAuth discovery or a browser");
+  await service.signOut(list[0]!.id);
+  await service.signIn(list[0]!.id);
+  assert.equal(service.list()[0]?.status, "connected");
   await service.remove(list[0]?.id ?? "");
   assert.deepEqual(service.list().map((connector) => connector.serverName), ["open_2"]);
 });

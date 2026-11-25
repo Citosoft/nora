@@ -111,3 +111,10 @@ test("getTrailingIncompleteOsc7Sequence keeps only an unterminated OSC 7 tail", 
     ""
   );
 });
+
+test("edits and submissions span input chunks, including pasted lines", () => {
+  assert.deepEqual(getSubmittedCommandsFromInput("\u007f/app\rcd next\npartial", "cd packagesx"), {
+    commands: ["cd packages/app", "cd next"], remainingInput: "partial"
+  });
+  assert.deepEqual(getSubmittedCommandsFromInput("\u0015cd new\r", "cd old"), { commands: ["cd new"], remainingInput: "" });
+});

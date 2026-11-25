@@ -1,3 +1,4 @@
+import { useOnceVisible } from "@/components/app/hooks/useOnceVisible";
 import { cn } from "@/lib/utils";
 import type { SessionTabStackProps, SessionTabPaneProps } from "@/components/app/types/sessionTabStack.types";
 
@@ -16,7 +17,8 @@ export function SessionTabStack({ children, className }: SessionTabStackProps) {
  * One layer in a {@link SessionTabStack}. Same idea as a classic tab panel:
  * inactive tabs are hidden with CSS, not unmounted.
  */
-export function SessionTabPane({ visible, children, className }: SessionTabPaneProps) {
+export function SessionTabPane({ visible, children, className, deferMount }: SessionTabPaneProps) {
+  const mounted = useOnceVisible(!deferMount || visible);
   return (
     <div
       role="tabpanel"
@@ -28,7 +30,7 @@ export function SessionTabPane({ visible, children, className }: SessionTabPaneP
         className
       )}
     >
-      {children}
+      {mounted ? children : null}
     </div>
   );
 }

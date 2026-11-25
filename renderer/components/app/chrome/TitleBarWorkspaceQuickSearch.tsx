@@ -1,10 +1,9 @@
 import {
-  browseWorkspaceQuickSearchRows,
   buildWorkspaceQuickSearchRows,
-  filterWorkspaceQuickSearchRows
+  workspaceQuickSearchResults
 } from "@/components/app/logic/workspaceQuickSearchModel";
 import type {
-  TitleBarWorkspaceQuickSearchConfig,
+  TitleBarWorkspaceQuickSearchProps,
   WorkspaceQuickSearchGroupId,
   WorkspaceQuickSearchRow
 } from "@/components/app/types/titlebarWorkspaceSearch.types";
@@ -50,14 +49,13 @@ const GROUP_ORDER: WorkspaceQuickSearchGroupId[] = [
   "files"
 ];
 
-type TitleBarWorkspaceQuickSearchProps = TitleBarWorkspaceQuickSearchConfig;
-
 export const TitleBarWorkspaceQuickSearch = ({
   source,
   openRequestId,
   resolvedTheme,
   openShortcutLabel,
-  onPick
+  onPick,
+  iconToneClass
 }: TitleBarWorkspaceQuickSearchProps) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -71,11 +69,8 @@ export const TitleBarWorkspaceQuickSearch = ({
     resultCount: 0
   });
 
-  const allRows = useMemo(() => buildWorkspaceQuickSearchRows(source), [source]);
-  const displayRows = useMemo(() => {
-    const trimmed = query.trim();
-    return trimmed ? filterWorkspaceQuickSearchRows(allRows, trimmed) : browseWorkspaceQuickSearchRows(allRows);
-  }, [allRows, query]);
+  const groups = useMemo(() => open ? buildWorkspaceQuickSearchRows(source) : null, [open, source]);
+  const displayRows = useMemo(() => groups ? workspaceQuickSearchResults(groups, query) : [], [groups, query]);
 
   useEffect(() => {
     if (openRequestId === 0 || openRequestId === lastOpenRequestRef.current) {
@@ -167,9 +162,6 @@ export const TitleBarWorkspaceQuickSearch = ({
     const option = root.querySelector<HTMLElement>(`[data-workspace-search-index="${highlightedIndex}"]`);
     option?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [highlightedIndex, open, displayRows.length]);
-
-  const titleBarSelectorSurfaceClass =
-    resolvedTheme === "light" ? "border-border bg-white" : "border-border/70 bg-background";
 
   const handleOpenChange = (next: boolean): void => {
     setOpen(next);
@@ -384,24 +376,15 @@ export const TitleBarWorkspaceQuickSearch = ({
         type="button"
         onClick={() => handleOpenChange(true)}
         className={cn(
-          "flex h-8 w-full min-w-[12rem] max-w-md items-center gap-2 rounded-lg border py-1 pl-2.5 pr-2 text-left text-xs transition hover:bg-accent/40",
-          titleBarSelectorSurfaceClass
+          "grid h-8 w-10 shrink-0 place-items-center rounded-md transition hover:bg-accent/60 hover:text-foreground",
+          iconToneClass
         )}
-        aria-label="Open project search"
+        aria-label={`Search project (${openShortcutLabel})`}
+        title={`Search project (${openShortcutLabel})`}
         aria-expanded={open}
         aria-haspopup="dialog"
       >
-        <Search
-          className={cn(
-            "size-3.5 shrink-0",
-            resolvedTheme === "light" ? "text-slate-500" : "text-muted-foreground"
-          )}
-          aria-hidden
-        />
-        <span className="min-w-0 flex-1 truncate text-muted-foreground">Search project...</span>
-        <kbd className="shrink-0 rounded border border-border/60 bg-muted/40 px-1 py-px font-mono text-[9px] text-muted-foreground">
-          {openShortcutLabel}
-        </kbd>
+        <Search className="size-3.5" aria-hidden />
       </button>
       {palette}
     </>

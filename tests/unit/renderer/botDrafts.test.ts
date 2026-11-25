@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createThreadWorkspaceStore } from "@/components/app/logic/thread-workspace/store";
 import { buildThreadNavigation } from "@/components/app/logic/thread-workspace/navigation";
-import { threadWorkspaceFixture } from "./threadWorkspaceFixtures";
+import { threadSummary, threadWorkspaceFixture } from "./threadWorkspaceFixtures";
 import { bot } from "../shared/bots/fixtures";
 import { DIRECT_BINDING, GROUP_BINDING } from "@shared/bots/chats";
 import { snapshotBot } from "@shared/bots/snapshot";
@@ -70,4 +70,23 @@ test("reverting to a bot's model keeps the thread's policy only on the same prov
   assert.deepEqual(botModelRevertSeed(snapshot, sameProvider), { kind: "claude", instanceId: "claude", model: "claude-opus-5-5", reasoning: null, permissionPolicy: "plan" });
   assert.equal(botModelRevertSeed(snapshot, { ...sameProvider, kind: "codex", instanceId: "codex" }).permissionPolicy, null);
   assert.equal(isBotModelOverride(snapshot, sameProvider), true);
+});
+
+test("resetting a direct chat retires it, closes its tab and opens a fresh draft with the bot", async () => {
+  const f = fixtureWithBots();
+  const dm = threadSummary("dm");
+  const ada = snapshotBot(bot("ada"));
+  dm.conversation.direct = { botId: "ada", name: ada.name, role: ada.role, avatar: ada.avatar, scope: { kind: "global" }, workspaceId: "personal", retiredAt: null };
+  f.summaries.push(dm);
+  const store = createThreadWorkspaceStore(f.deps);
+  await store.refresh();
+  const old = store.openDirect("personal", "ada");
+  assert.ok(old);
+  await store.resetDirectChat(old);
+  assert.deepEqual(f.commands.map((command) => [command.kind, command.conversationId]), [["reset-direct", "dm"]]);
+  const { layout } = store.snapshot();
+  assert.equal(layout.openIds.includes(old), false, "the retired chat's tab closes");
+  const fresh = layout.documents.find((entry) => entry.id === layout.activeId);
+  assert.deepEqual([fresh?.target.kind, fresh?.direct?.botId], ["draft", "ada"]);
+  assert.equal(store.openDirect("personal", "ada"), fresh?.id, "the bot's chat is now the fresh draft");
 });

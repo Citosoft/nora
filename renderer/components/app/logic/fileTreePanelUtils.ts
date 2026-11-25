@@ -8,6 +8,7 @@ export const buildFileTree = (paths: string[], directoryPaths: string[]): FileTr
     children: []
   };
 
+  const nodesByPath = new Map<string, FileTreeNode>();
   const upsertPath = (pathName: string, leafKind: "file" | "directory") => {
     const parts = pathName.split("/").filter(Boolean);
     let current = root;
@@ -15,7 +16,7 @@ export const buildFileTree = (paths: string[], directoryPaths: string[]): FileTr
       const nextPath = current.path ? `${current.path}/${part}` : part;
       const isLeaf = index === parts.length - 1;
       const nodeKind = isLeaf ? leafKind : "directory";
-      let child = current.children.find((entry) => entry.name === part);
+      let child = nodesByPath.get(nextPath);
 
       if (!child) {
         child = {
@@ -24,6 +25,7 @@ export const buildFileTree = (paths: string[], directoryPaths: string[]): FileTr
           kind: nodeKind,
           children: []
         };
+        nodesByPath.set(nextPath, child);
         current.children.push(child);
       }
 
@@ -42,20 +44,15 @@ export const buildFileTree = (paths: string[], directoryPaths: string[]): FileTr
     upsertPath(directoryPath, "directory");
   }
 
-  const sortNodes = (nodes: FileTreeNode[]): FileTreeNode[] =>
-    nodes
-      .map((node) => ({
-        ...node,
-        children: sortNodes(node.children)
-      }))
-      .sort((left, right) => {
-        if (left.kind !== right.kind) {
-          return left.kind === "directory" ? -1 : 1;
-        }
-        return left.name.localeCompare(right.name);
-      });
-
-  return sortNodes(root.children);
+  const sortNodes = (nodes: FileTreeNode[]): void => {
+    nodes.sort((left, right) => {
+      if (left.kind !== right.kind) return left.kind === "directory" ? -1 : 1;
+      return left.name.localeCompare(right.name);
+    });
+    for (const node of nodes) if (node.children.length) sortNodes(node.children);
+  };
+  sortNodes(root.children);
+  return root.children;
 };
 
 export const listSiblingNames = (paths: string[], directoryPaths: string[], parentDirectoryPath: string): Set<string> => {

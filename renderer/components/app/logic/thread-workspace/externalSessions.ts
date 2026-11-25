@@ -1,3 +1,4 @@
+import { readCheckoutModelCatalog } from "../modelCatalogStore";
 import type { NativeBoot } from "@shared/ipc/types/personalizationGateway.types";
 import { effectiveRole } from "@shared/personalization/profiles";
 import { resolveModelBinding } from "@/components/app/logic/modelBinding";
@@ -10,7 +11,7 @@ export async function adoptExternalSession(deps: ThreadWorkspaceDeps, boot: Nati
   if (!workspace) throw new Error("The external conversation's workspace is unavailable.");
   const provider = boot.providers.find((entry) => entry.kind === session.providerKind && entry.instanceId === session.instanceId);
   if (!provider) throw new Error("The external conversation's provider is unavailable.");
-  const catalog = await deps.client.catalog(provider.kind, provider.instanceId, workspace.workspace);
+  const catalog = await readCheckoutModelCatalog({ client: deps.client, workspace: workspace.workspace }, provider);
   const policyId = catalog.status === "available" ? catalog.catalog.policies[0]?.id ?? null : null;
   const resolution = resolveModelBinding({ provider, catalog, locked: null, modelId: null, policyId, reasoning: null, subagentModel: null });
   if (resolution.status !== "ready") throw new Error(resolution.message ?? "Choose a ready provider before opening this external conversation.");

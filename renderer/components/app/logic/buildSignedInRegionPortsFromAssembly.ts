@@ -57,7 +57,8 @@ export const buildSessionCenterSurfacePortsFromAssembly = (
   aiModels: a.aiModels,
   resolvedTheme: a.core.resolvedTheme,
   terminalThemeId: a.sessionSurface.terminalThemeId,
-  terminalFontId: a.sessionSurface.terminalFontId
+  terminalFontId: a.sessionSurface.terminalFontId,
+  threadBackdrop: a.core.appSettings.threadBackdrop
 });
 
 export const buildSessionCenterPortsFromAssembly = (a: AppShellSignedInAssemblySources): SessionCenterPorts => ({

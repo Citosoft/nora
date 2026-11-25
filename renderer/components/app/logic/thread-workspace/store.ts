@@ -1,6 +1,6 @@
 import { sameProviderBinding } from "@shared/conversations/providerBinding";
 import { COMPOSER_ATTACHMENT_MAX_COUNT } from "@shared/composerAttachments";
-import { setThreadSettlement } from "./settlement";
+import { resetDirectChat, setThreadSettlement } from "./settlement";
 import { createThreadReferences } from "./references";
 import { importExternalSession, pinExternalSession } from "./externalSessions";
 import { effectiveRole } from "@shared/personalization/profiles";
@@ -30,7 +30,7 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
   let state: ThreadWorkspaceSnapshot = { boot: deps.boot, focusRevision: 0, unreadThreadIds: [], layout, summaries: [], runtime: {}, loading: true, error: null, storageError };
   let windowFocused = true, threadVisible = true;
   const listeners = new Set<() => void>();
-  let users = 0, epoch = 0, sequence = 0, scheduled = false;
+  let users = 0, epoch = 0;
   let stop = (): void => {};
   const publish = (next: ThreadWorkspaceSnapshot): void => {
     const active = next.layout.documents.find((entry) => entry.id === next.layout.activeId);
@@ -59,36 +59,52 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
     save(focusThreadDocument(layout, here));
     publish({ ...state, focusRevision: state.focusRevision + 1 });
   };
-  let latestRefresh: Promise<void> = Promise.resolve();
-  const readSummaries = async (): Promise<void> => {
-    const current = ++sequence, generation = epoch;
-    try {
-      const summaries = await deps.client.summaries();
-      if (current === sequence && generation === epoch) publish({ ...state, summaries, loading: false, error: null });
-    } catch (cause) {
-      if (current === sequence && generation === epoch) publish({ ...state, loading: false, error: cause instanceof Error ? cause.message : "Threads could not be loaded from their execution host." });
+  let pendingRefresh: Promise<void> | null = null;
+  let reading = false;
+  let dirty = false;
+  // Share one read and follow it with a fresh snapshot if a change arrived while it was in flight.
+  const refresh = (): Promise<void> => {
+    if (pendingRefresh) {
+      if (reading) dirty = true;
+      return pendingRefresh;
     }
+    const generation = epoch;
+    pendingRefresh = Promise.resolve().then(async () => {
+      try {
+        do {
+          if (generation !== epoch) return;
+          dirty = false;
+          reading = true;
+          try {
+            const summaries = await deps.client.summaries();
+            if (generation === epoch && !dirty) publish({ ...state, summaries, loading: false, error: null });
+          } catch (cause) {
+            if (generation === epoch && !dirty) publish({ ...state, loading: false, error: cause instanceof Error ? cause.message : "Threads could not be loaded from their execution host." });
+          }
+        } while (generation === epoch && dirty);
+      } finally {
+        if (generation === epoch) { pendingRefresh = null; reading = false; }
+      }
+    });
+    return pendingRefresh;
   };
-  /**
-   * Resolves once the newest refresh has published. A reply superseded by a later read (for example one scheduled
-   * by the events a create emits) is discarded, so callers wait for that later read instead of acting on stale rows.
-   */
-  const refresh = async (): Promise<void> => {
-    let work = readSummaries();
-    latestRefresh = work;
-    await work;
-    while (latestRefresh !== work) { work = latestRefresh; await work; }
-  };
-  const scheduleRefresh = (): void => {
-    if (scheduled) return;
-    scheduled = true;
-    queueMicrotask(() => { scheduled = false; if (users) void refresh(); });
-  };
+  const scheduleRefresh = (): void => { if (users) void refresh(); };
   const internal: ThreadWorkspaceInternals = { deps, snapshot: () => state, runtime, setRuntime, save, refresh: scheduleRefresh };
   const submission = createThreadSubmission(internal);
   const store: ThreadWorkspaceStore = {
     client: deps.client,
     async setSettled(target, settled) { await setThreadSettlement(internal, target, settled); await refresh(); },
+    async resetDirectChat(documentId) {
+      const document = state.layout.documents.find((entry) => entry.id === documentId);
+      if (document?.target.kind !== "thread") return;
+      const { conversationId } = document.target;
+      const botId = state.summaries.find((entry) => entry.conversation.id === conversationId)?.conversation.direct?.botId;
+      if (!botId) return;
+      await resetDirectChat(internal, conversationId);
+      await refresh();
+      // The retired chat no longer counts as the bot's, so this opens a fresh draft in its place.
+      store.openDirect(document.workspaceId, botId);
+    },
     async renameThread(conversationId, title) {
       await deps.client.execute({ kind: "rename", commandId: deps.nextId(), conversationId, title });
       await refresh();
@@ -99,7 +115,7 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
     subscribe(listener) { listeners.add(listener); return () => { listeners.delete(listener); }; },
     start() {
       if (++users === 1) {
-        epoch++;
+        epoch++; pendingRefresh = null; reading = false;
         const stopEvents = deps.client.subscribe({ after: state.boot.cursor, onEvent: (event) => { if (event.payload.kind !== "item") scheduleRefresh(); },
           onError: (cause) => publish({ ...state, error: cause.message }) });
         const stopUnread = deps.unread.subscribe(() => publish(state));
@@ -107,11 +123,12 @@ export function createThreadWorkspaceStore(deps: ThreadWorkspaceDeps): ThreadWor
         scheduleRefresh();
       }
       let closed = false;
-      return () => { if (closed) return; closed = true; if (--users === 0) { epoch++; stop(); } };
+      return () => { if (closed) return; closed = true; if (--users === 0) { epoch++; pendingRefresh = null; reading = false; stop(); } };
     },
     refresh,
     updateBoot(boot) {
       if (boot.environmentId !== state.boot.environmentId) throw new Error("Thread views cannot move between execution hosts.");
+      if (state.boot === boot) return;
       publish({ ...state, boot });
       save({ ...state.layout, documents: state.layout.documents.map((entry) => entry.target.kind === "draft" && !entry.pending
         ? { ...entry, role: effectiveRole(boot.personalization, entry.workspaceId) ?? entry.role } : entry) });

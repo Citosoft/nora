@@ -34,26 +34,30 @@ test("CLI imports fail locally without creating work when the workspace or catal
   assert.equal(f.commands.length, 0);
 });
 
-test("opening an external conversation opens it on the first click even when a later refresh supersedes the import's read", async () => {
+test("opening an external conversation opens it on the first click when a refresh arrives during the import's read", async () => {
   const f = threadWorkspaceFixture();
   const store = createThreadWorkspaceStore(f.deps);
   const stop = store.start();
   await new Promise<void>((resolve) => setImmediate(resolve));
   const read = f.deps.client.summaries;
   const gates: Array<() => void> = [];
-  // Every read waits for the test to release it, so replies can arrive out of order.
+  // Hold each read to verify that the follow-up waits for the current read.
   f.deps.client.summaries = async () => { await new Promise<void>((resolve) => { gates.push(resolve); }); return read(); };
   const settle = (): Promise<void> => new Promise<void>((resolve) => setImmediate(resolve));
   const listener = [...f.listeners][0]; assert.ok(listener);
   const session: ExternalSession = { origin: "cli", id: "native-terminal", providerKind: "codex", instanceId: "account", cwd: "/personal", title: "Terminal work",
     createdAt: f.deps.now(), updatedAt: f.deps.now() };
   const opening = store.resumeExternal("personal", session);
-  while (gates.length < 1) await settle();
+  await settle();
+  assert.equal(gates.length, 1);
   // The create's events arrive while the import's read is still in flight and schedule a newer read.
   listener.onEvent({ schemaVersion: 1, id: "created", conversationId: f.summaries[1].conversation.id, cursor: 1, at: f.deps.now(),
     payload: { kind: "conversation", conversation: f.summaries[1].conversation } });
-  while (gates.length < 2) await settle();
-  gates[0](); await settle();
+  await settle();
+  assert.equal(gates.length, 1);
+  gates[0]();
+  await settle();
+  assert.equal(gates.length, 2);
   gates[1]();
   await opening;
   const active = store.snapshot().layout.documents.find((document) => document.id === store.snapshot().layout.activeId);

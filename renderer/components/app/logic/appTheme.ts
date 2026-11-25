@@ -1,7 +1,9 @@
 import { getUiFontFamily } from "@/components/app/logic/appUiFonts";
 import type { AccentColor, ResolvedTheme, ThemeMode, UiFontId } from "@/components/app/types";
+import type { AppThemeSelection } from "@/components/app/types/appTheme.types";
+import type { FixedAccentColor } from "@shared/types/appearance/accentColor.types";
 
-const ACCENT_PALETTES: Record<AccentColor, Record<ResolvedTheme, {
+const ACCENT_PALETTES: Record<FixedAccentColor, Record<ResolvedTheme, {
   primary: string;
   primaryForeground: string;
   accent: string;
@@ -175,12 +177,30 @@ export function getSystemTheme(): ResolvedTheme {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+const ACCENT_PROPERTIES = [
+  "--primary",
+  "--primary-foreground",
+  "--accent",
+  "--accent-foreground",
+  "--ring",
+  "--button-default-bg",
+  "--button-default-border",
+  "--button-default-hover",
+  "--body-gradient-a",
+  "--body-gradient-b"
+] as const;
+
+/** A fixed accent overrides the theme's accent inline; "theme" clears the overrides so the theme's own CSS applies. */
 export function applyAccentColor(accentColor: AccentColor, resolvedTheme: ResolvedTheme): void {
+  const root = document.documentElement;
+  root.dataset.accent = accentColor;
+  if (accentColor === "theme") {
+    for (const property of ACCENT_PROPERTIES) root.style.removeProperty(property);
+    return;
+  }
   const palette = ACCENT_PALETTES[accentColor][resolvedTheme];
   const bodyGradientA = resolvedTheme === "light" ? "transparent" : palette.bodyGradientA;
   const bodyGradientB = resolvedTheme === "light" ? "transparent" : palette.bodyGradientB;
-  const root = document.documentElement;
-  root.dataset.accent = accentColor;
   root.style.setProperty("--primary", palette.primary);
   root.style.setProperty("--primary-foreground", palette.primaryForeground);
   root.style.setProperty("--accent", palette.accent);
@@ -197,10 +217,12 @@ export function applyUiFont(uiFontId: UiFontId): void {
   document.documentElement.style.setProperty("--app-ui-font", getUiFontFamily(uiFontId));
 }
 
-export function applyTheme(mode: ThemeMode, accentColor: AccentColor): ResolvedTheme {
-  const resolved = mode === "system" ? getSystemTheme() : mode;
+/** Theme palettes live in styles.css, keyed by `data-color-theme` and `data-theme` on <html>. */
+export function applyTheme({ themeMode, colorTheme, accentColor }: AppThemeSelection): ResolvedTheme {
+  const resolved = themeMode === "system" ? getSystemTheme() : themeMode;
   const root = document.documentElement;
   root.dataset.theme = resolved;
+  root.dataset.colorTheme = colorTheme;
   root.style.colorScheme = resolved;
   root.classList.toggle("dark", resolved === "dark");
   applyAccentColor(accentColor, resolved);
