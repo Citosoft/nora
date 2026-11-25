@@ -1,15 +1,19 @@
 import { parseTaskLink } from "@shared/taskLink";
 import { parseIssueReference } from "@/components/app/logic/forge-items/issueReference";
 import { IssueReferencePill } from "./IssueReferencePill";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import type { MouseEvent, ReactNode } from "react";
 import ReactMarkdown, { defaultUrlTransform, type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { markdownHtmlPlugins } from "@/components/app/logic/markdownHtml";
 import { cn } from "@/lib/utils";
-import type { MarkdownRendererLinkClickHandler, MarkdownRendererProps } from "@/components/app/types/markdownRenderer.types";
+import type { MarkdownRendererProps } from "@/components/app/types/markdownRenderer.types";
 
-function buildMarkdownComponents(onLinkClick?: MarkdownRendererLinkClickHandler): Components {
+import { resolveHomepageFaviconUrl } from "@/components/app/logic/projectHomepage";
+import { markdownMentions } from "@/components/app/logic/markdownMentions";
+import { ReferencePill } from "./ReferencePill";
+
+function buildMarkdownComponents({ onLinkClick, showLinkIcons, mentions }: Pick<MarkdownRendererProps, "onLinkClick" | "showLinkIcons" | "mentions">): Components {
   return {
   h1: ({ children }: { children?: ReactNode }) => <h1 className="mt-5 text-2xl font-semibold tracking-tight text-foreground first:mt-0">{children}</h1>,
   h2: ({ children }: { children?: ReactNode }) => <h2 className="mt-4 text-xl font-semibold tracking-tight text-foreground first:mt-0">{children}</h2>,
@@ -21,8 +25,13 @@ function buildMarkdownComponents(onLinkClick?: MarkdownRendererLinkClickHandler)
   ul: ({ children, className }) => <ul className={cn("mt-3 list-disc space-y-2 pl-6 text-sm leading-7 text-foreground first:mt-0", className)}>{children}</ul>,
   ol: ({ children }: { children?: ReactNode }) => <ol className="mt-3 list-decimal space-y-2 pl-6 text-sm leading-7 text-foreground first:mt-0">{children}</ol>,
   li: ({ children, className }) => <li className={cn("pl-1 marker:text-muted-foreground [&.task-list-item]:list-none", className)}>{children}</li>,
+  span: ({ node, children, ...props }) => {
+    const bot = mentions?.find((candidate) => candidate.id === node?.properties.dataBotMention);
+    return bot ? <ReferencePill icon={bot.icon} title={bot.detail}>{bot.name}</ReferencePill> : <span {...props}>{children}</span>;
+  },
   a: ({ children, href, title }) => {
     const reference = parseIssueReference(href, title, typeof children === "string" ? children : Array.isArray(children) ? children.filter((child) => typeof child === "string").join("") : "");
+    const favicon = showLinkIcons && !reference && href && /^https?:\/\//i.test(href) ? resolveHomepageFaviconUrl(href) : null;
     const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
       if (!href || !onLinkClick || href.startsWith("#")) {
         return;
@@ -34,6 +43,8 @@ function buildMarkdownComponents(onLinkClick?: MarkdownRendererLinkClickHandler)
 
     return (
       <a className={reference ? "inline rounded-full no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" : "text-primary underline underline-offset-4"} href={href} title={reference ? reference.webUrl : title} onClick={handleClick}>
+        {favicon && <img key={favicon} className="mr-1.5 inline-block size-3.5 align-[-0.15em]" src={favicon} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer"
+          onError={(event) => { event.currentTarget.hidden = true; }} />}
         {reference ? <IssueReferencePill reference={reference} /> : children}
       </a>
     );
@@ -52,9 +63,9 @@ function buildMarkdownComponents(onLinkClick?: MarkdownRendererLinkClickHandler)
   tr: ({ children }: { children?: ReactNode }) => <tr className="border-b border-border/40 last:border-b-0">{children}</tr>,
   th: ({ children, style }) => <th style={style} className="px-3 py-2 font-medium text-foreground">{children}</th>,
   td: ({ children, style }) => <td style={style} className="px-3 py-2 align-top text-foreground">{children}</td>,
-  code: ({ children, className }) => <code className={cn("rounded bg-muted px-1.5 py-0.5 font-mono text-[12px] text-foreground", className)}>{children}</code>,
+  code: ({ children, className }) => <code className={cn("rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground", className)}>{children}</code>,
   // The pre element identifies every fenced block, including fences without a language.
-  pre: ({ children }) => <pre className="mt-3 max-w-full overflow-x-auto rounded-md border bg-muted/50 px-4 py-3 text-[12px] leading-6 first:mt-0 [&>code]:block [&>code]:rounded-none [&>code]:bg-transparent [&>code]:p-0">{children}</pre>,
+  pre: ({ children }) => <pre className="mt-3 max-w-full overflow-x-auto rounded-md border bg-muted/50 px-4 py-3 text-xs leading-6 first:mt-0 [&>code]:block [&>code]:rounded-none [&>code]:bg-transparent [&>code]:p-0">{children}</pre>,
   input: ({ checked, disabled, type }: { checked?: boolean; disabled?: boolean; type?: string }) => {
     if (type !== "checkbox") {
       return null;
@@ -65,14 +76,20 @@ function buildMarkdownComponents(onLinkClick?: MarkdownRendererLinkClickHandler)
   };
 }
 
-export function MarkdownRenderer({ children, className, onLinkClick, allowHtml = false }: MarkdownRendererProps) {
-  const components = useMemo(() => buildMarkdownComponents(onLinkClick), [onLinkClick]);
+const REMARK_PLUGINS = [remarkGfm];
+
+export const MarkdownRenderer = memo(function MarkdownRenderer({ children, className, onLinkClick, allowHtml = false, showLinkIcons, mentions }: MarkdownRendererProps) {
+  const components = useMemo(() => buildMarkdownComponents({ onLinkClick, showLinkIcons, mentions }), [onLinkClick, showLinkIcons, mentions]);
+  const rehypePlugins = useMemo(() => [
+    ...(allowHtml ? markdownHtmlPlugins : []),
+    ...(mentions?.length ? [markdownMentions(mentions)] : [])
+  ], [allowHtml, mentions]);
   return (
     <div className={className}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={allowHtml ? markdownHtmlPlugins : undefined} components={components}
+      <ReactMarkdown remarkPlugins={REMARK_PLUGINS} rehypePlugins={rehypePlugins} components={components}
         urlTransform={(url, key) => key === "href" && onLinkClick && (parseTaskLink(url) || /^(?:file:|[a-z]:[\\/])/i.test(url)) ? url : defaultUrlTransform(url)}>
         {children}
       </ReactMarkdown>
     </div>
   );
-}
+});

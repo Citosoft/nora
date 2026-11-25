@@ -31,10 +31,12 @@ export function createDemoServices(storage: KeyValueStorage, preferences: Prefer
       const entry = runtimes.find(r => r.installationId === id);
       if (!entry) throw new RemoteRequestError("directory", { kind: "api", status: 404, code: "not-found", message: "Demo computer not found." });
       const updated = { ...entry, name }; runtimes = runtimes.map(r => r.installationId === id ? updated : r); return updated;
-    }, remove: async id => { runtimes = runtimes.filter(r => r.installationId !== id); } },
+    }, remove: async id => { runtimes = runtimes.filter(r => r.installationId !== id); },
+    registerPushDevice: async () => { throw new Error("Demo mode never registers for notifications."); },
+    removePushDevice: async () => undefined },
     sessions: { get: endpoint => sessions.get(endpoint), resumeAll: () => sessions.resumeAll(), disposeAll() { sessions.disposeAll(); runtime.dispose(); } },
     pendingCommands, commandDeps: { createId, now: () => new Date() },
-    probe: async () => ({ status: "online", apiVersion: 1, compatible: true, checkedAt: new Date().toISOString() }), recordConnected: () => undefined,
+    probe: async () => ({ status: "online", apiVersion: 1, compatible: true, checkedAt: new Date().toISOString() }), recordConnected: () => undefined, push: null,
     async forgetDeviceData() { sessions.disposeAll(); runtime.dispose(); await pendingCommands.clear(); await preferences.update(current => ({ ...current, cachedRuntimes: null, lastConnected: {}, defaultRuntimeId: null })); }
   };
 }

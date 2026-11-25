@@ -20,7 +20,8 @@ export type SessionCenterPorts = {
   resolvedTheme: ResolvedTheme;
   terminalThemeId: TerminalThemeId;
   terminalFontId: TerminalFontId;
-  threadBackdrop: ThreadBackdropSettings;
+  /** Null when the backdrop is unavailable (GPU acceleration disabled). */
+  threadBackdrop: ThreadBackdropSettings | null;
   /** Same payload as former `CenterContentBuildProvider`; derived from assembly in one place. */
   centerContentBuild: AppCenterContentValueArgs;
 };

@@ -87,7 +87,7 @@ test("Schema v3 upgrade preserves execution history and finalizes historical pen
   database.exec("DELETE FROM effects WHERE json_extract(json, '$.action.kind') = 'review'; PRAGMA user_version = 3");
   const before = f.snapshot(); const cursor = f.store.cursor();
   f.restart();
-  assert.equal(database.prepare("PRAGMA user_version").get()?.user_version, 6);
+  assert.equal(database.prepare("PRAGMA user_version").get()?.user_version, 7);
   assert.deepEqual(f.snapshot(), before); assert.equal(f.store.cursor(), cursor);
   assert.equal(f.store.unfinishedEffects().filter((effect) => effect.action.kind === "review").length, 1);
   f.engine.recover();

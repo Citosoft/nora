@@ -1,6 +1,6 @@
 # Turn checkpoints and review diffs
 
-Implemented in the isolated v3 host on 2026-11-09. This is not production cutover, automatic restore, authenticated-provider acceptance or final UI acceptance.
+Implemented in the isolated v3 host on 2026-11-09; user-initiated undo added 2026-11-25. This is not production cutover, automatic restore, authenticated-provider acceptance or final UI acceptance.
 
 ## Evidence semantics
 
@@ -20,6 +20,8 @@ Capture covers Git-visible tracked and non-ignored untracked files on disk. Igno
 
 Schema v5 adds private checkpoint manifests and SHA-256-addressed blobs in the environment-owned SQLite database. Unchanged bytes are deduplicated across files, before/after states and turns. Blobs and manifests commit together, with integrity verification on hydration. Only normalized review metadata/patches cross IPC; snapshot contents and unchanged files never enter the event journal. Live token/admission paths use small reservation metadata rather than hydrating file contents.
 
+Files byte-identical to their Git index blob are recorded as `indexed` entries (path, mode, SHA-256 and the Git object id) without retaining their bytes, so the 8 MiB content budget covers only modified and untracked files. Diffing reads indexed bytes back from the object database and verifies them against the recorded SHA-256; an unreadable or mismatched object yields an explicit unavailable patch, never clean evidence. Content filters (line endings, LFS) make the bytes differ from the blob, so such files are captured inline.
+
 Capture verifies filesystem identity and file size/mode/timestamps around reads, refuses symlinked parents, records link targets without following them, and confirms two matching scans. This detects ordinary concurrent changes; it is not an atomic filesystem snapshot or a filesystem access sandbox.
 
 ## Recovery and fallback
@@ -30,12 +32,22 @@ Capture verifies filesystem identity and file size/mode/timestamps around reads,
 - Missing/oversized/failed baseline or final capture falls back to workspace review with a typed attribution-unavailable reason. Saved-pair diff failures remain unavailable and preserve the bytes for inspection; they never become clean evidence.
 - Existing v1–v4 execution history and receipts survive schema upgrades. Old runs have no fabricated checkpoints.
 
+## Undo
+
+A user can undo a reviewed turn's file changes (`undo-turn` command). Only files are restored; the transcript and the provider's native conversation are untouched, and the review item records the outcome (`pending`, `undone`, `blocked`, `failed` or `expired`).
+
+- **Availability.** The latest turn, or an older one whose files no later standing turn changed. Admission also requires an uninterrupted retained before/after pair, write access, no active turn in the thread and no turn evidence, undo or running turn on an overlapping checkout.
+- **Conflicts.** Before writing, each changed file must still hold exactly what the turn left (hash and mode, or absence). A file already back at its pre-turn state counts as restored, so retries are idempotent. Any other state is an `edited` conflict; pre-turn bytes that were only fingerprinted are `unrestorable`. Mode `all` changes nothing when any conflict exists; mode `unconflicted` restores the rest and reports the conflicts.
+- **Writing.** Files are written beside the target and renamed over it; added files are deleted; deleted files and their folders are recreated. Folder chains are walked without following links, and each file is re-checked immediately before it is written. Folders created by the turn are left in place when their files are removed.
+- **Durability.** Review finalization copies the pre-turn bytes of changed indexed files into the checkpoint store, so undo does not depend on Git retaining those objects. An undo effect holds its checkout like pending review evidence; later starts on overlapping checkouts wait, and a turn sent meanwhile does not deadlock it. After a host restart an unfinished undo runs again.
+- **Retention.** Each conversation keeps snapshots for its 20 most recent checkpointed turns. Recording a new baseline drops older pairs (skipping any with unfinished review or undo work), marks their reviews `expired` for undo, and deletes blobs no remaining checkpoint references (schema v7 `checkpoint_blob_refs`). Diffs in the transcript are unaffected. Execution history has no conversation deletion, so snapshots are only released by retention.
+
 ## Resource limits
 
 - Up to 5,000 files, 1 MiB per file and 8 MiB of decoded content per snapshot; no partial snapshot on overflow.
 - Capture checks a 10-second scan budget; Git subprocesses each have a 10-second timeout and 2 MiB output limit. In-flight filesystem operations are not an atomic or hard real-time boundary.
 - Up to 128 textual patches, 128 KiB per patch and 512 KiB total text, with a 10-second patch scheduling budget. Remaining changed paths/modes/hashes stay visible with an explicit omitted-text presentation. Binary files retain before/after hashes and modes without a fabricated text patch.
-- Deduplication limits repeated storage, but changed blobs accumulate with history. Retention/garbage collection, on-demand large patches, general-file/artifact capture, SSH adapters and restore/rollback acceptance remain future work.
+- Deduplication limits repeated storage, and retention bounds it to 20 turns per conversation. On-demand large patches, general-file/artifact capture, SSH adapters and native conversation rollback remain future work.
 
 ## Implementation and verification
 

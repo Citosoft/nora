@@ -1,6 +1,7 @@
 import { inboxCounts, inboxTarget, inboxTier, isSnoozed } from "@shared/inbox/projection";
 import type { InboxItem, InboxSnapshot } from "@shared/types/inbox/inbox.types";
 import type { InboxNotice, InboxNotifierDeps } from "@main/types/inbox/inbox.types";
+import { watchInboxArrivals } from "./arrivals";
 
 /** How a needs-you item reads as a desktop notification. */
 export function describeInboxNotice(item: InboxItem): InboxNotice {
@@ -14,22 +15,18 @@ export function describeInboxNotice(item: InboxItem): InboxNotice {
   }
 }
 
-const awakeNeedsYou = (snapshot: InboxSnapshot, now: string): Set<string> =>
-  new Set(snapshot.items.filter((item) => inboxTier(item) === "needs-you" && !isSnoozed(item, now)).map((item) => item.id));
+/** Needs-you items that are not snoozed: what the badge counts and what is announced as it arrives. */
+export const awakeNeedsYou = (snapshot: InboxSnapshot, now: string): InboxItem[] =>
+  snapshot.items.filter((item) => inboxTier(item) === "needs-you" && !isSnoozed(item, now));
 
 /**
  * Keeps the badge equal to what needs the user and notifies once for each needs-you item as it arrives or wakes from a
  * snooze. Items already waiting when Nora starts are counted but not announced again.
  */
 export function startInboxNotifier(deps: InboxNotifierDeps): () => void {
-  let seen = awakeNeedsYou(deps.inbox.snapshot(), deps.now());
   deps.setBadge(inboxCounts(deps.inbox.snapshot().items, deps.now()).needsYou);
-  return deps.inbox.subscribe((snapshot) => {
-    const now = deps.now();
-    deps.setBadge(inboxCounts(snapshot.items, now).needsYou);
-    const current = awakeNeedsYou(snapshot, now);
-    const arrived = snapshot.items.filter((item) => current.has(item.id) && !seen.has(item.id));
-    seen = current;
+  return watchInboxArrivals({ inbox: deps.inbox, select: (snapshot) => awakeNeedsYou(snapshot, deps.now()) }, (snapshot, arrived) => {
+    deps.setBadge(inboxCounts(snapshot.items, deps.now()).needsYou);
     if (!arrived.length || !deps.shouldNotify()) return;
     for (const item of arrived) deps.notify(describeInboxNotice(item));
   });

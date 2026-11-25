@@ -2,26 +2,17 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { EffectWorker } from "@main/execution/effectWorker";
 import { ProviderRegistry } from "@main/execution/providerRegistry";
-import { nativeCapabilities } from "@main/execution/providerCapabilities";
 import { compareSnapshots } from "@main/execution/checkpoints/diff";
-import type { ExecutionProvider } from "@main/types/execution/provider.types";
 import type { TurnCheckpoints } from "@main/types/execution/checkpoints.types";
 import { fixture } from "../fixture";
-import { snapshot } from "./fixture";
+import { noRestore, registry, snapshot } from "./fixture";
 
-function registry(start: ExecutionProvider["start"]): ProviderRegistry {
-  const providers = new ProviderRegistry();
-  providers.register({ kind: "codex", instanceId: "account-a", capabilities: nativeCapabilities, start,
-    async catalog() { return { status: "unavailable", failure: { code: "unsupported", message: "Fixture", retryable: false } }; },
-    async interrupt() {}, async respond() {}, async reconcile() {}, async close() {} });
-  return providers;
-}
 
 test("baseline commits before native start; queued turns wait for final capture and inherit the previous result", async (t) => {
   const f = fixture(t); f.create(); f.submit();
   let current = snapshot({ "document.md": "Pre-existing edit\n" }); let starts = 0;
-  const checkpoints: TurnCheckpoints = { async capture() { return { status: "ready", snapshot: current }; },
-    compare: (before, after) => compareSnapshots("git", before, after) };
+  const checkpoints: TurnCheckpoints = { ...noRestore, async capture() { return { status: "ready", snapshot: current }; },
+    compare: (_workspace, before, after) => compareSnapshots("git", ".", before, after) };
   const providers = registry(async ({ run }, emit) => {
     const saved = f.store.checkpoint("conversation", run.id); assert.ok(saved?.baseline.status === "ready");
     assert.deepEqual(saved.baseline.snapshot, current);
@@ -48,13 +39,13 @@ test("baseline commits before native start; queued turns wait for final capture 
   assert.ok(second.result.changes[0].patch?.includes("-Turn 1\n+Turn 2"));
 });
 
-test("pending turn evidence retains checkout writer admission, while unrelated checkouts continue", (t) => {
+test("final checkout evidence can be captured after a new instruction is admitted", (t) => {
   const f = fixture(t); f.create(); f.create("same", "conversation"); f.create("isolated"); f.submit();
   const start = f.engine.claimEffect(["start"]); assert.ok(start);
   f.engine.recordCheckpoint(start.id, "baseline", { status: "ready", snapshot: snapshot({ "note.md": "Before\n" }) });
   f.update({ kind: "finished", eventId: "done", status: "completed", failure: null, usage: null });
   assert.deepEqual(f.store.writers(f.snapshot().conversation.workspace), ["conversation"]);
-  assert.throws(() => f.submit("other", "same"), /isolated worktree/);
+  f.submit("other", "same");
   f.submit("parallel", "isolated");
   assert.equal(f.engine.claimEffect(["start"])?.conversationId, "isolated");
 });
@@ -67,7 +58,7 @@ test("capture failure falls back to workspace scope without claiming turn attrib
   });
   const worker = new EffectWorker(f.engine, providers, undefined, undefined,
     async () => ({ status: "ready", scope: "workspace", paths: ["note.md"] }),
-    { async capture() { return { status: "unavailable", reason: "limit-exceeded" }; }, async compare() { assert.fail("No complete pair exists"); } });
+    { ...noRestore, async capture() { return { status: "unavailable", reason: "limit-exceeded" }; }, async compare() { assert.fail("No complete pair exists"); } });
   await worker.runNext(["start"]); await worker.runNext(["review"]);
   const review = f.snapshot().items.find((item) => item.kind === "review"); assert.ok(review?.kind === "review");
   assert.deepEqual(review.result, { status: "ready", scope: "workspace", paths: ["note.md"], attributionUnavailable: "limit-exceeded" });
@@ -79,7 +70,7 @@ test("cancelling during baseline capture never submits the instruction", async (
   let release = (): void => {};
   const gate = new Promise<void>((resolve) => { release = resolve; });
   const worker = new EffectWorker(f.engine, registry(async () => { starts++; }), undefined, undefined, undefined,
-    { async capture() { await gate; return { status: "ready", snapshot: snapshot({}) }; }, async compare() { assert.fail("No turn started"); } });
+    { ...noRestore, async capture() { await gate; return { status: "ready", snapshot: snapshot({}) }; }, async compare() { assert.fail("No turn started"); } });
   const operation = worker.beginNextEffect(["start"]); assert.ok(operation);
   f.command({ kind: "interrupt", commandId: "stop", conversationId: "conversation", runId: "run" });
   release(); await operation;
@@ -92,7 +83,7 @@ test("checkpoint transaction failure prevents provider submission and preserves 
   const database = f.openDatabase();
   database.exec("CREATE TRIGGER reject_checkpoint BEFORE INSERT ON turn_checkpoints BEGIN SELECT RAISE(ABORT, 'checkpoint failure'); END");
   const worker = new EffectWorker(f.engine, registry(async () => { starts++; }), undefined, undefined, undefined,
-    { async capture() { return { status: "ready", snapshot: snapshot({}) }; }, async compare() { assert.fail("No turn started"); } });
+    { ...noRestore, async capture() { return { status: "ready", snapshot: snapshot({}) }; }, async compare() { assert.fail("No turn started"); } });
   await assert.rejects(worker.runNext(["start"]), /checkpoint failure/);
   assert.equal(starts, 0); assert.equal(f.store.checkpoint("conversation", "run"), null);
   assert.equal(database.prepare("SELECT count(*) AS count FROM checkpoint_blobs").get()?.count, 0);
@@ -110,7 +101,7 @@ test("restart with a saved pair rebuilds review from durable bytes without re-re
   assert.deepEqual(f.store.checkpoint("conversation", "run"), saved);
   const worker = new EffectWorker(f.engine, new ProviderRegistry(), undefined, undefined,
     async () => { assert.fail("Do not inspect the current workspace"); },
-    { async capture() { assert.fail("Do not recapture after restart"); }, compare: (before, after) => compareSnapshots("git", before, after) });
+    { ...noRestore, async capture() { assert.fail("Do not recapture after restart"); }, compare: (_workspace, before, after) => compareSnapshots("git", ".", before, after) });
   await worker.runNext(["review"]);
   const item = f.snapshot().items.find((entry) => entry.kind === "review");
   assert.ok(item?.kind === "review" && item.result.status === "ready" && item.result.scope === "turn");
@@ -136,7 +127,7 @@ for (const loss of ["restart", "disconnect"] as const) {
     f.update({ kind: "finished", eventId: "confirmed", status: "completed", failure: null, usage: null });
     const worker = new EffectWorker(f.engine, new ProviderRegistry(), undefined, undefined,
       async () => ({ status: "ready", scope: "workspace", paths: ["later.md"] }),
-      { async capture() { assert.fail("A later capture cannot recover the original turn boundary"); }, async compare() { assert.fail("No continuous evidence"); } });
+      { ...noRestore, async capture() { assert.fail("A later capture cannot recover the original turn boundary"); }, async compare() { assert.fail("No continuous evidence"); } });
     await worker.runNext(["review"]);
     const item = f.snapshot().items.find((entry) => entry.kind === "review"); assert.ok(item?.kind === "review");
     assert.deepEqual(item.result, { status: "ready", scope: "workspace", paths: ["later.md"], attributionUnavailable: "interrupted" });
@@ -154,4 +145,17 @@ test("restart before final capture records unavailable evidence instead of exami
   assert.deepEqual(f.store.checkpoint("conversation", "run")?.baseline, baseline);
   assert.deepEqual(f.store.checkpoint("conversation", "run")?.final, { status: "unavailable", reason: "interrupted" });
   assert.equal(f.engine.claimEffect(["review"]), null);
+});
+
+test("parallel writers keep workspace review without attributing each other's changes to a turn", (t) => {
+  const f = fixture(t); f.create(); f.create("peer", "conversation");
+  f.submit();
+  const first = f.engine.claimEffect(["start"]); assert.ok(first);
+  const baseline = { status: "ready", snapshot: snapshot({ "note.md": "Before\n" }) } as const;
+  f.engine.recordCheckpoint(first.id, "baseline", baseline);
+  f.submit("other", "peer");
+  const second = f.engine.claimEffect(["start"]); assert.ok(second);
+  f.engine.recordCheckpoint(second.id, "baseline", baseline);
+  assert.equal(f.store.checkpoint("conversation", "run")?.continuity, "interrupted");
+  assert.equal(f.store.checkpoint("peer", "other")?.continuity, "interrupted");
 });

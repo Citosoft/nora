@@ -123,6 +123,14 @@ test("a new task sees the chat so far; a continuing one only what is new since i
   assert.match(continuing, /\[User\]: Now the header/);
 });
 
+test("a new task's opening transcript keeps only the recent end of a long chat", () => {
+  const items = Array.from({ length: 40 }, (_, index) => message(String(index), `msg-${index}-${"x".repeat(200)}`));
+  const fresh = directPrompt(direct, items, "other", "App");
+  assert.match(fresh, /earlier messages omitted; call chat_history/);
+  assert.doesNotMatch(fresh, /msg-0-/);
+  assert.match(fresh, /msg-39-/);
+});
+
 test("a router failure falls back to the working workspace, and Stop interrupts the work thread", async () => {
   const fallback = await runChat("Hello", async () => { throw new Error("no AI configured"); });
   assert.equal(fallback.threads[0]?.workspace.projectId, "app");

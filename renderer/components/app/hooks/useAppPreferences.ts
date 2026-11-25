@@ -1,3 +1,4 @@
+import { normalizeUiFontSize } from "@shared/appearance/fontSize";
 import { useAgentWindowSettings } from "@/components/app/hooks/useAgentWindowSettings";
 import { normalizeAppSettings } from "@/components/app/logic/normalizeAppSettings";
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
@@ -50,6 +51,7 @@ import type {
   UiFontId
 } from "@/components/app/types";
 import type { AppPreferences } from "@/components/app/types/component.types";
+import type { NotificationPreferencesUpdate } from "@/components/app/types/settings.types";
 import type { ColorThemeId } from "@shared/types/appearance/colorTheme.types";
 import { DEFAULT_COLOR_THEME_ID } from "@shared/appearance/colorThemes";
 import { DEFAULT_ACCENT_COLOR } from "@shared/appearance/accentColors";
@@ -177,6 +179,11 @@ export function useAppPreferences(): AppPreferences {
   useEffect(() => {
     appSettingsRef.current = appSettings;
   }, [appSettings]);
+
+  useEffect(() => {
+    const size = normalizeUiFontSize(appSettings.uiFontSize);
+    document.documentElement.style.setProperty("--app-ui-font-size", `${size / DEFAULT_APP_SETTINGS.uiFontSize * 100}%`);
+  }, [appSettings.uiFontSize]);
 
   const toggleTheme = () => {
     const nextMode: ThemeMode = resolvedTheme === "dark" ? "light" : "dark";
@@ -307,6 +314,8 @@ export function useAppPreferences(): AppPreferences {
     }));
   };
 
+  const updateUiFontSize = (uiFontSize: number) => saveAppSettings((current) => ({ ...current, uiFontSize: normalizeUiFontSize(uiFontSize) }));
+
   const updateThreadBackdrop = async (patch: Partial<AppSettings["threadBackdrop"]>) => {
     await saveAppSettings((current) => ({
       ...current,
@@ -375,10 +384,7 @@ export function useAppPreferences(): AppPreferences {
   };
 
   const updateNotificationPreferences = async (
-    nextNotificationSettings: Pick<
-      AppSettings,
-      "agentCompletionNotificationsEnabled"
-    >
+    nextNotificationSettings: NotificationPreferencesUpdate
   ) => {
     await saveAppSettings((current) => ({
       ...current,
@@ -522,6 +528,7 @@ export function useAppPreferences(): AppPreferences {
     updateVercelAccountLabel,
     updateFileEditorThemeId,
     updateThreadBackdrop,
+    updateUiFontSize,
     updateHardwareAccelerationEnabled,
     updateWorkspaceStateStorageMode,
     updateDefaultAgentLaunchTarget,

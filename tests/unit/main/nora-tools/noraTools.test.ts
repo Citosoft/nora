@@ -246,6 +246,15 @@ test("worker threads are not served the orchestration tools, so delegation never
   const botWorker = await names("bot-worker");
   for (const name of orchestration) { assert.ok(plain.includes(name)); assert.ok(botTools.includes(name)); assert.ok(!worker.includes(name)); assert.ok(!botWorker.includes(name)); }
   assert.ok(worker.includes("list_threads"));
+  assert.ok(worker.includes("remember") && worker.includes("list_tasks"));
+  // Plain workers stay off Nora admin catalogues (apps, workflows, settings, terminals, bot CRUD).
+  for (const name of ["create_bot", "get_settings", "list_workflows", "list_terminals", "create_app"]) {
+    assert.ok(plain.includes(name), name);
+    assert.ok(!worker.includes(name), name);
+  }
+  // Bots no longer get terminals or routine listing; those stay on Nora.
+  assert.ok(plain.includes("list_terminals") && !botTools.includes("list_terminals"));
+  assert.ok(plain.includes("list_routines") && !botTools.includes("list_routines"));
   // The builder's guidance already holds the whole guide, so offering the tool only invites re-reading it.
   const builder = await names("builder");
   assert.ok(builder.includes("update_app") && !builder.includes("app_builder_guide"));

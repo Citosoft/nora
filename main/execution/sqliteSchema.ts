@@ -11,7 +11,7 @@ export function migrateExecutionSchema(database: DatabaseSync, environmentId: st
   database.exec("BEGIN IMMEDIATE");
   try {
     const version = versionRowSchema.parse(database.prepare("PRAGMA user_version").get()).user_version;
-    if (version > 6) throw new Error(`Unsupported execution schema ${version}; a newer Nora version is required`);
+    if (version > 7) throw new Error(`Unsupported execution schema ${version}; a newer Nora version is required`);
     if (version === 0) {
       database.exec(`
         CREATE TABLE execution_owner (environment_id TEXT NOT NULL);
@@ -39,8 +39,20 @@ export function migrateExecutionSchema(database: DatabaseSync, environmentId: st
       baseline_ready INTEGER NOT NULL, json TEXT NOT NULL, PRIMARY KEY(conversation_id, run_id))`);
     // Historical conversations retain their original native guidance; never infer a new role.
     if (version < 6) database.exec("UPDATE conversation_heads SET json = json_set(json, '$.role', NULL) WHERE json_type(json, '$.role') IS NULL");
-    database.exec("PRAGMA user_version = 6; COMMIT");
+    if (version < 7) referenceCheckpointBlobs(database);
+    database.exec("PRAGMA user_version = 7; COMMIT");
   } catch (error) { database.exec("ROLLBACK"); throw error; }
+}
+
+/** v7 records which checkpoint uses each stored blob, so pruning old turns can drop bytes nothing else needs. */
+function referenceCheckpointBlobs(database: DatabaseSync): void {
+  database.exec(`CREATE TABLE IF NOT EXISTS checkpoint_blob_refs (conversation_id TEXT NOT NULL, run_id TEXT NOT NULL, hash TEXT NOT NULL,
+      PRIMARY KEY(conversation_id, run_id, hash));
+    CREATE INDEX IF NOT EXISTS checkpoint_blob_refs_hash ON checkpoint_blob_refs(hash);
+    INSERT OR IGNORE INTO checkpoint_blob_refs SELECT c.conversation_id, c.run_id, json_extract(f.value, '$.hash')
+      FROM turn_checkpoints c, json_each(c.json, '$.baseline.snapshot.files') f;
+    INSERT OR IGNORE INTO checkpoint_blob_refs SELECT c.conversation_id, c.run_id, json_extract(f.value, '$.hash')
+      FROM turn_checkpoints c, json_each(c.json, '$.final.snapshot.files') f;`);
 }
 
 /** v4 introduces host review effects/items; older readers must refuse the newer schema. */

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { providerConnectionSchema } from "@shared/providers/account";
 import { providerKindSchema } from "@shared/providers/providerKinds";
 import { conversationReviewSchema } from "./review";
+import { turnUndoModeSchema, turnUndoStateSchema } from "./turnUndo";
 import { roleSelectionSchema, roleSnapshotSchema } from "@shared/personalization/contracts";
 import { threadReferenceSchema } from "./references";
 import { mcpAppCallSchema } from "./mcpApp";
@@ -184,7 +185,8 @@ export const timelineItemSchema = z.discriminatedUnion("kind", [
     /** The model the agent ran on, or the one requested until the runtime reports it. */
     model: z.string().optional(), effort: z.string().optional() }).strict(),
   z.object({ ...itemBase, kind: z.literal("changes"), paths: z.array(z.string()), patches: z.record(z.string(), z.string().nullable()).optional(), attribution: z.enum(["turn", "workspace"]) }).strict(),
-  z.object({ ...itemBase, kind: z.literal("review"), result: conversationReviewSchema }).strict(),
+  /** `undo` is present once the user asks to undo this turn's file changes. */
+  z.object({ ...itemBase, kind: z.literal("review"), result: conversationReviewSchema, undo: turnUndoStateSchema.optional() }).strict(),
   /** The model asked the user to sign in to an MCP connector, named as the runtime reports it; connection state is read live, never stored. */
   z.object({ ...itemBase, kind: z.literal("connector-sign-in"), server: z.string().min(1), reason: z.string().optional() }).strict()
 ]);
@@ -245,7 +247,9 @@ export const conversationCommandSchema = z.discriminatedUnion("kind", [
   /** Settles a direct chat and retires it, so the bot's next message starts a fresh chat; refused while it has active or queued work. */
   z.object({ ...commandBase, kind: z.literal("reset-direct") }).strict(),
   /** Pins or unpins one of the thread's messages, settled or not. */
-  z.object({ ...commandBase, kind: z.literal("set-message-pin"), itemId: id, pinned: z.boolean() }).strict()
+  z.object({ ...commandBase, kind: z.literal("set-message-pin"), itemId: id, pinned: z.boolean() }).strict(),
+  /** Restores the files a reviewed turn changed to their pre-turn bytes; the transcript is kept. */
+  z.object({ ...commandBase, kind: z.literal("undo-turn"), runId: id, mode: turnUndoModeSchema }).strict()
 ]);
 export const commandReceiptSchema = z.object({
   commandId: id,

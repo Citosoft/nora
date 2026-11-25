@@ -4,10 +4,12 @@ import type { AgentSettings, AgentSettingsPatch } from "@shared/types/nora-tools
 import type { Conversation, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ConnectorSubject } from "@shared/types/connectors/connectors.types";
 import type { NoraToolAudience } from "@shared/types/nora-tools/noraTools.types";
+import type { AskBotWait } from "@shared/nora-tools/askBot";
 import type { LoopDefinition, LoopRun, LoopRoleOutcome } from "@shared/appTypes";
 import type { SecretScope, SecretSummary } from "@shared/types/secrets/secrets.types";
 import type { SecretPromptOutcome, SecretRunOutcome } from "@main/types/secrets/secrets.types";
 import type { BotMemoryEntry, BotAvatarEyes, BotAvatarPalette, BotAvatarShape, BotDefinition, EffectiveBot } from "@shared/types/bots/bots.types";
+import type { RoutineSchedule } from "@shared/types/bots/routines.types";
 import type { AppDefinition, AppRenderData, AppSpecInput } from "@shared/types/apps/apps.types";
 import type { JsonValue } from "@main/jsonValue";
 
@@ -90,6 +92,29 @@ export interface NoraAppOperations {
   models(context: NoraToolContext): Promise<NoraProviderModels[]>;
 }
 
+export type NoraTerminalKind = "local" | "workspace";
+export interface NoraTerminalInfo {
+  id: string;
+  name: string;
+  kind: NoraTerminalKind;
+  status: string;
+  host: string;
+  cwd: string;
+  branch: string | null;
+  lastLine: string;
+  busy: boolean;
+}
+export interface OpenNoraTerminalInput {
+  kind: NoraTerminalKind;
+  /** Display name for a new workspace terminal; ignored for the local dock. */
+  name?: string;
+}
+export interface NoraTerminalOperations {
+  list(context: NoraToolContext): NoraTerminalInfo[];
+  open(input: OpenNoraTerminalInput, context: NoraToolContext): Promise<NoraTerminalInfo>;
+  paste(id: string, text: string, context: NoraToolContext): Promise<NoraTerminalInfo>;
+}
+
 export interface NoraThreadQuery { allWorkspaces: boolean; includeSettled: boolean; limit: number; }
 export interface NoraThreadInfo { id: string; title: string; workspace: string; bot: string | null; status: string; updatedAt: string; current: boolean; }
 export interface NoraThreadMessage { role: "user" | "assistant"; text: string; createdAt: string; }
@@ -161,10 +186,16 @@ export interface NoraWorkerOperations {
   wait(input: WaitForWorkersInput, context: NoraToolContext, signal: AbortSignal): Promise<NoraWorkerReport[]>;
 }
 
-export interface AskBotResult { botName: string; conversationId: string; reply: string; }
+export type AskBotResult =
+  | { status: "replied"; botName: string; conversationId: string; reply: string }
+  | { status: "working"; botName: string; conversationId: string; reason: "notify" | "timeout" };
 export interface NoraAskOperations {
-  /** Runs the bot in its own child thread of the caller and waits for its final reply. */
-  ask(bot: string, message: string, context: NoraToolContext, signal: AbortSignal): Promise<AskBotResult>;
+  /**
+   * Runs the bot in its own child thread of the caller.
+   * `notify` (default) returns once work is started and posts the answer into the caller when it finishes;
+   * `reply` waits for the final answer in this tool call.
+   */
+  ask(bot: string, message: string, wait: AskBotWait, context: NoraToolContext, signal: AbortSignal): Promise<AskBotResult>;
 }
 /** A new note in a scope, or a correction of one of the thread's own saved notes by id. */
 export type RememberInput = { kind: "add"; text: string; scope: "bot" | "workspace" } | { kind: "update"; memoryId: string; text: string };
@@ -202,6 +233,49 @@ export interface CreateAppToolInput { name: string; spec: AppSpecInput; suggesti
 /** A builder thread always says which version it changed, so its saves never overwrite edits it has not seen. */
 export type UpdateAppToolInput = UpdateAppInput & { baseVersion: number };
 
+export interface NoraRoutineInfo {
+  id: string;
+  botId: string;
+  name: string;
+  instruction: string;
+  active: boolean;
+  timezone: string;
+  schedule: string;
+  workspaceId: string;
+  runIn: "chat" | "thread";
+  missedPolicy: "skip" | "run-once";
+  nextRunAt: string | null;
+}
+export interface CreateNoraRoutineInput {
+  botId: string;
+  name: string;
+  instruction: string;
+  schedule: RoutineSchedule;
+  active?: boolean;
+  timezone?: string;
+  workspaceId?: string;
+  runIn?: "chat" | "thread";
+  missedPolicy?: "skip" | "run-once";
+}
+export interface UpdateNoraRoutineInput {
+  id: string;
+  botId: string;
+  name?: string;
+  instruction?: string;
+  schedule?: RoutineSchedule;
+  active?: boolean;
+  timezone?: string;
+  workspaceId?: string;
+  runIn?: "chat" | "thread";
+  missedPolicy?: "skip" | "run-once";
+}
+export interface NoraRoutineOperations {
+  list(botId: string | undefined, context: NoraToolContext): NoraRoutineInfo[];
+  create(input: CreateNoraRoutineInput, context: NoraToolContext): NoraRoutineInfo;
+  update(input: UpdateNoraRoutineInput, context: NoraToolContext): NoraRoutineInfo;
+  remove(id: string, botId: string | undefined, context: NoraToolContext): NoraRoutineInfo;
+}
+
 export interface NoraToolDeps {
   asks: NoraAskOperations;
   apps: NoraAppsOperations;
@@ -214,17 +288,25 @@ export interface NoraToolDeps {
   threads: NoraThreadOperations;
   chats: NoraChatOperations;
   tasks: NoraTaskOperations;
+  terminals: NoraTerminalOperations;
+  routines: NoraRoutineOperations;
   workflows: NoraWorkflowOperations;
   workers: NoraWorkerOperations;
 }
 /** The connectors a run receives; satisfied by the connector service. */
 export interface RunContextConnectors {
-  /** The connectors this thread gets: usable ones whose access admits its workspace and bot, narrowed to `only` when a thread names its own. */
-  endpoints(subject: ConnectorSubject, only?: readonly string[]): Promise<RunMcpServer[]>;
+  /**
+   * The connectors this thread gets: usable ones whose access admits its workspace and bot, narrowed to `only` when a thread
+   * names its own. OAuth connectors that still need sign-in are included so a tool call can open an authorize card.
+   * `conversationIds` (asking thread first) scopes that card.
+   */
+  endpoints(subject: ConnectorSubject, only?: readonly string[], conversationIds?: readonly string[]): Promise<RunMcpServer[]>;
   activeCount(subject: ConnectorSubject, only?: readonly string[]): number;
 }
 /** The runtime account connectors a thread's subject may use, read live so a bot's change applies on its next turn. */
 export type RunContextAccountConnectors = (subject: ConnectorSubject) => readonly string[];
+/** Looks up a thread's parent id so connector authorize cards can surface on ancestor chats. */
+export type RunContextParentLookup = (conversationId: string) => string | null;
 export interface NoraToolServer {
   resolve: NoraToolEndpointResolver;
   running(): boolean;

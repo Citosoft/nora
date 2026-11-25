@@ -10,7 +10,7 @@ function fixture() {
   const time = "2026-11-13T12:00:00Z";
   const project: ProjectSummary = { id: "project", name: "Project", rootPath: "/project", gitCommonDir: "/project/.git", versionControl: "git", baseBranch: "main", framework: null, platform: "darwin", createdAt: time, updatedAt: time, lastOpenedAt: time };
   const session: SessionRecord = { id: "session", projectId: project.id, name: "Default", status: "active", focusedWorktreeId: "root", createdAt: time, updatedAt: time, lastUsedAt: time };
-  const planned: WorktreeRecord = { id: "created", projectId: project.id, sessionId: session.id, branch: "generated", path: "/managed/checkout", createdFromRef: "HEAD", status: "creating", writerAgentId: null, readerAgentIds: [], terminalSessionIds: [], scripts: [], createdAt: time, updatedAt: time, lastUsedAt: time };
+  const planned: WorktreeRecord = { id: "created", projectId: project.id, sessionId: session.id, branch: "generated", path: "/managed/checkout", createdFromRef: "HEAD", status: "creating", readerAgentIds: [], terminalSessionIds: [], scripts: [], createdAt: time, updatedAt: time, lastUsedAt: time };
   let state: AppState = { ...createInitialState(), project, sessions: [session], currentSessionId: session.id };
   const created: WorktreeRecord[] = [];
   const validated: string[] = [];

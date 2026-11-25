@@ -83,7 +83,6 @@ export interface WorktreeRecord {
   updatedAt: string;
   lastUsedAt: string;
   status: "creating" | "ready" | "removing" | "error";
-  writerAgentId: string | null;
   readerAgentIds: string[];
   terminalSessionIds: string[];
   scripts: WorkspaceScriptLauncher[];

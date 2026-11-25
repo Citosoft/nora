@@ -145,3 +145,18 @@ test("returning installations reprovision before starting an expired cached conn
   assert.equal(resumed.service.view().status.status, "connected");
   await resumed.service.shutdown();
 });
+
+test("phone pushes go out as the provisioned installation, and are skipped when signed out, another account or not provisioned", async () => {
+  const notice = { kind: "finished" as const, id: "outcome:c:r", title: "Fix the build", body: "Done", target: { kind: "inbox" as const } };
+  const f = serviceFixture(); await f.service.start();
+  assert.deepEqual(await f.service.notifyPhones([notice]), { kind: "skipped" });
+  await f.service.enable();
+  assert.deepEqual(await f.service.notifyPhones([notice]), { kind: "sent", delivered: 1 });
+  assert.deepEqual(f.pushes, [{ installationId: "installation-123456", notifications: [notice] }]);
+  f.setSession({ userId: "another-account", sessionId: "session-b" });
+  assert.deepEqual(await f.service.notifyPhones([notice]), { kind: "skipped" });
+  f.setSession(null);
+  assert.deepEqual(await f.service.notifyPhones([notice]), { kind: "skipped" });
+  assert.equal(f.pushes.length, 1);
+  await f.service.shutdown();
+});

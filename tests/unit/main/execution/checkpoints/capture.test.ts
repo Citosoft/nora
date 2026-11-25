@@ -63,12 +63,12 @@ test("a new one-line file gets an exact turn diff beside an unchanged oversized 
   const baseline = await f.service.capture(f.workspace); assert.ok(baseline.status === "ready");
   await f.write("new.txt", "One line\n");
   const final = await f.service.capture(f.workspace); assert.ok(final.status === "ready");
-  const review = await f.service.compare(baseline.snapshot, final.snapshot);
+  const review = await f.service.compare(f.workspace, baseline.snapshot, final.snapshot);
   assert.deepEqual(review.changes.map((change) => [change.path, change.kind]), [["new.txt", "added"]]);
   assert.deepEqual(patchLineCounts(review.changes[0].patch ?? ""), { additions: 1, deletions: 0 });
   await f.write("preview.png", Buffer.alloc(maxFileBytes + 1, 8));
   const changed = await f.service.capture(f.workspace); assert.ok(changed.status === "ready");
-  const imageReview = await f.service.compare(final.snapshot, changed.snapshot);
+  const imageReview = await f.service.compare(f.workspace, final.snapshot, changed.snapshot);
   assert.equal(imageReview.changes.length, 1);
   assert.equal(imageReview.changes[0].path, "preview.png");
   assert.equal(imageReview.changes[0].presentation, "too-large");
@@ -82,7 +82,27 @@ test("aggregate capture budgets omit bytes without discarding file identities", 
   const result = await f.service.capture(f.workspace); assert.ok(result.status === "ready");
   assert.ok(result.snapshot.omitted?.length);
   assert.ok(result.snapshot.files.reduce((sum, file) => sum + Buffer.byteLength(file.content, "base64"), 0) <= maxSnapshotBytes);
-  assert.equal(result.snapshot.files.length + result.snapshot.omitted.length, 11);
-  assert.deepEqual((await f.service.compare(result.snapshot, result.snapshot)).changes, []);
+  assert.deepEqual(result.snapshot.indexed?.map((file) => file.path), ["document.md", "unchanged.md"]);
+  assert.equal(result.snapshot.files.length + result.snapshot.omitted.length, 9);
+  assert.deepEqual((await f.service.compare(f.workspace, result.snapshot, result.snapshot)).changes, []);
   assert.equal(fileSnapshotSchema.safeParse({ ...result.snapshot, omitted: [...result.snapshot.omitted, result.snapshot.omitted[0]] }).success, false);
+});
+
+test("clean tracked files are kept as index blob ids so edits past the byte budget still get exact diffs", async (t) => {
+  const f = await gitFixture(t);
+  // Committed assets that sort first would exhaust the byte budget if clean files were stored inline.
+  for (let index = 0; index < 9; index++) await f.write(`asset-${index}.txt`, Buffer.alloc(maxFileBytes, 65));
+  await f.write("zebra.md", "First\n");
+  await f.git("add", ".");
+  await f.git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.test", "-c", "commit.gpgSign=false", "commit", "-m", "Assets");
+  const baseline = await f.service.capture(f.workspace); assert.ok(baseline.status === "ready");
+  assert.deepEqual(baseline.snapshot.files, []);
+  assert.equal(baseline.snapshot.omitted, undefined);
+  assert.equal(baseline.snapshot.indexed?.length, 12);
+  await f.write("zebra.md", "First\nSecond\n");
+  const final = await f.service.capture(f.workspace); assert.ok(final.status === "ready");
+  assert.deepEqual(final.snapshot.files.map((file) => file.path), ["zebra.md"]);
+  const review = await f.service.compare(f.workspace, baseline.snapshot, final.snapshot);
+  assert.deepEqual(review.changes.map((change) => [change.path, change.presentation]), [["zebra.md", "text"]]);
+  assert.deepEqual(patchLineCounts(review.changes[0].patch ?? ""), { additions: 1, deletions: 0 });
 });

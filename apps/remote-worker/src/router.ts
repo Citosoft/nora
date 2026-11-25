@@ -1,9 +1,25 @@
+import { PUSH_ROUTES } from "@shared/remote-access/push";
 import type { RouteMatch } from "./types/router.types";
 
 const RUNTIMES_PREFIX = "/v1/runtimes";
 
-/** Pure path/method matching. The installation ID is returned raw; validation happens after authentication. */
+/** Pure path/method matching. Path IDs are returned raw; validation happens after authentication. */
 export function matchRoute(method: string, pathname: string): RouteMatch {
+  if (pathname === PUSH_ROUTES.send || pathname === PUSH_ROUTES.devices || pathname.startsWith(`${PUSH_ROUTES.devices}/`)) {
+    return matchPushRoute(method, pathname);
+  }
+  return matchRuntimeRoute(method, pathname);
+}
+
+function matchPushRoute(method: string, pathname: string): RouteMatch {
+  if (pathname === PUSH_ROUTES.send) return method === "POST" ? matched({ kind: "push-send" }) : notAllowed(["POST"]);
+  if (pathname === PUSH_ROUTES.devices) return method === "POST" ? matched({ kind: "push-register" }) : notAllowed(["POST"]);
+  const rawDeviceId = pathname.slice(PUSH_ROUTES.devices.length + 1);
+  if (rawDeviceId.length === 0 || rawDeviceId.includes("/")) return { kind: "not-found" };
+  return method === "DELETE" ? matched({ kind: "push-unregister", rawDeviceId }) : notAllowed(["DELETE"]);
+}
+
+function matchRuntimeRoute(method: string, pathname: string): RouteMatch {
   if (pathname === `${RUNTIMES_PREFIX}/provision`) {
     return method === "POST" ? matched({ kind: "provision" }) : notAllowed(["POST"]);
   }

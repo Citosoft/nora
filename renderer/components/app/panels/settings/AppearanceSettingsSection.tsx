@@ -1,3 +1,4 @@
+import { UI_FONT_SIZES } from "@shared/appearance/fontSize";
 import { ACCENT_COLOR_OPTIONS } from "@/components/app/logic/accentColors";
 import { getUiFontFamily, UI_FONT_OPTIONS } from "@/components/app/logic/appUiFonts";
 import { useSettingsRuntime } from "@/components/app/hooks/useSettingsRuntime";
@@ -6,6 +7,7 @@ import { SettingRow, SettingsSectionHeader, TerminalThemePreview, ToggleButton }
 import type { AccentColor, TerminalFontId, TerminalThemeId, UiFontId } from "@/components/app/types";
 import { Select } from "@/components/ui/select";
 import { APP_SHORT_NAME } from "@shared/appMeta";
+import { availableThreadBackdrop } from "@shared/thread-backdrop/settings";
 import type { FileEditorThemeId } from "@shared/appTypes";
 import { Palette } from "lucide-react";
 
@@ -19,6 +21,7 @@ export function AppearanceSettingsSection() {
     updateAccentColor,
     uiFontId,
     updateUiFont,
+    updateUiFontSize,
     terminalThemeId,
     updateTerminalTheme,
     terminalFontId,
@@ -31,6 +34,7 @@ export function AppearanceSettingsSection() {
     forceMacTitleBarPreview,
     updateForceMacTitleBarPreview
   } = useSettingsRuntime();
+  const backdropAvailable = availableThreadBackdrop(appSettings) !== null;
 
   return (
     <div className="max-w-4xl">
@@ -118,18 +122,28 @@ export function AppearanceSettingsSection() {
         }
       />
       <SettingRow
+        title="UI font size"
+        description="Adjust the text size across the app."
+        control={<Select aria-label="UI font size" value={appSettings.uiFontSize} onChange={(event) => updateUiFontSize(Number(event.target.value))}>
+          {UI_FONT_SIZES.map((size) => <option key={size} value={size}>{size} px</option>)}
+        </Select>}
+      />
+      <SettingRow
         title="Animated thread background"
-        description="Draw a slowly drifting pixel terrain behind threads. Pauses when the window is hidden and stays still with reduced motion."
+        description={backdropAvailable
+          ? "Draw a slowly drifting pixel terrain behind threads. Pauses when the window is hidden and stays still with reduced motion."
+          : "Unavailable while hardware acceleration is disabled in System settings."}
         control={
           <ToggleButton
-            checked={appSettings.threadBackdrop.animated}
+            checked={backdropAvailable && appSettings.threadBackdrop.animated}
             onChange={(animated) => updateThreadBackdrop({ animated })}
-            label={appSettings.threadBackdrop.animated ? "Enabled" : "Disabled"}
+            label={backdropAvailable && appSettings.threadBackdrop.animated ? "Enabled" : "Disabled"}
             accessibleName="Animated thread background"
+            disabled={!backdropAvailable}
           />
         }
       />
-      {appSettings.threadBackdrop.animated ? (
+      {backdropAvailable && appSettings.threadBackdrop.animated ? (
         <SettingRow
           title="Show background on"
           description="New threads only keeps the terrain behind the greeting; all threads also show it behind conversations."

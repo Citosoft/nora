@@ -30,11 +30,13 @@ export function buildThreadNavigation(state: ThreadWorkspaceSnapshot, workspaceI
   // Direct chats belong to their bot, not a workspace; the Bots sidebar reaches them from any workspace.
   if (filter !== "settled") for (const document of state.layout.documents) {
     if (document.target.kind !== "draft" || document.source?.kind === "app" || document.direct || (workspaceId && document.workspaceId !== workspaceId)) continue;
+    const sending = !!state.runtime[document.id]?.busy;
+    const unconfirmed = !!document.pending && !sending;
     rows.push({ id: document.id, target: { kind: "draft", documentId: document.id }, title: threadDocumentTitle(document, state.summaries),
       workspaceId: document.workspaceId, providerKind: document.provider?.kind ?? null, providerConnection: document.provider?.connection ?? "unknown",
       model: document.group ? null : (state.runtime[document.id]?.readyBinding ?? document.provider)?.model ?? null,
-      bot: null, group: draftGroup(state, document.workspaceId, document.group?.botIds), status: document.pending ? "Delivery unconfirmed" : "Draft",
-      active: !!document.pending, working: false, unread: false, attention: !!document.pending, pinned: false, selected: document.id === state.layout.activeId,
+      bot: null, group: draftGroup(state, document.workspaceId, document.group?.botIds), status: sending ? "Starting" : unconfirmed ? "Delivery unconfirmed" : "Draft",
+      active: sending || unconfirmed, working: sending, unread: false, attention: unconfirmed, pinned: false, selected: document.id === state.layout.activeId,
       hasDraft: !isEmptyDraft(document), queuedCount: 0, updatedAt: document.updatedAt });
   }
   const waiting = filter === "settled" ? null : waitingDescendants(state.summaries);

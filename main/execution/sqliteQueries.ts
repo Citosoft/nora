@@ -3,11 +3,11 @@ import { z } from "zod";
 import { conversationSchema, requestSchema, runSchema, timelineItemSchema } from "@shared/conversations/contracts";
 import type { Conversation, ConversationSnapshot, TimelineItem, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import { workspacesOverlap } from "./workspaceConflict";
-import { loadCheckpoint } from "./checkpoints/storage";
+import { hasRestorableCheckpoint, listCheckpointRuns, loadCheckpoint, readCheckpointBlob } from "./checkpoints/storage";
 import { readJsonRow } from "./sqliteRows";
 import type { ConversationHeader, ConversationHistoryPage, ConversationSummary, HistoryQuery } from "@shared/types/conversation/queries.types";
 import type { ConversationState, ExecutionState } from "@main/types/execution/store.types";
-import { activeRunStates, isActiveRun } from "./projection";
+import { activeRunStates, isActiveRun } from "@shared/conversations/runActivity";
 import { summarizeConversation } from "./summaries";
 import { ExecutionCommandError } from "./errors";
 
@@ -87,9 +87,20 @@ export class SqliteQueries {
   checkpointReservations(): WorkspaceRef[] {
     return this.database.prepare(`SELECT DISTINCT h.id, h.json FROM conversation_heads h JOIN turn_checkpoints c ON c.conversation_id = h.id
       JOIN effects e ON json_extract(e.json, '$.conversationId') = c.conversation_id AND json_extract(e.json, '$.runId') = c.run_id
-      WHERE c.baseline_ready = 1 AND json_extract(e.json, '$.action.kind') = 'review'
-      AND json_extract(e.json, '$.status') IN ('pending', 'claimed')`).all()
+      WHERE json_extract(e.json, '$.status') IN ('pending', 'claimed') AND (
+        (json_extract(e.json, '$.action.kind') = 'review' AND c.baseline_ready = 1
+          AND json_extract(c.json, '$.continuity') = 'intact' AND json_extract(c.json, '$.final') IS NULL)
+        OR json_extract(e.json, '$.action.kind') = 'undo')`).all()
       .map((row) => readJsonRow(row, conversationSchema).workspace);
+  }
+  restorableCheckpoint(conversationId: string, runId: string): boolean {
+    return hasRestorableCheckpoint(this.database, conversationId, runId);
+  }
+  checkpointRuns(conversationId: string) {
+    return listCheckpointRuns(this.database, conversationId);
+  }
+  checkpointBlob(hash: string): Buffer | null {
+    return readCheckpointBlob(this.database, hash);
   }
   writers(workspace: WorkspaceRef): string[] {
     return this.database.prepare(`SELECT h.id, h.json FROM conversation_heads h WHERE h.access = 'write'

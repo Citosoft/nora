@@ -10,7 +10,7 @@ export function ChatThreadReplyCard({ bot, reply, children }: ChatThreadReplyCar
       <SpeakerAvatar botId={bot.botId} avatar={bot.avatar} size={22} /><span className="font-medium">{bot.name}</span>
       <time dateTime={reply.at} className="ml-auto text-xs text-muted-foreground">{chatTime(reply.at)}</time>
     </header>
-    <MarkdownRenderer className="native-prose min-w-0 break-words text-[12px]">{reply.text}</MarkdownRenderer>
+    <MarkdownRenderer showLinkIcons className="native-prose min-w-0 break-words text-[12px]">{reply.text}</MarkdownRenderer>
     {children}
   </article>;
 }

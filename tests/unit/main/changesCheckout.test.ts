@@ -38,7 +38,6 @@ function createWorktree(overrides: Partial<WorktreeRecord> = {}): WorktreeRecord
     updatedAt: "2026-06-04T00:00:00.000Z",
     lastUsedAt: "2026-06-04T00:00:00.000Z",
     status: "ready",
-    writerAgentId: null,
     readerAgentIds: [],
     terminalSessionIds: ["terminal-1"],
     scripts: [],

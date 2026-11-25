@@ -27,7 +27,10 @@ export class StdioRpc {
     const id = ++this.sequence;
     return new Promise<T>((resolve, reject) => {
       if (this.closed) { reject(new Error("Codex connection is closed")); return; }
-      const timeout = setTimeout(() => this.disconnect(), this.options.timeoutMs ?? 30_000);
+      const timeout = setTimeout(() => {
+        this.pending.delete(id);
+        reject(new Error(`Codex did not respond to ${method}; the execution outcome is unconfirmed`));
+      }, this.options.timeoutMs ?? 30_000);
       this.pending.set(id, { timeout, reject, resolve: (value) => {
         const parsed = schema.safeParse(value);
         if (parsed.success) resolve(parsed.data);

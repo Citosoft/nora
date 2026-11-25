@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { DEFAULT_APP_SETTINGS } from "@shared/appTypes";
-import { parseThreadBackdropSettings, showsThreadBackdrop } from "@shared/thread-backdrop/settings";
+import { availableThreadBackdrop, parseThreadBackdropSettings, showsThreadBackdrop } from "@shared/thread-backdrop/settings";
 import { captureSettings, applySettings } from "@main/settings-sync/preferences";
 import { syncAppearance } from "../../helpers/settingsSync";
 
@@ -23,6 +23,14 @@ test("backdrop settings sync between devices", () => {
   const settings = structuredClone(DEFAULT_APP_SETTINGS);
   const expected = captureSettings(settings, syncAppearance);
   assert.deepEqual(expected.threadBackdrop, { animated: true, scope: "all" });
-  const next = applySettings(settings, syncAppearance, { threadBackdrop: { animated: true, scope: "new" } }, expected, []);
+  assert.equal(expected.uiFontSize, 16);
+  const next = applySettings(settings, syncAppearance, { threadBackdrop: { animated: true, scope: "new" }, uiFontSize: 18 }, expected, []);
   assert.deepEqual(next.threadBackdrop, { animated: true, scope: "new" });
+  assert.equal(next.uiFontSize, 18);
+});
+
+test("the backdrop is unavailable while GPU acceleration is disabled, keeping the stored preference", () => {
+  const threadBackdrop = { animated: true, scope: "all" } as const;
+  assert.strictEqual(availableThreadBackdrop({ threadBackdrop, hardwareAccelerationEnabled: true }), threadBackdrop);
+  assert.equal(availableThreadBackdrop({ threadBackdrop, hardwareAccelerationEnabled: false }), null);
 });

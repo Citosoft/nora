@@ -1,3 +1,4 @@
+import { McpServerLogo } from "@/components/app/panels/settings/McpServerLogo";
 import { Clock3, FileCode2, Globe, Image, LoaderCircle, Plug, Terminal, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { NativeToolActivityProps } from "@/components/app/types/nativeActivity.types";
@@ -6,7 +7,7 @@ import { toolStateLabel } from "@/components/app/logic/toolStateLabel";
 import { DiffCounts } from "./DiffCounts";
 import { NativeDiff } from "./NativeDiff";
 
-export function NativeToolActivity({ item }: NativeToolActivityProps) {
+export function NativeToolActivity({ item, connector }: NativeToolActivityProps) {
   const category = item.details?.category ?? "other";
   const Icon = category === "command" ? Terminal : category === "integration" ? Plug : category === "search" ? Globe
     : category === "file" ? FileCode2 : category === "image" ? Image : category === "agent" ? Users : Clock3;
@@ -15,7 +16,8 @@ export function NativeToolActivity({ item }: NativeToolActivityProps) {
   const status = toolStateLabel(item.state);
   return <details className="min-w-0 text-sm text-muted-foreground" aria-label={`${item.label}: ${status}`}>
     <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md py-1 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden" title={item.details?.input ?? item.label}>
-      <span className={cn("shrink-0", running && "motion-safe:animate-spin")} aria-hidden="true">{running ? <LoaderCircle className="size-3.5" /> : <Icon className="size-3.5" />}</span>
+      {connector && <McpServerLogo logo={connector.logo} size="small" />}
+      {(!connector || running) && <span className={cn("shrink-0", running && "motion-safe:animate-spin")} aria-hidden="true">{running ? <LoaderCircle className="size-3.5" /> : <Icon className="size-3.5" />}</span>}
       <span className={cn("min-w-0 flex-1 truncate", running && "text-shimmer")}>{item.label}{item.details?.input && <span className={cn("ml-1.5", running ? "text-shimmer" : "text-muted-foreground/80")}>{item.details.input.replace(/\s+/g, " ").trim()}</span>}</span>
       <DiffCounts counts={patchLineCounts(item.details?.patch)} />
       <span role="status" className={cn(item.state === "completed" ? "sr-only" : "shrink-0 text-xs", failed && "text-destructive")}>{status}</span>

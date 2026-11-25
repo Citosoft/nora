@@ -15,6 +15,9 @@ import type {
   TerminalShellOption
 } from "@shared/appTypes";
 
+/** The notification toggles in General settings; each update changes only the keys it names. */
+export type NotificationPreferencesUpdate = Partial<Pick<AppSettings, "agentCompletionNotificationsEnabled" | "phonePushNotificationsEnabled">>;
+
 export type DevToastVariant = "info" | "success" | "error";
 
 export type DevToastPayload = {
@@ -67,6 +70,7 @@ export type SettingsRuntimeValue = {
   disconnectVercelAccount: () => void;
   appSettings: AppSettings;
   updateFileEditorThemeId: (themeId: AppSettings["fileEditorThemeId"]) => void;
+  updateUiFontSize: (size: number) => void;
   updateThreadBackdrop: (patch: Partial<AppSettings["threadBackdrop"]>) => void;
   updateHardwareAcceleration: (enabled: boolean) => void;
   updateWorkspaceStateStorageMode: (mode: AppSettings["workspaceStateStorageMode"]) => void;
@@ -81,6 +85,7 @@ export type SettingsRuntimeValue = {
   updateForceMacTitleBarPreview: (enabled: boolean) => void;
   updateLifecycle: (lifecycle: AppSettings["lifecycle"]) => Promise<void>;
   updateAgentCompletionNotifications: (enabled: boolean) => void;
+  updatePhonePushNotifications: (enabled: boolean) => void;
   updateAnalyticsConsent: (enabled: boolean) => void;
   analyticsAllowedInCurrentRun: boolean;
   analyticsDevModeSwitch: string;

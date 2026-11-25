@@ -53,6 +53,9 @@ export const buildSettingsRuntimeValue = (d: BuildSettingsRuntimeValueDeps): Set
   updateFileEditorThemeId: (fileEditorThemeId) => {
     void d.updateFileEditorThemeId(fileEditorThemeId).catch(d.captureError);
   },
+  updateUiFontSize: (size) => {
+    void d.updateUiFontSize(size).catch(d.captureError);
+  },
   updateThreadBackdrop: (patch) => {
     void d.updateThreadBackdrop(patch).catch(d.captureError);
   },
@@ -112,6 +115,9 @@ export const buildSettingsRuntimeValue = (d: BuildSettingsRuntimeValueDeps): Set
     void d.updateNotificationPreferences({
       agentCompletionNotificationsEnabled
     }).catch(d.captureError);
+  },
+  updatePhonePushNotifications: (phonePushNotificationsEnabled) => {
+    void d.updateNotificationPreferences({ phonePushNotificationsEnabled }).catch(d.captureError);
   },
   updateAnalyticsConsent: (enabled) => {
     void d.updateAnalyticsConsentStatus(enabled ? "granted" : "declined").catch(d.captureError);

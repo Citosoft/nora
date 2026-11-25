@@ -1,4 +1,4 @@
-import { formatAskBotReply } from "@shared/nora-tools/askBot";
+import { formatAskBotReply, formatAskBotWorking } from "@shared/nora-tools/askBot";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { NORA_TOOLS } from "@shared/nora-tools/catalog";
@@ -8,16 +8,20 @@ import type { NoraToolContext, NoraToolDeps } from "@main/types/nora-tools/noraT
 import { runTool } from "./result";
 import { noteLine } from "@main/bots/memory/format";
 
-export function registerAskBotTool(server: McpServer, context: NoraToolContext, deps: NoraToolDeps): void {
+export function registerAskBotTool(server: McpServer, context: NoraToolContext, deps: NoraToolDeps, requestSignal: AbortSignal): void {
   server.registerTool("ask_bot", { ...NORA_TOOLS.ask_bot,
     inputSchema: {
       bot: z.string().trim().min(1).max(100).describe("The bot's id or name from list_bots"),
-      message: z.string().trim().min(1).max(20_000).describe("What you want from the bot, with any context it needs; it cannot see this thread")
+      message: z.string().trim().min(1).max(20_000).describe("What you want from the bot, with any context it needs; it cannot see this thread"),
+      wait: z.enum(["notify", "reply"]).optional()
+        .describe("notify (default): return at once; Nora posts the bot's answer into this thread when it finishes. "
+          + "reply: wait here for the bot's answer (use when you need it before continuing)")
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false }
   }, (input, extra) => runTool(async () => {
-    const result = await deps.asks.ask(input.bot, input.message, context, extra.signal);
-    return formatAskBotReply(result.botName, result.conversationId, result.reply);
+    const result = await deps.asks.ask(input.bot, input.message, input.wait ?? "notify", context, AbortSignal.any([extra.signal, requestSignal]));
+    return result.status === "working" ? formatAskBotWorking(result.botName, result.conversationId, result.reason)
+      : formatAskBotReply(result.botName, result.conversationId, result.reply);
   }));
 }
 
@@ -43,7 +47,7 @@ export function registerMemoryTools(server: McpServer, context: NoraToolContext,
     return notes.length ? notes.map(recallLine).join("\n") : "No matching notes.";
   }));
   server.registerTool("forget", { ...NORA_TOOLS.forget,
-    inputSchema: { memory_id: z.string().trim().min(1).max(512).describe("The id of the note, from recall or your saved notes") },
+    inputSchema: { memory_id: z.string().trim().min(1).max(512).describe("The id of a note, from recall or your saved notes") },
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false }
   }, (input) => runTool(() => `Forgot: ${deps.memory.forget(input.memory_id, context).text}`));
 }

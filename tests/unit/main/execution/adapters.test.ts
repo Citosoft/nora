@@ -272,7 +272,9 @@ test("a Claude bot thread skips account extras and connects only the account con
   const own = opened.find((input) => input.instruction === "own thread");
   const botRun = opened.find((input) => input.instruction === "hi");
   assert.equal(own?.accountExtras, true); assert.deepEqual(own?.accountConnectors, {});
+  assert.equal(own?.toolScope, "full");
   assert.equal(botRun?.accountExtras, false); assert.deepEqual(botRun?.accountConnectors, { "claude.ai Gmail": gmail });
+  assert.equal(botRun?.toolScope, "agent", "bots use agent scope so they do not inherit the user's global MCP");
   assert.equal(own?.promptSuggestions, true, "the user's own thread suggests replies by default");
   assert.equal(botRun?.promptSuggestions, false, "a bot thread never pays for reply suggestions");
   assert.deepEqual(resolved, [["claude.ai Gmail"]], "only the bot thread looks its connectors up");

@@ -12,7 +12,9 @@ export function captureSettings(settings: AppSettings, appearance: PortableAppea
     defaultSplitViewGridColumns: settings.defaultSplitViewGridColumns, defaultSplitViewGridRows: settings.defaultSplitViewGridRows,
     rememberLastSplitViewPerWorkspace: settings.rememberLastSplitViewPerWorkspace, confirmSplitViewDelete: settings.confirmSplitViewDelete,
     showWorkspaceSessionTabs: settings.showWorkspaceSessionTabs, agentCompletionNotificationsEnabled: settings.agentCompletionNotificationsEnabled,
+    phonePushNotificationsEnabled: settings.phonePushNotificationsEnabled,
     openInternalBrowserOnNewPortDetection: settings.openInternalBrowserOnNewPortDetection, fileEditorThemeId: settings.fileEditorThemeId,
+    uiFontSize: settings.uiFontSize,
     threadBackdrop: settings.threadBackdrop,
     defaultRole: settings.personalization.defaultRole, idleCompaction: settings.personalization.idleCompaction ?? "suggest",
     ...threads, threadModel: portableModel(settings.personalization.threadModel), subagentModel: portableModel(threads.subagentModel)
@@ -56,8 +58,10 @@ export function applySettings(settings: AppSettings, appearance: PortableAppeara
     confirmSplitViewDelete: values.confirmSplitViewDelete ?? settings.confirmSplitViewDelete,
     showWorkspaceSessionTabs: values.showWorkspaceSessionTabs ?? settings.showWorkspaceSessionTabs,
     agentCompletionNotificationsEnabled: values.agentCompletionNotificationsEnabled ?? settings.agentCompletionNotificationsEnabled,
+    phonePushNotificationsEnabled: values.phonePushNotificationsEnabled ?? settings.phonePushNotificationsEnabled,
     openInternalBrowserOnNewPortDetection: values.openInternalBrowserOnNewPortDetection ?? settings.openInternalBrowserOnNewPortDetection,
     fileEditorThemeId: values.fileEditorThemeId ?? settings.fileEditorThemeId,
+    uiFontSize: values.uiFontSize ?? settings.uiFontSize,
     threadBackdrop: values.threadBackdrop ?? settings.threadBackdrop
   };
 }

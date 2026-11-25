@@ -1,3 +1,4 @@
+import { normalizeUiFontSize } from "@shared/appearance/fontSize";
 import { DEFAULT_APP_SETTINGS, type AppSettings } from "@shared/appTypes";
 import { parseDesktopLifecycleSettings } from "@shared/desktop-lifecycle/settings";
 import { parseVoiceSettings } from "@shared/voice/settings";
@@ -14,6 +15,7 @@ export function normalizeAppSettings(candidate: AppSettings): AppSettings {
   return {
     ...DEFAULT_APP_SETTINGS,
     ...candidate,
+    uiFontSize: normalizeUiFontSize(candidate.uiFontSize),
     lifecycle: parseDesktopLifecycleSettings(candidate.lifecycle),
     terminalQuickLaunchDefaults: {
       ...DEFAULT_APP_SETTINGS.terminalQuickLaunchDefaults,

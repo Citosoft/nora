@@ -16,7 +16,11 @@ export const preferencesSchema = z.object({
   /** The welcome pages were seen once; later sign-ins open straight on the sign-in page. */
   onboardingCompleted: z.boolean().catch(false),
   /** Desktop-sized windows only: the permanent sidebar shrunk to its icon rail. */
-  sidebarCollapsed: z.boolean().catch(false)
+  sidebarCollapsed: z.boolean().catch(false),
+  /** Phone notifications from this account's computers. Opt-in, because turning it on asks for the OS permission. */
+  pushNotificationsEnabled: z.boolean().catch(false),
+  /** The home-screen card offering notifications was answered (either way); it never returns. */
+  pushPromptDismissed: z.boolean().catch(false)
 });
 
 export const defaultPreferences = preferencesSchema.parse({});

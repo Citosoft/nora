@@ -13,6 +13,7 @@ import { createRemoteTokenVerifier } from "./auth";
 import { createRemoteConnector } from "./connector/process";
 import { openRemoteAuditLog } from "./auditLog";
 import { startRuntimeServer } from "./http/server";
+import { startPhonePushNotifier } from "@main/inbox/phonePush";
 
 /** Desktop composition only: the coordinator and runtime transport accept no Electron dependencies. */
 export function createDesktopRemoteAccess(options: DesktopRemoteAccessOptions): RemoteAccessService {
@@ -35,5 +36,10 @@ export function createDesktopRemoteAccess(options: DesktopRemoteAccessOptions): 
       hostname: () => service?.view().runtime?.hostname ?? null, record: (entry) => activityLog().record(entry), now: Date.now }),
     activity: (limit) => activityLog().activity(limit), onChanged: options.onChanged, close: () => audit?.close()
   });
-  return service;
+  const coordinator = service;
+  const stopPhonePush = startPhonePushNotifier({ inbox: options.inbox, now: () => new Date().toISOString(), enabled: options.phonePushEnabled,
+    send: (notifications) => coordinator.notifyPhones(notifications),
+    setTimeout(callback, delayMs) { const timer = setTimeout(callback, delayMs); return { cancel: () => clearTimeout(timer) }; },
+    onError: (error) => console.warn("Phone notification failed:", error instanceof Error ? error.message : "unknown error") });
+  return { ...coordinator, shutdown() { stopPhonePush(); return coordinator.shutdown(); } };
 }

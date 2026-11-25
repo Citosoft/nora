@@ -513,6 +513,7 @@ function SignedInAppRootContent({
     disconnectVercelAccount: vercelIntegration.disconnectVercelAccount,
     appSettings: props.preferences.appSettings,
     updateFileEditorThemeId: props.preferences.updateFileEditorThemeId,
+    updateUiFontSize: props.preferences.updateUiFontSize,
     updateThreadBackdrop: props.preferences.updateThreadBackdrop,
     updateHardwareAccelerationEnabled: props.preferences.updateHardwareAccelerationEnabled,
     updateWorkspaceStateStorageMode: props.preferences.updateWorkspaceStateStorageMode,

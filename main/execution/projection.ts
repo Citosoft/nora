@@ -1,11 +1,5 @@
-import type { ConversationEvent, ConversationRun, ConversationSnapshot, EventPayload } from "@shared/types/conversation/contracts.types";
+import type { ConversationEvent, ConversationSnapshot, EventPayload } from "@shared/types/conversation/contracts.types";
 import type { ConversationState } from "@main/types/execution/store.types";
-
-export const activeRunStates = ["starting", "running", "awaiting-approval", "awaiting-input", "stopping", "recovering"] as const;
-
-export function isActiveRun(run: ConversationRun): boolean {
-  return activeRunStates.some((state) => state === run.state);
-}
 
 function upsert<T extends { id: string }>(items: T[], item: T): T[] {
   return items.some((entry) => entry.id === item.id)

@@ -4,10 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { McpToolsToggle } from "./McpToolsToggle";
 import { McpToolDetailsRow } from "./McpToolDetailsRow";
 import type { NoraMcpServerRowProps } from "@/components/app/types/runtimeMcp.types";
+import type { NoraToolAudience } from "@shared/types/nora-tools/noraTools.types";
 
 const CELL_CLASS_NAME = "px-3 py-2 align-middle";
-const DETAILS = "Built into Nora and added to each thread as it starts: Nora threads get the app tools, bot threads get ask_bot, list_bots and their own notes, and group chats need none. It runs on this computer only, works with Claude, Codex and ACP agents that support HTTP MCP servers, and needs no setup.";
-const AUDIENCE_LABELS = { nora: "Nora threads", bot: "bot threads", member: "bots answering in a group chat" } as const;
+const DETAILS = "Built into Nora and added to each thread as it starts: Nora threads get the app tools, bot threads get ask_bot, list_bots and their own notes, worker threads get a slim set, and group chats need none. It runs on this computer only, works with Claude, Codex and ACP agents that support HTTP MCP servers, and needs no setup.";
+const AUDIENCE_LABELS: Record<NoraToolAudience, string> = { nora: "Nora threads", bot: "bot threads", worker: "worker threads", member: "bots answering in a group chat" };
 
 /** Nora's own MCP server, which runtimes never report because it is added per thread rather than configured. */
 export function NoraMcpServerRow({ status }: NoraMcpServerRowProps) {

@@ -29,6 +29,7 @@ import { ChatTyping } from "./ChatTyping";
 import { ChatRequests } from "./ChatRequests";
 import { ChatComposer } from "./ChatComposer";
 import { canForceEndThread } from "@/components/app/logic/threadStopControl";
+import { ConnectorAuthPromptStack } from "@/components/app/panels/conversations/ConnectorAuthPromptStack";
 import { SecretPromptStack } from "@/components/app/panels/conversations/SecretPromptStack";
 import { ChatWorkspacePicker } from "./ChatWorkspacePicker";
 import { useDirectChatFollowsWorkspace } from "@/components/app/hooks/useDirectChatFollowsWorkspace";
@@ -89,12 +90,14 @@ export function ChatConversationPanel() {
   const avatarState: BotAvatarState = settled ? "settled" : current?.waiting ? "waiting" : active ? "thinking" : executionFailure ? "failed" : "idle";
   const text = pending?.submit.instruction ?? document.text;
   const canSend = !busy && !settled && (!conversationId || !!header) && (!!pending || (!!runtime.readyBinding && !!document.text.trim()));
-  const stoppable = !!active && !canForceEndThread(active.state) && !pending && !document.text.trim();
+  const stoppable = !!active && !canForceEndThread(active.state);
   const endTurn = active && canForceEndThread(active.state)
     ? () => void execute({ kind: "interrupt", commandId: crypto.randomUUID(), conversationId: active.conversationId, runId: active.id })
     : null;
   const mentions = useMemo(() => participants?.kind === "group" ? participants.members.map((member) => ({ id: member.botId, name: member.name,
     detail: member.role || undefined, icon: <BotAvatar avatar={member.avatar} size={20} /> })) : undefined, [participants]);
+  const transcriptMentions = useMemo(() => mentions ?? bots.map(({ bot }) => ({ id: bot.id, name: bot.name,
+    detail: bot.role || undefined, icon: <BotAvatar avatar={bot.avatar} size={20} /> })), [mentions, bots]);
   const direct = participants?.kind === "direct" ? participants.bot : null;
   const chatWorkspaces = useMemo(() => direct ? ports.state.workspaces.filter((entry) => entry.workspace.environmentId === ports.state.environmentId
     && !!findChatBot(ports.state.personalization.bots, entry.id, ports.state.sharedBots, direct.botId)) : [],
@@ -112,7 +115,7 @@ export function ChatConversationPanel() {
   const footer = direct ? <ChatWorkspacePicker workspaces={chatWorkspaces} selectedId={workingWorkspaceId}
     fixed={!savedDirect || savedDirect.scope.kind === "workspace"} disabled={busy || settled}
     onSelect={(workspaceId) => { if (header) void execute({ kind: "set-direct-workspace", commandId: crypto.randomUUID(), conversationId: header.conversation.id, workspaceId }); }} /> : undefined;
-  const error = runtime.error ?? ports.storageError ?? (executionFailure ? executionFailureMessage(executionFailure) : pending ? "Delivery is unconfirmed. Retry sends the same saved message." : null);
+  const error = runtime.error ?? ports.storageError ?? (executionFailure ? executionFailureMessage(executionFailure) : pending && !busy ? "Delivery is unconfirmed. Retry sends the same saved message." : null);
   if (!participants) return <section className="p-6 text-sm text-muted-foreground" role="status">This chat's bots are no longer available in this workspace.</section>;
   const name = participants.kind === "direct" ? participants.bot.name : "the group";
   const botOf = (botId: string | null) => participants.kind === "direct" ? participants.bot : participants.members.find((member) => member.botId === botId) ?? null;
@@ -138,7 +141,7 @@ export function ChatConversationPanel() {
         {view?.nextBefore && <div className="mt-4 flex justify-center"><Button variant="ghost" size="sm" onClick={() => void older()}>Load earlier messages</Button></div>}
         {conversationId && !view && !loadError && <p className="mt-4 text-muted-foreground">Loading chat…</p>}
         {!entries.length && !conversationId && <ChatGreeting participants={participants} />}
-        <ChatTranscript entries={entries} workThreads={workThreads} onOpenThread={ports.openThread} onLinkClick={onLinkClick}
+        <ChatTranscript entries={entries} workThreads={workThreads} onOpenThread={ports.openThread} onLinkClick={onLinkClick} mentions={transcriptMentions}
           onBranch={conversationId ? branchFromMessage : undefined} />
         {header && <ChatRequests conversationId={header.conversation.id} />}
         {active && speaker && <ChatTyping botId={speaker.botId} name={speaker.name} avatar={speaker.avatar} workspaceName={current?.workspaceName ?? null} waiting={!!current?.waiting} />}
@@ -151,6 +154,7 @@ export function ChatConversationPanel() {
     <div className="mx-auto w-full max-w-[808px] space-y-2 px-4 pb-5 sm:px-6">
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       {/* Bots answer a chat from their own threads, so their secret prompts surface here, where the user is. */}
+      {conversationId && <ConnectorAuthPromptStack conversationId={conversationId} />}
       {conversationId && <SecretPromptStack conversationId={conversationId} />}
       {endTurn && <div className="flex flex-wrap items-center gap-2">
         {active?.state === "recovering" && <Button type="button" size="sm" variant="outline" disabled={busy}
@@ -164,7 +168,7 @@ export function ChatConversationPanel() {
         sendLabel={pending ? "Retry saved message" : active ? "Queue message" : "Send message"}
         stop={stoppable && active ? { label: "Stop", disabled: busy,
           onStop: () => void execute({ kind: "interrupt", commandId: crypto.randomUUID(), conversationId: active.conversationId, runId: active.id }) } : null}
-        onChange={setText} onSubmit={() => void submit()} />
+        onChange={setText} onSubmit={() => { if (canSend) { transcript.jumpToLatest(); void submit(); } }} />
     </div>
     </div>
     <ChatSidebar bot={direct ? { bot: direct, state: avatarState, reset } : null} context={context} connectors={connectorSubject} threads={sidebarThreads}
@@ -173,6 +177,6 @@ export function ChatConversationPanel() {
     {branchTarget && branchBot && <TabsContent value={tab} className="flex min-h-0 flex-1 flex-col">
       <ChatBranchView key={tab} target={branchTarget} bot={branchBot} chatId={conversationId} composer={chatTabs.composer(tab)}
         onComposerChange={(patch) => chatTabs.updateComposer(tab, patch)} onStarted={(threadId) => chatTabs.markStarted(tab, threadId)}
-        onOpenThread={ports.openThread} onLinkClick={onLinkClick} chatWorkspaceName={workingWorkspaceName} /></TabsContent>}
+        onOpenThread={ports.openThread} onLinkClick={onLinkClick} mentions={transcriptMentions} chatWorkspaceName={workingWorkspaceName} /></TabsContent>}
   </section></Tabs>;
 }

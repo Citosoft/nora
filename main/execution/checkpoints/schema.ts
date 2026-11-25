@@ -13,9 +13,16 @@ const fileSchema = z.object({ path: checkpointPathSchema, mode: fileModeSchema,
   content: z.string().max(Math.ceil(maxFileBytes / 3) * 4).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/)
 }).strict().refine((file) => Buffer.byteLength(file.content, "base64") <= maxFileBytes, "File exceeds checkpoint limit");
 const omittedFileSchema = z.object({ path: checkpointPathSchema, mode: fileModeSchema, hash: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
-export const fileSnapshotSchema = z.object({ capturedAt: z.string().datetime(), files: z.array(fileSchema).max(maxSnapshotFiles), omitted: z.array(omittedFileSchema).max(maxSnapshotFiles).optional() }).strict()
-  .refine((snapshot) => new Set([...snapshot.files, ...(snapshot.omitted ?? [])].map((file) => file.path)).size === snapshot.files.length + (snapshot.omitted?.length ?? 0), "Duplicate checkpoint path")
-  .refine((snapshot) => snapshot.files.length + (snapshot.omitted?.length ?? 0) <= maxSnapshotFiles, "Checkpoint exceeds file limit")
+export const gitObjectIdPattern = /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/;
+/** Files byte-identical to their Git index blob: the object database already holds the bytes, so only the ids are kept. */
+const indexedFileSchema = z.object({ path: checkpointPathSchema, mode: fileModeSchema, hash: z.string().regex(/^[a-f0-9]{64}$/),
+  object: z.string().regex(gitObjectIdPattern) }).strict();
+const entryCount = (snapshot: { files: readonly unknown[]; omitted?: readonly unknown[]; indexed?: readonly unknown[] }): number =>
+  snapshot.files.length + (snapshot.omitted?.length ?? 0) + (snapshot.indexed?.length ?? 0);
+export const fileSnapshotSchema = z.object({ capturedAt: z.string().datetime(), files: z.array(fileSchema).max(maxSnapshotFiles),
+  omitted: z.array(omittedFileSchema).max(maxSnapshotFiles).optional(), indexed: z.array(indexedFileSchema).max(maxSnapshotFiles).optional() }).strict()
+  .refine((snapshot) => new Set([...snapshot.files, ...(snapshot.omitted ?? []), ...(snapshot.indexed ?? [])].map((file) => file.path)).size === entryCount(snapshot), "Duplicate checkpoint path")
+  .refine((snapshot) => entryCount(snapshot) <= maxSnapshotFiles, "Checkpoint exceeds file limit")
   .refine((snapshot) => snapshot.files.reduce((total, file) => total + Buffer.byteLength(file.content, "base64"), 0) <= maxSnapshotBytes, "Checkpoint exceeds size limit");
 export const checkpointCaptureSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("ready"), snapshot: fileSnapshotSchema }).strict(),
@@ -27,7 +34,8 @@ export const storedCheckpointSchema = z.object({ conversationId: z.string().min(
 
 const manifestSnapshotSchema = z.object({ capturedAt: z.string().datetime(), files: z.array(z.object({
   path: checkpointPathSchema, mode: fileModeSchema, hash: z.string().regex(/^[a-f0-9]{64}$/)
-}).strict()).max(maxSnapshotFiles), omitted: z.array(omittedFileSchema).max(maxSnapshotFiles).optional() }).strict();
+}).strict()).max(maxSnapshotFiles), omitted: z.array(omittedFileSchema).max(maxSnapshotFiles).optional(),
+  indexed: z.array(indexedFileSchema).max(maxSnapshotFiles).optional() }).strict();
 export const manifestCaptureSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("ready"), snapshot: manifestSnapshotSchema }).strict(),
   z.object({ status: z.literal("unavailable"), reason: checkpointUnavailableSchema }).strict()

@@ -23,7 +23,7 @@ const NO_THREADS: ReadonlyMap<string, ChatWorkThread> = new Map();
  * A branch of a chat: one work thread read and written like the chat itself, so you can keep several conversations going with
  * a bot without each one carrying the others' context. A draft branch has no thread yet; its first message starts one.
  */
-export function ChatBranchView({ target, bot, chatId, composer, onComposerChange, onStarted, onOpenThread, onLinkClick, chatWorkspaceName }: ChatBranchViewProps) {
+export function ChatBranchView({ target, bot, chatId, composer, onComposerChange, onStarted, onOpenThread, onLinkClick, mentions, chatWorkspaceName }: ChatBranchViewProps) {
   const { client, workspace } = useNativeConversationPorts();
   const thread = target.kind === "thread" ? target.thread : null;
   const conversationId = thread?.id ?? (target.kind === "draft" ? target.draft.threadId : null);
@@ -60,7 +60,7 @@ export function ChatBranchView({ target, bot, chatId, composer, onComposerChange
         {loadError && <div role="alert" className="mt-4"><p>{loadError}</p><Button onClick={reload}>Reload branch</Button></div>}
         {view?.nextBefore && <div className="mt-4 flex justify-center"><Button variant="ghost" size="sm" onClick={() => void older()}>Load earlier messages</Button></div>}
         {conversationId && !view && !loadError && <p className="mt-4 text-muted-foreground">Loading…</p>}
-        <ChatTranscript entries={entries} workThreads={NO_THREADS} onOpenThread={onOpenThread} onLinkClick={onLinkClick ?? threadLinks} />
+        <ChatTranscript entries={entries} workThreads={NO_THREADS} onOpenThread={onOpenThread} onLinkClick={onLinkClick ?? threadLinks} mentions={mentions} />
         {chatId && conversationId && <ChatRequests conversationId={chatId} threadId={conversationId} />}
         {working && <ChatTyping botId={bot.botId} name={bot.name} avatar={bot.avatar} workspaceName={thread?.workspaceName ?? null} waiting={waiting} />}
       </div>
@@ -73,7 +73,7 @@ export function ChatBranchView({ target, bot, chatId, composer, onComposerChange
       <ChatComposer inputRef={input} value={composer.text} disabled={busy || settled} canSend={canSend}
         placeholder={settled ? "This thread is settled" : `Message ${bot.name} in this ${thread && !thread.branch ? "task" : "branch"}`}
         sendLabel={composer.pending ? "Retry message" : active ? "Queue message" : "Send message"} stop={stop}
-        onChange={(text) => onComposerChange({ text })} onSubmit={() => void send()} />
+        onChange={(text) => onComposerChange({ text })} onSubmit={() => { if (canSend) { transcript.jumpToLatest(); void send(); } }} />
     </div>
     </div>
     <ChatBranchInfoPanel target={target} bot={bot} model={view?.header.conversation.provider.model ?? null} chatWorkspaceName={chatWorkspaceName} onOpenThread={onOpenThread} />

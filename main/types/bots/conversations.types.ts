@@ -37,6 +37,8 @@ export interface BotAskInput {
   instruction: string;
   signal: AbortSignal;
   timeoutMs: number;
+  /** Let delegated work continue when the tool must return before its runtime deadline. */
+  continueOnTimeout?: boolean;
   /** Pins a direct-chat message to one workspace for this run only. */
   workspaceId?: string;
   /** The user's own words behind `instruction`, shown in place of it when the thread is viewed as a chat. */

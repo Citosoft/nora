@@ -15,7 +15,7 @@ import type { WorkspaceTaskBoard, WorkspaceTaskSummary } from "@shared/appTypes"
 import { bot } from "../../shared/bots/fixtures";
 import { normalizeLoopDefinition } from "@main/loops/loopValidation";
 import type { LoopDefinition, LoopRun, LoopRunStatus, StartLoopRunPayload, ReportLoopStagePayload } from "@shared/appTypes";
-import type { NoraWorkflowRunPlacement, NoraWorkflowStore } from "@main/types/nora-tools/operations.types";
+import type { NoraRoutineStore, NoraTerminalStore, NoraWorkflowRunPlacement, NoraWorkflowStore } from "@main/types/nora-tools/operations.types";
 
 /** An in-memory stand-in for the app's workflow runner that keeps its real definition validation. */
 export function workflowFake() {
@@ -83,7 +83,7 @@ const message = (id: string, role: "user" | "assistant", text: string, complete 
 const codexCatalog = { status: "available", catalog: { models: [{ id: "gpt-6", name: "GPT-6" }], policies: [], capabilities: {} } } as unknown as ProviderCatalogResult;
 const offline: ProviderCatalogResult = { status: "unavailable", failure: { code: "provider", message: "offline", retryable: true } };
 
-export function noraFixture() {
+export function noraFixture(extra: { terminals?: NoraTerminalStore; routines?: NoraRoutineStore } = {}) {
   let boot: NativeBoot = { environmentId: "local", cursor: 0, noraTools: noraToolsStatus("idle"), sharedBots: [],
     personalization: { defaultRole: { id: "general" }, workspaceRoles: {}, bots: { global: [bot("ada")], workspaces: {} } },
     workspaces: [{ id: "w", name: "Web", kind: "repository", shellProjectId: "shell-w", workspace },
@@ -153,7 +153,9 @@ export function noraFixture() {
         board = { ...board, taskPositions: { ...board.taskPositions, [path]: { sectionId: "todo", order: 1 } } };
         return path;
       }
-    }
+    },
+    ...(extra.terminals ? { terminals: extra.terminals } : {}),
+    ...(extra.routines ? { routines: extra.routines } : {})
   });
   return { taskNotifications, workflows, secrets, deps, saved, conversations, items, memory, get settings() { return settings; }, get settingsNotifications() { return settingsNotifications; }, get board() { return board; }, get tasks() { return tasks; } };
 }

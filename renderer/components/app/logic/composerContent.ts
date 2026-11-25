@@ -54,7 +54,8 @@ export function deleteComposerReference(value: string, caret: number, direction:
 }
 
 /** Known names match longest-first; email addresses and partial names remain ordinary editable text. */
-function splitMentionContent(value: string, mentions: readonly ComposerSuggestionOption[]): ComposerPart[] {
+export function splitMentionContent(value: string, mentions: readonly ComposerSuggestionOption[]): ComposerPart[] {
+  if (!mentions.length || !value.includes("@")) return value ? [{ kind: "text", source: value }] : [];
   const ordered = [...mentions].filter((mention) => mention.name.length > 0).sort((left, right) => right.name.length - left.name.length);
   const parts: ComposerPart[] = [];
   let offset = 0;

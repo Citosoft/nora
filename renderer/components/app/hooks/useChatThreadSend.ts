@@ -24,7 +24,7 @@ export function useChatThreadSend({ client, target, chatId, composer, onComposer
     } finally { setSending(false); }
   };
   const forceEnd = active ? canForceEndThread(active.state) : false;
-  const stop = active && (forceEnd || !composer.text.trim()) ? {
+  const stop = active ? {
     label: forceEnd ? "End turn" : "Stop",
     disabled: false,
     onStop: () => void client.execute({ kind: "interrupt", commandId: crypto.randomUUID(), conversationId: active.conversationId, runId: active.id })

@@ -2,12 +2,16 @@ import { createDirectoryInventory } from "./clerk/inventory";
 import { cleanupTunnels } from "./maintenance/cleanup";
 import { createClerkVerifier } from "./auth";
 import { createClerkMetadataApi, createDirectoryStore } from "./clerk/directoryStore";
+import { createPushDeviceStore } from "./clerk/pushDeviceStore";
 import { createCloudflareClient } from "./cloudflare/client";
 import { parseWorkerConfig } from "./env";
 import { createDirectoryHandler } from "./handler";
 import { errorResponse } from "./http/responses";
+import { createExpoPushClient } from "./expo/pushClient";
 import { createProvisioningService } from "./provisioning/service";
+import { createPushService } from "./push/service";
 import { createBindingRateLimiter } from "./rateLimit";
+import { PUSH_LIMITS } from "@shared/remote-access/push";
 import type { WorkerBindings } from "./types/env.types";
 
 /** Composition root: validates bindings on every request and wires real adaptors into the handler. */
@@ -40,8 +44,10 @@ async function handle(request: Request, env: WorkerBindings): Promise<Response> 
   const config = parseWorkerConfig(env);
   if (config === null) return errorResponse("internal", "Service misconfigured.");
 
+  const clerk = createClerkMetadataApi(config.clerkSecretKey);
+  const directory = createDirectoryStore(clerk);
   const service = createProvisioningService({
-    store: createDirectoryStore(createClerkMetadataApi(config.clerkSecretKey)),
+    store: directory,
     tunnels: createCloudflareClient({
       apiToken: config.cloudflareApiToken,
       accountId: config.cloudflareAccountId,
@@ -55,6 +61,14 @@ async function handle(request: Request, env: WorkerBindings): Promise<Response> 
     hostnameSuffix: config.runtimeHostnameSuffix,
     maxRuntimesPerUser: config.maxRuntimesPerUser
   });
+  const push = createPushService({
+    devices: createPushDeviceStore(clerk),
+    directory,
+    expo: config.expoAccessToken === null ? null
+      : createExpoPushClient({ accessToken: config.expoAccessToken, fetch: (input, init) => fetch(input, init) }),
+    clock: { now: () => new Date() },
+    maxDevicesPerUser: PUSH_LIMITS.maxDevicesPerUser
+  });
 
   const handler = createDirectoryHandler({
     allowedOrigins: config.allowedOrigins,
@@ -65,9 +79,11 @@ async function handle(request: Request, env: WorkerBindings): Promise<Response> 
     }),
     rateLimiter: createBindingRateLimiter({
       general: config.generalRateLimiter,
-      provisioning: config.provisionRateLimiter
+      provisioning: config.provisionRateLimiter,
+      push: config.pushRateLimiter
     }),
-    service
+    service,
+    push
   });
   return handler(request);
 }

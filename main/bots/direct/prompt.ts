@@ -1,17 +1,17 @@
 import type { DirectDescriptor } from "@shared/types/bots/bots.types";
 import type { TimelineItem } from "@shared/types/conversation/contracts.types";
-import { chatMessages, chatTranscript } from "@main/bots/chats/transcript";
+import { chatMessages, chatTranscript, openingChatTranscript } from "@main/bots/chats/transcript";
 import { withDoneCriteria } from "@main/bots/conversations/doneCriteria";
 
 /**
- * What a work thread sees for one chat message. A new task gets the chat so far, so the conversation carries over;
- * a continuing one gets the messages since it last replied, since its own session already holds the rest. A new task's `done`
- * criteria (from the router) close its first prompt; its session keeps them after that.
+ * What a work thread sees for one chat message. A new task gets a short recent slice of the chat so far (not the full
+ * history), so cold starts stay cheap; a continuing one gets the messages since it last replied, since its own session
+ * already holds the rest. A new task's `done` criteria (from the router) close its first prompt; its session keeps them after that.
  */
 export function directPrompt(direct: DirectDescriptor, items: readonly TimelineItem[], workThreadId: string, workspaceName: string, done: string | null = null): string {
   const messages = chatMessages(items);
   const since = messages.map((item) => item.workThreadId).lastIndexOf(workThreadId);
-  const transcript = chatTranscript(messages, since);
+  const transcript = since < 0 ? openingChatTranscript(messages) : chatTranscript(messages, since);
   const opening = since < 0
     ? `You are ${direct.name}, chatting with the user. This thread is a task you are taking on in ${workspaceName}. The chat so far:`
     : "New in your chat with the user since your last reply:";

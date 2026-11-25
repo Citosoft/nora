@@ -41,11 +41,13 @@ import { NativeProviderPicker } from "./NativeProviderPicker";
 import { ThreadBackdrop } from "./ThreadBackdrop";
 import { showsThreadBackdrop } from "@shared/thread-backdrop/settings";
 import { NativeTimeline } from "./NativeTimeline";
+import { useTurnUndo } from "@/components/app/hooks/useTurnUndo";
 import { NativeRequestStack } from "./NativeRequestStack";
+import { ConnectorAuthPromptStack } from "./ConnectorAuthPromptStack";
 import { SecretPromptStack } from "./SecretPromptStack";
 import { NativeQueue } from "./NativeQueue";
 import type { ProviderCapabilities } from "@shared/types/provider/capabilities.types";
-import type { TimelineItem } from "@shared/types/conversation/contracts.types";
+import type { ConversationRun, TimelineItem } from "@shared/types/conversation/contracts.types";
 import { ThreadInsightsPanel } from "./ThreadInsightsPanel";
 import { ThreadContextUsage } from "./ThreadContextUsage";
 import { nativeProviderLabel } from "@/components/app/logic/nativeProviderLabel";
@@ -58,6 +60,7 @@ import { ThreadAccessBadge } from "../threads/ThreadAccessBadge";
 import { BotAvatar } from "@/components/app/shared/BotAvatar";
 
 const NO_ITEMS: readonly TimelineItem[] = [];
+const NO_RUNS: readonly ConversationRun[] = [];
 
 export function NativeConversationPanel() {
   const ports = useNativeConversationPorts();
@@ -81,6 +84,7 @@ export function NativeConversationPanel() {
   const pins = useMessagePins({ conversation: header?.conversation ?? null, items: view?.items ?? NO_ITEMS, execute, scrollRef: transcript.ref,
     hasOlderHistory: !!view?.nextBefore, loadOlder: older, onNavigate: transcript.pauseFollowing });
   const { isPinned, toggle: togglePin } = pins;
+  const turnUndo = useTurnUndo({ conversationId: header?.conversation.id ?? null, items: view?.items ?? NO_ITEMS, runs: view?.runHistory.runs ?? NO_RUNS, execute });
   const hasThread = !!header;
   const pinControls = useMemo(() => hasThread ? { isPinned, toggle: togglePin } : undefined, [hasThread, isPinned, togglePin]);
   // Restored tabs stay mounted while hidden; each discovery starts a provider runtime, so only shown threads discover.
@@ -117,8 +121,8 @@ export function NativeConversationPanel() {
     return found ? { name: found.bot.name, avatar: found.bot.avatar } : null;
   }, [bots]);
   // Nora threads suggest the workspace's bots, which Nora asks with ask_bot. Bot threads suggest none.
-  const mentionOptions = useMemo(() => !currentBot ? bots.map(({ bot }) => ({ id: bot.id, name: bot.name, detail: bot.role || undefined,
-    icon: <BotAvatar avatar={bot.avatar} size={20} /> })) : undefined, [currentBot, bots]);
+  const mentionOptions = useMemo(() => bots.map(({ bot }) => ({ id: bot.id, name: bot.name, detail: bot.role || undefined,
+    icon: <BotAvatar avatar={bot.avatar} size={20} /> })), [bots]);
   const role = header?.conversation.role?.selection ?? document.role;
   const profile = role && !currentBot ? roleProfile(role) : null;
   const firstName = getGreetingFirstName(ports.userDisplayName);
@@ -137,11 +141,11 @@ export function NativeConversationPanel() {
   const sendLabel = pending ? "Retry saved instruction" : active ? steerFollowUp ? "Steer instruction" : "Queue instruction" : "Send instruction";
   const stopLabel = active ? threadStopLabel(active.state) : "Stop turn";
   const actionLabel = showStop ? stopLabel : busy ? "Sending instruction" : sendLabel;
-  const endTurn = active && canForceEndThread(active.state)
-    ? () => void execute({ kind: "interrupt", commandId: crypto.randomUUID(), conversationId: active.conversationId, runId: active.id })
-    : null;
+  const stopTurn = active ? () => void execute({ kind: "interrupt", commandId: crypto.randomUUID(), conversationId: active.conversationId, runId: active.id }) : null;
+  const endTurn = active && canForceEndThread(active.state) ? stopTurn : null;
   const send = (): void => {
     if (!canSend) return;
+    transcript.jumpToLatest();
     rememberPrompt(pending?.submit.instruction ?? document.text);
     void submit();
   };
@@ -159,7 +163,7 @@ export function NativeConversationPanel() {
     : undefined;
   return <section className={cn("thread-conversation relative isolate flex min-h-0 min-w-0 flex-1 flex-col", !conversationId && "justify-center pb-[12vh]")} aria-label={conversationId ? "Thread" : "New thread"}
     data-thread-insights={header ? insightsExpanded ? "expanded" : "collapsed" : undefined}>
-    {ports.threadBackdrop && showsThreadBackdrop(ports.threadBackdrop, !!conversationId) && <ThreadBackdrop variant={conversationId ? "conversation" : "greeting"} />}
+    {ports.threadBackdrop && showsThreadBackdrop(ports.threadBackdrop, !!conversationId) && <ThreadBackdrop variant={conversationId ? "conversation" : "greeting"} working={!!active || !!pending} />}
     {/* A new thread sizes the transcript to its greeting so the composer sits directly beneath it. */}
     <div className={cn("relative flex min-h-0 flex-col", conversationId ? "flex-1" : "flex-initial")}>
     {header && providerLabel !== null && <ThreadInsightsPanel header={header} providerLabel={providerLabel} connectors={connectors} skills={skills} changes={insights.changes} subagents={insights.subagents} outputs={insights.outputs} branch={insights.branch} pins={pins} expanded={insightsExpanded} busy={busy}
@@ -174,8 +178,8 @@ export function NativeConversationPanel() {
         {loadError && <div role="alert"><p>{loadError}</p><Button onClick={reload}>Reload thread</Button></div>}
         {view?.nextBefore && <Button variant="ghost" onClick={() => void older()}>Load older messages</Button>}
         {conversationId && !view && !loadError && <p className="text-muted-foreground">Loading thread…</p>}
-        {view && <NativeTimeline items={view.items} runs={view.runHistory.runs} onLinkClick={onLinkClick} connectors={connectors}
-          resolveBot={resolveBot} onOpenThread={openThread} mcpApps={mcpApps} toolOutputs={toolOutputs} onOpenOutput={openOutput} pins={pinControls} />}
+        {view && <NativeTimeline items={view.items} runs={view.runHistory.runs} onLinkClick={onLinkClick} connectors={connectors} mentions={mentionOptions}
+          resolveBot={resolveBot} onOpenThread={openThread} mcpApps={mcpApps} toolOutputs={toolOutputs} onOpenOutput={openOutput} pins={pinControls} turnUndo={turnUndo} />}
         {!conversationId && <div className="mx-auto flex w-full flex-col items-center gap-7 pb-2 text-center">
           <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">What would you like to work on in <span className="text-primary">{workspace.name}</span>{firstName && <>, <span className="whitespace-nowrap text-primary">{firstName}</span></>}?</h1>
           <div className="flex flex-wrap justify-center gap-2">{profile?.starters.map((starter) => <Button key={starter} variant="outline" className="h-auto max-w-full rounded-full px-4 py-2 text-left font-normal whitespace-normal"
@@ -189,6 +193,7 @@ export function NativeConversationPanel() {
     <div className="thread-composer">
     <div className="mx-auto w-full max-w-[848px] space-y-3 px-4 pb-5 sm:px-6">
       {header && <NativeRequestStack key={header.conversation.id} requests={header.pendingRequests} busy={busy} visible={ports.visible} onRespond={(requestId, response) => execute({ kind: "respond", commandId: crypto.randomUUID(), conversationId: header.conversation.id, requestId, response })} />}
+      {conversationId && <ConnectorAuthPromptStack conversationId={conversationId} />}
       {conversationId && <SecretPromptStack conversationId={conversationId} />}
       {endTurn && <div className="flex flex-wrap items-center gap-2">
         {active?.state === "recovering" && <Button type="button" size="sm" variant="outline" disabled={busy}
@@ -197,7 +202,7 @@ export function NativeConversationPanel() {
           aria-label={active?.state === "stopping" ? "End turn that is still stopping" : "End turn whose outcome is unconfirmed"}>End turn</Button>
       </div>}
       {voice.error && <p role="alert" className="text-sm text-destructive">{voice.error}</p>}
-      {(runtime.error || ports.storageError || executionFailure || pending) && <p role="alert" className="text-sm text-destructive">{runtime.error ?? ports.storageError ?? (executionFailure ? executionFailureMessage(executionFailure) : "Delivery is unconfirmed. Retry checks the same saved instruction.")}</p>}
+      {(runtime.error || ports.storageError || executionFailure || (pending && !busy)) && <p role="alert" className="text-sm text-destructive">{runtime.error ?? ports.storageError ?? (executionFailure ? executionFailureMessage(executionFailure) : "Delivery is unconfirmed. Retry checks the same saved instruction.")}</p>}
       <div>
       {header && <NativeQueue conversationId={header.conversation.id} runs={header.queuedRuns} paused={header.conversation.queuePaused} busy={busy} execute={execute}
         steerTarget={capabilities?.steering && active?.state === "running" && active.nativeTurnId && !header.pendingRequests.length && !header.queuedRuns.some((run) => run.steering === "pending") ? active.id : null} />}
@@ -211,7 +216,7 @@ export function NativeConversationPanel() {
             aria-label="Open thread settings" tooltip="Thread settings" onClick={ports.openThreadSettings}><Settings className="size-4" aria-hidden="true" /></Button> : undefined}
           placeholder={settled ? "Reopen this settled thread to continue" : active ? "Queue your next instruction…" : "Ask, plan, or start something…"}
           suggestion={hasContent || attachmentInput.saving || busy || pending || loadError || runtime.error ? null : selectPromptSuggestion(view, capabilities)}
-          onFiles={(files) => void attachmentInput.addFiles(files)} onChange={setText} onSubmit={send} mentions={mentionOptions} issueSource={issueSource} />
+          onFiles={(files) => void attachmentInput.addFiles(files)} onChange={setText} onSubmit={send} mentions={currentBot ? undefined : mentionOptions} issueSource={issueSource} />
         <NativeComposerAttachments attachments={attachments} disabled={!!pending || settled || busy} saving={attachmentInput.saving}
           error={attachmentInput.error} onFiles={(files) => void attachmentInput.addFiles(files)} onRemove={ports.removeAttachment}
           trailingAction={<>
@@ -237,8 +242,10 @@ export function NativeConversationPanel() {
             initial={botModelRevert && botModelSeed ? botModelSeed : document.provider} locked={threadProvider} onBinding={setBinding} onCapabilities={setCapabilities} /></div>
           <ThreadContextUsage header={header ?? null} capabilities={capabilities} ready={!busy && !pending && !settled} compact={ports.compact} client={client} />
           <VoiceInputButton voice={voice} className="rounded-md" />
+          {stopTurn && !endTurn && !showStop && <Button type="button" variant="outline" size="icon" className="shrink-0 rounded-md"
+            aria-label={stopLabel} tooltip={stopLabel} disabled={busy} onClick={stopTurn}><Square className="size-3.5 fill-current" aria-hidden="true" /></Button>}
           <Button type={showStop ? "button" : "submit"} size={pending ? "sm" : "icon"} className="shrink-0 rounded-md" disabled={showStop ? busy : !canSend}
-            onClick={showStop && active ? () => void execute({ kind: "interrupt", commandId: crypto.randomUUID(), conversationId: active.conversationId, runId: active.id }) : undefined}
+            onClick={showStop ? stopTurn ?? undefined : undefined}
             aria-label={actionLabel}>
             {showStop ? <Square className="size-3.5 fill-current" aria-hidden="true" /> : pending ? "Retry saved instruction" : <ArrowUp className="size-4" aria-hidden="true" />}</Button>
         </div>

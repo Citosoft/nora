@@ -20,3 +20,9 @@ test("a turn's last agent message, user messages and messages before another tur
   const rows = buildNativeTimeline([message("ask", "user"), message("a", "assistant"), message("next", "assistant", "other")], []);
   assert.deepEqual(rows.map(({ continued }) => continued), [false, false, false]);
 });
+
+test("unsupported Git review does not add a transcript row", () => {
+  const rows = buildNativeTimeline([message("answer", "assistant"),
+    { id: "review", runId: "run", createdAt, kind: "review", result: { status: "unavailable", reason: "unsupported" } }], []);
+  assert.deepEqual(rows.map(({ key }) => key), ["answer"]);
+});

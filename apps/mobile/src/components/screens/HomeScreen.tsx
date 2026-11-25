@@ -15,6 +15,7 @@ import { SectionHeader } from "@/components/common/SectionHeader";
 import { StateView } from "@/components/common/StateView";
 import { ComputerCard } from "@/components/dashboard/ComputerCard";
 import { DashboardHero } from "@/components/dashboard/DashboardHero";
+import { PushPrompt } from "@/components/dashboard/PushPrompt";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { DirectoryNotices } from "@/components/runtimes/DirectoryNotices";
 import { InstallHint } from "@/components/runtimes/InstallHint";
@@ -55,6 +56,8 @@ export function HomeScreen() {
       trailing={<NavButton icon="desktop-outline" label="Computers" onPress={() => router.push(routes.computers)} />}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void directory.refresh()} />}>
       {!preferences.installHintDismissed ? <InstallHint onDismiss={() => void update((current) => ({ ...current, installHintDismissed: true }))} /> : null}
+      <PushPrompt dismissed={preferences.pushPromptDismissed} linkedComputers={runtimes.length}
+        onDismiss={() => void update((current) => ({ ...current, pushPromptDismissed: true }))} />
       <DirectoryNotices directory={directory} now={now} />
       {primary ? <QuickActions runtime={primary} /> : null}
       {runtimes.length ? <SectionHeader title={runtimes.length === 1 ? "Your computer" : "Your computers"} /> : null}

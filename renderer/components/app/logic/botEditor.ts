@@ -9,7 +9,7 @@ import type { BotEditorDraft, BotEditorResult } from "@/components/app/types/bot
 const FIELD_LABELS: Readonly<Record<string, string>> = { name: "Name", role: "Role", instructions: "Instructions", connectorIds: "Connectors", accountConnectors: "Account connectors", binding: "Model", avatar: "Avatar", scope: "Where it's available" };
 
 export function newBotEditorDraft(scope: BotScope, model: ThreadModelDefault | null, seed: number): BotEditorDraft {
-  return { name: "", role: "", instructions: "", connectorIds: undefined, accountConnectors: [], model, avatar: { seed }, scope };
+  return { name: "", role: "", instructions: "", connectorIds: [], accountConnectors: [], model, avatar: { seed }, scope };
 }
 
 /** A new bot prefilled from a template; the template's face is pinned, the seed still varies for future rerolls. */
@@ -18,7 +18,8 @@ export function templateEditorDraft(template: BotTemplate, scope: BotScope, mode
 }
 
 export function botEditorDraft(bot: BotDefinition): BotEditorDraft {
-  return { name: bot.name, role: bot.role, instructions: bot.instructions, connectorIds: bot.connectorIds, accountConnectors: [...(bot.accountConnectors ?? [])], avatar: bot.avatar, scope: bot.scope,
+  // Omitted connectorIds on older bots meant "all"; runtime now treats omit as none, so the editor shows an empty selection.
+  return { name: bot.name, role: bot.role, instructions: bot.instructions, connectorIds: bot.connectorIds ?? [], accountConnectors: [...(bot.accountConnectors ?? [])], avatar: bot.avatar, scope: bot.scope,
     model: { kind: bot.binding.kind, instanceId: bot.binding.instanceId, model: bot.binding.model } };
 }
 
@@ -29,7 +30,7 @@ export function botFromEditorDraft(draft: BotEditorDraft, existing: BotDefinitio
   const sameProvider = existing && existing.binding.kind === draft.model.kind && existing.binding.instanceId === draft.model.instanceId;
   const parsed = botDefinitionSchema.safeParse({
     id: existing?.id ?? newBotId(draft.name, takenIds), name: draft.name, role: draft.role, instructions: draft.instructions,
-    ...(draft.connectorIds !== undefined ? { connectorIds: draft.connectorIds } : {}),
+    connectorIds: draft.connectorIds ?? [],
     ...(draft.accountConnectors.length ? { accountConnectors: draft.accountConnectors } : {}),
     binding: { ...draft.model, reasoning: sameProvider ? existing.binding.reasoning : null, permissionPolicy: sameProvider ? existing.binding.permissionPolicy : null },
     avatar: draft.avatar, scope: draft.scope, revision: existing?.revision ?? 1

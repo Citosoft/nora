@@ -200,6 +200,12 @@ export function createRemoteAccessService(options: RemoteCoordinatorOptions): Re
       presence.disconnect(deviceId); notify();
       return enqueue(async () => { await save(); return view(); });
     },
+    async notifyPhones(notifications) {
+      const local = state; const session = options.session();
+      if (disposed || !local?.enabled || !local.runtime || !session || session.userId !== local.ownerId) return { kind: "skipped" };
+      const { delivered } = await options.control.sendPush(session, { installationId: local.installationId, notifications: [...notifications] }, controller.signal);
+      return { kind: "sent", delivered };
+    },
     view,
     isEnabled: () => state?.enabled ?? false,
     activity: options.activity,

@@ -6,7 +6,7 @@ import type { NativeMessageProps } from "@/components/app/types/nativePanels.typ
 import { NativeMessageActions } from "./NativeMessageActions";
 import { SpeakerAvatar } from "@/components/app/shared/SpeakerAvatar";
 
-export function NativeMessage({ item, onLinkClick, pins, actions = "inline" }: NativeMessageProps) {
+export function NativeMessage({ item, onLinkClick, mentions, pins, actions = "inline" }: NativeMessageProps) {
   const isUser = item.role === "user";
   // Actions appear once the text is final, so a streaming reply is never copied or pinned half-written.
   const showActions = item.complete || isUser;
@@ -18,7 +18,7 @@ export function NativeMessage({ item, onLinkClick, pins, actions = "inline" }: N
       <SpeakerAvatar botId={item.author.botId} avatar={item.author.avatar} size={22} /><span>{item.author.name}</span></div>}
     <article aria-label={item.author ? `${item.author.name} message` : `${item.role} message`}
       className={isUser ? "max-w-[85%] rounded-lg bg-muted px-4 py-3" : "native-prose"}>
-      <MarkdownRenderer className="min-w-0 break-words" onLinkClick={onLinkClick}>{item.text}</MarkdownRenderer>
+      <MarkdownRenderer className="min-w-0 break-words" onLinkClick={onLinkClick} showLinkIcons mentions={mentions}>{item.text}</MarkdownRenderer>
     </article>
     {showActions && <NativeMessageActions item={item} placement={actions} pin={pins && item.complete ? { pinned, onToggle: () => pins.toggle(item.id) } : undefined} />}
   </div>;

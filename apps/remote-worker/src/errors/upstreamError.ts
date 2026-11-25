@@ -1,9 +1,11 @@
-/** A dependency (Clerk or Cloudflare) failed. Details stay server-side; the client sees a generic `upstream` error. */
+import type { UpstreamProvider } from "../types/upstream.types";
+
+/** A dependency (Clerk, Cloudflare or Expo) failed. Details stay server-side; the client sees a generic `upstream` error. */
 export class UpstreamError extends Error {
-  readonly provider: "clerk" | "cloudflare";
+  readonly provider: UpstreamProvider;
   readonly status: number | null;
 
-  constructor(provider: "clerk" | "cloudflare", status: number | null, message: string) {
+  constructor(provider: UpstreamProvider, status: number | null, message: string) {
     super(message);
     this.name = "UpstreamError";
     this.provider = provider;

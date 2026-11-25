@@ -6,7 +6,9 @@ import { registerAppBuilderTools } from "./apps";
 import { registerBotTools, registerBotListTool } from "./bots";
 import { registerAskBotTool, registerChatTools, registerMemoryTools } from "./conversation";
 import { registerSecretTools } from "./secrets";
+import { registerRoutineListTool, registerRoutineTools } from "./routines";
 import { registerTaskTools } from "./tasks";
+import { registerTerminalTools } from "./terminals";
 import { registerThreadTools } from "./threads";
 import { registerWorkflowTools, registerWorkflowReportTool } from "./workflows";
 import { registerWorkerTools } from "./workers";
@@ -14,9 +16,10 @@ import { registerWorkerTools } from "./workers";
 /**
  * Registers the tools for the calling thread's audience (see `audience` in the shared catalog). Every agent thread manages tasks,
  * keeps notes, uses saved secrets and reads past threads (bots see their own work). Nora and bots start and collect worker threads,
- * unless they are workers themselves. Nora also manages the app and workflows; bots read the chat they answer in.
+ * unless they are workers themselves. Nora also manages the app and workflows; bots read the chat they answer in. Plain workers get
+ * a slim set so delegated turns do not pay for Nora admin catalogues.
  */
-export function registerNoraTools(server: McpServer, context: NoraToolContext, deps: NoraToolDeps): void {
+export function registerNoraTools(server: McpServer, context: NoraToolContext, deps: NoraToolDeps, requestSignal: AbortSignal): void {
   if (context.conversation.source?.kind === "workflow") {
     registerWorkflowReportTool(server, context, deps);
     // Reviewers only get the stage-report capability; app, memory-write and delegation tools cannot bypass read-only access.
@@ -24,7 +27,14 @@ export function registerNoraTools(server: McpServer, context: NoraToolContext, d
   }
   // An app's builder works through the app tools alone; secrets stay so a connector's key can be collected without passing through chat.
   if (threadToolScope(context.conversation) === "apps") { registerAppBuilderTools(server, context, deps); registerSecretTools(server, context, deps); return; }
-  registerAskBotTool(server, context, deps);
+  if (context.audience === "worker") {
+    registerMemoryTools(server, context, deps);
+    registerSecretTools(server, context, deps);
+    registerThreadTools(server, context, deps);
+    registerTaskTools(server, context, deps);
+    return;
+  }
+  registerAskBotTool(server, context, deps, requestSignal);
   registerBotListTool(server, context, deps);
   registerModelListTool(server, context, deps);
   registerTaskTools(server, context, deps);
@@ -37,7 +47,11 @@ export function registerNoraTools(server: McpServer, context: NoraToolContext, d
     if (context.chat) registerChatTools(server, context, deps);
     return;
   }
+  // Nora-only: routines, terminals, bot CRUD, apps and workflows stay off bot and worker surfaces to keep those cold starts cheap.
+  registerRoutineListTool(server, context, deps);
+  registerTerminalTools(server, context, deps);
   registerBotTools(server, context, deps);
+  registerRoutineTools(server, context, deps);
   registerAppTools(server, context, deps);
   registerAppBuilderTools(server, context, deps);
   registerWorkflowTools(server, context, deps);

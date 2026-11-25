@@ -1,3 +1,4 @@
+import { normalizeUiFontSize } from "@shared/appearance/fontSize";
 import { parseAiSimpleTaskProvider, parseMemoryReviewSettings, parseRuntimeModelByProvider } from "@shared/ai/settings";
 import {
   DEFAULT_APP_SETTINGS,
@@ -83,6 +84,7 @@ function parseAppSettings(raw: string): AppSettings {
       confirmSplitViewDelete: candidate.confirmSplitViewDelete !== false,
       showWorkspaceSessionTabs: candidate.showWorkspaceSessionTabs !== false,
       agentCompletionNotificationsEnabled: candidate.agentCompletionNotificationsEnabled !== false,
+      phonePushNotificationsEnabled: candidate.phonePushNotificationsEnabled !== false,
       analyticsConsentStatus:
         candidate.analyticsConsentStatus === "granted" || candidate.analyticsConsentStatus === "declined"
           ? candidate.analyticsConsentStatus
@@ -94,6 +96,7 @@ function parseAppSettings(raw: string): AppSettings {
         candidate.fileEditorThemeId === "high-contrast"
           ? candidate.fileEditorThemeId
           : DEFAULT_APP_SETTINGS.fileEditorThemeId,
+      uiFontSize: normalizeUiFontSize(candidate.uiFontSize),
       threadBackdrop: parseThreadBackdropSettings(candidate.threadBackdrop),
       terminalQuickLaunchDefaults: parseTerminalQuickLaunchDefaults(candidate.terminalQuickLaunchDefaults),
       terminalPresets: parseTerminalPresets(candidate.terminalPresets),

@@ -20,9 +20,9 @@ test("live connector selection follows effective bot precedence and hidden bots"
   assert.deepEqual(connectorIdsForBot(settings, shared, subject), []);
 });
 
-test("old definitions inherit available connectors; missing bots get none and plain threads stay unrestricted", () => {
+test("omitted connector ids mean none; missing bots and plain threads get none", () => {
   const settings: BotSettings = { global: [bot("ada")], workspaces: {} };
-  assert.equal(connectorIdsForBot(settings, [], subject), undefined);
+  assert.deepEqual(connectorIdsForBot(settings, [], subject), [], "bots opt in to connectors");
   assert.deepEqual(connectorIdsForBot(settings, [], { ...subject, botId: "missing" }), []);
-  assert.equal(connectorIdsForBot(settings, [], { ...subject, botId: null }), undefined);
+  assert.deepEqual(connectorIdsForBot(settings, [], { ...subject, botId: null }), []);
 });

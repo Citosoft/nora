@@ -1,7 +1,8 @@
 import type { Conversation, ConversationCommand, ConversationRun, RequestResponse, RuntimeRequest } from "@shared/types/conversation/contracts.types";
 import type { Decision, DecisionContext } from "@main/types/execution/decisions.types";
 import { ExecutionCommandError } from "./errors";
-import { isActiveRun, projectState } from "./projection";
+import { projectState } from "./projection";
+import { isActiveRun } from "@shared/conversations/runActivity";
 import { snapshotRole } from "@shared/personalization/profiles";
 import { NORA_PROVIDER_KIND } from "@shared/providers/providerKinds";
 import { areQuestionAnswersComplete } from "@shared/conversations/questionAnswers";
@@ -9,7 +10,7 @@ import { steeringTarget } from "./steeringAdmission";
 import { sameProviderBinding } from "@shared/conversations/providerBinding";
 import { applyMessagePin } from "./messagePins";
 import { forceEndRun } from "./forceEndRun";
-import { onlyAncestorWriters } from "./ancestorWriters";
+import { decideUndo } from "./decideUndo";
 
 /** A workspace a direct chat may work in: any for a global bot's chat, only its own for a workspace bot's. */
 function assertDirectWorkspaceScope(direct: Conversation["direct"], workspaceId: string): NonNullable<Conversation["direct"]> {
@@ -101,12 +102,6 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
     }
     if (command.access === state.conversation.workspace.access) return decision;
     const workspace = { ...state.conversation.workspace, access: command.access };
-    if (command.access === "write") {
-      const others = context.admission.writers(workspace).filter((id) => id !== command.conversationId);
-      if (!onlyAncestorWriters((id) => context.admission.header(id), command.conversationId, others)) {
-        throw new ExecutionCommandError("conflict", "Another conversation is writing to this checkout; choose an isolated worktree");
-      }
-    }
     add({ kind: "conversation", conversation: { ...state.conversation, workspace, updatedAt: context.now } });
     return decision;
   }
@@ -143,28 +138,25 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
     if (command.kind === "archive") return decision;
     throw new ExecutionCommandError("conflict", "This thread is settled. Reopen it before continuing");
   }
+  // Undo restores files only, so it neither changes the transcript's turns nor starts queued work.
+  if (command.kind === "undo-turn") return decideUndo(command, state, context.undoTarget, context.now);
   const initial = state;
   const run = "runId" in command ? initial.runs.find((entry) => entry.id === command.runId) : undefined;
-  const assertWriter = (): void => {
-    const workspace = initial.conversation.workspace;
-    if (workspace.access !== "write") return;
-    const others = context.admission.writers(workspace).filter((id) => id !== command.conversationId);
-    if (onlyAncestorWriters((id) => context.admission.header(id), command.conversationId, others)) return;
-    throw new ExecutionCommandError("conflict", "Another conversation is writing to this checkout; choose an isolated worktree");
-  };
   const putRun = (next: ConversationRun): void => add({ kind: "run", run: { ...next, updatedAt: context.now } });
   switch (command.kind) {
     case "submit": {
       if (command.compactionDeadline && command.action !== "compact") throw new ExecutionCommandError("invalid", "Only automatic compaction can have a deadline");
       if (command.workspaceId) assertDirectWorkspaceScope(initial.conversation.direct, command.workspaceId);
       if (run) throw new ExecutionCommandError("conflict", "Instruction identity already exists");
-      assertWriter();
       const change = command.providerChange;
       if (change && (command.action || !context.providerTransition || !sameProviderBinding(change.expected, initial.conversation.provider)
         || !sameProviderBinding(context.providerTransition.handoff.previousProvider, change.expected) || sameProviderBinding(change.expected, change.next))) {
         throw new ExecutionCommandError("conflict", "The provider handoff does not match this chat. Reload before changing providers.");
       }
-      const conversation = { ...initial.conversation, ...(change ? { provider: context.providerTransition?.provider ?? change.next, nativeConversationId: null, pendingHandoffRunId: command.runId, context: null, queuePaused: false } : {}), updatedAt: context.now };
+      const emptyPausedQueue = initial.conversation.queuePaused && !command.action
+        && !initial.runs.some((entry) => isActiveRun(entry) || entry.state === "queued");
+      const conversation = { ...initial.conversation, ...(change ? { provider: context.providerTransition?.provider ?? change.next, nativeConversationId: null,
+        pendingHandoffRunId: command.runId, context: null } : {}), queuePaused: !change && !emptyPausedQueue && initial.conversation.queuePaused, updatedAt: context.now };
       add({ kind: "conversation", conversation });
       if (change) add({ kind: "item", item: { kind: "milestone", id: JSON.stringify([command.runId, "provider-change"]), runId: command.runId, createdAt: context.now,
         text: `Continued from ${change.expected.kind} / ${change.expected.model} to ${change.next.kind} / ${change.next.model} in a fresh session with a saved history handoff.` } });
@@ -200,14 +192,12 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
       if (!run || run.state !== "queued" || run.steering || run.action || !target || steeringTarget(initial)?.id !== target.id) {
         throw new ExecutionCommandError("conflict", "Steering requires an unsent message and a confirmed running turn");
       }
-      assertWriter();
       putRun({ ...run, steering: "pending", failure: null });
       decision.effects.push({ id: JSON.stringify([command.commandId, "steer"]), conversationId: command.conversationId, runId: target.id,
         attemptId: target.attemptId, status: "pending", action: { kind: "steer", queuedRunId: run.id, instruction: run.instruction } });
       return decision;
     }
     case "continue-queue":
-      assertWriter();
       add({ kind: "conversation", conversation: { ...initial.conversation, queuePaused: false, updatedAt: context.now } });
       break;
     case "reconcile":
@@ -226,6 +216,10 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
       add({ kind: "conversation", conversation: { ...initial.conversation, archivedAt: context.now } });
       return decision;
     case "interrupt":
+      if (run?.state === "queued" && !run.steering) {
+        putRun({ ...run, state: "interrupted", review: "unavailable" });
+        return decision;
+      }
       if (!run || !isActiveRun(run)) {
         throw new ExecutionCommandError("conflict", "No active turn is available to interrupt");
       }
@@ -273,7 +267,6 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
   if (state && !state.conversation.queuePaused && !state.runs.some(isActiveRun) && !state.runs.some((entry) => entry.steering)) {
     const next = state.runs.find((entry) => entry.state === "queued");
     if (next) {
-      assertWriter();
       putRun({ ...next, state: "starting", startedAt: context.now });
       const instructionId = JSON.stringify([next.id, "instruction"]);
       add({ kind: "item", item: next.action === "compact"

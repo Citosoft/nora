@@ -1,4 +1,4 @@
-import type { DevToastPayload, SettingsRuntimeValue } from "@/components/app/types/settings.types";
+import type { DevToastPayload, NotificationPreferencesUpdate, SettingsRuntimeValue } from "@/components/app/types/settings.types";
 import type {
   AgentSkillSearchResult,
   AiProvider,
@@ -52,6 +52,7 @@ export type BuildSettingsRuntimeValueDeps = {
   disconnectVercelAccount: () => void;
   appSettings: AppSettings;
   updateFileEditorThemeId: (themeId: AppSettings["fileEditorThemeId"]) => Promise<void>;
+  updateUiFontSize: (size: number) => Promise<void>;
   updateThreadBackdrop: (patch: Partial<AppSettings["threadBackdrop"]>) => Promise<void>;
   updateHardwareAccelerationEnabled: (enabled: boolean) => Promise<void>;
   updateWorkspaceStateStorageMode: (mode: AppSettings["workspaceStateStorageMode"]) => Promise<void>;
@@ -68,7 +69,7 @@ export type BuildSettingsRuntimeValueDeps = {
   forceMacTitleBarPreview: boolean;
   updateForceMacTitleBarPreview: (enabled: boolean) => void;
   updateLifecycle: (lifecycle: AppSettings["lifecycle"]) => Promise<void>;
-  updateNotificationPreferences: (next: { agentCompletionNotificationsEnabled: boolean }) => Promise<void>;
+  updateNotificationPreferences: (next: NotificationPreferencesUpdate) => Promise<void>;
   updateAnalyticsConsentStatus: (status: "granted" | "declined") => Promise<void>;
   analyticsAllowedInCurrentRun: boolean;
   analyticsRuntimeConfig: AnalyticsRuntimeConfig | null;

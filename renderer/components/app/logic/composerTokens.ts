@@ -12,11 +12,10 @@ export function matchMentions(options: readonly ComposerSuggestionOption[], quer
 
 /** Only a token at a word boundary may open suggestions; completed references and URLs cannot. */
 export function activeComposerToken(text: string, caret: number, trigger: "@" | "#"): ComposerToken | null {
-  const before = text.slice(0, caret);
-  const start = before.lastIndexOf(trigger);
+  const start = caret > 0 ? text.lastIndexOf(trigger, caret - 1) : -1;
   if (start < 0 || caret - start - 1 > QUERY_MAX) return null;
-  if (start > 0 && !/[\s([{]/.test(before[start - 1])) return null;
-  const query = before.slice(start + 1);
+  if (start > 0 && !/[\s([{]/.test(text[start - 1])) return null;
+  const query = text.slice(start + 1, caret);
   if (trigger === "#" ? /[\r\n@#()[\]<>`"]/.test(query) : /[\r\n]/.test(query)) return null;
   return { start, query, trigger };
 }

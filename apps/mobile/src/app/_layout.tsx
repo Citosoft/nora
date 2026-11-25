@@ -9,9 +9,11 @@ import { PreferencesProvider } from "@/context/preferencesContext";
 import { ThemeProvider } from "@/context/themeContext";
 import { useTheme } from "@/hooks/useTheme";
 import { registerServiceWorker } from "@/platform/serviceWorker";
+import { pushNotifications } from "@/platform/pushNotifications";
 
 export default function RootLayout() {
   useEffect(registerServiceWorker, []);
+  useEffect(() => pushNotifications.configure(), []);
   return (
     <SafeAreaProvider>
       <DemoModeProvider>

@@ -1,4 +1,5 @@
 import type { NoraWorkerWorkspaces } from "./workerWorkspaces.types";
+import type { NoraTerminalInfo } from "@main/types/nora-tools/noraTools.types";
 import type { WindowSettingsPort } from "@shared/types/nora-tools/settings.types";
 import type { SettingsSyncService } from "@main/types/settings-sync/service.types";
 import type { ProviderBinding } from "@shared/types/conversation/contracts.types";
@@ -11,6 +12,7 @@ import type { SecretService } from "@main/types/secrets/secrets.types";
 import type { LoopRunner } from "@main/types/loopRunner.types";
 import type { AppService } from "@main/types/apps/apps.types";
 import type { ConnectorToolAccess } from "@main/types/connectors/connectors.types";
+import type { Routine, RoutineInput, RoutineList } from "@shared/types/bots/routines.types";
 
 /** Task board access for a shell project, backed by the workspace service. */
 export interface NoraTaskStore {
@@ -48,6 +50,27 @@ export interface NoraToolOperationOptions {
   /** Apps the agent builds, and the connector tools they are built on. */
   apps: AppService;
   connectorTools: ConnectorToolAccess;
+  /** Open workspace terminals and the permanent local dock; absent when the classic session surface is unavailable. */
+  terminals?: NoraTerminalStore;
+  /** Bot routines; absent when the scheduler is unavailable in this environment. */
+  routines?: NoraRoutineStore;
+}
+
+/** Routine access for Nora's tools, backed by the bot routine scheduler. */
+export interface NoraRoutineStore {
+  list(botId: string): RoutineList;
+  create(input: RoutineInput): Routine;
+  update(id: string, input: RoutineInput): Routine;
+  remove(id: string): void;
+}
+
+/** Terminal access for Nora's tools: list open sessions, open new ones, and paste without submitting. */
+export interface NoraTerminalStore {
+  list(shellProjectId: string | null): NoraTerminalInfo[];
+  /** Opens the local dock (idempotent) or a blank workspace terminal for `shellProjectId`. */
+  open(input: { kind: "local" } | { kind: "workspace"; shellProjectId: string; name?: string }): Promise<NoraTerminalInfo>;
+  /** Pastes `text` into the terminal without Enter; strips one trailing newline. */
+  paste(id: string, text: string): Promise<NoraTerminalInfo>;
 }
 /** The model a bot falls back to when the caller names no provider or model. */
 export interface BotBindingFallback { kind: ProviderBinding["kind"]; instanceId: string; model: string; reasoning: string | null; permissionPolicy: string | null; }

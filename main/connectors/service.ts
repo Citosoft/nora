@@ -43,7 +43,11 @@ export function createConnectorService(options: ConnectorServiceOptions): Connec
   };
   const list = (): Connector[] => store.list().map(view);
   const publish = (): void => options.onChanged(list());
-  const setState = (id: string, state: ConnectorRuntimeState): void => { states.set(id, state); publish(); };
+  const setState = (id: string, state: ConnectorRuntimeState): void => {
+    states.set(id, state);
+    if (state.status === "connected") options.authPrompts?.signedIn(id);
+    publish();
+  };
   const existing = (id: string): StoredConnector => {
     const connector = store.get(id);
     if (!connector) throw new Error("This connector no longer exists.");
@@ -69,12 +73,23 @@ export function createConnectorService(options: ConnectorServiceOptions): Connec
   const toolClient = createConnectorToolClient({ store, credentials, onNeedsAuth: needsAuth, ...(fetchFn ? { fetch: fetchFn } : {}) });
   const forgetSession = (id: string): void => { void toolClient.forget(id); };
   const gateway = createConnectorGateway({ store, credentials, ...(fetchFn ? { fetch: fetchFn } : {}),
-    onNeedsAuth: needsAuth });
-  const usable = (connector: StoredConnector): boolean => connector.enabled && states.get(connector.id)?.status !== "needs-auth";
+    onNeedsAuth: needsAuth, logoFor: (id) => states.get(id)?.logo,
+    ...(options.authPrompts ? { authPrompts: options.authPrompts } : {}) });
+  /**
+   * OAuth connectors that still need sign-in stay attachable so a tool call can open the authorize card; header connectors
+   * without credentials cannot be fixed interactively mid-turn and stay out.
+   */
+  const attachable = (connector: StoredConnector): boolean => {
+    if (!connector.enabled) return false;
+    const status = states.get(connector.id)?.status ?? "checking";
+    if (status === "failed" || status === "disabled") return false;
+    if (status === "needs-auth") return connector.auth.kind === "oauth";
+    return true;
+  };
   const selectionFor = (subject: ConnectorSubject): readonly string[] | undefined => subject.botId ? options.connectorIdsForBot?.(subject) : undefined;
   const availableFor = (connector: StoredConnector, subject: ConnectorSubject): boolean => connectorSelectedFor(connector, subject, selectionFor(subject));
   const usableFor = (subject: ConnectorSubject, only?: readonly string[]): StoredConnector[] =>
-    store.list().filter((connector) => usable(connector) && availableFor(connector, subject) && (!only || only.includes(connector.id)));
+    store.list().filter((connector) => attachable(connector) && availableFor(connector, subject) && (!only || only.includes(connector.id)));
 
   for (const connector of store.list()) if (connector.enabled) checkInBackground(connector.id);
 
@@ -158,6 +173,7 @@ export function createConnectorService(options: ConnectorServiceOptions): Connec
         if (signIns.get(id) === controller) signIns.delete(id);
       }
       await check(id);
+      options.authPrompts?.signedIn(id);
       return list();
     },
     async signOut(id) {
@@ -174,7 +190,7 @@ export function createConnectorService(options: ConnectorServiceOptions): Connec
       await Promise.all(targets.map((connector) => check(connector.id)));
       return list();
     },
-    endpoints: (subject, only) => Promise.all(usableFor(subject, only).map((connector) => gateway.endpoint(connector))),
+    endpoints: (subject, only, conversationIds) => Promise.all(usableFor(subject, only).map((connector) => gateway.endpoint(connector, conversationIds))),
     activeCount: (subject, only) => usableFor(subject, only).length,
     tools: {
       call(connectorId, tool, args, subject) {

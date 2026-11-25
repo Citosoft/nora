@@ -25,6 +25,14 @@ export function forceEndRun(
       add({ kind: "item", item: { ...item, state: "interrupted" } });
     }
   }
+  decision.effects.push({
+    id: JSON.stringify([run.attemptId, "force-interrupt"]),
+    conversationId: initial.conversation.id,
+    runId: run.id,
+    attemptId: run.attemptId,
+    status: "pending",
+    action: { kind: "interrupt", force: true }
+  });
   const review = run.nativeTurnId ? run.review : "unavailable";
   putRun({ ...run, state: "interrupted", failure: null, review, updatedAt: context.now });
   add({ kind: "conversation", conversation: { ...initial.conversation, queuePaused: true, updatedAt: context.now } });

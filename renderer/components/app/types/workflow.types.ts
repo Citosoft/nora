@@ -16,6 +16,7 @@ UiState,
 WindowUiState,
 WorkspaceLoadingState
 } from "@/components/app/types";
+import type { NotificationPreferencesUpdate } from "@/components/app/types/settings.types";
 import type { ThreadLaunchInput } from "@/components/app/types/thread-workspace/runtime.types";
 import type { ChatParticipants } from "@/components/app/types/chatPanels.types";
 import type {
@@ -339,6 +340,7 @@ export type AppPreferences = {
   updateGitlabAccountLabel: (nextLabel: string | null) => void;
   updateVercelAccountLabel: (nextLabel: string | null) => void;
   updateFileEditorThemeId: (themeId: AppSettings["fileEditorThemeId"]) => Promise<void>;
+  updateUiFontSize: (size: number) => Promise<void>;
   updateThreadBackdrop: (patch: Partial<AppSettings["threadBackdrop"]>) => Promise<void>;
   updateHardwareAccelerationEnabled: (enabled: boolean) => Promise<void>;
   updateWorkspaceStateStorageMode: (mode: AppSettings["workspaceStateStorageMode"]) => Promise<void>;
@@ -359,7 +361,7 @@ export type AppPreferences = {
     nextBrowserSettings: Partial<Pick<AppSettings, "openInternalBrowserOnNewPortDetection" | "browserDataImportPromptSeen">>
   ) => Promise<void>;
   updateLifecycle: (lifecycle: AppSettings["lifecycle"]) => Promise<void>;
-  updateNotificationPreferences: (nextNotificationSettings: Pick<AppSettings, "agentCompletionNotificationsEnabled">) => Promise<void>;
+  updateNotificationPreferences: (nextNotificationSettings: NotificationPreferencesUpdate) => Promise<void>;
   updateAnalyticsConsentStatus: (status: AppSettings["analyticsConsentStatus"]) => Promise<void>;
   updateTerminalPresets: (presets: AppSettings["terminalPresets"]) => Promise<void>;
   updateTerminalQuickLaunchDefaults: (defaults: AppSettings["terminalQuickLaunchDefaults"]) => Promise<void>;

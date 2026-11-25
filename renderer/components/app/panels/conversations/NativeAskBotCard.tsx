@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button";
 import type { NativeAskBotCardProps } from "@/components/app/types/nativeActivity.types";
 
 /** "Asked Rex": who was asked, what, and the answer, with a link to the asked bot's own thread where its work and approvals live. */
-export function NativeAskBotCard({ call, bot, onOpenThread }: NativeAskBotCardProps) {
+export function NativeAskBotCard({ call, bot, onOpenThread, onLinkClick, mentions }: NativeAskBotCardProps) {
   const name = bot?.name ?? call.bot;
   const running = call.tool.state === "running";
-  const status = running ? `Waiting for ${name}…` : call.error ? `${name} couldn't answer` : call.reply !== null ? `${name} replied` : `Asked ${name}`;
+  const status = running ? `Waiting for ${name}…` : call.working ? `${name} is working` : call.error ? `${name} couldn't answer` : call.reply !== null ? `${name} replied` : `Asked ${name}`;
   return <article aria-label={`Asked ${name}`} className="rounded-lg border bg-card/60 px-4 py-3 text-sm">
     <div className="flex items-center gap-2">
       {bot ? <BotInfoTrigger botId={call.bot} name={name} className="block shrink-0 rounded-full">
@@ -21,7 +21,7 @@ export function NativeAskBotCard({ call, bot, onOpenThread }: NativeAskBotCardPr
     </div>
     {call.message && <p className="mt-2 line-clamp-2 whitespace-pre-wrap break-words text-muted-foreground" title={call.message}>{call.message}</p>}
     {call.reply && <details className="mt-2"><summary className="cursor-pointer text-xs text-muted-foreground">Show {name}'s reply</summary>
-      <MarkdownRenderer className="native-prose mt-2 min-w-0 break-words">{call.reply}</MarkdownRenderer></details>}
+      <MarkdownRenderer showLinkIcons onLinkClick={onLinkClick} mentions={mentions} className="native-prose mt-2 min-w-0 break-words">{call.reply}</MarkdownRenderer></details>}
     {call.error && <p className="mt-2 whitespace-pre-wrap break-words text-xs text-destructive">{call.error}</p>}
   </article>;
 }

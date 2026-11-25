@@ -41,18 +41,11 @@ export function createWorktreeSelectionHelpers(deps: WorktreeSelectionDeps): Wor
         throw new Error("Agents cannot launch directly from a mounted UNC workspace on Windows. Choose a new worktree instead.");
       }
       session = existingSessions.find((item) => item.id === existingWorktree.sessionId) || session;
-      if (payload.mode === "write" && existingWorktree.writerAgentId) {
-        throw new Error("That worktree already has an active writer.");
-      }
     } else if (target.kind === "session-default") {
       const preferredId = session.focusedWorktreeId;
       const candidate = state.worktrees.find((item) => item.id === preferredId) ||
         state.worktrees.find((item) => item.sessionId === session.id);
-      if (
-        candidate &&
-        !deps.isWindowsUncPath(candidate.path) &&
-        (payload.mode === "read" || !candidate.writerAgentId)
-      ) {
+      if (candidate && !deps.isWindowsUncPath(candidate.path)) {
         worktree = candidate;
       }
     } else if (target.kind === "root") {

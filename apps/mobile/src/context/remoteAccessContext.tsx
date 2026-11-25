@@ -9,6 +9,7 @@ import { keyValueStorage } from "@/platform/keyValueStorage";
 import { createId } from "@/platform/randomId";
 import { subscribeToForeground } from "@/platform/foregroundSignals";
 import { createRemoteAccessServices } from "@/session/createRemoteAccessServices";
+import { pushNotifications } from "@/platform/pushNotifications";
 
 export const RemoteAccessContext = createContext<RemoteAccessServices | null>(null);
 
@@ -28,7 +29,8 @@ export function RemoteAccessProvider({ children }: { children: ReactNode }) {
     controlPlaneUrl: appConfig.controlPlaneUrl,
     storage: keyValueStorage,
     preferences,
-    createId
+    createId,
+    pushNotifications
   }) : null, [activeUserId, demo.active, demo.storage, preferences]);
 
   useEffect(() => {

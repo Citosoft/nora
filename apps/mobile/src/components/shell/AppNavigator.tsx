@@ -3,6 +3,8 @@ import { Stack } from "expo-router";
 import { useAppAccount } from "@/hooks/useAppAccount";
 import { DemoFrame } from "@/components/demo/DemoFrame";
 import { RemoteAccessProvider } from "@/context/remoteAccessContext";
+import { PushNotificationsProvider } from "@/context/pushNotificationsContext";
+import { usePushNotificationTaps } from "@/hooks/usePushNotificationTaps";
 import { RuntimeDirectoryProvider } from "@/context/runtimeDirectoryContext";
 import { AuthLoading } from "./AuthLoading";
 import { useTheme } from "@/hooks/useTheme";
@@ -14,10 +16,12 @@ const signedInScreens = ["index", "computers", "settings", "about", "runtimes/[r
 export function AppNavigator() {
   const account = useAppAccount();
   const { colors } = useTheme();
+  usePushNotificationTaps();
   if (account.status === "loading") return <AuthLoading />;
   const signedIn = account.status === "signed-in" || account.status === "demo";
   return (
     <RemoteAccessProvider>
+      <PushNotificationsProvider>
       <SignedInData signedIn={signedIn}>
         <DemoFrame>
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.groupedBackground } }}>
@@ -30,6 +34,7 @@ export function AppNavigator() {
           </Stack>
         </DemoFrame>
       </SignedInData>
+      </PushNotificationsProvider>
     </RemoteAccessProvider>
   );
 }

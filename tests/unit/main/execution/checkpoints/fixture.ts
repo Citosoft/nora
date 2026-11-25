@@ -7,9 +7,27 @@ import type { TestContext } from "node:test";
 import { LocalWorkspaceAuthority } from "@main/execution/localWorkspace";
 import { createCheckoutInspector } from "@main/execution/workspaceGit";
 import { createGitCheckpoints } from "@main/execution/checkpoints/gitService";
-import type { FileSnapshot } from "@main/types/execution/checkpoints.types";
+import type { FileSnapshot, TurnCheckpoints } from "@main/types/execution/checkpoints.types";
+import type { ExecutionProvider } from "@main/types/execution/provider.types";
+import { ProviderRegistry } from "@main/execution/providerRegistry";
+import { nativeCapabilities } from "@main/execution/providerCapabilities";
 
 const execFileAsync = promisify(execFile);
+
+/** A single fake Codex provider whose turns are scripted by `start`. */
+export function registry(start: ExecutionProvider["start"]): ProviderRegistry {
+  const providers = new ProviderRegistry();
+  providers.register({ kind: "codex", instanceId: "account-a", capabilities: nativeCapabilities, start,
+    async catalog() { return { status: "unavailable", failure: { code: "unsupported", message: "Fixture", retryable: false } }; },
+    async interrupt() {}, async respond() {}, async reconcile() {}, async close() {} });
+  return providers;
+}
+
+/** Fills the restore half of a checkpoint fake for tests that only capture and compare. */
+export const noRestore: Pick<TurnCheckpoints, "read" | "restore"> = {
+  async read() { throw new Error("This test does not read checkpoint bytes"); },
+  async restore() { throw new Error("This test does not restore files"); }
+};
 
 export function snapshot(files: Record<string, string>, capturedAt = "2026-11-09T10:00:00.000Z"): FileSnapshot {
   return { capturedAt, files: Object.entries(files).map(([path, content]) => ({ path, mode: "100644", content: Buffer.from(content).toString("base64") })) };

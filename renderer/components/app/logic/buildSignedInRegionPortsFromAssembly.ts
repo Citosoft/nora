@@ -13,6 +13,7 @@ import type { AppChromeShellComposeSlice } from "@/components/app/types/appChrom
 import type { AppModalDialogsBuildDeps } from "@/components/app/types/appModalDialogsBuild.types";
 import type { ThreadForgeClient } from "@/components/app/types/threadForge.types";
 import type { CenterDiffPorts } from "@/components/app/types/centerDiff.types";
+import { availableThreadBackdrop } from "@shared/thread-backdrop/settings";
 import { noraIntegrationClient } from "@/components/app/clients/noraIntegrationClient";
 
 /** Session center surface fields (terminal dock theme + tabs/editor slices) without center-column build deps. */
@@ -58,7 +59,7 @@ export const buildSessionCenterSurfacePortsFromAssembly = (
   resolvedTheme: a.core.resolvedTheme,
   terminalThemeId: a.sessionSurface.terminalThemeId,
   terminalFontId: a.sessionSurface.terminalFontId,
-  threadBackdrop: a.core.appSettings.threadBackdrop
+  threadBackdrop: availableThreadBackdrop(a.core.appSettings)
 });
 
 export const buildSessionCenterPortsFromAssembly = (a: AppShellSignedInAssemblySources): SessionCenterPorts => ({

@@ -1,9 +1,13 @@
+import { PUSH_LIMITS } from "@shared/remote-access/push";
 import { createDirectoryStore } from "../../src/clerk/directoryStore";
+import { createPushDeviceStore } from "../../src/clerk/pushDeviceStore";
 import { createDirectoryHandler } from "../../src/handler";
 import { createProvisioningService } from "../../src/provisioning/service";
+import { createPushService } from "../../src/push/service";
 import type { SessionTokenVerifier } from "../../src/types/auth.types";
 import type { RateLimiter, RateLimitScope } from "../../src/types/rateLimit.types";
 import { FakeClerkMetadata } from "./fakeClerkMetadata";
+import { FakeExpoPushClient } from "./fakeExpoPushClient";
 import { FakeTunnelProvider } from "./fakeTunnelProvider";
 import type { Harness } from "../types/harness.types";
 
@@ -48,14 +52,16 @@ export function createFakeVerifier(): SessionTokenVerifier {
   };
 }
 
-export function createHarness(options: { readonly maxRuntimesPerUser?: number } = {}): Harness {
+export function createHarness(options: { readonly maxRuntimesPerUser?: number; readonly expoConfigured?: boolean } = {}): Harness {
   const clerk = new FakeClerkMetadata();
   const tunnels = new FakeTunnelProvider();
   const limiter = new FakeRateLimiter();
   let now = Date.parse("2026-11-16T10:00:00.000Z");
   let randomCounter = 0;
+  const expo = new FakeExpoPushClient();
+  const directory = createDirectoryStore(clerk);
   const service = createProvisioningService({
-    store: createDirectoryStore(clerk),
+    store: directory,
     tunnels,
     clock: { now: () => new Date(now) },
     random: { bytes: (length) => new Uint8Array(length).fill(++randomCounter % 256) },
@@ -63,13 +69,21 @@ export function createHarness(options: { readonly maxRuntimesPerUser?: number } 
     hostnameSuffix: SUFFIX,
     maxRuntimesPerUser: options.maxRuntimesPerUser ?? 3
   });
+  const push = createPushService({
+    devices: createPushDeviceStore(clerk),
+    directory,
+    expo: options.expoConfigured === false ? null : expo,
+    clock: { now: () => new Date(now) },
+    maxDevicesPerUser: PUSH_LIMITS.maxDevicesPerUser
+  });
   const handle = createDirectoryHandler({
     allowedOrigins: [WEB_ORIGIN],
     verifier: createFakeVerifier(),
     rateLimiter: limiter,
-    service
+    service,
+    push
   });
-  return { clerk, tunnels, limiter, service, handle, tick: () => { now += 1000; } };
+  return { clerk, tunnels, limiter, expo, service, handle, tick: () => { now += 1000; } };
 }
 
 export function apiRequest(

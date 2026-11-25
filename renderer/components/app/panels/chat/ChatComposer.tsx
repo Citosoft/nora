@@ -22,9 +22,9 @@ export function ChatComposer({ inputRef, value, placeholder, disabled, canSend, 
           onChange={onChange} onSubmit={send} mentions={mentions} />
       </div>
       <VoiceInputButton voice={voice} />
-      {stop ? <Button type="button" size="icon" className="size-8 shrink-0 rounded-full" disabled={stop.disabled} aria-label={stop.label} onClick={stop.onStop}>
-          <Square className="size-3 fill-current" aria-hidden="true" /></Button>
-        : <Button type="submit" size="icon" className="size-8 shrink-0 rounded-full" disabled={!canSend} aria-label={sendLabel}>
+      {stop && <Button type="button" size="icon" className="size-8 shrink-0 rounded-full" disabled={stop.disabled} aria-label={stop.label} onClick={stop.onStop}>
+          <Square className="size-3 fill-current" aria-hidden="true" /></Button>}
+      {(!stop || canSend) && <Button type="submit" size="icon" className="size-8 shrink-0 rounded-full" disabled={!canSend} aria-label={sendLabel}>
           <ArrowUp className="size-4" aria-hidden="true" /></Button>}
     </div>
     {voice.error && <p role="alert" className="mt-1 px-2 text-xs text-destructive">{voice.error}</p>}

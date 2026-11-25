@@ -37,7 +37,7 @@ test("registered root and symlink aliases share identity; unrelated checkouts an
   await assert.rejects(authority.verify(prepared), /identity or branch changed/);
 });
 
-test("host canonicalizes create, serializes writers across aliases and keeps retry receipts after filesystem loss", async (t) => {
+test("host canonicalizes create, allows writers across aliases and keeps retry receipts after filesystem loss", async (t) => {
   const f = fixture(t);
   const directory = await realpath(await mkdtemp(join(tmpdir(), "nora-admission-")));
   t.after(() => rm(directory, { recursive: true, force: true }));
@@ -54,7 +54,7 @@ test("host canonicalizes create, serializes writers across aliases and keeps ret
     const receipt = await host.execute(create);
     await host.execute({ ...create, commandId: "other", conversationId: "two", workspace: { ...selection, checkoutId: "alias" } });
     await host.execute({ kind: "submit", commandId: "send", conversationId: "one", runId: "run", instruction: "Work" });
-    await assert.rejects(host.execute({ kind: "submit", commandId: "send", conversationId: "two", runId: "run", instruction: "Work" }), /isolated worktree/);
+    await host.execute({ kind: "submit", commandId: "send", conversationId: "two", runId: "run", instruction: "Work" });
     await rename(root, join(directory, "removed"));
     assert.deepEqual(await host.execute(create), receipt);
     await assert.rejects(host.execute({ ...create, title: "Changed" }), /different content/);
@@ -63,10 +63,11 @@ test("host canonicalizes create, serializes writers across aliases and keeps ret
   } finally { await host.shutdown(); }
 });
 
-test("writer admission rejects overlapping folders even when their selected IDs differ", (t) => {
+test("writer discovery recognizes overlapping folders even when their selected IDs differ", (t) => {
   const f = fixture(t); f.create("outer", "root");
   f.command({ kind: "create", commandId: "nested", conversationId: "nested", title: "Nested", parentId: null, provider,
     workspace: { ...f.snapshot("outer").conversation.workspace, checkoutId: "different", path: "/test/root/nested" } });
   f.submit("run", "outer");
-  assert.throws(() => f.submit("run", "nested"), /isolated worktree/);
+  f.submit("run", "nested");
+  assert.deepEqual(f.store.writers(f.snapshot("nested").conversation.workspace), ["outer", "nested"]);
 });

@@ -108,7 +108,6 @@ export function createWorktreeHelpers(deps: WorktreeHelperDeps) {
       updatedAt: deps.nowIso(),
       lastUsedAt: deps.nowIso(),
       status: "ready",
-      writerAgentId: null,
       readerAgentIds: [],
       terminalSessionIds: [],
       scripts: await deps.detectWorkspaceScripts(deps.getProjectTarget(project))
@@ -150,7 +149,6 @@ export function createWorktreeHelpers(deps: WorktreeHelperDeps) {
       updatedAt: deps.nowIso(),
       lastUsedAt: deps.nowIso(),
       status: "creating",
-      writerAgentId: null,
       readerAgentIds: [],
       terminalSessionIds: [],
       scripts: []
@@ -210,7 +208,6 @@ export function createWorktreeHelpers(deps: WorktreeHelperDeps) {
   async function attachAgentToWorktree(agent: AgentSession, worktree: WorktreeRecord): Promise<WorktreeRecord> {
     const nextWorktree: WorktreeRecord = {
       ...worktree,
-      writerAgentId: agent.mode === "write" ? agent.id : worktree.writerAgentId,
       readerAgentIds: agent.mode === "read" ? [...new Set([...worktree.readerAgentIds, agent.id])] : worktree.readerAgentIds,
       updatedAt: deps.nowIso(),
       lastUsedAt: deps.nowIso()
@@ -236,7 +233,6 @@ export function createWorktreeHelpers(deps: WorktreeHelperDeps) {
     }
     const next: WorktreeRecord = {
       ...existingWorktree,
-      writerAgentId: existingWorktree.writerAgentId === agent.id ? null : existingWorktree.writerAgentId,
       readerAgentIds: existingWorktree.readerAgentIds.filter((readerId) => readerId !== agent.id),
       updatedAt: deps.nowIso(),
       lastUsedAt: deps.nowIso()

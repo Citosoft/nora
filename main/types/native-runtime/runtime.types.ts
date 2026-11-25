@@ -3,7 +3,7 @@ import type { NoraSettingsOptions } from "@main/types/nora-tools/operations.type
 import type { ProjectSummary } from "@shared/appTypes";
 import type { ExecutionHost } from "@main/execution/host";
 import type { PersonalizationService } from "@main/personalization/service";
-import type { NoraTaskStore, NoraWorkflowStore } from "@main/types/nora-tools/operations.types";
+import type { NoraTaskStore, NoraTerminalStore, NoraWorkflowStore } from "@main/types/nora-tools/operations.types";
 import type { BotMemoryStore } from "@main/types/bots/memory.types";
 import type { MemoryReviewLog } from "@main/types/bots/memoryReview.types";
 import type { RoutineScheduler } from "@main/types/bots/routines.types";
@@ -11,7 +11,9 @@ import type { DirectContextPreview, DirectContextRequest } from "@shared/ipc/typ
 import type { ChatBranchRequest } from "@shared/ipc/types/chatBranchGateway.types";
 import type { WorkspaceCatalog } from "@main/types/personalization/services.types";
 import type { ConnectorService } from "@main/types/connectors/connectors.types";
+import type { ConnectorAuthPromptBroker } from "@main/types/connectors/authPrompt.types";
 import type { Connector } from "@shared/types/connectors/connectors.types";
+import type { ConnectorAuthPrompt } from "@shared/types/connectors/authPrompt.types";
 import type { SecretService } from "@main/types/secrets/secrets.types";
 import type { SecretPrompt, VaultSecret } from "@shared/types/secrets/secrets.types";
 import type { AppService } from "@main/types/apps/apps.types";
@@ -32,12 +34,16 @@ export interface NativeRuntimeOptions extends NoraSettingsOptions {
   onTasksChanged?: (projectId: string) => void;
   /** Workflows for Nora's tools, backed by the app's workflow runner. */
   workflows?: NoraWorkflowStore;
+  /** Open terminals for Nora's tools, backed by the session orchestrator. */
+  terminals?: NoraTerminalStore;
   /** Called with a bot's id whenever its routines or routine runs change. */
   onRoutinesChanged(botId: string): void;
   /** Opens a connector's OAuth sign-in page in the user's browser. */
   openExternal(url: string): Promise<void>;
   /** Called with every connector whenever one's configuration or status changes. */
   onConnectorsChanged(connectors: Connector[]): void;
+  /** Called with every connector authorize prompt waiting on the user whenever one opens or closes. */
+  onConnectorAuthPromptsChanged(prompts: ConnectorAuthPrompt[]): void;
   /** Called with every secret prompt waiting on the user whenever one opens or closes. */
   onSecretPromptsChanged(prompts: SecretPrompt[]): void;
   /** Called with every saved secret (never values) whenever one is saved or deleted. */
@@ -60,6 +66,8 @@ export interface NativeRuntime {
   routines: RoutineScheduler;
   /** Connectors added in Nora and the gateway threads reach them through. */
   connectors: ConnectorService;
+  /** Authorize prompts while a connector tool call waits on OAuth sign-in. */
+  connectorAuthPrompts: ConnectorAuthPromptBroker;
   /** Secrets the user saved for threads to use, and the prompts waiting on them. */
   secrets: SecretService;
   /** Apps built by agents over the user's connectors. */
