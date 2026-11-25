@@ -180,7 +180,6 @@ export function createSessionCreationHelpers(deps: SessionCreationDeps): Session
       const nextSessions = deps.upsertSession(currentState.sessions, session);
       const nextWorktrees = deps.upsertWorktree(currentState.worktrees, {
         ...worktree,
-        writerAgentId: payload.mode === "write" ? agentId : worktree.writerAgentId,
         readerAgentIds:
           payload.mode === "read" ? [...new Set([...worktree.readerAgentIds, agentId])] : worktree.readerAgentIds,
         updatedAt: deps.nowIso(),

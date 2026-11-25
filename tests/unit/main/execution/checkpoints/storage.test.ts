@@ -6,7 +6,8 @@ import { snapshot } from "./fixture";
 test("checkpoint bytes are deduplicated across files and captures, verified on read, and kept out of manifests/events", (t) => {
   const f = fixture(t); f.create(); f.submit();
   const start = f.engine.claimEffect(["start"]); assert.ok(start);
-  const baseline = { status: "ready" as const, snapshot: snapshot({ "one.md": "Private file contents\n", "two.md": "Private file contents\n" }) };
+  const baseline = { status: "ready" as const, snapshot: { ...snapshot({ "one.md": "Private file contents\n", "two.md": "Private file contents\n" }),
+    indexed: [{ path: "clean.md", mode: "100644" as const, hash: "a".repeat(64), object: "b".repeat(40) }] } };
   f.engine.recordCheckpoint(start.id, "baseline", baseline);
   assert.throws(() => f.engine.recordCheckpoint(start.id, "baseline", baseline), /already exists/);
   f.update({ kind: "finished", eventId: "done", status: "completed", failure: null, usage: null });
@@ -45,7 +46,7 @@ test("schema v4 upgrades preserve history/receipts and create empty private chec
   const database = f.openDatabase();
   database.exec("DROP TABLE turn_checkpoints; DROP TABLE checkpoint_blobs; PRAGMA user_version = 4");
   f.restart();
-  assert.equal(database.prepare("PRAGMA user_version").get()?.user_version, 6);
+  assert.equal(database.prepare("PRAGMA user_version").get()?.user_version, 7);
   assert.deepEqual(f.snapshot(), before); assert.deepEqual(f.submit(), receipt); assert.deepEqual(f.store.events(0, 200), events);
   assert.equal(f.store.checkpoint("conversation", "run"), null);
   assert.equal(database.prepare("SELECT count(*) AS count FROM checkpoint_blobs").get()?.count, 0);

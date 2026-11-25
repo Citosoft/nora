@@ -1,12 +1,15 @@
 import type { RuntimeDirectoryEntry } from "@shared/types/remote-access/directory.types";
 
-export interface RuntimeDirectorySnapshot {
-  /** The directory container itself is malformed; cleanup cannot establish ownership safely. */
+/** A `{ [id]: entry }` map parsed from one Clerk private-metadata key. */
+export interface KeyedMetadataSnapshot<T> {
+  /** The container itself is malformed; callers cannot establish ownership safely. */
   readonly malformed?: true;
-  readonly entries: readonly RuntimeDirectoryEntry[];
+  readonly entries: readonly T[];
   /** Keys present in metadata whose value failed validation; they are ignored but may need overwriting. */
   readonly invalidKeys: readonly string[];
 }
+
+export type RuntimeDirectorySnapshot = KeyedMetadataSnapshot<RuntimeDirectoryEntry>;
 
 /** Per-user runtime directory persisted in Clerk private metadata. */
 export interface RuntimeDirectoryStore {

@@ -1,4 +1,4 @@
-export type RateLimitScope = "general" | "provisioning";
+export type RateLimitScope = "general" | "provisioning" | "push";
 
 /** Returns true when the key may proceed. Implementations decide how to count. */
 export interface RateLimiter {

@@ -5,6 +5,14 @@ import type { EventPayload, RuntimeRequest, TimelineItem } from "@shared/types/c
 import type { ConversationState, StoreReader } from "./store.types";
 import type { PreparedProviderTransition } from "./providerTransition.types";
 
+export interface UndoTarget {
+  /** The turn's review item, which carries its observed changes and undo state. */
+  review: TimelineItem | null;
+  /** The turn kept an uninterrupted before/after snapshot pair. */
+  restorable: boolean;
+  /** Turn evidence, an undo or another thread's running turn holds an overlapping checkout. */
+  busy: boolean;
+}
 export interface Decision {
   events: EventPayload[];
   effects: ExecutionEffect[];
@@ -24,6 +32,8 @@ export interface DecisionContext {
   state: ConversationState | null;
   admission: Pick<StoreReader, "writers" | "unfinishedEffects" | "execution" | "header">;
   previousItem?: TimelineItem | null;
+  /** Store facts an undo-turn command is checked against. */
+  undoTarget?: UndoTarget;
   /** The message a set-message-pin command pins, looked up from the store. */
   pinTarget?: TimelineItem | null;
   previousRequest?: RuntimeRequest | null;

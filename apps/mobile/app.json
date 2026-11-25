@@ -63,6 +63,13 @@
           "cameraPermission": "Take photos to attach to your Nora messages.",
           "microphonePermission": false
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "default",
+          "color": "#000000"
+        }
       ]
     ],
     "extra": {

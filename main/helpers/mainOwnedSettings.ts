@@ -1,3 +1,4 @@
+import { normalizeUiFontSize } from "@shared/appearance/fontSize";
 import { DEFAULT_APP_SETTINGS, type AppSettings } from "@shared/appTypes";
 
 /**
@@ -12,5 +13,5 @@ export function withMainOwnedSettings(current: AppSettings, fromRenderer: AppSet
   };
   // Reflect the trusted, complete domain defaults rather than keys from an IPC payload.
   for (const key of Object.keys(DEFAULT_APP_SETTINGS) as (keyof AppSettings)[]) apply(key);
-  return next;
+  return { ...next, uiFontSize: normalizeUiFontSize(next.uiFontSize) };
 }

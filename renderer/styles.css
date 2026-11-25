@@ -727,6 +727,8 @@
     @apply border-border;
   }
 
+  html { font-size: var(--app-ui-font-size, 100%); }
+
   html,
   body,
   #app {

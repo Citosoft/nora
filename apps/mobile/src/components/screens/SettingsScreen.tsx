@@ -8,6 +8,7 @@ import { AboutSection } from "@/components/settings/AboutSection";
 import { AccountSection } from "@/components/settings/AccountSection";
 import { DefaultRuntimePicker } from "@/components/settings/DefaultRuntimePicker";
 import { InstallGuidance } from "@/components/settings/InstallGuidance";
+import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { PrivacyNotice } from "@/components/settings/PrivacyNotice";
 import { SignOutSection } from "@/components/settings/SignOutSection";
 import { ThemePicker } from "@/components/settings/ThemePicker";
@@ -23,6 +24,7 @@ export function SettingsScreen() {
       <AccountSection />
       <ComputerSettingsLinks />
       <DefaultRuntimePicker />
+      <NotificationSettings />
       <ThemePicker />
       <SetupHelp />
       <InstallGuidance />

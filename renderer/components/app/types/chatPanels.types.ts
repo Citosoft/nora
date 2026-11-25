@@ -42,6 +42,7 @@ export type ChatEntry =
     workThreadId: string | null; continued: boolean }
   | { kind: "notice"; id: string; text: string; workThreadId?: string };
 export interface ChatMessageProps {
+  mentions?: readonly ComposerSuggestionOption[];
   entry: Extract<ChatEntry, { kind: "message" }>;
   workThread: ChatWorkThread | null;
   onOpenThread(conversationId: string): void;
@@ -50,6 +51,7 @@ export interface ChatMessageProps {
   onLinkClick?: MarkdownRendererLinkClickHandler;
 }
 export interface ChatTranscriptProps {
+  mentions?: readonly ComposerSuggestionOption[];
   entries: readonly ChatEntry[];
   workThreads: ReadonlyMap<string, ChatWorkThread>;
   onOpenThread(conversationId: string): void;
@@ -83,6 +85,7 @@ export interface ChatBranchInfoPanelProps {
   onOpenThread(conversationId: string): void;
 }
 export interface ChatBranchViewProps {
+  mentions?: readonly ComposerSuggestionOption[];
   target: ChatBranchTarget;
   bot: ChatBranchBot;
   chatId: string | null;

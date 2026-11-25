@@ -76,14 +76,21 @@ export interface ConnectorCredentialsOptions { store: ConnectorStore; fetch?: ty
 export interface ConnectorRefreshCooldown { accessToken: string; savedAt: number; retryAt: number; }
 
 export interface ConnectorGateway {
-  /** How a thread's runtime reaches a connector: Nora's gateway, which adds the real credentials. Starts the gateway on first use. */
-  endpoint(connector: StoredConnector): Promise<RunMcpServer>;
+  /**
+   * How a thread's runtime reaches a connector: Nora's gateway, which adds the real credentials. Starts the gateway on first use.
+   * `conversationIds` scopes authorize prompts to the waiting thread (and its parents).
+   */
+  endpoint(connector: StoredConnector, conversationIds?: readonly string[]): Promise<RunMcpServer>;
   close(): Promise<void>;
 }
 export interface ConnectorGatewayOptions {
   store: ConnectorStore;
   credentials: ConnectorCredentials;
   onNeedsAuth(id: string): void;
+  /** When set, OAuth needs-auth holds the HTTP call and opens a thread authorize card instead of failing immediately. */
+  authPrompts?: import("@main/types/connectors/authPrompt.types").ConnectorAuthPromptBroker;
+  /** Logo shown on the authorize card when the connector was probed earlier. */
+  logoFor?(id: string): import("@shared/types/provider/mcp.types").McpServerLogo | undefined;
   fetch?: typeof fetch;
 }
 
@@ -114,6 +121,8 @@ export interface ConnectorServiceOptions {
   /** Port the OAuth callback tries first, so dynamically registered clients usually keep a valid redirect URI. */
   callbackPort?: number;
   fetch?: typeof fetch;
+  /** Thread authorize prompts for OAuth connectors that are not signed in when a tool call needs them. */
+  authPrompts?: import("@main/types/connectors/authPrompt.types").ConnectorAuthPromptBroker;
 }
 export interface ConnectorNetworkRequestInit extends RequestInit { dispatcher: Dispatcher; }
 export interface ConnectorNetwork { fetch: typeof fetch; close(): Promise<void>; }

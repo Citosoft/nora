@@ -130,14 +130,14 @@ export class AcpAdapter implements ExecutionProvider {
     }
   }
 
-  async start(execution: ProviderExecution, emit: EmitProviderUpdate): Promise<void> {
+  async start(execution: ProviderExecution, emit: EmitProviderUpdate, canStart?: () => boolean): Promise<void> {
     const { run } = execution;
     const turn: AcpTurn = { execution, emit, sessionId: null, items: new Map(), message: null, reasoning: null, streams: 0, cancelled: false };
     this.byAttempt.set(run.attemptId, turn);
     try {
-      await this.run(turn);
+      await this.run(turn, canStart);
     } finally {
-      if (turn.sessionId) this.bySession.delete(turn.sessionId);
+      if (turn.sessionId && this.bySession.get(turn.sessionId) === turn) this.bySession.delete(turn.sessionId);
       this.byAttempt.delete(run.attemptId);
       for (const [id, pending] of this.permissions) {
         if (pending.attemptId === run.attemptId) { this.permissions.delete(id); pending.resolve({ outcome: "cancelled" }); }
@@ -145,7 +145,7 @@ export class AcpAdapter implements ExecutionProvider {
     }
   }
 
-  private async run(turn: AcpTurn): Promise<void> {
+  private async run(turn: AcpTurn, canStart?: () => boolean): Promise<void> {
     const { execution, emit } = turn;
     const { snapshot, run } = execution;
     const base = { conversationId: snapshot.conversation.id, runId: run.id, attemptId: run.attemptId };
@@ -210,7 +210,7 @@ export class AcpAdapter implements ExecutionProvider {
       return;
     }
     emit({ ...base, eventId: "native-binding", kind: "bound", nativeConversationId: sessionId });
-    if (turn.cancelled) {
+    if (turn.cancelled || (canStart && !canStart())) {
       emit({ ...base, eventId: "finished", kind: "finished", status: "interrupted", failure: null, usage: null });
       return;
     }

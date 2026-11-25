@@ -1,5 +1,5 @@
 import { codexWithoutUserMcpServers } from "./userMcpServers";
-import { isReadOnlyToolScope, threadToolScope } from "@main/execution/toolScope";
+import { inheritsUserMcpConfig, isReadOnlyToolScope, threadToolScope } from "@main/execution/toolScope";
 import { codexMcpServersConfig } from "./runMcpServers";
 import { instructionWithTurnNotes, joinGuidance, optionalRunContext, runMcpServers, workflowReviewMcpServers } from "@main/nora-tools/endpoint";
 import { conversationGuidance } from "@shared/conversations/guidance";
@@ -168,17 +168,28 @@ export class CodexAdapter implements ExecutionProvider {
     return thread.path ? readRolloutContext(thread.path) : null;
   }
 
-  async start(execution: ProviderExecution, emit: EmitProviderUpdate): Promise<void> {
-    const { snapshot, run } = execution;
-    const base = { conversationId: snapshot.conversation.id, runId: run.id, attemptId: run.attemptId };
+  async start(execution: ProviderExecution, emit: EmitProviderUpdate, canStart?: () => boolean): Promise<void> {
+    const { run } = execution;
     let resolveReady: CodexActive["resolveReady"] = () => {};
     let rejectReady: CodexActive["rejectReady"] = () => {};
     const ready = new Promise<string>((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
     void ready.catch(() => {});
-    const active: CodexActive = { ...execution, emit, items: new Map(), usage: null, usageBaseline: null, nativeTurnId: null, ready, resolveReady, rejectReady, autoReviewChosen: false };
+    const active: CodexActive = { ...execution, emit, items: new Map(), usage: null, usageBaseline: null, nativeThreadId: null, nativeTurnId: null, ready, resolveReady, rejectReady, autoReviewChosen: false };
     this.byAttempt.set(run.attemptId, active);
+    try { await this.startTurn(active, canStart); }
+    catch (error) {
+      active.rejectReady(error instanceof Error ? error : new Error("Codex could not start its turn"));
+      if (!active.nativeThreadId) this.byAttempt.delete(run.attemptId);
+      throw error;
+    }
+  }
+
+  private async startTurn(active: CodexActive, canStart?: () => boolean): Promise<void> {
+    const { snapshot, run, emit } = active;
+    const base = { conversationId: snapshot.conversation.id, runId: run.id, attemptId: run.attemptId };
     const fail = (eventId: string, failure: ExecutionFailure): void => {
       emit({ ...base, eventId, kind: "finished", status: "failed", usage: null, failure });
+      active.rejectReady(new Error(failure.message));
       this.byAttempt.delete(run.attemptId);
     };
     const policy = this.options.policies[snapshot.conversation.provider.permissionPolicy];
@@ -214,7 +225,7 @@ export class CodexAdapter implements ExecutionProvider {
     const outputConfig = await codexOutputConfig(rpc, snapshot.conversation.workspace.path, this.options.compactToolOutput?.() ?? false);
     const runContext = await optionalRunContext(this.options.runContext, snapshot.conversation);
     const toolScope = threadToolScope(snapshot.conversation);
-    const scopedConfig = toolScope === "full" ? {} : await codexWithoutUserMcpServers(rpc, snapshot.conversation.workspace.path);
+    const scopedConfig = inheritsUserMcpConfig(toolScope) ? {} : await codexWithoutUserMcpServers(rpc, snapshot.conversation.workspace.path);
     // Codex cannot drop its shell, so a builder keeps a read-only sandbox and every command asks, which onRequest declines.
     // The reviewer is always sent for a full thread so switching back from auto-review reaches a resumed thread.
     const scopedPolicy = isReadOnlyToolScope(toolScope) ? { sandbox: "read-only", approvalPolicy: "never" } : toolScope === "apps" ? { sandbox: "read-only", approvalPolicy: "untrusted" }
@@ -227,9 +238,18 @@ export class CodexAdapter implements ExecutionProvider {
     const binding = snapshot.conversation.nativeConversationId
       ? await rpc.request("thread/resume", { threadId: snapshot.conversation.nativeConversationId, excludeTurns: true, ...params }, threadSchema)
       : await rpc.request("thread/start", params, threadSchema);
+    active.nativeThreadId = binding.thread.id;
     emit({ ...base, eventId: "native-binding", kind: "bound", nativeConversationId: binding.thread.id });
     active.usageBaseline = !snapshot.conversation.nativeConversationId ? { ...EMPTY_CODEX_USAGE }
       : binding.thread.path ? await readRolloutTotalUsage(binding.thread.path).catch(() => null) : null;
+    if (canStart && !canStart()) {
+      active.rejectReady(new Error("Codex turn was stopped before submission"));
+      this.byAttempt.delete(run.attemptId);
+      emit({ ...base, eventId: "cancelled-before-start", kind: "finished", status: "interrupted", usage: null, failure: null });
+      return;
+    }
+    const previous = this.byThread.get(binding.thread.id);
+    if (previous && previous !== active) this.byAttempt.delete(previous.run.attemptId);
     this.byThread.set(binding.thread.id, active);
     // Compaction runs as its own native turn; `turn/started` and `turn/completed` drive the run like any other.
     if (run.action === "compact") {
@@ -403,7 +423,9 @@ export class CodexAdapter implements ExecutionProvider {
     const { threadId } = routingSchema.parse(params);
     const active = this.byThread.get(threadId);
     if (!active) throw new Error("Request has no active owner");
-    if (threadToolScope(active.snapshot.conversation) !== "full"
+    const requestScope = threadToolScope(active.snapshot.conversation);
+    // Read-only and app-builder threads cannot approve edits or unsandboxed commands; agent/full threads still ask as usual.
+    if ((isReadOnlyToolScope(requestScope) || requestScope === "apps")
       && (method === "item/commandExecution/requestApproval" || method === "item/fileChange/requestApproval")) return { decision: "decline" };
     const id = JSON.stringify([active.run.id, nativeId]);
     const common = { id, nativeId: JSON.stringify(nativeId), runId: active.run.id, attemptId: active.run.attemptId, status: "pending" as const,
@@ -458,7 +480,7 @@ export class CodexAdapter implements ExecutionProvider {
   async interrupt(execution: ProviderExecution): Promise<void> {
     const active = this.byAttempt.get(execution.run.attemptId);
     const nativeTurnId = active ? await active.ready : execution.run.nativeTurnId;
-    const threadId = execution.snapshot.conversation.nativeConversationId;
+    const threadId = active?.nativeThreadId ?? execution.snapshot.conversation.nativeConversationId;
     if (!nativeTurnId || !threadId) throw new Error("Native turn is not confirmed");
     await (await this.connect()).request("turn/interrupt", { threadId, turnId: nativeTurnId }, z.object({}));
   }
@@ -472,7 +494,7 @@ export class CodexAdapter implements ExecutionProvider {
     // Without an exact persisted native turn ID, even a recent turn is not proof of ownership.
     if (!turn) throw new Error("Cannot confirm the submitted native turn");
     if (turn.status === "inProgress") throw new Error("Turn is active in another owner; a read does not reconnect its live requests");
-    const active: CodexActive = { ...execution, emit, nativeTurnId: turn.id, items: new Map(), usage: null, usageBaseline: null,
+    const active: CodexActive = { ...execution, emit, nativeThreadId: threadId, nativeTurnId: turn.id, items: new Map(), usage: null, usageBaseline: null,
       ready: Promise.resolve(turn.id), resolveReady() {}, rejectReady() {}, autoReviewChosen: false };
     for (const item of turn.items) this.onRecoveredItem(active, threadId, turn.id, item);
     this.finish(active, turn.id, turn.status, turn.error?.codexErrorInfo);

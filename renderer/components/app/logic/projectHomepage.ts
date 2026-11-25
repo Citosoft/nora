@@ -22,7 +22,8 @@ function parseWebUrl(value: string): URL | null {
  * icon and hide the framework-logo fallback.
  */
 function isPublicHostname(hostname: string): boolean {
-  return hostname.includes(".") && !IPV4_HOSTNAME.test(hostname) && !hostname.startsWith("[");
+  return hostname.includes(".") && !IPV4_HOSTNAME.test(hostname) && !hostname.startsWith("[")
+    && !/\.(?:localhost|local|internal|test|invalid|example|lan|home|onion)\.?$/i.test(hostname);
 }
 
 /** Reads the npm `homepage` field from raw `package.json` text as a normalized http(s) URL. */

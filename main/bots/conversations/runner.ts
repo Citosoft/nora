@@ -94,27 +94,40 @@ export function watchConversation<T>(deps: BotRunnerDeps, input: ConversationWat
   });
 }
 
-/** Sends one instruction to a bot thread and waits for that run to finish, interrupting it if the caller gives up. */
-export async function askBotThread(deps: BotRunnerDeps, input: BotAskInput): Promise<BotReply> {
+/** Starts one instruction on a bot thread and returns the run id and event cursor to watch from. */
+export async function startBotAsk(deps: BotRunnerDeps, input: Pick<BotAskInput, "conversationId" | "instruction" | "workspaceId" | "chatText" | "signal">): Promise<{ runId: string; after: number }> {
   input.signal.throwIfAborted();
   const runId = deps.nextId();
   const after = deps.host.eventCursor();
   await deps.host.execute({ kind: "submit", commandId: deps.nextId(), conversationId: input.conversationId, runId, instruction: input.instruction,
     ...(input.workspaceId ? { workspaceId: input.workspaceId } : {}), ...(input.chatText ? { chatText: input.chatText } : {}) });
+  return { runId, after };
+}
+
+/** Watches a started ask until that run finishes, interrupting it if the caller gives up (unless continueOnTimeout). */
+export async function followBotAsk(deps: BotRunnerDeps, input: BotAskInput & { runId: string; after: number }): Promise<BotReply> {
   let waitingReported = false;
-  const run = await watchConversation<ConversationRun>(deps, { conversationId: input.conversationId, after, signal: input.signal, timeoutMs: input.timeoutMs,
+  const run = await watchConversation<ConversationRun>(deps, { conversationId: input.conversationId, after: input.after, signal: input.signal, timeoutMs: input.timeoutMs,
     settle(event) {
-      if (event.payload.kind === "request" && event.payload.request.runId === runId && event.payload.request.status === "pending" && !waitingReported) {
+      if (event.payload.kind === "request" && event.payload.request.runId === input.runId && event.payload.request.status === "pending" && !waitingReported) {
         waitingReported = true; input.onWaiting?.();
       }
-      return event.payload.kind === "run" && event.payload.run.id === runId && TERMINAL.has(event.payload.run.state) ? event.payload.run : undefined;
+      return event.payload.kind === "run" && event.payload.run.id === input.runId && (TERMINAL.has(event.payload.run.state) || event.payload.run.state === "recovering") ? event.payload.run : undefined;
     } });
   if (run === "aborted" || run === "timed-out") {
-    await deps.host.execute({ kind: "interrupt", commandId: deps.nextId(), conversationId: input.conversationId, runId }).catch(() => undefined);
-    return { conversationId: input.conversationId, status: run === "aborted" ? "interrupted" : "timed-out", text: finalAssistantText(deps, input.conversationId, runId), failure: null };
+    if (run === "aborted" || !input.continueOnTimeout) {
+      await deps.host.execute({ kind: "interrupt", commandId: deps.nextId(), conversationId: input.conversationId, runId: input.runId }).catch(() => undefined);
+    }
+    return { conversationId: input.conversationId, status: run === "aborted" ? "interrupted" : "timed-out", text: finalAssistantText(deps, input.conversationId, input.runId), failure: null };
   }
   const status = run.state === "completed" ? "completed" : run.state === "failed" ? "failed" : "interrupted";
-  return { conversationId: input.conversationId, status, text: finalAssistantText(deps, input.conversationId, runId), failure: run.failure?.message ?? null };
+  return { conversationId: input.conversationId, status, text: finalAssistantText(deps, input.conversationId, input.runId), failure: run.failure?.message ?? null };
+}
+
+/** Sends one instruction to a bot thread and waits for that run to finish, interrupting it if the caller gives up. */
+export async function askBotThread(deps: BotRunnerDeps, input: BotAskInput): Promise<BotReply> {
+  const started = await startBotAsk(deps, input);
+  return followBotAsk(deps, { ...input, ...started });
 }
 
 export function authorOf(bot: Pick<BotSnapshot, "botId" | "name" | "avatar"> | BotDefinition): { kind: "bot"; botId: string; name: string; avatar: BotDefinition["avatar"] } {

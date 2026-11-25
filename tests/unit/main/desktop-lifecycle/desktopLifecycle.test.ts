@@ -22,7 +22,7 @@ function fixture(platform: NodeJS.Platform = "win32", failTray = false) {
     view: () => view, isEnabled: () => view.enabled,
     subscribe: (next) => { listener = next; return () => { listener = () => {}; }; },
     async activity() { return []; }, async enable() { return view; }, async disable() { return view; },
-    async retry() { return view; }, async rotate() { return view; }, async rename() { return view; }, async disconnectDevice() { return view; }
+    async retry() { return view; }, async rotate() { return view; }, async rename() { return view; }, async disconnectDevice() { return view; }, async notifyPhones() { return { kind: "skipped" }; }
   };
   const lifecycle = createDesktopLifecycle({ platform, readSettings: () => settings, getRemoteAccess: () => remote,
     getMainWindow: () => ({ isDestroyed: () => false, isVisible: () => visible, isMinimized: () => minimized,

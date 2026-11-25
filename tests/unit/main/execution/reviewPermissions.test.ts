@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { claudeToolAllowed, claudeToolScopeOptions, isClaudeInspectionTool } from "@main/providers/claude/toolScope";
-import { threadToolScope } from "@main/execution/toolScope";
+import { inheritsUserMcpConfig, threadToolScope } from "@main/execution/toolScope";
+import { snapshotBot } from "@shared/bots/snapshot";
+import { bot } from "../../shared/bots/fixtures";
 
 test("Claude read-only threads cannot expose file edits, execution, delegation or external tools", () => {
   assert.deepEqual(claudeToolScopeOptions("inspect"), { tools: ["Read", "Glob", "Grep", "AskUserQuestion"], mcpServers: {}, strictMcpConfig: true });
@@ -23,6 +25,7 @@ test("an app's builder thread keeps only the question dialog and the run's own M
   assert.equal(threadToolScope({ workspace, source: { kind: "app", appId: null } }), "apps");
   assert.equal(threadToolScope({ workspace: { ...workspace, access: "read" }, source: { kind: "app", appId: null } }), "inspect");
   assert.equal(threadToolScope({ workspace }), "full");
+  assert.equal(inheritsUserMcpConfig("full"), true);
   const { runMcpServers } = await import("@main/nora-tools/endpoint");
   const servers = runMcpServers({ tools: { url: "http://127.0.0.1:1/mcp", token: "t" }, connectors: [{ name: "crm", url: "http://127.0.0.1:2/mcp", token: "c" }] });
   const options = claudeToolScopeOptions("apps", servers);
@@ -34,6 +37,22 @@ test("an app's builder thread keeps only the question dialog and the run's own M
   assert.equal(claudeToolAllowed("full", "Bash"), true);
 });
 
+test("bots, chats and write workers use agent scope: full built-ins, strict MCP, no user skills", async () => {
+  const workspace = { environmentId: "local", projectId: "p", checkoutId: "c", path: "/tmp", branch: "main", access: "write" as const };
+  const rex = snapshotBot(bot("rex"));
+  assert.equal(threadToolScope({ workspace, bot: rex }), "agent");
+  assert.equal(threadToolScope({ workspace, direct: { botId: "rex", name: "Rex", role: "Reviewer", avatar: rex.avatar, scope: { kind: "global" }, workspaceId: "p", retiredAt: null } }), "agent");
+  assert.equal(threadToolScope({ workspace, source: { kind: "worker" } }), "agent");
+  assert.equal(inheritsUserMcpConfig("agent"), false);
+  const { runMcpServers } = await import("@main/nora-tools/endpoint");
+  const servers = runMcpServers({ tools: { url: "http://127.0.0.1:1/mcp", token: "t" }, connectors: [{ name: "crm", url: "http://127.0.0.1:2/mcp", token: "c" }] });
+  const options = claudeToolScopeOptions("agent", servers);
+  assert.equal(options.strictMcpConfig, true);
+  assert.deepEqual(options.settingSources, ["project", "local"]);
+  assert.deepEqual(options.plugins, []);
+  assert.deepEqual(Object.keys(options.mcpServers ?? {}).sort(), ["crm", "nora"]);
+  for (const name of ["Bash", "Read", "Edit", "Agent", "mcp__nora__ask_bot", "mcp__crm__list"]) assert.equal(claudeToolAllowed("agent", name), true, name);
+});
 
 test("read workers can execute arbitrary commands in a required read-only sandbox without exposing edits or external tools", () => {
   const workspace = { environmentId: "local", projectId: "p", checkoutId: "c", path: "/repo", branch: "main", access: "read" as const };

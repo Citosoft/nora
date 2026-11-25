@@ -2,7 +2,7 @@ import type { z } from "zod";
 import type { effectSchema } from "@main/execution/effectSchema";
 import type { Conversation, CommandReceipt, ConversationEvent, ConversationSnapshot, EventPayload, RuntimeRequest, TimelineItem, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ConversationHeader, ConversationHistoryPage, ConversationSummary, HistoryQuery } from "@shared/types/conversation/queries.types";
-import type { StoredCheckpoint } from "./checkpoints.types";
+import type { CheckpointRun, StoredCheckpoint } from "./checkpoints.types";
 
 /** Only live/queued work and an explicitly selected run; historical transcript is loaded separately. */
 export type ConversationState = Pick<ConversationSnapshot, "cursor" | "conversation" | "runs" | "requests">;
@@ -21,7 +21,14 @@ export interface StoreReader {
   item(conversationId: string, itemId: string): TimelineItem | null;
   request(conversationId: string, requestId: string): RuntimeRequest | null;
   checkpoint(conversationId: string, runId: string): StoredCheckpoint | null;
+  /** Checkouts held by unfinished turn evidence or an undo in progress; later starts on them wait. */
   checkpointReservations(): WorkspaceRef[];
+  /** Whether a turn kept an uninterrupted before/after pair, without hydrating file contents. */
+  restorableCheckpoint(conversationId: string, runId: string): boolean;
+  /** A conversation's checkpointed turns, newest first. */
+  checkpointRuns(conversationId: string): CheckpointRun[];
+  /** Verified bytes kept by any checkpoint, or null. */
+  checkpointBlob(hash: string): Buffer | null;
   writers(workspace: WorkspaceRef): string[];
   maintenanceConversations(scope: "workers" | "claude" | "all"): Conversation[];
   summaries(projectId?: string): ConversationSummary[];
@@ -41,6 +48,9 @@ export interface StoreTransaction extends StoreReader {
   putReceipt(stored: StoredReceipt): void;
   putEffect(effect: ExecutionEffect): void;
   putCheckpoint(checkpoint: StoredCheckpoint): void;
+  interruptCheckpoint(conversationId: string, runId: string): void;
+  pinCheckpointBlobs(conversationId: string, runId: string, contents: readonly Uint8Array[]): void;
+  deleteCheckpoint(conversationId: string, runId: string): void;
   appendEvent(id: string, conversationId: string, at: string, payload: EventPayload): ConversationEvent;
 }
 export interface ExecutionStore extends StoreReader {

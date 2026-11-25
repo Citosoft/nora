@@ -8,6 +8,14 @@ import {
   rotateRuntimeResponseSchema,
   runtimeResponseSchema
 } from "@shared/remote-access/directory";
+import {
+  deletePushDeviceResponseSchema,
+  pushDeviceIdSchema,
+  pushDeviceResponseSchema,
+  registerPushDeviceRequestSchema,
+  sendPushRequestSchema,
+  sendPushResponseSchema
+} from "@shared/remote-access/push";
 import type { z } from "zod";
 import { authenticate } from "./auth";
 import { decideCors, preflightResponse, withCors } from "./cors";
@@ -16,10 +24,13 @@ import { UpstreamError } from "./errors/upstreamError";
 import { contractResponse, errorResponse } from "./http/responses";
 import { matchRoute } from "./router";
 import type { DirectoryHandlerDeps } from "./types/handler.types";
+import type { RateLimitScope } from "./types/rateLimit.types";
 import type { DirectoryRoute } from "./types/router.types";
 
 /** Request bodies here are tiny; anything larger is refused before parsing. */
 const MAX_BODY_BYTES = 4 * 1024;
+/** A push batch carries up to 10 notifications with titles, bodies and IDs at their contract limits. */
+const MAX_PUSH_SEND_BODY_BYTES = 16 * 1024;
 
 export function createDirectoryHandler(deps: DirectoryHandlerDeps): (request: Request) => Promise<Response> {
   return async (request) => {
@@ -38,11 +49,15 @@ async function handleRequest(request: Request, deps: DirectoryHandlerDeps): Prom
     return errorResponse("invalid", "Method not allowed.", { status: 405, headers: { Allow: match.allow.join(", ") } });
   }
 
+  // Pushes are started only by the desktop runtime, never by a browser, even one on an allowed origin.
+  if (match.route.kind === "push-send" && request.headers.get("Origin") !== null) {
+    return errorResponse("forbidden", "Notifications can only be sent from a Nora computer.");
+  }
+
   const userId = await authenticate(request, deps.verifier);
   if (userId === null) return errorResponse("unauthenticated", "Authentication required.");
 
-  const scopes = isProvisioningRoute(match.route) ? (["general", "provisioning"] as const) : (["general"] as const);
-  for (const scope of scopes) {
+  for (const scope of rateLimitScopes(match.route)) {
     if (!(await deps.rateLimiter.allow(scope, userId))) return errorResponse("rate-limited", "Too many requests. Try again shortly.");
   }
 
@@ -78,28 +93,57 @@ async function dispatch(route: DirectoryRoute, request: Request, userId: string,
       const installationId = parseInstallationId(route.rawInstallationId);
       return contractResponse(rotateRuntimeResponseSchema, await service.rotate(userId, installationId));
     }
+    case "push-register": {
+      const body = await readJsonBody(request, registerPushDeviceRequestSchema);
+      return contractResponse(pushDeviceResponseSchema, { device: await deps.push.register(userId, body) });
+    }
+    case "push-unregister": {
+      const deviceId = parsePathId(route.rawDeviceId, pushDeviceIdSchema, "Invalid device ID.");
+      await deps.push.remove(userId, deviceId);
+      return contractResponse(deletePushDeviceResponseSchema, { deleted: true, deviceId });
+    }
+    case "push-send": {
+      const body = await readJsonBody(request, sendPushRequestSchema, MAX_PUSH_SEND_BODY_BYTES);
+      return contractResponse(sendPushResponseSchema, await deps.push.send(userId, body));
+    }
   }
 }
 
-function isProvisioningRoute(route: DirectoryRoute): boolean {
-  return route.kind === "provision" || route.kind === "rotate";
+function rateLimitScopes(route: DirectoryRoute): readonly RateLimitScope[] {
+  switch (route.kind) {
+    case "provision":
+    case "rotate":
+      return ["general", "provisioning"];
+    case "push-register":
+    case "push-unregister":
+    case "push-send":
+      return ["general", "push"];
+    case "list":
+    case "rename":
+    case "delete":
+      return ["general"];
+  }
 }
 
 function parseInstallationId(raw: string): string {
+  return parsePathId(raw, installationIdSchema, "Invalid installation ID.");
+}
+
+function parsePathId(raw: string, schema: z.ZodType<string>, message: string): string {
   let decoded: string;
   try {
     decoded = decodeURIComponent(raw);
   } catch {
-    throw new DirectoryFailure("invalid", "Invalid installation ID.");
+    throw new DirectoryFailure("invalid", message);
   }
-  const parsed = installationIdSchema.safeParse(decoded);
-  if (!parsed.success) throw new DirectoryFailure("invalid", "Invalid installation ID.");
+  const parsed = schema.safeParse(decoded);
+  if (!parsed.success) throw new DirectoryFailure("invalid", message);
   return parsed.data;
 }
 
-async function readJsonBody<T>(request: Request, schema: z.ZodType<T>): Promise<T> {
+async function readJsonBody<T>(request: Request, schema: z.ZodType<T>, maxBytes = MAX_BODY_BYTES): Promise<T> {
   const text = await request.text();
-  if (new TextEncoder().encode(text).byteLength > MAX_BODY_BYTES) throw new DirectoryFailure("invalid", "Request body too large.");
+  if (new TextEncoder().encode(text).byteLength > maxBytes) throw new DirectoryFailure("invalid", "Request body too large.");
   let json: unknown;
   try {
     json = JSON.parse(text);

@@ -12,6 +12,7 @@ export function ComposerEditor({ inputRef, value, disabled, placeholder, onValue
   const element = useRef<HTMLDivElement>(null);
   const composing = useRef(false);
   const restoreCaret = useRef<number | null>(null);
+  const nativeText = useRef<string | null>(null);
   const history = useRef<ComposerHistory>({ values: [value], index: 0 });
   const [hosts, setHosts] = useState<ComposerPillHost[]>([]);
   useImperativeHandle(inputRef, () => ({ focus: () => element.current?.focus(), setSelectionRange: (start, end) => {
@@ -20,16 +21,18 @@ export function ComposerEditor({ inputRef, value, disabled, placeholder, onValue
   useLayoutEffect(() => {
     const root = element.current;
     if (!root || composing.current) return;
-    const current = readComposerText(root);
-    const focused = root.ownerDocument.activeElement === root;
-    const caret = restoreCaret.current ?? (focused ? readComposerCaret(root) : value.length);
-    restoreCaret.current = null;
+    const current = nativeText.current ?? readComposerText(root);
+    nativeText.current = null;
     // A sent or externally cleared draft starts a fresh history rather than restoring sent text on Undo.
     history.current = value === "" && current !== value && history.current.values[history.current.index] !== value ? { values: [value], index: 0 } : recordComposerHistory(history.current, value);
     if (current === value && composerProjectionMatches(root, value, mentions)) {
+      restoreCaret.current = null;
       setHosts((previous) => previous.every((host) => root.contains(host.element)) ? previous : previous.filter((host) => root.contains(host.element)));
       return;
     }
+    const focused = root.ownerDocument.activeElement === root;
+    const caret = restoreCaret.current ?? (focused ? readComposerCaret(root, current.length) : value.length);
+    restoreCaret.current = null;
     setHosts(writeComposerContent(root, value, mentions));
     if (focused) setComposerSelection(root, caret, caret, mentions);
   }, [value, mentions]);
@@ -40,7 +43,8 @@ export function ComposerEditor({ inputRef, value, disabled, placeholder, onValue
     if (text === "" && root.childNodes.length) {
       root.replaceChildren(); setHosts([]); setComposerSelection(root, 0, 0);
     }
-    onValueChange(text, readComposerCaret(root));
+    nativeText.current = text;
+    onValueChange(text, readComposerCaret(root, text.length));
   };
   const copy = (event: ClipboardEvent<HTMLDivElement>, cut: boolean): void => {
     const selection = event.currentTarget.ownerDocument.getSelection();
@@ -89,6 +93,6 @@ export function ComposerEditor({ inputRef, value, disabled, placeholder, onValue
       if (files.length && onFiles) { onFiles(files); return; }
       replaceComposerSelection(event.currentTarget, event.clipboardData.getData("text/plain")); change();
     }}>
-    {hosts.map((host) => createPortal(host.part.kind === "issue" ? <IssueReferencePill reference={host.part.reference} /> : <ReferencePill icon={host.part.mention.icon} title={host.part.mention.detail}>@{host.part.mention.name}</ReferencePill>, host.element))}
+    {hosts.map((host) => createPortal(host.part.kind === "issue" ? <IssueReferencePill reference={host.part.reference} /> : <ReferencePill icon={host.part.mention.icon} title={host.part.mention.detail}>{host.part.mention.name}</ReferencePill>, host.element))}
   </div>;
 }

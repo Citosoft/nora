@@ -20,6 +20,24 @@ test("control plane receives a short-lived session JWT, validated runtime respon
   await client.remove(session, "installation-123456", new AbortController().signal); assert.equal(calls, 2);
 });
 
+test("control plane sends phone pushes and surfaces its error message", async () => {
+  const bodies: unknown[] = [];
+  let fail = false;
+  const client = createRemoteControlPlane({ origin: "https://remote-api.withnora.run", sessionToken: async () => "session-jwt",
+    fetch: async (input, init) => {
+      const request = new Request(input, init);
+      assert.equal(request.method, "POST"); assert.equal(new URL(request.url).pathname, "/v1/push/send");
+      assert.equal(request.headers.get("Authorization"), "Bearer session-jwt"); assert.equal(request.headers.get("Origin"), null);
+      bodies.push(await request.json());
+      return fail ? Response.json({ error: { code: "not-found", message: "Runtime not found." } }, { status: 404 }) : Response.json({ delivered: 2 });
+    } });
+  const input = { installationId: "installation-123456", notifications: [{ kind: "needs-you" as const, id: "request:1", title: "Rex needs you", body: "Run npm test?", target: { kind: "thread" as const, conversationId: "c" } }] };
+  assert.deepEqual(await client.sendPush(session, input, new AbortController().signal), { delivered: 2 });
+  assert.deepEqual(bodies, [input]);
+  fail = true;
+  await assert.rejects(client.sendPush(session, input, new AbortController().signal), /Runtime not found/);
+});
+
 test("native client token stays at Clerk while minting a selected session JWT", async () => {
   let saved = "";
   const client = createClerkNativeClient({ host: "account.clerk.accounts.dev", session: () => session,

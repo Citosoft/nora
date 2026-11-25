@@ -20,6 +20,7 @@ import { createSharedBotLibrary } from "@main/bots/sharedBotLibrary";
 import { createNoraToolServer } from "@main/nora-tools/server";
 import { createNoraToolOperations } from "@main/nora-tools/operations/index";
 import { createRunContext } from "@main/nora-tools/runContext";
+import { createConnectorAuthPrompts } from "@main/connectors/authPrompts";
 import { createConnectorService } from "@main/connectors/service";
 import { openConnectorStore } from "@main/connectors/store";
 import { openAppStore } from "@main/apps/appStore";
@@ -107,12 +108,19 @@ export async function openNativeRuntime(options: NativeRuntimeOptions): Promise<
     // Lapses a minute before the runtimes' tool-call limit, so the model is told the prompt went unanswered.
     prompts: createSecretPrompts({ nextId: randomUUID, now, timeoutMs: (NORA_TOOL_TIMEOUT_SECONDS - 60) * 1000, onChanged: options.onSecretPromptsChanged }) });
   const botIn = (workspaceId: string, botId: string) => findEffectiveBot(options.readSettings().personalization.bots, workspaceId, bots.list(), botId);
+  // Lapses a minute before the runtimes' tool-call limit, so the model is told the prompt went unanswered.
+  const connectorAuthPrompts = createConnectorAuthPrompts({ nextId: randomUUID, now, timeoutMs: (NORA_TOOL_TIMEOUT_SECONDS - 60) * 1000,
+    onChanged: options.onConnectorAuthPromptsChanged });
   const connectors = createConnectorService({ store: openConnectorStore({ path: join(options.stateDirectory, "connectors.json"), codec: safeStorageSecretCodec }),
-    openExternal: options.openExternal, onChanged: options.onConnectorsChanged, nextId: randomUUID,
+    openExternal: options.openExternal, onChanged: options.onConnectorsChanged, nextId: randomUUID, authPrompts: connectorAuthPrompts,
     connectorIdsForBot: (subject) => connectorIdsForBot(options.readSettings().personalization.bots, bots.list(), subject) });
   const appStore = openAppStore(join(options.stateDirectory, "apps.sqlite"));
   const apps = createAppService({ store: appStore, connectors: connectors.tools, files: createFileSourceReader(), nextId: randomUUID, now, onChanged: options.onAppsChanged, onData: options.onAppData, onBuildStep: options.onAppBuildStep, onAlertsChanged: options.onAppAlertsChanged });
   apps.start();
+  const routineStore = openRoutineStore(join(options.stateDirectory, "bot-routines.sqlite"));
+  const routines = createRoutineScheduler({ store: routineStore, host: lazyHost, bot: botIn, nextId: randomUUID,
+    workspaces: () => catalog.list().map((entry) => ({ id: entry.id, name: entry.name, workspace: entry.workspace })),
+    onChanged: options.onRoutinesChanged, onError: (error) => console.error("Bot routine failed", error) });
   const noraTools = createNoraToolServer(createNoraToolOperations({
     workerWorkspaces: options.workerWorkspaces,
     host: lazyHost, nextId: randomUUID, memory, secrets, apps, connectorTools: connectors.tools,
@@ -122,11 +130,19 @@ export async function openNativeRuntime(options: NativeRuntimeOptions): Promise<
     boot: () => started(personalization).state(),
     saveBot: async (bot, previousScope) => { await started(personalization).request({ kind: "save-bot", bot, previousScope }); },
     onTasksChanged: options.onTasksChanged,
+    routines: {
+      list: (botId) => routines.list(botId),
+      create: (input) => routines.create(input),
+      update: (id, input) => routines.update(id, input),
+      remove: (id) => routines.remove(id)
+    },
     ...(options.tasks ? { tasks: options.tasks } : {}),
-    ...(options.workflows ? { workflows: options.workflows } : {})
+    ...(options.workflows ? { workflows: options.workflows } : {}),
+    ...(options.terminals ? { terminals: options.terminals } : {})
   }), () => personalization?.publish());
   const runContextSource = createRunContext(noraTools, memory, connectors,
-    (subject) => accountConnectorsForBot(options.readSettings().personalization.bots, bots.list(), subject));
+    (subject) => accountConnectorsForBot(options.readSettings().personalization.bots, bots.list(), subject),
+    (id) => lazyHost.header(id)?.conversation.parentId ?? null);
   const runContext = runContextSource.resolve;
   await bots.refresh(catalog.list());
   host = await openLocalHost({ runContext, environmentId, databasePath: join(options.stateDirectory, "execution.sqlite"), gitExecutable: "git", instances,
@@ -169,10 +185,6 @@ export async function openNativeRuntime(options: NativeRuntimeOptions): Promise<
     enabled: () => readThreadPreferences().automaticMemory,
     onError: (error) => console.error("Background memory review failed", error) });
   memoryReview.start();
-  const routineStore = openRoutineStore(join(options.stateDirectory, "bot-routines.sqlite"));
-  const routines = createRoutineScheduler({ store: routineStore, host: lazyHost, bot: botIn, nextId: randomUUID,
-    workspaces: () => catalog.list().map((entry) => ({ id: entry.id, name: entry.name, workspace: entry.workspace })),
-    onChanged: options.onRoutinesChanged, onError: (error) => console.error("Bot routine failed", error) });
   routines.start();
   const chatWorkspaces = () => catalog.list().map((entry) => ({ id: entry.id, name: entry.name, workspace: entry.workspace }));
   const nameBranch = (message: string) => generateBranchName(options.readSettings().ai, message);
@@ -180,6 +192,6 @@ export async function openNativeRuntime(options: NativeRuntimeOptions): Promise<
   const previewContext = (request: DirectContextRequest) => previewDirectContext({ host: lazyHost, bot: botIn, noraModel, workspaces: chatWorkspaces, now,
     runContext: runContextSource.preview, routerModel: () => simpleTaskModelLabel(options.readSettings().ai) }, request);
   const openedHost = host;
-  return { host: openedHost, personalization, catalog, memory, memoryReviewLog, routines, connectors, secrets, apps, startBranch, nameBranch, previewDirectContext: previewContext,
+  return { host: openedHost, personalization, catalog, memory, memoryReviewLog, routines, connectors, connectorAuthPrompts, secrets, apps, startBranch, nameBranch, previewDirectContext: previewContext,
     async shutdown() { memoryReview.stop(); routines.stop(); apps.close(); await openedHost.shutdown(); await noraTools.close(); await connectors.close(); memory.close(); memoryReviewLog.close(); routineStore.close(); appStore.close(); } };
 }

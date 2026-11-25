@@ -45,14 +45,28 @@ function forwardedHeaders(request: IncomingMessage): Record<string, string> {
   return headers;
 }
 
+function parsePath(path: string): { conversationId: string; connectorId: string } | null {
+  if (!path.startsWith(PATH_PREFIX)) return null;
+  const parts = path.slice(PATH_PREFIX.length).split("/").filter(Boolean).map((part) => {
+    try { return decodeURIComponent(part); } catch { return part; }
+  });
+  // /connectors/{conversationId}/{connectorId} — conversation scopes the authorize card to the waiting thread.
+  if (parts.length === 2 && parts[0] && parts[1]) return { conversationId: parts[0], connectorId: parts[1] };
+  // Legacy /connectors/{connectorId} — cannot wait on a thread card.
+  if (parts.length === 1 && parts[0]) return { conversationId: "", connectorId: parts[0] };
+  return null;
+}
+
 /**
  * Loopback-only reverse proxy between thread runtimes and connectors' Streamable HTTP servers. Runtimes authenticate to the gateway
  * with a per-launch token; the gateway adds the connector's real credentials, refreshing an OAuth token once when the server
- * rejects it, so tokens never reach provider runtimes, their config or their logs.
+ * rejects it, so tokens never reach provider runtimes, their config or their logs. When OAuth needs the user, the gateway holds
+ * the call and opens a thread authorize prompt instead of failing immediately.
  */
-export function createConnectorGateway({ store, credentials, onNeedsAuth, fetch: fetchFn = fetch }: ConnectorGatewayOptions): ConnectorGateway {
+export function createConnectorGateway({ store, credentials, onNeedsAuth, authPrompts, logoFor, fetch: fetchFn = fetch }: ConnectorGatewayOptions): ConnectorGateway {
   const token = randomBytes(32).toString("base64url");
   let listening: Promise<{ server: Server; base: string }> | null = null;
+  const conversationIdsByKey = new Map<string, readonly string[]>();
 
   const authorized = (header: string | undefined): boolean => {
     const expected = Buffer.from(`Bearer ${token}`), actual = Buffer.from(header ?? "");
@@ -71,23 +85,51 @@ export function createConnectorGateway({ store, credentials, onNeedsAuth, fetch:
     return null;
   }
 
+  async function waitForSignIn(connector: StoredConnector, conversationId: string, signal: AbortSignal): Promise<boolean> {
+    if (!authPrompts || !conversationId || connector.auth.kind !== "oauth") return false;
+    const conversationIds = conversationIdsByKey.get(`${conversationId}/${connector.id}`) ?? [conversationId];
+    const logo = logoFor?.(connector.id);
+    const outcome = await authPrompts.ask({
+      conversationIds,
+      connectorId: connector.id,
+      connectorName: connector.name,
+      serverName: connector.serverName,
+      message: `${connector.name} needs you to authorize before this thread can use it.`,
+      ...(logo ? { logo } : {})
+    }, signal);
+    return outcome.kind === "signed-in";
+  }
+
   async function handle(request: IncomingMessage, response: ServerResponse): Promise<void> {
     const path = request.url ?? "";
-    const id = path.startsWith(PATH_PREFIX) ? decodeURIComponent(path.slice(PATH_PREFIX.length)) : "";
+    const parsed = parsePath(path.split("?")[0] ?? path);
     if (!authorized(request.headers.authorization)) { reply(response, 401, "This runtime cannot use Nora's connectors"); return; }
-    const connector = id ? store.get(id) : undefined;
+    if (!parsed) { reply(response, 404, "This connector is not available"); return; }
+    const connector = store.get(parsed.connectorId);
     if (!connector?.enabled) { reply(response, 404, "This connector is not available"); return; }
     if (!ALLOWED_METHODS.has(request.method ?? "")) { reply(response, 405, "Method not allowed"); return; }
     const body = await readBody(request);
     const abort = new AbortController();
     response.on("close", () => abort.abort());
-    const upstream = await send(connector, request, body, abort.signal);
+    let upstream = await send(connector, request, body, abort.signal);
     if (!upstream) {
       onNeedsAuth(connector.id);
-      reply(response, 401, `${connector.name} needs you to sign in again in Nora's MCP Servers settings.`);
-      return;
+      if (await waitForSignIn(connector, parsed.conversationId, abort.signal)) {
+        upstream = await send(connector, request, body, abort.signal);
+      }
+      if (!upstream) {
+        reply(response, 401, `${connector.name} needs you to sign in again in Nora.`);
+        return;
+      }
     }
-    if (upstream.status === 401 && connector.auth.kind === "oauth") { credentials.requireSignIn(connector); onNeedsAuth(connector.id); }
+    if (upstream.status === 401 && connector.auth.kind === "oauth") {
+      credentials.requireSignIn(connector);
+      onNeedsAuth(connector.id);
+      if (await waitForSignIn(connector, parsed.conversationId, abort.signal)) {
+        const retried = await send(connector, request, body, abort.signal);
+        if (retried) upstream = retried;
+      }
+    }
     const headers: Record<string, string> = {};
     for (const name of FORWARDED_RESPONSE_HEADERS) {
       const value = upstream.headers.get(name);
@@ -115,13 +157,19 @@ export function createConnectorGateway({ store, credentials, onNeedsAuth, fetch:
   });
 
   return {
-    async endpoint(connector) {
+    async endpoint(connector, conversationIds = []) {
       const { base } = await start();
-      return { name: connector.serverName, url: `${base}${PATH_PREFIX}${encodeURIComponent(connector.id)}`, token };
+      const conversationId = conversationIds[0] ?? "";
+      if (conversationId) conversationIdsByKey.set(`${conversationId}/${connector.id}`, conversationIds);
+      const path = conversationId
+        ? `${PATH_PREFIX}${encodeURIComponent(conversationId)}/${encodeURIComponent(connector.id)}`
+        : `${PATH_PREFIX}${encodeURIComponent(connector.id)}`;
+      return { name: connector.serverName, url: `${base}${path}`, token };
     },
     async close() {
       const current = listening;
       listening = null;
+      conversationIdsByKey.clear();
       if (current) await current.then(({ server }) => new Promise<void>((resolve) => { server.closeAllConnections(); server.close(() => resolve()); }), () => undefined);
     }
   };

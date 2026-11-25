@@ -16,6 +16,7 @@ export function groupNativeTimelineEntries(items: readonly TimelineItem[]): Nati
   const entries: NativeTimelineEntry[] = [];
   const toolGroups = new Map<string, ToolActivity[]>();
   for (const item of items) {
+    if (item.kind === "review" && item.result.status === "unavailable" && item.result.reason === "unsupported") continue;
     if (item.kind === "tool") {
       const ask = askBotCall(item);
       if (ask) { entries.push({ kind: "ask", call: ask }); continue; }

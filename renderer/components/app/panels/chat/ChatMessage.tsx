@@ -10,13 +10,13 @@ const AVATAR = 32;
 const ACTION = "flex items-center gap-1 rounded px-1 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 /** A chat bubble: the user's on the right; a bot's on the left under its face and name, linking to the work behind it. */
-export function ChatMessage({ entry, workThread, onOpenThread, onBranch, onLinkClick }: ChatMessageProps) {
+export function ChatMessage({ entry, workThread, onOpenThread, onBranch, onLinkClick, mentions }: ChatMessageProps) {
   const time = chatTime(entry.createdAt);
   if (entry.from === "user") {
     return <div data-history-prompt={entry.id} data-history-text={entry.text} className={cn("flex flex-col items-end", entry.continued ? "mt-1" : "mt-4")}>
       {/* A primary tint, not a solid fill: MarkdownRenderer paints text with `text-foreground`, so the bubble keeps foreground contrast in both themes. */}
       <article aria-label="Your message" title={time} className="max-w-[80%] rounded-2xl rounded-br-md bg-primary/15 px-4 py-2 ring-1 ring-inset ring-primary/20">
-        <MarkdownRenderer className="min-w-0 break-words" onLinkClick={onLinkClick}>{entry.text}</MarkdownRenderer>
+        <MarkdownRenderer className="min-w-0 break-words" onLinkClick={onLinkClick} showLinkIcons mentions={mentions}>{entry.text}</MarkdownRenderer>
       </article>
     </div>;
   }
@@ -28,7 +28,7 @@ export function ChatMessage({ entry, workThread, onOpenThread, onBranch, onLinkC
       {!entry.continued && <p className="flex items-baseline gap-2 text-sm">{entry.author ? <BotInfoTrigger botId={entry.author.botId} name={name} className="font-medium hover:underline">{name}</BotInfoTrigger>
         : <span className="font-medium">{name}</span>}<time className="text-xs text-muted-foreground" dateTime={entry.createdAt}>{time}</time></p>}
       <article aria-label={`${name} message`} className="native-prose max-w-full rounded-2xl rounded-tl-md bg-muted px-4 py-2">
-        <MarkdownRenderer className="min-w-0 break-words" onLinkClick={onLinkClick}>{entry.text}</MarkdownRenderer>
+        <MarkdownRenderer className="min-w-0 break-words" onLinkClick={onLinkClick} showLinkIcons mentions={mentions}>{entry.text}</MarkdownRenderer>
       </article>
       {(entry.workThreadId || (onBranch && entry.author && entry.complete)) && <div className="flex items-center gap-1">
         {entry.workThreadId && <button type="button" onClick={() => entry.workThreadId && onOpenThread(entry.workThreadId)} className={ACTION}

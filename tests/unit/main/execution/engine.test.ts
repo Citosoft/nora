@@ -59,18 +59,18 @@ test("root turns serialize, queued instructions edit/remove, independent convers
   assert.equal(f.snapshot().runs[1].instruction, "edited");
 });
 
-test("writer conflict and host mismatch reject before native admission", (t) => {
+test("writers can share a checkout while host mismatch rejects before admission", (t) => {
   const f = fixture(t);
   f.create("one", "checkout"); f.create("two", "checkout"); f.submit("work", "one");
-  assert.throws(() => f.submit("work", "two"), /isolated worktree/);
-  assert.equal(f.snapshot("two").runs.length, 0);
+  f.submit("work", "two");
+  assert.equal(f.snapshot("two").runs[0].state, "starting");
   f.create("isolated", "worker-checkout"); f.submit("worker", "isolated");
   assert.equal(f.snapshot("isolated").runs.length, 1);
   assert.throws(() => f.command({ kind: "create", commandId: "remote-create", conversationId: "remote", title: "Remote", parentId: null, provider,
     workspace: { projectId: "p", environmentId: "ssh", checkoutId: "c", path: "/remote", branch: "main", access: "write" } }), /different execution host/);
 });
 
-test("a write child may submit while its write ancestor is active; sibling writers still conflict", (t) => {
+test("a parent and sibling offloads can write to the same checkout", (t) => {
   const f = fixture(t);
   const checkout = { environmentId: "local", projectId: "project", checkoutId: "checkout", path: "/test/checkout", branch: "main", access: "write" as const };
   f.create("parent", "checkout");
@@ -79,8 +79,14 @@ test("a write child may submit while its write ancestor is active; sibling write
   f.submit("parent-run", "parent");
   f.submit("child-a-run", "child-a");
   assert.equal(f.snapshot("child-a").runs.length, 1);
-  assert.throws(() => f.submit("child-b-run", "child-b"), /isolated worktree/);
-  assert.equal(f.snapshot("child-b").runs.length, 0);
+  f.submit("child-b-run", "child-b");
+  assert.equal(f.snapshot("child-b").runs[0].state, "starting");
+  f.submit("parent-next", "parent");
+  const first = f.snapshot("parent").runs[0];
+  f.engine.accept({ kind: "finished", eventId: "done", conversationId: "parent", runId: first.id, attemptId: first.attemptId,
+    status: "completed", failure: null, usage: null });
+  assert.equal(f.snapshot("parent").runs[1].state, "starting");
+
 });
 
 test("snapshot cursor replay has no gaps even when replay causes reentrant commands", (t) => {
@@ -153,7 +159,7 @@ test("a second interrupt force-ends a turn that stayed stopping", (t) => {
   assert.equal(f.snapshot().conversation.queuePaused, true);
   const tool = f.snapshot().items.find((item) => item.id === "tool");
   assert.equal(tool?.kind === "tool" ? tool.state : null, "interrupted");
-  assert.equal(f.store.unfinishedEffects().some((effect) => effect.action.kind === "interrupt"), false);
+  assert.equal(f.store.unfinishedEffects().some((effect) => effect.action.kind === "interrupt" && effect.action.force), true);
   assert.equal(f.store.unfinishedEffects().some((effect) => effect.action.kind === "review"), true);
 });
 
@@ -321,7 +327,7 @@ test("creating a worker atomically admits its initial instruction and replays wi
   assert.equal(f.store.effects().length, 1);
 });
 
-test("rejected initial instructions leave no empty worker or receipt", (t) => {
+test("invalid initial instructions leave no empty worker or receipt", (t) => {
   const f = fixture(t);
   f.create("writer", "checkout"); f.submit("work", "writer");
   const command = { kind: "create", commandId: "worker-create", conversationId: "worker", title: "Worker", parentId: null,
@@ -329,12 +335,10 @@ test("rejected initial instructions leave no empty worker or receipt", (t) => {
     workspace: { environmentId: "local", projectId: "project", checkoutId: "checkout", path: "/test/checkout", branch: "main", access: "write" },
     initialInstruction: { runId: "first", instruction: "Do the work" } } as const;
   const cursor = f.store.cursor();
-  assert.throws(() => f.command(command), /isolated worktree/);
+  assert.throws(() => f.command({ ...command, initialInstruction: { runId: "first", instruction: "   " } }));
   assert.equal(f.engine.snapshot("worker"), null);
   assert.equal(f.engine.receipt(command), null);
   assert.equal(f.store.cursor(), cursor);
-  assert.throws(() => f.command({ ...command, initialInstruction: { runId: "first", instruction: "   " } }));
-  assert.equal(f.engine.snapshot("worker"), null);
 });
 
 test("streamed items skip workspace writer and unfinished effect queries", (t) => {

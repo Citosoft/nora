@@ -4,7 +4,7 @@ import type { EventSubscription } from "@main/types/execution/engine.types";
 import type { ConversationInvocation } from "@main/types/execution/gateway.types";
 import type { LoopRun } from "@shared/types/loop.types";
 import type { AttentionNotice } from "@shared/types/conversation/attention.types";
-import type { InboxAlertSource, InboxCommand, InboxConnectorSource, InboxLedger, InboxSnapshot, InboxTarget } from "@shared/types/inbox/inbox.types";
+import type { InboxAlertSource, InboxCommand, InboxConnectorSource, InboxItem, InboxLedger, InboxSnapshot, InboxTarget } from "@shared/types/inbox/inbox.types";
 import type { InboxReply } from "@shared/ipc/types/inboxGateway.types";
 
 /** The slice of the execution host the inbox reads; it never executes commands. */
@@ -44,6 +44,11 @@ export interface InboxService {
   refreshConnectors(): void;
   refreshAlerts(): void;
   start(): () => void;
+}
+/** Which inbox items a watcher announces as they arrive. */
+export interface InboxArrivalWatch {
+  inbox: Pick<InboxService, "snapshot" | "subscribe">;
+  select(snapshot: InboxSnapshot): readonly InboxItem[];
 }
 export interface InboxNotice extends Omit<AttentionNotice, "conversationId"> { target: InboxTarget; }
 export interface InboxNotifierDeps {

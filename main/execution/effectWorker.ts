@@ -1,13 +1,26 @@
 import type { EmitProviderUpdate, ProviderResolver } from "@main/types/execution/provider.types";
 import type { ExecutionEffect } from "@main/types/execution/store.types";
 import type { WorkspaceRef } from "@shared/types/conversation/contracts.types";
-import { isActiveRun } from "./projection";
+import { isActiveRun } from "@shared/conversations/runActivity";
 import { ConversationEngine } from "./engine";
 import type { WorkspaceReviewer } from "@main/types/execution/review.types";
-import type { TurnCheckpoints } from "@main/types/execution/checkpoints.types";
+import type { TurnCheckpoints, UndoOutcome } from "@main/types/execution/checkpoints.types";
 import { safeCapture } from "./checkpoints/safeCapture";
 import { reviewExecution } from "./checkpoints/review";
+import { undoExecution } from "./checkpoints/undo";
 import type { EffectWorkerOptions } from "@main/types/execution/worker.types";
+
+const CONTROL_TIMEOUT_MS = 15_000;
+
+async function boundedControl<T>(work: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([work, new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error("Runtime control timed out")), CONTROL_TIMEOUT_MS);
+      timer.unref();
+    })]);
+  } finally { clearTimeout(timer); }
+}
 
 export class EffectWorker {
   constructor(private readonly engine: ConversationEngine, private readonly providers: ProviderResolver,
@@ -25,10 +38,12 @@ export class EffectWorker {
     return true;
   }
 
-  beginNextEffect(allowed?: readonly ExecutionEffect["action"]["kind"][]): Promise<void> | null {
+  beginNextEffect(allowed?: readonly ExecutionEffect["action"]["kind"][], onClaim?: (effect: ExecutionEffect) => void): Promise<void> | null {
     this.engine.expireRequests();
     const effect = this.engine.claimEffect(allowed);
-    return effect ? this.perform(effect) : null;
+    if (!effect) return null;
+    onClaim?.(effect);
+    return this.perform(effect);
   }
 
   private async perform(effect: ExecutionEffect): Promise<void> {
@@ -38,6 +53,13 @@ export class EffectWorker {
     if (effect.action.kind === "review") {
       const result = await reviewExecution(this.engine, effect, snapshot.conversation.workspace, this.reviewer, this.checkpoints);
       this.engine.finishReview(effect.id, result);
+      return;
+    }
+    if (effect.action.kind === "undo") {
+      let outcome: UndoOutcome;
+      try { outcome = await undoExecution(this.engine, effect, effect.action.mode, snapshot.conversation.workspace, this.checkpoints); }
+      catch { outcome = { status: "failed", message: "Undo stopped unexpectedly. Trying again is safe.", restored: [] }; }
+      this.engine.finishUndo(effect.id, outcome);
       return;
     }
     if (effect.action.kind === "start") {
@@ -72,7 +94,7 @@ export class EffectWorker {
         const provider = this.providers.resolve(snapshot.conversation.provider.kind, snapshot.conversation.provider.instanceId);
         const result = run.state !== "running" || !provider.steer || !provider.capabilities.steering
           ? { status: "rejected" as const, message: "The turn is no longer available for steering. The message remains queued." }
-          : await provider.steer({ snapshot, run }, effect.action.instruction);
+          : await boundedControl(provider.steer({ snapshot, run }, effect.action.instruction));
         this.engine.finishSteering(effect.id, result);
       } catch {
         this.engine.finishSteering(effect.id, { status: "unconfirmed", message: "Steering delivery is unconfirmed. This message will not run automatically." });
@@ -92,14 +114,17 @@ export class EffectWorker {
               failure: { code: "unsupported", message: "This provider cannot compact this thread's context", retryable: false } });
             break;
           }
-          await provider.start(execution, emit); break;
-        case "interrupt": await provider.interrupt(execution, emit); break;
-        case "reconcile": await provider.reconcile(execution, emit); break;
+          await provider.start(execution, emit, () => this.engine.isStarting(effect.conversationId, effect.runId, effect.attemptId)); break;
+        case "interrupt":
+          await boundedControl(effect.action.force && provider.forceInterrupt
+            ? provider.forceInterrupt(execution) : provider.interrupt(execution, emit));
+          break;
+        case "reconcile": await boundedControl(provider.reconcile(execution, emit)); break;
         case "respond": {
           const { requestId } = effect.action;
           const request = snapshot.requests.find((entry) => entry.id === requestId);
           if (!request) throw new Error("Response effect has no native request");
-          await provider.respond(execution, request, effect.action.response, emit);
+          await boundedControl(provider.respond(execution, request, effect.action.response, emit));
           break;
         }
       }

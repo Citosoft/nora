@@ -36,8 +36,10 @@ export interface ExecutionProvider {
   readContext?(conversation: Conversation): Promise<ContextReading | null>;
   catalog(workspace: WorkspaceRef): Promise<ProviderCatalogResult>;
   close(): Promise<void>;
-  start(execution: ProviderExecution, emit: EmitProviderUpdate): Promise<void>;
+  /** Check the saved attempt again before submitting after asynchronous runtime setup. */
+  start(execution: ProviderExecution, emit: EmitProviderUpdate, canStart?: () => boolean): Promise<void>;
   interrupt(execution: ProviderExecution, emit: EmitProviderUpdate): Promise<void>;
+  forceInterrupt?(execution: ProviderExecution): Promise<void>;
   respond(execution: ProviderExecution, request: RuntimeRequest, response: RequestResponse, emit: EmitProviderUpdate): Promise<void>;
   reconcile(execution: ProviderExecution, emit: EmitProviderUpdate): Promise<void>;
 }

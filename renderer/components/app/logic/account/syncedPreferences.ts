@@ -21,7 +21,7 @@ export function mergeAppearance(current: PortableAppearance, values: Partial<Por
 const sameSetting = (left: unknown, right: unknown): boolean => JSON.stringify(left) === JSON.stringify(right);
 export function mergeAppPreferences(settings: AppSettings, values: Partial<PortableSettings>, expected: PortableSettings): AppSettings {
   const next = { ...settings };
-  const keys: readonly (keyof PortableAppKeys)[] = ["defaultSplitViewGridColumns", "defaultSplitViewGridRows", "rememberLastSplitViewPerWorkspace", "confirmSplitViewDelete", "showWorkspaceSessionTabs", "agentCompletionNotificationsEnabled", "openInternalBrowserOnNewPortDetection", "fileEditorThemeId", "threadBackdrop"];
+  const keys: readonly (keyof PortableAppKeys)[] = ["defaultSplitViewGridColumns", "defaultSplitViewGridRows", "rememberLastSplitViewPerWorkspace", "confirmSplitViewDelete", "showWorkspaceSessionTabs", "agentCompletionNotificationsEnabled", "phonePushNotificationsEnabled", "openInternalBrowserOnNewPortDetection", "fileEditorThemeId", "threadBackdrop"];
   const set = <K extends keyof PortableAppKeys>(key: K, value: AppSettings[K]): void => { next[key] = value; };
   for (const key of keys) { const value = values[key]; if (value !== undefined && sameSetting(settings[key], expected[key])) set(key, value); }
   return next;

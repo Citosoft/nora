@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import type { TranscriptFollow } from "@/components/app/types/transcriptFollow.types";
 
 /**
@@ -9,13 +9,16 @@ export function useTranscriptFollow(changeKey: unknown): TranscriptFollow {
   const ref = useRef<HTMLDivElement>(null);
   const follow = useRef(true);
   const [newActivity, setNewActivity] = useState(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (follow.current) ref.current?.scrollTo({ top: ref.current.scrollHeight });
     else setNewActivity(true);
   }, [changeKey]);
-  return { ref, newActivity,
-    pauseFollowing: () => { follow.current = false; },
+  const pauseFollowing = useCallback(() => { follow.current = false; }, []);
+  return { ref, newActivity, pauseFollowing,
     onWheel: (event) => { if (event.deltaY < 0) follow.current = false; },
-    onScroll: () => { const element = ref.current; if (element) follow.current = element.scrollHeight - element.scrollTop - element.clientHeight <= 1; },
+    onScroll: () => { const element = ref.current; if (element) {
+      follow.current = element.scrollHeight - element.scrollTop - element.clientHeight <= 2;
+      if (follow.current) setNewActivity(false);
+    } },
     jumpToLatest: () => { follow.current = true; setNewActivity(false); ref.current?.scrollTo({ top: ref.current.scrollHeight }); } };
 }

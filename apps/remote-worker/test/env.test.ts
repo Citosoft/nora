@@ -10,8 +10,10 @@ const validEnv = {
   CLOUDFLARE_ACCOUNT_ID: "0123456789abcdef0123456789abcdef",
   CLOUDFLARE_ZONE_ID: "fedcba9876543210fedcba9876543210",
   HOSTNAME_SECRET: "x".repeat(32),
+  EXPO_ACCESS_TOKEN: "expo-access-token",
   GENERAL_RATE_LIMITER: limiter,
-  PROVISION_RATE_LIMITER: limiter
+  PROVISION_RATE_LIMITER: limiter,
+  PUSH_RATE_LIMITER: limiter
 };
 
 describe("parseWorkerConfig", () => {
@@ -20,6 +22,13 @@ describe("parseWorkerConfig", () => {
     expect(config?.runtimeHostnameSuffix).toBe("remote.withnora.run");
     expect(config?.maxRuntimesPerUser).toBe(3);
     expect(config?.allowedOrigins).toEqual(["https://app.withnora.run"]);
+  });
+
+  it("treats the Expo access token as optional", () => {
+    expect(parseWorkerConfig(validEnv)?.expoAccessToken).toBe("expo-access-token");
+    const withoutPush = parseWorkerConfig({ ...validEnv, EXPO_ACCESS_TOKEN: undefined });
+    expect(withoutPush).not.toBeNull();
+    expect(withoutPush?.expoAccessToken).toBeNull();
   });
 
   it("parses vars", () => {
@@ -42,7 +51,9 @@ describe("parseWorkerConfig", () => {
     ["origin with path", { ALLOWED_ORIGINS: "https://app.withnora.run/" }],
     ["quota too high", { MAX_RUNTIMES_PER_USER: "50" }],
     ["quota not a number", { MAX_RUNTIMES_PER_USER: "many" }],
-    ["missing limiter binding", { PROVISION_RATE_LIMITER: undefined }]
+    ["missing limiter binding", { PROVISION_RATE_LIMITER: undefined }],
+    ["missing push limiter binding", { PUSH_RATE_LIMITER: undefined }],
+    ["blank Expo access token", { EXPO_ACCESS_TOKEN: "  " }]
   ])("rejects %s", (_label, override) => {
     expect(parseWorkerConfig({ ...validEnv, ...override })).toBeNull();
   });

@@ -9,8 +9,8 @@ export async function workerWorkspace(input: StartWorkerToolInput, parent: Conve
   const isolation = input.isolation ?? (access === "write" && isGitProject(workspace) ? "worktree" : "shared");
   if (isolation === "shared") return workspace;
   if (access !== "write") throw new Error("Read-only workers share the caller's checkout. Use isolation shared with read access.");
-  if (!isGitProject(workspace)) throw new Error("This workspace is not a Git repository. Use read access, or isolation shared after its current writer finishes.");
-  if (!workspaces) throw new Error("Worker worktrees are unavailable here. Use read access, or isolation shared after its current writer finishes.");
+  if (!isGitProject(workspace)) throw new Error("This workspace is not a Git repository. Use read access, or isolation shared.");
+  if (!workspaces) throw new Error("Worker worktrees are unavailable here. Use read access, or isolation shared.");
   const isolated = await workspaces.isolate(workspace, input.title);
   if (isolated.environmentId !== workspace.environmentId || isolated.projectId !== workspace.projectId
     || isolated.checkoutId === workspace.checkoutId || isolated.path === workspace.path || isolated.access !== "write") {

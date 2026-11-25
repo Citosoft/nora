@@ -5,13 +5,17 @@ import { claudeSessionSettings } from "@main/providers/claude/sessionSettings";
 import { claudeAccountConnectorOptions, createClaudeAccountConnectorDirectory } from "@main/providers/claude/accountConnectors";
 import { accountConnectorsForBot } from "@shared/bots/connectorSelection";
 import { parseSharedBotFile, serializeSharedBotFile } from "@shared/bots/botFile";
+import { snapshotBot } from "@shared/bots/snapshot";
 import type { McpServerStatus } from "@anthropic-ai/claude-agent-sdk";
+import { bot as botFixture } from "../../shared/bots/fixtures";
 
 const workspace = { environmentId: "local", projectId: "p", checkoutId: "c", path: "/repo", branch: "main", access: "write" as const };
 
 test("only the user's own working thread loads the signed-in account's extras", () => {
   assert.equal(threadLoadsAccountExtras({ workspace }), true);
   assert.equal(threadLoadsAccountExtras({ workspace, chatBranch: { from: null } }), false, "a chat branch skips them");
+  assert.equal(threadLoadsAccountExtras({ workspace, bot: snapshotBot(botFixture("rex")) }), false, "a bot skips them");
+  assert.equal(threadLoadsAccountExtras({ workspace, source: { kind: "worker" } }), false, "a write worker skips them");
   assert.equal(threadLoadsAccountExtras({ workspace, source: { kind: "app", appId: null } }), false, "an app's builder skips them");
   assert.equal(threadLoadsAccountExtras({ workspace: { ...workspace, access: "read" } }), false, "a review skips them");
   assert.equal(threadLoadsAccountExtras({ workspace: { ...workspace, access: "read" }, source: { kind: "worker" } }), false);

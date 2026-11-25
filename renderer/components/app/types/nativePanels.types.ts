@@ -1,3 +1,5 @@
+import type { ComposerSuggestionOption } from "./composerInput.types";
+import type { TurnUndoControls } from "@/components/app/types/turnUndo.types";
 import type { ThreadBackdropSettings } from "@shared/types/threadBackdrop.types";
 import type { ChatWorkThread } from "./chatPanels.types";
 import type { McpAppHost } from "./mcpApp.types";
@@ -10,7 +12,6 @@ import type { ConversationRun, TimelineItem, RuntimeRequest, RequestResponse, Pr
 import type { NativeBoot } from "@shared/ipc/types/personalizationGateway.types";
 import type { NativeWorkspace } from "@shared/types/personalization/workspaces.types";
 import type { ConversationClient } from "./conversationClient.types";
-import type { ConversationReview } from "@shared/types/conversation/review.types";
 import type { ThreadDocument, ThreadDocumentRuntime } from "./thread-workspace/state.types";
 import type { ThreadForgeClient } from "./threadForge.types";
 import type { ProviderCapabilities } from "@shared/types/provider/capabilities.types";
@@ -22,6 +23,7 @@ import type { MessagePinControls } from "./messagePins.types";
 
 export type NativeMessageItem = Extract<TimelineItem, { kind: "message" }>;
 export interface NativeMessageProps {
+  mentions?: readonly ComposerSuggestionOption[];
   item: NativeMessageItem;
   onLinkClick?: MarkdownRendererLinkClickHandler;
   /** Absent where messages cannot be pinned, such as before a thread exists. */
@@ -36,6 +38,7 @@ export interface NativeMessageActionsProps {
   placement: NativeMessageActionsPlacement;
 }
 export interface NativeTimelineProps {
+  mentions?: readonly ComposerSuggestionOption[];
   items: readonly TimelineItem[];
   runs?: readonly ConversationRun[];
   onLinkClick?: MarkdownRendererLinkClickHandler;
@@ -51,8 +54,13 @@ export interface NativeTimelineProps {
   /** Opens an output file in the file viewer, or with the operating system when the viewer can't show it. */
   onOpenOutput?: (target: ThreadOutputTarget) => Promise<void>;
   pins?: MessagePinControls;
+  /** Offers undo on reviewed turns; absent where the thread cannot send commands. */
+  turnUndo?: TurnUndoControls;
 }
-export interface NativeReviewProps { result: ConversationReview; }
+export interface NativeReviewProps {
+  item: Extract<TimelineItem, { kind: "review" }>;
+  undo?: TurnUndoControls;
+}
 export interface NativeRequestProps {
   request: RuntimeRequest;
   busy: boolean;

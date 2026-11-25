@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import { DIRECTORY_ROUTES, deleteRuntimeResponseSchema, directoryErrorSchema, listRuntimesResponseSchema, renameRuntimeRequestSchema,
   runtimeResponseSchema } from "@shared/remote-access/directory";
+import { deletePushDeviceResponseSchema, PUSH_ROUTES, pushDeviceResponseSchema, registerPushDeviceRequestSchema } from "@shared/remote-access/push";
 import type { DirectoryErrorCode } from "@shared/types/remote-access/directory.types";
 import type { DirectoryClient, DirectoryClientConfig } from "@/types/directoryClient.types";
 import type { HttpMethod } from "@/types/http.types";
@@ -23,6 +24,11 @@ export function createDirectoryClient(config: DirectoryClientConfig): DirectoryC
     },
     remove: async (installationId) => {
       await call("DELETE", DIRECTORY_ROUTES.runtime(installationId), deleteRuntimeResponseSchema);
+    },
+    registerPushDevice: async (request) =>
+      (await call("POST", PUSH_ROUTES.devices, pushDeviceResponseSchema, registerPushDeviceRequestSchema.parse(request))).device,
+    removePushDevice: async (deviceId) => {
+      await call("DELETE", PUSH_ROUTES.device(deviceId), deletePushDeviceResponseSchema);
     }
   };
 }

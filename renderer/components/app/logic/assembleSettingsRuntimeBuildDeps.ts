@@ -72,6 +72,7 @@ export const buildAppShellSettingsRuntimeAssemblyInputFromDeps = (
   appPrefs: {
     appSettings: deps.appSettings,
     updateFileEditorThemeId: deps.updateFileEditorThemeId,
+    updateUiFontSize: deps.updateUiFontSize,
     updateThreadBackdrop: deps.updateThreadBackdrop,
     updateHardwareAccelerationEnabled: deps.updateHardwareAccelerationEnabled,
     updateWorkspaceStateStorageMode: deps.updateWorkspaceStateStorageMode,

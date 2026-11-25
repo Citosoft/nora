@@ -45,7 +45,7 @@ describe("dashboardHeadline", () => {
 
 describe("recentChats", () => {
   it("leaves out bot direct chats and caps the list", () => {
-    const direct = { ...conversation("bot"), direct: { botId: "b1", name: "Pixel", role: "Design critic", avatar: { seed: 1 }, scope: { kind: "global" as const }, workspaceId: "proj-1" } };
+    const direct = { ...conversation("bot"), direct: { botId: "b1", name: "Pixel", role: "Design critic", avatar: { seed: 1 }, scope: { kind: "global" as const }, workspaceId: "proj-1", retiredAt: null } };
     const list = [summary({ conversation: conversation("a") }), summary({ conversation: direct }), summary({ conversation: conversation("b") }),
       summary({ conversation: conversation("c") })];
     expect(recentChats(list, 2).map((item) => item.conversation.id)).toEqual(["a", "b"]);

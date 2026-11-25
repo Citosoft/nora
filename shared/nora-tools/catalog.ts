@@ -5,7 +5,7 @@ import type { NoraToolsStatus } from "@shared/types/nora-tools/noraTools.types";
 /** The MCP server name runtimes see for Nora's tools. */
 export const NORA_MCP_SERVER = "nora";
 
-/** `audience` says which threads get each tool: Nora (bot-less) threads, bot threads, and bot threads answering in a group chat ("member"). */
+/** `audience` says which threads get each tool: Nora threads, bots, plain workers, or bots answering in a chat ("member"). */
 export const NORA_TOOLS = {
   report_workflow_stage: {
     audience: ["nora", "bot"],
@@ -15,61 +15,52 @@ export const NORA_TOOLS = {
   ask_bot: {
     audience: ["nora", "bot"],
     title: "Ask another bot",
-    description: "Send a message to a bot (by id or name from list_bots) and wait for its reply. The bot answers in its own thread, "
-      + "with its own instructions, model and permissions. Global bots can write in this workspace; workspace bots get the same access as this thread. "
-      + "Asking the same bot again continues that thread. "
-      + "Use it when the user @mentions a bot or when another bot's role fits the work. Bots cannot ask themselves, and chains of asks are limited."
+    description: "Send a message to a bot (id or name from list_bots) in its own thread. Continues that bot's thread on repeat asks. "
+      + "wait=notify (default) returns at once and Nora posts the bot's answer into this thread when it finishes; wait=reply blocks until the answer. "
+      + "Use for @mentions or when another bot's role fits. Bots cannot ask themselves; ask chains are limited."
   },
   remember: {
-    audience: ["nora", "bot"],
+    audience: ["nora", "bot", "worker"],
     title: "Remember something",
-    description: "Save a short, durable note for yourself, such as a user preference, a decision or a project fact. "
-      + "To correct or merge a note you saved, pass its id as memory_id instead of adding a near-duplicate. "
-      + "Your newest notes are included in every later thread; older ones stay searchable with recall. The user can see and edit them. Do not store secrets."
+    description: "Save a short durable note (preference, decision, project fact). Pass memory_id to correct or merge a note you saved. "
+      + "Newest notes appear in later threads; older ones via recall. Do not store secrets."
   },
   recall: {
-    audience: ["nora", "bot"],
+    audience: ["nora", "bot", "worker"],
     title: "Search your notes",
-    description: "Search the notes you saved with remember, for this workspace and everywhere, best match first, with each note's id. "
-      + "An empty query lists your newest notes."
+    description: "Search notes saved with remember (this workspace and everywhere), best match first, with ids. Empty query lists newest notes."
   },
   forget: {
-    audience: ["nora", "bot"],
+    audience: ["nora", "bot", "worker"],
     title: "Forget a note",
-    description: "Delete one of the notes you saved, by its id, when it turns out wrong or out of date, or after you merged it into another. "
-      + "Notes the user wrote can only be changed by the user."
+    description: "Delete one of your notes by id when it is wrong, out of date, or merged. User-written notes can only be changed by the user."
   },
   request_secret: {
-    audience: ["nora", "bot"],
+    audience: ["nora", "bot", "worker"],
     title: "Ask for a secret",
-    description: "Ask the user for a password, API key, token or other secret through Nora's secure input dialog, and wait for them to save it. "
-      + "The value is encrypted with the system keychain and never appears in this thread; you only learn whether it was saved. "
-      + "Always use this instead of asking the user to paste a secret into chat. Name it like an environment variable (GITHUB_TOKEN) and say what it is for. "
-      + "Check list_secrets first; asking for a name that is already saved replaces it."
+    description: "Ask for a password, API key or token via Nora's secure dialog (never chat). Name it like an env var (GITHUB_TOKEN). "
+      + "Check list_secrets first; a saved name is replaced."
   },
   list_secrets: {
-    audience: ["nora", "bot"],
+    audience: ["nora", "bot", "worker"],
     title: "List saved secrets",
-    description: "List the secrets saved for this workspace and everywhere, with each one's name, purpose and scope. Values are never returned."
+    description: "List secrets for this workspace and everywhere (name, purpose, scope). Values are never returned."
   },
   run_with_secrets: {
-    audience: ["nora", "bot"],
+    audience: ["nora", "bot", "worker"],
     title: "Run a command with secrets",
-    description: "Run a shell command in this thread's workspace folder with saved secrets set as environment variables named after them "
-      + "(sh, or cmd.exe on Windows), and return its exit code and output with the secrets redacted. The user approves each command first. "
-      + "Reference secrets only as variables, such as \"$GITHUB_TOKEN\" (%GITHUB_TOKEN% on Windows); never print, echo, encode or copy them, "
-      + "and prefer piping or environment variables over writing them to files. Use your normal tools for commands that need no secret."
+    description: "Run a shell command in the workspace with saved secrets as env vars (user approves first). Reference as \"$NAME\" only; never print secrets. Use normal tools when no secret is needed."
   },
   delete_secret: {
-    audience: ["nora", "bot"],
+    audience: ["nora", "bot", "worker"],
     title: "Delete a saved secret",
-    description: "Delete a saved secret by name and scope (from list_secrets) when the user asks for it to be removed or it is no longer valid."
+    description: "Delete a saved secret by name and scope (from list_secrets) when the user asks or it is invalid."
   },
   chat_history: {
     audience: ["member"],
     title: "Read the chat",
-    description: "Read earlier messages of the group or direct chat you are answering in, newest last, with who wrote each one. "
-      + "Your prompt only carries messages since you last spoke; use this when you need what was said before that."
+    description: "Read earlier messages of the group or direct chat you are answering in, newest last. "
+      + "Your prompt only carries messages since you last spoke; use this for what was said before that."
   },
   create_bot: {
     audience: ["nora"],
@@ -89,6 +80,32 @@ export const NORA_TOOLS = {
     title: "List Nora bots",
     description: "List the bots available in this thread's workspace, with their id, role, model and where they are available."
   },
+  list_routines: {
+    audience: ["nora"],
+    title: "List a bot's routines",
+    description: "List the scheduled routines for a bot (from list_bots), with each routine's id, name, schedule, timezone, whether it is active, "
+      + "where runs land (chat or thread), missed-run policy and next run time."
+  },
+  create_routine: {
+    audience: ["nora"],
+    title: "Add a bot routine",
+    description: "Add a scheduled routine to a bot (id from list_bots): a name, instruction for each run, schedule and where runs land. "
+      + "Defaults to this thread's workspace and the machine timezone; workspace bots always run in their own workspace. "
+      + "Schedules use the routine's timezone (daily/weekdays/weekly/monthly/hourly/once/custom cron, or interval). "
+      + "Pass active false to save it paused. At most 20 routines per bot. Returns the new routine id."
+  },
+  update_routine: {
+    audience: ["nora"],
+    title: "Update a bot routine",
+    description: "Change an existing routine by id (from list_routines); only the fields you pass change. "
+      + "Use it to rename, rewrite the instruction, change the schedule or timezone, move between chat and thread, "
+      + "change the missed-run policy, or pause/resume with active. The routine stays on the same bot."
+  },
+  remove_routine: {
+    audience: ["nora"],
+    title: "Remove a bot routine",
+    description: "Delete one of a bot's routines by id (from list_routines). Stops unfinished runs of that routine. The bot itself is unchanged."
+  },
   get_settings: {
     audience: ["nora"],
     title: "Read Nora settings",
@@ -106,74 +123,85 @@ export const NORA_TOOLS = {
     title: "List Nora workspaces",
     description: "List the workspaces open in Nora, with their kind, folder and Git branch, and mark the one this thread belongs to."
   },
+  list_terminals: {
+    audience: ["nora"],
+    title: "List open terminals",
+    description: "List terminals open in this workspace (including the local dock). Use open_terminal then paste_terminal for the user to run commands; do not run shell via these tools."
+  },
+  open_terminal: {
+    audience: ["nora"],
+    title: "Open a terminal",
+    description: "Open the local terminal dock or a new workspace terminal. Returns an id for paste_terminal. Prefer when the user should run commands themselves."
+  },
+  paste_terminal: {
+    audience: ["nora"],
+    title: "Paste into a terminal",
+    description: "Paste text into an open terminal by id without pressing Enter, so the user can review and run it."
+  },
   list_models: {
     audience: ["nora", "bot"],
     title: "List providers and models",
     description: "List the installed providers (such as claude and codex), their models and whether they enforce read-only worker commands."
   },
   list_threads: {
-    audience: ["nora", "bot"],
+    audience: ["nora", "bot", "worker"],
     title: "List Nora threads",
     description: "List threads in this workspace (or every workspace), newest first, with id, title, bot, status and last activity. "
       + "A bot sees its own threads and the workers it started. Settled threads are left out unless you ask for them."
   },
   read_thread: {
-    audience: ["nora", "bot"],
+    audience: ["nora", "bot", "worker"],
     title: "Read a Nora thread",
-    description: "Read the latest messages of another thread by id (from list_threads): what the user asked and the final answers, "
-      + "without tool output. Use it to pick up context from earlier work."
+    description: "Read the latest messages of another thread by id (from list_threads): what was asked and the final answers, without tool output."
   },
   start_thread: {
     audience: ["nora", "bot"],
     title: "Start a worker thread",
-    description: "Hand one part of the job to a new worker thread and return at once with its id; the worker runs in the background while you carry on. "
-      + "Give it a self-contained prompt (it cannot see this thread) and say what done means for it with done. For bots it defaults to your own identity and model. You can pick a provider and model, or a saved bot from list_bots. "
-      + "Write workers in Git get a separate managed worktree by default; pass isolation shared to use the caller’s checkout, which permits only one writer. Read workers share the checkout and can run commands under the provider’s read-only sandbox; list_models shows which providers enforce it. Isolated worktrees start from committed project HEAD and do not include uncommitted changes; provide all needed context. Start several for independent parts. "
-      + "Collect their reports with wait_for_threads."
+    description: "Start a background worker with a self-contained prompt and done criteria; returns its id immediately. "
+      + "Defaults to your bot/model; or pass provider/model or a bot from list_bots. "
+      + "Write workers in Git get an isolated worktree by default (isolation shared uses the caller's checkout). "
+      + "Read workers share the checkout under the provider's read-only sandbox. Collect reports with wait_for_threads."
   },
   message_thread: {
     audience: ["nora", "bot"],
     title: "Message a worker thread",
-    description: "Send a follow-up instruction to one of this thread's workers (or workers you started in earlier threads as the same bot) by id (from start_thread), such as a correction or the next step, and return at once. "
-      + "It queues behind any turn the worker is still running. Collect the answer with wait_for_threads."
+    description: "Send a follow-up to one of this thread's workers by id (from start_thread) and return at once. Collect the answer with wait_for_threads."
   },
   wait_for_threads: {
     audience: ["nora", "bot"],
     title: "Wait for worker threads",
-    description: "Wait until this thread's workers (by id, or all of them when ids is omitted) finish their current work, then return each one's status and final report. "
-      + "Waits for all of them by default, or for the first to finish with mode any. Returns early for a worker that needs the user's approval or input, "
-      + "and after timeout_minutes (at most 15) with the ones still running, which you can wait for again."
+    description: "Wait until workers (by id, or all when omitted) finish; returns status and final report. "
+      + "Default waits for all; mode any returns on the first. Returns early on approval/input needs or after timeout_minutes (max 15)."
   },
   list_tasks: {
-    audience: ["nora", "bot", "member"],
+    audience: ["nora", "bot", "member", "worker"],
     title: "List workspace tasks",
-    description: "List the tasks on this workspace's task board, with their stable id, path, title, column (such as Todo, In Progress or Done), and Markdown link that opens each task in Nora. Use these links when referring the user to existing tasks."
+    description: "List this workspace's tasks (id, path, title, column) with a Markdown link that opens each in Nora. Include those links when referring the user to tasks."
   },
   create_task: {
-    audience: ["nora", "bot", "member"],
+    audience: ["nora", "bot", "member", "worker"],
     title: "Create a workspace task",
-    description: "Add a task to this workspace's task board, in the first column. It is saved as a Markdown file under .nora/tasks "
-      + "with the title as its heading and your details as the body. When telling the user you created a task, you MUST include the Markdown task link returned by this tool so they can open it in Nora. Include a link for each task you create."
+    description: "Add a task to the board (Markdown under .nora/tasks). Always include the returned Markdown task link in your reply to the user."
   },
   read_task: {
-    audience: ["nora", "bot", "member"],
+    audience: ["nora", "bot", "member", "worker"],
     title: "Read a workspace task",
-    description: "Read a task's current details, status and Markdown link that opens it in Nora, by its stable id from list_tasks or a task handoff. Use the returned link when referring the user to this task."
+    description: "Read a task's details, status and open-in-Nora link by id from list_tasks or a handoff."
   },
   start_task: {
-    audience: ["nora", "bot", "member"],
+    audience: ["nora", "bot", "member", "worker"],
     title: "Start a workspace task",
-    description: "Start or reopen a task by its stable id, marking it incomplete and moving it to In Progress. Safe to retry."
+    description: "Start or reopen a task by id (incomplete, In Progress). Safe to retry."
   },
   finish_task: {
-    audience: ["nora", "bot", "member"],
+    audience: ["nora", "bot", "member", "worker"],
     title: "Finish a workspace task",
-    description: "Mark a task complete by its stable id and move it to Done. Call only after the task's completion criteria and validation are satisfied. Safe to retry."
+    description: "Mark a task complete by id and move it to Done after its criteria are satisfied. Safe to retry."
   },
   move_task: {
-    audience: ["nora", "bot", "member"],
+    audience: ["nora", "bot", "member", "worker"],
     title: "Move a workspace task",
-    description: "Move a task to another column of this workspace's task board, by its path (from list_tasks) and the column's id or title."
+    description: "Move a task to another column by path (from list_tasks) and column id or title."
   },
   list_workflows: {
     audience: ["nora"],
@@ -258,7 +286,7 @@ export const NORA_TOOLS = {
 export const noraToolsStatusSchema = z.object({
   /** Running once the first Nora thread has started its loopback server this session. */
   status: z.enum(["idle", "running"]),
-  tools: z.array(z.object({ name: z.string().min(1), description: z.string(), audience: z.array(z.enum(["nora", "bot", "member"])) }).strict())
+  tools: z.array(z.object({ name: z.string().min(1), description: z.string(), audience: z.array(z.enum(["nora", "bot", "worker", "member"])) }).strict())
 }).strict();
 
 export function noraToolsStatus(status: NoraToolsStatus["status"]): NoraToolsStatus {

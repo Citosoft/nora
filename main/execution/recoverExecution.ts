@@ -1,7 +1,7 @@
 import type { StoreTransaction } from "@main/types/execution/store.types";
 import type { EventPayload } from "@shared/types/conversation/contracts.types";
 import { finalizeReview } from "./finalizeReview";
-import { isActiveRun } from "./projection";
+import { isActiveRun } from "@shared/conversations/runActivity";
 import { finalizeSteering } from "./finalizeSteering";
 
 /** Recover durable intent only after acquiring sole environment ownership. */
@@ -21,6 +21,10 @@ export function recoverExecution(transaction: StoreTransaction, now: string, nex
         final: { status: "unavailable", reason: "interrupted" } });
       finalizeReview(transaction, effect, { status: "unavailable", reason: "interrupted" }, now, nextId);
     }
+  }
+  // Restoring checks every file against the turn's recorded state first, so an interrupted undo is safe to run again.
+  for (const effect of transaction.unfinishedEffects().filter((entry) => entry.action.kind === "undo")) {
+    transaction.putEffect({ ...effect, status: "pending" });
   }
   for (const snapshot of transaction.activeStates()) {
     const events: EventPayload[] = [];
@@ -46,7 +50,7 @@ export function recoverExecution(transaction: StoreTransaction, now: string, nex
     }
   }
   for (const effect of transaction.unfinishedEffects()) {
-    if (effect.action.kind === "review") continue;
+    if (effect.action.kind === "review" || effect.action.kind === "undo") continue;
     const owner = transaction.state(effect.conversationId, effect.runId)?.runs.find((run) => run.id === effect.runId && run.attemptId === effect.attemptId);
     if (effect.status !== "done" && (!owner || !isActiveRun(owner))) transaction.putEffect({ ...effect, status: "done" });
   }

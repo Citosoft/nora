@@ -63,7 +63,7 @@ test("an OAuth connector follows its authentication challenge to sign in through
   assert.ok(created);
   await settled(created.id);
   assert.equal(status(created.id), "needs-auth");
-  assert.deepEqual(await service.endpoints(ANY_THREAD), [], "a connector waiting on sign-in is not handed to threads");
+  assert.equal((await service.endpoints(ANY_THREAD)).length, 1, "OAuth connectors waiting on sign-in stay attachable so a tool call can open the authorize card");
 
   const [signedIn] = await service.signIn(created.id);
   assert.equal(opened.length, 1);
@@ -93,7 +93,7 @@ test("an OAuth connector follows its authentication challenge to sign in through
 
   await service.signOut(created.id);
   assert.equal(status(created.id), "needs-auth");
-  assert.deepEqual(await service.endpoints(ANY_THREAD), []);
+  assert.equal((await service.endpoints(ANY_THREAD)).length, 1, "signed-out OAuth connectors stay attachable for re-authorize");
 });
 
 test("a rejected refresh marks the connector as needing sign-in instead of failing silently", async (t) => {

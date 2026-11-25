@@ -1,17 +1,16 @@
-import { createHash } from "node:crypto";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { CheckpointEntry, FileSnapshot } from "@main/types/execution/checkpoints.types";
+import type { FileSnapshot } from "@main/types/execution/checkpoints.types";
 import type { TurnChange, TurnReview } from "@shared/types/conversation/review.types";
 import { turnReviewSchema } from "@shared/conversations/checkpoints";
 import { runWorkspaceGit } from "../gitProcess";
+import { readCheckpointEntry } from "./gitObjects";
+import { entryDigest, snapshotEntries } from "./entries";
 
 const maxPatchBytes = 128 * 1024;
 const maxReviewBytes = 512 * 1024;
 const maxTextPatches = 128;
-const digest = (file: CheckpointEntry | undefined): string | null => file && !("content" in file) ? file.hash : file
-  ? createHash("sha256").update(Buffer.from(file.content, "base64")).digest("hex") : null;
 const binary = (content: Buffer): boolean => {
   if (content.includes(0)) return true;
   try { new TextDecoder("utf-8", { fatal: true }).decode(content); return false; } catch { return true; }
@@ -26,10 +25,13 @@ async function patchBody(executable: string, directory: string): Promise<string>
   }
 }
 
-/** Compare durable bytes, never the current checkout. External edits during the interval remain included. */
-export async function compareSnapshots(executable: string, baseline: FileSnapshot, final: FileSnapshot): Promise<TurnReview> {
-  const before = new Map([...baseline.files, ...(baseline.omitted ?? [])].map((file) => [file.path, file]));
-  const after = new Map([...final.files, ...(final.omitted ?? [])].map((file) => [file.path, file]));
+/**
+ * Compare durable bytes, never the current checkout. External edits during the interval remain included.
+ * `root` is the repository whose object database holds indexed files' bytes; each read is verified against the recorded hash.
+ */
+export async function compareSnapshots(executable: string, root: string, baseline: FileSnapshot, final: FileSnapshot): Promise<TurnReview> {
+  const before = snapshotEntries(baseline);
+  const after = snapshotEntries(final);
   const paths = [...new Set([...before.keys(), ...after.keys()])].sort();
   const changes: TurnChange[] = [];
   let bytes = 0;
@@ -39,13 +41,14 @@ export async function compareSnapshots(executable: string, baseline: FileSnapsho
   try {
     for (const path of paths) {
       const previous = before.get(path); const current = after.get(path);
-      if (digest(previous) === digest(current) && previous?.mode === current?.mode) continue;
-      const oldContent = Buffer.from(previous && "content" in previous ? previous.content : "", "base64");
-      const newContent = Buffer.from(current && "content" in current ? current.content : "", "base64");
+      if (entryDigest(previous) === entryDigest(current) && previous?.mode === current?.mode) continue;
       const change: TurnChange = { path, kind: !previous ? "added" : !current ? "deleted" : "modified",
-        beforeMode: previous?.mode ?? null, afterMode: current?.mode ?? null, beforeHash: digest(previous), afterHash: digest(current),
+        beforeMode: previous?.mode ?? null, afterMode: current?.mode ?? null, beforeHash: entryDigest(previous), afterHash: entryDigest(current),
         presentation: "text", patch: null };
-      if ((previous && !("content" in previous)) || (current && !("content" in current))) change.presentation = "too-large";
+      const oldContent = await readCheckpointEntry(executable, root, previous);
+      const newContent = await readCheckpointEntry(executable, root, current);
+      // Fingerprint-only or unreadable bytes cannot be diffed; the shared contract reports every such case as too-large.
+      if (!oldContent || !newContent) change.presentation = "too-large";
       else if (binary(oldContent) || binary(newContent)) change.presentation = "binary";
       else if (Date.now() > patchDeadline || textPatches >= maxTextPatches || bytes >= maxReviewBytes
         || oldContent.length + newContent.length > maxPatchBytes) change.presentation = "too-large";

@@ -12,7 +12,7 @@ function setup() {
   const workspace = { projectId: "native-project", environmentId: "local", checkoutId: "root", path: "/project", branch: "main", access: "write" as const, versionControl: "git" as const };
   const checkout = { ...workspace, checkoutId: "isolated", path: "/managed/worker", branch: "worker" };
   const project: ProjectSummary = { id: "shell-project", name: "Project", rootPath: workspace.path, gitCommonDir: "/project/.git", versionControl: "git", baseBranch: "main", framework: null, platform: "darwin", createdAt: time, updatedAt: time, lastOpenedAt: time };
-  const worktree: WorktreeRecord = { id: "isolated", projectId: project.id, sessionId: "session", branch: "worker", path: checkout.path, createdFromRef: "HEAD", status: "ready", writerAgentId: null, readerAgentIds: [], terminalSessionIds: [], scripts: [], createdAt: time, updatedAt: time, lastUsedAt: time };
+  const worktree: WorktreeRecord = { id: "isolated", projectId: project.id, sessionId: "session", branch: "worker", path: checkout.path, createdFromRef: "HEAD", status: "ready", readerAgentIds: [], terminalSessionIds: [], scripts: [], createdAt: time, updatedAt: time, lastUsedAt: time };
   const boot: NativeBoot = { environmentId: "local", cursor: 0, sharedBots: [], noraTools: noraToolsStatus("idle"), providers: [],
     personalization: { defaultRole: null, workspaceRoles: {} }, workspaces: [{ id: workspace.projectId, name: "Project", kind: "repository", shellProjectId: project.id, workspace }] };
   const calls: string[] = [];

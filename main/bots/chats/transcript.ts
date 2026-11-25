@@ -1,6 +1,10 @@
 import type { TimelineItem } from "@shared/types/conversation/contracts.types";
 
-const TRANSCRIPT_MAX_CHARS = 40_000;
+/**
+ * Bound for chat handoffs (new tasks, continue deltas, group "since last spoke"). Session resume and `chat_history` keep
+ * older context; this only needs a recent slice so cold starts stay cheap.
+ */
+const TRANSCRIPT_MAX_CHARS = 4_000;
 type MessageItem = Extract<TimelineItem, { kind: "message" }>;
 
 /**
@@ -10,6 +14,11 @@ type MessageItem = Extract<TimelineItem, { kind: "message" }>;
 export function chatTranscript(messages: readonly MessageItem[], since: number, maxChars = TRANSCRIPT_MAX_CHARS): string {
   const transcript = messages.slice(since + 1).map((item) => `[${item.role === "user" ? "User" : item.author?.name ?? "Nora"}]: ${item.text}`).join("\n\n");
   return transcript.length > maxChars ? `[…earlier messages omitted; call chat_history to read them]\n${transcript.slice(-maxChars)}` : transcript;
+}
+
+/** Opening transcript for a new work thread: same bound as continuing handoffs. */
+export function openingChatTranscript(messages: readonly MessageItem[]): string {
+  return chatTranscript(messages, -1, TRANSCRIPT_MAX_CHARS);
 }
 
 /** The complete, non-empty messages of a chat timeline, oldest first. */

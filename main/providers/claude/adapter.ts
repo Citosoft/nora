@@ -74,7 +74,7 @@ export class ClaudeAdapter implements ExecutionProvider {
     }
   }
 
-  async start(execution: ProviderExecution, emit: EmitProviderUpdate): Promise<void> {
+  async start(execution: ProviderExecution, emit: EmitProviderUpdate, canStart?: () => boolean): Promise<void> {
     const { snapshot, run } = execution;
     // A new instruction supersedes a previous turn's optional prediction work.
     for (const previous of this.active.values()) {
@@ -103,10 +103,14 @@ export class ClaudeAdapter implements ExecutionProvider {
       : runMcpServers(runContext);
     this.runServers.set(snapshot.conversation.id, mcpServers);
     const accountExtras = threadLoadsAccountExtras(snapshot.conversation);
-    // Only a working thread can call MCP tools at all, so a scoped one is never handed account connectors.
-    const accountConnectorNames = !accountExtras && toolScope === "full" ? runContext.accountConnectors ?? [] : [];
+    // Agent threads (bots/chats/write workers) may reconnect only the account connectors the bot named; other scopes do not.
+    const accountConnectorNames = toolScope === "agent" ? runContext.accountConnectors ?? [] : [];
     const accountConnectors = accountConnectorNames.length && this.options.accountConnectors
       ? await this.options.accountConnectors.resolve(snapshot.conversation.workspace.path, accountConnectorNames) : {};
+    if (canStart && !canStart()) {
+      emit({ ...base, eventId: "cancelled-before-start", kind: "finished", status: "interrupted", usage: null, failure: null });
+      return;
+    }
     emit({ ...base, eventId: "native-binding", kind: "bound", nativeConversationId: sessionId });
     const session = this.options.open({ sessionId, resume: !!snapshot.conversation.nativeConversationId,
       ...(autoCompactTokens ? { autoCompactTokens } : {}),
@@ -225,6 +229,9 @@ export class ClaudeAdapter implements ExecutionProvider {
     const active = this.active.get(execution.run.attemptId);
     if (!active) throw new Error("Claude owner is not reachable");
     await active.session.interrupt();
+  }
+  async forceInterrupt(execution: ProviderExecution): Promise<void> {
+    await this.active.get(execution.run.attemptId)?.session.close();
   }
   async reconcile(execution: ProviderExecution, emit: EmitProviderUpdate): Promise<void> {
     // SDK history is not an authoritative live-turn/approval lookup. Never resume by resending.

@@ -23,7 +23,7 @@ const lifecycleSchema = z.object({
 export const generalSettingsSchema = portableSettingsSchema.pick({
   defaultSplitViewGridColumns: true, defaultSplitViewGridRows: true, rememberLastSplitViewPerWorkspace: true,
   confirmSplitViewDelete: true, showWorkspaceSessionTabs: true, agentCompletionNotificationsEnabled: true,
-  openInternalBrowserOnNewPortDetection: true, fileEditorThemeId: true, threadBackdrop: true
+  phonePushNotificationsEnabled: true, openInternalBrowserOnNewPortDetection: true, fileEditorThemeId: true, uiFontSize: true, threadBackdrop: true
 }).extend({
   hardwareAccelerationEnabled: z.boolean().describe("Requires an app restart to take effect."),
   workspaceStateStorageMode: z.enum(["home", "repo"]),

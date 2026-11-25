@@ -54,6 +54,7 @@ const result = await build({
   jsx: "automatic",
   sourcemap: false,
   define: {
+    "process.env.NODE_ENV": JSON.stringify("production"),
     __NORA_IS_PRODUCTION__: "true",
     __NORA_POSTHOG_API_KEY__: JSON.stringify(process.env.NORA_POSTHOG_API_KEY ?? ""),
     __NORA_POSTHOG_HOST__: JSON.stringify(process.env.NORA_POSTHOG_HOST ?? ""),

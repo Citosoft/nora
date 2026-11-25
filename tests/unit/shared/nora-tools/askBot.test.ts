@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { askBotReplyText, askBotThreadId, askBotThreadMark, formatAskBotReply, isAskBotCall } from "@shared/nora-tools/askBot";
+import { askBotReplyText, askBotThreadId, askBotThreadMark, formatAskBotFinishedNotice, formatAskBotReply, formatAskBotWorking, isAskBotCall, isAskBotWorking } from "@shared/nora-tools/askBot";
 
 test("ask_bot calls are recognised from either runtime's naming", () => {
   assert.equal(isAskBotCall("mcp__nora__ask_bot", undefined), true);
@@ -17,4 +17,15 @@ test("replies and errors carry the asked bot's thread, and only replies yield te
   assert.equal(askBotThreadId(error), "c-9");
   assert.equal(askBotReplyText(error), null);
   assert.equal(askBotThreadId(""), null);
+});
+
+test("working and finished notices cover notify and timeout outcomes", () => {
+  const notify = formatAskBotWorking("Ada", "t1", "notify");
+  const timeout = formatAskBotWorking("Ada", "t1", "timeout");
+  assert.equal(isAskBotWorking(notify), true);
+  assert.equal(isAskBotWorking(timeout), true);
+  assert.match(notify, /Nora will post Ada's answer/);
+  assert.match(timeout, /still working/);
+  assert.match(formatAskBotFinishedNotice("Ada", "t1", { status: "completed", text: "Done.", failure: null }), /finished what you asked \(thread t1\)/);
+  assert.match(formatAskBotFinishedNotice("Ada", "t1", { status: "failed", text: null, failure: "rate limited" }), /could not finish.*rate limited/);
 });

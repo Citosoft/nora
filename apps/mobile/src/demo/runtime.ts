@@ -24,7 +24,7 @@ export function createDemoRuntime(now: () => string = () => new Date().toISOStri
     projects: async () => projectsResponseSchema.parse({ projects: demoProjects }).projects,
     bots: async () => botsResponseSchema.parse({ bots: bots.map(bot => ({ id: bot.id, name: bot.name, role: bot.role, avatar: bot.avatar,
       scope: bot.scope.kind === "global" ? { kind: "global" } : { kind: "workspace", workspaceId: bot.scope.workspaceId },
-      chatConversationId: [...store.threads.values()].find(v => v.header.conversation.direct?.botId === bot.id)?.header.conversation.id ?? null })) }).bots,
+      chatConversationId: [...store.threads.values()].find(v => v.header.conversation.direct?.botId === bot.id && !v.header.conversation.direct.retiredAt)?.header.conversation.id ?? null })) }).bots,
     settings: async () => ({ ...settings }),
     updateSettings: async patch => { settings = { ...settings, ...patch }; return { ...settings }; },
     botSettings: async () => botDefinitionSchema.array().parse(bots),

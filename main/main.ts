@@ -34,6 +34,7 @@ import { DEFAULT_APP_SETTINGS } from "@shared/appTypes";
 import { app, BrowserWindow, session, dialog, ipcMain, shell } from "electron";
 import { openOutputFileWithSystem } from "@main/helpers/openOutputFileWithSystem";
 import { createWorkerWorkspaces } from "./helpers/workerWorkspaces";
+import { createNoraTerminalStore } from "./helpers/noraTerminalStore";
 import { openNativeRuntime } from "./helpers/nativeRuntime";
 import { withMainOwnedSettings } from "./helpers/mainOwnedSettings";
 import { createWindowStartup } from "./helpers/windowStartup";
@@ -51,10 +52,12 @@ import { registerPersonalizationIpc } from "./ipc/registerPersonalizationIpc";
 import { registerBotMemoryIpc } from "./ipc/registerBotMemoryIpc";
 import { registerBotRoutineIpc } from "./ipc/registerBotRoutineIpc";
 import { registerConnectorIpc } from "./ipc/registerConnectorIpc";
+import { registerConnectorAuthPromptIpc } from "./ipc/registerConnectorAuthPromptIpc";
 import { registerAppsIpc } from "./ipc/registerAppsIpc";
 import { createAppFileDialogs } from "./apps/appFileDialogs";
 import { appsBuildingChannel, appsChangedChannel, appsDataChannel } from "@shared/apps/gateway";
 import { connectorsChangedChannel } from "@shared/connectors/gateway";
+import { connectorAuthPromptsChangedChannel } from "@shared/connectors/authPrompt";
 import { registerSecretIpc } from "./ipc/registerSecretIpc";
 import { secretPromptsChangedChannel, secretVaultChangedChannel } from "@shared/secrets/gateway";
 import { registerChatBranchIpc } from "./ipc/registerChatBranchIpc";
@@ -540,6 +543,7 @@ function registerIpc(): void {
   registerBotRoutineIpc({ ipc: ipcMain, isAllowedSender, routines: nativeRuntime.routines });
   if (inbox) registerInboxIpc({ ipc: ipcMain, isAllowedSender, inbox: inbox.service });
   registerConnectorIpc({ ipc: ipcMain, isAllowedSender, connectors: nativeRuntime.connectors });
+  registerConnectorAuthPromptIpc({ ipc: ipcMain, isAllowedSender, prompts: nativeRuntime.connectorAuthPrompts, connectors: nativeRuntime.connectors });
   registerAppsIpc({ ipc: ipcMain, isAllowedSender, apps: nativeRuntime.apps, connectors: nativeRuntime.connectors, installRequests: appInstallRequests, files: createAppFileDialogs(() => mainWindow), now: () => new Date().toISOString() });
   registerSecretIpc({ ipc: ipcMain, isAllowedSender, secrets: nativeRuntime.secrets });
   registerChatBranchIpc({ ipc: ipcMain, isAllowedSender, start: (request) => nativeRuntime.startBranch(request),
@@ -718,6 +722,7 @@ async function bootstrap(): Promise<void> {
     onRoutinesChanged: (botId) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(botRoutinesChangedChannel, { botId }); },
     openExternal: (url) => shell.openExternal(url),
     onConnectorsChanged: (connectors) => { inbox?.service.refreshConnectors(); if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(connectorsChangedChannel, connectors); },
+    onConnectorAuthPromptsChanged: (prompts) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(connectorAuthPromptsChangedChannel, prompts); },
     onSecretPromptsChanged: (prompts) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(secretPromptsChangedChannel, prompts); },
     onSecretVaultChanged: (secrets) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(secretVaultChangedChannel, secrets); },
     onAppsChanged: (apps) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(appsChangedChannel, apps); },
@@ -743,7 +748,16 @@ async function bootstrap(): Promise<void> {
         if (project?.id !== projectId) return "unavailable";
         return isGitProject(project) ? "worktree" : "project-folder";
       }
-    }
+    },
+    terminals: createNoraTerminalStore({
+      workspaceTerminals: () => services.snapshot.getSnapshot().terminals,
+      getLocalTerminal: () => services.snapshot.getLocalTerminalState(),
+      openShellProjectId: () => services.snapshot.getSnapshot().project?.id ?? null,
+      openLocalTerminal: () => services.session.openLocalTerminal(),
+      createWorkspaceTerminal: (payload) => services.session.createTerminal(payload),
+      sendInput: (sessionId, input) => services.session.sendTerminalInput(sessionId, input),
+      focusWorkspaceTerminal: async (sessionId) => { await services.session.focusTerminal(sessionId); }
+    })
   });
   inbox = startInboxRuntime({ host: nativeRuntime.host, stateDirectory: getStateDir(), getMainWindow: () => mainWindow, getAppIcon, focusMainWindow,
     notificationsEnabled: () => appSettings.agentCompletionNotificationsEnabled,
@@ -753,6 +767,7 @@ async function bootstrap(): Promise<void> {
     connectors: () => nativeRuntime.connectors.list(), alerts: () => nativeRuntime.apps.activeAlerts() });
   remoteAccess = createDesktopRemoteAccess({ directory: getStateDir(), runtimeVersion: app.getVersion(), name: os.hostname(),
     management: nativeRuntime.personalization, account: accountRuntime, host: nativeRuntime.host, inbox: inbox.service, boot: () => nativeRuntime.personalization.state(),
+    phonePushEnabled: () => appSettings.phonePushNotificationsEnabled,
     onChanged: (view) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(remoteAccessChangedChannel, view); }
   });
   desktopLifecycle.attachRemoteAccess(remoteAccess);

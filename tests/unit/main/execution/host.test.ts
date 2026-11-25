@@ -153,3 +153,50 @@ test("workflow threads freeze their supplied bot snapshot and pass workflow owne
     assert.deepEqual(host.header("child")?.conversation.source, source);
   } finally { await host.shutdown(); }
 });
+
+test("a live parent releases the startup slot for its delegated thread", async (t) => {
+  const f = fixture(t); f.create(); f.create("child", "conversation");
+  const provider = new ProviderDouble(); const providers = new ProviderRegistry(); providers.register(provider);
+  const host = new ExecutionHost({ store: f.store, providers, workspaces: workspaceAuthority, owner: { id: randomUUID(), processId: process.pid },
+    isProcessAlive: () => true, now: () => "2026-10-21T10:00:00.000Z", nextId: randomUUID, effectConcurrency: 1,
+    shutdownGraceMs: 0, onFailure: (failure) => assert.fail(failure.message) });
+  host.start();
+  try {
+    const running = waitFor(host, "running");
+    await host.execute({ kind: "submit", commandId: "send", conversationId: "conversation", runId: "run", instruction: "Delegate" });
+    await running;
+    const delegated = waitFor(host, "running", "delegated");
+    await host.execute({ kind: "submit", commandId: "delegate", conversationId: "child", runId: "delegated", instruction: "Help the parent" });
+    await delegated;
+    assert.equal(provider.active.size, 2);
+  } finally { await host.shutdown(); }
+});
+
+test("an unconfirmed stop expires without blocking new instructions", async (t) => {
+  t.mock.timers.enable({ apis: ["setInterval"] });
+  const f = fixture(t); f.create();
+  const provider = new ProviderDouble(false); const providers = new ProviderRegistry(); providers.register(provider);
+  let now = Date.parse("2026-10-21T10:00:00.000Z");
+  const hardStops: string[] = [];
+  const interrupt = provider.interrupt.bind(provider);
+  t.mock.method(provider, "interrupt", async (execution: Parameters<typeof interrupt>[0]) => { hardStops.push(execution.run.state); });
+  const host = new ExecutionHost({ store: f.store, providers, workspaces: workspaceAuthority, owner: { id: randomUUID(), processId: process.pid },
+    isProcessAlive: () => true, now: () => new Date(now).toISOString(), nextId: randomUUID, effectConcurrency: 1,
+    shutdownGraceMs: 0, onFailure: (failure) => assert.fail(failure.message) });
+  host.start();
+  try {
+    const running = waitFor(host, "running");
+    await host.execute({ kind: "submit", commandId: "send", conversationId: "conversation", runId: "run", instruction: "Run" });
+    await running;
+    const interrupted = waitFor(host, "interrupted");
+    await host.execute({ kind: "interrupt", commandId: "stop", conversationId: "conversation", runId: "run" });
+    now += 16_000;
+    t.mock.timers.tick(5000);
+    await interrupted;
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.deepEqual(hardStops, ["stopping", "interrupted"]);
+    const next = waitFor(host, "running", "next");
+    await host.execute({ kind: "submit", commandId: "send-next", conversationId: "conversation", runId: "next", instruction: "Continue" });
+    await next;
+  } finally { await host.shutdown(); }
+});

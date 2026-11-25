@@ -1,7 +1,7 @@
 import type { StoreTransaction, ExecutionEffect } from "@main/types/execution/store.types";
 import type { ConversationReview } from "@shared/types/conversation/review.types";
 import type { EventPayload } from "@shared/types/conversation/contracts.types";
-import { isActiveRun } from "./projection";
+import { isActiveRun } from "@shared/conversations/runActivity";
 
 /** Final evidence and outbox retirement share a transaction; provider outcome/recency stay intact. */
 export function finalizeReview(transaction: StoreTransaction, effect: ExecutionEffect, result: ConversationReview,

@@ -1,36 +1,15 @@
 import { createClerkClient } from "@clerk/backend";
 import { runtimeDirectoryEntrySchema } from "@shared/remote-access/directory";
-import type { RuntimeDirectoryEntry } from "@shared/types/remote-access/directory.types";
-import { z } from "zod";
 import { UpstreamError } from "../errors/upstreamError";
+import { parseKeyedMetadata } from "./keyedMetadata";
 import type { ClerkPrivateMetadataApi, RuntimeDirectorySnapshot, RuntimeDirectoryStore } from "../types/directoryStore.types";
 
 /** Private metadata key holding `{ [installationId]: RuntimeDirectoryEntry }`. Never holds credentials. */
 export const DIRECTORY_METADATA_KEY = "noraRuntimes";
 
-const directoryRecordSchema = z.record(z.string(), z.unknown());
-
-/**
- * Pure parse of whatever is stored. Malformed entries (or entries filed under a key that does not match their own
- * installation ID) are skipped and reported, so one bad value never hides the rest of the directory.
- */
+/** Pure parse of whatever is stored; see `parseKeyedMetadata` for how malformed entries are reported. */
 export function parseDirectory(privateMetadata: unknown): RuntimeDirectorySnapshot {
-  const metadata = directoryRecordSchema.safeParse(privateMetadata);
-  if (!metadata.success) return { entries: [], invalidKeys: [], malformed: true };
-  const value = metadata.data[DIRECTORY_METADATA_KEY];
-  if (value === undefined || value === null) return { entries: [], invalidKeys: [] };
-  const raw = directoryRecordSchema.safeParse(value);
-  if (!raw.success) return { entries: [], invalidKeys: [], malformed: true };
-
-  const entries: RuntimeDirectoryEntry[] = [];
-  const invalidKeys: string[] = [];
-  for (const [key, value] of Object.entries(raw.data)) {
-    if (value === null) continue;
-    const entry = runtimeDirectoryEntrySchema.safeParse(value);
-    if (entry.success && entry.data.installationId === key) entries.push(entry.data);
-    else invalidKeys.push(key);
-  }
-  return { entries, invalidKeys };
+  return parseKeyedMetadata(privateMetadata, DIRECTORY_METADATA_KEY, runtimeDirectoryEntrySchema, (entry) => entry.installationId);
 }
 
 /**

@@ -10,7 +10,7 @@ import { migrateExecutionSchema } from "./sqliteSchema";
 import { projectSqliteEvent } from "./sqliteProjection";
 import type { ExecutionOwner, OwnershipStore } from "@main/types/execution/ownership.types";
 import type { StoredCheckpoint } from "@main/types/execution/checkpoints.types";
-import { saveCheckpoint } from "./checkpoints/storage";
+import { deleteCheckpoint, pinCheckpointBlobs, saveCheckpoint } from "./checkpoints/storage";
 
 const storedReceiptSchema = z.object({ key: z.string(), fingerprint: z.string(), receipt: commandReceiptSchema }).strict();
 const cursorRowSchema = z.object({ cursor: z.number().int().nonnegative() });
@@ -116,6 +116,19 @@ export class SqliteExecutionStore extends SqliteQueries implements ExecutionStor
   putCheckpoint(checkpoint: StoredCheckpoint): void {
     this.requireTransaction();
     saveCheckpoint(this.database, checkpoint);
+  }
+  interruptCheckpoint(conversationId: string, runId: string): void {
+    this.requireTransaction();
+    this.database.prepare(`UPDATE turn_checkpoints SET json = json_set(json, '$.continuity', 'interrupted')
+      WHERE conversation_id = ? AND run_id = ? AND json_extract(json, '$.final') IS NULL`).run(conversationId, runId);
+  }
+  pinCheckpointBlobs(conversationId: string, runId: string, contents: readonly Uint8Array[]): void {
+    this.requireTransaction();
+    pinCheckpointBlobs(this.database, conversationId, runId, contents);
+  }
+  deleteCheckpoint(conversationId: string, runId: string): void {
+    this.requireTransaction();
+    deleteCheckpoint(this.database, conversationId, runId);
   }
   appendEvent(id: string, conversationId: string, at: string, payload: EventPayload): ConversationEvent {
     this.requireTransaction();

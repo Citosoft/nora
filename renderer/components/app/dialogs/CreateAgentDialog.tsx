@@ -275,11 +275,6 @@ export function CreateAgentDialog({
   const isLaunchBlocked =
     !detectedTools.length ||
     !formState.toolId ||
-    (
-      formState.target.kind === "existing" &&
-      formState.mode === "write" &&
-      !!selectedExistingWorktree?.writerAgentId
-    ) ||
     isWorkspaceStepBlocked;
   const handleStartAgent = () => {
     const branchNameValue = branchName.trim();
@@ -496,7 +491,7 @@ export function CreateAgentDialog({
                         >
                           {worktrees.map((worktree) => (
                             <option key={worktree.id} value={worktree.id}>
-                              {worktree.branch} {worktree.writerAgentId ? "(writer busy)" : ""}
+                              {worktree.branch}
                             </option>
                           ))}
                         </Select>
@@ -569,7 +564,7 @@ export function CreateAgentDialog({
                       <span className="font-medium text-foreground">{launchTargetSummary}</span>
                       <span className="mt-1 block text-xs text-muted-foreground">
                         {formState.mode === "write"
-                          ? "This agent can modify files. Existing worktrees with an active writer cannot take another writer."
+                          ? "This agent can modify files in the selected checkout."
                           : "Read-only agents never get write access."}
                       </span>
                     </div>

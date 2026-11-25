@@ -20,7 +20,8 @@ export function GeneralSettingsSection() {
     appSettings,
     updateWorkspaceStateStorageMode,
     updateDefaultAgentLaunchTarget,
-    updateAgentCompletionNotifications
+    updateAgentCompletionNotifications,
+    updatePhonePushNotifications
   } = useSettingsRuntime();
   const selectedDefaultIdeId = useMemo(
     () => (defaultIdeId && installedIdes.some((ide) => ide.id === defaultIdeId) ? defaultIdeId : ""),
@@ -158,6 +159,17 @@ export function GeneralSettingsSection() {
             checked={appSettings.agentCompletionNotificationsEnabled}
             onChange={updateAgentCompletionNotifications}
             label={appSettings.agentCompletionNotificationsEnabled ? "Enabled" : "Disabled"}
+          />
+        }
+      />
+      <SettingRow
+        title="Notify my phone"
+        description="Send a push to your phone when a thread finishes or needs you."
+        control={
+          <ToggleButton
+            checked={appSettings.phonePushNotificationsEnabled}
+            onChange={updatePhonePushNotifications}
+            label={appSettings.phonePushNotificationsEnabled ? "Enabled" : "Disabled"}
           />
         }
       />

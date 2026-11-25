@@ -6,7 +6,7 @@ import type { NoraRunContext, NoraRunContextResolver, RunMcpServer } from "@main
 export const NORA_MCP_SERVER_NAME = NORA_MCP_SERVER;
 /** Nora's tools run without a runtime approval prompt because they only act inside Nora; the one that runs a command (run_with_secrets) asks the user itself. */
 const NORA_TOOL_NAMES: readonly string[] = Object.keys(NORA_TOOLS) as NoraToolName[];
-/** ask_bot waits for another bot's whole turn, so runtimes must allow long tool calls. */
+/** ask_bot with wait=reply blocks on another bot's turn, so runtimes must allow long tool calls. */
 export const NORA_TOOL_TIMEOUT_SECONDS = 16 * 60;
 const EMPTY: NoraRunContext = { tools: null, connectors: [], guidance: null, turnNotes: null };
 

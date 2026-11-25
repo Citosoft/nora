@@ -29,11 +29,14 @@ const envSchema = z.object({
   CLOUDFLARE_ACCOUNT_ID: z.string().regex(/^[a-f0-9]{32}$/),
   CLOUDFLARE_ZONE_ID: z.string().regex(/^[a-f0-9]{32}$/),
   HOSTNAME_SECRET: z.string().min(32, "HOSTNAME_SECRET must be at least 32 characters"),
+  // Optional so a missing push secret disables only `/v1/push/send`, not the runtime directory.
+  EXPO_ACCESS_TOKEN: z.string().trim().min(1).optional(),
   RUNTIME_HOSTNAME_SUFFIX: hostnameSuffixSchema.default(RUNTIME_HOSTNAME_SUFFIX),
   MAX_RUNTIMES_PER_USER: z.coerce.number().int().min(1).max(MAX_RUNTIMES_CEILING).default(REMOTE_LIMITS.maxRuntimesPerUser),
   ALLOWED_ORIGINS: allowedOriginsSchema.default([REMOTE_WEB_APP_ORIGIN]),
   GENERAL_RATE_LIMITER: rateLimitBindingSchema,
-  PROVISION_RATE_LIMITER: rateLimitBindingSchema
+  PROVISION_RATE_LIMITER: rateLimitBindingSchema,
+  PUSH_RATE_LIMITER: rateLimitBindingSchema
 });
 
 function isExactOrigin(value: string): boolean {
@@ -57,10 +60,12 @@ export function parseWorkerConfig(env: unknown): WorkerConfig | null {
     cloudflareAccountId: value.CLOUDFLARE_ACCOUNT_ID,
     cloudflareZoneId: value.CLOUDFLARE_ZONE_ID,
     hostnameSecret: value.HOSTNAME_SECRET,
+    expoAccessToken: value.EXPO_ACCESS_TOKEN ?? null,
     runtimeHostnameSuffix: value.RUNTIME_HOSTNAME_SUFFIX,
     maxRuntimesPerUser: value.MAX_RUNTIMES_PER_USER,
     allowedOrigins: value.ALLOWED_ORIGINS,
     generalRateLimiter: value.GENERAL_RATE_LIMITER,
-    provisionRateLimiter: value.PROVISION_RATE_LIMITER
+    provisionRateLimiter: value.PROVISION_RATE_LIMITER,
+    pushRateLimiter: value.PUSH_RATE_LIMITER
   };
 }

@@ -1,4 +1,5 @@
 import { DIRECTORY_ROUTES, provisionRuntimeResponseSchema, runtimeResponseSchema, directoryErrorSchema, deleteRuntimeResponseSchema } from "@shared/remote-access/directory";
+import { PUSH_ROUTES, sendPushResponseSchema } from "@shared/remote-access/push";
 import type { ControlPlaneOptions, RemoteControlPlane } from "@main/types/remote-access/controlPlane.types";
 import { NORA_RELAY_NAME } from "@shared/remote-access/constants";
 
@@ -23,6 +24,7 @@ export function createRemoteControlPlane(options: ControlPlaneOptions): RemoteCo
     async provision(session, input, signal) { return provisionRuntimeResponseSchema.parse(await request(session, DIRECTORY_ROUTES.provision, "POST", signal, JSON.stringify(input))); },
     async rename(session, id, name, signal) { return runtimeResponseSchema.parse(await request(session, DIRECTORY_ROUTES.runtime(id), "PATCH", signal, JSON.stringify({ name }))).runtime; },
     async rotate(session, id, signal) { return provisionRuntimeResponseSchema.parse(await request(session, DIRECTORY_ROUTES.rotate(id), "POST", signal)); },
-    async remove(session, id, signal) { const result = await request(session, DIRECTORY_ROUTES.runtime(id), "DELETE", signal); if (result !== null) deleteRuntimeResponseSchema.parse(result); }
+    async remove(session, id, signal) { const result = await request(session, DIRECTORY_ROUTES.runtime(id), "DELETE", signal); if (result !== null) deleteRuntimeResponseSchema.parse(result); },
+    async sendPush(session, input, signal) { return sendPushResponseSchema.parse(await request(session, PUSH_ROUTES.send, "POST", signal, JSON.stringify(input))); }
   };
 }

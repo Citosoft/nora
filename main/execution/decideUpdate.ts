@@ -3,7 +3,8 @@ import type { ProviderUpdate } from "@main/types/execution/provider.types";
 import type { EventPayload } from "@shared/types/conversation/contracts.types";
 import type { ConversationState } from "@main/types/execution/store.types";
 import { ExecutionCommandError } from "./errors";
-import { isActiveRun, projectState } from "./projection";
+import { projectState } from "./projection";
+import { isActiveRun } from "@shared/conversations/runActivity";
 import { decideCommand } from "./decideCommand";
 
 export function decideUpdate(snapshot: ConversationState, update: ProviderUpdate, context: DecisionContext): Decision {
@@ -38,7 +39,7 @@ export function decideUpdate(snapshot: ConversationState, update: ProviderUpdate
       }
       add({ kind: "conversation", conversation: { ...snapshot.conversation, nativeConversationId: update.nativeConversationId, pendingHandoffRunId: undefined, updatedAt: context.now } });
       add({ kind: "run", run: { ...run, nativeTurnId: update.nativeTurnId,
-        state: run.state === "stopping" ? "stopping" : "running", failure: null, updatedAt: context.now } });
+        state: run.state === "stopping" ? "stopping" : "running", failure: null, updatedAt: run.state === "stopping" ? run.updatedAt : context.now } });
       break;
     case "item": {
       if (update.item.kind === "review") throw new ExecutionCommandError("invalid", "Review evidence belongs to the execution host");

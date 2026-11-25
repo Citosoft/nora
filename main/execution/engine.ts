@@ -7,7 +7,7 @@ import type { ProviderUpdate } from "@main/types/execution/provider.types";
 import { decideCommand } from "./decideCommand";
 import { decideUpdate } from "./decideUpdate";
 import { ExecutionCommandError } from "./errors";
-import { isActiveRun } from "./projection";
+import { isActiveRun } from "@shared/conversations/runActivity";
 import { providerUpdateSchema } from "./providerUpdateSchema";
 import { commandFingerprint } from "./commandIdentity";
 import { finalizeReview } from "./finalizeReview";
@@ -16,8 +16,12 @@ import type { SteeringResult } from "@main/types/execution/steering.types";
 import { recoverExecution } from "./recoverExecution";
 import { conversationReviewSchema } from "@shared/conversations/review";
 import type { ConversationReview } from "@shared/types/conversation/review.types";
-import type { CheckpointCapture } from "@main/types/execution/checkpoints.types";
-import { recordCheckpoint } from "./checkpoints/record";
+import type { CheckpointCapture, UndoOutcome } from "@main/types/execution/checkpoints.types";
+import { pruneCheckpoints } from "./checkpoints/retention";
+import { finalizeUndo } from "./finalizeUndo";
+import { resolveUndoTarget } from "./decideUndo";
+import { turnUndoStateSchema } from "@shared/conversations/turnUndo";
+import { invalidateOverlappingBaselines, mayBeWriting, recordCheckpoint } from "./checkpoints/record";
 import { hasPendingCheckpointReview } from "./checkpoints/admission";
 import type { PreparedCommand } from "@main/types/execution/preparedCommand.types";
 import { assertTransitionIdle } from "./provider-transition/admission";
@@ -80,12 +84,16 @@ export class ConversationEngine {
       const decision = decideCommand(decisionCommand, { now, environmentId: this.deps.store.environmentId, state,
         steerFollowUp, providerTransition, providerConnection, bot, group, direct,
         pinTarget: decisionCommand.kind === "set-message-pin" && decisionCommand.pinned ? transaction.item(decisionCommand.conversationId, decisionCommand.itemId) : undefined,
+        undoTarget: decisionCommand.kind === "undo-turn" ? resolveUndoTarget(transaction, decisionCommand.conversationId, decisionCommand.runId) : undefined,
         admission: transaction });
       const created = decision.events.find((event) => event.kind === "conversation");
       const events = command.kind === "create" && externalTranscript && created?.kind === "conversation"
         ? externalImportEvents(created.conversation, externalTranscript) : decision.events;
       const cursor = this.commitEvents(transaction, command.conversationId, now, events);
-      for (const effect of decision.effects) transaction.putEffect(effect);
+      for (const effect of decision.effects) {
+        if (effect.action.kind === "interrupt" && effect.action.force) transaction.interruptCheckpoint(effect.conversationId, effect.runId);
+        transaction.putEffect(effect);
+      }
       const receipt = { commandId: command.commandId, conversationId: command.conversationId, cursor, acceptedAt: now };
       transaction.putReceipt({ key, fingerprint, receipt });
       return receipt;
@@ -110,7 +118,9 @@ export class ConversationEngine {
 
   accept(input: ProviderUpdate): void {
     this.deps.assertOwnership();
-    const update = providerUpdateSchema.parse(input);
+    const parsed = providerUpdateSchema.safeParse(input);
+    if (!parsed.success) throw new ExecutionCommandError("invalid", "Provider update did not match the execution protocol");
+    const update = parsed.data;
     const commandId = JSON.stringify(["provider", update.conversationId, update.attemptId, update.eventId]);
     const fingerprint = commandFingerprint(update);
     this.deps.store.transaction((transaction) => {
@@ -127,8 +137,7 @@ export class ConversationEngine {
         previousItem: update.kind === "item" ? transaction.item(update.conversationId, update.item.id) : null,
         previousRequest: update.kind === "request" ? transaction.request(update.conversationId, update.request.id) : null });
       if (decision.events.some((payload) => payload.kind === "run" && payload.run.state === "recovering")) {
-        const checkpoint = transaction.checkpoint(update.conversationId, update.runId);
-        if (checkpoint && !checkpoint.final) transaction.putCheckpoint({ ...checkpoint, continuity: "interrupted" });
+        transaction.interruptCheckpoint(update.conversationId, update.runId);
       }
       const cursor = this.commitEvents(transaction, update.conversationId, now, decision.events);
       for (const effect of decision.effects) transaction.putEffect(effect);
@@ -139,11 +148,29 @@ export class ConversationEngine {
 
   snapshot(conversationId: string): ConversationSnapshot | null { return this.deps.store.snapshot(conversationId); }
   execution(conversationId: string, runId: string) { return this.deps.store.execution(conversationId, runId); }
+  isStarting(conversationId: string, runId: string, attemptId: string): boolean {
+    return this.deps.store.state(conversationId, runId)?.runs.some((run) => run.id === runId && run.attemptId === attemptId && run.state === "starting") ?? false;
+  }
   checkpoint(conversationId: string, runId: string) { return this.deps.store.checkpoint(conversationId, runId); }
+  checkpointBlob(hash: string): Buffer | null { return this.deps.store.checkpointBlob(hash); }
+  item(conversationId: string, itemId: string) { return this.deps.store.item(conversationId, itemId); }
 
+  /** A new baseline starts a turn, which is when the oldest retained turns fall out of undo's reach. */
   recordCheckpoint(effectId: string, phase: "baseline" | "final", capture: CheckpointCapture): boolean {
     this.deps.assertOwnership();
-    return this.deps.store.transaction((transaction) => recordCheckpoint(transaction, effectId, phase, capture));
+    const recorded = this.deps.store.transaction((transaction) => {
+      const saved = recordCheckpoint(transaction, effectId, phase, capture);
+      const effect = transaction.effect(effectId);
+      if (saved && phase === "baseline" && effect) pruneCheckpoints(transaction, effect.conversationId, this.deps.now(), this.deps.nextId);
+      return saved;
+    });
+    this.publish();
+    return recorded;
+  }
+
+  pinCheckpointBlobs(conversationId: string, runId: string, contents: readonly Uint8Array[]): void {
+    this.deps.assertOwnership();
+    this.deps.store.transaction((transaction) => transaction.pinCheckpointBlobs(conversationId, runId, contents));
   }
 
   claimEffect(allowed?: readonly ExecutionEffect["action"]["kind"][]): ExecutionEffect | null {
@@ -155,11 +182,19 @@ export class ConversationEngine {
         const snapshot = transaction.state(effect.conversationId, effect.runId);
         const run = snapshot?.runs.find((entry) => entry.id === effect.runId && entry.attemptId === effect.attemptId);
         const reviewable = run && !isActiveRun(run) && run.state !== "queued" && run.review === "pending";
+        if (effect.action.kind === "undo") {
+          if (!run || !snapshot) { transaction.putEffect({ ...effect, status: "done" }); continue; }
+          // Admission refused busy checkouts. A turn sent since waits at its start for this undo, so only a turn already writing is waited out.
+          if (snapshot.runs.some((entry) => mayBeWriting(transaction, entry))) continue;
+          const claimed = { ...effect, status: "claimed" as const };
+          transaction.putEffect(claimed); return claimed;
+        }
         if (effect.action.kind === "steer" && run) {
           const claimed = { ...effect, status: "claimed" as const };
           transaction.putEffect(claimed); return claimed;
         }
-        if (!run || (effect.action.kind === "review" ? !reviewable : !isActiveRun(run))) {
+        const forceStop = effect.action.kind === "interrupt" && effect.action.force && run?.state === "interrupted";
+        if (!run || (!forceStop && (effect.action.kind === "review" ? !reviewable : !isActiveRun(run)))) {
           transaction.putEffect({ ...effect, status: "done" }); continue;
         }
         if (run.state === "recovering" && effect.action.kind !== "reconcile") {
@@ -169,7 +204,10 @@ export class ConversationEngine {
           transaction.putEffect({ ...effect, status: "done" });
           continue;
         }
-        if (effect.action.kind === "start" && snapshot && hasPendingCheckpointReview(transaction, snapshot.conversation.workspace)) continue;
+        if (effect.action.kind === "start" && snapshot) {
+          if (hasPendingCheckpointReview(transaction, snapshot.conversation.workspace)) continue;
+          invalidateOverlappingBaselines(transaction, effect, snapshot.conversation.workspace);
+        }
         if (effect.action.kind === "respond") {
           const { requestId } = effect.action;
           const request = snapshot?.requests.find((entry) => entry.id === requestId);
@@ -192,6 +230,7 @@ export class ConversationEngine {
       const effect = transaction.effect(effectId);
       if (!effect || effect.status !== "claimed") throw new ExecutionCommandError("conflict", "Effect is not claimed");
       if (effect.action.kind === "review") throw new ExecutionCommandError("conflict", "Review evidence must be finalized before retiring its effect");
+      if (effect.action.kind === "undo") throw new ExecutionCommandError("conflict", "Undo outcome must be recorded before retiring its effect");
       transaction.putEffect({ ...effect, status: "done" });
     });
   }
@@ -232,6 +271,19 @@ export class ConversationEngine {
       if (effect.status === "done") return;
       if (effect.status !== "claimed") throw new ExecutionCommandError("conflict", "Review is not claimed");
       finalizeReview(transaction, effect, result, this.deps.now(), this.deps.nextId);
+    });
+    this.publish();
+  }
+
+  finishUndo(effectId: string, outcome: UndoOutcome): void {
+    this.deps.assertOwnership();
+    this.deps.store.transaction((transaction) => {
+      const effect = transaction.effect(effectId);
+      if (!effect || effect.action.kind !== "undo") throw new ExecutionCommandError("conflict", "Effect is not an undo");
+      if (effect.status === "done") return;
+      if (effect.status !== "claimed") throw new ExecutionCommandError("conflict", "Undo is not claimed");
+      const at = this.deps.now();
+      finalizeUndo(transaction, effect, turnUndoStateSchema.parse({ ...outcome, at }), at, this.deps.nextId);
     });
     this.publish();
   }

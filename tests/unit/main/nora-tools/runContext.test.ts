@@ -12,8 +12,9 @@ import { bot } from "../../shared/bots/fixtures";
 const endpoint = { url: "http://127.0.0.1:1/mcp", token: "t" };
 const server = (available: boolean): NoraToolServer => ({ resolve: async () => available ? endpoint : null, running: () => available, close: async () => {} });
 const linear: RunMcpServer = { name: "linear", url: "http://127.0.0.1:2/connectors/a", token: "g" };
-const connectors = (servers: RunMcpServer[] = [], subjects: ConnectorSubject[] = [], chosen: (readonly string[] | undefined)[] = []): RunContextConnectors => ({
-  endpoints: async (subject, only) => { subjects.push(subject); chosen.push(only); return servers; },
+const connectors = (servers: RunMcpServer[] = [], subjects: ConnectorSubject[] = [], chosen: (readonly string[] | undefined)[] = [],
+  conversationIds: (readonly string[] | undefined)[] = []): RunContextConnectors => ({
+  endpoints: async (subject, only, ids) => { subjects.push(subject); chosen.push(only); conversationIds.push(ids); return servers; },
   activeCount: (subject, only) => { subjects.push(subject); chosen.push(only); return servers.length; }
 });
 
@@ -32,7 +33,7 @@ test("Nora threads get their own notes and the continuity guidance; bots get the
   const nora = await resolve(conversation("plain"));
   assert.deepEqual(nora.tools, endpoint);
   assert.match(nora.guidance ?? "", /You are Nora/);
-  assert.match(nora.guidance ?? "", /save it with remember/);
+  assert.match(nora.guidance ?? "", /remember/);
   assert.match(nora.guidance ?? "", /- \[n1\] Prefers dark mode/);
   assert.doesNotMatch(nora.guidance ?? "", /Ada's note/);
   const ada = await resolve(conversation("bot", { bot: snapshotBot(bot("ada")) }));
@@ -47,10 +48,10 @@ test("Nora threads are told to orchestrate; worker threads are briefed as worker
   assert.match(worker, /You are a worker thread/);
   assert.doesNotMatch(worker, /You are Nora|start_thread/);
   const botWorker = (await resolve(conversation("ada-worker", { parentId: "plain", source: { kind: "worker" }, bot: snapshotBot(bot("ada")) }))).guidance ?? "";
-  assert.match(botWorker, /You are a worker thread[\s\S]*ask other bots/);
+  assert.match(botWorker, /You are a worker thread[\s\S]*ask_bot/);
   assert.doesNotMatch(botWorker, /start_thread/);
   const botTask = (await resolve(conversation("ada-task", { bot: snapshotBot(bot("ada")) }))).guidance ?? "";
-  assert.match(botTask, /start_thread[\s\S]*message_thread[\s\S]*wait_for_threads/);
+  assert.match(botTask, /start_thread[\s\S]*wait_for_threads[\s\S]*message_thread/);
 });
 
 test("notes that do not fit are counted and pointed at recall; without tools only the notes remain", async (t) => {
@@ -141,4 +142,24 @@ test("an app's builder thread is handed only the connectors chosen for it, and c
   assert.match(builder.guidance ?? "", /then call create_app/);
   const editor = await source.resolve(conversation("editor", { source: { kind: "app", appId: "app-1" } }));
   assert.match(editor.guidance ?? "", /existing app \(id app-1\).*Never call create_app/);
+});
+
+test("plain workers get no connectors by default; Nora's own threads stay unrestricted", async (t) => {
+  const memory = memoryFixture(t);
+  const chosen: (readonly string[] | undefined)[] = [];
+  const source = createRunContext(server(true), memory, connectors([linear], [], chosen));
+  await source.resolve(conversation("worker", { parentId: "plain", source: { kind: "worker" } }));
+  await source.resolve(conversation("plain"));
+  await source.resolve(conversation("bot-worker", { parentId: "plain", source: { kind: "worker" }, bot: snapshotBot(bot("ada")) }));
+  assert.deepEqual(chosen, [[], undefined, undefined], "only bot-less workers force an empty connector list");
+});
+
+test("connector endpoints receive the asking thread and its parents so authorize cards surface on chats", async (t) => {
+  const memory = memoryFixture(t);
+  const conversationIds: (readonly string[] | undefined)[] = [];
+  const parents = new Map([["worker", "chat"], ["chat", "root"]]);
+  const source = createRunContext(server(true), memory, connectors([linear], [], [], conversationIds), () => [],
+    (id) => parents.get(id) ?? null);
+  await source.resolve(conversation("worker", { parentId: "chat", source: { kind: "worker" }, bot: snapshotBot(bot("ada")) }));
+  assert.deepEqual(conversationIds, [["worker", "chat", "root"]]);
 });

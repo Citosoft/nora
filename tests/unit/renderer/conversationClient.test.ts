@@ -10,7 +10,7 @@ import type { ConversationEvent } from "@shared/types/conversation/contracts.typ
 import { fixture, workspaceAuthority } from "../main/execution/fixture";
 import { GatewayFixture, FixtureSubscriber } from "../main/execution/gatewayFixture";
 import { ProviderDouble } from "../main/execution/providerDouble";
-import { snapshot } from "../main/execution/checkpoints/fixture";
+import { snapshot, noRestore } from "../main/execution/checkpoints/fixture";
 import { compareSnapshots } from "@main/execution/checkpoints/diff";
 
 function deferred<T>() {
@@ -81,7 +81,7 @@ test("turn review patches cross the typed IPC/client boundary without exposing u
   const host = new ExecutionHost({ store: f.store, providers, workspaces: workspaceAuthority,
     owner: { id: randomUUID(), processId: process.pid }, isProcessAlive: () => true,
     now: () => "2026-11-09T10:00:00.000Z", nextId: randomUUID, onFailure(failure) { assert.fail(failure.message); },
-    checkpoints: { async capture() { return { status: "ready", snapshot: current }; }, compare: (before, after) => compareSnapshots("git", before, after) } });
+    checkpoints: { ...noRestore, async capture() { return { status: "ready", snapshot: current }; }, compare: (_workspace, before, after) => compareSnapshots("git", ".", before, after) } });
   host.start(); const ipc = new GatewayFixture({ resolveHost: () => host });
   const client = createConversationClient(ipc.bridge(new FixtureSubscriber(1)), "local");
   const seen: ConversationEvent[] = []; const errors: Error[] = [];

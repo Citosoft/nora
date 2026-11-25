@@ -2,13 +2,16 @@ import { createHash } from "node:crypto";
 import { constants } from "node:fs";
 import { lstat, open, readlink, realpath } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import type { CheckpointFile, CheckpointOmission, CheckpointCapture, FileSnapshot } from "@main/types/execution/checkpoints.types";
+import type { CheckpointFile, CheckpointIndexedFile, CheckpointOmission, CheckpointCapture, FileSnapshot } from "@main/types/execution/checkpoints.types";
 import type { WorkspaceAuthority } from "@main/types/execution/workspace.types";
 import type { WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import { normalizeComparablePath } from "@shared/pathComparison";
 import { isNotGitRepository, runWorkspaceGit } from "../gitProcess";
 import { checkpointCaptureSchema, checkpointPathSchema, maxFileBytes, maxSnapshotBytes, maxSnapshotFiles } from "./schema";
 import { CheckpointError } from "./errors";
+import { gitBlobId, readIndexBlobIds } from "./gitObjects";
+
+const sha256 = (content: Buffer): string => createHash("sha256").update(content).digest("hex");
 
 function missing(error: unknown): boolean {
   return error instanceof Error && "code" in error && error.code === "ENOENT";
@@ -22,13 +25,15 @@ export function createFileCapture(executable: string, authority: WorkspaceAuthor
   const verify = async (workspace: WorkspaceRef): Promise<void> => {
     try { await authority.verify(workspace); } catch { throw new CheckpointError("workspace-changed"); }
   };
-  const scan = async (workspace: WorkspaceRef, deadline: number): Promise<Pick<FileSnapshot, "files" | "omitted">> => {
+  const scan = async (workspace: WorkspaceRef, deadline: number): Promise<Pick<FileSnapshot, "files" | "omitted" | "indexed">> => {
     const { stdout } = await runWorkspaceGit(executable, workspace.path, ["ls-files", "--cached", "--others", "--exclude-standard", "-z"]);
     if (stdout && !stdout.endsWith("\0")) throw new CheckpointError("capture-failed");
     const paths = [...new Set(stdout ? stdout.slice(0, -1).split("\0") : [])].sort();
     if (paths.length > maxSnapshotFiles) throw new CheckpointError("limit-exceeded");
+    const indexBlobIds = await readIndexBlobIds(executable, workspace.path);
     const files: CheckpointFile[] = [];
     const omitted: CheckpointOmission[] = [];
+    const indexed: CheckpointIndexedFile[] = [];
     let total = 0;
     for (const path of paths) {
       if (Date.now() > deadline) throw new CheckpointError("limit-exceeded");
@@ -41,14 +46,14 @@ export function createFileCapture(executable: string, authority: WorkspaceAuthor
         const info = await lstat(absolute, { bigint: true });
         if (!info.isFile() && !info.isSymbolicLink()) throw new CheckpointError("unsupported");
         const mode = info.isSymbolicLink() ? "120000" : (info.mode & 0o111n) !== 0n ? "100755" : "100644";
-        const omit = info.size > BigInt(maxFileBytes) || info.size > BigInt(maxSnapshotBytes - total);
+        // Oversized files are only fingerprinted; everything else is read so it can be matched against the index.
+        const omit = info.size > BigInt(maxFileBytes);
         let content: Buffer = Buffer.alloc(0);
         let hash: string | undefined;
         let length = 0;
         if (info.isSymbolicLink()) {
           content = Buffer.from(await readlink(absolute));
           length = content.length;
-          if (omit) hash = createHash("sha256").update(content).digest("hex");
         }
         else {
           const handle = await open(absolute, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
@@ -74,17 +79,20 @@ export function createFileCapture(executable: string, authority: WorkspaceAuthor
         const after = await lstat(absolute, { bigint: true });
         if (after.dev !== info.dev || after.ino !== info.ino || after.size !== info.size || after.mtimeNs !== info.mtimeNs
           || after.ctimeNs !== info.ctimeNs || after.mode !== info.mode || length !== Number(info.size)) throw new CheckpointError("workspace-changed");
+        const object = indexBlobIds.get(path);
         if (hash) omitted.push({ path, mode, hash });
-        else {
+        // Clean files cost nothing: their bytes stay readable from the object database, so the byte budget covers real edits.
+        else if (object && gitBlobId(content, object.length) === object) indexed.push({ path, mode, hash: sha256(content), object });
+        else if (content.length <= maxSnapshotBytes - total) {
           total += content.length;
           files.push({ path, mode, content: content.toString("base64") });
-        }
+        } else omitted.push({ path, mode, hash: sha256(content) });
       } catch (error) {
         if (missing(error)) continue; // Deleted tracked paths are absent from this working-tree snapshot.
         throw error;
       }
     }
-    return omitted.length ? { files, omitted } : { files };
+    return { files, ...(omitted.length ? { omitted } : {}), ...(indexed.length ? { indexed } : {}) };
   };
   return async (workspace) => {
     try {

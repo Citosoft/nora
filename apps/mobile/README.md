@@ -107,11 +107,38 @@ with `npx expo run:ios|android` or EAS (`npx eas-cli build`). Native-specific pi
 | `platform/openExternalUrl` | in-app browser (`expo-web-browser`) | new tab, `noopener` |
 | `platform/foregroundSignals` | `AppState` → active | `visibilitychange` + `online` |
 | `platform/serviceWorker`, `installContext`, `reloadApp` | no-ops | PWA behaviour |
+| `platform/pushNotifications` | `expo-notifications` (permission, Expo token, Android `default` channel, foreground banners, taps) | no-op (`platform: null`) |
 | `components/auth/SignInPanel` | Clerk hosted sign-in (`useHostedAuth`) | Clerk `<SignIn routing="hash">` |
 
 Preferences use AsyncStorage rather than SecureStore on native because nothing stored there is secret (preferences,
 computer names/hostnames, unsent commands) and the cached runtime list can exceed SecureStore's value-size guidance.
 Tokens stay in Clerk's storage only.
+
+### Push notifications
+
+Native iOS and Android builds can notify the user when a thread finishes or something needs them (an approval, a
+question, a connector sign-in, a paused workflow). The phone never hears from its computers directly about this: the
+desktop asks the control-plane Worker to push, and the Worker sends through Expo's push service to every phone
+registered on the account (see `apps/remote-worker/README.md`, contract in `shared/remote-access/push.ts`).
+
+- **Opt-in.** Settings → Notifications (`pushNotificationsEnabled`, off by default). Turning it on asks for the OS
+  permission and registers only if it is granted; when it was refused, Settings explains and offers **Open Settings**
+  (`Linking.openSettings`).
+- **One-time offer.** Once a computer is linked, the home screen shows a card ("Get notified when a thread finishes or
+  needs you") with **Turn on** (same as the Settings switch) and **Not now**. Either answer sets `pushPromptDismissed`
+  and the card never returns; it is skipped when notifications are already on, refused at the OS level or unsupported.
+- **Registration** (`push/pushRegistration.ts`): `POST /v1/push/devices` with a random device ID kept in
+  `nora.pushDevice.v1` (separate from preferences, so it survives sign-out), the Expo token (EAS `projectId` from
+  `expo-constants`) and the platform. It runs after sign-in, when the token rotates and when the app returns to the
+  foreground, only while the setting is on and permission is granted. Turning the setting off or signing out sends
+  `DELETE /v1/push/devices/:deviceId`. Demo mode, the web app and simulators never register. Android builds show the
+  setting only once `app.json` sets `android.googleServicesFile` (Firebase is not set up yet, so today push is iOS-only).
+- **Taps** (`push/pushTaps.ts`, `hooks/usePushNotificationTaps.ts`): the message `data` is parsed with
+  `pushPayloadDataSchema`; a thread target opens that conversation on that computer, anything else opens the
+  computer's inbox. A tap that launched the app waits until sign-in completes and wins over "Open at launch".
+- **Native setup.** `app.json` carries the `expo-notifications` plugin, so a new native build is required (OTA updates
+  cannot add it). iOS needs an APNs key in EAS credentials (`eas credentials -p ios`); Android needs FCM V1 credentials in
+  EAS and a `google-services.json` for `run.withnora.app` referenced from `android.googleServicesFile`.
 
 ### Over-the-air updates
 
@@ -190,6 +217,7 @@ tests/unit/         vitest tests for the non-UI logic
 - Not verified against a real Clerk instance, a real runtime/Worker, or real iPhone/Android devices.
 - Photo and file attachments need a desktop runtime advertising `attachments.upload`; diffs show changed paths only.
 - Connector sign-in requests must be completed on the computer.
-- No push notifications (out of MVP scope); the PWA does not run agents in the background — they run on the computer.
+- Push notifications are native-only; the PWA has no web push and does not run agents in the background — they run on
+  the computer. Delivery receipts are not checked, and Android uses the app icon as the notification icon.
 - Native sign-in uses Clerk's hosted Account Portal; a native-component sign-in flow is not implemented.
 - Bot avatars are a simplified native rendering (palette, rounded shape, eyes), not the desktop SVG artwork.

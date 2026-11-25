@@ -5,6 +5,8 @@ import type { ThreadBackdropSettings } from "./threadBackdrop.types";
 import type { VoiceSettings } from "./voice.types";
 import { DEFAULT_VOICE_SETTINGS } from "../voice/settings";
 import type { Personalization } from "./personalization/roles.types";
+import type { UiFontSize } from "../appearance/fontSize";
+import { DEFAULT_UI_FONT_SIZE } from "../appearance/fontSize";
 
 export type Screen = "project-selector" | "workspace";
 
@@ -299,11 +301,14 @@ export interface AppSettings {
   confirmSplitViewDelete: boolean;
   showWorkspaceSessionTabs: boolean;
   agentCompletionNotificationsEnabled: boolean;
+  /** Push to the user's phones (through the control plane) when a thread finishes or needs them. */
+  phonePushNotificationsEnabled: boolean;
   analyticsConsentStatus: AnalyticsConsentStatus;
   openInternalBrowserOnNewPortDetection: boolean;
   browserDataImportPromptSeen: boolean;
   linuxAptSetupPromptDismissed: boolean;
   fileEditorThemeId: FileEditorThemeId;
+  uiFontSize: UiFontSize;
   threadBackdrop: ThreadBackdropSettings;
   terminalQuickLaunchDefaults: TerminalQuickLaunchDefaults;
   terminalPresets: TerminalPreset[];
@@ -324,11 +329,13 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   confirmSplitViewDelete: true,
   showWorkspaceSessionTabs: true,
   agentCompletionNotificationsEnabled: true,
+  phonePushNotificationsEnabled: true,
   analyticsConsentStatus: "unknown",
   openInternalBrowserOnNewPortDetection: false,
   browserDataImportPromptSeen: false,
   linuxAptSetupPromptDismissed: false,
   fileEditorThemeId: "default",
+  uiFontSize: DEFAULT_UI_FONT_SIZE,
   threadBackdrop: { animated: true, scope: "all" },
   terminalQuickLaunchDefaults: {
     name: "Terminal",

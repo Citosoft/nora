@@ -47,7 +47,6 @@ const rootWorktree: WorktreeRecord = {
   updatedAt: timestamp,
   lastUsedAt: timestamp,
   status: "ready",
-  writerAgentId: null,
   readerAgentIds: [],
   terminalSessionIds: [],
   scripts: []

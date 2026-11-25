@@ -6,6 +6,11 @@ import { routes } from "@/navigation/routes";
 /** Per app launch: when "Open at launch" names a computer, the first visit home jumps to it; going back lands on the dashboard. */
 let openedThisLaunch = false;
 
+/** Something more specific (a tapped notification) is opening; don't also jump to the default computer this launch. */
+export function skipDefaultRuntimeOpen(): void {
+  openedThisLaunch = true;
+}
+
 export function useOpenDefaultRuntimeOnce(defaultRuntimeId: string | null, runtimes: readonly RuntimeDirectoryEntry[] | null): void {
   useEffect(() => {
     if (openedThisLaunch || !runtimes) return;

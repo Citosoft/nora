@@ -3,34 +3,32 @@ import { createMemoryDelivery } from "@main/bots/memory/delivery";
 import type { BotMemoryStore } from "@main/types/bots/memory.types";
 import { joinGuidance } from "@main/nora-tools/endpoint";
 import { connectorSubjectOf } from "@shared/connectors/access";
-import type { NoraRunContextSource, NoraToolServer, RunContextAccountConnectors, RunContextConnectors, RunContextSubject } from "@main/types/nora-tools/noraTools.types";
+import type { Conversation } from "@shared/types/conversation/contracts.types";
+import type { NoraRunContextSource, NoraToolServer, RunContextAccountConnectors, RunContextConnectors, RunContextParentLookup, RunContextSubject } from "@main/types/nora-tools/noraTools.types";
 import { appBuilderGuide, guidanceCarriesAppBuilderGuide } from "@main/apps/builderGuide";
 
 const MEMORY_DIGEST_CHARS = 4000;
+/** Bounds the walk up a thread's parents for authorize cards; ask chains are far shallower than this. */
+const ANCESTORS_MAX = 8;
 const NORA_GUIDANCE = "You are Nora, the user's assistant inside the Nora app. Nora's own tools (server \"nora\") manage the app: "
   + "bots, workspaces, threads, the task board and workflows. When the user @mentions a bot by name, pass the request to that bot with ask_bot "
-  + "and relay its answer. For a job with separable parts, orchestrate: give each part to a worker thread with start_thread (a self-contained brief, "
+  + "(wait=notify by default so you can keep going; Nora posts its answer here when it finishes; wait=reply only when you need the answer this turn). "
+  + "For a job with separable parts, orchestrate: give each part to a worker thread with start_thread (a self-contained brief, "
   + "with the model that suits it from list_models, or a bot that fits), keep the parts apart so workers do not edit the same files, collect their reports "
   + "with wait_for_threads, follow up with message_thread where one falls short, then check and combine the results for the user.";
 /** A worker's first message is its brief and its final message is what the thread that started it reads. */
 const WORKER_GUIDANCE = "You are a worker thread that another thread started to do one part of a larger job; your first message is your brief, and that thread reads your "
   + "final message as your report. Do the part in full and stay within it, then end with a concise report: what you did, the files you changed, "
   + "and anything left undone or uncertain.";
-const BOT_TOOLS_GUIDANCE = "You can ask other bots for help with ask_bot (find them with list_bots).";
-const BOT_WORK_GUIDANCE = "Start separate tasks with start_thread: give each a self-contained brief; by default it runs as you. "
-  + "Keep independent work in separate threads and avoid concurrent edits to the same files. Track your work with list_threads and read_thread, "
-  + "follow up with message_thread, and collect results with wait_for_threads. Tell the user what you started and link its thread. "
-  + "You can follow up on workers you started in earlier threads too.";
+const BOT_TOOLS_GUIDANCE = "Ask other bots with ask_bot (list_bots); wait=notify (default) keeps you moving, wait=reply when you need the answer first.";
+const BOT_WORK_GUIDANCE = "Delegate with start_thread (self-contained brief; default runs as you), keep file edits apart, "
+  + "then wait_for_threads / message_thread / read_thread. Tell the user what you started and link its thread.";
 /** Each thread starts without the others' history, so continuity depends on saving what matters and looking back when work continues. */
-const CONTINUITY_GUIDANCE = "Each thread starts fresh; only your notes carry over. When the user states a preference, a decision is made or you learn "
-  + "a lasting fact about their work, save it with remember before you finish, as one short self-contained note (never secrets). "
-  + "Correct or merge a note you saved by passing its id (shown in brackets) as memory_id, and forget notes that turn out wrong, rather than adding near-duplicates. "
-  + "When a request continues earlier work, search your notes with recall or find the earlier thread with list_threads and read_thread.";
+const CONTINUITY_GUIDANCE = "Threads start fresh; lasting facts go in remember (short notes, never secrets; merge via memory_id). "
+  + "For earlier work use recall, list_threads / read_thread, or chat_history when answering in a chat.";
 
 /** Secrets pasted into chat end up in provider logs, so threads are steered to the dialog that keeps them out of the transcript. */
-const SECRETS_GUIDANCE = "Never ask the user to paste a password, API key, token or other secret into chat, and never repeat one they did paste. "
-  + "Ask for it with request_secret, which opens a secure dialog and stores the value in the system keychain without showing it to you, "
-  + "then use it by name with run_with_secrets. Check list_secrets before asking for one that may already be saved.";
+const SECRETS_GUIDANCE = "Never ask for secrets in chat. Use request_secret, then run_with_secrets; check list_secrets first.";
 
 /** The thread's own create_app or update_app already holds the current spec, so read_app is only for a spec the thread has not seen. */
 const APP_CHANGE_GUIDANCE = "Change only what was asked, then save with update_app, passing the version you last saw as base_version. "
@@ -57,11 +55,26 @@ function toolGuidance(conversation: RunContextSubject): string {
   return [workerAccess, ...(worker ? [WORKER_GUIDANCE] : []), conversation.bot ? BOT_TOOLS_GUIDANCE : worker ? null : NORA_GUIDANCE, conversation.bot && !worker ? BOT_WORK_GUIDANCE : null, CONTINUITY_GUIDANCE, SECRETS_GUIDANCE]
     .filter((part): part is string => !!part).join("\n\n");
 }
-/** An app's builder thread is handed only the connectors chosen for the app; every other thread gets all it may use. */
-export const connectorsChosenBy = (conversation: RunContextSubject): readonly string[] | undefined =>
-  conversation.source?.kind === "app" ? conversation.source.connectorIds : undefined;
+/**
+ * App builders get only the connectors chosen for the app. Plain workers (no bot) get none — each connector's tool catalogue
+ * is expensive and workers should inherit tools from a bot that opted in, or use none. Bot threads rely on `connectorIdsForBot`
+ * (undefined here). Nora's own working threads keep every usable connector.
+ */
+export const connectorsChosenBy = (conversation: RunContextSubject): readonly string[] | undefined => {
+  if (conversation.source?.kind === "app") return conversation.source.connectorIds;
+  if (conversation.source?.kind === "worker" && !conversation.bot) return [];
+  return undefined;
+};
 /** Coordinator chats (group and direct) run on Nora itself and get no per-run additions. */
 const coordinated = (conversation: RunContextSubject): boolean => !!conversation.group || !!conversation.direct;
+
+/** Asking thread first, then parents, so a chat can show a bot worker's connector authorize card. */
+export const conversationIdsFor = (conversation: Pick<Conversation, "id" | "parentId">, parentOf?: RunContextParentLookup): readonly string[] => {
+  const ids = [conversation.id];
+  for (let parentId = conversation.parentId; parentId && ids.length <= ANCESTORS_MAX && !ids.includes(parentId);
+    parentId = parentOf?.(parentId) ?? null) ids.push(parentId);
+  return ids;
+};
 
 /**
  * Per-run additions kept out of the frozen conversation snapshot: the tool endpoint, connectors, guidance and saved notes. Notes are frozen
@@ -69,7 +82,7 @@ const coordinated = (conversation: RunContextSubject): boolean => !!conversation
  * `preview` describes the next run's additions without resolving an endpoint or freezing notes, for the context inspector.
  */
 export function createRunContext(server: NoraToolServer, memory: BotMemoryStore, connectors: RunContextConnectors,
-  accountConnectors: RunContextAccountConnectors = () => []): NoraRunContextSource {
+  accountConnectors: RunContextAccountConnectors = () => [], parentOf?: RunContextParentLookup): NoraRunContextSource {
   const delivery = createMemoryDelivery();
   const digest = (conversation: RunContextSubject) => memory.digest(memoryOwnerOf(conversation), conversation.workspace.projectId, MEMORY_DIGEST_CHARS);
   return {
@@ -77,7 +90,8 @@ export function createRunContext(server: NoraToolServer, memory: BotMemoryStore,
       if (coordinated(conversation)) return { tools: null, connectors: [], guidance: null, turnNotes: null };
       const [tools, endpoints] = await Promise.all([
         server.resolve(conversation).catch((error: unknown) => { console.error("Nora tools are unavailable for this turn", error); return null; }),
-        connectors.endpoints(connectorSubjectOf(conversation), connectorsChosenBy(conversation)).catch((error: unknown) => { console.error("Connectors are unavailable for this turn", error); return []; })
+        connectors.endpoints(connectorSubjectOf(conversation), connectorsChosenBy(conversation), conversationIdsFor(conversation, parentOf))
+          .catch((error: unknown) => { console.error("Connectors are unavailable for this turn", error); return []; })
       ]);
       const notes = delivery.forRun(conversation.id, digest(conversation));
       return { tools, connectors: endpoints, accountConnectors: accountConnectors(connectorSubjectOf(conversation)),

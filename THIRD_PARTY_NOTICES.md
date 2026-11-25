@@ -2,7 +2,7 @@
 
 This product includes third-party open-source software.
 
-Generated: 2026-11-24T22:26:22.129Z
+Generated: 2026-11-25T11:56:02.389Z
 
 | Package | Version | License |
 | --- | --- | --- |

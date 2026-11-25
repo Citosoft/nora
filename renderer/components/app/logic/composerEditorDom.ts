@@ -23,9 +23,12 @@ export function readComposerText(root: Node): string {
   return text;
 }
 
-export function readComposerCaret(root: HTMLElement): number {
+export function readComposerCaret(root: HTMLElement, textLength?: number): number {
   const selection = root.ownerDocument.getSelection();
-  if (!selection?.focusNode || !root.contains(selection.focusNode)) return readComposerText(root).length;
+  if (!selection?.focusNode || !root.contains(selection.focusNode)) return textLength ?? readComposerText(root).length;
+  if (root.childNodes.length === 1 && root.firstChild?.nodeType === Node.TEXT_NODE) {
+    return selection.focusNode === root ? (selection.focusOffset === 0 ? 0 : root.firstChild.textContent?.length ?? 0) : selection.focusOffset;
+  }
   const prefix = root.ownerDocument.createRange();
   prefix.selectNodeContents(root);
   prefix.setEnd(selection.focusNode, selection.focusOffset);
@@ -90,6 +93,9 @@ export function writeComposerContent(root: HTMLElement, value: string, mentions:
 /** Ordinary typing can keep its live DOM and selection when the existing reference hosts still match. */
 export function composerProjectionMatches(root: HTMLElement, value: string, mentions: readonly ComposerSuggestionOption[] = []): boolean {
   if (Boolean(root.querySelector("[data-composer-tail]")) !== value.endsWith("\n")) return false;
+  if (!(mentions.length && value.includes("@")) && !value.includes("nora-issue:")) {
+    return !root.querySelector(`[${REFERENCE_ATTRIBUTE}]`);
+  }
   const expected = splitComposerContent(value, mentions).filter((part) => part.kind !== "text").map((part) => part.source);
   const actual = Array.from(root.querySelectorAll(`[${REFERENCE_ATTRIBUTE}]`)).map((element) => element.getAttribute(REFERENCE_ATTRIBUTE));
   return actual.length === expected.length && actual.every((source, index) => source === expected[index]);

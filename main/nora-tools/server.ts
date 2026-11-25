@@ -55,9 +55,10 @@ export function createNoraToolServer(deps: NoraToolDeps, onStarted?: () => void)
     if (!context) { reply(response, 401, "This thread cannot use Nora's tools"); return; }
     if (request.method !== "POST") { reply(response, 405, "Method not allowed"); return; }
     const server = new McpServer({ name: "nora", version: "1.0.0" });
-    registerNoraTools(server, context, deps);
+    const lifetime = new AbortController();
+    registerNoraTools(server, context, deps, lifetime.signal);
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
-    response.on("close", () => { void transport.close(); void server.close(); });
+    response.on("close", () => { lifetime.abort(); void transport.close(); void server.close(); });
     await server.connect(transport);
     await transport.handleRequest(request, response, await readJson(request));
   };

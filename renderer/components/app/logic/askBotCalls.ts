@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { askBotReplyText, askBotThreadId, isAskBotCall } from "@shared/nora-tools/askBot";
+import { askBotReplyText, askBotThreadId, isAskBotCall, isAskBotWorking } from "@shared/nora-tools/askBot";
 import type { ToolActivity } from "@shared/types/conversation/contracts.types";
 import type { AskBotCall } from "@/components/app/types/nativeActivity.types";
 
@@ -22,6 +22,7 @@ export function askBotCall(tool: ToolActivity): AskBotCall | null {
   const args = readArguments(tool.details?.input);
   if (!args) return null;
   const reply = tool.state === "completed" ? askBotReplyText(tool.output) : null;
-  return { tool, bot: args.bot, message: args.message, threadId: askBotThreadId(tool.output), reply,
-    error: tool.state === "failed" || (tool.state === "completed" && reply === null && !!tool.output) ? tool.output || null : null };
+  const working = tool.state === "completed" && isAskBotWorking(tool.output);
+  return { working, tool, bot: args.bot, message: args.message, threadId: askBotThreadId(tool.output), reply,
+    error: tool.state === "failed" || (tool.state === "completed" && !working && reply === null && !!tool.output) ? tool.output || null : null };
 }

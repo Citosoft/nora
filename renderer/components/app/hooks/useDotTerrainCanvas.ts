@@ -1,18 +1,14 @@
 import { useEffect, useRef } from "react";
-import { DOT_TERRAIN_FRAME_INTERVAL_MS, dotTerrainCellAt, dotTerrainCellKey, drawDotTerrainFrame, drawDotTerrainGlows } from "@/components/app/logic/dotTerrain";
-import type { DotTerrainGlows, DotTerrainLook } from "@/components/app/types/dotTerrain.types";
+import { buildDotTerrainGrid, DOT_TERRAIN_FRAME_INTERVAL_MS, dotTerrainCellAt, dotTerrainCellKey, drawDotTerrainFrame, drawDotTerrainGlows } from "@/components/app/logic/dotTerrain";
+import type { DotTerrainCanvasOptions, DotTerrainGlows } from "@/components/app/types/dotTerrain.types";
 
-/** Marks the cell under the cursor as lit; its fade starts once the cursor moves off it. */
 const LIT = Number.POSITIVE_INFINITY;
 
-/**
- * Runs the dot-matrix terrain on a canvas: sizes it to the device pixel ratio, follows the
- * theme ink (the canvas's CSS `color`), lights the cell under the cursor and fades it out as
- * the cursor moves on, and pauses while off-screen or the window is hidden. With reduced
- * motion the terrain holds still and only the cursor glow animates.
- */
-export function useDotTerrainCanvas({ intensity, clearing }: DotTerrainLook) {
+export function useDotTerrainCanvas({ intensity, clearing, drifting }: DotTerrainCanvasOptions) {
   const ref = useRef<HTMLCanvasElement>(null);
+  // Read through refs so toggling the drift pauses or resumes in place instead of rebuilding the canvas.
+  const driftingRef = useRef(drifting);
+  const wakeRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const canvas = ref.current;
@@ -23,85 +19,121 @@ export function useDotTerrainCanvas({ intensity, clearing }: DotTerrainLook) {
     const glows: DotTerrainGlows = new Map();
     let hovered: number | null = null;
     let frame = 0;
-    let onScreen = true;
-    let last = 0;
-    let color = "#000";
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let onScreen = false;
+    let focused = document.hasFocus();
+    let color = getComputedStyle(canvas).color;
+    let bounds = canvas.getBoundingClientRect();
+    let grid = buildDotTerrainGrid(0, 0, { intensity, clearing });
+    let drift = 0;
 
+    const active = () => onScreen && focused && !document.hidden;
     const draw = (time: number) => {
-      const size = { width: canvas.clientWidth, height: canvas.clientHeight };
-      drawDotTerrainFrame(context, { ...size, time: motion.matches ? 0 : time / 1000, color, intensity, clearing });
+      drawDotTerrainFrame(context, { grid, time: motion.matches ? 0 : drift, color });
       drawDotTerrainGlows(context, glows, time, color);
     };
-    const active = () => onScreen && !document.hidden;
-    const loop = (time: number) => {
-      // Fading glows need every frame; the drift alone is fine at ~15fps.
-      if (glows.size || time - last >= DOT_TERRAIN_FRAME_INTERVAL_MS) {
-        last = time;
-        draw(time);
+    const moving = () => !motion.matches && driftingRef.current;
+    const fading = () => !motion.matches && [...glows.values()].some((litAt) => litAt !== LIT);
+    const paint = (time: number) => {
+      frame = 0;
+      if (!active()) return;
+      if (moving()) drift += DOT_TERRAIN_FRAME_INTERVAL_MS / 1000;
+      draw(time);
+      // A still terrain keeps ticking only until released cursor glows have faded out.
+      if (moving() || fading()) {
+        timer = setTimeout(() => { timer = undefined; requestPaint(); }, DOT_TERRAIN_FRAME_INTERVAL_MS);
       }
-      frame = active() && (glows.size || !motion.matches) ? requestAnimationFrame(loop) : 0;
     };
-    const sync = () => {
+    const requestPaint = () => {
+      if (!frame && timer === undefined && active()) frame = requestAnimationFrame(paint);
+    };
+    const stop = () => {
       cancelAnimationFrame(frame);
-      frame = active() && (glows.size || !motion.matches) ? requestAnimationFrame(loop) : 0;
+      clearTimeout(timer);
+      frame = 0;
+      timer = undefined;
     };
+    const sync = () => { stop(); requestPaint(); };
     const resize = () => {
-      const ratio = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = canvas.clientWidth * ratio;
-      canvas.height = canvas.clientHeight * ratio;
-      context.setTransform(ratio, 0, 0, ratio, 0, 0);
-      color = getComputedStyle(canvas).color;
-      draw(performance.now());
+      bounds = canvas.getBoundingClientRect();
+      const width = canvas.clientWidth, height = canvas.clientHeight;
+      if (width !== grid.width || height !== grid.height) {
+        // A CSS-pixel backing buffer keeps the cost independent of display scaling.
+        canvas.width = width;
+        canvas.height = height;
+        grid = buildDotTerrainGrid(width, height, { intensity, clearing });
+      }
+      requestPaint();
     };
     const release = () => {
-      if (hovered !== null) glows.set(hovered, performance.now());
+      if (hovered === null) return;
+      if (motion.matches) glows.delete(hovered);
+      else glows.set(hovered, performance.now());
       hovered = null;
+      requestPaint();
     };
-    // The backdrop sits behind the thread's content and takes no pointer events, so follow the cursor at window level.
     const track = (event: PointerEvent) => {
       if (!active()) return;
-      const rect = canvas.getBoundingClientRect();
-      const cell = dotTerrainCellAt(event.clientX - rect.left, event.clientY - rect.top, rect.width, rect.height);
+      const cell = dotTerrainCellAt(event.clientX - bounds.left, event.clientY - bounds.top, bounds.width, bounds.height);
       const key = cell ? dotTerrainCellKey(cell) : null;
       if (key === hovered) return;
       release();
       if (key !== null) {
         glows.set(key, LIT);
         hovered = key;
+        requestPaint();
       }
-      if (!frame) sync();
+    };
+    const focus = () => { focused = true; resize(); sync(); };
+    const blur = () => { focused = false; glows.clear(); hovered = null; stop(); };
+    const motionChange = () => {
+      glows.clear();
+      if (hovered !== null) glows.set(hovered, LIT);
+      sync();
     };
 
+    wakeRef.current = sync;
     resize();
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(canvas);
     const intersection = new IntersectionObserver(([entry]) => {
       onScreen = entry?.isIntersecting ?? false;
+      if (onScreen) resize();
       sync();
     });
     intersection.observe(canvas);
-    // appTheme flips the `dark` class and data-theme on <html>; accent changes adjust inline styles.
-    const themeObserver = new MutationObserver(resize);
-    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-theme", "style"] });
+    const themeObserver = new MutationObserver(() => {
+      const next = getComputedStyle(canvas).color;
+      if (next !== color) { color = next; requestPaint(); }
+    });
+    const root = document.documentElement;
+    themeObserver.observe(root, { attributes: true, attributeFilter: ["class", "data-theme", "style"] });
     window.addEventListener("pointermove", track, { passive: true });
-    document.documentElement.addEventListener("pointerleave", release);
-    window.addEventListener("blur", release);
+    root.addEventListener("pointerleave", release);
+    window.addEventListener("focus", focus);
+    window.addEventListener("blur", blur);
     document.addEventListener("visibilitychange", sync);
-    motion.addEventListener("change", sync);
-    sync();
+    motion.addEventListener("change", motionChange);
 
     return () => {
-      cancelAnimationFrame(frame);
+      wakeRef.current = null;
+      stop();
       resizeObserver.disconnect();
       intersection.disconnect();
       themeObserver.disconnect();
       window.removeEventListener("pointermove", track);
-      document.documentElement.removeEventListener("pointerleave", release);
-      window.removeEventListener("blur", release);
+      root.removeEventListener("pointerleave", release);
+      window.removeEventListener("focus", focus);
+      window.removeEventListener("blur", blur);
       document.removeEventListener("visibilitychange", sync);
-      motion.removeEventListener("change", sync);
+      motion.removeEventListener("change", motionChange);
     };
   }, [intensity, clearing]);
+
+  useEffect(() => {
+    driftingRef.current = drifting;
+    wakeRef.current?.();
+  }, [drifting]);
 
   return ref;
 }

@@ -1,6 +1,6 @@
 import type { ConversationSnapshot } from "@shared/types/conversation/contracts.types";
 import type { ConversationSummary } from "@shared/types/conversation/queries.types";
-import { isActiveRun } from "./projection";
+import { isActiveRun } from "@shared/conversations/runActivity";
 
 export function summarizeConversation(snapshot: Pick<ConversationSnapshot, "conversation" | "runs" | "requests">): ConversationSummary {
   let latest = snapshot.runs.find(isActiveRun);

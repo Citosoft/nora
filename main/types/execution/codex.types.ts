@@ -31,6 +31,7 @@ export interface CodexOptions {
 }
 export interface CodexActive extends ProviderExecution {
   emit: EmitProviderUpdate;
+  nativeThreadId: string | null;
   nativeTurnId: string | null;
   items: Map<string, TimelineItem>;
   usage: ExecutionUsage | null;

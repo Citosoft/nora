@@ -3,7 +3,8 @@
 Cloudflare Worker served at `https://remote-api.withnora.run`. It is the small authenticated control plane from
 `docs/v3/Nora_v3_mobile_remote_spec_v1_1.md` §7: it provisions one remotely-managed Cloudflare Tunnel per Nora
 installation, maps an unguessable hostname to it, and keeps a minimal runtime directory in the user's Clerk **private**
-metadata. It never relays application traffic and stores no credentials, conversations or user content.
+metadata. It never relays application traffic and stores no credentials, conversations or user content. It also
+sends phone push notifications on the desktop's behalf (see [Push notifications](#push-notifications)).
 
 > [!WARNING]
 > **TLS for `*.remote.withnora.run` is NOT covered by Cloudflare Universal SSL.**
@@ -32,6 +33,11 @@ installation ID.
 | `PATCH` | `/v1/runtimes/:id` | Rename (`{ name }`) |
 | `DELETE` | `/v1/runtimes/:id` | Drop connections, delete tunnel + DNS record, remove the entry |
 | `POST` | `/v1/runtimes/:id/rotate` | New tunnel secret, drop connections, return a new `connectorToken` |
+| `POST` | `/v1/push/devices` | Phone registers or refreshes its Expo push token (`{ deviceId, token, platform }`); returns `{ device }` without the token |
+| `DELETE` | `/v1/push/devices/:deviceId` | Phone stops receiving notifications; 404 if the device is not registered |
+| `POST` | `/v1/push/send` | Desktop sends `{ installationId, notifications }` to every phone on the account; returns `{ delivered }` |
+
+Push bodies are validated against `shared/remote-access/push.ts`.
 
 Errors use `{ error: { code, message } }`: `invalid` 400 (405 for a wrong method, with `Allow`), `unauthenticated`
 401, `forbidden` 403 (disallowed browser `Origin`), `not-found` 404 (including another account's runtime ID),
@@ -65,6 +71,7 @@ CLOUDFLARE_API_TOKEN=...
 CLOUDFLARE_ACCOUNT_ID=<32 hex>
 CLOUDFLARE_ZONE_ID=<32 hex>
 HOSTNAME_SECRET=<at least 32 random characters>
+EXPO_ACCESS_TOKEN=<Expo access token; optional, needed only to send pushes>
 ALLOWED_ORIGINS=http://localhost:8081
 ```
 
@@ -150,16 +157,36 @@ production token no expiry, or calendar its rotation: when it lapses, provisioni
   overwrite each other. Clerk is not transactional; quota is enforced by re-reading after a new entry is written and
   rolling back the caller's own entry if it landed over the limit.
 
+### Push notifications
+
+The phone never hears from the Worker directly about runtimes; it talks to the desktop through its tunnel. So the
+desktop starts every push: when a thread finishes or something needs the user, it calls `POST /v1/push/send` with the
+same Clerk bearer token it uses for provisioning. The Worker then:
+
+- refuses any request carrying an `Origin` header (`forbidden`), so browsers, including the web app, cannot send;
+- requires `installationId` to be one of the caller's own runtimes (`not-found` otherwise);
+- sends one Expo message per phone per notification (`sound: "default"`, `priority: "high"`, `channelId: "default"`,
+  `data` matching `pushPayloadDataSchema`) to `https://exp.host/--/api/v2/push/send`, at most 100 per request,
+  authenticated with the `EXPO_ACCESS_TOKEN` secret;
+- removes phones whose ticket comes back `DeviceNotRegistered`.
+
+Phones are kept in Clerk private metadata under `noraPushDevices` (`{ [deviceId]: { deviceId, platform,
+registeredAt, token } }`), next to `noraRuntimes`, at most `PUSH_LIMITS.maxDevicesPerUser` (10) per account
+(`quota` beyond that). Registering a token that another device ID holds moves it to the new device, so an app
+reinstall does not leave a duplicate. Push tokens are never returned or logged, and Expo's error payloads (which can
+echo tokens) are dropped. Only Expo push tickets are checked; delivery receipts are not polled.
+
 ### Rate limiting
 
-Two [Workers Rate Limiting](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/) bindings
-are declared in `wrangler.jsonc`, both keyed by the verified Clerk user ID:
+Three [Workers Rate Limiting](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/) bindings
+are declared in `wrangler.jsonc`, all keyed by the verified Clerk user ID:
 
 - `GENERAL_RATE_LIMITER` — every authenticated request (60/min).
 - `PROVISION_RATE_LIMITER` — additionally applied to provision and rotate (6/min).
+- `PUSH_RATE_LIMITER` — additionally applied to the `/v1/push/*` routes (30/min).
 
-`namespace_id` values must be unique positive integers within the Cloudflare account; change `4101`/`4102` if they
-collide. The limits are per Cloudflare location and eventually consistent, so they are abuse protection, not exact
+`namespace_id` values must be unique positive integers within the Cloudflare account; change `4101`/`4102`/`4103`
+if they collide. The limits are per Cloudflare location and eventually consistent, so they are abuse protection, not exact
 counters. Unauthenticated requests are rejected before rate limiting and are not counted.
 
 ## Deploy
@@ -170,6 +197,7 @@ npx wrangler login
 npx wrangler secret put CLERK_SECRET_KEY
 npx wrangler secret put CLOUDFLARE_API_TOKEN
 npx wrangler secret put HOSTNAME_SECRET
+npx wrangler secret put EXPO_ACCESS_TOKEN   # expo.dev → Account settings → Access tokens
 # edit wrangler.jsonc vars (publishable key, account ID, zone ID)
 npm run deploy
 ```
@@ -195,7 +223,9 @@ Check a build without deploying: `npx wrangler deploy --dry-run --outdir dist/dr
   runs with failures as failed. Returning desktops with registrations at least 90 days old provision before using
   their cached connector token, recreating expired resources at their stable hostname. This recovery behavior
   requires the desktop version containing this change; older versions can use Relay's Retry action.
-  Deploy with `npm run deploy` to install the handler and cron together; no new bindings or secrets are required.
+  Deploy with `npm run deploy` to install the handler and cron together.
+- **Push secret:** `EXPO_ACCESS_TOKEN` is optional. Without it the Worker runs normally and phones can still register,
+  but `POST /v1/push/send` answers `internal` ("Phone notifications are not configured.") until the secret is set.
 - **Manual cleanup:** list tunnels with
   `GET /accounts/{account_id}/cfd_tunnel?is_deleted=false&include_prefix=nora-`, compare against users' Clerk
   `privateMetadata.noraRuntimes`, then for each orphan: `DELETE …/cfd_tunnel/{id}/connections`,

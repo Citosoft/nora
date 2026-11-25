@@ -11,7 +11,7 @@ test("turn diffs exclude pre-existing edits and produce applicable patches for c
   await f.write("document.md", "User's pre-existing edit\n"); await f.write("removed.md", "Remove me\n");
   const baseline = snapshot({ "document.md": "User's pre-existing edit\n", "unchanged.md": "Unchanged\n", "removed.md": "Remove me\n" });
   const final = snapshot({ "document.md": "User's pre-existing edit\nTurn addition\n", "unchanged.md": "Unchanged\n", "new file.md": "New output\n" }, "2026-11-09T10:01:00.000Z");
-  const result = await compareSnapshots("git", baseline, final);
+  const result = await compareSnapshots("git", ".", baseline, final);
   assert.equal(result.scope, "turn"); assert.equal(result.attribution, "observed");
   assert.deepEqual(result.changes.map((change) => [change.path, change.kind]),
     [["document.md", "modified"], ["new file.md", "added"], ["removed.md", "deleted"]]);
@@ -27,7 +27,7 @@ test("binary, large and mode-only changes retain identities without fabricated t
   const baseline = snapshot({ "binary.bin": "a\0b", "mode.sh": "echo hello\n", "large.md": "a".repeat(100_000) });
   const final = snapshot({ "binary.bin": "a\0c", "mode.sh": "echo hello\n", "large.md": "b".repeat(100_000) });
   const executable = final.files.find((file) => file.path === "mode.sh"); assert.ok(executable); executable.mode = "100755";
-  const result = await compareSnapshots("git", baseline, final);
+  const result = await compareSnapshots("git", ".", baseline, final);
   assert.deepEqual(result.changes.map((change) => [change.path, change.presentation]),
     [["binary.bin", "binary"], ["large.md", "too-large"], ["mode.sh", "text"]]);
   assert.equal(result.changes[0].patch, null); assert.notEqual(result.changes[0].beforeHash, result.changes[0].afterHash);
@@ -36,8 +36,8 @@ test("binary, large and mode-only changes retain identities without fabricated t
 
 test("an unchanged checkpoint produces no turn changes and Git execution failure cannot become clean evidence", async () => {
   const baseline = snapshot({ "document.md": "Already dirty\n" });
-  assert.deepEqual((await compareSnapshots("git", baseline, baseline)).changes, []);
-  await assert.rejects(compareSnapshots("/missing/git", baseline, snapshot({ "document.md": "Different\n" })));
+  assert.deepEqual((await compareSnapshots("git", ".", baseline, baseline)).changes, []);
+  await assert.rejects(compareSnapshots("/missing/git", ".", baseline, snapshot({ "document.md": "Different\n" })));
 });
 
 test("the aggregate patch budget retains every change while marking omitted text explicitly", async () => {
@@ -46,7 +46,7 @@ test("the aggregate patch budget retains every change while marking omitted text
     before[`file-${index}.md`] = `${"a".repeat(35_000)}\n`;
     after[`file-${index}.md`] = `${"b".repeat(35_000)}\n`;
   }
-  const review = await compareSnapshots("git", snapshot(before), snapshot(after));
+  const review = await compareSnapshots("git", ".", snapshot(before), snapshot(after));
   assert.equal(review.changes.length, 8);
   assert.ok(review.changes.some((change) => change.presentation === "too-large" && change.patch === null));
   assert.ok(review.changes.reduce((total, change) => total + Buffer.byteLength(change.patch ?? ""), 0) <= 512 * 1024);
@@ -57,10 +57,24 @@ test("the same bytes moving into or out of the retained budget do not become fal
   const captured = snapshot({ "file.md": "Same\n" });
   const fingerprinted = { ...snapshot({}), omitted: [{ path: "file.md", mode: "100644" as const,
     hash: createHash("sha256").update("Same\n").digest("hex") }] };
-  assert.deepEqual((await compareSnapshots("git", captured, fingerprinted)).changes, []);
-  assert.deepEqual((await compareSnapshots("git", fingerprinted, captured)).changes, []);
-  const deleted = await compareSnapshots("git", fingerprinted, snapshot({}));
+  assert.deepEqual((await compareSnapshots("git", ".", captured, fingerprinted)).changes, []);
+  assert.deepEqual((await compareSnapshots("git", ".", fingerprinted, captured)).changes, []);
+  const deleted = await compareSnapshots("git", ".", fingerprinted, snapshot({}));
   assert.equal(deleted.changes[0].kind, "deleted");
   assert.equal(deleted.changes[0].presentation, "too-large");
   assert.equal(deleted.changes[0].patch, null);
+});
+
+test("indexed bytes that cannot be read back or fail their hash become explicit unavailable diffs", async (t) => {
+  const f = await gitFixture(t);
+  const object = (await f.git("rev-parse", "HEAD:document.md")).stdout.trim();
+  const indexed = (hash: string, id = object) => ({ ...snapshot({}), indexed: [{ path: "document.md", mode: "100644" as const, hash, object: id }] });
+  const original = createHash("sha256").update("Original\n").digest("hex");
+  const edited = snapshot({ "document.md": "Original\nMore\n" });
+  const readable = await compareSnapshots("git", f.root, indexed(original), edited);
+  assert.ok(readable.changes[0].patch?.includes(" Original\n+More"));
+  for (const baseline of [indexed(original, "0".repeat(40)), indexed("f".repeat(64))]) {
+    const review = await compareSnapshots("git", f.root, baseline, edited);
+    assert.deepEqual(review.changes.map((change) => [change.path, change.presentation, change.patch]), [["document.md", "too-large", null]]);
+  }
 });

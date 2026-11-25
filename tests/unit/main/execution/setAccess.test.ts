@@ -13,7 +13,7 @@ test("set-access toggles idle threads between read and write", (t) => {
   assert.equal(f.snapshot().conversation.workspace.access, "write");
 });
 
-test("set-access refuses active work and writer conflicts on the same checkout", (t) => {
+test("set-access refuses active work in the same thread while allowing a shared checkout", (t) => {
   const f = fixture(t);
   f.create();
   f.submit();
@@ -25,7 +25,8 @@ test("set-access refuses active work and writer conflicts on the same checkout",
   f.submit("writer-run", "writer");
   f.create("blocked", "shared");
   f.command({ kind: "set-access", commandId: "make-read", conversationId: "blocked", access: "read" });
-  assert.throws(() => f.command({ kind: "set-access", commandId: "blocked-write", conversationId: "blocked", access: "write" }), /isolated worktree/);
+  f.command({ kind: "set-access", commandId: "blocked-write", conversationId: "blocked", access: "write" });
+  assert.equal(f.snapshot("blocked").conversation.workspace.access, "write");
 });
 
 test("set-access refuses direct chats and workflow stage threads", (t) => {

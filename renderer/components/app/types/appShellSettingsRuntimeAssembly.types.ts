@@ -49,6 +49,7 @@ export type AppShellSettingsRuntimeAssemblyInput = {
     | "appSettings"
     | "updateFileEditorThemeId"
     | "updateThreadBackdrop"
+    | "updateUiFontSize"
     | "updateHardwareAccelerationEnabled"
     | "updateWorkspaceStateStorageMode"
     | "updateDefaultAgentLaunchTarget"

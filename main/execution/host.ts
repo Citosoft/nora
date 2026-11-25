@@ -22,7 +22,7 @@ import { botSnapshotSchema } from "@shared/bots/contracts";
 import { findDirectChat } from "@shared/bots/directChats";
 import { conversationCommandSchema } from "@shared/conversations/contracts";
 import { ConversationNaming } from "./conversationNaming";
-import { isActiveRun } from "./projection";
+import { isActiveRun } from "@shared/conversations/runActivity";
 import { IdleCompaction } from "./idleCompaction";
 import { DEFAULT_THREAD_PREFERENCES } from "@shared/personalization/threads";
 import { IdleSettlement } from "./idleSettlement";
@@ -43,8 +43,12 @@ export class ExecutionHost {
     { kinds: ["start"], controls: false, operations: new Set() },
     { kinds: ["reconcile"], controls: false, operations: new Set() },
     { kinds: ["review"], controls: false, operations: new Set() },
-    { kinds: ["interrupt", "respond", "steer"], controls: true, operations: new Set() }
+    { kinds: ["undo"], controls: false, operations: new Set() },
+    { kinds: ["interrupt"], controls: true, operations: new Set() },
+    { kinds: ["respond", "steer"], controls: true, operations: new Set() }
   ];
+  private readonly startingAttempts = new Set<string>();
+  private watchdog: ReturnType<typeof setInterval> | undefined;
   private lifecycle: HostLifecycle = "idle";
   private scheduled = false;
   private unsubscribe = (): void => {};
@@ -63,7 +67,14 @@ export class ExecutionHost {
       apply: (id, expected, title) => { if (this.lifecycle === "running" && (deps.threadPreferences?.().automaticTitles ?? true)) this.engine.applyGeneratedTitle(id, expected, title); } }) : null;
     this.worker = new EffectWorker(this.engine, deps.providers, (update) => {
       if (this.lifecycle !== "running" && this.lifecycle !== "stopping") return;
-      try { this.engine.accept(update); } catch { this.fault(); }
+      try { this.engine.accept(update); }
+      catch (error) {
+        if (error instanceof ExecutionCommandError && (error.code === "invalid" || error.code === "conflict")) {
+          this.engine.accept({ conversationId: update.conversationId, runId: update.runId, attemptId: update.attemptId,
+            kind: "disconnected", eventId: `invalid-provider-update:${this.deps.nextId()}`,
+            failure: { code: "uncertain", message: "The runtime sent conflicting turn information. Check or stop this turn before continuing.", retryable: false } });
+        } else this.fault();
+      }
     }, deps.workspaces.verify.bind(deps.workspaces), deps.reviewer, deps.checkpoints,
     { now: deps.now, idleCompactionMode: () => deps.idleCompactionMode?.() ?? "suggest" });
     const dispatchMaintenance = (command: ConversationCommand): void => {
@@ -85,10 +96,15 @@ export class ExecutionHost {
     try {
       this.engine.recover();
       this.lifecycle = "running";
-      this.unsubscribe = this.engine.subscribe({ after: this.deps.store.cursor(), onEvent: () => this.schedule(), onError: () => this.fault() });
+      this.unsubscribe = this.engine.subscribe({ after: this.deps.store.cursor(), onEvent: ({ payload }) => {
+        if (payload.kind === "run" && payload.run.state !== "starting") this.startingAttempts.delete(payload.run.attemptId);
+        this.schedule();
+      }, onError: () => this.fault() });
       this.schedule();
       this.idleCompaction.start();
       this.idleSettlement.start();
+      this.watchdog = setInterval(() => this.checkTurnDeadlines(), 5000);
+      this.watchdog.unref();
     } catch (error) { this.ownership.release(); throw error; }
   }
 
@@ -319,10 +335,16 @@ export class ExecutionHost {
       try {
         for (const group of this.groups) {
           if (this.lifecycle !== "running" && !(this.lifecycle === "stopping" && group.controls)) continue;
-          while (group.operations.size < this.concurrency) {
-            const work = this.worker.beginNextEffect(group.kinds);
+          const starting = group.kinds.includes("start");
+          while ((starting ? this.startingAttempts.size : group.operations.size) < this.concurrency) {
+            let attemptId: string | undefined;
+            const work = this.worker.beginNextEffect(group.kinds, starting ? (effect) => {
+              attemptId = effect.attemptId;
+              this.startingAttempts.add(effect.attemptId);
+            } : undefined);
             if (!work) break;
             const operation = work.catch(() => this.fault()).finally(() => {
+              if (attemptId) this.startingAttempts.delete(attemptId);
               group.operations.delete(operation);
               this.schedule();
             });
@@ -333,9 +355,31 @@ export class ExecutionHost {
     });
   }
 
+  private checkTurnDeadlines(): void {
+    if (this.lifecycle !== "running") return;
+    try {
+      this.engine.expireRequests();
+      const now = Date.parse(this.deps.now());
+      for (const { conversation, runs } of this.deps.store.activeStates()) {
+        for (const run of runs) {
+          const age = now - Date.parse(run.updatedAt);
+          const elapsed = now - Date.parse(run.startedAt ?? run.createdAt);
+          const stopRequested = run.state === "stopping" || (run.state === "recovering"
+            && !!this.deps.store.effect(JSON.stringify([run.attemptId, "interrupt"])));
+          const expired = stopRequested ? age >= 15_000
+            : run.state === "starting" ? elapsed >= 2 * 60_000
+            : run.state === "running" && elapsed >= 60 * 60_000;
+          if (!expired) continue;
+          this.engine.execute({ kind: "interrupt", commandId: `deadline:${run.attemptId}:${run.state}`, conversationId: conversation.id, runId: run.id });
+        }
+      }
+    } catch { this.fault(); }
+  }
+
   private fault(): void {
     if (this.lifecycle === "faulted" || this.lifecycle === "stopped") return;
     this.lifecycle = "faulted";
+    clearInterval(this.watchdog);
     this.idleCompaction.close();
     this.idleSettlement.close();
     this.naming?.close();
@@ -349,6 +393,7 @@ export class ExecutionHost {
     return this.shutdownPromise;
   }
   private async stop(): Promise<HostShutdownResult> {
+    clearInterval(this.watchdog);
     this.idleCompaction.close();
     this.idleSettlement.close();
     if (this.lifecycle === "idle") { this.lifecycle = "stopped"; this.deps.store.close(); return { unconfirmedRuns: [] }; }

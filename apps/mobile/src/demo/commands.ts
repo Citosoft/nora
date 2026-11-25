@@ -32,7 +32,7 @@ export function createDemoCommands(store: DemoStore, bots: () => BotDefinition[]
       if (!bot) throw new RemoteRequestError("runtime", { kind: "api", status: 404, code: "not-found", message: "This demo bot is no longer available." });
       const workspaceId = request.scope.kind === "workspace" ? request.scope.workspaceId : "demo-studio";
       const conversation = { ...demoConversation(request.conversationId, bot.name, store.now(), workspaceId),
-        direct: { botId, name: bot.name, role: bot.role, avatar: bot.avatar, scope: request.scope, workspaceId } };
+        direct: { botId, name: bot.name, role: bot.role, avatar: bot.avatar, scope: request.scope, workspaceId, retiredAt: null } };
       store.threads.set(request.conversationId, demoView(conversation));
       store.emit(request.conversationId, { kind: "conversation", conversation });
     }),

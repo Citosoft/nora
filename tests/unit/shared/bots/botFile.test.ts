@@ -41,7 +41,7 @@ test("malformed files report a readable problem instead of throwing", () => {
   }
 });
 
-test("connector selections round-trip, including none, while older files keep all available", () => {
+test("connector selections round-trip, including none; older files omit the field and runtime treats that as none", () => {
   for (const connectorIds of [undefined, [], ["00000000-0000-4000-8000-000000000001"]]) {
     const original = bot("assigned", scope, connectorIds === undefined ? {} : { connectorIds });
     const text = serializeSharedBotFile(original);
