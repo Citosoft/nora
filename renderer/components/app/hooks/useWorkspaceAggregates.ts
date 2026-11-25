@@ -115,9 +115,9 @@ export function useWorkspaceAggregates({
     return projectDelta !== 0 ? projectDelta : left.title.localeCompare(right.title);
   }), [currentProject, currentWorkspaces, workspaceNotes]);
 
+  const worktreePaths = useMemo(() => new Map(snapshot?.worktrees.map((worktree) => [worktree.id, worktree.path])), [snapshot?.worktrees]);
   const workspaceQuickSearchSource = useMemo((): WorkspaceQuickSearchSource => ({
     agents: (snapshot?.agents ?? []).map((agent) => {
-      const worktree = snapshot?.worktrees.find((item) => item.id === agent.worktreeId) ?? null;
       return {
         id: agent.id,
         name: agent.name,
@@ -126,38 +126,22 @@ export function useWorkspaceAggregates({
         workspace: agent.workspace,
         projectId: agent.projectId,
         branch: agent.branch,
-        worktreePath: worktree?.path ?? null
+        worktreePath: agent.worktreeId ? worktreePaths.get(agent.worktreeId) ?? null : null
       };
     }),
     terminals: (snapshot?.terminals ?? []).map((terminal) => {
-      const worktree = snapshot?.worktrees.find((item) => item.id === terminal.worktreeId) ?? null;
       return {
         id: terminal.id,
         name: terminal.name,
         workspace: terminal.workspace,
         projectId: terminal.projectId,
         branch: terminal.branch,
-        worktreePath: worktree?.path ?? null
+        worktreePath: terminal.worktreeId ? worktreePaths.get(terminal.worktreeId) ?? null : null
       };
     }),
-    tasks: allWorkspaceTasks.map((task) => ({
-      projectId: task.projectId,
-      projectName: task.projectName,
-      path: task.path,
-      title: task.title
-    })),
-    specs: allWorkspaceSpecs.map((spec) => ({
-      projectId: spec.projectId,
-      projectName: spec.projectName,
-      path: spec.path,
-      title: spec.title
-    })),
-    notes: allWorkspaceNotes.map((note) => ({
-      projectId: note.projectId,
-      projectName: note.projectName,
-      path: note.path,
-      title: note.title
-    })),
+    tasks: allWorkspaceTasks,
+    specs: allWorkspaceSpecs,
+    notes: allWorkspaceNotes,
     filePaths: workspaceFilePaths
   }), [
     allWorkspaceNotes,
@@ -165,7 +149,7 @@ export function useWorkspaceAggregates({
     allWorkspaceTasks,
     snapshot?.agents,
     snapshot?.terminals,
-    snapshot?.worktrees,
+    worktreePaths,
     workspaceFilePaths
   ]);
 

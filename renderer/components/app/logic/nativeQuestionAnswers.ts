@@ -7,10 +7,9 @@ export function selectQuestionOption(question: RequestQuestion, answers: readonl
   if (selected) selectedOptions.add(option);
   else selectedOptions.delete(option);
   return [...question.options.filter((entry) => selectedOptions.has(entry)),
-    ...(question.allowOther ? answers.filter((entry) => !question.options.includes(entry)) : [])];
+    ...answers.filter((entry) => !question.options.includes(entry))];
 }
 
 export function setOtherQuestionAnswer(question: RequestQuestion, answers: readonly string[], text: string): string[] {
   return [...(question.multiple ? answers.filter((entry) => question.options.includes(entry)) : []), text];
 }
-

@@ -145,9 +145,11 @@ export function createAppService(options: AppServiceOptions): AppService {
   /** An alert fires when its condition turns true or reports something new, and clears when the condition turns false. */
   async function evaluateAlerts(app: AppDefinition, sourceId: string, rows: JsonValue): Promise<void> {
     let changed = false;
-    for (const [alertId, alert] of Object.entries(app.spec.alerts)) {
-      if (alert.source !== sourceId) continue;
-      const previous = store.alertStates(app.id).find((state) => state.alertId === alertId);
+    const alerts = Object.entries(app.spec.alerts).filter(([, alert]) => alert.source === sourceId);
+    if (!alerts.length) return;
+    const states = new Map(store.alertStates(app.id).map((state) => [state.alertId, state]));
+    for (const [alertId, alert] of alerts) {
+      const previous = states.get(alertId);
       try {
         const result = await compileAlert(alert)(rows);
         if (!result.active) { if (previous) { store.clearAlertState(app.id, alertId); changed = true; } continue; }

@@ -68,8 +68,9 @@ export function createThreadSubmission(internal: ThreadWorkspaceInternals): Pick
       if (!document || document.target.kind !== "thread" || document.target.conversationId !== command.conversationId || command.kind === "create" || command.kind === "submit" || internal.runtime(id).busy) return;
       internal.setRuntime(id, { busy: true, error: null });
       try {
-        if (command.kind === "archive" || command.kind === "unarchive") await applyThreadSettlement(internal, command);
-        else { await deps.client.execute(command); internal.refresh(); }
+        if (command.kind === "archive" || command.kind === "unarchive" || command.kind === "reset-direct") await applyThreadSettlement(internal, command);
+        else await deps.client.execute(command);
+        internal.refresh();
       }
       catch (cause) { internal.setRuntime(id, { error: cause instanceof Error ? cause.message : "The thread command could not be delivered." }); }
       finally { internal.setRuntime(id, { busy: false }); }

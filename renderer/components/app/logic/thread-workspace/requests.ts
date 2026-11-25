@@ -12,11 +12,13 @@ export function threadRequestTarget(target: WorkspaceRef | undefined, workspace:
 
 /** One lookup per repository branch, even when several visible threads share it. */
 export function threadRequestTargets(state: ThreadWorkspaceSnapshot, conversationIds: readonly string[]): ThreadRequestTarget[] {
+  if (!conversationIds.length) return [];
+  const workspaces = new Map(state.boot.workspaces.map((workspace) => [workspace.id, workspace]));
   const visible = new Set(conversationIds);
   const targets = new Map<string, ThreadRequestTarget>();
   for (const { conversation } of state.summaries) {
     if (!visible.has(conversation.id)) continue;
-    const workspace = state.boot.workspaces.find((entry) => entry.id === conversation.workspace.projectId);
+    const workspace = workspaces.get(conversation.workspace.projectId);
     const target = threadRequestTarget(conversation.workspace, workspace);
     if (!target) continue;
     const existing = targets.get(target.key);

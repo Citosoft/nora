@@ -67,8 +67,9 @@ export function useAppRuntime(appId: string, connectors: readonly Connector[], c
     const onReturn = (): void => {
       if (document.visibilityState !== "visible") return;
       const states = dataRef.current?.sourceStates ?? {};
-      const stale = Object.values(states).some((state) => state.status === "ready" && Date.now() - Date.parse(state.fetchedAt) > STALE_AFTER_MS);
-      if (stale) refreshRef.current();
+      const cutoff = Date.now() - STALE_AFTER_MS;
+      const stale = Object.entries(states).flatMap(([id, state]) => state.status === "ready" && Date.parse(state.fetchedAt) < cutoff ? [id] : []);
+      if (stale.length) refreshRef.current(stale);
     };
     document.addEventListener("visibilitychange", onReturn);
     window.addEventListener("focus", onReturn);

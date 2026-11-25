@@ -20,83 +20,704 @@
   font-display: swap;
 }
 
+/*
+ * Theme palettes stay outside Tailwind layers so Tailwind keeps them: it drops layered rules whose selectors
+ * it cannot match against the content files, which removed the attribute-only theme selectors.
+ */
+/*
+ * Nora palette. The [data-color-theme] selectors also let a theme orb read a palette locally.
+ * --theme-swatch is a stronger version of each variant's base tone; theme orbs show light and dark halves.
+ * --theme-accent is the theme's own accent, used while the Accent Color setting is Theme.
+ */
+:root,
+[data-color-theme="nora"][data-theme="light"] {
+  --theme-accent: 220 9% 46%;
+  --theme-swatch: 0 0% 86%;
+  --background: 0 0% 100%;
+  --shell-background: 0 0% 98.4%;
+  --chrome-background: 180 4% 95.5%;
+  --foreground: 220 28% 14%;
+  --card: 0 0% 100%;
+  --card-foreground: 220 28% 14%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 28% 14%;
+  --primary: var(--theme-accent);
+  --primary-foreground: 0 0% 100%;
+  --secondary: 180 3% 93.5%;
+  --secondary-foreground: 220 28% 14%;
+  --muted: 0 0% 97%;
+  --muted-foreground: 220 12% 43%;
+  --accent: 220 10% 93%;
+  --accent-foreground: 220 28% 14%;
+  --destructive: 354 74% 52%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 214 22% 89%;
+  --input: var(--border);
+  --ring: var(--theme-accent);
+  --radius: 8px;
+  --radius-control: 5px;
+  --app-system-font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --app-ui-font: var(--app-system-font);
+  --button-default-bg: 220 10% 91%;
+  --button-default-border: 220 9% 76%;
+  --button-default-hover: 220 10% 87%;
+  --button-default-active: 220 10% 84%;
+  --button-outline-bg: 210 8% 94%;
+  --button-outline-border: 215 10% 84%;
+  --button-outline-hover: 210 8% 90%;
+  --form-control-bg: 0 0% 100%;
+  --form-control-border: var(--border);
+  --form-control-hover: 0 0% 98%;
+  --body-gradient-a: rgba(148, 163, 184, 0.14);
+  --body-gradient-b: rgba(71, 85, 105, 0.08);
+}
+
+:root[data-theme="dark"],
+[data-color-theme="nora"][data-theme="dark"] {
+  --theme-accent: 220 11% 74%;
+  --theme-swatch: 0 0% 20%;
+  --background: 0 0% 10%;
+  --shell-background: 0 0% 11.5%;
+  --chrome-background: 0 0% 9.5%;
+  --foreground: 210 20% 94%;
+  --card: 0 0% 14%;
+  --card-foreground: 210 20% 94%;
+  --popover: 0 0% 14%;
+  --popover-foreground: 210 20% 94%;
+  --primary: var(--theme-accent);
+  --primary-foreground: 220 35% 11%;
+  --secondary: 0 0% 14%;
+  --secondary-foreground: 210 20% 94%;
+  --muted: 0 0% 15%;
+  --muted-foreground: 215 10% 64%;
+  --accent: 220 14% 10%;
+  --accent-foreground: 210 20% 94%;
+  --destructive: 349 89% 60%;
+  --destructive-foreground: 210 24% 98%;
+  --border: 0 0% 22%;
+  --input: 0 0% 22%;
+  --ring: var(--theme-accent);
+  --button-default-bg: 220 16% 12%;
+  --button-default-border: 220 12% 23%;
+  --button-default-hover: 220 17% 16%;
+  --button-default-active: 220 16% 19%;
+  --button-outline-bg: 0 0% 12%;
+  --button-outline-border: 0 0% 24%;
+  --button-outline-hover: 0 0% 16%;
+  --form-control-bg: 0 0% 12%;
+  --form-control-border: 0 0% 25%;
+  --form-control-hover: 0 0% 15%;
+  --body-gradient-a: rgba(148, 163, 184, 0.06);
+  --body-gradient-b: rgba(255, 255, 255, 0.015);
+}
+
+
+/* Theme palettes set surfaces, text, borders and the theme accent. A fixed Accent Color setting overrides the accent inline. */
+[data-color-theme="slate"][data-theme="light"] {
+  --theme-swatch: 214 25% 82%;
+  --theme-accent: 214 60% 48%;
+  --primary: var(--theme-accent);
+  --primary-foreground: 0 0% 100%;
+  --accent: 214 40% 93%;
+  --ring: var(--theme-accent);
+  --button-default-bg: 214 45% 92%;
+  --button-default-border: 214 35% 78%;
+  --button-default-hover: 214 42% 88%;
+  --button-default-active: 214 40% 84%;
+  --background: 210 20% 99%;
+  --shell-background: 214 22% 97%;
+  --chrome-background: 215 20% 94.5%;
+  --foreground: 222 30% 14%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 30% 14%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 30% 14%;
+  --secondary: 214 18% 93%;
+  --secondary-foreground: 222 30% 14%;
+  --muted: 214 20% 96%;
+  --muted-foreground: 216 14% 42%;
+  --border: 214 18% 87%;
+  --input: 214 18% 87%;
+  --button-outline-bg: 214 16% 94%;
+  --button-outline-border: 215 14% 83%;
+  --button-outline-hover: 214 16% 90%;
+  --form-control-bg: 0 0% 100%;
+  --form-control-border: 214 18% 87%;
+  --form-control-hover: 214 20% 98%;
+}
+
+[data-color-theme="slate"][data-theme="dark"] {
+  --theme-swatch: 220 20% 22%;
+  --theme-accent: 214 80% 70%;
+  --primary: var(--theme-accent);
+  --primary-foreground: 214 40% 10%;
+  --accent: 214 18% 12%;
+  --ring: var(--theme-accent);
+  --button-default-bg: 214 25% 12%;
+  --button-default-border: 214 35% 23%;
+  --button-default-hover: 214 26% 16%;
+  --button-default-active: 214 26% 19%;
+  --body-gradient-a: rgba(117, 170, 240, 0.06);
+  --body-gradient-b: rgba(255, 255, 255, 0.015);
+  --background: 220 16% 11%;
+  --shell-background: 220 16% 12.5%;
+  --chrome-background: 222 18% 9.5%;
+  --foreground: 214 25% 93%;
+  --card: 220 15% 14.5%;
+  --card-foreground: 214 25% 93%;
+  --popover: 220 15% 14.5%;
+  --popover-foreground: 214 25% 93%;
+  --secondary: 220 14% 15%;
+  --secondary-foreground: 214 25% 93%;
+  --muted: 220 14% 16%;
+  --muted-foreground: 216 12% 63%;
+  --border: 219 13% 23%;
+  --input: 219 13% 23%;
+  --button-outline-bg: 220 15% 13%;
+  --button-outline-border: 219 12% 25%;
+  --button-outline-hover: 220 14% 17%;
+  --form-control-bg: 220 15% 12.5%;
+  --form-control-border: 219 12% 26%;
+  --form-control-hover: 220 14% 16%;
+}
+
+[data-color-theme="ocean"][data-theme="light"] {
+  --theme-swatch: 196 40% 78%;
+  --theme-accent: 192 80% 36%;
+  --primary: var(--theme-accent);
+  --primary-foreground: 0 0% 100%;
+  --accent: 192 40% 93%;
+  --ring: var(--theme-accent);
+  --button-default-bg: 192 45% 92%;
+  --button-default-border: 192 35% 78%;
+  --button-default-hover: 192 42% 88%;
+  --button-default-active: 192 40% 84%;
+  --background: 195 30% 98.5%;
+  --shell-background: 197 30% 96.5%;
+  --chrome-background: 198 28% 93.5%;
+  --foreground: 205 45% 14%;
+  --card: 195 40% 99.5%;
+  --card-foreground: 205 45% 14%;
+  --popover: 195 40% 99.5%;
+  --popover-foreground: 205 45% 14%;
+  --secondary: 197 24% 92%;
+  --secondary-foreground: 205 45% 14%;
+  --muted: 196 26% 95.5%;
+  --muted-foreground: 200 18% 40%;
+  --border: 198 24% 86%;
+  --input: 198 24% 86%;
+  --button-outline-bg: 197 22% 93.5%;
+  --button-outline-border: 198 18% 82%;
+  --button-outline-hover: 197 22% 89.5%;
+  --form-control-bg: 195 40% 99.5%;
+  --form-control-border: 198 24% 86%;
+  --form-control-hover: 196 30% 97%;
+}
+
+[data-color-theme="ocean"][data-theme="dark"] {
+  --theme-swatch: 208 45% 20%;
+  --theme-accent: 192 75% 58%;
+  --primary: var(--theme-accent);
+  --primary-foreground: 192 40% 10%;
+  --accent: 192 18% 12%;
+  --ring: var(--theme-accent);
+  --button-default-bg: 192 25% 12%;
+  --button-default-border: 192 35% 23%;
+  --button-default-hover: 192 26% 16%;
+  --button-default-active: 192 26% 19%;
+  --body-gradient-a: rgba(68, 196, 228, 0.06);
+  --body-gradient-b: rgba(255, 255, 255, 0.015);
+  --background: 208 38% 10%;
+  --shell-background: 208 36% 11.5%;
+  --chrome-background: 210 42% 8%;
+  --foreground: 195 30% 93%;
+  --card: 207 34% 13.5%;
+  --card-foreground: 195 30% 93%;
+  --popover: 207 34% 13.5%;
+  --popover-foreground: 195 30% 93%;
+  --secondary: 207 30% 14.5%;
+  --secondary-foreground: 195 30% 93%;
+  --muted: 207 30% 15.5%;
+  --muted-foreground: 200 16% 63%;
+  --border: 205 28% 21%;
+  --input: 205 28% 21%;
+  --button-outline-bg: 207 34% 12%;
+  --button-outline-border: 205 26% 24%;
+  --button-outline-hover: 207 30% 16%;
+  --form-control-bg: 207 34% 11.5%;
+  --form-control-border: 205 26% 25%;
+  --form-control-hover: 207 30% 15%;
+}
+
+[data-color-theme="forest"][data-theme="light"] {
+  --theme-swatch: 100 25% 78%;
+  --theme-accent: 145 50% 34%;
+  --primary: var(--theme-accent);
+  --primary-foreground: 0 0% 100%;
+  --accent: 145 40% 93%;
+  --ring: var(--theme-accent);
+  --button-default-bg: 145 45% 92%;
+  --button-default-border: 145 35% 78%;
+  --button-default-hover: 145 42% 88%;
+  --button-default-active: 145 40% 84%;
+  --background: 90 20% 98.5%;
+  --shell-background: 95 18% 96.5%;
+  --chrome-background: 100 16% 93.5%;
+  --foreground: 140 25% 13%;
+  --card: 80 25% 99.5%;
+  --card-foreground: 140 25% 13%;
+  --popover: 80 25% 99.5%;
+  --popover-foreground: 140 25% 13%;
+  --secondary: 100 14% 92%;
+  --secondary-foreground: 140 25% 13%;
+  --muted: 95 16% 95.5%;
+  --muted-foreground: 120 10% 38%;
+  --border: 100 14% 85%;
+  --input: 100 14% 85%;
+  --button-outline-bg: 100 14% 93.5%;
+  --button-outline-border: 105 12% 81%;
+  --button-outline-hover: 100 14% 89.5%;
+  --form-control-bg: 80 25% 99.5%;
+  --form-control-border: 100 14% 85%;
+  --form-control-hover: 95 18% 97%;
+}
+
+[data-color-theme="forest"][data-theme="dark"] {
+  --theme-swatch: 150 22% 18%;
+  --theme-accent: 145 45% 58%;
+  --primary: var(--theme-accent);
+  --primary-foreground: 145 40% 10%;
+  --accent: 145 18% 12%;
+  --ring: var(--theme-accent);
+  --button-default-bg: 145 25% 12%;
+  --button-default-border: 145 35% 23%;
+  --button-default-hover: 145 26% 16%;
+  --button-default-active: 145 26% 19%;
+  --body-gradient-a: rgba(100, 196, 140, 0.06);
+  --body-gradient-b: rgba(255, 255, 255, 0.015);
+  --background: 150 14% 9.5%;
+  --shell-background: 150 13% 11%;
+  --chrome-background: 152 16% 7.5%;
+  --foreground: 90 15% 91%;
+  --card: 150 12% 13%;
+  --card-foreground: 90 15% 91%;
+  --popover: 150 12% 13%;
+  --popover-foreground: 90 15% 91%;
+  --secondary: 150 11% 14%;
+  --secondary-foreground: 90 15% 91%;
+  --muted: 150 11% 15%;
+  --muted-foreground: 110 8% 60%;
+  --border: 148 10% 21%;
+  --input: 148 10% 21%;
+  --button-outline-bg: 150 12% 11.5%;
+  --button-outline-border: 148 10% 24%;
+  --button-outline-hover: 150 11% 15.5%;
+  --form-control-bg: 150 12% 11%;
+  --form-control-border: 148 10% 25%;
+  --form-control-hover: 150 11% 14%;
+}
+
+[data-color-theme="sand"][data-theme="light"] {
+  --theme-swatch: 38 45% 80%;
+  --theme-accent: 28 70% 44%;
+  --primary: var(--theme-accent);
+  --primary-foreground: 0 0% 100%;
+  --accent: 28 40% 93%;
+  --ring: var(--theme-accent);
+  --button-default-bg: 28 45% 92%;
+  --button-default-border: 28 35% 78%;
+  --button-default-hover: 28 42% 88%;
+  --button-default-active: 28 40% 84%;
+  --background: 40 33% 97.5%;
+  --shell-background: 38 30% 95%;
+  --chrome-background: 36 26% 91.5%;
+  --foreground: 28 30% 15%;
+  --card: 42 40% 99%;
+  --card-foreground: 28 30% 15%;
+  --popover: 42 40% 99%;
+  --popover-foreground: 28 30% 15%;
+  --secondary: 36 22% 90.5%;
+  --secondary-foreground: 28 30% 15%;
+  --muted: 38 26% 94%;
+  --muted-foreground: 30 14% 40%;
+  --border: 34 22% 83%;
+  --input: 34 22% 83%;
+  --button-outline-bg: 36 22% 92%;
+  --button-outline-border: 34 18% 79%;
+  --button-outline-hover: 36 22% 88%;
+  --form-control-bg: 42 40% 99%;
+  --form-control-border: 34 22% 83%;
+  --form-control-hover: 38 30% 96%;
+}
+
+[data-color-theme="sand"][data-theme="dark"] {
+  --theme-swatch: 30 20% 20%;
+  --theme-accent: 28 80% 62%;
+  --primary: var(--theme-accent);
+  --primary-foreground: 28 40% 10%;
+  --accent: 28 18% 12%;
+  --ring: var(--theme-accent);
+  --button-default-bg: 28 25% 12%;
+  --button-default-border: 28 35% 23%;
+  --button-default-hover: 28 26% 16%;
+  --button-default-active: 28 26% 19%;
+  --body-gradient-a: rgba(236, 153, 81, 0.06);
+  --body-gradient-b: rgba(255, 255, 255, 0.015);
+  --background: 30 12% 10%;
+  --shell-background: 30 11% 11.5%;
+  --chrome-background: 28 13% 8%;
+  --foreground: 38 30% 90%;
+  --card: 30 10% 13.5%;
+  --card-foreground: 38 30% 90%;
+  --popover: 30 10% 13.5%;
+  --popover-foreground: 38 30% 90%;
+  --secondary: 30 9% 14.5%;
+  --secondary-foreground: 38 30% 90%;
+  --muted: 30 9% 15.5%;
+  --muted-foreground: 34 10% 62%;
+  --border: 30 8% 22%;
+  --input: 30 8% 22%;
+  --button-outline-bg: 30 10% 12%;
+  --button-outline-border: 30 8% 25%;
+  --button-outline-hover: 30 9% 16%;
+  --form-control-bg: 30 10% 11.5%;
+  --form-control-border: 30 8% 26%;
+  --form-control-hover: 30 9% 15%;
+}
+
+[data-color-theme="dusk"][data-theme="light"] {
+  --theme-swatch: 268 32% 84%;
+  --theme-accent: 265 55% 55%;
+  --primary: var(--theme-accent);
+  --primary-foreground: 0 0% 100%;
+  --accent: 265 40% 93%;
+  --ring: var(--theme-accent);
+  --button-default-bg: 265 45% 92%;
+  --button-default-border: 265 35% 78%;
+  --button-default-hover: 265 42% 88%;
+  --button-default-active: 265 40% 84%;
+  --background: 270 25% 98.5%;
+  --shell-background: 268 22% 96.5%;
+  --chrome-background: 266 20% 93.5%;
+  --foreground: 262 30% 15%;
+  --card: 270 30% 99.5%;
+  --card-foreground: 262 30% 15%;
+  --popover: 270 30% 99.5%;
+  --popover-foreground: 262 30% 15%;
+  --secondary: 266 18% 92.5%;
+  --secondary-foreground: 262 30% 15%;
+  --muted: 268 20% 95.5%;
+  --muted-foreground: 262 12% 42%;
+  --border: 266 18% 86%;
+  --input: 266 18% 86%;
+  --button-outline-bg: 266 18% 93.5%;
+  --button-outline-border: 266 14% 82%;
+  --button-outline-hover: 266 18% 89.5%;
+  --form-control-bg: 270 30% 99.5%;
+  --form-control-border: 266 18% 86%;
+  --form-control-hover: 268 22% 97%;
+}
+
+[data-color-theme="dusk"][data-theme="dark"] {
+  --theme-swatch: 258 26% 22%;
+  --theme-accent: 265 75% 74%;
+  --primary: var(--theme-accent);
+  --primary-foreground: 265 40% 10%;
+  --accent: 265 18% 12%;
+  --ring: var(--theme-accent);
+  --button-default-bg: 265 25% 12%;
+  --button-default-border: 265 35% 23%;
+  --button-default-hover: 265 26% 16%;
+  --button-default-active: 265 26% 19%;
+  --body-gradient-a: rgba(180, 139, 238, 0.06);
+  --body-gradient-b: rgba(255, 255, 255, 0.015);
+  --background: 258 20% 10.5%;
+  --shell-background: 258 19% 12%;
+  --chrome-background: 260 22% 8.5%;
+  --foreground: 265 25% 93%;
+  --card: 258 18% 14%;
+  --card-foreground: 265 25% 93%;
+  --popover: 258 18% 14%;
+  --popover-foreground: 265 25% 93%;
+  --secondary: 258 16% 15%;
+  --secondary-foreground: 265 25% 93%;
+  --muted: 258 16% 16%;
+  --muted-foreground: 262 10% 64%;
+  --border: 258 14% 23%;
+  --input: 258 14% 23%;
+  --button-outline-bg: 258 18% 12.5%;
+  --button-outline-border: 258 13% 26%;
+  --button-outline-hover: 258 16% 16.5%;
+  --form-control-bg: 258 18% 12%;
+  --form-control-border: 258 13% 27%;
+  --form-control-hover: 258 16% 15%;
+}
+[data-color-theme="rose"][data-theme="light"] {
+  --theme-swatch: 345 40% 84%;
+  --theme-accent: 342 65% 50%;
+  --primary: var(--theme-accent);
+  --primary-foreground: 0 0% 100%;
+  --accent: 342 40% 93%;
+  --ring: var(--theme-accent);
+  --button-default-bg: 342 45% 92%;
+  --button-default-border: 342 35% 78%;
+  --button-default-hover: 342 42% 88%;
+  --button-default-active: 342 40% 84%;
+  --background: 345 30% 98.5%;
+  --shell-background: 345 26% 96.5%;
+  --chrome-background: 343 22% 93.5%;
+  --foreground: 340 30% 15%;
+  --card: 345 35% 99.5%;
+  --card-foreground: 340 30% 15%;
+  --popover: 345 35% 99.5%;
+  --popover-foreground: 340 30% 15%;
+  --secondary: 343 20% 92.5%;
+  --secondary-foreground: 340 30% 15%;
+  --muted: 345 22% 95.5%;
+  --muted-foreground: 340 12% 42%;
+  --border: 343 20% 86%;
+  --input: 343 20% 86%;
+  --button-outline-bg: 343 20% 93.5%;
+  --button-outline-border: 343 15% 82%;
+  --button-outline-hover: 343 20% 89.5%;
+  --form-control-bg: 345 35% 99.5%;
+  --form-control-border: 343 20% 86%;
+  --form-control-hover: 345 26% 97%;
+}
+[data-color-theme="rose"][data-theme="dark"] {
+  --theme-swatch: 340 28% 21%;
+  --theme-accent: 342 75% 70%;
+  --primary: var(--theme-accent);
+  --primary-foreground: 342 40% 10%;
+  --accent: 342 18% 12%;
+  --ring: var(--theme-accent);
+  --button-default-bg: 342 25% 12%;
+  --button-default-border: 342 35% 23%;
+  --button-default-hover: 342 26% 16%;
+  --button-default-active: 342 26% 19%;
+  --body-gradient-a: rgba(236, 121, 156, 0.06);
+  --body-gradient-b: rgba(255, 255, 255, 0.015);
+  --background: 340 16% 10%;
+  --shell-background: 340 15% 11.5%;
+  --chrome-background: 342 18% 8%;
+  --foreground: 345 25% 93%;
+  --card: 340 14% 13.5%;
+  --card-foreground: 345 25% 93%;
+  --popover: 340 14% 13.5%;
+  --popover-foreground: 345 25% 93%;
+  --secondary: 340 12% 14.5%;
+  --secondary-foreground: 345 25% 93%;
+  --muted: 340 12% 15.5%;
+  --muted-foreground: 342 10% 64%;
+  --border: 340 11% 22%;
+  --input: 340 11% 22%;
+  --button-outline-bg: 340 14% 12%;
+  --button-outline-border: 340 10% 25%;
+  --button-outline-hover: 340 12% 16%;
+  --form-control-bg: 340 14% 11.5%;
+  --form-control-border: 340 10% 26%;
+  --form-control-hover: 340 12% 15%;
+}
+[data-color-theme="ember"][data-theme="light"] {
+  --theme-swatch: 16 55% 80%;
+  --theme-accent: 14 78% 48%;
+  --primary: var(--theme-accent);
+  --primary-foreground: 0 0% 100%;
+  --accent: 14 40% 93%;
+  --ring: var(--theme-accent);
+  --button-default-bg: 14 45% 92%;
+  --button-default-border: 14 35% 78%;
+  --button-default-hover: 14 42% 88%;
+  --button-default-active: 14 40% 84%;
+  --background: 20 35% 98%;
+  --shell-background: 18 30% 96%;
+  --chrome-background: 16 26% 92.5%;
+  --foreground: 12 35% 14%;
+  --card: 22 40% 99.5%;
+  --card-foreground: 12 35% 14%;
+  --popover: 22 40% 99.5%;
+  --popover-foreground: 12 35% 14%;
+  --secondary: 16 22% 91.5%;
+  --secondary-foreground: 12 35% 14%;
+  --muted: 18 26% 95%;
+  --muted-foreground: 14 14% 41%;
+  --border: 16 22% 85%;
+  --input: 16 22% 85%;
+  --button-outline-bg: 16 22% 93%;
+  --button-outline-border: 16 17% 81%;
+  --button-outline-hover: 16 22% 89%;
+  --form-control-bg: 22 40% 99.5%;
+  --form-control-border: 16 22% 85%;
+  --form-control-hover: 18 30% 96.5%;
+}
+[data-color-theme="ember"][data-theme="dark"] {
+  --theme-swatch: 12 32% 20%;
+  --theme-accent: 14 85% 64%;
+  --primary: var(--theme-accent);
+  --primary-foreground: 14 40% 10%;
+  --accent: 14 18% 12%;
+  --ring: var(--theme-accent);
+  --button-default-bg: 14 25% 12%;
+  --button-default-border: 14 35% 23%;
+  --button-default-hover: 14 26% 16%;
+  --button-default-active: 14 26% 19%;
+  --body-gradient-a: rgba(241, 122, 85, 0.06);
+  --body-gradient-b: rgba(255, 255, 255, 0.015);
+  --background: 12 14% 9.5%;
+  --shell-background: 12 13% 11%;
+  --chrome-background: 10 16% 7.5%;
+  --foreground: 24 30% 91%;
+  --card: 12 12% 13%;
+  --card-foreground: 24 30% 91%;
+  --popover: 12 12% 13%;
+  --popover-foreground: 24 30% 91%;
+  --secondary: 12 11% 14%;
+  --secondary-foreground: 24 30% 91%;
+  --muted: 12 11% 15%;
+  --muted-foreground: 18 10% 62%;
+  --border: 12 10% 21%;
+  --input: 12 10% 21%;
+  --button-outline-bg: 12 12% 11.5%;
+  --button-outline-border: 12 10% 24%;
+  --button-outline-hover: 12 11% 15.5%;
+  --form-control-bg: 12 12% 11%;
+  --form-control-border: 12 10% 25%;
+  --form-control-hover: 12 11% 14%;
+}
+[data-color-theme="olive"][data-theme="light"] {
+  --theme-swatch: 58 30% 76%;
+  --theme-accent: 62 45% 34%;
+  --primary: var(--theme-accent);
+  --primary-foreground: 0 0% 100%;
+  --accent: 62 40% 93%;
+  --ring: var(--theme-accent);
+  --button-default-bg: 62 45% 92%;
+  --button-default-border: 62 35% 78%;
+  --button-default-hover: 62 42% 88%;
+  --button-default-active: 62 40% 84%;
+  --background: 55 25% 97.5%;
+  --shell-background: 58 22% 95%;
+  --chrome-background: 60 18% 91.5%;
+  --foreground: 70 30% 13%;
+  --card: 52 30% 99%;
+  --card-foreground: 70 30% 13%;
+  --popover: 52 30% 99%;
+  --popover-foreground: 70 30% 13%;
+  --secondary: 60 16% 90.5%;
+  --secondary-foreground: 70 30% 13%;
+  --muted: 58 18% 94%;
+  --muted-foreground: 65 10% 38%;
+  --border: 60 16% 83%;
+  --input: 60 16% 83%;
+  --button-outline-bg: 60 16% 92%;
+  --button-outline-border: 62 12% 79%;
+  --button-outline-hover: 60 16% 88%;
+  --form-control-bg: 52 30% 99%;
+  --form-control-border: 60 16% 83%;
+  --form-control-hover: 58 22% 96%;
+}
+[data-color-theme="olive"][data-theme="dark"] {
+  --theme-swatch: 70 22% 18%;
+  --theme-accent: 62 45% 58%;
+  --primary: var(--theme-accent);
+  --primary-foreground: 62 40% 10%;
+  --accent: 62 18% 12%;
+  --ring: var(--theme-accent);
+  --button-default-bg: 62 25% 12%;
+  --button-default-border: 62 35% 23%;
+  --button-default-hover: 62 26% 16%;
+  --button-default-active: 62 26% 19%;
+  --body-gradient-a: rgba(193, 196, 100, 0.06);
+  --body-gradient-b: rgba(255, 255, 255, 0.015);
+  --background: 70 12% 9%;
+  --shell-background: 70 11% 10.5%;
+  --chrome-background: 72 14% 7%;
+  --foreground: 58 20% 90%;
+  --card: 70 10% 12.5%;
+  --card-foreground: 58 20% 90%;
+  --popover: 70 10% 12.5%;
+  --popover-foreground: 58 20% 90%;
+  --secondary: 70 9% 13.5%;
+  --secondary-foreground: 58 20% 90%;
+  --muted: 70 9% 14.5%;
+  --muted-foreground: 62 8% 60%;
+  --border: 70 8% 20%;
+  --input: 70 8% 20%;
+  --button-outline-bg: 70 10% 11%;
+  --button-outline-border: 70 8% 23%;
+  --button-outline-hover: 70 9% 15%;
+  --form-control-bg: 70 10% 10.5%;
+  --form-control-border: 70 8% 24%;
+  --form-control-hover: 70 9% 13.5%;
+}
+[data-color-theme="jade"][data-theme="light"] {
+  --theme-swatch: 170 35% 78%;
+  --theme-accent: 168 60% 32%;
+  --primary: var(--theme-accent);
+  --primary-foreground: 0 0% 100%;
+  --accent: 168 40% 93%;
+  --ring: var(--theme-accent);
+  --button-default-bg: 168 45% 92%;
+  --button-default-border: 168 35% 78%;
+  --button-default-hover: 168 42% 88%;
+  --button-default-active: 168 40% 84%;
+  --background: 168 28% 98.5%;
+  --shell-background: 170 25% 96.5%;
+  --chrome-background: 172 22% 93.5%;
+  --foreground: 178 40% 12%;
+  --card: 166 32% 99.5%;
+  --card-foreground: 178 40% 12%;
+  --popover: 166 32% 99.5%;
+  --popover-foreground: 178 40% 12%;
+  --secondary: 172 18% 92%;
+  --secondary-foreground: 178 40% 12%;
+  --muted: 170 20% 95.5%;
+  --muted-foreground: 176 14% 37%;
+  --border: 172 18% 85%;
+  --input: 172 18% 85%;
+  --button-outline-bg: 172 18% 93.5%;
+  --button-outline-border: 174 14% 81%;
+  --button-outline-hover: 172 18% 89.5%;
+  --form-control-bg: 166 32% 99.5%;
+  --form-control-border: 172 18% 85%;
+  --form-control-hover: 170 25% 97%;
+}
+[data-color-theme="jade"][data-theme="dark"] {
+  --theme-swatch: 176 34% 17%;
+  --theme-accent: 168 55% 54%;
+  --primary: var(--theme-accent);
+  --primary-foreground: 168 40% 10%;
+  --accent: 168 18% 12%;
+  --ring: var(--theme-accent);
+  --button-default-bg: 168 25% 12%;
+  --button-default-border: 168 35% 23%;
+  --button-default-hover: 168 26% 16%;
+  --button-default-active: 168 26% 19%;
+  --body-gradient-a: rgba(73, 202, 176, 0.06);
+  --body-gradient-b: rgba(255, 255, 255, 0.015);
+  --background: 178 22% 8.5%;
+  --shell-background: 178 20% 10%;
+  --chrome-background: 180 26% 6.5%;
+  --foreground: 168 22% 91%;
+  --card: 178 18% 12%;
+  --card-foreground: 168 22% 91%;
+  --popover: 178 18% 12%;
+  --popover-foreground: 168 22% 91%;
+  --secondary: 178 16% 13%;
+  --secondary-foreground: 168 22% 91%;
+  --muted: 178 16% 14%;
+  --muted-foreground: 172 10% 60%;
+  --border: 177 14% 19%;
+  --input: 177 14% 19%;
+  --button-outline-bg: 178 18% 10.5%;
+  --button-outline-border: 177 13% 22%;
+  --button-outline-hover: 178 16% 14%;
+  --form-control-bg: 178 18% 10%;
+  --form-control-border: 177 13% 23%;
+  --form-control-hover: 178 16% 13%;
+}
+
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --shell-background: 0 0% 98.4%;
-    --chrome-background: 180 4% 95.5%;
-    --foreground: 220 28% 14%;
-    --card: 0 0% 100%;
-    --card-foreground: 220 28% 14%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 28% 14%;
-    --primary: 161 67% 37%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 180 3% 93.5%;
-    --secondary-foreground: 220 28% 14%;
-    --muted: 0 0% 97%;
-    --muted-foreground: 220 12% 43%;
-    --accent: 168 35% 92%;
-    --accent-foreground: 220 28% 14%;
-    --destructive: 354 74% 52%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 214 22% 89%;
-    --input: var(--border);
-    --ring: 161 67% 37%;
-    --radius: 8px;
-    --radius-control: 5px;
-    --app-system-font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-    --app-ui-font: var(--app-system-font);
-    --button-default-bg: 156 31% 92%;
-    --button-default-border: 156 18% 81%;
-    --button-default-hover: 156 28% 88%;
-    --button-default-active: 156 26% 84%;
-    --button-outline-bg: 210 8% 94%;
-    --button-outline-border: 215 10% 84%;
-    --button-outline-hover: 210 8% 90%;
-    --form-control-bg: 0 0% 100%;
-    --form-control-border: var(--border);
-    --form-control-hover: 0 0% 98%;
-    --body-gradient-a: rgba(58, 174, 131, 0.14);
-    --body-gradient-b: rgba(88, 137, 244, 0.1);
-  }
-
-  :root[data-theme="dark"] {
-    --background: 0 0% 10%;
-    --shell-background: 0 0% 11.5%;
-    --chrome-background: 0 0% 9.5%;
-    --foreground: 210 20% 94%;
-    --card: 0 0% 14%;
-    --card-foreground: 210 20% 94%;
-    --popover: 0 0% 14%;
-    --popover-foreground: 210 20% 94%;
-    --primary: 153 74% 64%;
-    --primary-foreground: 150 40% 8%;
-    --secondary: 0 0% 14%;
-    --secondary-foreground: 210 20% 94%;
-    --muted: 0 0% 15%;
-    --muted-foreground: 215 10% 64%;
-    --accent: 0 0% 18%;
-    --accent-foreground: 210 20% 94%;
-    --destructive: 349 89% 60%;
-    --destructive-foreground: 210 24% 98%;
-    --border: 0 0% 22%;
-    --input: 0 0% 22%;
-    --ring: 153 74% 64%;
-    --button-default-bg: 153 12% 15%;
-    --button-default-border: 153 10% 25%;
-    --button-default-hover: 153 12% 18%;
-    --button-default-active: 153 12% 21%;
-    --button-outline-bg: 0 0% 12%;
-    --button-outline-border: 0 0% 24%;
-    --button-outline-hover: 0 0% 16%;
-    --form-control-bg: 0 0% 12%;
-    --form-control-border: 0 0% 25%;
-    --form-control-hover: 0 0% 15%;
-    --body-gradient-a: rgba(98, 227, 168, 0.06);
-    --body-gradient-b: rgba(255, 255, 255, 0.015);
-  }
-
   :root[data-theme="light"] {
     --body-gradient-a: transparent;
     --body-gradient-b: transparent;
@@ -276,6 +897,32 @@
 
   @media (prefers-reduced-motion: reduce) {
     .role-option { transition: none; }
+  }
+
+  /*
+   * Pixel language shared by the role switcher and the workspace home: a dot-grid texture, items that pop in
+   * on a stagger (set animation-delay inline), and captions that settle in when their content changes.
+   */
+  @keyframes pixelPopIn {
+    from { opacity: 0; transform: translate3d(-6px, 0, 0) scale(0.7); }
+    to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  }
+  @keyframes pixelRiseIn {
+    from { opacity: 0; transform: translate3d(0, 6px, 0); }
+    to { opacity: 1; transform: translate3d(0, 0, 0); }
+  }
+  @keyframes pixelTextIn {
+    from { opacity: 0; transform: translate3d(0, 3px, 0); }
+    to { opacity: 1; transform: translate3d(0, 0, 0); }
+  }
+  .pixel-dots {
+    background-image: radial-gradient(hsl(var(--foreground) / 0.12) 1px, transparent 1.2px);
+    background-size: 6px 6px;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .pixel-pop-in { animation: pixelPopIn 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+    .pixel-rise-in { animation: pixelRiseIn 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+    .pixel-text-in { animation: pixelTextIn 200ms ease-out both; }
   }
 
   /* Bot avatars (Line style): the outline takes the bot's deep colour on light themes and its light colour on dark. */

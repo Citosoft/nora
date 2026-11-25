@@ -1,6 +1,7 @@
 import { getPathLeafName } from "@/components/app/logic/pathLeaf";
 import type {
   WorkspaceQuickSearchGroupId,
+  WorkspaceQuickSearchGroups,
   WorkspaceQuickSearchRow,
   WorkspaceQuickSearchSource
 } from "@/components/app/types/titlebarWorkspaceSearch.types";
@@ -67,8 +68,8 @@ const worktreeSearchFragments = (workspace: string, worktreePath: string | null)
   return parts;
 };
 
-export const buildWorkspaceQuickSearchRows = (source: WorkspaceQuickSearchSource): WorkspaceQuickSearchRow[] => {
-  const rows: WorkspaceQuickSearchRow[] = [];
+export const buildWorkspaceQuickSearchRows = (source: WorkspaceQuickSearchSource): WorkspaceQuickSearchGroups => {
+  const rows: WorkspaceQuickSearchGroups = { agents: [], terminals: [], tasks: [], specs: [], notes: [], files: [] };
 
   for (const agent of source.agents) {
     const searchText = [
@@ -100,7 +101,7 @@ export const buildWorkspaceQuickSearchRows = (source: WorkspaceQuickSearchSource
 
     const subtitle = subtitleParts.length ? subtitleParts.join(" · ") : agent.toolLabel;
 
-    rows.push({
+    rows.agents.push({
       key: `agent:${agent.id}`,
       group: "agents",
       title: agent.name,
@@ -120,7 +121,7 @@ export const buildWorkspaceQuickSearchRows = (source: WorkspaceQuickSearchSource
       .join(" ")
       .toLowerCase();
     const terminalBranch = terminal.branch.trim();
-    rows.push({
+    rows.terminals.push({
       key: `terminal:${terminal.id}`,
       group: "terminals",
       title: terminal.name,
@@ -132,7 +133,7 @@ export const buildWorkspaceQuickSearchRows = (source: WorkspaceQuickSearchSource
 
   for (const task of source.tasks) {
     const searchText = [task.title, task.path, task.projectName, task.projectId].join(" ").toLowerCase();
-    rows.push({
+    rows.tasks.push({
       key: `task:${task.projectId}:${task.path}`,
       group: "tasks",
       title: task.title,
@@ -144,7 +145,7 @@ export const buildWorkspaceQuickSearchRows = (source: WorkspaceQuickSearchSource
 
   for (const spec of source.specs) {
     const searchText = [spec.title, spec.path, spec.projectName, spec.projectId].join(" ").toLowerCase();
-    rows.push({
+    rows.specs.push({
       key: `spec:${spec.projectId}:${spec.path}`,
       group: "specs",
       title: spec.title,
@@ -156,7 +157,7 @@ export const buildWorkspaceQuickSearchRows = (source: WorkspaceQuickSearchSource
 
   for (const note of source.notes) {
     const searchText = [note.title, note.path, note.projectName, note.projectId].join(" ").toLowerCase();
-    rows.push({
+    rows.notes.push({
       key: `note:${note.projectId}:${note.path}`,
       group: "notes",
       title: note.title,
@@ -166,13 +167,13 @@ export const buildWorkspaceQuickSearchRows = (source: WorkspaceQuickSearchSource
     });
   }
 
-  const sortedPaths = [...source.filePaths].filter((path) => !shouldSkipFilePath(path)).sort((left, right) =>
+  const sortedPaths = source.filePaths.filter((path) => !shouldSkipFilePath(path)).sort((left, right) =>
     left.localeCompare(right)
   );
 
   for (const path of sortedPaths) {
     const searchText = path.toLowerCase();
-    rows.push({
+    rows.files.push({
       key: `file:${path}`,
       group: "files",
       title: path.split("/").pop() || path,
@@ -185,72 +186,15 @@ export const buildWorkspaceQuickSearchRows = (source: WorkspaceQuickSearchSource
   return rows;
 };
 
-export const filterWorkspaceQuickSearchRows = (
-  rows: readonly WorkspaceQuickSearchRow[],
-  query: string
-): WorkspaceQuickSearchRow[] => {
+export function workspaceQuickSearchResults(groups: WorkspaceQuickSearchGroups, query: string): WorkspaceQuickSearchRow[] {
   const tokens = normalizeTokens(query);
-  if (!tokens.length) {
-    return [];
-  }
-
-  const perGroup: Record<WorkspaceQuickSearchGroupId, number> = {
-    agents: 0,
-    terminals: 0,
-    tasks: 0,
-    specs: 0,
-    notes: 0,
-    files: 0
-  };
-
-  const ordered: WorkspaceQuickSearchRow[] = [];
-  for (const group of GROUP_ORDER) {
-    for (const row of rows) {
-      if (row.group !== group) {
-        continue;
-      }
-
-      if (!matchesTokens(row.searchText, tokens)) {
-        continue;
-      }
-
-      if (perGroup[group] >= MAX_PER_GROUP) {
-        break;
-      }
-
-      perGroup[group] += 1;
-      ordered.push(row);
+  return GROUP_ORDER.flatMap((group) => {
+    if (!tokens.length) return groups[group].slice(0, BROWSE_MAX_PER_GROUP);
+    const matches: WorkspaceQuickSearchRow[] = [];
+    for (const row of groups[group]) {
+      if (matchesTokens(row.searchText, tokens)) matches.push(row);
+      if (matches.length === MAX_PER_GROUP) break;
     }
-  }
-
-  return ordered;
-};
-
-export const browseWorkspaceQuickSearchRows = (rows: readonly WorkspaceQuickSearchRow[]): WorkspaceQuickSearchRow[] => {
-  const perGroup: Record<WorkspaceQuickSearchGroupId, number> = {
-    agents: 0,
-    terminals: 0,
-    tasks: 0,
-    specs: 0,
-    notes: 0,
-    files: 0
-  };
-
-  const ordered: WorkspaceQuickSearchRow[] = [];
-  for (const group of GROUP_ORDER) {
-    for (const row of rows) {
-      if (row.group !== group) {
-        continue;
-      }
-
-      if (perGroup[group] >= BROWSE_MAX_PER_GROUP) {
-        break;
-      }
-
-      perGroup[group] += 1;
-      ordered.push(row);
-    }
-  }
-
-  return ordered;
-};
+    return matches;
+  });
+}

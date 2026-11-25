@@ -8,7 +8,7 @@ test("registering the restored workspace preserves a DM selected ahead of a late
   const f = threadWorkspaceFixture();
   const dm = threadSummary("dm");
   dm.conversation.direct = { botId: "ada", name: "Ada", role: "Helper", avatar: { seed: 7 },
-    scope: { kind: "global" }, workspaceId: "project" };
+    scope: { kind: "global" }, workspaceId: "project", retiredAt: null };
   f.summaries.push(dm);
   const store = createThreadWorkspaceStore(f.deps);
   store.focusWorkspace("project");

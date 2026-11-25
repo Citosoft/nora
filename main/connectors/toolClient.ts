@@ -52,6 +52,7 @@ export function createConnectorToolClient({ store, credentials, onNeedsAuth, fet
         await drop(connector.id);
         if (isUnauthorized(error)) {
           if (connector.auth.kind === "oauth" && attempt === 0) continue;
+          if (connector.auth.kind === "oauth") credentials.requireSignIn(connector);
           onNeedsAuth(connector.id);
           throw new ConnectorToolError("needs-auth", `${connector.name} rejected Nora's sign-in. Sign in again in Settings.`);
         }

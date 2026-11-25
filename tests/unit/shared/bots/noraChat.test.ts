@@ -15,7 +15,7 @@ test("Nora is a direct-chat partner in every workspace, alongside the workspace'
 });
 
 test("Nora's chat is found like any global bot's, so it opens instead of starting a second one", () => {
-  const chat = conversation("dm", { direct: { botId: "nora", name: "Nora", role: NORA_CHAT.role, avatar: NORA_CHAT.avatar, scope: { kind: "global" }, workspaceId: "app" } });
+  const chat = conversation("dm", { direct: { botId: "nora", name: "Nora", role: NORA_CHAT.role, avatar: NORA_CHAT.avatar, scope: { kind: "global" }, workspaceId: "app", retiredAt: null } });
   assert.equal(findDirectChat([{ conversation: chat, latestRun: null, queuedCount: 0, pendingRequestCount: 0 }], NORA_CHAT)?.conversation.id, "dm");
 });
 
@@ -25,4 +25,9 @@ test("Nora's chat runs on its own model, else the new-thread default, else leave
   assert.deepEqual(noraChatModel({ noraChatModel: pinned, threadModel: thread }), pinned);
   assert.deepEqual(noraChatModel({ threadModel: thread }), thread);
   assert.equal(noraChatModel({}), null);
+});
+
+test("a reset (retired) direct chat is history, not the bot's chat", () => {
+  const chat = conversation("dm", { direct: { botId: "nora", name: "Nora", role: NORA_CHAT.role, avatar: NORA_CHAT.avatar, scope: { kind: "global" }, workspaceId: "app", retiredAt: "2026-11-25T00:00:00.000Z" } });
+  assert.equal(findDirectChat([{ conversation: chat, latestRun: null, queuedCount: 0, pendingRequestCount: 0 }], NORA_CHAT), null);
 });

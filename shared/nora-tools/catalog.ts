@@ -16,7 +16,8 @@ export const NORA_TOOLS = {
     audience: ["nora", "bot"],
     title: "Ask another bot",
     description: "Send a message to a bot (by id or name from list_bots) and wait for its reply. The bot answers in its own thread, "
-      + "with its own instructions, model and permissions and read-only access to this workspace; asking the same bot again continues that thread. "
+      + "with its own instructions, model and permissions. Global bots can write in this workspace; workspace bots get the same access as this thread. "
+      + "Asking the same bot again continues that thread. "
       + "Use it when the user @mentions a bot or when another bot's role fits the work. Bots cannot ask themselves, and chains of asks are limited."
   },
   remember: {

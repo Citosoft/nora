@@ -7,7 +7,7 @@ import { bot } from "../shared/bots/fixtures";
 
 const ada = snapshotBot(bot("ada"));
 const direct = (scope: "global" | "workspace", workspaceId: string) =>
-  conversation("dm", { direct: { botId: "ada", name: "Ada", role: "Helper", avatar: ada.avatar, scope: scope === "global" ? { kind: "global" } : { kind: "workspace", workspaceId }, workspaceId } }).direct;
+  conversation("dm", { direct: { botId: "ada", name: "Ada", role: "Helper", avatar: ada.avatar, scope: scope === "global" ? { kind: "global" } : { kind: "workspace", workspaceId }, workspaceId, retiredAt: null } }).direct;
 const available = [{ id: "app" }, { id: "site" }];
 
 test("a global bot's chat follows the workspace it is open in", () => {

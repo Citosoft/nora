@@ -1,8 +1,15 @@
 import os from "node:os";
 import path from "node:path";
 
+let noraRoot = path.join(os.homedir(), ".nora");
+
+/** Set once at startup by `applyAppProfile`, before any path below is read. */
+export function configureNoraRoot(root: string): void {
+  noraRoot = root;
+}
+
 export function getNoraRoot(): string {
-  return path.join(os.homedir(), ".nora");
+  return noraRoot;
 }
 
 export function getConfigDir(): string {

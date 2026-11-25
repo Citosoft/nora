@@ -12,3 +12,10 @@ test("getParentDirectoryPath handles nested paths", () => {
   assert.equal(getParentDirectoryPath("a/b/c.txt"), "a/b");
   assert.equal(getParentDirectoryPath("root.txt"), "");
 });
+
+test("duplicate paths merge and a file used as a parent becomes a directory", () => {
+  const tree = buildFileTree(["src", "/src//a", "src/a", "other/a"], ["src", "empty"]);
+  assert.deepEqual(tree.map((node) => [node.path, node.kind, node.children.map((child) => child.path)]), [
+    ["empty", "directory", []], ["other", "directory", ["other/a"]], ["src", "directory", ["src/a"]]
+  ]);
+});

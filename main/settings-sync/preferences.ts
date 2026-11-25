@@ -13,6 +13,7 @@ export function captureSettings(settings: AppSettings, appearance: PortableAppea
     rememberLastSplitViewPerWorkspace: settings.rememberLastSplitViewPerWorkspace, confirmSplitViewDelete: settings.confirmSplitViewDelete,
     showWorkspaceSessionTabs: settings.showWorkspaceSessionTabs, agentCompletionNotificationsEnabled: settings.agentCompletionNotificationsEnabled,
     openInternalBrowserOnNewPortDetection: settings.openInternalBrowserOnNewPortDetection, fileEditorThemeId: settings.fileEditorThemeId,
+    threadBackdrop: settings.threadBackdrop,
     defaultRole: settings.personalization.defaultRole, idleCompaction: settings.personalization.idleCompaction ?? "suggest",
     ...threads, threadModel: portableModel(settings.personalization.threadModel), subagentModel: portableModel(threads.subagentModel)
   };
@@ -56,6 +57,7 @@ export function applySettings(settings: AppSettings, appearance: PortableAppeara
     showWorkspaceSessionTabs: values.showWorkspaceSessionTabs ?? settings.showWorkspaceSessionTabs,
     agentCompletionNotificationsEnabled: values.agentCompletionNotificationsEnabled ?? settings.agentCompletionNotificationsEnabled,
     openInternalBrowserOnNewPortDetection: values.openInternalBrowserOnNewPortDetection ?? settings.openInternalBrowserOnNewPortDetection,
-    fileEditorThemeId: values.fileEditorThemeId ?? settings.fileEditorThemeId
+    fileEditorThemeId: values.fileEditorThemeId ?? settings.fileEditorThemeId,
+    threadBackdrop: values.threadBackdrop ?? settings.threadBackdrop
   };
 }

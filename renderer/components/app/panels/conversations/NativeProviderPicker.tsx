@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createModelCatalogStore, nativeProviderKey } from "@/components/app/logic/modelCatalogStore";
+import { checkoutModelCatalog, nativeProviderKey } from "@/components/app/logic/modelCatalogStore";
 import { inheritedModelId, inheritedSubagentModel, inheritedNativeProvider, resolveModelBinding, selectedNativeModel } from "@/components/app/logic/modelBinding";
 import { threadPreferences } from "@shared/personalization/threads";
 import { permissionChoices } from "@/components/app/logic/permissionPosture";
@@ -25,7 +25,7 @@ export function NativeProviderPicker({ state, workspace, client, locked: current
   const [needsPolicy, setNeedsPolicy] = useState(false);
   const [reasoning, setReasoning] = useState<string | null>(initial?.reasoning ?? null);
   const [subagentModel, setSubagentModel] = useState<string | null | undefined>(initial ? initial.subagentModel ?? null : undefined);
-  const store = useMemo(() => createModelCatalogStore({ client, workspace: workspace.workspace }), [client, workspace.workspace]);
+  const store = useMemo(() => checkoutModelCatalog({ client, workspace: workspace.workspace }), [client, workspace.workspace]);
   const selectedKey = locked ? nativeProviderKey(locked) : choice.providerKey;
   const provider = selectedKey ? state.providers.find((entry) => nativeProviderKey(entry) === selectedKey) ?? null : inheritedNativeProvider(state.providers, defaults);
   const catalog = useNativeModelCatalog(store, provider);

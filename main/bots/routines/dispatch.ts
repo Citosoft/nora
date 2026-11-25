@@ -1,4 +1,5 @@
 import { DIRECT_BINDING } from "@shared/bots/chats";
+import { findDirectChat } from "@shared/bots/directChats";
 import { createBotThread } from "@main/bots/conversations/runner";
 import type { BotDefinition } from "@shared/types/bots/bots.types";
 import type { Routine } from "@shared/types/bots/routines.types";
@@ -7,9 +8,7 @@ import type { RoutineTarget, RoutineWorkspace } from "@main/types/bots/routines.
 
 /** The bot's one direct chat for its scope, created on first use; runs posted there are routed to a work thread like any message. */
 async function directChat(deps: BotRunnerDeps, bot: BotDefinition, workspace: RoutineWorkspace): Promise<string> {
-  const scope = bot.scope.kind === "workspace" ? bot.scope.workspaceId : null;
-  const existing = deps.host.summaries().find(({ conversation }) => conversation.direct?.botId === bot.id
-    && (conversation.direct.scope.kind === "workspace" ? conversation.direct.scope.workspaceId === scope : scope === null));
+  const existing = findDirectChat(deps.host.summaries(), bot);
   if (existing) return existing.conversation.id;
   const receipt = await deps.host.execute({ kind: "create", commandId: deps.nextId(), conversationId: deps.nextId(), title: bot.name,
     workspace: { ...workspace.workspace, access: "read" }, provider: { ...DIRECT_BINDING }, parentId: null, direct: { botId: bot.id, workspaceId: workspace.id } });

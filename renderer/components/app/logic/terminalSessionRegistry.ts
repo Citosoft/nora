@@ -9,6 +9,8 @@ import { Terminal as XtermTerminal, type ITheme } from "@xterm/xterm";
 
 const terminalSessionRegistry = new Map<string, PreservedTerminalSessionEntry>();
 
+let unsubscribeOutput: (() => void) | null = null;
+
 function styleTerminalHelpers(mountElement: HTMLDivElement): void {
   const xtermRoot = mountElement.querySelector(".xterm");
   const helperTextarea = xtermRoot?.querySelector(".xterm-helper-textarea") as HTMLTextAreaElement | null;
@@ -114,10 +116,13 @@ function createPreservedTerminalSessionEntry(
       }
     },
     dispose: () => {
-      unsubscribe();
       entry.detachFromViewport();
       terminal.dispose();
       terminalSessionRegistry.delete(sessionId);
+      if (!terminalSessionRegistry.size) {
+        unsubscribeOutput?.();
+        unsubscribeOutput = null;
+      }
     }
   };
 
@@ -155,15 +160,6 @@ function createPreservedTerminalSessionEntry(
     void noraTerminalClient.sendTerminalInput(sessionId, data);
   });
 
-  const unsubscribe = noraTerminalClient.onTerminalData((payload) => {
-    if (payload.sessionId !== sessionId) {
-      return;
-    }
-
-    entry.liveEventCount += 1;
-    terminal.write(payload.data);
-  });
-
   return entry;
 }
 
@@ -184,6 +180,13 @@ export function getOrCreatePreservedTerminalSession(
 
   const created = createPreservedTerminalSessionEntry(sessionId, theme, fontFamily);
   terminalSessionRegistry.set(sessionId, created);
+  unsubscribeOutput ??= noraTerminalClient.onTerminalData(({ sessionId, data }) => {
+    const entry = terminalSessionRegistry.get(sessionId);
+    if (entry) {
+      entry.liveEventCount += 1;
+      entry.terminal.write(data);
+    }
+  });
   return created;
 }
 

@@ -1,8 +1,10 @@
 import { ChevronDown, ChevronUp, FileCode2, GitBranch } from "lucide-react";
 import { formatChangeTotals } from "@/components/app/logic/thread-workspace/insights";
+import { formatAgentMode } from "@/components/app/logic/utils";
 import type { ThreadInsightsPanelProps } from "@/components/app/types/threadInsights.types";
 import { Button } from "@/components/ui/button";
 import { useId } from "react";
+import { ThreadAccessBadge } from "../threads/ThreadAccessBadge";
 import { ThreadIdePicker } from "./ThreadIdePicker";
 import { DiffCounts } from "./DiffCounts";
 import { ThreadConnectors } from "./ThreadConnectors";
@@ -17,12 +19,13 @@ import { ThreadInsightsSectionsContextMenu } from "./ThreadInsightsSectionsConte
 import { ThreadInsightsSectionsDropdown } from "./ThreadInsightsSectionsDropdown";
 import { useThreadInsightsSections } from "@/components/app/hooks/useThreadInsightsSections";
 
-export function ThreadInsightsPanel({ header, providerLabel, connectors, skills, changes, subagents, outputs, branch, pins, expanded, busy, canSettle, hasOlderHistory, onToggle, onLoadHistory, onOpenOutput, onSettleChange }: ThreadInsightsPanelProps) {
+export function ThreadInsightsPanel({ header, providerLabel, connectors, skills, changes, subagents, outputs, branch, pins, expanded, busy, canSettle, hasOlderHistory, onToggle, onLoadHistory, onOpenOutput, onSettleChange, accessToggle }: ThreadInsightsPanelProps) {
   const detailsId = useId();
   const sections = useThreadInsightsSections();
   const show = sections.isVisible;
   const conversation = header.conversation;
   const active = header.activeRuns[0];
+  const accessLabel = formatAgentMode(conversation.workspace.access);
   const branchChanges = branch.changes.status === "ready" ? branch.changes.value : null;
   // Live agent work outranks change counts while the panel is collapsed; the checkout's branch diff outranks turn evidence.
   const compactSummary = subagents.running ? `${subagents.running} ${subagents.running === 1 ? "subagent" : "subagents"} running`
@@ -34,7 +37,7 @@ export function ThreadInsightsPanel({ header, providerLabel, connectors, skills,
     <div className="flex items-center gap-0.5 pr-1.5">
       <button type="button" className="flex min-w-0 flex-1 items-center gap-2 rounded-lg py-3 pl-3.5 pr-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={onToggle} aria-expanded={expanded} aria-controls={detailsId}>
         <FileCode2 className="size-4 shrink-0 text-primary" aria-hidden="true" />
-        <span className="min-w-0 flex-1 truncate text-xs font-medium">{expanded ? "Thread details" : compactSummary}</span>
+        <span className="min-w-0 flex-1 truncate text-xs font-medium">{expanded ? "Thread details" : `${accessLabel} · ${compactSummary}`}</span>
         {expanded ? <ChevronUp className="size-3.5 text-muted-foreground" aria-hidden="true" /> : <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden="true" />}
       </button>
       <ThreadInsightsSectionsDropdown visibility={sections} />
@@ -42,7 +45,11 @@ export function ThreadInsightsPanel({ header, providerLabel, connectors, skills,
     {expanded && <div id={detailsId} className="thin-scrollbar max-h-[min(70vh,44rem)] space-y-3 overflow-y-auto border-t border-border/50 px-3.5 pb-3.5 pt-3 text-xs [&>*:first-child]:border-t-0 [&>*:first-child]:pt-0">
       {show("overview") && <div className="space-y-1">
         <p className="truncate font-medium" title={conversation.title}>{conversation.title}</p>
-        <p className="text-muted-foreground">{conversation.archivedAt ? "Settled" : active ? active.state.replaceAll("-", " ") : "Ready"} · {conversation.provider.model}</p>
+        <p className="flex min-w-0 flex-wrap items-center gap-1.5 text-muted-foreground">
+          <ThreadAccessBadge access={conversation.workspace.access} disabled={accessToggle?.disabled}
+            onToggle={accessToggle?.onToggle} />
+          <span>{conversation.archivedAt ? "Settled" : active ? active.state.replaceAll("-", " ") : "Ready"} · {conversation.provider.model}</span>
+        </p>
         {conversation.workspace.branch && <p className="flex min-w-0 items-center gap-1.5 text-muted-foreground"><GitBranch className="size-3 shrink-0" aria-hidden="true" /><span className="truncate" title={conversation.workspace.branch}>{conversation.workspace.branch}</span></p>}
       </div>}
       {show("pinned") && <ThreadPinnedMessages pins={pins} />}

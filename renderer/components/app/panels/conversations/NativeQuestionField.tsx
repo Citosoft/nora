@@ -1,12 +1,14 @@
 import { useId } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { questionOffersOther } from "@shared/conversations/questionAnswers";
 import { selectQuestionOption, setOtherQuestionAnswer } from "@/components/app/logic/nativeQuestionAnswers";
 import type { NativeQuestionFieldProps } from "@/components/app/types/nativeQuestions.types";
 
 export function NativeQuestionField({ question, answers, disabled, onChange }: NativeQuestionFieldProps) {
   const fieldId = useId();
   const hintId = `${fieldId}-hint`;
+  const offersOther = questionOffersOther(question);
   const otherAnswer = answers.find((answer) => !question.options.includes(answer));
   return <fieldset disabled={disabled} aria-describedby={hintId} className="min-w-0 space-y-2">
     <legend className="text-sm font-medium leading-relaxed">{question.text}</legend>
@@ -26,7 +28,7 @@ export function NativeQuestionField({ question, answers, disabled, onChange }: N
         <span className="min-w-0 whitespace-pre-wrap break-words">{option}</span>
       </label>;
     })}
-      {question.allowOther && <div className="space-y-2 rounded-md border p-3">
+      {offersOther && <div className="space-y-2 rounded-md border p-3">
         <label className="flex cursor-pointer items-center gap-3 text-sm">
           <input type={question.multiple ? "checkbox" : "radio"} name={fieldId} checked={otherAnswer !== undefined}
             className="size-4 accent-primary" onChange={(event) => onChange(event.target.checked

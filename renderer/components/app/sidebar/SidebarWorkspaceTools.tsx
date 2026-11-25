@@ -4,27 +4,25 @@ import { isGitProject } from "@shared/projectVersionControl";
 import { WORKSPACE_TOOLS } from "@/components/app/constants/workspaceTools";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
 import { useWorkspaceNavigation } from "@/components/app/hooks/useWorkspaceNavigation";
-import { availableWorkspaceTools, DEFAULT_WORKSPACE_TOOL_PINS, toggleWorkspaceToolPin, workspaceToolPins } from "@/components/app/logic/workspace-navigation/tools";
-import type { SidebarModeStripProps } from "@/components/app/types/botNavigation.types";
+import { useWorkspaceToolPins } from "@/components/app/hooks/useWorkspaceToolPins";
+import type { SidebarModeStripProps, SidebarProjectToolsProps } from "@/components/app/types/botNavigation.types";
 import type { WorkspaceToolId } from "@/components/app/types/workspaceNavigation.types";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SidebarIconButton } from "./SidebarIconButton";
 
 export function SidebarWorkspaceTools({ edge }: SidebarModeStripProps) {
-  const navigation = useWorkspaceNavigation();
   const project = useCanonicalAppSnapshot()?.project;
+  return project ? <ProjectTools key={project.id} edge={edge} projectId={project.id} git={isGitProject(project)} /> : null;
+}
+
+function ProjectTools({ edge, projectId, git }: SidebarProjectToolsProps) {
+  const navigation = useWorkspaceNavigation();
+  const { available, pins, togglePin } = useWorkspaceToolPins(projectId, git);
   const [open, setOpen] = useState(false);
-  if (!project) return null;
-  const available = availableWorkspaceTools(isGitProject(project));
   const tools = WORKSPACE_TOOLS.filter((tool) => available.includes(tool.id));
-  const pins = workspaceToolPins(available, navigation.preferences.toolPins[project.id]);
-  const active = navigation.route?.projectId === project.id ? navigation.route.tool : null;
-  const select = (tool: WorkspaceToolId): void => { setOpen(false); navigation.openTool(project.id, tool); };
-  const togglePin = (tool: WorkspaceToolId): void => navigation.setPreferences((current) => ({
-    ...current,
-    toolPins: { ...current.toolPins, [project.id]: toggleWorkspaceToolPin(current.toolPins[project.id] ?? DEFAULT_WORKSPACE_TOOL_PINS, tool) }
-  }));
+  const active = navigation.route?.projectId === projectId ? navigation.route.tool : null;
+  const select = (tool: WorkspaceToolId): void => { setOpen(false); navigation.openTool(projectId, tool); };
   const hiddenActive = active !== null && !pins.includes(active);
   return <>
     {pins.map((id) => {
@@ -53,7 +51,7 @@ export function SidebarWorkspaceTools({ edge }: SidebarModeStripProps) {
             </Button>
           </div>;
         })}
-        <p className="px-2 pb-1 pt-2 text-xs text-muted-foreground">Pin tools to keep them in this workspace’s sidebar.</p>
+        <p className="px-2 pb-1 pt-2 text-xs text-muted-foreground">Pin tools to keep them in this workspace’s sidebar. Until you do, your work role picks them.</p>
       </PopoverContent>
     </Popover>
   </>;

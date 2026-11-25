@@ -1,3 +1,4 @@
+import { startVisiblePolling } from "@/components/app/logic/visiblePolling";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { TOOL_USAGE_POLL_INTERVAL_MS } from "@/components/app/constants/toolUsage";
 import { appToolUsageStore } from "@/components/app/logic/appToolUsageStore";
@@ -50,14 +51,13 @@ export function useModelUsage({ tools, onInstallTool, onSwitchToolAccount }: Mod
       polling = true;
       try {
         for (const toolId of pollingIds) {
-          if (cancelled) break;
+          if (cancelled || document.hidden) break;
           await loadToolUsage(toolId);
         }
       } finally { polling = false; }
     };
-    void poll();
-    const interval = window.setInterval(() => { void poll(); }, TOOL_USAGE_POLL_INTERVAL_MS);
-    return () => { cancelled = true; window.clearInterval(interval); };
+    const stop = startVisiblePolling(() => { void poll(); }, TOOL_USAGE_POLL_INTERVAL_MS);
+    return () => { cancelled = true; stop(); };
   }, [loadToolUsage, pollingIds]);
 
   return { visibleTools, usageByToolId, actionToolId, toolError, loadToolUsage, installTool, switchToolAccount };

@@ -8,6 +8,8 @@ import { areQuestionAnswersComplete } from "@shared/conversations/questionAnswer
 import { steeringTarget } from "./steeringAdmission";
 import { sameProviderBinding } from "@shared/conversations/providerBinding";
 import { applyMessagePin } from "./messagePins";
+import { forceEndRun } from "./forceEndRun";
+import { onlyAncestorWriters } from "./ancestorWriters";
 
 /** A workspace a direct chat may work in: any for a global bot's chat, only its own for a workspace bot's. */
 function assertDirectWorkspaceScope(direct: Conversation["direct"], workspaceId: string): NonNullable<Conversation["direct"]> {
@@ -87,6 +89,27 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
     if (state.conversation.title !== command.title) add({ kind: "conversation", conversation: { ...state.conversation, title: command.title } });
     return decision;
   }
+  if (command.kind === "set-access") {
+    if (state.conversation.group || state.conversation.direct) {
+      throw new ExecutionCommandError("invalid", "Group and direct chats keep read access; change a work thread instead.");
+    }
+    if (state.conversation.source?.kind === "workflow") {
+      throw new ExecutionCommandError("invalid", "Workflow stage threads keep the access their stage defines.");
+    }
+    if (state.runs.some((entry) => isActiveRun(entry) || entry.state === "queued")) {
+      throw new ExecutionCommandError("conflict", "Stop active work and clear the queue before changing workspace access.");
+    }
+    if (command.access === state.conversation.workspace.access) return decision;
+    const workspace = { ...state.conversation.workspace, access: command.access };
+    if (command.access === "write") {
+      const others = context.admission.writers(workspace).filter((id) => id !== command.conversationId);
+      if (!onlyAncestorWriters((id) => context.admission.header(id), command.conversationId, others)) {
+        throw new ExecutionCommandError("conflict", "Another conversation is writing to this checkout; choose an isolated worktree");
+      }
+    }
+    add({ kind: "conversation", conversation: { ...state.conversation, workspace, updatedAt: context.now } });
+    return decision;
+  }
   if (command.kind === "set-direct-workspace") {
     const direct = assertDirectWorkspaceScope(state.conversation.direct, command.workspaceId);
     // Like renaming, this is bookkeeping and leaves `updatedAt` alone.
@@ -100,7 +123,19 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
     if (outcome.kind === "changed") add({ kind: "conversation", conversation: { ...state.conversation, pinnedMessages: outcome.pins } });
     return decision;
   }
+  if (command.kind === "reset-direct") {
+    const direct = state.conversation.direct;
+    if (!direct) throw new ExecutionCommandError("invalid", "Only a direct chat can be reset");
+    if (direct.retiredAt) return decision;
+    if (state.runs.some((entry) => isActiveRun(entry) || entry.state === "queued")) {
+      throw new ExecutionCommandError("conflict", "Stop active work and remove queued messages before resetting this chat");
+    }
+    add({ kind: "conversation", conversation: { ...state.conversation, archivedAt: state.conversation.archivedAt ?? context.now, direct: { ...direct, retiredAt: context.now } } });
+    return decision;
+  }
   if (command.kind === "unarchive") {
+    // A reset chat's bot already has a newer chat, and each bot keeps one.
+    if (state.conversation.direct?.retiredAt) throw new ExecutionCommandError("conflict", "This chat was reset. Continue in the bot's current chat.");
     if (state.conversation.archivedAt) add({ kind: "conversation", conversation: { ...state.conversation, archivedAt: null, reopenedAt: context.now } });
     return decision;
   }
@@ -112,8 +147,10 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
   const run = "runId" in command ? initial.runs.find((entry) => entry.id === command.runId) : undefined;
   const assertWriter = (): void => {
     const workspace = initial.conversation.workspace;
-    const conflict = workspace.access === "write" && context.writers.some((id) => id !== command.conversationId);
-    if (conflict) throw new ExecutionCommandError("conflict", "Another conversation is writing to this checkout; choose an isolated worktree");
+    if (workspace.access !== "write") return;
+    const others = context.admission.writers(workspace).filter((id) => id !== command.conversationId);
+    if (onlyAncestorWriters((id) => context.admission.header(id), command.conversationId, others)) return;
+    throw new ExecutionCommandError("conflict", "Another conversation is writing to this checkout; choose an isolated worktree");
   };
   const putRun = (next: ConversationRun): void => add({ kind: "run", run: { ...next, updatedAt: context.now } });
   switch (command.kind) {
@@ -175,7 +212,7 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
       break;
     case "reconcile":
       if (!run || run.state !== "recovering") throw new ExecutionCommandError("conflict", "Only uncertain execution needs a native status check");
-      if (!context.effects.some((effect) => effect.conversationId === command.conversationId && effect.attemptId === run.attemptId
+      if (!context.admission.unfinishedEffects().some((effect) => effect.conversationId === command.conversationId && effect.attemptId === run.attemptId
         && effect.action.kind === "reconcile" && effect.status !== "done")) {
         decision.effects.push({ id: JSON.stringify([run.attemptId, "reconcile", command.commandId]), conversationId: command.conversationId,
           runId: run.id, attemptId: run.attemptId, status: "pending", action: { kind: "reconcile" } });
@@ -189,12 +226,16 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
       add({ kind: "conversation", conversation: { ...initial.conversation, archivedAt: context.now } });
       return decision;
     case "interrupt":
-      if (!run || !isActiveRun(run) || run.state === "recovering") {
-        throw new ExecutionCommandError("conflict", "No confirmed active turn is available to interrupt");
+      if (!run || !isActiveRun(run)) {
+        throw new ExecutionCommandError("conflict", "No active turn is available to interrupt");
       }
-      if (run.state === "stopping") return decision;
+      // Stopping or recovering means a cooperative stop already failed or cannot be confirmed; end locally.
+      if (run.state === "stopping" || run.state === "recovering") {
+        forceEndRun(run, initial, context, decision, add, putRun);
+        return decision;
+      }
       if (run.state === "starting") {
-        const start = context.effects.find((effect) => effect.conversationId === command.conversationId
+        const start = context.admission.unfinishedEffects().find((effect) => effect.conversationId === command.conversationId
           && effect.attemptId === run.attemptId && effect.action.kind === "start" && effect.status === "pending");
         if (start) {
           putRun({ ...run, state: "interrupted", review: "unavailable" });

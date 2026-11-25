@@ -21,7 +21,7 @@ export class IdleSettlement {
     const days = this.deps.days();
     const settleCompleted = days !== null && Number.isInteger(days) && days >= 1;
     const cutoff = Date.parse(now) - (days ?? 0) * 86_400_000;
-    for (const { conversation } of this.deps.store.summaries()) {
+    for (const conversation of this.deps.store.maintenanceConversations(settleCompleted ? "all" : "workers")) {
       if (expiredWorkerStartup(this.deps.store, conversation, now)) {
         this.settle(conversation, "worker-without-input");
         continue;

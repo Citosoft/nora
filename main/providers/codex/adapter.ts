@@ -413,9 +413,10 @@ export class CodexAdapter implements ExecutionProvider {
     if (method === "item/tool/requestUserInput") {
       const native = questionSchema.parse(params);
       if (native.turnId !== active.nativeTurnId) throw new Error("Stale question");
-      request = { ...common, kind: "question", title: "Codex needs input", questions: native.questions.map((question) => ({ id: question.id,
-        text: question.question, options: question.options?.map((option) => option.label) ?? [], multiple: false,
-        allowOther: question.isOther ?? false })) };
+      request = { ...common, kind: "question", title: "Codex needs input", questions: native.questions.map((question) => {
+        const options = question.options?.map((option) => option.label) ?? [];
+        return { id: question.id, text: question.question, options, multiple: false, allowOther: options.length > 0 };
+      }) };
     } else if (method === "item/commandExecution/requestApproval" || method === "item/fileChange/requestApproval") {
       const policy = this.options.policies[active.snapshot.conversation.provider.permissionPolicy];
       const autoReview = policy && !active.autoReviewChosen ? codexAutoReviewPolicy(this.options.policies, policy) : null;

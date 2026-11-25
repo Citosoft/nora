@@ -16,7 +16,7 @@ import { fakeHost } from "./fakeHost";
 const ada = bot("ada");
 const ref = (projectId: string): WorkspaceRef => ({ projectId, environmentId: "local", checkoutId: projectId, path: `/${projectId}`, branch: "main", access: "read" });
 const workspaces = [{ id: "app", name: "App", workspace: ref("app") }, { id: "site", name: "Site", workspace: ref("site") }];
-const direct: DirectDescriptor = { botId: "ada", name: "Ada", role: ada.role, avatar: ada.avatar, scope: { kind: "global" }, workspaceId: "app" };
+const direct: DirectDescriptor = { botId: "ada", name: "Ada", role: ada.role, avatar: ada.avatar, scope: { kind: "global" }, workspaceId: "app", retiredAt: null };
 const message = (id: string, text: string, extra: Partial<Extract<TimelineItem, { kind: "message" }>> = {}): TimelineItem =>
   ({ kind: "message", id, runId: "r", createdAt: "2026-11-13T00:00:00.000Z", role: "user", text, complete: true, ...extra });
 
@@ -54,7 +54,7 @@ test("a new task starts a write-enabled work thread in the routed workspace and 
 });
 
 test("Nora's chat starts ordinary Nora work threads on its chat model, in any workspace, and replies as Nora", async () => {
-  const noraDirect: DirectDescriptor = { botId: NORA_CHAT.id, name: NORA_CHAT.name, role: NORA_CHAT.role, avatar: NORA_CHAT.avatar, scope: { kind: "global" }, workspaceId: "app" };
+  const noraDirect: DirectDescriptor = { botId: NORA_CHAT.id, name: NORA_CHAT.name, role: NORA_CHAT.role, avatar: NORA_CHAT.avatar, scope: { kind: "global" }, workspaceId: "app", retiredAt: null };
   const result = await runChat("Tidy the site styles", async () => ({ kind: "new", workspaceId: "site", title: "Style tidy", done: null }), undefined, undefined, undefined, noraDirect);
   assert.equal(result.threads.length, 1);
   const [thread] = result.threads;

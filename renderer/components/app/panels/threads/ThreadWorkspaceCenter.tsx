@@ -46,7 +46,7 @@ export function ThreadWorkspaceCenter() {
   const documents = state.layout.documents.filter((entry) => open.has(entry.id));
   const homeWorkspaceId = !state.layout.activeId && mode === "threads" ? state.layout.focusedWorkspaceId : null;
   return <SessionTabStack>
-    {documents.map((document) => <SessionTabPane key={document.id} visible={state.layout.activeId === document.id}>
+    {documents.map((document) => <SessionTabPane deferMount key={document.id} visible={state.layout.activeId === document.id}>
       {document.source?.kind === "app" ? <AppBuilderView documentId={document.id} /> : <ThreadViewContent documentId={document.id} />}</SessionTabPane>)}
     {!state.layout.activeId && <SidebarModeHome mode={mode} botsHome={preferences?.botsHome ?? "bots"} />}
     {/* The Inbox page lists the same waiting requests, so the tray steps aside while it is on screen. */}

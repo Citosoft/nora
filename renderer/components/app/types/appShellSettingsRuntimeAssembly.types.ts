@@ -7,6 +7,8 @@ export type AppShellSettingsRuntimeAssemblyInput = {
     BuildSettingsRuntimeValueDeps,
     | "themeMode"
     | "updateThemeMode"
+    | "colorTheme"
+    | "updateColorTheme"
     | "accentColor"
     | "updateAccentColor"
     | "uiFontId"
@@ -46,6 +48,7 @@ export type AppShellSettingsRuntimeAssemblyInput = {
     BuildSettingsRuntimeValueDeps,
     | "appSettings"
     | "updateFileEditorThemeId"
+    | "updateThreadBackdrop"
     | "updateHardwareAccelerationEnabled"
     | "updateWorkspaceStateStorageMode"
     | "updateDefaultAgentLaunchTarget"

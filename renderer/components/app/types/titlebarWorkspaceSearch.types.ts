@@ -68,3 +68,10 @@ export type TitleBarWorkspaceQuickSearchConfig = {
   openShortcutLabel: string;
   onPick: (pick: WorkspaceQuickSearchPick) => void;
 };
+
+export type TitleBarWorkspaceQuickSearchProps = TitleBarWorkspaceQuickSearchConfig & {
+  /** Text tone shared with the other title bar icon buttons. */
+  iconToneClass: string;
+};
+
+export type WorkspaceQuickSearchGroups = Record<WorkspaceQuickSearchGroupId, WorkspaceQuickSearchRow[]>;

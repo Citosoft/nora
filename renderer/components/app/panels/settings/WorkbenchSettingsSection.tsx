@@ -124,7 +124,7 @@ export function WorkbenchSettingsSection() {
       />
       <SettingRow
         title="Project Session Tabs"
-        description="Show agent and terminal tabs above the main project panel."
+        description="Show thread, terminal and other session tabs in the title bar."
         control={
           <ToggleButton
             checked={appSettings.showWorkspaceSessionTabs}

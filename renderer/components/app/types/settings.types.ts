@@ -1,3 +1,4 @@
+import type { ColorThemeId } from "@shared/types/appearance/colorTheme.types";
 import type { AccentColor, ResolvedTheme, TerminalFontId, TerminalThemeId, UiFontId } from "@/components/app/types";
 import type {
   AgentCatalogEntry,
@@ -30,6 +31,8 @@ export type SettingsRuntimeValue = {
   closeSettingsPage: () => void;
   themeMode: "system" | "light" | "dark";
   updateThemeMode: (mode: "system" | "light" | "dark") => void;
+  colorTheme: ColorThemeId;
+  updateColorTheme: (colorTheme: ColorThemeId) => void;
   accentColor: AccentColor;
   updateAccentColor: (accentColor: AccentColor) => void;
   uiFontId: UiFontId;
@@ -64,6 +67,7 @@ export type SettingsRuntimeValue = {
   disconnectVercelAccount: () => void;
   appSettings: AppSettings;
   updateFileEditorThemeId: (themeId: AppSettings["fileEditorThemeId"]) => void;
+  updateThreadBackdrop: (patch: Partial<AppSettings["threadBackdrop"]>) => void;
   updateHardwareAcceleration: (enabled: boolean) => void;
   updateWorkspaceStateStorageMode: (mode: AppSettings["workspaceStateStorageMode"]) => void;
   updateDefaultAgentLaunchTarget: (launchTarget: AgentLaunchTargetPreference) => void;

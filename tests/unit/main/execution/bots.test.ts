@@ -51,7 +51,7 @@ test("group chats freeze their members, never write themselves, and need the coo
 test("direct chats are read-only, need the coordinator, and only change their working workspace within the bot's scope", (t) => {
   const f = fixture(t);
   const ada = bot("ada");
-  const descriptor = { botId: "ada", name: ada.name, role: ada.role, avatar: ada.avatar, scope: { kind: "global" as const }, workspaceId: "project" };
+  const descriptor = { botId: "ada", name: ada.name, role: ada.role, avatar: ada.avatar, scope: { kind: "global" as const }, workspaceId: "project", retiredAt: null };
   const nora = { kind: "nora" as const, instanceId: "direct", model: "direct", reasoning: null, permissionPolicy: "direct" };
   const command = { ...create(undefined), provider: nora, direct: { botId: "ada", workspaceId: "project" } };
   assert.throws(() => f.engine.execute({ ...command, provider }, { direct: descriptor }), /bot for this chat could not be resolved/);
@@ -66,10 +66,31 @@ test("direct chats are read-only, need the coordinator, and only change their wo
   assert.equal(f.snapshot().conversation.updatedAt, created.updatedAt, "choosing a workspace is not activity");
 });
 
+test("resetting a direct chat settles and retires it, and a retired chat cannot be reopened", (t) => {
+  const f = fixture(t);
+  const ada = bot("ada");
+  const descriptor = { botId: "ada", name: ada.name, role: ada.role, avatar: ada.avatar, scope: { kind: "global" as const }, workspaceId: "project", retiredAt: null };
+  const nora = { kind: "nora" as const, instanceId: "direct", model: "direct", reasoning: null, permissionPolicy: "direct" };
+  f.engine.execute({ ...create(undefined), provider: nora, direct: { botId: "ada", workspaceId: "project" } }, { direct: descriptor });
+  f.engine.execute({ kind: "reset-direct", commandId: "reset", conversationId: "conversation" });
+  const reset = f.snapshot().conversation;
+  assert.ok(reset.archivedAt);
+  assert.equal(reset.direct?.retiredAt, reset.archivedAt);
+  f.engine.execute({ kind: "reset-direct", commandId: "again", conversationId: "conversation" });
+  assert.equal(f.snapshot().conversation.direct?.retiredAt, reset.direct?.retiredAt, "resetting twice changes nothing");
+  assert.throws(() => f.engine.execute({ kind: "unarchive", commandId: "reopen", conversationId: "conversation" }), /was reset/);
+});
+
+test("only a direct chat can be reset", (t) => {
+  const f = fixture(t);
+  f.engine.execute(create(undefined));
+  assert.throws(() => f.engine.execute({ kind: "reset-direct", commandId: "reset", conversationId: "conversation" }), /Only a direct chat/);
+});
+
 test("a direct-chat message can be pinned to one workspace for its run only", (t) => {
   const f = fixture(t);
   const ada = bot("ada");
-  const descriptor = { botId: "ada", name: ada.name, role: ada.role, avatar: ada.avatar, scope: { kind: "global" as const }, workspaceId: "project" };
+  const descriptor = { botId: "ada", name: ada.name, role: ada.role, avatar: ada.avatar, scope: { kind: "global" as const }, workspaceId: "project", retiredAt: null };
   const nora = { kind: "nora" as const, instanceId: "direct", model: "direct", reasoning: null, permissionPolicy: "direct" };
   f.engine.execute({ ...create(undefined), provider: nora, direct: { botId: "ada", workspaceId: "project" } }, { direct: descriptor });
   f.engine.execute({ kind: "submit", commandId: "pin", conversationId: "conversation", runId: "r1", instruction: "Routine", workspaceId: "personal" });

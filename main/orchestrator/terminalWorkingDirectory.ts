@@ -60,11 +60,11 @@ export function getTrailingIncompleteOsc7Sequence(value: string): string {
   return tail.includes("\u0007") || tail.includes("\u001b\\") ? "" : tail;
 }
 
-export function getSubmittedCommandsFromInput(inputBuffer: string): SubmittedTerminalCommands {
+export function getSubmittedCommandsFromInput(input: string, bufferedInput = ""): SubmittedTerminalCommands {
   const commands: string[] = [];
-  let currentCommand = "";
+  let currentCommand = bufferedInput;
 
-  for (const char of inputBuffer) {
+  for (const char of input) {
     if (char === "\r" || char === "\n") {
       const submittedCommand = currentCommand.trim();
       if (submittedCommand) {

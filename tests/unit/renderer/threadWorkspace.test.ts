@@ -215,8 +215,16 @@ test("summary refreshes reject stale replies and token events do not reorder thr
   let reads = 0;
   const ordered = createThreadWorkspaceStore({ ...f.deps, client: { ...f.deps.client,
     summaries: () => ++reads === 1 ? delayed : Promise.resolve([]) } });
-  const first = ordered.refresh(); await ordered.refresh();
-  release(f.summaries); await first;
+  const first = ordered.refresh();
+  assert.equal(ordered.refresh(), first, "same-tick refreshes share a single read");
+  await Promise.resolve();
+  assert.equal(reads, 1);
+  assert.equal(ordered.refresh(), first, "changes arriving during a read share one follow-up");
+  ordered.refresh();
+  assert.equal(reads, 1);
+  release(f.summaries);
+  await first;
+  assert.equal(reads, 2);
   assert.deepEqual(ordered.snapshot().summaries, []);
 });
 

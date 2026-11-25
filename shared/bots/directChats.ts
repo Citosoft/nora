@@ -13,9 +13,9 @@ export function directChatHome(boot: NativeBoot, bot: Pick<ChatBotProfile, "scop
   return onHost.find((entry) => entry.kind === "personal") ?? onHost.find((entry) => entry.id === openedFrom) ?? null;
 }
 
-/** The bot's existing direct chat, settled or not; each bot has at most one. */
+/** The bot's current direct chat, settled or not; each bot has at most one. Chats retired by a reset are history, not the bot's chat. */
 export function findDirectChat(summaries: readonly ConversationSummary[], bot: Pick<ChatBotProfile, "id" | "scope">): ConversationSummary | null {
   const workspaceId = bot.scope.kind === "workspace" ? bot.scope.workspaceId : null;
-  return summaries.find(({ conversation }) => conversation.direct?.botId === bot.id
+  return summaries.find(({ conversation }) => conversation.direct?.botId === bot.id && !conversation.direct.retiredAt
     && (conversation.direct.scope.kind === "workspace" ? conversation.direct.scope.workspaceId === workspaceId : !workspaceId)) ?? null;
 }

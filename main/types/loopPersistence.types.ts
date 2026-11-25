@@ -5,3 +5,8 @@ export interface LoopPersistenceDeps {
   nowIso(): string;
   notifyRunChanged(run: LoopRun): void;
 }
+
+export interface PendingLoopOutput {
+  snapshot: Pick<LoopRun, "outputLog" | "outputEvents">;
+  written: Promise<void>;
+}

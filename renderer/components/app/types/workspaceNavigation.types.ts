@@ -85,3 +85,10 @@ export interface WorkspaceManageMenuItemsProps extends WorkspaceToolProps { onIt
 export type WorkspaceActionsDialog = "remove-workspace" | "new-worktree" | null;
 
 export interface WorkspaceScriptMenuItemsProps extends WorkspaceToolProps { scripts: WorkspaceScriptLauncher[]; onItemSelected?: () => void; }
+
+/** The tools a workspace offers and which of them sit in its sidebar rail. */
+export interface WorkspaceToolPinsState {
+  available: WorkspaceToolId[];
+  pins: WorkspaceToolId[];
+  togglePin(tool: WorkspaceToolId): void;
+}

@@ -39,13 +39,7 @@ export type UiFontId =
   | "outfit"
   | "plus-jakarta-sans";
 
-export type AccentColor =
-  | "silver"
-  | "green"
-  | "blue"
-  | "amber"
-  | "rose"
-  | "violet";
+export type { AccentColor } from "@shared/types/appearance/accentColor.types";
 
 export type TerminalThemeId =
   | "app"

@@ -8,23 +8,26 @@ import type { SelectedRows } from "@main/types/apps/select.types";
 const EVALUATE_TIMEOUT_MS = 2_000;
 
 /** Parses a `select` expression; the message names what JSONata could not read so the agent can fix the expression. */
-export function compileSelect(expression: string): { evaluate(input: JsonValue): Promise<JsonValue> } {
+function compileExpression(expression: string) {
   const compiled = (() => {
     try { return jsonata(expression); }
     catch (error) { throw new Error(`The select expression could not be parsed: ${error instanceof Error ? error.message : "unknown error"}`); }
   })();
-  return {
-    async evaluate(input) {
-      let timer: NodeJS.Timeout | undefined;
-      const deadline = new Promise<never>((_resolve, reject) => { timer = setTimeout(() => reject(new Error("The select expression took too long.")), EVALUATE_TIMEOUT_MS); });
-      try {
-        const value: unknown = await Promise.race([compiled.evaluate(input), deadline]);
-        return toJson(value);
-      } catch (error) {
-        throw new Error(`The select expression failed: ${error instanceof Error ? error.message : "unknown error"}`);
-      } finally { clearTimeout(timer); }
-    }
+  return async <T>(input: JsonValue, normalize: (value: unknown) => T): Promise<T> => {
+    let timer: NodeJS.Timeout | undefined;
+    const deadline = new Promise<never>((_resolve, reject) => { timer = setTimeout(() => reject(new Error("The select expression took too long.")), EVALUATE_TIMEOUT_MS); });
+    try {
+      const value: unknown = await Promise.race([compiled.evaluate(input), deadline]);
+      return normalize(value);
+    } catch (error) {
+      throw new Error(`The select expression failed: ${error instanceof Error ? error.message : "unknown error"}`);
+    } finally { clearTimeout(timer); }
   };
+}
+
+export function compileSelect(expression: string): { evaluate(input: JsonValue): Promise<JsonValue> } {
+  const evaluate = compileExpression(expression);
+  return { evaluate: (input) => evaluate(input, toJson) };
 }
 
 /** JSONata returns plain data, but sequences carry hidden flags; serialising once makes the result a JSON value with no surprises. */
@@ -49,7 +52,8 @@ export function toolResultInput(result: ConnectorToolCallResult): JsonValue {
 
 /** Applies a `select` expression and bounds the rows the window receives. */
 export async function selectRows(expression: string, input: JsonValue): Promise<SelectedRows> {
-  const value = await compileSelect(expression).evaluate(input);
-  if (!Array.isArray(value)) return { rows: value, truncated: false };
-  return { rows: value.slice(0, APP_SOURCE_ROW_LIMIT), truncated: value.length > APP_SOURCE_ROW_LIMIT };
+  return compileExpression(expression)(input, (value) => {
+    const truncated = Array.isArray(value) && value.length > APP_SOURCE_ROW_LIMIT;
+    return { rows: toJson(truncated ? value.slice(0, APP_SOURCE_ROW_LIMIT) : value), truncated };
+  });
 }

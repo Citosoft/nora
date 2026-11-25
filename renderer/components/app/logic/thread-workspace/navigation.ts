@@ -1,4 +1,4 @@
-import type { ThreadWorkspaceSnapshot } from "@/components/app/types/thread-workspace/state.types";
+import type { ThreadDocument, ThreadWorkspaceSnapshot } from "@/components/app/types/thread-workspace/state.types";
 import type { ThreadNavigationFilter, ThreadNavigationRow, ThreadNavigationStatus, ThreadRunState } from "@/components/app/types/thread-workspace/ports.types";
 import { isChat } from "@/components/app/logic/directChats";
 import type { WorkThreadVisibility } from "@/components/app/types/thread-workspace/navigation.types";
@@ -37,28 +37,37 @@ export function buildThreadNavigation(state: ThreadWorkspaceSnapshot, workspaceI
       active: !!document.pending, working: false, unread: false, attention: !!document.pending, pinned: false, selected: document.id === state.layout.activeId,
       hasDraft: !isEmptyDraft(document), queuedCount: 0, updatedAt: document.updatedAt });
   }
-  const waiting = waitingDescendants(state.summaries);
+  const waiting = filter === "settled" ? null : waitingDescendants(state.summaries);
+  const unread = new Set(state.unreadThreadIds);
+  const pendingDrafts = new Set<string>();
+  const threadDocuments = new Map<string, ThreadDocument>();
+  for (const document of state.layout.documents) {
+    if (document.target.kind === "draft" && document.pending) pendingDrafts.add(document.pending.submit.conversationId);
+    if (document.target.kind === "thread" && !threadDocuments.has(document.target.conversationId)) {
+      threadDocuments.set(document.target.conversationId, document);
+    }
+  }
   for (const summary of state.summaries) {
     const { conversation, latestRun, queuedCount, pendingRequestCount } = summary;
     if (conversation.source?.kind === "workflow" || conversation.source?.kind === "app" || conversation.direct || conversation.workspace.environmentId !== state.boot.environmentId || (workspaceId && conversation.workspace.projectId !== workspaceId)
       || (!!conversation.archivedAt !== (filter === "settled"))) continue;
     // A create accepted before a lost submit reply is represented by its recoverable draft, once.
-    if (state.layout.documents.some((entry) => entry.target.kind === "draft" && entry.pending?.submit.conversationId === conversation.id)) continue;
+    if (pendingDrafts.has(conversation.id)) continue;
     const active = !!latestRun && !terminal.has(latestRun.state);
-    const document = state.layout.documents.find((entry) => entry.target.kind === "thread" && entry.target.conversationId === conversation.id);
+    const document = threadDocuments.get(conversation.id);
     rows.push({ id: conversation.id, parentId: conversation.parentId, target: { kind: "thread", conversationId: conversation.id }, title: conversation.title,
       workspaceId: conversation.workspace.projectId, providerKind: conversation.provider.kind, providerConnection: conversation.provider.connection ?? "unknown", origin: conversation.origin,
       model: conversation.group ? null : conversation.provider.model,
       bot: conversation.bot ? { botId: conversation.bot.botId, name: conversation.bot.name, avatar: conversation.bot.avatar } : null,
       group: conversation.group?.members ?? null,
-      waitingOn: conversation.archivedAt ? null : waiting.get(conversation.id) ?? null,
+      waitingOn: conversation.archivedAt ? null : waiting?.get(conversation.id) ?? null,
       workThread: !!conversation.parentId && chatIds.has(conversation.parentId),
       settled: !!conversation.archivedAt,
       status: conversation.archivedAt ? "Settled" : pendingRequestCount ? (latestRun?.state === "awaiting-approval" ? "Needs approval" : "Needs input")
         : conversation.queuePaused && queuedCount ? "Queue paused" : latestRun ? statusLabels[latestRun.state] : "Ready",
-      unread: state.unreadThreadIds.includes(conversation.id),
+      unread: unread.has(conversation.id),
       active: active || queuedCount > 0, working: pendingRequestCount === 0 && !!latestRun && working.has(latestRun.state),
-      attention: pendingRequestCount > 0 || (!conversation.archivedAt && waiting.has(conversation.id)) || (conversation.queuePaused && queuedCount > 0)
+      attention: pendingRequestCount > 0 || (!conversation.archivedAt && !!waiting?.has(conversation.id)) || (conversation.queuePaused && queuedCount > 0)
         || latestRun?.state === "failed" || latestRun?.state === "recovering" || !!document?.pending,
       pinned: pins.has(conversation.id), selected: activeDocument?.target.kind === "thread" && activeDocument.target.conversationId === conversation.id,
       hasDraft: !!document?.text || !!document?.attachments?.length || !!document?.threadReferences?.length || !!document?.pending, queuedCount, updatedAt: conversation.updatedAt });

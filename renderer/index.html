@@ -17,6 +17,9 @@
           : mode;
         const root = document.documentElement;
         root.dataset.theme = resolved;
+        const colorTheme = localStorage.getItem("nora-color-theme");
+        // Unknown values match no palette in styles.css, which falls back to Nora.
+        root.dataset.colorTheme = colorTheme && /^[a-z-]+$/.test(colorTheme) ? colorTheme : "nora";
         root.style.colorScheme = resolved;
         root.classList.toggle("dark", resolved === "dark");
       })();

@@ -1,6 +1,6 @@
 import type { NativeWorkspace } from "@shared/types/personalization/workspaces.types";
 import type { ThreadNavigationRow } from "../thread-workspace/ports.types";
-import type { WorkspaceToolId } from "../workspaceNavigation.types";
+import type { WorkspaceToolId, WorkspaceToolItem } from "../workspaceNavigation.types";
 import type { ReactNode } from "react";
 import type { AttentionToastsState } from "../attentionToasts.types";
 
@@ -57,6 +57,8 @@ export interface WorkspaceHomeThreadRowProps {
   row: ThreadNavigationRow;
   providerLabel?: string;
   now: number;
+  /** Position in its section, staggering the rows as they rise in. */
+  order: number;
   onOpen(row: ThreadNavigationRow): void;
 }
 
@@ -65,4 +67,29 @@ export interface WorkspaceHomeComposerProps {
   onStart(text?: string): void;
 }
 
-export interface WorkspaceHomeToolsProps { onOpenTool(tool: WorkspaceToolId): void; }
+export interface WorkspaceHomeToolsProps {
+  onOpenTool(tool: WorkspaceToolId): void;
+  /** The shell project whose rail pins the grid marks; null shows every tool unmarked. */
+  projectId: string | null;
+  git: boolean;
+}
+
+export interface WorkspaceHomePinnedToolsProps extends Omit<WorkspaceHomeToolsProps, "projectId"> {
+  projectId: string;
+}
+
+export interface WorkspaceHomeToolGridProps {
+  tools: readonly WorkspaceToolItem[];
+  pins: readonly WorkspaceToolId[];
+  onOpenTool(tool: WorkspaceToolId): void;
+  onTogglePin: ((tool: WorkspaceToolId) => void) | null;
+}
+
+export interface WorkspaceHomeHeadingProps {
+  id: string;
+  children: ReactNode;
+  count?: number;
+  tone?: "attention";
+  /** Sits at the end of the heading row, such as a link to the full list. */
+  action?: ReactNode;
+}

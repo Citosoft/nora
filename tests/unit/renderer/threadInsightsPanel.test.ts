@@ -23,6 +23,7 @@ test("thread details mount in the standalone simulator without the signed-in she
     onToggle() {}, onLoadHistory() {}, async onOpenOutput() {}, onSettleChange() {}
   }));
   assert.ok(rendered.includes("Simulator · no LLM"));
+  assert.ok(rendered.includes("Writable") || rendered.includes("Read-only"));
   assert.ok(rendered.includes("Review the diff") && rendered.includes("1 running"));
   assert.ok(rendered.includes("code-review") && rendered.includes("Loaded") && rendered.includes("1 available, not used"));
   assert.ok(rendered.includes("Pinned messages") && rendered.includes("Ship on Friday after the smoke test"));

@@ -7,6 +7,8 @@ export const buildSettingsRuntimeValue = (d: BuildSettingsRuntimeValueDeps): Set
   closeSettingsPage: () => d.setActiveView("main"),
   themeMode: d.themeMode,
   updateThemeMode: d.updateThemeMode,
+  colorTheme: d.colorTheme,
+  updateColorTheme: d.updateColorTheme,
   accentColor: d.accentColor,
   updateAccentColor: d.updateAccentColor,
   uiFontId: d.uiFontId,
@@ -50,6 +52,9 @@ export const buildSettingsRuntimeValue = (d: BuildSettingsRuntimeValueDeps): Set
   appSettings: d.appSettings,
   updateFileEditorThemeId: (fileEditorThemeId) => {
     void d.updateFileEditorThemeId(fileEditorThemeId).catch(d.captureError);
+  },
+  updateThreadBackdrop: (patch) => {
+    void d.updateThreadBackdrop(patch).catch(d.captureError);
   },
   updateHardwareAcceleration: (enabled) => {
     void d.updateHardwareAccelerationEnabled(enabled).catch(d.captureError);

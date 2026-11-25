@@ -1,6 +1,7 @@
 import type { AiSettings } from "./ai.types";
 import type { AnalyticsConsentStatus } from "./analytics.types";
 import type { FileEditorThemeId } from "./fileEditorTheme.types";
+import type { ThreadBackdropSettings } from "./threadBackdrop.types";
 import type { VoiceSettings } from "./voice.types";
 import { DEFAULT_VOICE_SETTINGS } from "../voice/settings";
 import type { Personalization } from "./personalization/roles.types";
@@ -303,6 +304,7 @@ export interface AppSettings {
   browserDataImportPromptSeen: boolean;
   linuxAptSetupPromptDismissed: boolean;
   fileEditorThemeId: FileEditorThemeId;
+  threadBackdrop: ThreadBackdropSettings;
   terminalQuickLaunchDefaults: TerminalQuickLaunchDefaults;
   terminalPresets: TerminalPreset[];
   ai: AiSettings;
@@ -327,6 +329,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   browserDataImportPromptSeen: false,
   linuxAptSetupPromptDismissed: false,
   fileEditorThemeId: "default",
+  threadBackdrop: { animated: true, scope: "all" },
   terminalQuickLaunchDefaults: {
     name: "Terminal",
     target: "session-default"

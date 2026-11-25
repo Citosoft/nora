@@ -18,7 +18,7 @@ export function buildAnswers(request: QuestionRequest, draft: QuestionDraft): Qu
   const answers: QuestionAnswers = {};
   for (const question of request.questions) {
     const entry = draft[question.id] ?? { selected: [], other: "" };
-    const other = question.allowOther || question.options.length === 0 ? entry.other.trim() : "";
+    const other = entry.other.trim();
     const values = question.multiple ? [...entry.selected, ...(other ? [other] : [])] : other ? [other] : entry.selected.slice(0, 1);
     if (!values.length) return null;
     answers[question.id] = values;

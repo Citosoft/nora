@@ -53,7 +53,12 @@ export async function createNoraThread(deps: BotRunnerDeps, parent: Conversation
 /** Finds the bot's unsettled child thread under `parent` (never a branch the user started), or creates one in the parent's workspace with the given access. */
 export async function ensureBotThread(deps: BotRunnerDeps, parent: Conversation, bot: BotDefinition, access: "read" | "write", title: string): Promise<string> {
   const existing = deps.host.summaries().find(({ conversation }) => conversation.parentId === parent.id && conversation.bot?.botId === bot.id && !conversation.archivedAt && !conversation.chatBranch);
-  return existing ? existing.conversation.id : createBotThread(deps, parent, bot, { ...parent.workspace, access }, title);
+  if (existing) {
+    // Reuse when access matches, or when we only need read (a write child already can inspect). Promote read→write by settling the old child.
+    if (existing.conversation.workspace.access === access || access === "read") return existing.conversation.id;
+    await deps.host.execute({ kind: "archive", commandId: deps.nextId(), conversationId: existing.conversation.id });
+  }
+  return createBotThread(deps, parent, bot, { ...parent.workspace, access }, title);
 }
 
 /** The last complete assistant message of one run, or of the whole thread when `runId` is null. */

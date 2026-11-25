@@ -1,7 +1,7 @@
 import { launchThreadDraft } from "@/components/app/logic/thread-workspace/launchDraft";
 import { noraToolsStatus } from "@shared/nora-tools/catalog";
 import { materializeLegacyContext } from "@/components/app/logic/thread-workspace/legacyContext";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { NativeRuntimeContext } from "@/components/app/context/nativeRuntimeContext";
 import { nativeConversationBridge, nativePersonalizationClient } from "@/components/app/clients/nativeRuntimeClient";
@@ -41,7 +41,8 @@ export function NativeRuntimeProvider({ children }: NativeRuntimeProviderProps) 
   const store = useMemo(() => environmentId ? createThreadWorkspaceStore({ boot: { environmentId, cursor: 0, providers: [], workspaces: [], sharedBots: [], noraTools: noraToolsStatus("idle"),
     personalization: { defaultRole: null, workspaceRoles: {} } }, client: createConversationClient(nativeConversationBridge, environmentId), unread: inbox,
     persistence: createThreadLayoutPersistence(localStorage, environmentId), nextId: () => crypto.randomUUID(), now: () => new Date().toISOString() }) : null, [environmentId, inbox]);
-  useEffect(() => { if (store && boot) store.updateBoot(boot); }, [store, boot]);
+  // Supply the real boot cursor before the thread workspace starts its event subscription.
+  useLayoutEffect(() => { if (store && boot) store.updateBoot(boot); }, [store, boot]);
   const launch = useCallback(async (input: ThreadLaunchInput = {}): Promise<string | null> => {
     if (!store) return null;
     const next = input.projectId ? await request({ kind: "register-workspace", projectId: input.projectId }) : await request({ kind: "boot" });

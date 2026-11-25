@@ -7,6 +7,10 @@ export function useNativeModelCatalog(store: ModelCatalogStore, provider: Native
   const key = provider ? nativeProviderKey(provider) : "";
   const snapshot = useCallback(() => store.get(key), [store, key]);
   const state = useSyncExternalStore(store.subscribe, snapshot);
-  useEffect(() => { if (enabled && provider) void store.load(provider); }, [store, provider, enabled]);
+  const kind = provider?.kind;
+  const instanceId = provider?.instanceId;
+  useEffect(() => {
+    if (enabled && kind && instanceId) void store.load({ kind, instanceId });
+  }, [store, kind, instanceId, enabled]);
   return state;
 }

@@ -5,7 +5,7 @@ import type { WorkflowDesignerProps } from "@/components/app/types/workflowSurfa
 import type { LoopDefinitionDraft, LoopDesignerStep } from "@/components/app/types/loopDesigner.types";
 import { noraLoopClient } from "@/components/app/clients/noraLoopClient";
 import { useNativeRuntimePorts } from "@/components/app/hooks/useNativeRuntimePorts";
-import { createModelCatalogStore } from "@/components/app/logic/modelCatalogStore";
+import { checkoutModelCatalog } from "@/components/app/logic/modelCatalogStore";
 import { buildWorkflowAgentSummaries } from "@/components/app/logic/workflowAgents";
 import { moveWorkflowStage, newWorkflowStage } from "@/components/app/logic/workflowStages";
 import { canReviewLoop, loopReworkError } from "@shared/loopStages";
@@ -42,7 +42,7 @@ export function WorkflowDesigner({ projectId, agentCatalog, definition, onBack, 
   const workspace = boot.workspaces.find((entry) => entry.shellProjectId === projectId) ?? null;
   const nativeWorkspace = workspace?.workspace ?? null;
   const nativeWorkspaceKey = nativeWorkspace ? JSON.stringify(nativeWorkspace) : null;
-  const catalogs = useMemo(() => nativeWorkspace ? createModelCatalogStore({ client: store.client, workspace: nativeWorkspace }) : null,
+  const catalogs = useMemo(() => nativeWorkspace ? checkoutModelCatalog({ client: store.client, workspace: nativeWorkspace }) : null,
     [store.client, nativeWorkspaceKey]);
   const bots = useProjectBots(projectId);
   const [draft, setDraft] = useState<LoopDefinitionDraft>(() => definition ? {

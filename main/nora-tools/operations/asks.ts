@@ -18,7 +18,9 @@ export function createAskOperations(options: NoraToolOperationOptions): NoraAskO
       if (chain.some((entry) => entry.bot?.botId === bot.id)) throw new Error(`${bot.name} is already waiting on this conversation, so asking it again would loop. Answer with what you have.`);
       if (chain.filter((entry) => entry.bot).length >= ASK_DEPTH_LIMIT) throw new Error(`This chain of bots asking bots has reached its limit of ${ASK_DEPTH_LIMIT}. Answer with what you have.`);
       const caller = conversation.bot?.name ?? "Nora, on the user's behalf";
-      const threadId = await ensureBotThread(deps, conversation, bot, "read", `${bot.name}: ${message.split("\n")[0]}`);
+      // Global bots are not workspace-scoped; they always get write. Workspace bots stay within the caller's access.
+      const access = bot.scope.kind === "global" ? "write" : conversation.workspace.access;
+      const threadId = await ensureBotThread(deps, conversation, bot, access, `${bot.name}: ${message.split("\n")[0]}`);
       const reply = await askBotThread(deps, { conversationId: threadId, signal, timeoutMs: ASK_TIMEOUT_MS,
         instruction: `${caller} asks you (in thread "${conversation.title}"):\n\n${message}` });
       if (reply.status === "completed" && reply.text) return { botName: bot.name, conversationId: threadId, reply: reply.text };

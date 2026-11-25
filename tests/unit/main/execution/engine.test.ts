@@ -70,6 +70,19 @@ test("writer conflict and host mismatch reject before native admission", (t) => 
     workspace: { projectId: "p", environmentId: "ssh", checkoutId: "c", path: "/remote", branch: "main", access: "write" } }), /different execution host/);
 });
 
+test("a write child may submit while its write ancestor is active; sibling writers still conflict", (t) => {
+  const f = fixture(t);
+  const checkout = { environmentId: "local", projectId: "project", checkoutId: "checkout", path: "/test/checkout", branch: "main", access: "write" as const };
+  f.create("parent", "checkout");
+  f.command({ kind: "create", commandId: "create-child-a", conversationId: "child-a", title: "child-a", parentId: "parent", provider, workspace: checkout });
+  f.command({ kind: "create", commandId: "create-child-b", conversationId: "child-b", title: "child-b", parentId: "parent", provider, workspace: checkout });
+  f.submit("parent-run", "parent");
+  f.submit("child-a-run", "child-a");
+  assert.equal(f.snapshot("child-a").runs.length, 1);
+  assert.throws(() => f.submit("child-b-run", "child-b"), /isolated worktree/);
+  assert.equal(f.snapshot("child-b").runs.length, 0);
+});
+
 test("snapshot cursor replay has no gaps even when replay causes reentrant commands", (t) => {
   const f = fixture(t);
   f.create();
@@ -120,6 +133,42 @@ test("interrupt before provider submission cancels outbox work without starting 
   assert.equal(f.engine.claimEffect(), null);
   f.command({ kind: "continue-queue", commandId: "continue", conversationId: "conversation" });
   assert.equal(f.snapshot().runs[1].state, "starting");
+});
+
+test("a second interrupt force-ends a turn that stayed stopping", (t) => {
+  const f = fixture(t);
+  f.create(); f.submit();
+  f.update({ kind: "started", eventId: "start", nativeConversationId: "thread", nativeTurnId: "turn" });
+  const run = f.snapshot().runs[0];
+  f.engine.accept({
+    kind: "item", eventId: "tool", conversationId: "conversation", runId: run.id, attemptId: run.attemptId,
+    item: { id: "tool", runId: run.id, createdAt: "2026-10-21T10:00:00.000Z", kind: "tool", label: "Shell", output: "", state: "running",
+      details: { category: "command" } }
+  });
+  f.command({ kind: "interrupt", commandId: "stop", conversationId: "conversation", runId: "run" });
+  assert.equal(f.snapshot().runs[0].state, "stopping");
+  assert.equal(f.store.unfinishedEffects().some((effect) => effect.action.kind === "interrupt"), true);
+  f.command({ kind: "interrupt", commandId: "force", conversationId: "conversation", runId: "run" });
+  assert.equal(f.snapshot().runs[0].state, "interrupted");
+  assert.equal(f.snapshot().conversation.queuePaused, true);
+  const tool = f.snapshot().items.find((item) => item.id === "tool");
+  assert.equal(tool?.kind === "tool" ? tool.state : null, "interrupted");
+  assert.equal(f.store.unfinishedEffects().some((effect) => effect.action.kind === "interrupt"), false);
+  assert.equal(f.store.unfinishedEffects().some((effect) => effect.action.kind === "review"), true);
+});
+
+test("interrupt force-ends a recovering turn without waiting for reconcile", (t) => {
+  const f = fixture(t);
+  f.create(); f.submit();
+  f.update({ kind: "started", eventId: "start", nativeConversationId: "thread", nativeTurnId: "turn" });
+  const run = f.snapshot().runs[0];
+  f.engine.accept({ kind: "disconnected", eventId: "lost", conversationId: "conversation", runId: run.id, attemptId: run.attemptId,
+    failure: { code: "uncertain", message: "lost", retryable: false } });
+  assert.equal(f.snapshot().runs[0].state, "recovering");
+  f.command({ kind: "interrupt", commandId: "force", conversationId: "conversation", runId: "run" });
+  assert.equal(f.snapshot().runs[0].state, "interrupted");
+  assert.equal(f.snapshot().runs[0].failure, null);
+  assert.equal(f.snapshot().conversation.queuePaused, true);
 });
 
 test("recovery retires claimed effects whose final outcome already committed", (t) => {
@@ -286,4 +335,18 @@ test("rejected initial instructions leave no empty worker or receipt", (t) => {
   assert.equal(f.store.cursor(), cursor);
   assert.throws(() => f.command({ ...command, initialInstruction: { runId: "first", instruction: "   " } }));
   assert.equal(f.engine.snapshot("worker"), null);
+});
+
+test("streamed items skip workspace writer and unfinished effect queries", (t) => {
+  const f = fixture(t);
+  f.create();
+  f.submit();
+  const writers = t.mock.method(f.store, "writers");
+  const effects = t.mock.method(f.store, "unfinishedEffects");
+  f.engine.accept({ kind: "item", conversationId: "conversation", runId: "run", attemptId: f.snapshot().runs[0].attemptId,
+    eventId: "chunk", item: { id: "message", kind: "message", role: "assistant", text: "hello", runId: "run",
+      complete: false, createdAt: "2026-10-21T10:00:00.000Z" } });
+  assert.equal(writers.mock.callCount(), 0);
+  assert.equal(effects.mock.callCount(), 0);
+  assert.equal(f.snapshot().items.at(-1)?.id, "message");
 });

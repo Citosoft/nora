@@ -5,7 +5,7 @@ import { at } from "./fixtures/conversationFixtures";
 
 const request: QuestionRequest = { id: "req", runId: "run", attemptId: "a", nativeId: "n", status: "pending", createdAt: at, expiresAt: at, title: "Choices",
   kind: "question", questions: [
-    { id: "format", text: "Format?", options: ["PDF", "Slides"], multiple: false, allowOther: true },
+    { id: "format", text: "Format?", options: ["PDF", "Slides"], multiple: false },
     { id: "sections", text: "Sections?", options: ["Summary", "Budget"], multiple: true }
   ] };
 
@@ -22,5 +22,7 @@ describe("question answers", () => {
     expect(buildAnswers(request, draft)).toEqual({ format: ["Slides"], sections: ["Summary", "Budget"] });
     const withOther = { ...draft, format: { selected: ["Slides"], other: "  Word doc " } };
     expect(buildAnswers(request, withOther)).toEqual({ format: ["Word doc"], sections: ["Summary", "Budget"] });
+    const withMultipleOther = { ...draft, sections: { selected: ["Summary"], other: "Appendix" } };
+    expect(buildAnswers(request, withMultipleOther)).toEqual({ format: ["Slides"], sections: ["Summary", "Appendix"] });
   });
 });

@@ -2,7 +2,7 @@
 
 This product includes third-party open-source software.
 
-Generated: 2026-11-20T21:08:21.056Z
+Generated: 2026-11-24T22:26:22.129Z
 
 | Package | Version | License |
 | --- | --- | --- |
@@ -204,10 +204,12 @@ Generated: 2026-11-20T21:08:21.056Z
 | style-to-js | 1.1.21 | MIT |
 | style-to-object | 1.0.14 | MIT |
 | tailwind-merge | 3.6.0 | MIT |
+| thinking-orbs | 0.3.2 | MIT |
 | tiny-invariant | 1.3.3 | MIT |
 | trim-lines | 3.0.1 | MIT |
 | trough | 2.2.0 | MIT |
 | tslib | 2.8.1 | 0BSD |
+| undici | 7.27.0 | MIT |
 | unified | 11.0.5 | MIT |
 | unist-util-is | 6.0.1 | MIT |
 | unist-util-position | 5.0.0 | MIT |

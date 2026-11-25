@@ -1,5 +1,6 @@
 import { buildSessionCenterSurfacePortsFromAssembly } from "@/components/app/logic/buildSignedInRegionPortsFromAssembly";
 import type { AppShellSignedInAssemblySources } from "@/components/app/types/appShellSignedInAssemblySources.types";
+import { DEFAULT_APP_SETTINGS } from "@shared/appTypes";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -16,7 +17,7 @@ test("buildSessionCenterSurfacePortsFromAssembly forwards session slices and cor
   let settingsGroup: string | undefined;
 
   const assembly = {
-    core: { snapshot, resolvedTheme, openSettingsPage: (group) => { settingsGroup = group; } } as AppShellSignedInAssemblySources["core"],
+    core: { snapshot, resolvedTheme, appSettings: DEFAULT_APP_SETTINGS, openSettingsPage: (group) => { settingsGroup = group; } } as AppShellSignedInAssemblySources["core"],
     sessionSurface,
     centerTabs,
     aiModels,
@@ -31,6 +32,7 @@ test("buildSessionCenterSurfacePortsFromAssembly forwards session slices and cor
   assert.strictEqual(ports.resolvedTheme, resolvedTheme);
   assert.strictEqual(ports.terminalThemeId, terminalThemeId);
   assert.strictEqual(ports.terminalFontId, terminalFontId);
+  assert.strictEqual(ports.threadBackdrop, DEFAULT_APP_SETTINGS.threadBackdrop);
   assert.equal(ports.forgeItems.projectId, null);
   assert.equal(ports.forgeItems.overview, null);
   ports.forgeItems.openIntegrations();

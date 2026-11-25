@@ -23,7 +23,7 @@ export function finalizeSteering(transaction: StoreTransaction, effect: Executio
   const latest = transaction.state(effect.conversationId);
   if (latest && !latest.conversation.queuePaused) {
     const next = decideCommand({ kind: "continue-queue", commandId: effect.id, conversationId: effect.conversationId }, { now,
-      state: latest, environmentId: latest.conversation.workspace.environmentId, writers: transaction.writers(latest.conversation.workspace), effects: transaction.unfinishedEffects() });
+      state: latest, environmentId: latest.conversation.workspace.environmentId, admission: transaction });
     for (const payload of next.events) append(payload);
     for (const operation of next.effects) transaction.putEffect(operation);
   }

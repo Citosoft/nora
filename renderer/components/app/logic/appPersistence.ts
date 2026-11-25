@@ -22,9 +22,15 @@ import type {
 import { DEFAULT_UI_FONT_ID, isUiFontId } from "@/components/app/logic/appUiFonts";
 import { isAiChatReasoningLevel } from "@/components/app/types";
 import { clampRounded } from "@shared/math";
+import { DEFAULT_COLOR_THEME_ID, isColorThemeId } from "@shared/appearance/colorThemes";
+import { DEFAULT_ACCENT_COLOR, isAccentColor } from "@shared/appearance/accentColors";
+import type { ColorThemeId } from "@shared/types/appearance/colorTheme.types";
+import type { AppThemeSelection } from "@/components/app/types/appTheme.types";
 
 const THEME_STORAGE_KEY = "nora-theme-mode";
 const ACCENT_STORAGE_KEY = "nora-accent-color";
+/** Also read by the bootstrap script in renderer/index.html so the theme applies before first paint. */
+const COLOR_THEME_STORAGE_KEY = "nora-color-theme";
 const TERMINAL_THEME_STORAGE_KEY = "nora-terminal-theme";
 const TERMINAL_FONT_STORAGE_KEY = "nora-terminal-font";
 const UI_FONT_STORAGE_KEY = "nora-ui-font";
@@ -255,9 +261,16 @@ export function readStoredThemeMode(): ThemeMode {
 
 export function readStoredAccentColor(): AccentColor {
   const stored = window.localStorage.getItem(ACCENT_STORAGE_KEY);
-  return stored === "silver" || stored === "green" || stored === "blue" || stored === "amber" || stored === "rose" || stored === "violet"
-    ? stored
-    : "silver";
+  return isAccentColor(stored) ? stored : DEFAULT_ACCENT_COLOR;
+}
+
+export function readStoredColorTheme(): ColorThemeId {
+  const stored = window.localStorage.getItem(COLOR_THEME_STORAGE_KEY);
+  return isColorThemeId(stored) ? stored : DEFAULT_COLOR_THEME_ID;
+}
+
+export function readStoredThemeSelection(): AppThemeSelection {
+  return { themeMode: readStoredThemeMode(), colorTheme: readStoredColorTheme(), accentColor: readStoredAccentColor() };
 }
 
 export function readStoredUiLayout(): StoredUiLayout {
@@ -561,6 +574,10 @@ export function writeStoredThemeMode(mode: ThemeMode): void {
 
 export function writeStoredAccentColor(color: AccentColor): void {
   window.localStorage.setItem(ACCENT_STORAGE_KEY, color);
+}
+
+export function writeStoredColorTheme(themeId: ColorThemeId): void {
+  window.localStorage.setItem(COLOR_THEME_STORAGE_KEY, themeId);
 }
 
 export function writeStoredTerminalThemeId(themeId: TerminalThemeId): void {

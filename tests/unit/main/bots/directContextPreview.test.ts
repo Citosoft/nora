@@ -15,7 +15,7 @@ import { fakeHost } from "./fakeHost";
 const ada = bot("ada");
 const ref = (projectId: string): WorkspaceRef => ({ projectId, environmentId: "local", checkoutId: projectId, path: `/${projectId}`, branch: "main", access: "read" });
 const workspaces = [{ id: "app", name: "App", workspace: ref("app") }, { id: "site", name: "Site", workspace: ref("site") }];
-const direct: DirectDescriptor = { botId: "ada", name: "Ada", role: ada.role, avatar: ada.avatar, scope: { kind: "global" }, workspaceId: "app" };
+const direct: DirectDescriptor = { botId: "ada", name: "Ada", role: ada.role, avatar: ada.avatar, scope: { kind: "global" }, workspaceId: "app", retiredAt: null };
 const message = (id: string, text: string, extra: Partial<Extract<TimelineItem, { kind: "message" }>> = {}): TimelineItem =>
   ({ kind: "message", id, runId: "r", createdAt: "2026-11-13T00:00:00.000Z", role: "user", text, complete: true, ...extra });
 const usage: ContextUsage = { usedTokens: 12_000, windowTokens: 200_000, inputTokens: 11_000, cachedInputTokens: 10_000, outputTokens: 400, updatedAt: "2026-11-13T00:00:00.000Z" };
@@ -85,7 +85,7 @@ test("peeking at saved-note delivery never freezes a thread's notes or uses up i
 test("Nora's chat previews a new work thread on its chat model, with no bot persona, in any workspace", () => {
   const { fake, deps } = setup();
   fake.add(conversation("nora-dm", { title: "Nora", provider: { kind: "nora", instanceId: "direct", model: "direct", reasoning: null, permissionPolicy: "direct" },
-    direct: { botId: NORA_CHAT.id, name: NORA_CHAT.name, role: NORA_CHAT.role, avatar: NORA_CHAT.avatar, scope: { kind: "global" }, workspaceId: "app" } }));
+    direct: { botId: NORA_CHAT.id, name: NORA_CHAT.name, role: NORA_CHAT.role, avatar: NORA_CHAT.avatar, scope: { kind: "global" }, workspaceId: "app", retiredAt: null } }));
   const preview = previewDirectContext(deps, { chatId: "nora-dm", draft: "Tidy the styles", target: { kind: "new", workspaceId: "site" } });
   assert.deepEqual(preview.targets.map((option) => option.target), [{ kind: "new", workspaceId: "app" }, { kind: "new", workspaceId: "site" }]);
   const work = preview.requests[1];

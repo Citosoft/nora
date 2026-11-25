@@ -4,7 +4,7 @@ import type { PortableAppearance, PortableSettings, SyncDocument } from "@shared
 import type { SyncEngineDeps, SyncJournal } from "@main/types/settings-sync/service.types";
 import { mergeEntries } from "@shared/settings-sync/entries";
 
-export const syncAppearance: PortableAppearance = { themeMode: "system", accentColor: "silver", uiFontId: "system", terminalThemeId: "app", terminalFontId: "ibm-plex-mono", userDisplayName: "Daniel" };
+export const syncAppearance: PortableAppearance = { themeMode: "system", colorTheme: "nora", accentColor: "theme", uiFontId: "system", terminalThemeId: "app", terminalFontId: "ibm-plex-mono", userDisplayName: "Daniel" };
 export function syncPreferences(): PortableSettings { return captureSettings(structuredClone(DEFAULT_APP_SETTINGS), syncAppearance); }
 export function syncFixture() {
   let local = syncPreferences();

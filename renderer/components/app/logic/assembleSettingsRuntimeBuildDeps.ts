@@ -33,6 +33,8 @@ export const buildAppShellSettingsRuntimeAssemblyInputFromDeps = (
   appearance: {
     themeMode: deps.themeMode,
     updateThemeMode: deps.updateThemeMode,
+    colorTheme: deps.colorTheme,
+    updateColorTheme: deps.updateColorTheme,
     accentColor: deps.accentColor,
     updateAccentColor: deps.updateAccentColor,
     uiFontId: deps.uiFontId,
@@ -70,6 +72,7 @@ export const buildAppShellSettingsRuntimeAssemblyInputFromDeps = (
   appPrefs: {
     appSettings: deps.appSettings,
     updateFileEditorThemeId: deps.updateFileEditorThemeId,
+    updateThreadBackdrop: deps.updateThreadBackdrop,
     updateHardwareAccelerationEnabled: deps.updateHardwareAccelerationEnabled,
     updateWorkspaceStateStorageMode: deps.updateWorkspaceStateStorageMode,
     updateDefaultAgentLaunchTarget: deps.updateDefaultAgentLaunchTarget,

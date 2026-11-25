@@ -4,6 +4,7 @@ import { McpLoginButton } from "@/components/app/panels/settings/McpLoginButton"
 import { McpServerLogo } from "@/components/app/panels/settings/McpServerLogo";
 import { McpToolsToggle } from "./McpToolsToggle";
 import { McpToolDetailsRow } from "./McpToolDetailsRow";
+import { McpConnectionErrorRow } from "./McpConnectionErrorRow";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { MCP_SERVER_STATUS_BADGES } from "@/components/app/constants/mcpServerStatus";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +17,8 @@ export function McpServerTableRow({ server, source, logins }: McpServerTableRowP
   const [expanded, setExpanded] = useState(false);
   const detailsId = useId();
   const status = MCP_SERVER_STATUS_BADGES[server.status];
+  const login = logins.state(source, server.name);
+  const error = login?.status === "failed" ? login.message : server.status === "failed" ? server.message : undefined;
   const hasDetails = server.tools.length > 0 || Boolean(server.message);
   return <>
     <tr className="border-b border-border/40 last:border-0">
@@ -37,6 +40,7 @@ export function McpServerTableRow({ server, source, logins }: McpServerTableRowP
         {server.canLogin ? <McpLoginButton server={server} source={source} logins={logins} /> : null}
       </td>
     </tr>
+    <McpConnectionErrorRow message={error} />
     {expanded ? <McpToolDetailsRow id={detailsId} message={server.message} tools={server.tools} /> : null}
   </>;
 }

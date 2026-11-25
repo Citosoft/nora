@@ -8,6 +8,7 @@ import { McpServerLogo } from "./McpServerLogo";
 import { McpToolsToggle } from "./McpToolsToggle";
 import { McpToolDetailsRow } from "./McpToolDetailsRow";
 import { NoraConnectorActions } from "./NoraConnectorActions";
+import { McpConnectionErrorRow } from "./McpConnectionErrorRow";
 
 const CELL_CLASS_NAME = "px-3 py-2 align-middle";
 
@@ -17,6 +18,7 @@ export function NoraConnectorRow({ connector, controls, accessChoices, onEditAcc
   const detailsId = useId();
   const status = CONNECTOR_STATUS_BADGES[connector.status];
   const failure = controls.failure(connector.id);
+  const error = failure ?? (connector.status === "failed" ? connector.message : undefined);
   const message = [failure, connector.message, `${connector.url} · available to threads as "${connector.serverName}"`].filter(Boolean).join("\n");
   return <>
     <tr className="border-b border-border/40 last:border-0">
@@ -33,6 +35,7 @@ export function NoraConnectorRow({ connector, controls, accessChoices, onEditAcc
       </td>
       <td className={`${CELL_CLASS_NAME} text-right`}><NoraConnectorActions connector={connector} controls={controls} onEditAccess={onEditAccess} /></td>
     </tr>
+    <McpConnectionErrorRow message={error} />
     {expanded ? <McpToolDetailsRow id={detailsId} message={message} tools={connector.tools} /> : null}
   </>;
 }

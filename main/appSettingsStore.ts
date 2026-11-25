@@ -13,6 +13,7 @@ import { isNodeError } from "./nodeErrors";
 import { readPersonalization } from "@shared/personalization/settings";
 import { parseDesktopLifecycleSettings } from "@shared/desktop-lifecycle/settings";
 import { parseVoiceSettings } from "@shared/voice/settings";
+import { parseThreadBackdropSettings } from "@shared/thread-backdrop/settings";
 
 export class AppSettingsStore {
   constructor(private readonly filePath: string) {}
@@ -93,6 +94,7 @@ function parseAppSettings(raw: string): AppSettings {
         candidate.fileEditorThemeId === "high-contrast"
           ? candidate.fileEditorThemeId
           : DEFAULT_APP_SETTINGS.fileEditorThemeId,
+      threadBackdrop: parseThreadBackdropSettings(candidate.threadBackdrop),
       terminalQuickLaunchDefaults: parseTerminalQuickLaunchDefaults(candidate.terminalQuickLaunchDefaults),
       terminalPresets: parseTerminalPresets(candidate.terminalPresets),
       ai: decryptedAiSettings,

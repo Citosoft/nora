@@ -5,6 +5,7 @@ useWorkspaceSessionPanelData
 } from "@/components/app/context/workspaceSessionPanelContext";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
 import { useNativeRuntimePorts } from "@/components/app/hooks/useNativeRuntimePorts";
+import { useTitleBarLayout } from "@/components/app/hooks/useTitleBarLayout";
 import { useWorkspaceNavigation } from "@/components/app/hooks/useWorkspaceNavigation";
 import { backFromForgeViewer } from "@/components/app/logic/forgeViewerNavigation";
 import { useThreadWorkspaceSnapshot } from "@/components/app/hooks/useThreadWorkspaceSnapshot";
@@ -43,6 +44,7 @@ import type { WorkspaceSessionTab } from "@/components/app/types/workflow.types"
 import type { CheckoutWorkspaceBranchPayload } from "@shared/appTypes";
 import type { ReactNode } from "react";
 import { useCallback,useEffect,useMemo,useRef,useState } from "react";
+import { createPortal } from "react-dom";
 
 function assertUnreachable(value: never): never {
   throw new Error(`Unhandled workspace session tab kind: ${String(value)}`);
@@ -103,6 +105,7 @@ export function WorkspaceSessionPanel() {
     activeView,
     activeWorkspaceContentTab,
   } = useWorkspaceSessionPanelData();
+  const titleBarTabSlot = useTitleBarLayout()?.tabSlot ?? null;
   const {
     onChooseProject,
     onRefreshCatalog,
@@ -661,7 +664,7 @@ export function WorkspaceSessionPanel() {
   return (
     <WorkspaceSessionProvider value={contextValue}>
       <div className="flex h-full min-h-0 flex-col">
-        {showSessionTabs ? (
+        {showSessionTabs && titleBarTabSlot ? createPortal(
           <WorkspaceSessionTabs
             tabs={orderedSessionTabs}
             activeTabId={activeTabId}
@@ -698,8 +701,8 @@ export function WorkspaceSessionPanel() {
               onExitSplitView();
               onOpenWorkspaceBrowser(workspace.project.id);
             }}
-
-          />
+          />,
+          titleBarTabSlot
         ) : null}
         {activeView ? (
           <div className="border-b border-border/60 bg-background/60 px-3 py-2">

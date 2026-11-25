@@ -1,4 +1,6 @@
 import type { OAuthClientInformationMixed, OAuthTokens } from "@modelcontextprotocol/sdk/shared/auth.js";
+import type { OAuthDiscoveryState } from "@modelcontextprotocol/sdk/client/auth.js";
+import type { Dispatcher } from "undici";
 import type { Connector, ConnectorAccess, ConnectorInput, ConnectorSubject } from "@shared/types/connectors/connectors.types";
 import type { McpServerLogo } from "@shared/types/provider/mcp.types";
 import type { SecretCodec } from "@main/types/secretEncryption.types";
@@ -23,10 +25,12 @@ export interface ConnectorOAuthClient { information: OAuthClientInformationMixed
 export interface ConnectorOAuthTokens { tokens: OAuthTokens; savedAt: number; }
 /** Everything secret about a connector, encrypted at rest as one value. */
 export interface ConnectorSecrets {
+  requiresSignIn?: boolean;
   headerValue?: string;
   clientSecret?: string;
   client?: ConnectorOAuthClient;
   tokens?: ConnectorOAuthTokens;
+  discovery?: OAuthDiscoveryState;
 }
 export interface ConnectorStore {
   list(): StoredConnector[];
@@ -64,8 +68,12 @@ export interface OAuthCallbackServer {
 }
 
 /** Fresh request headers for a connector's upstream server, or null when it needs the user to sign in again. */
-export type ConnectorCredentials = (connector: StoredConnector, options: { forceRefresh: boolean }) => Promise<Record<string, string> | null>;
+export interface ConnectorCredentials {
+  (connector: StoredConnector, options: { forceRefresh: boolean }): Promise<Record<string, string> | null>;
+  requireSignIn(connector: StoredConnector): void;
+}
 export interface ConnectorCredentialsOptions { store: ConnectorStore; fetch?: typeof fetch; now?: () => number; }
+export interface ConnectorRefreshCooldown { accessToken: string; savedAt: number; retryAt: number; }
 
 export interface ConnectorGateway {
   /** How a thread's runtime reaches a connector: Nora's gateway, which adds the real credentials. Starts the gateway on first use. */
@@ -107,6 +115,8 @@ export interface ConnectorServiceOptions {
   callbackPort?: number;
   fetch?: typeof fetch;
 }
+export interface ConnectorNetworkRequestInit extends RequestInit { dispatcher: Dispatcher; }
+export interface ConnectorNetwork { fetch: typeof fetch; close(): Promise<void>; }
 export interface ConnectorService extends RunContextConnectors {
   list(): Connector[];
   create(input: ConnectorInput): Promise<Connector[]>;

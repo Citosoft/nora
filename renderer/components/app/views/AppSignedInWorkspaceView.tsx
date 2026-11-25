@@ -6,6 +6,7 @@ import { LocalTerminalDockProvider } from "@/components/app/context/localTermina
 import { WorkspaceRuntimeProvider } from "@/components/app/context/workspaceRuntimeContext";
 import { WorkspaceSidebarProvider } from "@/components/app/context/workspaceSidebarContext";
 import { LocalTerminalDock as AppLocalTerminalDock } from "@/components/app/panels/LocalTerminalDock";
+import { useTitleBarLayout } from "@/components/app/hooks/useTitleBarLayout";
 import { WorkspaceSidebar as AppWorkspaceSidebar } from "@/components/app/sidebar/WorkspaceSidebar";
 import { SidebarModeStrip } from "@/components/app/sidebar/SidebarModeStrip";
 import { AppMainCenterContent } from "@/components/app/views/AppMainCenterContent";
@@ -27,6 +28,7 @@ export function AppSignedInWorkspaceView() {
     isChangesSidebarCollapsed,
     onStartChangesSidebarResize
   } = useAppSignedInWorkspaceView();
+  const titleBarLayout = useTitleBarLayout();
 
   const workspaceSidebarCell = (
     <div className={`flex min-h-0 ${areSidebarsSwapped ? "flex-row-reverse" : ""}`} style={{ gridColumn: areSidebarsSwapped ? 3 : 1, gridRow: 1 }}>
@@ -61,7 +63,7 @@ export function AppSignedInWorkspaceView() {
   );
 
   const centerColumnCell = (
-    <div data-changes-sidebar-open={hasActiveWorkspace && !isChangesSidebarCollapsed} style={{ gridColumn: 2, gridRow: 1 }} className="center-column-host relative flex min-h-0 min-w-0 flex-col overflow-hidden border-x border-border/70 bg-background">
+    <div ref={titleBarLayout?.setContentColumn} data-changes-sidebar-open={hasActiveWorkspace && !isChangesSidebarCollapsed} style={{ gridColumn: 2, gridRow: 1 }} className="center-column-host relative flex min-h-0 min-w-0 flex-col overflow-hidden border-x border-border/70 bg-background">
       <div className="min-h-0 flex-1 overflow-hidden">
         <AppMainCenterContent />
       </div>
