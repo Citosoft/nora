@@ -90,6 +90,8 @@ export interface ModelListProps {
   locked: boolean;
   favorites: FavoriteModelsState;
   onSelect(model: ProviderModel): void;
+  /** Opens Settings → Providers, where the provider can be signed in; absent where the host has no Settings. */
+  onOpenProviderSettings?: () => void;
 }
 /** Where pickers read and save favourite models, kept narrow so hosts without the full native runtime can supply it. */
 export interface FavoriteModelsPort {

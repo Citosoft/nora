@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { z } from "zod";
+import { commandLaunch } from "@main/helpers/commandLaunch";
 import type { RuntimeTextInput, GeneratedText } from "@main/types/ai/textGeneration.types";
 
 /** Usage is accounting only: a missing or odd usage block never fails a generation. */
@@ -10,7 +11,7 @@ const eventSchema = z.object({ type: z.string(), item: z.object({ type: z.string
 /** Isolated, ephemeral CLI invocation. Authentication stays with Codex. */
 export function generateCodexText(input: RuntimeTextInput): Promise<GeneratedText> {
   return new Promise((resolve, reject) => {
-    const child = execFile(input.executable, [
+    const launch = commandLaunch(input.executable, [
       "exec", ...(input.model ? ["--model", input.model] : []), "--ignore-user-config", "--ignore-rules", "--ephemeral", "--skip-git-repo-check",
       "--sandbox", "read-only", "--color", "never", "--json",
       "--disable", "shell_tool", "--disable", "unified_exec", "--disable", "apply_patch_freeform",
@@ -18,7 +19,8 @@ export function generateCodexText(input: RuntimeTextInput): Promise<GeneratedTex
       "--disable", "browser_use", "--disable", "computer_use", "--disable", "remote_plugin",
       "--disable", "image_generation", "--disable", "view_image", "--disable", "skill_mcp_dependency_install",
       "--config", 'web_search="disabled"', "--config", "project_doc_max_bytes=0", "-"
-    ], { cwd: input.cwd, env: input.environment, encoding: "utf8", timeout: 90_000,
+    ]);
+    const child = execFile(launch.command, launch.args, { cwd: input.cwd, windowsVerbatimArguments: launch.windowsVerbatimArguments, env: input.environment, encoding: "utf8", timeout: 90_000,
       signal: input.request.signal, killSignal: "SIGKILL", maxBuffer: 1024 * 1024, windowsHide: true }, (error, stdout) => {
       if (error) { reject(new Error("Codex text generation failed")); return; }
       try { resolve({ ...parseCodexOutput(stdout), model: input.model }); } catch (failure) { reject(failure); }

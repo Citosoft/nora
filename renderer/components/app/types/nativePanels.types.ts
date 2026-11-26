@@ -20,6 +20,7 @@ import type { MarkdownRendererLinkClickHandler } from "./markdownRenderer.types"
 import type { ThreadConnectorsState } from "./threadConnectors.types";
 import type { ThreadReferenceChoice } from "./threadReferences.types";
 import type { MessagePinControls } from "./messagePins.types";
+import type { ProviderSetupPorts } from "./providerSetup.types";
 
 export type NativeMessageItem = Extract<TimelineItem, { kind: "message" }>;
 export interface NativeMessageProps {
@@ -113,6 +114,8 @@ export interface NativeConversationPorts {
   createWorktree: ((branch: string) => Promise<void>) | null;
   /** Null where the view is hosted outside the session center, such as the app builder drawer. */
   threadBackdrop: ThreadBackdropSettings | null;
+  /** Null outside the session center; the setup panel then offers no Settings link. */
+  providerSetup: ProviderSetupPorts | null;
 }
 export interface NativeProviderPickerProps {
   allowChange?: boolean;

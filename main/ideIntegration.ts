@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { buildMacAppBundleSearchPaths, getMacAppBundleBaseName, resolveIdeIconSourcePath, resolveMacAppBundlePath } from "./ideIconPath";
+import { commandLaunch } from "./helpers/commandLaunch";
 import { buildProcessEnv } from "./processEnv";
 import type { IdeDefinition } from "./types/internal.types";
 
@@ -424,11 +425,6 @@ export async function getInstalledIdes(): Promise<InstalledIde[]> {
   return detected.filter((entry): entry is InstalledIde => entry !== null);
 }
 
-function shouldLaunchWithShell(executablePath: string): boolean {
-  const extension = path.extname(executablePath).toLowerCase();
-  return extension === ".cmd" || extension === ".bat";
-}
-
 export async function openProjectInIde(ideId: string, projectPath: string): Promise<void> {
   const normalizedProjectPath = path.resolve(projectPath);
   let projectStats: import("node:fs").Stats;
@@ -449,12 +445,13 @@ export async function openProjectInIde(ideId: string, projectPath: string): Prom
     throw new Error("That IDE is no longer available on this machine.");
   }
 
-  const child = spawn(targetIde.executablePath, [normalizedProjectPath], {
+  const launch = commandLaunch(targetIde.executablePath, [normalizedProjectPath]);
+  const child = spawn(launch.command, launch.args, {
     cwd: normalizedProjectPath,
     detached: true,
     stdio: "ignore",
     windowsHide: true,
-    shell: shouldLaunchWithShell(targetIde.executablePath),
+    windowsVerbatimArguments: launch.windowsVerbatimArguments,
     env: buildProcessEnv(process.env)
   });
   child.unref();

@@ -4,12 +4,13 @@ import { AppMark } from "@/components/app/shared/AppMark";
 import type { SetupWindowShellProps } from "@/components/app/types/windowChrome.types";
 
 /** Startup screens live outside the workspace shell but still need frameless-window chrome. */
-export function SetupWindowShell({ children }: SetupWindowShellProps) {
+export function SetupWindowShell({ children, backdrop }: SetupWindowShellProps) {
   const state = useWindowUiState();
   const useMacTitleBarChrome = state.platform === "darwin";
 
   return (
     <div className="setup-window-shell relative isolate flex h-screen flex-col overflow-clip text-foreground">
+      {backdrop && <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">{backdrop}</div>}
       <header className="app-drag flex h-12 shrink-0 select-none items-center">
         {useMacTitleBarChrome && <TitleBarControls useMacTitleBarChrome isMaximized={state.isMaximized} iconToneClass="text-muted-foreground" />}
         <div className="pointer-events-none flex items-center gap-2 px-4 text-xs font-medium text-muted-foreground">

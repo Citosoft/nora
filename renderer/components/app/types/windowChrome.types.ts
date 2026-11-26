@@ -41,4 +41,6 @@ export interface RoleSidebarPreviewProps {
 
 export interface SetupWindowShellProps {
   children: ReactNode;
+  /** Decorative layer filling the whole window, title bar included, behind the content. */
+  backdrop?: ReactNode;
 }

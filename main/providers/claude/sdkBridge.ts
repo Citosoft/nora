@@ -6,7 +6,8 @@ import { z } from "zod";
 import { readClaudeStream } from "./readStream";
 import { questionGuidance } from "@main/execution/questionGuidance";
 import { claudeApprovalDetails } from "./approvals";
-import type { ClaudeOpenInput, ClaudeSession, ClaudeRuntimeOptions } from "@main/types/execution/claude.types";
+import type { ClaudeInputQueue, ClaudeOpenInput, ClaudeSession, ClaudeRuntimeOptions } from "@main/types/execution/claude.types";
+import { createClaudeLiveSession } from "./liveSession";
 import type { ClaudeToolOutputOptions } from "@main/types/execution/toolOutput.types";
 import { claudeOutputOptions } from "./outputBudget";
 import { claudeSessionSettings } from "./sessionSettings";
@@ -21,14 +22,28 @@ export function createClaudeOpener(runtime: ClaudeRuntimeOptions, toolOutput?: C
   return (input) => openClaudeSession(input, runtime, toolOutput);
 }
 
+/** Claude Code reads its prompts from here; the input stays open between turns until `end`, which lets the process exit. */
+export function createClaudeInputQueue(): ClaudeInputQueue {
+  const pending: SDKUserMessage[] = [];
+  let wake: (() => void) | null = null;
+  let ended = false;
+  const signal = (): void => { const resolve = wake; wake = null; resolve?.(); };
+  return {
+    push(message) { if (!ended) { pending.push(message); signal(); } },
+    end() { ended = true; signal(); },
+    async *[Symbol.asyncIterator]() {
+      for (;;) {
+        const next = pending.shift();
+        if (next) { yield next; continue; }
+        if (ended) return;
+        await new Promise<void>((resolve) => { wake = resolve; });
+      }
+    }
+  };
+}
+
 function openClaudeSession(input: ClaudeOpenInput, runtime: ClaudeRuntimeOptions, toolOutput?: ClaudeToolOutputOptions): ClaudeSession {
-  let releaseInput = (): void => {};
-  const keepInputOpen = new Promise<void>((resolve) => { releaseInput = resolve; });
-  async function* prompt(): AsyncGenerator<SDKUserMessage> {
-    yield { type: "user", uuid: input.nativeTurnId, session_id: input.sessionId,
-      message: { role: "user", content: input.instruction }, parent_tool_use_id: null };
-    await keepInputOpen;
-  }
+  const prompts = createClaudeInputQueue();
   const { settings: outputSettings, ...outputOptions } = claudeOutputOptions(toolOutput);
   const settings = claudeSessionSettings(input, outputSettings);
   const account = claudeAccountConnectorOptions(input);
@@ -37,7 +52,7 @@ function openClaudeSession(input: ClaudeOpenInput, runtime: ClaudeRuntimeOptions
   // The runtime has one MCP call limit, so the longest any server needs applies to all of them.
   const toolTimeoutSeconds = Math.max(0, ...input.mcpServers.map((server) => server.toolTimeoutSeconds ?? 0));
   let permissionMode = input.permissionMode;
-  const native = query({ prompt: prompt(), options: {
+  const native = query({ prompt: prompts, options: {
     ...outputOptions,
     cwd: input.cwd, model: input.model, permissionMode: input.permissionMode,
     ...(settings ? { settings } : {}),
@@ -77,19 +92,21 @@ function openClaudeSession(input: ClaudeOpenInput, runtime: ClaudeRuntimeOptions
         : { behavior: "deny", message: "Declined in Nora" };
     }
   } });
-  let closing: Promise<void> | null = null;
-  return {
-    async interrupt() { await native.interrupt(); },
-    close() {
-      if (!closing) closing = (async () => { releaseInput(); native.close(); await native.return(); })();
-      return closing;
+  return createClaudeLiveSession({
+    sessionId: input.sessionId, input: prompts, onFollowUp: input.onFollowUp,
+    opening: { nativeTurnId: input.nativeTurnId, instruction: input.instruction, model: input.model, permissionMode: input.permissionMode },
+    native: {
+      interrupt: () => native.interrupt(),
+      close: () => { native.close(); void native.return(undefined).catch(() => undefined); },
+      setModel: (model) => native.setModel(model),
+      // Approval choices follow the session's live mode, so a mode set for a later turn applies to its approvals too.
+      setPermissionMode: async (mode) => { await native.setPermissionMode(mode); permissionMode = mode; },
+      [Symbol.asyncIterator]: () => native[Symbol.asyncIterator]()
     },
-    async *[Symbol.asyncIterator]() {
-      yield* readClaudeStream(native, releaseInput, 5000, async () => {
-        const policy = await native.getContextUsage({ detail: "summary" });
-        return policy.isAutoCompactEnabled ? policy.autoCompactThreshold : undefined;
-      }, async () => claudeMcpAppLookup(await native.mcpServerStatus()));
-    }
-  };
+    readTurn: (source) => readClaudeStream(source, 5000, async () => {
+      const policy = await native.getContextUsage({ detail: "summary" });
+      return policy.isAutoCompactEnabled ? policy.autoCompactThreshold : undefined;
+    }, async () => claudeMcpAppLookup(await native.mcpServerStatus()))
+  });
 }
 

@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { homedir } from "node:os";
+import { commandLaunch } from "@main/helpers/commandLaunch";
 import type { AccountInfo, McpServerStatus } from "@anthropic-ai/claude-agent-sdk";
 import type { ClaudeAccountConnectorDirectory, ClaudeMcpLoginRunner, ClaudeRuntimeOptions, McpSettleOptions } from "@main/types/execution/claude.types";
 import type { McpAction, McpResult, McpServer } from "@shared/types/provider/mcp.types";
@@ -15,8 +16,6 @@ const defaultSleep = (ms: number) => new Promise<void>((resolve) => { setTimeout
 const CONNECTORS = "Claude account connectors (added in Claude on the web, desktop or mobile)";
 // Browser OAuth waits on the user; give up after this so an abandoned sign-in does not leave the runtime running.
 const MCP_LOGIN_TIMEOUT_MS = 5 * 60_000;
-// Windows needs a shell to run the runtime's command shim, so only names that cannot carry shell syntax reach it.
-const SHELL_SAFE_SERVER_NAME = /^[\w .:@-]+$/;
 
 /** Claude reports `source` (newer CLIs) or `scope`; project and local config belong to the workspace, everything else is global. */
 export function claudeMcpScope(server: Pick<McpServerStatus, "source" | "scope">): McpServer["scope"] {
@@ -91,10 +90,9 @@ export function normalizeClaudeMcp(server: McpServerStatus): McpServer {
  */
 export function createClaudeMcpLoginRunner(runtime: ClaudeRuntimeOptions): ClaudeMcpLoginRunner {
   return (cwd, serverName) => new Promise<boolean>((resolve) => {
-    const shell = process.platform === "win32";
-    if (shell && !SHELL_SAFE_SERVER_NAME.test(serverName)) { resolve(false); return; }
-    const child = spawn(runtime.executablePath, ["mcp", "login", serverName], { cwd,
-      env: { ...process.env, ...runtime.environment }, stdio: "ignore", windowsHide: true, shell });
+    const launch = commandLaunch(runtime.executablePath, ["mcp", "login", serverName]);
+    const child = spawn(launch.command, launch.args, { cwd,
+      env: { ...process.env, ...runtime.environment }, stdio: "ignore", windowsHide: true, windowsVerbatimArguments: launch.windowsVerbatimArguments });
     const timer = setTimeout(() => child.kill(), MCP_LOGIN_TIMEOUT_MS);
     const finish = (completed: boolean) => { clearTimeout(timer); resolve(completed); };
     child.once("error", () => finish(false));

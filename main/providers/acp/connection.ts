@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { commandLaunch } from "@main/helpers/commandLaunch";
 import { Readable, Writable } from "node:stream";
 import { client, methods, ndJsonStream, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 import type { AcpConnectionHandlers, AcpLiveConnection, AcpOptions } from "@main/types/execution/acp.types";
@@ -17,8 +18,9 @@ export function withAcpTimeout<T>(work: Promise<T>, ms: number, message: string)
  * client capabilities, so agents use their own tools and Nora only renders updates and answers permission requests.
  */
 export async function openAcpConnection(options: AcpOptions, handlers: AcpConnectionHandlers): Promise<AcpLiveConnection> {
-  const child = spawn(options.executable, [...options.args], { env: { ...process.env, ...options.environment }, stdio: ["pipe", "pipe", "pipe"],
-    windowsHide: true, shell: process.platform === "win32" && /\.(cmd|bat)$/i.test(options.executable) });
+  const launch = commandLaunch(options.executable, options.args);
+  const child = spawn(launch.command, launch.args, { env: { ...process.env, ...options.environment }, stdio: ["pipe", "pipe", "pipe"],
+    windowsHide: true, windowsVerbatimArguments: launch.windowsVerbatimArguments });
   // Agents log to stderr; drain it so a chatty agent can never block on a full pipe.
   child.stderr.resume();
   const spawned = new Promise<void>((resolve, reject) => { child.once("spawn", resolve); child.once("error", reject); });

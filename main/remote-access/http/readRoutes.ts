@@ -7,6 +7,7 @@ import type { RuntimeApiOptions } from "@main/types/remote-access/http/runtime.t
 import type { RuntimeRoute } from "@main/types/remote-access/http/routes.types";
 import { RuntimeFailure } from "./failure";
 import { REMOTE_INBOX_ITEM_KINDS } from "@shared/inbox/contracts";
+import { remoteEventPage, remoteHeader } from "./remoteRuns";
 import { listRemoteBots } from "./botChats";
 
 export function requireRemoteConversation(options: RuntimeApiOptions, id: string) {
@@ -34,7 +35,7 @@ export async function readRuntimeRoute(options: RuntimeApiOptions, route: Runtim
     case "conversation": {
       const header = requireRemoteConversation(options, route.id);
       const timeline = host.conversationHistory({ conversationId: route.id, scope: "timeline", limit: 100 });
-      return Response.json(conversationDetailResponseSchema.parse({ header, timeline }));
+      return Response.json(conversationDetailResponseSchema.parse({ header: remoteHeader(header), timeline }));
     }
     case "timeline": {
       requireRemoteConversation(options, route.id);
@@ -44,7 +45,7 @@ export async function readRuntimeRoute(options: RuntimeApiOptions, route: Runtim
     case "events": {
       const input = eventsQuerySchema.parse(Object.fromEntries(query));
       if (input.conversationId) requireRemoteConversation(options, input.conversationId);
-      return Response.json(eventsResponseSchema.parse(host.history(input.conversationId, input.after, input.limit)));
+      return Response.json(eventsResponseSchema.parse(remoteEventPage(host.history(input.conversationId, input.after, input.limit))));
     }
     case "tasks": {
       const tasks = host.summaries().flatMap(({ conversation }) => {

@@ -11,6 +11,7 @@ import { sameProviderBinding } from "@shared/conversations/providerBinding";
 import { applyMessagePin } from "./messagePins";
 import { forceEndRun } from "./forceEndRun";
 import { decideUndo } from "./decideUndo";
+import { advanceQueue } from "./advanceQueue";
 
 /** A workspace a direct chat may work in: any for a global bot's chat, only its own for a workspace bot's. */
 function assertDirectWorkspaceScope(direct: Conversation["direct"], workspaceId: string): NonNullable<Conversation["direct"]> {
@@ -181,7 +182,9 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
     case "edit-queued":
     case "remove-queued": {
       if (!run || run.state !== "queued") throw new ExecutionCommandError("conflict", "Only unsent queued instructions can be edited or removed");
-      if (run.action && command.kind === "edit-queued") throw new ExecutionCommandError("conflict", "Context compaction has no instruction to edit");
+      if (run.action && command.kind === "edit-queued") {
+        throw new ExecutionCommandError("conflict", run.action === "compact" ? "Context compaction has no instruction to edit" : "A background task's report has no instruction to edit");
+      }
       if (run.steering === "pending" || (run.steering && command.kind === "edit-queued")) throw new ExecutionCommandError("conflict", "Confirm steering delivery before editing this message");
       if (command.kind === "edit-queued") putRun({ ...run, instruction: command.instruction });
       else add({ kind: "remove-run", runId: run.id });
@@ -264,18 +267,6 @@ export function decideCommand(command: ConversationCommand, context: DecisionCon
       return decision;
     }
   }
-  if (state && !state.conversation.queuePaused && !state.runs.some(isActiveRun) && !state.runs.some((entry) => entry.steering)) {
-    const next = state.runs.find((entry) => entry.state === "queued");
-    if (next) {
-      putRun({ ...next, state: "starting", startedAt: context.now });
-      const instructionId = JSON.stringify([next.id, "instruction"]);
-      add({ kind: "item", item: next.action === "compact"
-        ? { id: instructionId, runId: next.id, createdAt: context.now, kind: "milestone", text: next.instruction }
-        : { id: instructionId, runId: next.id, createdAt: context.now, kind: "message", role: "user", text: next.instruction, complete: true,
-          ...(next.chatText ? { chatText: next.chatText } : {}) } });
-      decision.effects.push({ id: JSON.stringify([next.attemptId, "start"]), conversationId: command.conversationId,
-        runId: next.id, attemptId: next.attemptId, status: "pending", action: { kind: "start" } });
-    }
-  }
+  advanceQueue(state, context.now, decision, add);
   return decision;
 }

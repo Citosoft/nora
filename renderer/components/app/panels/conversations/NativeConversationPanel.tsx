@@ -58,6 +58,8 @@ import { botConversationState } from "@/components/app/logic/botConversationStat
 import { ThreadBotBadge } from "../threads/ThreadBotBadge";
 import { ThreadAccessBadge } from "../threads/ThreadAccessBadge";
 import { BotAvatar } from "@/components/app/shared/BotAvatar";
+import { NoraGlyph } from "@/components/app/shared/NoraGlyph";
+import { ProviderSetupPanel } from "./ProviderSetupPanel";
 
 const NO_ITEMS: readonly TimelineItem[] = [];
 const NO_RUNS: readonly ConversationRun[] = [];
@@ -181,6 +183,7 @@ export function NativeConversationPanel() {
         {view && <NativeTimeline items={view.items} runs={view.runHistory.runs} onLinkClick={onLinkClick} connectors={connectors} mentions={mentionOptions}
           resolveBot={resolveBot} onOpenThread={openThread} mcpApps={mcpApps} toolOutputs={toolOutputs} onOpenOutput={openOutput} pins={pinControls} turnUndo={turnUndo} />}
         {!conversationId && <div className="mx-auto flex w-full flex-col items-center gap-7 pb-2 text-center">
+          <NoraGlyph className="size-10" />
           <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">What would you like to work on in <span className="text-primary">{workspace.name}</span>{firstName && <>, <span className="whitespace-nowrap text-primary">{firstName}</span></>}?</h1>
           <div className="flex flex-wrap justify-center gap-2">{profile?.starters.map((starter) => <Button key={starter} variant="outline" className="h-auto max-w-full rounded-full px-4 py-2 text-left font-normal whitespace-normal"
             disabled={!!pending} onClick={() => chooseStarter(starter)}>{starter}</Button>)}</div>
@@ -203,7 +206,7 @@ export function NativeConversationPanel() {
       </div>}
       {voice.error && <p role="alert" className="text-sm text-destructive">{voice.error}</p>}
       {(runtime.error || ports.storageError || executionFailure || (pending && !busy)) && <p role="alert" className="text-sm text-destructive">{runtime.error ?? ports.storageError ?? (executionFailure ? executionFailureMessage(executionFailure) : "Delivery is unconfirmed. Retry checks the same saved instruction.")}</p>}
-      <div>
+      {!ports.state.providers.length ? <ProviderSetupPanel setup={ports.providerSetup} visible={ports.visible} translucent={!conversationId} /> : <div>
       {header && <NativeQueue conversationId={header.conversation.id} runs={header.queuedRuns} paused={header.conversation.queuePaused} busy={busy} execute={execute}
         steerTarget={capabilities?.steering && active?.state === "running" && active.nativeTurnId && !header.pendingRequests.length && !header.queuedRuns.some((run) => run.steering === "pending") ? active.id : null} />}
       <form className={cn("relative space-y-2 rounded-lg border p-3 shadow-sm focus-within:ring-1 focus-within:ring-ring/30",
@@ -250,7 +253,7 @@ export function NativeConversationPanel() {
             {showStop ? <Square className="size-3.5 fill-current" aria-hidden="true" /> : pending ? "Retry saved instruction" : <ArrowUp className="size-4" aria-hidden="true" />}</Button>
         </div>
       </form>
-      </div>
+      </div>}
     </div>
     </div>
   </section>;

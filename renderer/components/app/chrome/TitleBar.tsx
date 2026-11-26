@@ -3,7 +3,7 @@ import { TitleBarRoleSwitcher } from "@/components/app/chrome/TitleBarRoleSwitch
 import { TitleBarWorkspaceQuickSearch } from "@/components/app/chrome/TitleBarWorkspaceQuickSearch";
 import { useTitleBarContentInset } from "@/components/app/hooks/useTitleBarContentInset";
 import { useTitleBarLayout } from "@/components/app/hooks/useTitleBarLayout";
-import { AppMark } from "@/components/app/shared/AppMark";
+import { NoraGlyph } from "@/components/app/shared/NoraGlyph";
 import type { TitleBarProps } from "@/components/app/types/component.types";
 import { DropdownMenu, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuSub } from "@/components/ui/dropdown-menu";
 import { menuItemDescriptionClass } from "@/components/ui/menu-styles";
@@ -89,7 +89,7 @@ export function TitleBar({
           <TitleBarControls useMacTitleBarChrome isMaximized={windowUiState.isMaximized} iconToneClass={titleBarIconToneClass} />
         ) : null}
         <div className="flex items-center gap-2 px-1 py-0.5">
-          <AppMark className="size-[18px] shrink-0 text-primary" />
+          <NoraGlyph className="size-4" />
         </div>
         <button
           type="button"
