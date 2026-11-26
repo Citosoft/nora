@@ -11,10 +11,13 @@ import type { RoleSelection } from "@shared/types/personalization/roles.types";
 import type { IdleCompactionMode } from "@shared/types/personalization/compaction.types";
 import type { ThreadPreferences } from "@shared/types/personalization/threads.types";
 import type { WriteThreadReference } from "./threadReferences.types";
+import type { FollowUpListener } from "./followUp.types";
 
 export interface ProviderSupervisor extends ProviderResolver {
   /** Registers a provider found after startup; returns false when that kind and instance is already registered. */
   adopt(provider: ExecutionProvider): boolean;
+  /** Receives every registered provider's follow-up turns, including providers adopted later. */
+  onFollowUp(listener: FollowUpListener): () => void;
   close(): Promise<void>;
 }
 export interface HostDependencies {

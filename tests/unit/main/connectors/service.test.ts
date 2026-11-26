@@ -109,7 +109,7 @@ test("a rejected refresh marks the connector as needing sign-in instead of faili
   upstream.validTokens.clear();
   store.updateSecrets(created.id, { tokens: { tokens: { access_token: "stale", token_type: "Bearer", refresh_token: "revoked" }, savedAt: Date.now() } });
   const response = await fetch(endpoint.url, { method: "POST", headers: { Authorization: `Bearer ${endpoint.token}`, "content-type": "application/json",
-    accept: "application/json, text/event-stream" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }) });
+    accept: "application/json, text/event-stream" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "echo", arguments: { text: "x" } } }) });
   assert.equal(response.status, 401);
   assert.equal(response.headers.get("www-authenticate"), null, "runtimes never get a reason to start their own sign-in");
   assert.equal(status(created.id), "needs-auth");

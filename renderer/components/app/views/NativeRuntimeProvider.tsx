@@ -13,6 +13,7 @@ import { createThreadLayoutPersistence } from "@/components/app/logic/thread-wor
 import { RoleOnboarding } from "@/components/app/panels/personalization/RoleOnboarding";
 import { ThreadWorkspaceComposition } from "./ThreadWorkspaceComposition";
 import { SetupWindowShell } from "./SetupWindowShell";
+import { DotTerrain } from "@/components/app/shared/DotTerrain";
 import type { NativeBoot, PersonalizationRequest } from "@shared/ipc/types/personalizationGateway.types";
 import type { NativeRuntimeProviderProps, NativeRuntimePorts, ThreadLaunchInput } from "@/components/app/types/thread-workspace/runtime.types";
 import type { FavoriteModelsPort } from "@/components/app/types/modelPicker.types";
@@ -60,7 +61,7 @@ export function NativeRuntimeProvider({ children }: NativeRuntimeProviderProps) 
     async setFavorite(model, favorite) { await request({ kind: "set-favorite-model", model, favorite }); }
   }), [boot, request]);
   if (!boot || !ports) return <SetupWindowShell><div role={error ? "alert" : "status"} className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-sm"><p>{error ?? "Opening Nora…"}</p>{error && <Button onClick={reload}>Reconnect</Button>}</div></SetupWindowShell>;
-  if (!boot.personalization.defaultRole) return <SetupWindowShell><RoleOnboarding busy={busy} error={error} onComplete={async (role) => {
+  if (!boot.personalization.defaultRole) return <SetupWindowShell backdrop={<DotTerrain className="size-full" clearing />}><RoleOnboarding busy={busy} error={error} onComplete={async (role) => {
     if (busy) return; setBusy(true); setError(null);
     try { await request({ kind: "onboard", role }); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Setup could not be saved. Try again."); }

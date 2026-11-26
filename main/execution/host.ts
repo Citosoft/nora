@@ -52,6 +52,7 @@ export class ExecutionHost {
   private lifecycle: HostLifecycle = "idle";
   private scheduled = false;
   private unsubscribe = (): void => {};
+  private stopFollowUps = (): void => {};
   private shutdownPromise: Promise<HostShutdownResult> | null = null;
   private readonly concurrency: number;
   private readonly naming: ConversationNaming | null;
@@ -96,6 +97,11 @@ export class ExecutionHost {
     try {
       this.engine.recover();
       this.lifecycle = "running";
+      this.stopFollowUps = this.deps.providers.onFollowUp((followUp) => {
+        if (this.lifecycle !== "running") return false;
+        try { const accepted = this.engine.acceptFollowUp(followUp); this.schedule(); return accepted; }
+        catch { this.fault(); return false; }
+      });
       this.unsubscribe = this.engine.subscribe({ after: this.deps.store.cursor(), onEvent: ({ payload }) => {
         if (payload.kind === "run" && payload.run.state !== "starting") this.startingAttempts.delete(payload.run.attemptId);
         this.schedule();
@@ -420,7 +426,7 @@ export class ExecutionHost {
     } finally {
       waitController.abort();
       await Promise.race([this.deps.providers.close().catch(() => {}), deadline]);
-      clearTimeout(timeout); this.unsubscribe(); this.lifecycle = "stopped";
+      clearTimeout(timeout); this.unsubscribe(); this.stopFollowUps(); this.lifecycle = "stopped";
       try { this.ownership.release(); } finally { this.deps.store.close(); }
     }
   }

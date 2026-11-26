@@ -13,6 +13,7 @@ import { runCodexMcpApp } from "./mcpApps";
 import type { ProviderMcpAppAction, ProviderMcpAppResult } from "@main/types/execution/mcpApp.types";
 import type { ProviderAccountAction, ProviderAccountResult } from "@shared/types/provider/account.types";
 import { spawn } from "node:child_process";
+import { commandLaunch } from "@main/helpers/commandLaunch";
 import { APP_VERSION } from "@shared/appMeta";
 import { z } from "zod";
 import type { ExecutionProvider, EmitProviderUpdate, ProviderExecution } from "@main/types/execution/provider.types";
@@ -113,8 +114,9 @@ export class CodexAdapter implements ExecutionProvider {
   private connect(): Promise<StdioRpc> {
     if (!this.connection) {
       this.connection = (async () => {
-        const process = spawn(this.options.executable, this.options.arguments ?? ["app-server", "--listen", "stdio://"], {
-          env: { ...global.process.env, ...this.options.environment }, stdio: "pipe", windowsHide: true
+        const launch = commandLaunch(this.options.executable, this.options.arguments ?? ["app-server", "--listen", "stdio://"]);
+        const process = spawn(launch.command, launch.args, {
+          env: { ...global.process.env, ...this.options.environment }, stdio: "pipe", windowsHide: true, windowsVerbatimArguments: launch.windowsVerbatimArguments
         });
         const rpc = new StdioRpc({ process, onNotification: this.onNotification.bind(this), onRequest: this.onRequest.bind(this), onDisconnect: () => {
           this.connection = null;

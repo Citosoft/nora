@@ -4,7 +4,7 @@ import type { ExternalSessionReader } from "./externalSessions.types";
 import type { ProviderAccountAction, ProviderAccountResult, ProviderLoginMethod } from "@shared/types/provider/account.types";
 import type { McpAction, McpResult } from "@shared/types/provider/mcp.types";
 import type { SkillsResult } from "@shared/types/provider/skills.types";
-import type { EffortLevel, McpClaudeAIProxyServerConfig, McpServerStatus, Options, PermissionMode, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
+import type { EffortLevel, McpClaudeAIProxyServerConfig, McpServerStatus, Options, PermissionMode, SDKMessage, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { randomUUID } from "node:crypto";
 import type { ApprovalDetails, ContextReading, Conversation, ExecutionFailure, ExecutionUsage, RequestResponse, RuntimeRequest, ToolDetails, ToolState } from "@shared/types/conversation/contracts.types";
 import type { EmitProviderUpdate, ProviderExecution } from "./provider.types";
@@ -23,9 +23,57 @@ export type ClaudePrompt =
   /** `permissionMode` is the session's live mode when Claude asked, which an earlier answer may have changed. */
   | { kind: "approval"; nativeId: string; title: string; details?: ApprovalDetails; permissionMode: PermissionMode; signal: AbortSignal }
   | { kind: "question"; nativeId: string; title: string; questions: Extract<RuntimeRequest, { kind: "question" }>["questions"]; signal: AbortSignal };
-export interface ClaudeSession extends AsyncIterable<ClaudeFrame> {
+/** One turn's frames. Closing it stops reading the turn; the native process carries on. */
+export interface ClaudeTurn extends AsyncIterable<ClaudeFrame> {
+  close(): void;
+}
+/** What a turn sent into a running session needs; model and permission mode are switched live when they changed. */
+export interface ClaudeTurnInput {
+  nativeTurnId: ReturnType<typeof randomUUID>;
+  instruction: string;
+  model: string;
+  permissionMode: PermissionMode;
+}
+/**
+ * One Claude Code process, kept for later turns while it has background work (shells, monitors, background agents) so
+ * that work is not killed between turns. Without background work it closes on its own shortly after a turn ends.
+ */
+export interface ClaudeSession {
+  /** The turn the session was opened with. */
+  readonly opening: ClaudeTurn;
+  /** Starts another turn once the current one has ended. */
+  send(input: ClaudeTurnInput): ClaudeTurn;
   interrupt(): Promise<void>;
-  close(): void | Promise<void>;
+  /** Ends the process, stopping any background work. */
+  close(): Promise<void>;
+  /** False once the process has closed or is closing. */
+  isLive(): boolean;
+  /** Whether closing now would stop background work. */
+  hasBackgroundWork(): boolean;
+}
+/** The SDK query a live session drives; narrowed so the session can be tested without the SDK. */
+export interface ClaudeNativeQuery extends AsyncIterable<SDKMessage> {
+  interrupt(): Promise<unknown>;
+  close(): void;
+  setModel(model?: string): Promise<void>;
+  setPermissionMode(mode: PermissionMode): Promise<void>;
+}
+/** The session's prompt stream: messages pushed here reach Claude Code's input; ending it closes that input. */
+export interface ClaudeInputQueue extends AsyncIterable<SDKUserMessage> {
+  push(message: SDKUserMessage): void;
+  end(): void;
+}
+export interface ClaudeLiveSessionDeps {
+  native: ClaudeNativeQuery;
+  input: ClaudeInputQueue;
+  sessionId: string;
+  opening: ClaudeTurnInput;
+  /** Turns a turn's raw messages into frames (normally `readClaudeStream` with its policy and widget lookups). */
+  readTurn(source: ClaudeMessageStream): AsyncIterable<ClaudeFrame>;
+  /** A turn Claude started by itself, with a one-line description of what woke it. */
+  onFollowUp(turn: ClaudeTurn, summary: string): void;
+  /** How long an idle session without background work waits for a late suggestion or follow-up before closing. */
+  idleCloseMs?: number;
 }
 /** The settings object a session passes as its flag-level settings (the SDK also accepts a file path, which Nora never uses). */
 export type ClaudeFlagSettings = Exclude<Options["settings"], string | undefined>;
@@ -52,7 +100,10 @@ export interface ClaudeOpenInput {
   subagentModel?: string;
   /** MCP servers this run adds: Nora's own tools when the conversation gets them, and connectors. */
   mcpServers: readonly RunMcpServer[];
+  /** Approvals and questions from any turn of the session, including turns Claude starts by itself. */
   onRequest: (prompt: ClaudePrompt) => Promise<RequestResponse>;
+  /** A turn Claude started by itself, typically to report background work that finished. */
+  onFollowUp: (turn: ClaudeTurn, summary: string) => void;
 }
 /** claude.ai connectors keyed by the name the runtime lists them under, as the proxy configs that connect them explicitly. */
 export type ClaudeAccountConnectors = Readonly<Record<string, McpClaudeAIProxyServerConfig>>;
@@ -87,8 +138,18 @@ export interface ClaudeOptions {
 }
 export interface ClaudeActive extends ProviderExecution {
   session: ClaudeSession;
+  turn: ClaudeTurn;
   emit: EmitProviderUpdate;
   settled: boolean;
+}
+/** A conversation's open Claude Code process, reused for its next turn while compatible. */
+export interface ClaudeLive {
+  session: ClaudeSession;
+  sessionId: string;
+  /** Everything a reused process cannot change mid-session; a different key needs a fresh process. */
+  key: string;
+  /** Turns Claude started by itself, keyed by the run ID the host gave each, waiting for that run to start. */
+  followUps: Map<string, ClaudeTurn>;
 }
 export interface ClaudePending {
   attemptId: string;

@@ -15,6 +15,7 @@ import type { ThreadForgeClient } from "@/components/app/types/threadForge.types
 import type { CenterDiffPorts } from "@/components/app/types/centerDiff.types";
 import { availableThreadBackdrop } from "@shared/thread-backdrop/settings";
 import { noraIntegrationClient } from "@/components/app/clients/noraIntegrationClient";
+import { noraToolingManagementClient } from "@/components/app/clients/noraToolingManagementClient";
 
 /** Session center surface fields (terminal dock theme + tabs/editor slices) without center-column build deps. */
 export const buildSessionCenterSurfacePortsFromAssembly = (
@@ -53,6 +54,11 @@ export const buildSessionCenterSurfacePortsFromAssembly = (
   onOpenThreadSettings: () => a.core.openSettingsPage("threads"),
   onOpenBotSettings: () => a.core.openSettingsPage("bots"),
   onOpenConnectorSettings: () => a.core.openSettingsPage("mcp"),
+  providerSetup: {
+    agentCatalog: a.core.snapshot.agentCatalog,
+    refreshAgentCatalog: async () => { await a.core.safely(() => noraToolingManagementClient.refreshToolCatalog()); },
+    openProviderSettings: () => a.core.openSettingsPage("cli")
+  },
   sessionSurface: a.sessionSurface,
   centerTabs: a.centerTabs,
   aiModels: a.aiModels,

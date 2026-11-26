@@ -91,6 +91,8 @@ export interface ConnectorGatewayOptions {
   authPrompts?: import("@main/types/connectors/authPrompt.types").ConnectorAuthPromptBroker;
   /** Logo shown on the authorize card when the connector was probed earlier. */
   logoFor?(id: string): import("@shared/types/provider/mcp.types").McpServerLogo | undefined;
+  /** Tools Nora last saw on the connector, listed to a runtime that connects while it is signed out. */
+  toolsFor?(id: string): readonly McpTool[];
   fetch?: typeof fetch;
 }
 

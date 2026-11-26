@@ -16,6 +16,7 @@ import {
   SHARED_AGENT_SKILLS_TOOL_ID,
   type AgentSkillCatalogConfig
 } from "./agentCatalog";
+import { commandLaunch } from "./helpers/commandLaunch";
 import { buildProcessEnv } from "./processEnv";
 import { findExecutableOnPath, findExistingPath } from "./processLookup";
 import type {
@@ -73,76 +74,8 @@ function shellQuote(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
-function shellCommandQuote(value: string): string {
-  if (!value.length) {
-    return "\"\"";
-  }
-
-  const escaped = value.replace(/"/g, "\"\"");
-  return /[\s&()[\]{}^=;!'+,`~|<>]/.test(value) ? `"${escaped}"` : escaped;
-}
-
-function buildShellCommand(executable: string, args: string[]): string {
-  return [shellCommandQuote(executable), ...args.map((arg) => shellCommandQuote(arg))].join(" ").trim();
-}
-
-async function runShellCommand(
-  command: string,
-  env: NodeJS.ProcessEnv
-): Promise<{ stdout: string; stderr: string }> {
-  return new Promise((resolve, reject) => {
-    let settled = false;
-    const child = spawn(command, {
-      cwd: process.cwd(),
-      env,
-      shell: true,
-      windowsHide: true
-    });
-
-    let stdout = "";
-    let stderr = "";
-
-    child.stdout?.on("data", (chunk: Buffer | string) => {
-      stdout += chunk.toString();
-    });
-    child.stderr?.on("data", (chunk: Buffer | string) => {
-      stderr += chunk.toString();
-    });
-    child.on("error", (error) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      reject(error);
-    });
-    child.on("close", (code) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      if (code === 0) {
-        resolve({ stdout, stderr });
-        return;
-      }
-
-      const error = new Error(`Command exited with code ${code ?? 1}.`);
-      Object.assign(error, { code, stdout, stderr });
-      reject(error);
-    });
-  });
-}
-
 function formatDisplayCommand(executableLabel: string, args: string[]): string {
   return [executableLabel, ...args.map((arg) => shellQuote(arg))].join(" ").trim();
-}
-
-function shouldUseWindowsCmdWrapper(executable: string): boolean {
-  if (!isWindows()) {
-    return false;
-  }
-
-  const normalized = executable.toLowerCase();
-  return normalized.endsWith(".cmd") || normalized.endsWith(".bat");
 }
 
 function isCommandNotFoundError(error: unknown): boolean {
@@ -307,19 +240,13 @@ async function runSpawnedSkillsCommand(
           });
         }
       : null;
-    const child = shouldUseWindowsCmdWrapper(candidate.executable)
-      ? spawn(buildShellCommand(candidate.executable, fullArgs), {
-          cwd: process.cwd(),
-          env,
-          shell: true,
-          windowsHide: true
-        })
-      : spawn(candidate.executable, fullArgs, {
-          cwd: process.cwd(),
-          env,
-          shell: false,
-          windowsHide: true
-        });
+    const launch = commandLaunch(candidate.executable, fullArgs);
+    const child = spawn(launch.command, launch.args, {
+      cwd: process.cwd(),
+      env,
+      windowsHide: true,
+      windowsVerbatimArguments: launch.windowsVerbatimArguments
+    });
 
     child.stdout?.on("data", (chunk: Buffer | string) => {
       forwardProcessOutput(emit, chunk, "stdout", outputState);
@@ -366,15 +293,15 @@ async function runSkillsCommand(args: string[]): Promise<SkillsCommandExecution>
 
   for (const candidate of await getPreferredSkillsCommands()) {
     try {
-      const { stdout, stderr } = shouldUseWindowsCmdWrapper(candidate.executable)
-        ? await runShellCommand(buildShellCommand(candidate.executable, [...candidate.argsPrefix, ...args]), commandEnv)
-        : await execFileAsync(candidate.executable, [...candidate.argsPrefix, ...args], {
-            cwd: process.cwd(),
-            env: commandEnv,
-            timeout: 60_000,
-            maxBuffer: 8 * 1024 * 1024,
-            windowsHide: true
-          });
+      const launch = commandLaunch(candidate.executable, [...candidate.argsPrefix, ...args]);
+      const { stdout, stderr } = await execFileAsync(launch.command, launch.args, {
+        cwd: process.cwd(),
+        env: commandEnv,
+        timeout: 60_000,
+        maxBuffer: 8 * 1024 * 1024,
+        windowsHide: true,
+        windowsVerbatimArguments: launch.windowsVerbatimArguments
+      });
 
       return {
         command: formatDisplayCommand(candidate.label, args),

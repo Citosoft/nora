@@ -22,6 +22,7 @@ export function ThreadViewContent({ documentId }: ThreadViewContentProps) {
   const openThreadSettings = sessionCenter?.onOpenThreadSettings;
   const openBotSettings = sessionCenter?.onOpenBotSettings;
   const threadBackdrop = sessionCenter?.threadBackdrop ?? null;
+  const providerSetup = sessionCenter?.providerSetup ?? null;
   const document = state.layout.documents.find((entry) => entry.id === documentId);
   const native = useContext(NativeRuntimeContext);
   const baseWorkspace = state.boot.workspaces.find((entry) => entry.id === document?.workspaceId);
@@ -69,9 +70,9 @@ export function ThreadViewContent({ documentId }: ThreadViewContentProps) {
     && summary.conversation.workspace.environmentId === state.boot.environmentId).map(({ conversation }) => ({ id: conversation.id, title: conversation.title,
       workspace: state.boot.workspaces.find((entry) => entry.id === conversation.workspace.projectId)?.name ?? conversation.workspace.path, settled: !!conversation.archivedAt })),
     [state.summaries, state.boot.environmentId, state.boot.workspaces, conversationId]);
-  const ports = useMemo<NativeConversationPorts | null>(() => document && workspace && baseWorkspace ? { visible, client: store.client, workspace, baseWorkspace, state: state.boot, userDisplayName, threadForge, openThreadSettings, openBotSettings, referenceChoices, workThreads, botWorkThreads, threadBackdrop,
+  const ports = useMemo<NativeConversationPorts | null>(() => document && workspace && baseWorkspace ? { visible, client: store.client, workspace, baseWorkspace, state: state.boot, userDisplayName, threadForge, openThreadSettings, openBotSettings, referenceChoices, workThreads, botWorkThreads, threadBackdrop, providerSetup,
     document, runtime: state.runtime[documentId] ?? { busy: false, error: null, readyBinding: null }, storageError: state.storageError, latestFailure, ...actions } : null,
-  [visible, store.client, workspace, baseWorkspace, state.boot, document, state.runtime, state.storageError, latestFailure, actions, documentId, userDisplayName, threadForge, openThreadSettings, openBotSettings, referenceChoices, workThreads, botWorkThreads, threadBackdrop]);
+  [visible, store.client, workspace, baseWorkspace, state.boot, document, state.runtime, state.storageError, latestFailure, actions, documentId, userDisplayName, threadForge, openThreadSettings, openBotSettings, referenceChoices, workThreads, botWorkThreads, threadBackdrop, providerSetup]);
   if (!ports) return <section className="p-6 text-sm text-muted-foreground" role="status">This thread's workspace is unavailable on its owning host. Its saved draft has been retained.</section>;
   return <NativeConversationContext.Provider value={ports}>{chat ? <ChatConversationPanel /> : <NativeConversationPanel />}</NativeConversationContext.Provider>;
 }

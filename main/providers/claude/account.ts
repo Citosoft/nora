@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { homedir } from "node:os";
+import { commandLaunch } from "@main/helpers/commandLaunch";
 import type { ClaudeLoginMethod, ClaudeRuntimeOptions } from "@main/types/execution/claude.types";
 import type { ProviderAccountAction, ProviderAccountResult, ProviderLoginMethod } from "@shared/types/provider/account.types";
 import { normalizeClaudeAccount, normalizeClaudeConnection } from "./authentication";
@@ -29,9 +30,10 @@ export function createClaudeAccount(runtime: ClaudeRuntimeOptions): (action: Pro
       const flag = claudeLoginFlag(action.methodId);
       if (!flag) return { kind: "unavailable", message: "This Claude sign-in option isn't supported. Refresh and pick another." };
       try {
-        const child = spawn(runtime.executablePath, ["auth", "login", flag], { cwd: homedir(),
+        const launch = commandLaunch(runtime.executablePath, ["auth", "login", flag]);
+        const child = spawn(launch.command, launch.args, { cwd: homedir(),
           env: { ...process.env, ...runtime.environment }, stdio: "ignore", detached: false, windowsHide: true,
-          shell: process.platform === "win32" });
+          windowsVerbatimArguments: launch.windowsVerbatimArguments });
         await new Promise<void>((resolve, reject) => { child.once("spawn", resolve); child.once("error", reject); });
         return { kind: "login-started" };
       } catch {

@@ -1,4 +1,5 @@
 import { realtimeClientMessageSchema } from "@shared/remote-access/runtimeApi";
+import { remoteEvent } from "./remoteRuns";
 import { REALTIME_CLOSE_CODES, REMOTE_LIMITS } from "@shared/remote-access/constants";
 import type { RemoteIdentity } from "@main/types/remote-access/auth.types";
 import type { RuntimeApiOptions, RealtimePeer, RealtimeTickets } from "@main/types/remote-access/http/runtime.types";
@@ -60,7 +61,7 @@ export function attachRuntimeRealtime(options: RuntimeApiOptions, tickets: Realt
             onEvent: (event) => {
               if (closed) return;
               if (!allowed()) { close(REALTIME_CLOSE_CODES.authExpired); return; }
-              if (!peer.send({ type: "event", event })) { resync(); return; }
+              if (!peer.send({ type: "event", event: remoteEvent(event) })) { resync(); return; }
               lastCursor = event.cursor;
             }, onError: resync });
           if (closed) unsubscribe();

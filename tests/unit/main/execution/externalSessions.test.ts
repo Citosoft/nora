@@ -11,6 +11,7 @@ import { join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { CodexAdapter } from "@main/providers/codex/adapter";
 import { ClaudeAdapter } from "@main/providers/claude/adapter";
+import { singleTurnOpener } from "./claudeSessionFixture";
 import { createClaudeExternalSessions, normalizeClaudeHistory } from "@main/providers/claude/externalSessions";
 import { isExternalWorkspace } from "@main/providers/externalWorkspace";
 import { ExecutionHost } from "@main/execution/host";
@@ -123,9 +124,9 @@ for (const kind of ["codex", "claude"] as const) for (const origin of ["cli", "d
     : new ClaudeAdapter({ instanceId: binding.instanceId, policies: { "native-default": "default" },
       externalSessions: { async list() { return [{ ...session, origin, cwd: root }]; }, async read() { return normalizeClaudeHistory({ ...session, origin, cwd: root }, messages); } },
       discover: async () => ({ models: [], authentication: "present" }), now: () => session.updatedAt, nextId: randomUUID,
-      open(input) { opens.push(input); return { async interrupt() {}, close() {}, async *[Symbol.asyncIterator]() {
+      open: singleTurnOpener((input) => { opens.push(input); return { async interrupt() {}, close() {}, async *[Symbol.asyncIterator]() {
         yield { kind: "finished", eventId: "done", status: "completed", failure: null, usage: { inputTokens: 1, outputTokens: 1 } };
-      } }; }
+      } }; })
     });
   const registry = new ProviderRegistry(); registry.register(adapter);
   const host = new ExecutionHost({ store: f.store, providers: registry, workspaces: workspaceAuthority,

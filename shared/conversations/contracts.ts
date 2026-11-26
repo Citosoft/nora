@@ -60,8 +60,16 @@ export const contextUsageSchema = z.object({
   autoCompactThreshold: z.number().int().positive().optional(),
   updatedAt: z.string().datetime()
 }).strict();
-/** A run that asks the runtime to compact its context instead of delivering an instruction. */
-export const runActionSchema = z.literal("compact");
+/** A run the user can ask for that compacts the runtime's context instead of delivering an instruction. */
+export const submitActionSchema = z.literal("compact");
+/**
+ * A run that does something other than deliver the user's instruction: `compact` compacts the runtime's context;
+ * `background-task` carries a turn the runtime started by itself, such as reporting a background task that finished.
+ * Only the host creates `background-task` runs, so commands cannot submit one.
+ */
+export const runActionSchema = z.enum(["compact", "background-task"]);
+/** Run actions every released phone app can parse; others are left off runs the runtime API serves until phones learn them. */
+export const REMOTE_RUN_ACTIONS: ReadonlySet<string> = new Set(["compact"]);
 /** The chat message a branch started from, saved when it was made so the branch can say where it came from after the chat moves on. */
 export const chatBranchOriginSchema = z.object({ itemId: id, role: z.enum(["user", "assistant"]), authorName: z.string().nullable(), excerpt: z.string().max(600), createdAt: time }).strict();
 /** A side chat off a bot or group chat: `from` is null for a blank branch. */
@@ -220,7 +228,7 @@ export const snapshotSchema = z.object({
 const commandBase = { commandId: id, conversationId: id };
 export const initialInstructionSchema = z.object({ runId: id, instruction: z.string().trim().min(1) }).strict();
 export const createConversationCommandSchema = z.object({ initialInstruction: initialInstructionSchema.optional(), ...commandBase, kind: z.literal("create"), title: z.string().trim().min(1), done: doneCriteriaSchema.optional(), workspace: workspaceRefSchema, provider: providerBindingSchema, parentId: id.nullable(), role: roleSelectionSchema.optional(), botId: botIdSchema.optional(), chatBranch: chatBranchSchema.optional(), group: groupRequestSchema.optional(), direct: directRequestSchema.optional(), source: conversationSourceSchema.optional(), externalSessionId: id.optional() }).strict();
-export const submitConversationCommandSchema = z.object({ ...commandBase, kind: z.literal("submit"), runId: id, instruction: z.string().trim().min(1), action: runActionSchema.optional(), compactionDeadline: time.optional(),
+export const submitConversationCommandSchema = z.object({ ...commandBase, kind: z.literal("submit"), runId: id, instruction: z.string().trim().min(1), action: submitActionSchema.optional(), compactionDeadline: time.optional(),
   /** Pins a direct-chat message to one workspace for this run only, leaving the chat's working workspace unchanged. */
   workspaceId: id.optional(),
   /** The user's own words when `instruction` wraps them; see the run's `chatText`. */

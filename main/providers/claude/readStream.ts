@@ -12,8 +12,11 @@ async function within<T>(pending: Promise<T>, ms: number, fallback: T): Promise<
   } finally { clearTimeout(timer); }
 }
 
-/** Deliver completion immediately, then drain the optional suggestion without keeping a CLI alive indefinitely. */
-export async function* readClaudeStream(source: ClaudeMessageStream, releaseInput: () => void, drainMs = 5000,
+/**
+ * Reads one turn: delivers completion immediately, then waits up to `drainMs` for the optional prompt suggestion before
+ * closing `source`. Closing ends this turn's reading only; the native process's lifetime belongs to its live session.
+ */
+export async function* readClaudeStream(source: ClaudeMessageStream, drainMs = 5000,
   readThreshold?: () => Promise<number | undefined>, readMcpApps?: () => Promise<ClaudeMcpAppLookup | null>): AsyncGenerator<ClaudeFrame> {
   const normalize = new ClaudeStreamNormalizer();
   // Read once, when the first MCP tool is called: servers connect in the background, so status at init can be incomplete.
@@ -40,7 +43,6 @@ export async function* readClaudeStream(source: ClaudeMessageStream, releaseInpu
           } finally { clearTimeout(policyTimer); }
         }
         completed = true;
-        releaseInput();
         timeout = setTimeout(() => source.close(), drainMs);
         timeout.unref();
       }
@@ -52,6 +54,5 @@ export async function* readClaudeStream(source: ClaudeMessageStream, releaseInpu
     if (!completed) throw cause;
   } finally {
     clearTimeout(timeout);
-    releaseInput();
   }
 }

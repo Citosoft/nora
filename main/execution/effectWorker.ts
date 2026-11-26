@@ -114,6 +114,12 @@ export class EffectWorker {
               failure: { code: "unsupported", message: "This provider cannot compact this thread's context", retryable: false } });
             break;
           }
+          if (run.action === "background-task" && !provider.followUps) {
+            emit({ eventId: JSON.stringify([effect.id, "follow-up-unsupported"]), conversationId: effect.conversationId,
+              runId: effect.runId, attemptId: effect.attemptId, kind: "finished", status: "failed", usage: null,
+              failure: { code: "unsupported", message: "This provider cannot report background work in this thread", retryable: false } });
+            break;
+          }
           await provider.start(execution, emit, () => this.engine.isStarting(effect.conversationId, effect.runId, effect.attemptId)); break;
         case "interrupt":
           await boundedControl(effect.action.force && provider.forceInterrupt

@@ -25,6 +25,8 @@ import { invalidateOverlappingBaselines, mayBeWriting, recordCheckpoint } from "
 import { hasPendingCheckpointReview } from "./checkpoints/admission";
 import type { PreparedCommand } from "@main/types/execution/preparedCommand.types";
 import { assertTransitionIdle } from "./provider-transition/admission";
+import { decideFollowUp } from "./decideFollowUp";
+import type { ProviderFollowUp } from "@main/types/execution/followUp.types";
 
 export class ConversationEngine {
   private readonly subscriptions = new Set<ActiveSubscription>();
@@ -144,6 +146,29 @@ export class ConversationEngine {
       transaction.putReceipt({ key: commandId, fingerprint, receipt: { commandId, conversationId: update.conversationId, cursor, acceptedAt: now } });
     });
     this.publish();
+  }
+
+  /** Queues a run for a turn the runtime started by itself. Returns false when the conversation can no longer take it. */
+  acceptFollowUp(followUp: ProviderFollowUp): boolean {
+    this.deps.assertOwnership();
+    const key = JSON.stringify(["follow-up", followUp.conversationId, followUp.followUpId]);
+    const fingerprint = commandFingerprint({ ...followUp, provider: { ...followUp.provider } });
+    const accepted = this.deps.store.transaction((transaction) => {
+      const previous = transaction.receipt(key);
+      if (previous) {
+        if (previous.fingerprint !== fingerprint) throw new ExecutionCommandError("conflict", "Follow-up identity was reused with different content");
+        return true;
+      }
+      const now = this.deps.now();
+      const decision = decideFollowUp(transaction.state(followUp.conversationId), followUp, now);
+      if (!decision) return false;
+      const cursor = this.commitEvents(transaction, followUp.conversationId, now, decision.events);
+      for (const effect of decision.effects) transaction.putEffect(effect);
+      transaction.putReceipt({ key, fingerprint, receipt: { commandId: key, conversationId: followUp.conversationId, cursor, acceptedAt: now } });
+      return true;
+    });
+    this.publish();
+    return accepted;
   }
 
   snapshot(conversationId: string): ConversationSnapshot | null { return this.deps.store.snapshot(conversationId); }

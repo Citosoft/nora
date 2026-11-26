@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { useNativeModelCatalog } from "@/components/app/hooks/useNativeModelCatalog";
 import { useFavoriteModels } from "@/components/app/hooks/useFavoriteModels";
+import { useOptionalSessionCenterPorts } from "@/components/app/hooks/useSessionCenterPorts";
 import { providerDisplayName } from "@/components/app/logic/favoriteModelRows";
 import { nativeProviderKey } from "@/components/app/logic/modelCatalogStore";
 import { bindingChangeHint } from "@/components/app/logic/modelBinding";
@@ -22,6 +23,8 @@ export function NativeModelPopover({ providers, store, selectedConnection, selec
   const [browsingKey, setBrowsingKey] = useState<string | null>(null);
   const selectedKey = selectedProvider ? nativeProviderKey(selectedProvider) : null;
   const favorites = useFavoriteModels();
+  // Settings live in the session center; hosts outside it (fixtures, the simulator) offer no sign-in shortcut.
+  const openProviderSettings = useOptionalSessionCenterPorts()?.providerSetup.openProviderSettings;
   const showingFavorites = browsingKey === FAVORITES_VIEW;
   const browsed = showingFavorites ? null : providers.find((provider) => nativeProviderKey(provider) === browsingKey) ?? selectedProvider ?? providers[0] ?? null;
   const selectedIsFavorite = !!selectedProvider && !!selectedModelId
@@ -81,7 +84,8 @@ export function NativeModelPopover({ providers, store, selectedConnection, selec
             ? <NativeFavoriteModelList providers={providers} store={store} selectedProviderKey={selectedKey} selectedModelId={selectedModel?.id ?? selectedModelId}
               locked={locked} favorites={favorites} onSelect={(provider, model) => { if (!locked) onSelect(provider, model); }} />
             : <NativeModelList provider={browsed} state={catalog} selectedProviderKey={selectedKey} selectedModelId={selectedModel?.id ?? selectedModelId}
-              locked={locked} favorites={favorites} onSelect={(model) => { if (!browsed || locked) return; onSelect(browsed, model); }} />}</div>
+              locked={locked} favorites={favorites} onSelect={(model) => { if (!browsed || locked) return; onSelect(browsed, model); }}
+              onOpenProviderSettings={openProviderSettings ? () => { setOpen(false); openProviderSettings(); } : undefined} />}</div>
           {favorites.error && <p role="alert" className="px-3 pt-2 text-xs text-destructive">{favorites.error}</p>}
         </section>
       </div>

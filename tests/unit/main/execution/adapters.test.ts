@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import test from "node:test";
 import { z } from "zod";
 import { ClaudeAdapter } from "@main/providers/claude/adapter";
+import { singleTurnOpener } from "./claudeSessionFixture";
 import { claudeAutoSwitchPolicy } from "@main/providers/claude/permissionPolicies";
 import { CodexAdapter } from "@main/providers/codex/adapter";
 import { StdioRpc } from "@main/providers/codex/stdioRpc";
@@ -89,12 +90,12 @@ test("Claude receives the configured compaction threshold on each new turn and c
   const opened: ClaudeOpenInput[] = [];
   const adapter = new ClaudeAdapter({ instanceId: "account-a", policies: { "native-default": "default" }, now, nextId: randomUUID, discover,
     autoCompactTokens: () => threshold,
-    open(input) {
+    open: singleTurnOpener((input) => {
       opened.push(input);
       return { close() {}, async interrupt() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
         yield { kind: "finished", eventId: "finished", status: "completed", failure: null, usage: { inputTokens: 0, outputTokens: 0 } };
       } };
-    } });
+    }) });
   const registry = new ProviderRegistry(); registry.register(adapter);
   const worker = new EffectWorker(f.engine, registry);
   try {
@@ -182,13 +183,13 @@ test("Claude receives a separate saved guidance field while the user's instructi
   const f = fixture(t); f.create("conversation", "checkout", { ...provider, kind: "claude" }, { id: "research" });
   const opened: ClaudeOpenInput[] = [];
   const adapter = new ClaudeAdapter({ instanceId: "account-a", policies: { "native-default": "default" }, now, nextId: randomUUID, discover,
-    open(input) {
+    open: singleTurnOpener((input) => {
       opened.push(input);
       return { async interrupt() {}, close() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
         yield { kind: "init", eventId: "init", sessionId: input.sessionId };
         yield { kind: "finished", eventId: "done", status: "completed", failure: null, usage: { inputTokens: 0, outputTokens: 0 } };
       } };
-    } });
+    }) });
   const registry = new ProviderRegistry(); registry.register(adapter);
   const worker = new EffectWorker(f.engine, registry);
   for (const id of ["first", "follow-up"]) { f.submit(id); await worker.runNext(); await worker.runNext(["review"]); }
@@ -205,13 +206,13 @@ test("Claude gets this turn's note changes in front of the instruction while its
   const turns = [null, "<nora_note_update>\n- [n1] Prefers tabs\n</nora_note_update>"];
   const adapter = new ClaudeAdapter({ instanceId: "account-a", policies: { "native-default": "default" }, now, nextId: randomUUID, discover,
     runContext: async () => ({ tools: null, connectors: [{ name: "linear", url: "http://127.0.0.1:2/connectors/a", token: "g" }], guidance: "Your saved notes: none", turnNotes: turns[opened.length] ?? null }),
-    open(input) {
+    open: singleTurnOpener((input) => {
       opened.push(input);
       return { async interrupt() {}, close() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
         yield { kind: "init", eventId: "init", sessionId: input.sessionId };
         yield { kind: "finished", eventId: "done", status: "completed", failure: null, usage: { inputTokens: 0, outputTokens: 0 } };
       } };
-    } });
+    }) });
   const registry = new ProviderRegistry(); registry.register(adapter);
   const worker = new EffectWorker(f.engine, registry);
   for (const id of ["first", "follow-up"]) { f.submit(id); await worker.runNext(); await worker.runNext(["review"]); }
@@ -230,13 +231,13 @@ test("Claude receives a bot thread's guidance instead of the role's", async (t) 
     workspace: { environmentId: "local", projectId: "project", checkoutId: "checkout", path: "/test/checkout", branch: "main", access: "write" } }, { bot, role: { id: "research" } });
   const opened: ClaudeOpenInput[] = [];
   const adapter = new ClaudeAdapter({ instanceId: "account-a", policies: { "native-default": "default" }, now, nextId: randomUUID, discover,
-    open(input) {
+    open: singleTurnOpener((input) => {
       opened.push(input);
       return { async interrupt() {}, close() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
         yield { kind: "init", eventId: "init", sessionId: input.sessionId };
         yield { kind: "finished", eventId: "done", status: "completed", failure: null, usage: { inputTokens: 0, outputTokens: 0 } };
       } };
-    } });
+    }) });
   const registry = new ProviderRegistry(); registry.register(adapter);
   const worker = new EffectWorker(f.engine, registry);
   f.submit("first"); await worker.runNext(); await worker.runNext(["review"]);
@@ -258,13 +259,13 @@ test("a Claude bot thread skips account extras and connects only the account con
     runContext: async (conversation) => ({ tools: null, connectors: [], guidance: null, turnNotes: null,
       accountConnectors: conversation.bot ? ["claude.ai Gmail"] : [] }),
     accountConnectors: { async resolve(_cwd, names) { resolved.push([...names]); return Object.fromEntries(names.filter((name) => name === "claude.ai Gmail").map((name) => [name, gmail])); } },
-    open(input) {
+    open: singleTurnOpener((input) => {
       opened.push(input);
       return { async interrupt() {}, close() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
         yield { kind: "init", eventId: "init", sessionId: input.sessionId };
         yield { kind: "finished", eventId: "done", status: "completed", failure: null, usage: { inputTokens: 0, outputTokens: 0 } };
       } };
-    } });
+    }) });
   const registry = new ProviderRegistry(); registry.register(adapter);
   const worker = new EffectWorker(f.engine, registry);
   f.submit("own thread"); await worker.runNext(); await worker.runNext(["review"]);
@@ -437,7 +438,7 @@ test("Claude SDK lifecycle preserves native continuation and serves approval thr
   const f = fixture(t); f.create("conversation", "checkout", { ...provider, kind: "claude" }); f.submit();
   const opened: ClaudeOpenInput[] = [];
   const adapter = new ClaudeAdapter({ instanceId: "account-a", policies: { "native-default": "default" }, now, nextId: randomUUID, discover,
-    open(input) {
+    open: singleTurnOpener((input) => {
       opened.push(input);
       return { async interrupt() {}, close() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
         yield { kind: "init", sessionId: input.sessionId, eventId: "init" };
@@ -448,7 +449,7 @@ test("Claude SDK lifecycle preserves native continuation and serves approval thr
         yield { kind: "finished", eventId: "result", status: "completed", failure: null, usage: { inputTokens: 10, outputTokens: 2 } };
         yield { kind: "prompt-suggestion", eventId: "suggestion", suggestion: "Review the test coverage." };
       } };
-    } });
+    }) });
   const registry = new ProviderRegistry(); registry.register(adapter);
   const worker = new EffectWorker(f.engine, registry);
   const awaiting = waitFor(f.engine, "awaiting-approval");
@@ -481,14 +482,14 @@ test("Claude offers to allow and switch to auto in manual mode, and later turns 
   const opened: ClaudeOpenInput[] = [];
   const answers: unknown[] = [];
   const adapter = new ClaudeAdapter({ instanceId: "account-a", policies: { "native-default": "default", "native-auto": "auto" }, now, nextId: randomUUID, discover,
-    open(input) {
+    open: singleTurnOpener((input) => {
       opened.push(input);
       return { async interrupt() {}, close() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
         yield { kind: "init", sessionId: input.sessionId, eventId: "init" };
         answers.push(await input.onRequest({ kind: "approval", nativeId: "tool", title: "Run tests?", permissionMode: input.permissionMode, signal: new AbortController().signal }));
         yield { kind: "finished", eventId: "result", status: "completed", failure: null, usage: { inputTokens: 1, outputTokens: 1 } };
       } };
-    } });
+    }) });
   const registry = new ProviderRegistry(); registry.register(adapter);
   const worker = new EffectWorker(f.engine, registry);
   const awaiting = waitFor(f.engine, "awaiting-approval");
@@ -525,14 +526,14 @@ test("Claude receives the thread's subagent model and stores reported agents wit
   const f = fixture(t); f.create("conversation", "checkout", { ...provider, kind: "claude", subagentModel: "haiku" }); f.submit();
   const opened: ClaudeOpenInput[] = [];
   const adapter = new ClaudeAdapter({ instanceId: "account-a", policies: { "native-default": "default" }, now, nextId: randomUUID, discover,
-    open(input) {
+    open: singleTurnOpener((input) => {
       opened.push(input);
       return { async interrupt() {}, close() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
         yield { kind: "init", sessionId: input.sessionId, eventId: "init" };
         yield { kind: "subagent", eventId: "agent", nativeId: "agent", label: "Review", state: "completed", model: "claude-haiku-5-5", effort: "low", result: "Done" };
         yield { kind: "finished", eventId: "result", status: "completed", failure: null, usage: { inputTokens: 1, outputTokens: 1 } };
       } };
-    } });
+    }) });
   const registry = new ProviderRegistry(); registry.register(adapter);
   await new EffectWorker(f.engine, registry).runNext();
   assert.equal(opened[0].subagentModel, "haiku");
@@ -546,9 +547,9 @@ test("Claude stream loss does not fabricate completion or resubmit during reconc
   const f = fixture(t); f.create("conversation", "checkout", { ...provider, kind: "claude" }); f.submit();
   let opened = 0;
   const adapter = new ClaudeAdapter({ instanceId: "account-a", policies: { "native-default": "default" }, now, nextId: randomUUID, discover,
-    open(input) { opened++; return { async interrupt() {}, close() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
+    open: singleTurnOpener((input) => { opened++; return { async interrupt() {}, close() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
       yield { kind: "init", sessionId: input.sessionId, eventId: "init" };
-    } }; } });
+    } }; }) });
   const registry = new ProviderRegistry(); registry.register(adapter);
   const worker = new EffectWorker(f.engine, registry);
   await worker.runNext();
@@ -565,7 +566,7 @@ test("a new Claude instruction closes a completed turn's pending prediction befo
   let opened = 0;
   let firstClosed = false;
   const adapter = new ClaudeAdapter({ instanceId: "account-a", policies: { "native-default": "default" }, now, nextId: randomUUID, discover,
-    open(input) {
+    open: singleTurnOpener((input) => {
       const first = opened++ === 0;
       if (!first) assert.equal(firstClosed, true);
       return { async interrupt() {}, close() { if (first) { firstClosed = true; releaseTail(); } },
@@ -575,7 +576,7 @@ test("a new Claude instruction closes a completed turn's pending prediction befo
           if (first) await tail;
           yield { kind: "prompt-suggestion", eventId: "suggestion", suggestion: first ? "Old suggestion" : "New suggestion" };
         } };
-    } });
+    }) });
   const registry = new ProviderRegistry(); registry.register(adapter);
   const worker = new EffectWorker(f.engine, registry);
   try {
@@ -595,12 +596,12 @@ test("Claude interruption expires the native question, preserves the queue and w
   const f = fixture(t); f.create("conversation", "checkout", { ...provider, kind: "claude" }); f.submit(); f.submit("queued");
   const controller = new AbortController();
   const adapter = new ClaudeAdapter({ instanceId: "account-a", policies: { "native-default": "default" }, now, nextId: randomUUID, discover,
-    open(input) { return { async interrupt() { controller.abort(); }, close() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
+    open: singleTurnOpener((input) => { return { async interrupt() { controller.abort(); }, close() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
       yield { kind: "init", sessionId: input.sessionId, eventId: "init" };
       try { await input.onRequest({ kind: "question", nativeId: "question", title: "Choose", signal: controller.signal,
         questions: [{ id: "pick", text: "Choose", options: ["A"], multiple: false }] }); }
       catch { yield { kind: "finished", eventId: "native-interrupt-result", status: "interrupted", failure: null, usage: { inputTokens: 0, outputTokens: 0 } }; }
-    } }; } });
+    } }; }) });
   const registry = new ProviderRegistry(); registry.register(adapter);
   const worker = new EffectWorker(f.engine, registry);
   const awaiting = waitFor(f.engine, "awaiting-input");
@@ -645,7 +646,7 @@ test("Codex model discovery paginates and preserves advertised reasoning without
 test("Claude discovery exposes normalized models and configured permission choices", async (t) => {
   const f = fixture(t); f.create("conversation", "checkout", { ...provider, kind: "claude" });
   const adapter = new ClaudeAdapter({ instanceId: "account-a", policies: { "native-default": "default", unsafe: "bypassPermissions" }, now, nextId: randomUUID,
-    open() { throw new Error("Discovery must not open an execution turn"); }, async discover(cwd) {
+    open: singleTurnOpener(() => { throw new Error("Discovery must not open an execution turn"); }), async discover(cwd) {
       assert.equal(cwd, f.snapshot().conversation.workspace.path);
       return { authentication: "unknown", models: [{ id: "model", name: "Model", description: "Catalog", reasoningEfforts: ["medium"], defaultReasoningEffort: null }] };
     } });
@@ -680,13 +681,13 @@ test("Claude read access requests inspection-only tools regardless of its config
     workspace: { projectId: "project", environmentId: "local", checkoutId: "checkout", path: "/test/checkout", branch: "main", access: "read" } });
   const opened: ClaudeOpenInput[] = [];
   const adapter = new ClaudeAdapter({ instanceId: "account-a", policies: { "native-default": "acceptEdits" }, now, nextId: randomUUID, discover,
-    open(input) {
+    open: singleTurnOpener((input) => {
       opened.push(input);
       return { async interrupt() {}, close() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
         yield { kind: "init", eventId: "init", sessionId: input.sessionId };
         yield { kind: "finished", eventId: "done", status: "completed", failure: null, usage: { inputTokens: 0, outputTokens: 0 } };
       } };
-    } });
+    }) });
   const registry = new ProviderRegistry(); registry.register(adapter);
   try {
     f.submit(); await new EffectWorker(f.engine, registry).runNext(["start"]);
@@ -703,13 +704,13 @@ test("Claude read-only worker access selects sandboxed execution on both start a
   const opened: ClaudeOpenInput[] = [];
   const adapter = new ClaudeAdapter({ instanceId: "account-a", policies: { "native-default": "acceptEdits" }, now, nextId: randomUUID, discover,
     runContext: async () => ({ tools: { url: "http://127.0.0.1:1/mcp", token: "nora" }, connectors: [], guidance: "Worker", turnNotes: null }),
-    open(input) {
+    open: singleTurnOpener((input) => {
       opened.push(input);
       return { async interrupt() {}, close() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
         yield { kind: "init", eventId: "init", sessionId: input.sessionId };
         yield { kind: "finished", eventId: "done", status: "completed", failure: null, usage: { inputTokens: 0, outputTokens: 0 } };
       } };
-    } });
+    }) });
   const registry = new ProviderRegistry(); registry.register(adapter);
   try {
     const worker = new EffectWorker(f.engine, registry);
@@ -743,13 +744,13 @@ test("turning suggested replies off stops Claude predicting the next message in 
   const opened: ClaudeOpenInput[] = [];
   const adapter = new ClaudeAdapter({ instanceId: "account-a", policies: { "native-default": "default" }, now, nextId: randomUUID, discover,
     promptSuggestions: () => false,
-    open(input) {
+    open: singleTurnOpener((input) => {
       opened.push(input);
       return { async interrupt() {}, close() {}, async *[Symbol.asyncIterator](): AsyncGenerator<ClaudeFrame> {
         yield { kind: "init", eventId: "init", sessionId: input.sessionId };
         yield { kind: "finished", eventId: "done", status: "completed", failure: null, usage: { inputTokens: 0, outputTokens: 0 } };
       } };
-    } });
+    }) });
   const registry = new ProviderRegistry(); registry.register(adapter);
   const worker = new EffectWorker(f.engine, registry);
   f.submit("first"); await worker.runNext(); await worker.runNext(["review"]);

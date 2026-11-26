@@ -43,7 +43,7 @@ let host, window;
   await wait(`document.body.textContent.includes('Models could not be loaded')`); assert.equal(await binding(), null);
   assert.equal(await evaluate(`document.body.textContent.includes('Private failure')`), false);
   await scenario('empty'); await click('button[aria-label="Refresh provider models"]'); await wait(`document.body.textContent.includes('no available models')`);
-  await scenario('auth'); await click('button[aria-label="Refresh provider models"]'); await wait(`document.body.textContent.includes('Sign in using this provider')`); assert.equal(await binding(), null);
+  await scenario('auth'); await click('button[aria-label="Refresh provider models"]'); await wait(`document.body.textContent.includes('in Settings → Providers, then refresh')`); assert.equal(await binding(), null);
   await scenario('ready'); await click('button[aria-label="Refresh provider models"]'); await wait(`document.getElementById('picker-binding').textContent.includes('claude')`);
   assert.equal(await evaluate('document.getElementById("picker-draft").value'), 'A draft that must survive model selection');
   await evaluate(`document.querySelector('[role="dialog"]').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));`); await pause(70);

@@ -7,6 +7,7 @@ import type {
 import type { ResolvedTheme, TerminalFontId, TerminalThemeId } from "@/components/app/types";
 import type { ForgeItemsPorts } from "./forge-items/ports.types";
 import type { ThreadBackdropSettings } from "@shared/types/threadBackdrop.types";
+import type { ProviderSetupPorts } from "./providerSetup.types";
 
 /** Read surface for session center (tabs, editor host, split views, terminal dock theming) — assembly-backed. */
 export type SessionCenterPorts = {
@@ -14,6 +15,7 @@ export type SessionCenterPorts = {
   onOpenThreadSettings(): void;
   onOpenBotSettings(): void;
   onOpenConnectorSettings(): void;
+  providerSetup: ProviderSetupPorts;
   sessionSurface: AppShellSignedInSessionSurfaceSources;
   centerTabs: AppShellSignedInCenterTabsSources;
   aiModels: AppShellSignedInAiModelSources;

@@ -31,6 +31,8 @@ export function createConnectorService(options: ConnectorServiceOptions): Connec
   const fetchFn = options.fetch ?? network?.fetch;
   const credentials = createConnectorCredentials({ store, ...(fetchFn ? { fetch: fetchFn } : {}) });
   const states = new Map<string, ConnectorRuntimeState>();
+  /** Last tools seen while connected; kept through sign-outs so a signed-out thread can still offer them. */
+  const knownTools = new Map<string, Connector["tools"]>();
   const checks = new Map<string, number>();
   const signIns = new Map<string, AbortController>();
 
@@ -45,7 +47,7 @@ export function createConnectorService(options: ConnectorServiceOptions): Connec
   const publish = (): void => options.onChanged(list());
   const setState = (id: string, state: ConnectorRuntimeState): void => {
     states.set(id, state);
-    if (state.status === "connected") options.authPrompts?.signedIn(id);
+    if (state.status === "connected") { knownTools.set(id, state.tools); options.authPrompts?.signedIn(id); }
     publish();
   };
   const existing = (id: string): StoredConnector => {
@@ -73,7 +75,7 @@ export function createConnectorService(options: ConnectorServiceOptions): Connec
   const toolClient = createConnectorToolClient({ store, credentials, onNeedsAuth: needsAuth, ...(fetchFn ? { fetch: fetchFn } : {}) });
   const forgetSession = (id: string): void => { void toolClient.forget(id); };
   const gateway = createConnectorGateway({ store, credentials, ...(fetchFn ? { fetch: fetchFn } : {}),
-    onNeedsAuth: needsAuth, logoFor: (id) => states.get(id)?.logo,
+    onNeedsAuth: needsAuth, logoFor: (id) => states.get(id)?.logo, toolsFor: (id) => knownTools.get(id) ?? [],
     ...(options.authPrompts ? { authPrompts: options.authPrompts } : {}) });
   /**
    * OAuth connectors that still need sign-in stay attachable so a tool call can open the authorize card; header connectors
@@ -147,7 +149,7 @@ export function createConnectorService(options: ConnectorServiceOptions): Connec
       signIns.get(id)?.abort(new Error("The connector was removed."));
       forgetSession(id);
       store.remove(id);
-      states.delete(id); checks.delete(id);
+      states.delete(id); checks.delete(id); knownTools.delete(id);
       publish();
       return list();
     },

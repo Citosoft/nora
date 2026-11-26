@@ -4,6 +4,9 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import { Readable } from "node:stream";
 import type { ReadableStream as WebReadableStream } from "node:stream/web";
 import type { ConnectorGateway, ConnectorGatewayOptions, StoredConnector } from "@main/types/connectors/connectors.types";
+import type { GatewayCall, GatewayLocalReply } from "@main/types/connectors/gatewaySession.types";
+import { createSessionBridge } from "./sessionBridge";
+import { DEFAULT_MCP_PROTOCOL_VERSION, isSignInToolCall, parseRpcRequest, signedOutReply, signInToolReply, usesConnector } from "./signedOutSession";
 
 const PATH_PREFIX = "/connectors/";
 const MAX_BODY_BYTES = 8 * 1024 * 1024;
@@ -45,6 +48,16 @@ function forwardedHeaders(request: IncomingMessage): Record<string, string> {
   return headers;
 }
 
+function headerValue(request: IncomingMessage, name: string): string | undefined {
+  const value = request.headers[name];
+  return typeof value === "string" && value ? value : undefined;
+}
+
+function localReply(response: ServerResponse, { status, body }: GatewayLocalReply): void {
+  if (body) response.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify(body));
+  else response.writeHead(status).end();
+}
+
 function parsePath(path: string): { conversationId: string; connectorId: string } | null {
   if (!path.startsWith(PATH_PREFIX)) return null;
   const parts = path.slice(PATH_PREFIX.length).split("/").filter(Boolean).map((part) => {
@@ -60,10 +73,11 @@ function parsePath(path: string): { conversationId: string; connectorId: string 
 /**
  * Loopback-only reverse proxy between thread runtimes and connectors' Streamable HTTP servers. Runtimes authenticate to the gateway
  * with a per-launch token; the gateway adds the connector's real credentials, refreshing an OAuth token once when the server
- * rejects it, so tokens never reach provider runtimes, their config or their logs. When OAuth needs the user, the gateway holds
- * the call and opens a thread authorize prompt instead of failing immediately.
+ * rejects it, so tokens never reach provider runtimes, their config or their logs. When OAuth needs the user, a runtime's start-up
+ * traffic is answered locally and only a call that uses the connector is held while a thread authorize prompt is open.
  */
-export function createConnectorGateway({ store, credentials, onNeedsAuth, authPrompts, logoFor, fetch: fetchFn = fetch }: ConnectorGatewayOptions): ConnectorGateway {
+export function createConnectorGateway({ store, credentials, onNeedsAuth, authPrompts, logoFor, toolsFor, fetch: fetchFn = fetch }: ConnectorGatewayOptions): ConnectorGateway {
+  const sessions = createSessionBridge(fetchFn);
   const token = randomBytes(32).toString("base64url");
   let listening: Promise<{ server: Server; base: string }> | null = null;
   const conversationIdsByKey = new Map<string, readonly string[]>();
@@ -73,11 +87,19 @@ export function createConnectorGateway({ store, credentials, onNeedsAuth, authPr
     return expected.length === actual.length && timingSafeEqual(expected, actual);
   };
 
-  async function send(connector: StoredConnector, request: IncomingMessage, body: Buffer | undefined, signal: AbortSignal): Promise<Response | null> {
+  /** Forwards with fresh credentials, refreshing an OAuth token once on 401; null when the connector needs a sign-in. */
+  async function send(connector: StoredConnector, call: GatewayCall, signal: AbortSignal): Promise<Response | null> {
     let auth = await credentials(connector, { forceRefresh: false });
     for (let attempt = 0; auth; attempt += 1) {
-      const upstream = await fetchFn(connector.url, { method: request.method ?? "GET", signal,
-        headers: { ...forwardedHeaders(request), ...auth }, ...(body ? { body: new Uint8Array(body) } : {}) });
+      const session = call.bridged ? await sessions.headersFor(call.key, connector, auth, call.protocolVersion, signal) : {};
+      const upstream = await fetchFn(connector.url, { method: call.request.method ?? "GET", signal,
+        headers: { ...forwardedHeaders(call.request), ...session, ...auth }, ...(call.body ? { body: new Uint8Array(call.body) } : {}) });
+      // A bridged session the server has since dropped is reopened once.
+      if (upstream.status === 404 && session["mcp-session-id"] && attempt === 0) {
+        await upstream.body?.cancel();
+        sessions.forget(call.key);
+        continue;
+      }
       if (upstream.status !== 401 || connector.auth.kind !== "oauth" || attempt > 0) return upstream;
       await upstream.body?.cancel();
       auth = await credentials(connector, { forceRefresh: true });
@@ -109,25 +131,36 @@ export function createConnectorGateway({ store, credentials, onNeedsAuth, authPr
     if (!connector?.enabled) { reply(response, 404, "This connector is not available"); return; }
     if (!ALLOWED_METHODS.has(request.method ?? "")) { reply(response, 405, "Method not allowed"); return; }
     const body = await readBody(request);
+    const rpc = parseRpcRequest(body);
+    const call: GatewayCall = { request, body, key: `${parsed.conversationId}/${connector.id}`,
+      protocolVersion: headerValue(request, "mcp-protocol-version") ?? DEFAULT_MCP_PROTOCOL_VERSION,
+      // Calls without a session that are not a new handshake come from a runtime that connected while signed out.
+      bridged: request.method === "POST" && !headerValue(request, "mcp-session-id") && rpc.messages.length > 0
+        && !rpc.messages.some((message) => message.method === "initialize") };
     const abort = new AbortController();
     response.on("close", () => abort.abort());
-    let upstream = await send(connector, request, body, abort.signal);
-    if (!upstream) {
+    const tools = toolsFor?.(connector.id) ?? [];
+    if (isSignInToolCall(rpc, tools)) {
+      const secrets = store.secrets(connector.id);
+      const signedIn = (!!secrets.tokens && !secrets.requiresSignIn) || await waitForSignIn(connector, parsed.conversationId, abort.signal);
+      if (signedIn) localReply(response, signInToolReply(rpc, connector));
+      else reply(response, 401, `${connector.name} needs you to sign in again in Nora.`);
+      return;
+    }
+    let upstream = await send(connector, call, abort.signal);
+    if (!upstream || (upstream.status === 401 && connector.auth.kind === "oauth")) {
+      if (upstream) { await upstream.body?.cancel(); credentials.requireSignIn(connector); }
+      sessions.forget(call.key);
       onNeedsAuth(connector.id);
-      if (await waitForSignIn(connector, parsed.conversationId, abort.signal)) {
-        upstream = await send(connector, request, body, abort.signal);
+      // Start-up traffic (handshake, tool listing) never prompts; only a call that needs the connector does.
+      if (connector.auth.kind === "oauth" && !usesConnector(rpc)) {
+        localReply(response, signedOutReply(request.method ?? "GET", rpc, connector, tools));
+        return;
       }
+      upstream = await waitForSignIn(connector, parsed.conversationId, abort.signal) ? await send(connector, call, abort.signal) : null;
       if (!upstream) {
         reply(response, 401, `${connector.name} needs you to sign in again in Nora.`);
         return;
-      }
-    }
-    if (upstream.status === 401 && connector.auth.kind === "oauth") {
-      credentials.requireSignIn(connector);
-      onNeedsAuth(connector.id);
-      if (await waitForSignIn(connector, parsed.conversationId, abort.signal)) {
-        const retried = await send(connector, request, body, abort.signal);
-        if (retried) upstream = retried;
       }
     }
     const headers: Record<string, string> = {};
@@ -170,6 +203,7 @@ export function createConnectorGateway({ store, credentials, onNeedsAuth, authPr
       const current = listening;
       listening = null;
       conversationIdsByKey.clear();
+      sessions.clear();
       if (current) await current.then(({ server }) => new Promise<void>((resolve) => { server.closeAllConnections(); server.close(() => resolve()); }), () => undefined);
     }
   };

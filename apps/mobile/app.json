@@ -3,7 +3,7 @@
     "name": "Nora",
     "slug": "nora",
     "owner": "citosoft",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "scheme": "nora",
     "orientation": "default",
     "icon": "./assets/icon-ios.png",

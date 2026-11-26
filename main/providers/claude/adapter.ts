@@ -6,7 +6,8 @@ import type { McpAction, McpResult } from "@shared/types/provider/mcp.types";
 import type { SkillsResult } from "@shared/types/provider/skills.types";
 import type { ProviderAccountAction, ProviderAccountResult } from "@shared/types/provider/account.types";
 import type { ExecutionProvider, EmitProviderUpdate, ProviderExecution } from "@main/types/execution/provider.types";
-import type { ClaudeActive, ClaudeOptions, ClaudePending, ClaudePrompt } from "@main/types/execution/claude.types";
+import type { ClaudeActive, ClaudeLive, ClaudeOptions, ClaudePending, ClaudePrompt, ClaudeTurn } from "@main/types/execution/claude.types";
+import type { FollowUpListener, ProviderFollowUpSource } from "@main/types/execution/followUp.types";
 import type { ContextReading, Conversation, RequestResponse, RuntimeRequest, SubagentActivity, ToolActivity, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ProviderCatalogResult } from "@shared/types/provider/catalog.types";
 import { nativeCapabilities } from "@main/execution/providerCapabilities";
@@ -18,6 +19,8 @@ import type { RunMcpServer } from "@main/types/nora-tools/noraTools.types";
 
 /** Claude Code's slash command, which the SDK runs instead of sending the text to the model. */
 const CLAUDE_COMPACT_COMMAND = "/compact";
+/** How long an approval from a turn Claude started by itself waits for that turn's run to attach before it is declined. */
+const FOLLOW_UP_ATTACH_MS = 30_000;
 
 export class ClaudeAdapter implements ExecutionProvider {
   readonly kind = "claude";
@@ -27,6 +30,15 @@ export class ClaudeAdapter implements ExecutionProvider {
   readonly capabilities = { ...nativeCapabilities, readOnlyCommands: process.platform !== "win32", subagentDetails: true, subagentModel: true, promptSuggestions: true, contextUsage: true, compaction: true,
     mcpApps: { toolCalls: false } };
   private readonly active = new Map<string, ClaudeActive>();
+  /** Each conversation's open process, kept between turns while it has background work. */
+  private readonly live = new Map<string, ClaudeLive>();
+  /** The run reading each conversation's current turn, which answers that turn's approvals and questions. */
+  private readonly attached = new Map<string, ClaudeActive>();
+  private readonly attachWaiters = new Map<string, (() => void)[]>();
+  private readonly followUpListeners = new Set<FollowUpListener>();
+  readonly followUps: ProviderFollowUpSource = {
+    subscribe: (listener) => { this.followUpListeners.add(listener); return () => { this.followUpListeners.delete(listener); }; }
+  };
   private readonly requests = new Map<string, ClaudePending>();
   /** The servers each conversation's latest run added, so its widgets reach the same servers until the app restarts. */
   private readonly runServers = new Map<string, readonly RunMcpServer[]>();
@@ -76,10 +88,7 @@ export class ClaudeAdapter implements ExecutionProvider {
 
   async start(execution: ProviderExecution, emit: EmitProviderUpdate, canStart?: () => boolean): Promise<void> {
     const { snapshot, run } = execution;
-    // A new instruction supersedes a previous turn's optional prediction work.
-    for (const previous of this.active.values()) {
-      if (previous.settled && previous.snapshot.conversation.id === snapshot.conversation.id) await previous.session.close();
-    }
+    if (run.action === "background-task") { await this.startFollowUp(execution, emit); return; }
     const base = { conversationId: snapshot.conversation.id, runId: run.id, attemptId: run.attemptId };
     const mode = this.options.policies[snapshot.conversation.provider.permissionPolicy];
     if (!mode || mode === "bypassPermissions") {
@@ -112,18 +121,53 @@ export class ClaudeAdapter implements ExecutionProvider {
       return;
     }
     emit({ ...base, eventId: "native-binding", kind: "bound", nativeConversationId: sessionId });
-    const session = this.options.open({ sessionId, resume: !!snapshot.conversation.nativeConversationId,
-      ...(autoCompactTokens ? { autoCompactTokens } : {}),
-      nativeTurnId, instruction: run.action === "compact" ? CLAUDE_COMPACT_COMMAND : instructionWithTurnNotes(run.instruction, runContext), cwd: snapshot.conversation.workspace.path,
-      ...(guidance ? { guidance } : {}), mcpServers,
-      model: snapshot.conversation.provider.model, permissionMode: toolScope === "inspect" ? "plan" : toolScope === "read-worker" ? "default" : mode, toolScope,
-      accountExtras, accountConnectors,
+    const turnInput = { nativeTurnId, instruction: run.action === "compact" ? CLAUDE_COMPACT_COMMAND : instructionWithTurnNotes(run.instruction, runContext),
+      model: snapshot.conversation.provider.model, permissionMode: toolScope === "inspect" ? "plan" as const : toolScope === "read-worker" ? "default" as const : mode };
+    const fixed = { cwd: snapshot.conversation.workspace.path, ...(guidance ? { guidance } : {}), mcpServers, toolScope, accountExtras, accountConnectors,
       promptSuggestions: !isBotOrChatThread(snapshot.conversation) && (this.options.promptSuggestions?.() ?? true),
       ...(snapshot.conversation.provider.subagentModel ? { subagentModel: snapshot.conversation.provider.subagentModel } : {}),
-      effort: effort.data,
-      onRequest: (prompt) => this.ask(execution, prompt, emit) });
-    const active: ClaudeActive = { ...execution, emit, session, settled: false };
+      ...(autoCompactTokens ? { autoCompactTokens } : {}), effort: effort.data };
+    const conversationId = snapshot.conversation.id;
+    const key = JSON.stringify(fixed);
+    const existing = this.live.get(conversationId);
+    if (existing && existing.session.isLive() && existing.sessionId === sessionId && existing.key === key) {
+      await this.runTurn(execution, emit, existing, existing.session.send(turnInput), nativeTurnId);
+      return;
+    }
+    if (existing) await this.retire(conversationId, existing, () => emit({ ...base, eventId: "background-work-stopped", kind: "item",
+      item: { kind: "milestone", id: JSON.stringify([run.id, "background-work-stopped"]), runId: run.id, createdAt: this.options.now(),
+        text: "Background work from an earlier turn was stopped because this thread's settings changed." } }));
+    const followUps = new Map<string, ClaudeTurn>();
+    const session = this.options.open({ ...fixed, ...turnInput, sessionId, resume: !!snapshot.conversation.nativeConversationId,
+      onRequest: (prompt) => this.routeRequest(conversationId, prompt),
+      onFollowUp: (turn, summary) => this.announceFollowUp(conversationId, live, turn, summary) });
+    const live: ClaudeLive = { session, sessionId, key, followUps };
+    this.live.set(conversationId, live);
+    await this.runTurn(execution, emit, live, session.opening, nativeTurnId);
+  }
+
+  /** Attaches a `background-task` run to the turn Claude started by itself; the run was queued when that turn began. */
+  private async startFollowUp(execution: ProviderExecution, emit: EmitProviderUpdate): Promise<void> {
+    const { snapshot, run } = execution;
+    const live = this.live.get(snapshot.conversation.id);
+    const turn = live?.followUps.get(run.id);
+    if (!live || !turn) {
+      emit({ conversationId: snapshot.conversation.id, runId: run.id, attemptId: run.attemptId, eventId: "follow-up-unavailable", kind: "finished",
+        status: "failed", usage: null, failure: { code: "provider", message: "Claude's report on its background work is no longer available. Ask Claude for the result.", retryable: false } });
+      return;
+    }
+    live.followUps.delete(run.id);
+    await this.runTurn(execution, emit, live, turn, run.id);
+  }
+
+  /** Delivers one turn's frames as this run's updates. A turn cut off without a result closes its process. */
+  private async runTurn(execution: ProviderExecution, emit: EmitProviderUpdate, live: ClaudeLive, turn: ClaudeTurn, nativeTurnId: string): Promise<void> {
+    const { snapshot, run } = execution;
+    const base = { conversationId: snapshot.conversation.id, runId: run.id, attemptId: run.attemptId };
+    const active: ClaudeActive = { ...execution, emit, session: live.session, turn, settled: false };
     this.active.set(run.attemptId, active);
+    this.attached.set(snapshot.conversation.id, active);
+    for (const resolve of this.attachWaiters.get(snapshot.conversation.id)?.splice(0) ?? []) resolve();
     const tools = new Map<string, ToolActivity | SubagentActivity>();
     const timestamps = new Map(snapshot.items.map((item) => [item.id, item.createdAt]));
     const itemTime = (nativeId: string, kind: string): string => {
@@ -132,15 +176,22 @@ export class ClaudeAdapter implements ExecutionProvider {
       timestamps.set(id, at);
       return at;
     };
+    let started = false;
+    // A turn on a reused process may arrive without its own init frame, so the first frame of any kind starts the run.
+    const markStarted = (eventId: string): void => {
+      if (started) return;
+      started = true;
+      emit({ ...base, eventId, kind: "started", nativeConversationId: live.sessionId, nativeTurnId });
+    };
     try {
-      for await (const frame of session) {
+      for await (const frame of turn) {
+        if (frame.kind === "init" && frame.sessionId !== live.sessionId) throw new Error("Claude session identity changed");
+        if (frame.kind !== "prompt-suggestion") markStarted(frame.kind === "init" ? frame.eventId : `started:${nativeTurnId}`);
         switch (frame.kind) {
           case "prompt-suggestion":
             if (active.settled) emit({ ...base, eventId: frame.eventId, kind: "prompt-suggestion", suggestion: frame.suggestion });
             break;
-          case "init":
-            if (frame.sessionId !== sessionId) throw new Error("Claude session identity changed");
-            emit({ ...base, eventId: frame.eventId, kind: "started", nativeConversationId: sessionId, nativeTurnId }); break;
+          case "init": break;
           case "text":
           case "reasoning":
             emit({ ...base, eventId: frame.eventId, kind: "item", item: frame.kind === "text"
@@ -176,11 +227,55 @@ export class ClaudeAdapter implements ExecutionProvider {
         if (item.state === "running") emit({ ...base, eventId: `unconfirmed:${item.id}`, kind: "item", item: { ...item, state: "unconfirmed" } });
       }
       this.active.delete(run.attemptId);
+      if (this.attached.get(snapshot.conversation.id) === active) this.attached.delete(snapshot.conversation.id);
       for (const [id, pending] of this.requests) {
         if (pending.attemptId === run.attemptId) { pending.reject(new Error("Claude request expired")); this.requests.delete(id); }
       }
-      await session.close();
+      turn.close();
+      if (!active.settled) await this.retire(snapshot.conversation.id, live);
     }
+  }
+
+  /** Closes a conversation's process; `onStoppedWork` runs first when that stops background work still in flight. */
+  private async retire(conversationId: string, live: ClaudeLive, onStoppedWork?: () => void): Promise<void> {
+    if (this.live.get(conversationId) === live) this.live.delete(conversationId);
+    if (live.session.isLive() && live.session.hasBackgroundWork()) onStoppedWork?.();
+    for (const turn of live.followUps.values()) turn.close();
+    live.followUps.clear();
+    await live.session.close();
+  }
+
+  /** Hands a turn Claude started by itself to the host, which queues a run for it; a refused turn is dropped. */
+  private announceFollowUp(conversationId: string, live: ClaudeLive, turn: ClaudeTurn, summary: string): void {
+    const followUpId = this.options.nextId();
+    live.followUps.set(followUpId, turn);
+    let accepted = false;
+    for (const listener of this.followUpListeners) {
+      accepted = listener({ conversationId, provider: { kind: this.kind, instanceId: this.instanceId }, nativeConversationId: live.sessionId,
+        followUpId, summary }) || accepted;
+    }
+    if (!accepted) { live.followUps.delete(followUpId); turn.close(); }
+  }
+
+  /**
+   * Sends an approval or question to the run reading the session's current turn. A turn Claude started by itself may ask
+   * before its run attaches, so it waits briefly for that; with no run to answer, the request is declined.
+   */
+  private async routeRequest(conversationId: string, prompt: ClaudePrompt): Promise<RequestResponse> {
+    let active = this.attached.get(conversationId);
+    if (!active && this.live.get(conversationId)?.followUps.size) {
+      await new Promise<void>((resolve) => {
+        const waiters = this.attachWaiters.get(conversationId) ?? [];
+        this.attachWaiters.set(conversationId, waiters);
+        const timer = setTimeout(() => { waiters.splice(waiters.indexOf(done), 1); resolve(); }, FOLLOW_UP_ATTACH_MS);
+        timer.unref();
+        const done = (): void => { clearTimeout(timer); resolve(); };
+        waiters.push(done);
+      });
+      active = this.attached.get(conversationId);
+    }
+    if (!active) return { kind: "approval", optionId: "deny" };
+    return this.ask(active, prompt, active.emit);
   }
 
   private ask(execution: ProviderExecution, prompt: ClaudePrompt, emit: EmitProviderUpdate): Promise<RequestResponse> {
@@ -231,7 +326,10 @@ export class ClaudeAdapter implements ExecutionProvider {
     await active.session.interrupt();
   }
   async forceInterrupt(execution: ProviderExecution): Promise<void> {
-    await this.active.get(execution.run.attemptId)?.session.close();
+    const conversationId = execution.snapshot.conversation.id;
+    const live = this.live.get(conversationId);
+    if (live) await this.retire(conversationId, live);
+    else await this.active.get(execution.run.attemptId)?.session.close();
   }
   async reconcile(execution: ProviderExecution, emit: EmitProviderUpdate): Promise<void> {
     // SDK history is not an authoritative live-turn/approval lookup. Never resume by resending.
@@ -240,6 +338,8 @@ export class ClaudeAdapter implements ExecutionProvider {
       failure: { code: "uncertain", message: "Claude native turn status cannot be confirmed after owner loss; automatic resubmission is disabled", retryable: false } });
   }
   async close(): Promise<void> {
-    await Promise.all([...this.active.values()].map((active) => active.session.close()));
+    const sessions = new Set([...this.active.values()].map((active) => active.session));
+    await Promise.all([...this.live].map(([conversationId, live]) => this.retire(conversationId, live)));
+    await Promise.all([...sessions].map((session) => session.close()));
   }
 }
