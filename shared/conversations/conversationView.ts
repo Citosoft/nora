@@ -48,6 +48,9 @@ export function applyConversationEvent(view: ConversationView, event: Conversati
       }
       break;
     }
+    case "background-tasks":
+      header.backgroundTasks = payload.tasks;
+      break;
   }
   return { ...view, header };
 }

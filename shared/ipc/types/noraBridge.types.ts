@@ -18,6 +18,9 @@ import type { AppsBridge } from "./appsGateway.types";
 import type { AccountBridge } from "@shared/types/account/account.types";
 import type { SettingsSyncBridge } from "@shared/types/settings-sync/sync.types";
 import type { RemoteAccessBridge } from "./remoteAccessGateway.types";
+import type { KeybindingsBridge } from "./keybindingsGateway.types";
+import type { IslandAppBridge } from "@shared/types/island/island.types";
+import type { AppImportBridge } from "./appImportGateway.types";
 
 export interface NoraBridge
   extends AppBridge,
@@ -40,4 +43,7 @@ export interface NoraBridge
   inbox: InboxBridge;
   apps: AppsBridge;
   remoteAccess: RemoteAccessBridge;
+  keybindings: KeybindingsBridge;
+  island: IslandAppBridge;
+  appImport: AppImportBridge;
 }

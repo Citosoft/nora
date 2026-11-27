@@ -1,6 +1,5 @@
 import { createStoredList } from "./storedList";
-import type { ComposerStashKeyInput, PromptStashSwap, StashedPrompt } from "@/components/app/types/composerPrompts.types";
-import type { ShortcutKey } from "@/components/app/types/component.types";
+import type { PromptStashSwap, StashedPrompt } from "@/components/app/types/composerPrompts.types";
 
 export const PROMPT_STASH_LIMIT = 50;
 
@@ -35,10 +34,4 @@ export function togglePromptStash(stash: readonly StashedPrompt[], current: stri
 
 export function removeStashedPrompt(stash: readonly StashedPrompt[], id: string): readonly StashedPrompt[] {
   return stash.filter((entry) => entry.id !== id);
-}
-
-export const PROMPT_STASH_SHORTCUT: ShortcutKey[] = ["mod", "s"];
-
-export function isPromptStashShortcut({ key, shiftKey, altKey, ctrlKey, metaKey }: ComposerStashKeyInput): boolean {
-  return (metaKey || ctrlKey) && !shiftKey && !altKey && key.toLowerCase() === "s";
 }

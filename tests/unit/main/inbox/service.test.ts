@@ -69,7 +69,7 @@ test("marks are saved, done is refused for what still needs the user, and snooze
   const request: RuntimeRequest = { kind: "approval", id: "q", runId: "r", attemptId: "a", nativeId: "q", status: "pending", createdAt: "2026-11-18T09:00:00.000Z",
     expiresAt: "", title: "Deploy?", options: [{ id: "allow", label: "Allow" }] };
   const rex = conversation("rex");
-  f.headers.set("rex", { schemaVersion: 1, cursor: 0, conversation: rex, activeRuns: [], queuedRuns: [], pendingRequests: [request] });
+  f.headers.set("rex", { schemaVersion: 1, cursor: 0, conversation: rex, activeRuns: [], queuedRuns: [], pendingRequests: [request], backgroundTasks: [] });
   f.setSummaries([{ conversation: rex, latestRun: null, queuedCount: 0, pendingRequestCount: 1 }, finished("t", "r1", "2026-11-18T10:00:00.000Z")]);
   const service = createInboxService(f.deps);
   service.start();

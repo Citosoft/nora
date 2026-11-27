@@ -66,7 +66,7 @@ async function run(): Promise<void> {
     const run = view.runs.get("start"); const conversation = host.header("acceptance")?.conversation;
     if (!run || !conversation) throw new Error("Native acceptance state unavailable");
     const execution = { run, snapshot: { cursor: host.eventCursor(), conversation, runs: [...view.runs.values()],
-      requests: [...view.requests.values()], items: [...view.items.values()] } };
+      requests: [...view.requests.values()], backgroundTasks: view.backgroundTasks, items: [...view.items.values()] } };
     const usage = [...view.runs.values()].some((entry) => entry.usage !== null);
     report.checks.push({ name: "native-usage", status: usage ? "passed" : "unverified", detail: "normalized-native-token-counts" });
     stop(); await host.shutdown();

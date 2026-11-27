@@ -48,7 +48,6 @@ export type AppRootWorkspaceSessionProviderProps = {
   openAiChat: (projectId: string) => void;
   uiCommands: AppUiCommands;
   normalizeSnapshot: (snapshot: AppState) => AppState;
-  windowPlatform: import("@/components/app/types").WindowUiState["platform"];
   setDefaultTerminalShellId: Dispatch<SetStateAction<string | null>>;
   installedIdes: InstalledIde[];
   defaultIdeId: string | null;

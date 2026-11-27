@@ -1,4 +1,3 @@
-import type { WorkspaceDiscoveryResult } from "../../types/workspaceImport.types";
 import type {
   ArchiveExternalHarnessThreadPayload,
   AppState,
@@ -12,6 +11,7 @@ import type {
   ImportBrowserImagePayload,
   NoraDetectableContextBundleSummary,
   TerminalPreset,
+  WorkspaceSetupScript,
   WorkspaceFileRequest,
   WorkspaceGitStatusSummary,
   SetWorkspaceUpstreamPayload,
@@ -36,7 +36,6 @@ export interface WorkspaceLoadingProgressPayload {
 }
 
 export interface WorkspaceBridge {
-  discoverWorkspaces: () => Promise<WorkspaceDiscoveryResult>;
   onWorkspaceTasksChanged: (listener: (projectId: string) => void) => () => void;
   chooseProject: () => Promise<AppState>;
   chooseProjectAtPath: (defaultPath: string, title?: string) => Promise<AppState>;
@@ -65,6 +64,8 @@ export interface WorkspaceBridge {
     collection: WorkspaceSplitViewCollection
   ) => Promise<WorkspaceSplitViewCollection>;
   saveWorkspaceTerminalPresets: (projectId: string, presets: TerminalPreset[]) => Promise<AppState>;
+  /** Replaces the workspace's setup scripts with the edited list. */
+  saveWorkspaceSetupScripts: (projectId: string, scripts: WorkspaceSetupScript[]) => Promise<AppState>;
   readWorkspaceFile: (payload: WorkspaceFileRequest) => Promise<string>;
   readWorkspaceImageFile: (payload: WorkspaceFileRequest) => Promise<WorkspaceImageFileContent>;
   /** The project's own logo for its avatar, or null when none is detected. */

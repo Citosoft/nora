@@ -107,7 +107,8 @@ export function mergePersistedProjectSummary(
   return {
     ...baseProject,
     createdAt: persistedProject.createdAt || baseProject.createdAt,
-    workspaceTerminalPresets: persistedProject.workspaceTerminalPresets ?? baseProject.workspaceTerminalPresets
+    workspaceTerminalPresets: persistedProject.workspaceTerminalPresets ?? baseProject.workspaceTerminalPresets,
+    workspaceSetupScripts: persistedProject.workspaceSetupScripts ?? baseProject.workspaceSetupScripts
   };
 }
 
@@ -175,6 +176,7 @@ export function createGetProjectMetadata(deps: ProjectMetadataDependencies) {
       ...gitInfo,
       location,
       workspaceTerminalPresets: [],
+      workspaceSetupScripts: [],
       workspaceInstructionFile,
       framework,
       platform: location.kind === "ssh" ? "ssh" : process.platform,

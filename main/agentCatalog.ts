@@ -1,3 +1,5 @@
+import { APP_SHORT_NAME } from "@shared/appMeta";
+import { NORA_PROVIDER_KIND } from "@shared/providers/providerKinds";
 import type { AgentDefinition, AgentExecutablePathCandidate, AgentSkillCatalogConfig } from "./types/internal.types";
 
 export const SHARED_AGENT_SKILLS_TOOL_ID = "shared-agent-skills";
@@ -367,6 +369,12 @@ export const AGENT_DEFINITIONS: AgentDefinition[] = [
     ]
   })
 ];
+
+/** The catalog's display name for a tool or provider kind; Nora's own coordinator is the app, and unknown ids show as-is. */
+export function agentToolLabel(toolId: string): string {
+  if (toolId === NORA_PROVIDER_KIND) return APP_SHORT_NAME;
+  return AGENT_DEFINITIONS.find((tool) => tool.id === toolId)?.label ?? toolId;
+}
 
 export function getDefaultToolCommand(tool: Pick<AgentDefinition, "installTemplate">, action: "install" | "remove"): string {
   const installTemplate = tool.installTemplate.trim();

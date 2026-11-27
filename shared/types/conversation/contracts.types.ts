@@ -1,11 +1,12 @@
 import type { z } from "zod";
 import type {
-  initialInstructionSchema, chatBranchOriginSchema, chatBranchSchema, conversationSourceSchema, commandReceiptSchema, conversationCommandSchema, conversationEventSchema, conversationSchema,
+  backgroundTaskSchema, initialInstructionSchema, chatBranchOriginSchema, chatBranchSchema, conversationSourceSchema, commandReceiptSchema, conversationCommandSchema, conversationEventSchema, conversationSchema,
   eventPayloadSchema, failureSchema, providerBindingSchema, requestResponseSchema, requestSchema,
   runSchema, runActionSchema, contextUsageSchema, snapshotSchema, pinnedMessageSchema, timelineItemSchema, usageSchema, workspaceRefSchema, toolDetailsSchema, toolStateSchema, approvalDetailsSchema
 } from "@shared/conversations/contracts";
 
 export type ProviderBinding = z.infer<typeof providerBindingSchema>;
+export type BackgroundTask = z.infer<typeof backgroundTaskSchema>;
 export type WorkspaceRef = z.infer<typeof workspaceRefSchema>;
 export type ChatBranch = z.infer<typeof chatBranchSchema>;
 export type ChatBranchOrigin = z.infer<typeof chatBranchOriginSchema>;

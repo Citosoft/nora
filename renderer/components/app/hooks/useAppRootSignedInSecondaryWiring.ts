@@ -1,5 +1,5 @@
 import { getChangesCheckoutBranch } from "@/components/app/logic/changesCheckoutOptions";
-import { formatShortcutKeys, SHORTCUT_DEFINITIONS } from "@/components/app/logic/keyboardShortcuts";
+import { useKeybindingLabel } from "@/components/app/hooks/useKeybindings";
 import { setDefaultTerminalShell } from "@/components/app/logic/terminalShellPreferences";
 import type {
   UseAppRootSignedInSecondaryWiringArgs,
@@ -16,7 +16,6 @@ export const useAppRootSignedInSecondaryWiring = ({
   workspaceSpecs,
   workspaceNotes,
   workspaceFileTreePaths,
-  windowPlatform,
   setDefaultTerminalShellId,
   installedIdes,
   defaultIdeId,
@@ -62,14 +61,7 @@ export const useAppRootSignedInSecondaryWiring = ({
     workspaceFilePaths: workspaceFileTreePaths
   });
 
-  const workspaceQuickSearchOpenShortcutLabel = useMemo(
-    () =>
-      formatShortcutKeys(
-        SHORTCUT_DEFINITIONS.find((definition) => definition.id === "open-workspace-quick-search")?.keys ?? ["mod", "k"],
-        windowPlatform
-      ),
-    [windowPlatform]
-  );
+  const workspaceQuickSearchOpenShortcutLabel = useKeybindingLabel("open-workspace-quick-search") ?? "";
 
   const handleDefaultTerminalShellChange = (shellId: string | null): void => {
     setDefaultTerminalShell(shellId);

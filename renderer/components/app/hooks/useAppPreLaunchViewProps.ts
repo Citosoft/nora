@@ -320,7 +320,6 @@ export function useAppPreLaunchViewProps(args: UseAppPreLaunchViewPropsArgs): {
       }),
       keyboardShortcutsDialogProps: buildPreLaunchKeyboardShortcutsDialogProps({
         uiState,
-        windowUiState,
         uiCommands
       }),
       resourceMonitorDialogProps: buildPreLaunchResourceMonitorDialogProps({

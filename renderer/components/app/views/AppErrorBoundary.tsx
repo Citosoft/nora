@@ -1,6 +1,7 @@
 import { toAppCrashDetails } from "@/components/app/logic/appCrashReport";
 import type { AppErrorBoundaryProps, AppErrorBoundaryState } from "@/components/app/types/appErrorBoundary.types";
 import { AppCrashFallback } from "@/components/app/views/AppCrashFallback";
+import { trackAnalyticsError } from "@/lib/analytics";
 import { Component, type ErrorInfo } from "react";
 
 /** Top-level boundary so a render error shows a recoverable screen instead of a blank window. */
@@ -13,6 +14,7 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
 
   componentDidCatch(error: unknown, info: ErrorInfo): void {
     console.error("Nora renderer crashed.", error, info.componentStack);
+    trackAnalyticsError(error, "render-crash");
     this.setState({ crash: toAppCrashDetails(error, info.componentStack ?? null) });
   }
 

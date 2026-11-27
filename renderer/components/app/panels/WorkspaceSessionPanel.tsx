@@ -668,7 +668,6 @@ export function WorkspaceSessionPanel() {
           <WorkspaceSessionTabs
             tabs={orderedSessionTabs}
             activeTabId={activeTabId}
-            platform={platform}
             tools={tools}
             onSelect={handleSelectTab}
             onClose={handleCloseTab}

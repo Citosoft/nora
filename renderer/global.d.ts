@@ -1,18 +1,17 @@
 import type { NoraBridge } from "@shared/ipc/types/noraBridge.types";
 import type { AccountSessionBridge } from "@shared/types/account/account.types";
+import type { IslandBridge } from "@shared/types/island/island.types";
 import type * as React from "react";
 
 declare global {
   const __NORA_IS_PRODUCTION__: boolean;
-  const __NORA_POSTHOG_API_KEY__: string;
-  const __NORA_POSTHOG_HOST__: string;
-  const __VITE_PUBLIC_POSTHOG_PROJECT_TOKEN__: string;
-  const __VITE_PUBLIC_POSTHOG_HOST__: string;
   const __NPM_PACKAGE_VERSION__: string;
 
   interface Window {
     nora: NoraBridge;
     noraAccount: AccountSessionBridge;
+    /** Present only in the notch island's window. */
+    noraIsland: IslandBridge;
   }
 
   interface ElectronDidNavigateEvent extends Event {

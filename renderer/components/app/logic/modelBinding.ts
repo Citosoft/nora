@@ -3,12 +3,12 @@ import type { ProviderModel } from "@shared/types/provider/catalog.types";
 import type { NativeProvider } from "@shared/ipc/types/personalizationGateway.types";
 import type { ThreadModelDefault } from "@shared/types/personalization/threadModel.types";
 import { nativeProviderKey } from "@/components/app/logic/modelCatalogStore";
-import type { ModelBindingInput, ModelBindingResolution, ModelCatalogState } from "@/components/app/types/modelPicker.types";
-import { providerBindingProblem } from "@shared/conversations/providerBinding";
+import type { ModelBindingInput, ModelCatalogState } from "@/components/app/types/modelPicker.types";
+import type { ProviderBindingResolution } from "@shared/types/conversation/providerBinding.types";
+import { resolveProviderBinding, selectedCatalogModel } from "@shared/conversations/providerBinding";
 
 export function selectedNativeModel(catalog: ModelCatalogState, modelId: string | null): ProviderModel | null {
-  if (catalog.status !== "available") return null;
-  return modelId === null ? catalog.catalog.models[0] ?? null : catalog.catalog.models.find((model) => model.id === modelId) ?? null;
+  return catalog.status === "idle" || catalog.status === "loading" ? null : selectedCatalogModel(catalog, modelId);
 }
 
 /** A new thread's provider before one is chosen: the configured default while it is installed, otherwise the first provider. */
@@ -26,24 +26,11 @@ export function inheritedSubagentModel(catalog: ModelCatalogState, provider: Nat
   return catalog.status === "available" && catalog.catalog.capabilities.subagentModel ? inheritedModelId(catalog, provider, preferred) : null;
 }
 
-/** No fallback for a removed explicit choice, a locked binding, or an unconfirmed permission selection. */
-export function resolveModelBinding(input: ModelBindingInput): ModelBindingResolution {
-  const { provider, catalog, locked } = input;
-  if (!provider) return { status: "blocked", message: "Choose a configured provider before sending." };
+/** Waits while the catalog loads, then resolves exactly as the host-side importers do. */
+export function resolveModelBinding(input: ModelBindingInput): ProviderBindingResolution {
+  const { catalog } = input;
   if (catalog.status === "idle" || catalog.status === "loading") return { status: "blocked", message: null };
-  if (catalog.status === "unavailable") return { status: "blocked", message: catalog.failure.message };
-  if (catalog.catalog.kind !== provider.kind || catalog.catalog.instanceId !== provider.instanceId
-    || (locked && (locked.kind !== provider.kind || locked.instanceId !== provider.instanceId))) {
-    return { status: "blocked", message: "The model catalog does not match this conversation's provider." };
-  }
-  const model = selectedNativeModel(catalog, locked?.model ?? input.modelId);
-  const policy = locked?.permissionPolicy ?? input.policyId;
-  const reasoning = locked ? locked.reasoning : input.reasoning;
-  const subagentModel = locked ? locked.subagentModel ?? null : input.subagentModel;
-  const binding = locked ?? { ...(catalog.catalog.connection !== undefined ? { connection: catalog.catalog.connection } : {}), kind: provider.kind, instanceId: provider.instanceId, model: model?.id ?? input.modelId ?? "", permissionPolicy: policy ?? "", reasoning,
-    ...(subagentModel !== null ? { subagentModel } : {}) };
-  const problem = providerBindingProblem(binding, catalog.catalog);
-  return problem ? { status: "blocked", message: problem } : { status: "ready", binding };
+  return resolveProviderBinding({ ...input, catalog });
 }
 
 /** Explains when a model, permission or reasoning change takes effect, shared by the composer's pickers. */

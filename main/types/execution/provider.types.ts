@@ -8,6 +8,7 @@ import type { WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { SteeringResult } from "./steering.types";
 import type { ExternalSessionReader } from "./externalSessions.types";
 import type { ProviderFollowUpSource } from "./followUp.types";
+import type { ProviderBackgroundTasksSource } from "./backgroundTasks.types";
 
 export type ProviderUpdate = z.infer<typeof providerUpdateSchema>;
 export type EmitProviderUpdate = (update: ProviderUpdate) => void;
@@ -24,6 +25,8 @@ export interface ExecutionProvider {
   readonly externalSessions?: ExternalSessionReader;
   /** Turns the runtime starts by itself; the host queues each as a `background-task` run that `start` then attaches to. */
   readonly followUps?: ProviderFollowUpSource;
+  /** Live background work still running between turns; the host mirrors each list onto the conversation header. */
+  readonly backgroundTasks?: ProviderBackgroundTasksSource;
   mcp?(workspace: WorkspaceRef | null, action: McpAction): Promise<McpResult>;
   /** Serves MCP Apps widgets: reads a tool's `ui://` resource or runs a widget's own tool call on the conversation's native session. */
   mcpApp?(conversation: Conversation, action: ProviderMcpAppAction): Promise<ProviderMcpAppResult>;

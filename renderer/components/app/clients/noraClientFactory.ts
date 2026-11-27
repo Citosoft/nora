@@ -9,7 +9,6 @@ export const NORA_APP_CLIENT_METHODS = [
 ] as const satisfies readonly (keyof AppGateway)[];
 
 export const NORA_WORKSPACE_CLIENT_METHODS = [
-  "discoverWorkspaces",
   "chooseProject",
   "focusWorkspace",
   "chooseProjectAtPath",
@@ -34,6 +33,7 @@ export const NORA_WORKSPACE_CLIENT_METHODS = [
   "getWorkspaceSplitViews",
   "saveWorkspaceSplitViews",
   "saveWorkspaceTerminalPresets",
+  "saveWorkspaceSetupScripts",
   "readWorkspaceFile",
   "readWorkspaceImageFile",
   "readWorkspaceLogo",
@@ -150,6 +150,7 @@ export const NORA_TOOLING_CLIENT_METHODS = [
 export const NORA_SYSTEM_CLIENT_METHODS = [
   "openExternalUrl",
   "copyText",
+  "readClipboardText",
   "closeWindow",
   "minimizeWindow",
   "toggleMaximizeWindow",
@@ -203,7 +204,7 @@ export const NORA_SYSTEM_CLIENT_METHODS = [
   "readComposerAttachmentThumbnail",
   "showAgentCompletionNotification",
   "onAppClosingProgress",
-  "logAnalytics",
+  "trackAnalytics",
   "scanLocalAgentUsage",
   "getResourceMonitorSnapshot",
   "syncMacApplicationMenu",

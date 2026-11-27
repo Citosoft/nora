@@ -46,7 +46,7 @@ test("schema v4 upgrades preserve history/receipts and create empty private chec
   const database = f.openDatabase();
   database.exec("DROP TABLE turn_checkpoints; DROP TABLE checkpoint_blobs; PRAGMA user_version = 4");
   f.restart();
-  assert.equal(database.prepare("PRAGMA user_version").get()?.user_version, 7);
+  assert.equal(database.prepare("PRAGMA user_version").get()?.user_version, 8);
   assert.deepEqual(f.snapshot(), before); assert.deepEqual(f.submit(), receipt); assert.deepEqual(f.store.events(0, 200), events);
   assert.equal(f.store.checkpoint("conversation", "run"), null);
   assert.equal(database.prepare("SELECT count(*) AS count FROM checkpoint_blobs").get()?.count, 0);

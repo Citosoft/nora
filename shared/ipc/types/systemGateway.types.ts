@@ -1,4 +1,5 @@
 import type { WindowSettingsRequest, WindowSettingsReply } from "@shared/types/nora-tools/settings.types";
+import type { RendererAnalyticsEvent } from "@shared/types/analytics.types";
 import type {
   AgentCompletionNotificationPayload,
   AnalyticsRuntimeConfig,
@@ -61,6 +62,7 @@ export interface VoiceInputTranscriptionPayload {
 export interface SystemBridge {
   openExternalUrl: (url: string) => Promise<void>;
   copyText: (text: string) => Promise<void>;
+  readClipboardText: () => Promise<string>;
   closeWindow: () => Promise<void>;
   minimizeWindow: () => Promise<void>;
   toggleMaximizeWindow: () => Promise<WindowState>;
@@ -113,7 +115,7 @@ export interface SystemBridge {
   savePastedImage: (payload: SavePastedImagePayload) => Promise<PastedImageReference>;
   showAgentCompletionNotification: (payload: AgentCompletionNotificationPayload) => Promise<void>;
   onAppClosingProgress: (listener: (payload: AppClosingProgressPayload) => void) => () => void;
-  logAnalytics: (level: "info" | "warn" | "debug" | "error", message: string) => Promise<void>;
+  trackAnalytics: (event: RendererAnalyticsEvent) => Promise<void>;
   scanLocalAgentUsage: (request: AgentUsageScanRequest) => Promise<LocalAgentUsageReport>;
   getResourceMonitorSnapshot: () => Promise<ResourceMonitorSnapshot>;
   checkAppRepositoryStarred: () => Promise<boolean | null>;

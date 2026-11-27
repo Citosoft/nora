@@ -11,7 +11,7 @@ export function projectState(snapshot: ConversationState | null, payload: EventP
   if (payload.kind === "conversation") {
     return snapshot
       ? { ...snapshot, conversation: payload.conversation }
-      : { cursor: 0, conversation: payload.conversation, runs: [], requests: [] };
+      : { cursor: 0, conversation: payload.conversation, runs: [], requests: [], backgroundTasks: [] };
   }
   if (!snapshot) throw new Error("Conversation must exist before its activity");
   switch (payload.kind) {
@@ -19,6 +19,7 @@ export function projectState(snapshot: ConversationState | null, payload: EventP
     case "remove-run": return { ...snapshot, runs: snapshot.runs.filter((run) => run.id !== payload.runId) };
     case "item": return snapshot;
     case "request": return { ...snapshot, requests: upsert(snapshot.requests, payload.request) };
+    case "background-tasks": return { ...snapshot, backgroundTasks: payload.tasks };
   }
 }
 

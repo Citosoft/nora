@@ -1,6 +1,7 @@
-import { mkdir, writeFile, readFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
+import { noraGlyphSvg, noraMarkSvg, SMALL_DIAGONAL_OPACITY } from "./noraMark.mjs";
 
 const rendererDir = path.resolve("renderer");
 const svgPath = path.join(rendererDir, "icon.svg");
@@ -9,7 +10,10 @@ const png256Path = path.join(rendererDir, "icon-256.png");
 const icoPath = path.join(rendererDir, "icon.ico");
 const icnsPath = path.join(rendererDir, "icon.icns");
 
-const source = sharp(svgPath);
+const iconSvg = noraMarkSvg();
+/** At favicon sizes the inner panel muddies the mark, so small renders drop it and brighten the diagonal. */
+const smallIconSvg = noraMarkSvg({ panel: false, diagonalOpacity: SMALL_DIAGONAL_OPACITY });
+const smallIconMaxSize = 64;
 
 const pngSizes = [16, 32, 48, 64, 128, 256, 512, 1024];
 
@@ -55,11 +59,16 @@ function createIcns(icnsEntries) {
 }
 
 await mkdir(rendererDir, { recursive: true });
+await writeFile(svgPath, iconSvg);
+await writeFile(path.join(rendererDir, "glyph-white.svg"), noraGlyphSvg({ color: "#FFFFFF" }));
+await writeFile(path.join(rendererDir, "glyph-black.svg"), noraGlyphSvg({ color: "#000000" }));
+
+const renderSvg = (svg, size) => sharp(Buffer.from(svg)).resize(size, size, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).png();
 
 const renderedPngs = await Promise.all(
   pngSizes.map(async (size) => ({
     size,
-    data: await source.clone().resize(size, size).png().toBuffer()
+    data: await renderSvg(size <= smallIconMaxSize ? smallIconSvg : iconSvg, size).toBuffer()
   }))
 );
 
@@ -92,12 +101,9 @@ await writeFile(
   )
 );
 
-// Reuse the icon's foreground glyph without its opaque tile for the system menu bar.
-const iconSvg = await readFile(svgPath, "utf8");
-const glyph = iconSvg.match(/<g fill="#F4F8F5">([\s\S]*?)<\/g>/)?.[1];
-if (!glyph) throw new Error("The app icon foreground glyph could not be found.");
-const template = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="192 232 640 544"><g fill="black">${glyph}</g></svg>`);
+// The menu bar shows the bare glyph: a black template image on macOS, the small icon elsewhere.
+const trayTemplateSvg = noraGlyphSvg({ color: "#000000", diagonalOpacity: SMALL_DIAGONAL_OPACITY, padding: 44 });
 for (const [suffix, size] of [["", 20], ["@2x", 40]]) {
-  await sharp(template).resize(size, size, { fit: "contain" }).png().toFile(path.join(rendererDir, `trayTemplate${suffix}.png`));
-  await source.clone().resize(size, size).png().toFile(path.join(rendererDir, `tray${suffix}.png`));
+  await renderSvg(trayTemplateSvg, size).toFile(path.join(rendererDir, `trayTemplate${suffix}.png`));
+  await renderSvg(smallIconSvg, size).toFile(path.join(rendererDir, `tray${suffix}.png`));
 }

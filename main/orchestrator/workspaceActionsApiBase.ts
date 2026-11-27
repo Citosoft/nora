@@ -4,6 +4,7 @@ import type {
   SetWorkspaceUpstreamPayload,
   SelectChangesCheckoutPayload,
   TerminalPreset,
+  WorkspaceSetupScriptsUpdate,
   WorkspaceGitStatusSummary,
   WorkspaceNoteSummary,
   WorkspacePathStatResult,
@@ -120,5 +121,9 @@ export abstract class WorkspaceActionsApiBase {
 
   async saveWorkspaceTerminalPresets(projectId: string, presets: TerminalPreset[]): Promise<AppState> {
     return this.getWorkspaceActions().saveWorkspaceTerminalPresets(projectId, presets);
+  }
+
+  async saveWorkspaceSetupScripts(projectId: string, update: WorkspaceSetupScriptsUpdate): Promise<AppState> {
+    return this.getWorkspaceActions().saveWorkspaceSetupScripts(projectId, update);
   }
 }

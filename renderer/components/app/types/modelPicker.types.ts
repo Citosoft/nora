@@ -7,9 +7,10 @@ import type { LocalVoiceModelDescriptor } from "@shared/types/voice.types";
 import type { MemoryReviewActivity, MemoryReviewRecord } from "@shared/types/bots/memoryReview.types";
 import type { ThreadModelDefault } from "@shared/types/personalization/threadModel.types";
 import type { NativeBoot, NativeProvider, PersonalizationRequest } from "@shared/ipc/types/personalizationGateway.types";
-import type { ProviderBinding, WorkspaceRef } from "@shared/types/conversation/contracts.types";
+import type { WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ProviderCatalog, ProviderCatalogResult, ProviderModel } from "@shared/types/provider/catalog.types";
 import type { ConversationClient } from "./conversationClient.types";
+import type { ProviderBindingInput } from "@shared/types/conversation/providerBinding.types";
 
 export type ModelCatalogState = { status: "idle" } | { status: "loading" } | ProviderCatalogResult;
 export interface ModelCatalogStore {
@@ -25,18 +26,8 @@ export interface ModelCatalogDeps {
 export interface ModelChoice { providerKey: string; modelId: string | null; inherited: boolean; }
 /** Whether a draft's binding was picked by the user (saved with the draft) or inherited from the default (not saved). */
 export type BindingOrigin = "chosen" | "inherited";
-export interface ModelBindingInput {
-  /** Only the provider's identity matters for binding; MCP reporting and labels do not. */
-  provider: Pick<NativeProvider, "kind" | "instanceId"> | null;
-  catalog: ModelCatalogState;
-  modelId: string | null;
-  policyId: string | null;
-  reasoning: string | null;
-  /** Default subagent model, or null for the runtime's own default. */
-  subagentModel: string | null;
-  locked: ProviderBinding | null;
-}
-export type ModelBindingResolution = { status: "ready"; binding: ProviderBinding } | { status: "blocked"; message: string | null };
+/** Binding input while the catalog may still be loading. */
+export type ModelBindingInput = Omit<ProviderBindingInput, "catalog"> & { catalog: ModelCatalogState };
 export interface ModelSettingsInput {
   catalog: ProviderCatalog | null;
   subagentModel: string | null;

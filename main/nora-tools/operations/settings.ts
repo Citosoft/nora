@@ -42,6 +42,7 @@ export function createSettingsOperations(options: Pick<NoraToolOperationOptions,
               modelByProvider: { ...current.ai.modelByProvider, ...general?.ai?.modelByProvider } },
             voice: { ...current.voice, ...general?.voice },
             lifecycle: { ...current.lifecycle, ...general?.lifecycle },
+            notchIsland: { ...current.notchIsland, ...general?.notchIsland },
             terminalQuickLaunchDefaults: { ...current.terminalQuickLaunchDefaults, ...general?.terminalQuickLaunchDefaults }
           };
         });

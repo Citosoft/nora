@@ -216,13 +216,21 @@ export const requestResponseSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("approval"), optionId: id }).strict(),
   z.object({ kind: z.literal("question"), answers: z.record(z.string(), z.array(z.string()).min(1)) }).strict()
 ]);
+/** Live work a provider keeps running between turns (background shells, monitors, agents). Full-replace lists only. */
+export const backgroundTaskSchema = z.object({
+  id,
+  description: z.string().min(1),
+  /** Provider-specific task kind when known (for example Claude's `task_type`). */
+  kind: z.string().min(1).optional()
+}).strict();
 export const snapshotSchema = z.object({
   schemaVersion: z.literal(1),
   cursor: z.number().int().nonnegative(),
   conversation: conversationSchema,
   runs: z.array(runSchema),
   items: z.array(timelineItemSchema),
-  requests: z.array(requestSchema)
+  requests: z.array(requestSchema),
+  backgroundTasks: z.array(backgroundTaskSchema).default([])
 }).strict();
 
 const commandBase = { commandId: id, conversationId: id };
@@ -270,7 +278,8 @@ export const eventPayloadSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("run"), run: runSchema }).strict(),
   z.object({ kind: z.literal("remove-run"), runId: id }).strict(),
   z.object({ kind: z.literal("item"), item: timelineItemSchema }).strict(),
-  z.object({ kind: z.literal("request"), request: requestSchema }).strict()
+  z.object({ kind: z.literal("request"), request: requestSchema }).strict(),
+  z.object({ kind: z.literal("background-tasks"), tasks: z.array(backgroundTaskSchema) }).strict()
 ]);
 export const conversationEventSchema = z.object({
   schemaVersion: z.literal(1), id, conversationId: id,

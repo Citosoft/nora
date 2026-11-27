@@ -119,10 +119,18 @@ export const buildSettingsRuntimeValue = (d: BuildSettingsRuntimeValueDeps): Set
   updatePhonePushNotifications: (phonePushNotificationsEnabled) => {
     void d.updateNotificationPreferences({ phonePushNotificationsEnabled }).catch(d.captureError);
   },
+  updateNotchIsland: (patch) => {
+    void d.updateNotchIsland(patch).catch(d.captureError);
+  },
   updateAnalyticsConsent: (enabled) => {
-    void d.updateAnalyticsConsentStatus(enabled ? "granted" : "declined").catch(d.captureError);
+    void d.updateAnalyticsPreferences({ analyticsConsentStatus: enabled ? "granted" : "declined" }).catch(d.captureError);
+  },
+  updateUsageStatistics: (enabled) => {
+    void d.updateAnalyticsPreferences({ usageStatisticsEnabled: enabled }).catch(d.captureError);
   },
   analyticsAllowedInCurrentRun: d.analyticsAllowedInCurrentRun,
+  // Until main answers, assume the strictest region so the copy never promises less consent than is needed.
+  usageStatisticsRequireConsent: d.analyticsRuntimeConfig?.usageStatisticsRequireConsent ?? true,
   analyticsDevModeSwitch: d.analyticsRuntimeConfig?.devModeAnalyticsSwitch ?? "enable-dev-analytics",
   updateOpenInternalBrowserOnNewPortDetection: (openInternalBrowserOnNewPortDetection) => {
     void d.updateBrowserPreferences({

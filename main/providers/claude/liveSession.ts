@@ -1,5 +1,8 @@
 import type { SDKMessage, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { ClaudeLiveSessionDeps, ClaudeMessageStream, ClaudeSession, ClaudeTurn, ClaudeTurnInput } from "@main/types/execution/claude.types";
+import type { BackgroundTask } from "@shared/types/conversation/contracts.types";
+import { sameBackgroundTasks } from "@shared/conversations/backgroundTasks";
+import { normalizeClaudeBackgroundTasks } from "./normalizeBackgroundTasks";
 
 /** After background work ends, Claude starts its report turn promptly; this is how long an idle session waits for it. */
 const FOLLOW_UP_GRACE_MS = 15_000;
@@ -65,7 +68,7 @@ export function createClaudeLiveSession(deps: ClaudeLiveSessionDeps): ClaudeSess
   let previous: TurnChannel | null = null;
   /** Session messages (such as init) that arrive before a turn Claude starts by itself. */
   let preamble: SDKMessage[] = [];
-  const backgroundTasks = new Set<string>();
+  let backgroundTaskList: BackgroundTask[] = [];
   const taskNames = new Map<string, string>();
   let finishedWork: { name: string; status: "completed" | "failed" | "stopped" }[] = [];
   let pendingSends = 0;
@@ -74,6 +77,20 @@ export function createClaudeLiveSession(deps: ClaudeLiveSessionDeps): ClaudeSess
   let closing: Promise<void> | null = null;
   let model = deps.opening.model;
   let permissionMode = deps.opening.permissionMode;
+  let publishedEmpty = true;
+
+  const publishBackgroundTasks = (next: BackgroundTask[]): void => {
+    if (sameBackgroundTasks(backgroundTaskList, next)) return;
+    backgroundTaskList = next;
+    publishedEmpty = next.length === 0;
+    deps.onBackgroundTasksChanged(next);
+  };
+  const clearBackgroundTasks = (): void => {
+    if (publishedEmpty && backgroundTaskList.length === 0) return;
+    backgroundTaskList = [];
+    publishedEmpty = true;
+    deps.onBackgroundTasksChanged([]);
+  };
 
   const turnOf = (channel: TurnChannel): ClaudeTurn => {
     const frames = deps.readTurn(channel);
@@ -82,7 +99,7 @@ export function createClaudeLiveSession(deps: ClaudeLiveSessionDeps): ClaudeSess
   const cancelIdle = (): void => { clearTimeout(idleTimer); idleTimer = undefined; };
   const armIdle = (delayMs: number): void => {
     cancelIdle();
-    if (closing || current || pendingSends || backgroundTasks.size) return;
+    if (closing || current || pendingSends || backgroundTaskList.length) return;
     idleTimer = setTimeout(() => { void session.close(); }, delayMs);
     idleTimer.unref?.();
   };
@@ -103,14 +120,11 @@ export function createClaudeLiveSession(deps: ClaudeLiveSessionDeps): ClaudeSess
     switch (message.subtype) {
       case "task_started": taskNames.set(message.task_id, message.description); break;
       case "background_tasks_changed": {
-        const wasBusy = backgroundTasks.size > 0;
-        backgroundTasks.clear();
-        for (const task of message.tasks) {
-          if (task.ambient) continue;
-          backgroundTasks.add(task.task_id);
-          taskNames.set(task.task_id, task.description);
-        }
-        if (backgroundTasks.size) cancelIdle();
+        const wasBusy = backgroundTaskList.length > 0;
+        const next = normalizeClaudeBackgroundTasks(message);
+        for (const task of next) taskNames.set(task.id, task.description);
+        publishBackgroundTasks(next);
+        if (next.length) cancelIdle();
         else if (wasBusy && !current) armIdle(Math.max(idleCloseMs, FOLLOW_UP_GRACE_MS));
         break;
       }
@@ -181,6 +195,7 @@ export function createClaudeLiveSession(deps: ClaudeLiveSessionDeps): ClaudeSess
     close() {
       closing ??= (async () => {
         cancelIdle();
+        clearBackgroundTasks();
         deps.input.end();
         deps.native.close();
         current?.end(); previous?.end();
@@ -189,7 +204,8 @@ export function createClaudeLiveSession(deps: ClaudeLiveSessionDeps): ClaudeSess
       return closing;
     },
     isLive: () => closing === null,
-    hasBackgroundWork: () => backgroundTasks.size > 0
+    hasBackgroundWork: () => backgroundTaskList.length > 0,
+    backgroundTasks: () => backgroundTaskList
   };
 
   // The opening turn is the session's first: route its output there and send its instruction straight away.
@@ -201,6 +217,7 @@ export function createClaudeLiveSession(deps: ClaudeLiveSessionDeps): ClaudeSess
     } catch (error) {
       endTurns({ error });
     } finally {
+      clearBackgroundTasks();
       void session.close();
       notifyIdle();
     }

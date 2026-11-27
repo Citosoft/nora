@@ -154,13 +154,7 @@ export function useWorkspaceLoading({
         next.workspaces.find((workspace) => workspace.project.id === projectId)?.project ??
         (next.project?.id === projectId ? next.project : null);
       const targetKind = targetProject?.location?.kind ?? "local";
-      trackAnalyticsEvent("workspace.focused", {
-        projectId: next.project?.id ?? projectId,
-        requestedProjectId: projectId,
-        projectName: targetProject?.name ?? next.project?.name ?? null,
-        kind: targetKind,
-        workspaceCount: snapshot?.workspaces.length ?? 0
-      });
+      trackAnalyticsEvent({ name: "workspace.focused", properties: { kind: targetKind, workspaceCount: next.workspaces.length } });
       return next;
     } catch (error: unknown) {
       const missingProjectRoot = isMissingProjectFolderError(error)

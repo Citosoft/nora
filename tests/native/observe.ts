@@ -2,11 +2,12 @@ import type { ExecutionHost } from "@main/execution/host";
 import type { AcceptanceView, AcceptanceContext } from "./types/acceptance.types";
 
 export function observe(host: ExecutionHost): AcceptanceView {
-  const view: AcceptanceView = { runs: new Map(), items: new Map(), requests: new Map(), streamedRuns: new Set(), stop() {} };
+  const view: AcceptanceView = { runs: new Map(), items: new Map(), requests: new Map(), backgroundTasks: [], streamedRuns: new Set(), stop() {} };
   view.stop = host.subscribe({ after: 0, conversationId: "acceptance", onError() {}, onEvent(event) {
     const payload = event.payload;
     if (payload.kind === "run") view.runs.set(payload.run.id, payload.run);
     if (payload.kind === "request") view.requests.set(payload.request.id, payload.request);
+    if (payload.kind === "background-tasks") view.backgroundTasks = payload.tasks;
     if (payload.kind === "item") {
       view.items.set(payload.item.id, payload.item);
       if (payload.item.kind === "message" && payload.item.role === "assistant" && !payload.item.complete) view.streamedRuns.add(payload.item.runId);

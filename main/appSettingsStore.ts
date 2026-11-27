@@ -15,6 +15,7 @@ import { readPersonalization } from "@shared/personalization/settings";
 import { parseDesktopLifecycleSettings } from "@shared/desktop-lifecycle/settings";
 import { parseVoiceSettings } from "@shared/voice/settings";
 import { parseThreadBackdropSettings } from "@shared/thread-backdrop/settings";
+import { parseNotchIslandSettings } from "@shared/island/settings";
 
 export class AppSettingsStore {
   constructor(private readonly filePath: string) {}
@@ -89,6 +90,7 @@ function parseAppSettings(raw: string): AppSettings {
         candidate.analyticsConsentStatus === "granted" || candidate.analyticsConsentStatus === "declined"
           ? candidate.analyticsConsentStatus
           : DEFAULT_APP_SETTINGS.analyticsConsentStatus,
+      usageStatisticsEnabled: candidate.usageStatisticsEnabled !== false,
       openInternalBrowserOnNewPortDetection: candidate.openInternalBrowserOnNewPortDetection === true,
       browserDataImportPromptSeen: candidate.browserDataImportPromptSeen === true,
       linuxAptSetupPromptDismissed: candidate.linuxAptSetupPromptDismissed === true,
@@ -98,6 +100,7 @@ function parseAppSettings(raw: string): AppSettings {
           : DEFAULT_APP_SETTINGS.fileEditorThemeId,
       uiFontSize: normalizeUiFontSize(candidate.uiFontSize),
       threadBackdrop: parseThreadBackdropSettings(candidate.threadBackdrop),
+      notchIsland: parseNotchIslandSettings(candidate.notchIsland),
       terminalQuickLaunchDefaults: parseTerminalQuickLaunchDefaults(candidate.terminalQuickLaunchDefaults),
       terminalPresets: parseTerminalPresets(candidate.terminalPresets),
       ai: decryptedAiSettings,

@@ -21,7 +21,7 @@ export function demoRun(id: string, conversationId: string, instruction: string,
 }
 export function demoView(conversation: Conversation, runs: ConversationRun[] = [], items: TimelineItem[] = [], requests: RuntimeRequest[] = []): ConversationView {
   const finished = new Set(["completed", "failed", "interrupted"]);
-  return { header: { schemaVersion: 1, cursor: 0, conversation, activeRuns: runs.filter(r => !finished.has(r.state)), queuedRuns: [], pendingRequests: requests },
+  return { header: { schemaVersion: 1, cursor: 0, conversation, activeRuns: runs.filter(r => !finished.has(r.state)), queuedRuns: [], pendingRequests: requests, backgroundTasks: [] },
     items, nextBefore: null, runHistory: { runs, nextBefore: null } };
 }
 export function seedThreads(now: string): Map<string, ConversationView> {

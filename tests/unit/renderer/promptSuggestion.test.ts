@@ -16,7 +16,7 @@ function run(id: string, promptSuggestion?: string): ConversationRun {
     ...(promptSuggestion ? { promptSuggestion } : {}) };
 }
 function view(runs: ConversationRun[]): ConversationView {
-  return { header: { schemaVersion: 1, cursor: 0, conversation: threadSummary().conversation, activeRuns: [], queuedRuns: [], pendingRequests: [] },
+  return { header: { schemaVersion: 1, cursor: 0, conversation: threadSummary().conversation, activeRuns: [], queuedRuns: [], pendingRequests: [], backgroundTasks: [] },
     items: [], nextBefore: null, runHistory: { runs, nextBefore: null } };
 }
 

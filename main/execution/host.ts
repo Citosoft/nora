@@ -1,5 +1,6 @@
 import { captureProviderConnection } from "./providerConnection";
 import type { ExternalSessionsResult } from "@shared/types/conversation/externalSessions.types";
+import { externalTranscriptHistory } from "./externalImport";
 import { discoverExternalSessions, readExternalTranscript } from "./externalSessions";
 import type { CommandReceipt, ContextUsage, Conversation, ConversationCommand, ProviderBinding, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ConversationEventPage, ConversationHeader, ConversationHistoryPage, ConversationSummary, HistoryQuery, HostShutdownResult, OutputFileContent, OutputFileSize, OutputThread } from "@shared/types/conversation/queries.types";
@@ -11,6 +12,7 @@ import type { ProviderAccountRequest, ProviderAccountResult } from "@shared/type
 import type { ProviderCatalogResult } from "@shared/types/provider/catalog.types";
 import type { HostDependencies, HostLifecycle, WorkerGroup } from "@main/types/execution/host.types";
 import type { ExecutionProvider } from "@main/types/execution/provider.types";
+import type { ExternalSessionReader, SuppliedHistory } from "@main/types/execution/externalSessions.types";
 import type { EventSubscription } from "@main/types/execution/engine.types";
 import { ConversationEngine } from "./engine";
 import { EffectWorker } from "./effectWorker";
@@ -53,6 +55,7 @@ export class ExecutionHost {
   private scheduled = false;
   private unsubscribe = (): void => {};
   private stopFollowUps = (): void => {};
+  private stopBackgroundTasks = (): void => {};
   private shutdownPromise: Promise<HostShutdownResult> | null = null;
   private readonly concurrency: number;
   private readonly naming: ConversationNaming | null;
@@ -102,6 +105,11 @@ export class ExecutionHost {
         try { const accepted = this.engine.acceptFollowUp(followUp); this.schedule(); return accepted; }
         catch { this.fault(); return false; }
       });
+      this.stopBackgroundTasks = this.deps.providers.onBackgroundTasks((update) => {
+        if (this.lifecycle !== "running") return;
+        try { this.engine.acceptBackgroundTasks(update); }
+        catch { this.fault(); }
+      });
       this.unsubscribe = this.engine.subscribe({ after: this.deps.store.cursor(), onEvent: ({ payload }) => {
         if (payload.kind === "run" && payload.run.state !== "starting") this.startingAttempts.delete(payload.run.attemptId);
         this.schedule();
@@ -115,6 +123,21 @@ export class ExecutionHost {
   }
 
   async execute(input: ConversationCommand, frozenBot?: BotSnapshot): Promise<CommandReceipt> {
+    return await this.admit(input, { frozenBot });
+  }
+
+  /**
+   * Creates a conversation that adopts history an importer supplies (for example from another app whose
+   * native session is gone). It has no native session, so it is never resumed and runs nothing.
+   */
+  async importHistory(input: ConversationCommand, history: SuppliedHistory): Promise<CommandReceipt> {
+    if (input.kind !== "create" || input.externalSessionId || input.initialInstruction) {
+      throw new ExecutionCommandError("invalid", "Supplied history can only start a new conversation without a native session or instruction");
+    }
+    return await this.admit(input, { suppliedHistory: history });
+  }
+
+  private async admit(input: ConversationCommand, { frozenBot, suppliedHistory }: { frozenBot?: BotSnapshot; suppliedHistory?: SuppliedHistory }): Promise<CommandReceipt> {
     if (this.lifecycle !== "running") throw new ExecutionCommandError("conflict", "Execution host is not accepting instructions");
     let command = conversationCommandSchema.parse(input);
     if (command.kind === "create" && command.parentId && !command.source) {
@@ -150,15 +173,16 @@ export class ExecutionHost {
     const previousRuns = command.kind === "submit" && this.naming
       ? this.deps.store.history({ conversationId: command.conversationId, scope: "runs", limit: 1 }) : null;
     const firstInstruction = previousRuns?.scope === "runs" && previousRuns.runs.length === 0;
-    const externalTranscript = command.kind === "create" && command.externalSessionId && workspace
-      ? await readExternalTranscript(this.deps.providers.resolve(command.provider.kind, command.provider.instanceId), workspace, command.externalSessionId) : undefined;
+    const importedHistory = command.kind === "create" && command.externalSessionId && workspace
+      ? externalTranscriptHistory(await readExternalTranscript(this.deps.providers.resolve(command.provider.kind, command.provider.instanceId), workspace, command.externalSessionId))
+      : suppliedHistory;
     if (this.lifecycle !== "running") throw new ExecutionCommandError("conflict", "Execution host is not accepting instructions");
     const preferences = this.deps.threadPreferences?.() ?? DEFAULT_THREAD_PREFERENCES;
     const owner = command.kind === "submit" ? this.deps.store.header(command.conversationId)?.conversation : null;
     const provider = owner && preferences.followUp === "steer" && !(command.kind === "submit" && command.action)
       ? this.deps.providers.resolve(owner.provider.kind, owner.provider.instanceId) : null;
     const steerFollowUp = preferences.followUp === "steer" && !!provider?.capabilities.steering && !!provider.steer;
-    const receipt = this.engine.execute(command, { workspace, role, bot, group, direct, externalTranscript, steerFollowUp, providerTransition, providerConnection });
+    const receipt = this.engine.execute(command, { workspace, role, bot, group, direct, importedHistory, steerFollowUp, providerTransition, providerConnection });
     if (firstInstruction && command.kind === "submit" && preferences.automaticTitles && !command.action) {
       const conversation = this.deps.store.header(command.conversationId)?.conversation;
       // A direct chat keeps its bot's name as its title.
@@ -286,6 +310,18 @@ export class ExecutionHost {
       throw new ExecutionCommandError("environment", "Provider discovery must run on the owning execution host");
     }
     return this.deps.providers.resolve(kind, instanceId).catalog(workspace);
+  }
+
+  /**
+   * The provider's own history reader, for importers that check which native sessions still exist before
+   * the folder is a Nora workspace. Unlike `externalSessions`, it includes sessions Nora already adopted.
+   */
+  externalSessionReader(kind: ProviderBinding["kind"], instanceId: string): ExternalSessionReader | null {
+    try {
+      return this.deps.providers.resolve(kind, instanceId).externalSessions ?? null;
+    } catch {
+      return null;
+    }
   }
 
   async externalSessions(kind: ProviderBinding["kind"], instanceId: string, selection: WorkspaceRef): Promise<ExternalSessionsResult> {
@@ -426,7 +462,7 @@ export class ExecutionHost {
     } finally {
       waitController.abort();
       await Promise.race([this.deps.providers.close().catch(() => {}), deadline]);
-      clearTimeout(timeout); this.unsubscribe(); this.stopFollowUps(); this.lifecycle = "stopped";
+      clearTimeout(timeout); this.unsubscribe(); this.stopFollowUps(); this.stopBackgroundTasks(); this.lifecycle = "stopped";
       try { this.ownership.release(); } finally { this.deps.store.close(); }
     }
   }

@@ -11,7 +11,7 @@ export function migrateExecutionSchema(database: DatabaseSync, environmentId: st
   database.exec("BEGIN IMMEDIATE");
   try {
     const version = versionRowSchema.parse(database.prepare("PRAGMA user_version").get()).user_version;
-    if (version > 7) throw new Error(`Unsupported execution schema ${version}; a newer Nora version is required`);
+    if (version > 8) throw new Error(`Unsupported execution schema ${version}; a newer Nora version is required`);
     if (version === 0) {
       database.exec(`
         CREATE TABLE execution_owner (environment_id TEXT NOT NULL);
@@ -40,8 +40,19 @@ export function migrateExecutionSchema(database: DatabaseSync, environmentId: st
     // Historical conversations retain their original native guidance; never infer a new role.
     if (version < 6) database.exec("UPDATE conversation_heads SET json = json_set(json, '$.role', NULL) WHERE json_type(json, '$.role') IS NULL");
     if (version < 7) referenceCheckpointBlobs(database);
-    database.exec("PRAGMA user_version = 7; COMMIT");
+    if (version < 8) addBackgroundTasksColumn(database);
+    database.exec("PRAGMA user_version = 8; COMMIT");
   } catch (error) { database.exec("ROLLBACK"); throw error; }
+}
+
+/**
+ * v8 tracks each conversation's running background tasks. Idempotent because pre-v3 upgrades add it early,
+ * before projecting legacy conversations into the heads table.
+ */
+function addBackgroundTasksColumn(database: DatabaseSync): void {
+  const columns = database.prepare("SELECT name FROM pragma_table_info('conversation_heads')").all();
+  if (columns.some((column) => column.name === "background_tasks")) return;
+  database.exec(`ALTER TABLE conversation_heads ADD COLUMN background_tasks TEXT NOT NULL DEFAULT '[]'`);
 }
 
 /** v7 records which checkpoint uses each stored blob, so pruning old turns can drop bytes nothing else needs. */
@@ -90,6 +101,8 @@ function normalizeProjections(database: DatabaseSync, environmentId: string): vo
     CREATE INDEX requests_status ON conversation_requests(conversation_id, status);
     CREATE INDEX unfinished_effects ON effects(json_extract(json, '$.status'));
   `);
+  // Projection writes today's head columns, so the table needs them before legacy conversations replay into it.
+  addBackgroundTasksColumn(database);
   // Iterate rather than loading every old transcript into memory at once.
   for (const row of database.prepare("SELECT id, json FROM conversations ORDER BY rowid").iterate()) {
     const snapshot = snapshotSchema.parse(JSON.parse(legacyRowSchema.parse(row).json));

@@ -3,10 +3,23 @@ import { removeGitWorktreeIfRegistered } from "../helpers/gitWorktreeRemoval";
 import fs from "node:fs/promises";
 import type {
   SessionLifecycleHelperDeps,
-  SessionLifecycleHelpers
+  SessionLifecycleHelpers,
+  WorktreeCollectionAfterDetach
 } from "../types/orchestratorSessionLifecycle.types";
 
 export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps): SessionLifecycleHelpers {
+  /**
+   * Runs the workspace's archive scripts, then removes the git checkout. Script failures never block
+   * removal; their message is returned so the caller can show it instead of clearing the error banner.
+   */
+  async function removeWorktreeCheckout(project: ProjectSummary, worktree: WorktreeRecord): Promise<string | null> {
+    const report = await deps.runWorktreeLifecycleScripts(project, worktree, "worktree-archive");
+    await removeGitWorktreeIfRegistered(() =>
+      deps.execGit(deps.getProjectTarget(project), ["worktree", "remove", "--force", worktree.path])
+    );
+    return report.kind === "failed" ? report.message : null;
+  }
+
   async function focusAgent(agentId: string): Promise<AppState> {
     const snapshot = deps.getSnapshot();
     const agent = snapshot.agents.find((item) => item.id === agentId);
@@ -215,7 +228,7 @@ export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps):
     deps.deleteContextWriteChain(agentId);
 
     const remainingAgents = state.agents.filter((item) => item.id !== agentId);
-    const nextWorktrees = await refreshWorktreeCollectionAfterDetach(
+    const { worktrees: nextWorktrees, scriptFailureMessage } = await refreshWorktreeCollectionAfterDetach(
       state.project,
       state.worktrees,
       remainingAgents,
@@ -248,7 +261,7 @@ export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps):
       agents: currentState.agents.filter((item) => item.id !== agentId),
       worktrees: nextWorktrees,
       focusedAgentId: nextFocusedAgentId,
-      errorMessage: null
+      errorMessage: scriptFailureMessage
     }));
 
     return deps.refreshProjectState();
@@ -274,7 +287,7 @@ export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps):
     deps.deleteTerminalActivity(terminalId);
 
     const remainingTerminals = state.terminals.filter((item) => item.id !== terminalId);
-    const nextWorktrees = await refreshWorktreeCollectionAfterTerminalDetach(
+    const { worktrees: nextWorktrees, scriptFailureMessage } = await refreshWorktreeCollectionAfterTerminalDetach(
       state.project,
       state.worktrees,
       state.agents,
@@ -291,7 +304,7 @@ export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps):
       terminals: currentState.terminals.filter((item) => item.id !== terminalId),
       worktrees: nextWorktrees,
       focusedTerminalId: nextFocusedTerminalId,
-      errorMessage: null
+      errorMessage: scriptFailureMessage
     }));
 
     return deps.refreshProjectState();
@@ -302,25 +315,32 @@ export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps):
     worktrees: WorktreeRecord[],
     remainingAgents: AgentSession[],
     removedAgent: AgentSession
-  ): Promise<WorktreeRecord[]> {
+  ): Promise<WorktreeCollectionAfterDetach> {
     const updated = await deps.detachAgentFromWorktree(removedAgent);
     if (!updated) {
-      return worktrees;
+      return { worktrees, scriptFailureMessage: null };
     }
 
     const stillAttached =
       remainingAgents.some((agent) => agent.worktreeId === updated.id) ||
       deps.getSnapshot().terminals.some((terminal) => terminal.worktreeId === updated.id);
     if (stillAttached) {
-      return deps.upsertWorktree(worktrees, updated);
+      return { worktrees: deps.upsertWorktree(worktrees, updated), scriptFailureMessage: null };
     }
 
+    return removeDetachedWorktree(project, worktrees, updated);
+  }
+
+  async function removeDetachedWorktree(
+    project: ProjectSummary,
+    worktrees: WorktreeRecord[],
+    updated: WorktreeRecord
+  ): Promise<WorktreeCollectionAfterDetach> {
+    let scriptFailureMessage: string | null;
     try {
-      await removeGitWorktreeIfRegistered(() =>
-        deps.execGit(deps.getProjectTarget(project), ["worktree", "remove", "--force", updated.path])
-      );
+      scriptFailureMessage = await removeWorktreeCheckout(project, updated);
     } catch {
-      return deps.upsertWorktree(worktrees, updated);
+      return { worktrees: deps.upsertWorktree(worktrees, updated), scriptFailureMessage: null };
     }
 
     await fs.rm(deps.getWorktreeDir(updated.projectId, updated.sessionId, updated.id), {
@@ -328,7 +348,7 @@ export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps):
       force: true
     });
 
-    return worktrees.filter((item) => item.id !== updated.id);
+    return { worktrees: worktrees.filter((item) => item.id !== updated.id), scriptFailureMessage };
   }
 
   async function refreshWorktreeCollectionAfterTerminalDetach(
@@ -337,37 +357,24 @@ export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps):
     remainingAgents: AgentSession[],
     remainingTerminals: TerminalSession[],
     removedTerminal: TerminalSession
-  ): Promise<WorktreeRecord[]> {
+  ): Promise<WorktreeCollectionAfterDetach> {
     const updated = await deps.detachTerminalFromWorktree(removedTerminal);
     if (!updated) {
-      return worktrees;
+      return { worktrees, scriptFailureMessage: null };
     }
 
     const stillAttached =
       remainingAgents.some((agent) => agent.worktreeId === updated.id) ||
       remainingTerminals.some((terminal) => terminal.worktreeId === updated.id);
     if (stillAttached) {
-      return deps.upsertWorktree(worktrees, updated);
+      return { worktrees: deps.upsertWorktree(worktrees, updated), scriptFailureMessage: null };
     }
 
     if (updated.path === project.rootPath || updated.createdFromRef === "ROOT") {
-      return worktrees.filter((item) => item.id !== updated.id);
+      return { worktrees: worktrees.filter((item) => item.id !== updated.id), scriptFailureMessage: null };
     }
 
-    try {
-      await removeGitWorktreeIfRegistered(() =>
-        deps.execGit(deps.getProjectTarget(project), ["worktree", "remove", "--force", updated.path])
-      );
-    } catch {
-      return deps.upsertWorktree(worktrees, updated);
-    }
-
-    await fs.rm(deps.getWorktreeDir(updated.projectId, updated.sessionId, updated.id), {
-      recursive: true,
-      force: true
-    });
-
-    return worktrees.filter((item) => item.id !== updated.id);
+    return removeDetachedWorktree(project, worktrees, updated);
   }
 
   async function removeWorktree(worktreeId: string): Promise<AppState> {
@@ -390,10 +397,9 @@ export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps):
       throw new Error("Remove all agents and terminals from this worktree before deleting it.");
     }
 
+    let scriptFailureMessage: string | null;
     try {
-      await removeGitWorktreeIfRegistered(() =>
-        deps.execGit(deps.getProjectTarget(project), ["worktree", "remove", "--force", worktree.path])
-      );
+      scriptFailureMessage = await removeWorktreeCheckout(project, worktree);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to remove git worktree.";
       throw new Error(message);
@@ -424,7 +430,7 @@ export function createSessionLifecycleHelpers(deps: SessionLifecycleHelperDeps):
       ...currentState,
       sessions: nextSessions,
       worktrees: nextWorktrees,
-      errorMessage: null
+      errorMessage: scriptFailureMessage
     }));
 
     return deps.refreshProjectState();

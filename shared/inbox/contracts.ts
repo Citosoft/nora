@@ -49,7 +49,9 @@ export const inboxTargetSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("thread"), conversationId: id }).strict(),
   z.object({ kind: z.literal("workflow"), projectId: id, runId: id }).strict(),
   z.object({ kind: z.literal("connectors") }).strict(),
-  z.object({ kind: z.literal("app"), appId: id }).strict()
+  z.object({ kind: z.literal("app"), appId: id }).strict(),
+  /** The inbox itself, e.g. from the notch island's inbox button. */
+  z.object({ kind: z.literal("inbox") }).strict()
 ]);
 
 export const SNOOZE_MAX_MS = 30 * 24 * 60 * 60 * 1000;

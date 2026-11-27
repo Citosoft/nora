@@ -68,7 +68,11 @@ describe("gridFor", () => {
 describe("pixel glyphs", () => {
   it("lists lit cells with a diagonal stagger", () => {
     const cells = glyphCells(["#.", ".#"]);
-    expect(cells).toEqual([{ column: 0, row: 0, delayMs: 0 }, { column: 1, row: 1, delayMs: 56 }]);
+    expect(cells).toEqual([{ column: 0, row: 0, shape: "full", delayMs: 0 }, { column: 1, row: 1, shape: "full", delayMs: 56 }]);
+  });
+
+  it("reads the mark's diagonal as half-width cells", () => {
+    expect(glyphCells(["<>"]).map((cell) => cell.shape)).toEqual(["left", "right"]);
   });
 
   it("keeps every bundled glyph rectangular", () => {

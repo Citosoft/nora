@@ -5,18 +5,22 @@ import process from "node:process";
 
 const root = process.cwd();
 
-const entry = path.join(root, "main", "preload.ts");
-const outfile = path.join(root, "dist", "main", "preload.js");
+// The app window's preload and the notch island's much narrower one.
+const entryPoints = [
+  { in: path.join(root, "main", "preload.ts"), out: "preload" },
+  { in: path.join(root, "main", "preload", "islandPreload.ts"), out: "islandPreload" }
+];
+const outdir = path.join(root, "dist", "main");
 const preloadChunkDir = path.join(root, "dist", "main", "preload");
 
 const buildOptions = {
   absWorkingDir: root,
-  entryPoints: [entry],
+  entryPoints,
   bundle: true,
   platform: "node",
   format: "cjs",
   target: "es2022",
-  outfile,
+  outdir,
   external: ["electron"],
   sourcemap: true,
   logLevel: "info",

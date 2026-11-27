@@ -1,14 +1,13 @@
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { shouldOpenAnalyticsConsentDialog } from "@/components/app/logic/startupDialogVisibility";
 import type { UseAnalyticsConsentPromptArgs, UseAnalyticsConsentPromptResult } from "@/components/app/types/component.types";
-import { setAnalyticsConsentStatus, setAnalyticsRuntimeAllowed } from "@/lib/analytics";
 import { useCallback, useEffect, useState } from "react";
 
 export function useAnalyticsConsentPrompt({
   appSettings,
   isAppSettingsLoaded,
   isOnboardingOpen,
-  updateAnalyticsConsentStatus,
+  updateAnalyticsPreferences,
   captureError
 }: UseAnalyticsConsentPromptArgs): UseAnalyticsConsentPromptResult {
   const [isAnalyticsConsentDialogOpen, setIsAnalyticsConsentDialogOpen] = useState(false);
@@ -23,7 +22,6 @@ export function useAnalyticsConsentPrompt({
       }
 
       setAnalyticsRuntimeConfig(nextConfig);
-      setAnalyticsRuntimeAllowed(nextConfig.analyticsAllowedInCurrentRun);
     }).catch(captureError);
 
     return () => {
@@ -32,7 +30,6 @@ export function useAnalyticsConsentPrompt({
   }, [captureError]);
 
   useEffect(() => {
-    setAnalyticsConsentStatus(appSettings.analyticsConsentStatus);
     setIsAnalyticsConsentDialogOpen(shouldOpenAnalyticsConsentDialog(
       isAppSettingsLoaded,
       appSettings.analyticsConsentStatus,
@@ -42,17 +39,18 @@ export function useAnalyticsConsentPrompt({
 
   const allowAnalyticsConsent = useCallback((): void => {
     setIsAnalyticsConsentDialogOpen(false);
-    void updateAnalyticsConsentStatus("granted").catch(captureError);
-  }, [captureError, updateAnalyticsConsentStatus]);
+    void updateAnalyticsPreferences({ analyticsConsentStatus: "granted" }).catch(captureError);
+  }, [captureError, updateAnalyticsPreferences]);
 
   const declineAnalyticsConsent = useCallback((): void => {
     setIsAnalyticsConsentDialogOpen(false);
-    void updateAnalyticsConsentStatus("declined").catch(captureError);
-  }, [captureError, updateAnalyticsConsentStatus]);
+    void updateAnalyticsPreferences({ analyticsConsentStatus: "declined" }).catch(captureError);
+  }, [captureError, updateAnalyticsPreferences]);
 
   return {
     analyticsRuntimeConfig,
     isAnalyticsConsentDialogOpen,
+    usageStatisticsRequireConsent: analyticsRuntimeConfig?.usageStatisticsRequireConsent ?? true,
     allowAnalyticsConsent,
     declineAnalyticsConsent
   };

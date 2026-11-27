@@ -1,3 +1,5 @@
+import { ANALYTICS_DISCLOSURE } from "@/components/app/constants/analyticsDisclosure";
+import { AnalyticsDisclosure } from "@/components/app/shared/AnalyticsDisclosure";
 import type { AnalyticsConsentDialogProps } from "@/components/app/types/component.types";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,44 +10,43 @@ import {
   DialogFooter,
   DialogHeader
 } from "@/components/ui/dialog";
-import { BarChart3 } from "lucide-react";
 
 export function AnalyticsConsentDialog({
   open,
+  usageStatisticsRequireConsent,
   onAllow,
   onDecline
 }: AnalyticsConsentDialogProps) {
+  // Where the law needs opt-in for any analytics, nothing has been sent yet and one answer covers both levels.
+  const sections = usageStatisticsRequireConsent
+    ? [
+      { title: "Usage statistics", items: ANALYTICS_DISCLOSURE.statistics },
+      { title: "Detailed analytics", items: ANALYTICS_DISCLOSURE.detailed }
+    ]
+    : [
+      { title: "Sent now, unless you turn it off in Settings → Privacy", items: ANALYTICS_DISCLOSURE.statistics },
+      { title: "Sent only if you allow detailed analytics", items: ANALYTICS_DISCLOSURE.detailed }
+    ];
   return (
     <Dialog open={open} onOpenChange={() => undefined}>
-      <DialogContent headerTitle="Help improve Nora" className="max-w-[580px]">
+      <DialogContent headerTitle="Help improve Nora" className="max-w-[620px]">
         <DialogHeader>
           <DialogDescription>
-            Can Nora collect optional usage analytics to help us improve reliability and product decisions?
+            {usageStatisticsRequireConsent
+              ? "Can Nora send usage analytics to help us fix problems and decide what to build? Nothing is sent unless you allow it."
+              : "Nora sends anonymous usage statistics to help us fix problems and decide what to build. Would you also like to share detailed analytics?"}
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Nora counts app launches using a random installation ID, app version, operating system and country from your region setting,
-            even if you decline optional analytics. This ID is separate from your account.
-          </p>
-          <div className="rounded-md border border-border/70 bg-background p-4">
-            <div className="flex items-start gap-3">
-              <BarChart3 className="mt-0.5 size-5 text-primary" />
-              <div className="space-y-1 text-sm text-foreground">
-                <div className="font-medium">You can change this anytime in Settings.</div>
-                <div className="text-muted-foreground">
-                  Open Settings → Privacy to change optional usage analytics.
-                </div>
-              </div>
-            </div>
-          </div>
+          <AnalyticsDisclosure sections={sections} />
+          <p className="text-sm text-muted-foreground">You can change either choice at any time in Settings → Privacy.</p>
         </DialogBody>
         <DialogFooter>
           <Button variant="outline" onClick={onDecline}>
             No thanks
           </Button>
           <Button onClick={onAllow}>
-            Allow analytics
+            {usageStatisticsRequireConsent ? "Allow analytics" : "Allow detailed analytics"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -8,7 +8,7 @@ import { threadSummary } from "./threadWorkspaceFixtures";
 test("thread details mount in the standalone simulator without the signed-in shell runtime", () => {
   const rendered = renderToStaticMarkup(createElement(ThreadInsightsPanel, {
     header: { schemaVersion: 1, cursor: 0, conversation: threadSummary().conversation,
-      activeRuns: [], queuedRuns: [], pendingRequests: [] },
+      activeRuns: [], queuedRuns: [], pendingRequests: [], backgroundTasks: [] },
     providerLabel: "Simulator · no LLM", connectors: null,
     skills: { refresh() {}, summary: { catalog: { status: "ready", skills: [{ name: "release-notes", description: "Draft release notes", scope: "workspace" }] },
       used: [{ name: "code-review", evidence: "loaded", agents: [], calls: [] }], available: [{ name: "release-notes", description: "Draft release notes", scope: "workspace" }] } }, changes: { status: "pending" },

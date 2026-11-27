@@ -1,3 +1,4 @@
+import { trackAnalyticsEvent } from "@/lib/analytics";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAppRootState } from "@/components/app/context/appRootStateContext";
 import { useCanonicalAppSnapshot } from "./useAppDomainState";
@@ -24,6 +25,7 @@ export function useWorkspaceToolNavigation({ preferences, setPreferences }: Work
 
   const openTool = useCallback<WorkspaceNavigationValue["openTool"]>((id, tool) => {
     if (id !== projectId) return;
+    trackAnalyticsEvent({ name: "view.opened", properties: { view: `tool:${tool}` } });
     setPreferences((current) => updateWorkspaceView(current, id, { activeTool: tool }));
     setOpenedTools((current) => current.some((entry) => entry.projectId === id && entry.tool === tool)
       ? current : [...current, { projectId: id, tool }]);

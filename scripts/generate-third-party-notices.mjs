@@ -1,6 +1,14 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { readRendererBundledPackages } from "./bundledPackages.mjs";
 
+/** Logos copied into the app rather than installed as packages (BrandMarks.tsx and renderer/brand-icons). */
+const BUNDLED_ARTWORK = [
+  { name: "T3 Code logo", usedIn: "Migrate from another app", copyright: "Copyright (c) 2026 T3 Tools Inc.", license: "MIT" },
+  { name: "Orca logo", usedIn: "Migrate from another app", copyright: "Copyright (c) 2026 Lovecast Inc.", license: "MIT" },
+  { name: "OpenBot app icon", usedIn: "Migrate bots (identifies the source app)", copyright: "nightly-labs/openbot", license: "PolyForm Noncommercial 1.0.0" },
+  { name: "Grok Bot app icon", usedIn: "Migrate bots (identifies the source app)", copyright: "SpaceXAI", license: "Proprietary; shown only to name the app being imported from" }
+];
+
 const manifest = JSON.parse(await readFile("package.json", "utf8"));
 const lock = JSON.parse(await readFile("package-lock.json", "utf8"));
 const packages = lock.packages ?? {};
@@ -47,6 +55,12 @@ const lines = [
   "Includes top-level runtime dependencies declared in `package.json` (`dependencies` and `optionalDependencies`) and every package bundled into the renderer.",
   "",
   "License texts are available in each dependency package under `node_modules/<package>/LICENSE*`.",
+  "",
+  "## Bundled artwork",
+  "",
+  "| Artwork | Used in | Copyright | License |",
+  "| --- | --- | --- | --- |",
+  ...BUNDLED_ARTWORK.map((entry) => `| ${entry.name} | ${entry.usedIn} | ${entry.copyright} | ${entry.license} |`),
   ""
 ];
 

@@ -94,6 +94,7 @@ function openClaudeSession(input: ClaudeOpenInput, runtime: ClaudeRuntimeOptions
   } });
   return createClaudeLiveSession({
     sessionId: input.sessionId, input: prompts, onFollowUp: input.onFollowUp,
+    onBackgroundTasksChanged: input.onBackgroundTasksChanged,
     opening: { nativeTurnId: input.nativeTurnId, instruction: input.instruction, model: input.model, permissionMode: input.permissionMode },
     native: {
       interrupt: () => native.interrupt(),

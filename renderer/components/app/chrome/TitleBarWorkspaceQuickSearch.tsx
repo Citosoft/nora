@@ -379,8 +379,8 @@ export const TitleBarWorkspaceQuickSearch = ({
           "grid h-8 w-10 shrink-0 place-items-center rounded-md transition hover:bg-accent/60 hover:text-foreground",
           iconToneClass
         )}
-        aria-label={`Search project (${openShortcutLabel})`}
-        title={`Search project (${openShortcutLabel})`}
+        aria-label={openShortcutLabel ? `Search project (${openShortcutLabel})` : "Search project"}
+        title={openShortcutLabel ? `Search project (${openShortcutLabel})` : "Search project"}
         aria-expanded={open}
         aria-haspopup="dialog"
       >

@@ -16,7 +16,7 @@ const EMPTY_MESSAGES = {
 export function InboxPage() {
   const model = useInboxView();
   return <section aria-label="Inbox" className="min-h-0 flex-1 overflow-y-auto">
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-10 sm:px-10">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10 sm:px-10">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground"><Inbox className="size-4" aria-hidden="true" /><span>Inbox</span></div>

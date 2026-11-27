@@ -1,3 +1,5 @@
+import { applyAnalyticsPreferences } from "@shared/analytics/preferences";
+import type { AnalyticsPreferencesPatch } from "@shared/types/analytics.types";
 import { normalizeUiFontSize } from "@shared/appearance/fontSize";
 import { useAgentWindowSettings } from "@/components/app/hooks/useAgentWindowSettings";
 import { normalizeAppSettings } from "@/components/app/logic/normalizeAppSettings";
@@ -323,6 +325,10 @@ export function useAppPreferences(): AppPreferences {
     }));
   };
 
+  const updateNotchIsland = async (patch: Partial<AppSettings["notchIsland"]>) => {
+    await saveAppSettings((current) => ({ ...current, notchIsland: { ...current.notchIsland, ...patch } }));
+  };
+
   const updateWorkspaceStateStorageMode = async (workspaceStateStorageMode: AppSettings["workspaceStateStorageMode"]) => {
     await saveAppSettings((current) => ({
       ...current,
@@ -392,13 +398,8 @@ export function useAppPreferences(): AppPreferences {
     }));
   };
 
-  const updateAnalyticsConsentStatus = async (
-    analyticsConsentStatus: AppSettings["analyticsConsentStatus"]
-  ) => {
-    await saveAppSettings((current) => ({
-      ...current,
-      analyticsConsentStatus
-    }));
+  const updateAnalyticsPreferences = async (patch: AnalyticsPreferencesPatch) => {
+    await saveAppSettings((current) => ({ ...current, ...applyAnalyticsPreferences(current, patch) }));
   };
 
   const updateTerminalPresets = async (terminalPresets: AppSettings["terminalPresets"]) => {
@@ -528,6 +529,7 @@ export function useAppPreferences(): AppPreferences {
     updateVercelAccountLabel,
     updateFileEditorThemeId,
     updateThreadBackdrop,
+    updateNotchIsland,
     updateUiFontSize,
     updateHardwareAccelerationEnabled,
     updateWorkspaceStateStorageMode,
@@ -538,7 +540,7 @@ export function useAppPreferences(): AppPreferences {
     updateBrowserPreferences,
     updateLifecycle,
     updateNotificationPreferences,
-    updateAnalyticsConsentStatus,
+    updateAnalyticsPreferences,
     updateTerminalPresets,
     updateTerminalQuickLaunchDefaults,
     updateAiPreferredProvider,

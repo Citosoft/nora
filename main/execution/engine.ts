@@ -1,4 +1,4 @@
-import { externalImportEvents } from "./externalImport";
+import { importedHistoryEvents } from "./externalImport";
 import { conversationCommandSchema, workspaceRefSchema } from "@shared/conversations/contracts";
 import type { CommandReceipt, ContextReading, ContextUsage, ConversationCommand, ConversationSnapshot, EventPayload } from "@shared/types/conversation/contracts.types";
 import type { ActiveSubscription, EngineDependencies, EventSubscription } from "@main/types/execution/engine.types";
@@ -27,6 +27,8 @@ import type { PreparedCommand } from "@main/types/execution/preparedCommand.type
 import { assertTransitionIdle } from "./provider-transition/admission";
 import { decideFollowUp } from "./decideFollowUp";
 import type { ProviderFollowUp } from "@main/types/execution/followUp.types";
+import type { ProviderBackgroundTasks } from "@main/types/execution/backgroundTasks.types";
+import { sameBackgroundTasks } from "@shared/conversations/backgroundTasks";
 
 export class ConversationEngine {
   private readonly subscriptions = new Set<ActiveSubscription>();
@@ -53,7 +55,7 @@ export class ConversationEngine {
   /** `prepared` carries host-resolved inputs that are not part of the command's durable identity. */
   execute(input: ConversationCommand, prepared: PreparedCommand = {}): CommandReceipt {
     this.deps.assertOwnership();
-    const { workspace: preparedWorkspace, role: preparedRole, bot, group, direct, externalTranscript, steerFollowUp = false, providerTransition, providerConnection } = prepared;
+    const { workspace: preparedWorkspace, role: preparedRole, bot, group, direct, importedHistory, steerFollowUp = false, providerTransition, providerConnection } = prepared;
     const command = conversationCommandSchema.parse(input);
     const decisionCommand = command.kind === "create"
       ? { ...command, ...(preparedWorkspace ? { workspace: workspaceRefSchema.parse(preparedWorkspace) } : {}),
@@ -68,7 +70,7 @@ export class ConversationEngine {
       }
       const now = this.deps.now();
       if (command.kind === "create" && command.externalSessionId) {
-        if (!externalTranscript || externalTranscript.session.id !== command.externalSessionId) throw new ExecutionCommandError("invalid", "External history must be verified by its provider before importing");
+        if (!importedHistory || importedHistory.nativeConversationId !== command.externalSessionId) throw new ExecutionCommandError("invalid", "External history must be verified by its provider before importing");
         const existing = transaction.summaries().find(({ conversation }) => conversation.nativeConversationId === command.externalSessionId
           && conversation.provider.kind === command.provider.kind && conversation.provider.instanceId === command.provider.instanceId);
         if (existing) {
@@ -89,8 +91,8 @@ export class ConversationEngine {
         undoTarget: decisionCommand.kind === "undo-turn" ? resolveUndoTarget(transaction, decisionCommand.conversationId, decisionCommand.runId) : undefined,
         admission: transaction });
       const created = decision.events.find((event) => event.kind === "conversation");
-      const events = command.kind === "create" && externalTranscript && created?.kind === "conversation"
-        ? externalImportEvents(created.conversation, externalTranscript) : decision.events;
+      const events = command.kind === "create" && importedHistory && created?.kind === "conversation"
+        ? importedHistoryEvents(created.conversation, importedHistory) : decision.events;
       const cursor = this.commitEvents(transaction, command.conversationId, now, events);
       for (const effect of decision.effects) {
         if (effect.action.kind === "interrupt" && effect.action.force) transaction.interruptCheckpoint(effect.conversationId, effect.runId);
@@ -169,6 +171,19 @@ export class ConversationEngine {
     });
     this.publish();
     return accepted;
+  }
+
+  /** Replaces the conversation's live background-task list; works while idle so the thread can show work between turns. */
+  acceptBackgroundTasks(update: ProviderBackgroundTasks): void {
+    this.deps.assertOwnership();
+    this.deps.store.transaction((transaction) => {
+      const state = transaction.state(update.conversationId);
+      if (!state) return;
+      if (sameBackgroundTasks(state.backgroundTasks, update.tasks)) return;
+      const now = this.deps.now();
+      this.commitEvents(transaction, update.conversationId, now, [{ kind: "background-tasks", tasks: update.tasks }]);
+    });
+    this.publish();
   }
 
   snapshot(conversationId: string): ConversationSnapshot | null { return this.deps.store.snapshot(conversationId); }

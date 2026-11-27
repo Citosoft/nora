@@ -142,9 +142,7 @@ jobs:
           NORA_NOTARY_APPLE_ID_PASSWORD: ${{ secrets.NORA_APPLE_APP_SPECIFIC_PASSWORD }}
           NORA_NOTARY_TEAM_ID: ${{ secrets.NORA_APPLE_TEAM_ID }}
           NORA_POSTHOG_API_KEY: ${{ secrets.NORA_POSTHOG_API_KEY }}
-          NORA_POSTHOG_HOST: ${{ secrets.NORA_POSTHOG_HOST }}
           VITE_PUBLIC_POSTHOG_PROJECT_TOKEN: ${{ secrets.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN }}
-          VITE_PUBLIC_POSTHOG_HOST: ${{ secrets.VITE_PUBLIC_POSTHOG_HOST }}
         run: ${{ matrix.make_command }}
 
       - name: Check Linux binaries support glibc 2.31

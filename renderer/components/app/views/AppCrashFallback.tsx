@@ -1,3 +1,4 @@
+import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { formatAppCrashReport } from "@/components/app/logic/appCrashReport";
 import type { AppCrashFallbackProps } from "@/components/app/types/appErrorBoundary.types";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ export function AppCrashFallback({ crash, onReload }: AppCrashFallbackProps) {
   const report = formatAppCrashReport(crash);
 
   const handleCopy = (): void => {
-    void navigator.clipboard.writeText(report).then(
+    void noraSystemClient.copyText(report).then(
       () => setCopied(true),
       () => setCopied(false)
     );

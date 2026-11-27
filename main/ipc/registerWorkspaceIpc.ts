@@ -1,5 +1,3 @@
-import { discoverWorkspaces } from "@main/workspace-import/discovery";
-import { workspaceHistorySources } from "@main/workspace-import/historySources";
 import { listProviderModels } from "@main/ai/providerModels";
 import type { MainServices } from "@main/services/mainServices";
 import type {
@@ -28,6 +26,7 @@ import type {
   WriteWorkspaceFilePayload
 } from "@shared/appTypes";
 import type { WorkspaceImageFileContent } from "@shared/types/workspaceFile.types";
+import { normalizeWorkspaceSetupScripts } from "@shared/workspaceSetupScripts";
 import { app, ipcMain } from "electron";
 import { prepareContextHandoff } from "@main/helpers/contextHandoff";
 import { generateCommitMessageFromChanges } from "@main/ai/commitMessageGenerator";
@@ -54,11 +53,6 @@ export function registerWorkspaceIpc({
   validateWriteWorkspaceFilePayload,
   createProjectWorkspace
 }: RegisterWorkspaceIpcDeps): void {
-  ipcMain.handle("app:discover-workspaces", () => discoverWorkspaces(
-    workspaceHistorySources,
-    services.snapshot.getSnapshot().workspaces.filter((workspace) => workspace.project.location?.kind !== "ssh")
-      .map((workspace) => workspace.project.rootPath)
-  ));
   ipcMain.handle("app:get-snapshot", () => compactStateForRenderer(services.snapshot.getSnapshot()));
   ipcMain.handle("app:get-agent-terminal-buffer", (_event, agentId: string) =>
     services.snapshot.getAgentTerminalBuffer(agentId)
@@ -190,6 +184,15 @@ export function registerWorkspaceIpc({
     "app:save-workspace-terminal-presets",
     (_event, projectId: string, presets: TerminalPreset[]): Promise<AppState> =>
       services.workspace.saveWorkspaceTerminalPresets(projectId, presets)
+  );
+  ipcMain.handle(
+    "app:save-workspace-setup-scripts",
+    (_event, projectId: string, scripts: unknown): Promise<AppState> =>
+      services.workspace.saveWorkspaceSetupScripts(
+        projectId,
+        // The editor always saves the full list; the renderer cannot touch an importer's ownership.
+        { kind: "replace-all", scripts: normalizeWorkspaceSetupScripts(scripts) }
+      )
   );
   ipcMain.handle("app:move-workspace-file", (_event, payload: { projectId: string; fromPath: string; toPath: string }) =>
     withSnapshot(() => {

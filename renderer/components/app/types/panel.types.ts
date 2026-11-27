@@ -489,7 +489,6 @@ export type WorkspaceSessionPanelProps = {
 export type WorkspaceSessionTabsProps = {
   tabs: WorkspaceSessionTab[];
   activeTabId: string | null;
-  platform: WindowUiState["platform"];
   tools: AgentCatalogEntry[];
   onSelect: (tab: WorkspaceSessionTab) => void;
   onClose: (tab: WorkspaceSessionTab) => void;

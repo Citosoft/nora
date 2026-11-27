@@ -22,7 +22,7 @@ export function message(id: string, text: string, runId = "run-1"): TimelineItem
 }
 
 export function header(cursor: number, conversationId = "conv-1"): ConversationHeader {
-  return { schemaVersion: 1, cursor, conversation: conversation(conversationId), activeRuns: [], queuedRuns: [], pendingRequests: [] };
+  return { schemaVersion: 1, cursor, conversation: conversation(conversationId), activeRuns: [], queuedRuns: [], pendingRequests: [], backgroundTasks: [] };
 }
 
 export function detail(cursor: number, items: TimelineItem[] = [], nextBefore: number | null = null): ConversationDetailResponse {

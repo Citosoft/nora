@@ -3,7 +3,6 @@ import type {
   ExternalHarnessContextRef,
   ProjectSummary,
   ProjectVersionControl,
-  TerminalPreset,
   WorkspaceGitStatusSummary,
   SetWorkspaceUpstreamPayload,
   SelectChangesCheckoutPayload,
@@ -17,13 +16,13 @@ import type {
   WorkspaceTaskSummary
 } from "@shared/appTypes";
 import { selectChangesCheckout } from "./changesCheckout";
+import { createWorkspaceProjectSettingsActions } from "./workspaceProjectSettings";
+import { randomUUID } from "node:crypto";
 import { assertGitProject, isGitProject } from "@shared/projectVersionControl";
 import { createTaskDraft, deriveTaskTitle } from "@shared/taskDraft";
 import { resolveWorkspaceFileViewKind } from "@shared/workspaceFileViewKind";
 import type { WorkspaceImageFileContent } from "@shared/types/workspaceFile.types";
 import { pickWorkspaceLogoPaths } from "../helpers/workspaceLogo";
-import fs from "node:fs/promises";
-import { getProjectFile } from "../noraPaths";
 import type { WorkspaceTarget } from "../types/internal.types";
 import {
   listRemoteTrackingBranches,
@@ -351,32 +350,7 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
     return deps.writeWorkspaceSplitViewCollection(deps.getProjectTarget(project), project.id, collection);
   };
 
-  const saveWorkspaceTerminalPresets = async (projectId: string, presets: TerminalPreset[]): Promise<AppState> => {
-    const project = await deps.resolveProjectSummaryById(projectId);
-    const updatedProject: ProjectSummary = {
-      ...project,
-      workspaceTerminalPresets: presets,
-      updatedAt: deps.nowIso()
-    };
-
-    await deps.saveProject(updatedProject);
-    await fs.writeFile(getProjectFile(updatedProject.id), JSON.stringify(updatedProject, null, 2), "utf8");
-
-    deps.updateState((currentState) => ({
-      ...currentState,
-      project: currentState.project?.id === updatedProject.id ? updatedProject : currentState.project,
-      workspaces: currentState.workspaces.map((workspace) =>
-        workspace.project.id === updatedProject.id
-          ? {
-              ...workspace,
-              project: updatedProject
-            }
-          : workspace
-      )
-    }));
-
-    return deps.refreshProjectState();
-  };
+  const projectSettings = createWorkspaceProjectSettingsActions({ ...deps, createId: randomUUID });
 
   return {
     readWorkspaceFile,
@@ -402,6 +376,6 @@ export function createWorkspaceActions(deps: WorkspaceActionsDependencies) {
     createWorkspaceTaskFile,
     getWorkspaceSplitViews,
     saveWorkspaceSplitViews,
-    saveWorkspaceTerminalPresets
+    ...projectSettings
   };
 }

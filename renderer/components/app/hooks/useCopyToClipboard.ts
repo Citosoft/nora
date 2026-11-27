@@ -1,3 +1,4 @@
+import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const COPIED_FEEDBACK_MS = 1_500;
@@ -10,7 +11,7 @@ export function useCopyToClipboard(): { copied: boolean; copy: (text: string) =>
   useEffect(() => () => { if (timerRef.current !== null) window.clearTimeout(timerRef.current); }, []);
 
   const copy = useCallback((text: string): void => {
-    void navigator.clipboard.writeText(text).then(() => {
+    void noraSystemClient.copyText(text).then(() => {
       setCopied(true);
       if (timerRef.current !== null) window.clearTimeout(timerRef.current);
       timerRef.current = window.setTimeout(() => setCopied(false), COPIED_FEEDBACK_MS);

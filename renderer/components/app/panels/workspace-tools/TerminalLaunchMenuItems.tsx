@@ -75,7 +75,7 @@ export function TerminalLaunchMenuItems({ workspace, focusedProjectId, terminalS
         <div className={hasRunnablePresets ? "mt-1 border-t border-border/60 pt-1" : undefined}>
           <DropdownMenuItem onSelect={() => onSelectWithClose(() => onOpenWorkspaceTerminalPresets(workspace.project.id))}>
             <Wrench className="size-4" />
-            Configure presets…
+            Presets &amp; setup scripts…
           </DropdownMenuItem>
         </div>
       </DropdownMenuSub>

@@ -1,5 +1,7 @@
-import { readAnalyticsConfig } from "./helpers/analytics/config";
-import { trackInstallationLaunch } from "./helpers/analytics/launch";
+import { createDesktopAnalytics } from "./helpers/analytics/desktop";
+import { observeProcessErrors } from "./helpers/analytics/processErrors";
+import { registerAnalyticsIpc } from "./ipc/registerAnalyticsIpc";
+import type { AnalyticsService } from "./types/analytics/analytics.types";
 import { createAppInstallRequests } from "./apps/installRequests";
 import { APP_INSTALL_SCHEME } from "@shared/apps/installLink";
 import { appsInstallRequestedChannel } from "@shared/apps/gateway";
@@ -66,6 +68,12 @@ import { botRoutinesChangedChannel } from "@shared/bots/routines/gateway";
 import { startInboxRuntime } from "./inbox/runtime";
 import { registerInboxIpc } from "./ipc/registerInboxIpc";
 import type { InboxRuntime } from "./types/inbox/inboxRuntime.types";
+import { startIsland } from "./helpers/island/startIsland";
+import { registerIslandIpc } from "./ipc/registerIslandIpc";
+import type { IslandRuntime } from "./types/island/island.types";
+import type { ActiveWorkInput } from "./types/desktop-lifecycle/desktopLifecycle.types";
+import { inboxOpenChannel } from "@shared/inbox/gateway";
+import type { InboxTarget } from "@shared/types/inbox/inbox.types";
 import { personalizationChangedChannel } from "@shared/personalization/gateway";
 import type { NativeRuntime } from "./types/native-runtime/runtime.types";
 import path from "node:path";
@@ -76,7 +84,7 @@ import {
 } from "./autoUpdates";
 import { resolveHardwareAccelerationEnabledAtStartup } from "./hardwareAcceleration";
 import { parseLaunchCommand } from "./launchCommand";
-import { getAppSettingsPath, getProjectsIndexPath, getRecentProjectsPath, getSessionsIndexPath, getToolConfigPath, getStateDir, getNoraRoot } from "./noraPaths";
+import { getAppImportLedgerPath, getAppSettingsPath, getKeybindingsPath, getProjectsIndexPath, getRecentProjectsPath, getSessionsIndexPath, getToolConfigPath, getStateDir, getNoraRoot } from "./noraPaths";
 import { applyLinuxDesktopIdentity, applyMacDockIcon as applyMacDockIconHelper, getAppIcon as getAppIconHelper, pathIsWithinAnyMount } from "./helpers/appRuntimeAssets";
 import { getImportedImageTargetPath } from "./helpers/browserImageImport";
 import { createLaunchCommandQueueController } from "./helpers/launchCommandQueue";
@@ -112,6 +120,14 @@ import { registerSessionIpc } from "./ipc/registerSessionIpc";
 import { registerSystemIpc } from "./ipc/registerSystemIpc";
 import { registerToolingIpc } from "./ipc/registerToolingIpc";
 import { registerMacApplicationMenuIpc } from "./ipc/registerMacApplicationMenuIpc";
+import { registerKeybindingsIpc } from "./ipc/registerKeybindingsIpc";
+import { registerAppImportIpc } from "./ipc/registerAppImportIpc";
+import { createAppImportRuntime } from "./helpers/appImportRuntime";
+import { APP_IMPORT_CHANNELS } from "@shared/app-import/gateway";
+import { createKeybindingsFileStore } from "./keybindings/keybindingsStore";
+import { createKeybindingsService } from "./keybindings/keybindingsService";
+import { keybindingPlatformFrom } from "@shared/keybindings/chord";
+import { KEYBINDINGS_CHANNELS } from "@shared/keybindings/gateway";
 import { registerLoopIpc } from "./ipc/registerLoopIpc";
 import { registerWindowIpc } from "./ipc/registerWindowIpc";
 import { registerWorkspaceIpc } from "./ipc/registerWorkspaceIpc";
@@ -159,11 +175,13 @@ const desktopLifecycle = createDesktopLifecycle({
 });
 const appShutdown = createAppShutdown({
   confirmQuit: createQuitConfirmation({
-    countActiveWork: () => countActiveWork({ conversations: nativeRuntime?.host.summaries() ?? [],
-      agents: services?.snapshot.getSnapshot().agents ?? [] }),
+    countActiveWork: () => countActiveWork(readActiveWork()),
     showPrompt: (prompt) => showElectronQuitPrompt(prompt, mainWindow), log: console.error
   }),
   shutdown: async () => {
+    // Flush analytics alongside the rest of shutdown; it gives up after a few seconds offline.
+    const analyticsFlushed = analytics?.shutdown();
+    island?.dispose();
     desktopLifecycle.dispose();
     await remoteAccess?.shutdown();
     await settingsSync.dispose();
@@ -172,6 +190,7 @@ const appShutdown = createAppShutdown({
     inbox?.stop();
     await nativeRuntime?.shutdown();
     if (mainWindow) await shutdownMainWindow();
+    await analyticsFlushed;
   },
   quit: () => app.quit(),
   onFailure: (message) => console.error("Nora shutdown failed:", message)
@@ -179,13 +198,20 @@ const appShutdown = createAppShutdown({
 const appSettingsStore = new AppSettingsStore(getAppSettingsPath());
 let appSettings: AppSettings = DEFAULT_APP_SETTINGS;
 let inbox: InboxRuntime | null = null;
+let island: IslandRuntime | null = null;
+let analytics: AnalyticsService | null = null;
 const windowSettingsPort = createWindowSettingsPort({ send(request) {
   if (!mainWindow || mainWindow.isDestroyed()) throw new Error("Open Nora to change window preferences.");
   mainWindow.webContents.send(WINDOW_SETTINGS_CHANNELS.request, request);
 } });
 const settingsUpdates = createSettingsUpdates({ read: () => appSettings,
-  save: async (next) => { appSettings = await appSettingsStore.save(next); return appSettings; },
-  onSaved: () => { settingsSync.localChanged(); desktopLifecycle.settingsChanged(); }
+  save: async (next) => {
+    const previous = appSettings;
+    appSettings = await appSettingsStore.save(next);
+    void analytics?.settingsSaved(previous, appSettings).catch((error: unknown) => console.warn("[analytics] Settings change not recorded", error));
+    return appSettings;
+  },
+  onSaved: () => { settingsSync.localChanged(); desktopLifecycle.settingsChanged(); island?.settingsChanged(); }
 });
 const workspaceLoadingTimingByProject = new Map<string, { startedAt: number; lastStepAt: number }>();
 const SQUIRREL_WINDOW_LIFETIME_MS = APP_RUNTIME_SETTINGS.main.squirrelWindowLifetimeMs;
@@ -201,7 +227,7 @@ const isDevelopmentMode = process.env.NORA_DEV_WATCH === "1";
 const devModeAnalyticsEnabled = app.commandLine.hasSwitch(DEV_ANALYTICS_SWITCH);
 const MAX_IMPORTED_IMAGE_BYTES = APP_RUNTIME_SETTINGS.main.maxImportedImageBytes;
 const EXTERNAL_URL_ALLOWED_PROTOCOLS: ReadonlySet<string> = new Set(APP_RUNTIME_SETTINGS.main.externalUrlAllowedProtocols);
-const analyticsRuntimeConfig: AnalyticsRuntimeConfig = {
+const analyticsRuntimeConfig: Omit<AnalyticsRuntimeConfig, "usageStatisticsRequireConsent"> = {
   isDevelopmentMode,
   devModeAnalyticsSwitch: DEV_ANALYTICS_SWITCH,
   devModeAnalyticsEnabled,
@@ -377,6 +403,12 @@ const accountRuntime = createAccountRuntime({
   onSessionChanged: () => { settingsSync.sessionChanged(); remoteAccess?.sessionChanged(); },
   hostedFrames: (url) => mcpAppFrames.respond(url)
 });
+/** User keybinding overrides; also the main-process entry point (`applyKeybindingOverrides`) for importers. */
+const keybindings = createKeybindingsService({
+  platform: keybindingPlatformFrom(process.platform),
+  store: createKeybindingsFileStore({ path: getKeybindingsPath(), nextId: () => randomUUID(),
+    onReadError: (error) => console.warn("[keybindings] Could not read keybindings.json; using defaults.", error) })
+});
 const settingsSync = createSettingsSyncService({ path: path.join(getStateDir(), "settings-sync.json"),
   client: accountRuntime.cloud, session: accountRuntime.session, readSettings: () => appSettings,
   updateSettings: settingsUpdates.update, providers: () => nativeRuntime.personalization.state().providers,
@@ -461,7 +493,8 @@ function createWindow(): void {
 
   mainWindow.setMenuBarVisibility(false);
   attachWindowStateListeners(mainWindow);
-  attachCloseSessionTabShortcutForwarding(mainWindow);
+  attachCloseSessionTabShortcutForwarding(mainWindow, () =>
+    keybindings.resolved().find((binding) => binding.commandId === "close-active-session-tab")?.chord ?? null);
   attachMainWindowRecovery({
     window: mainWindow,
     isClosing: () => isClosingMainWindow,
@@ -499,6 +532,17 @@ function createWindow(): void {
 
 function focusMainWindow(): void {
   focusMainWindowHelper(mainWindow);
+}
+
+/** Brings Nora forward and shows an inbox target: a thread, or the inbox itself. */
+function showInboxTarget(target: InboxTarget): void {
+  windowStartup.activate();
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(inboxOpenChannel, target);
+}
+
+/** Threads and terminal agents as they stand now; empty until the runtime and services have started. */
+function readActiveWork(): ActiveWorkInput {
+  return { conversations: nativeRuntime?.host.summaries() ?? [], agents: services?.snapshot.getSnapshot().agents ?? [] };
 }
 
 async function shutdownMainWindow(): Promise<void> {
@@ -542,6 +586,7 @@ function registerIpc(): void {
   registerBotMemoryIpc({ ipc: ipcMain, isAllowedSender, memory: nativeRuntime.memory, reviews: nativeRuntime.memoryReviewLog, now: () => new Date() });
   registerBotRoutineIpc({ ipc: ipcMain, isAllowedSender, routines: nativeRuntime.routines });
   if (inbox) registerInboxIpc({ ipc: ipcMain, isAllowedSender, inbox: inbox.service });
+  if (island) registerIslandIpc({ ipc: ipcMain, runtime: island, isAllowedSender });
   registerConnectorIpc({ ipc: ipcMain, isAllowedSender, connectors: nativeRuntime.connectors });
   registerConnectorAuthPromptIpc({ ipc: ipcMain, isAllowedSender, prompts: nativeRuntime.connectorAuthPrompts, connectors: nativeRuntime.connectors });
   registerAppsIpc({ ipc: ipcMain, isAllowedSender, apps: nativeRuntime.apps, connectors: nativeRuntime.connectors, installRequests: appInstallRequests, files: createAppFileDialogs(() => mainWindow), now: () => new Date().toISOString() });
@@ -599,12 +644,19 @@ function registerIpc(): void {
     requestQuit: appShutdown.request,
     saveAppSettings: (nextSettings, baseline) => settingsUpdates.update((current) => withMainOwnedSettings(current, nextSettings, baseline)),
     showAgentCompletionNotification,
-    analyticsRuntimeConfig,
     getSnapshot: () => services.snapshot.getSnapshot(),
     getLocalTerminalState: () => services.snapshot.getLocalTerminalState()
   });
 
-  registerMacApplicationMenuIpc(() => mainWindow);
+  registerMacApplicationMenuIpc({ getMainWindow: () => mainWindow, keybindings });
+  if (analytics) registerAnalyticsIpc({ ipc: ipcMain, isAllowedSender, record: analytics.recordFromRenderer,
+    runtimeConfig: { ...analyticsRuntimeConfig, ...analytics.runtimeConfig } });
+  registerKeybindingsIpc({ ipc: ipcMain, service: keybindings, isAllowedSender,
+    notify: (file) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(KEYBINDINGS_CHANNELS.changed, file); } });
+  registerAppImportIpc({ ipc: ipcMain, isAllowedSender, service: createAppImportRuntime({
+    ledgerPath: getAppImportLedgerPath(), nextId: () => randomUUID(), now: () => new Date().toISOString(),
+    services, settings: { read: () => appSettings, update: settingsUpdates.update }, native: () => nativeRuntime, keybindings,
+    onProgress: (progress) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(APP_IMPORT_CHANNELS.progress, progress); } }) });
 
   registerRemoteIpc({
     services,
@@ -626,14 +678,15 @@ function registerIpc(): void {
 }
 
 async function bootstrap(): Promise<void> {
-  void trackInstallationLaunch({
-    allowed: analyticsRuntimeConfig.analyticsAllowedInCurrentRun,
-    config: readAnalyticsConfig(path.join(__dirname, "..", "runtime", "analytics-config.json")),
-    statePath: path.join(app.getPath("userData"), "analytics-installation.json"),
-    context: { appVersion: app.getVersion(), environment: isDevelopmentMode ? "development" : "production",
-      platform: process.platform, countryCode: app.getLocaleCountryCode() || null }
-  }).catch(() => console.warn("[analytics] Could not send app launch count."));
   appSettings = await appSettingsStore.load();
+  const desktopAnalytics = createDesktopAnalytics({ distDirectory: __dirname, isDevelopmentMode,
+    runtimeAllowed: analyticsRuntimeConfig.analyticsAllowedInCurrentRun, readSettings: () => appSettings });
+  analytics = desktopAnalytics;
+  // Before any IPC module registers, so every channel is counted.
+  desktopAnalytics.instrumentIpc(ipcMain);
+  observeProcessErrors(desktopAnalytics.recordError);
+  void desktopAnalytics.start().catch(() => console.warn("[analytics] Could not send app launch count."));
+  await keybindings.load();
   configureMediaPermissions();
   applyMacDockIcon();
   if (process.platform === "win32") {
@@ -759,12 +812,30 @@ async function bootstrap(): Promise<void> {
       focusWorkspaceTerminal: async (sessionId) => { await services.session.focusTerminal(sessionId); }
     })
   });
+  analytics?.observeRuns(nativeRuntime.host);
+  analytics?.reportInventory(() => {
+    const threads = nativeRuntime.host.summaries();
+    return { boot: nativeRuntime.personalization.state(), settings: appSettings, connectors: nativeRuntime.connectors.list(),
+      apps: nativeRuntime.apps.list().length,
+      threads: { total: threads.length, archived: threads.filter((summary) => summary.conversation.archivedAt !== null).length } };
+  });
   inbox = startInboxRuntime({ host: nativeRuntime.host, stateDirectory: getStateDir(), getMainWindow: () => mainWindow, getAppIcon, focusMainWindow,
     notificationsEnabled: () => appSettings.agentCompletionNotificationsEnabled,
     projectIds: () => nativeRuntime.personalization.state().workspaces.flatMap((entry) => entry.shellProjectId ? [entry.shellProjectId] : []),
     listWorkflowRuns: (projectId) => loopRunner.listRuns(projectId),
     workspaceForProject: (projectId) => nativeRuntime.personalization.state().workspaces.find((entry) => entry.shellProjectId === projectId)?.id ?? null,
     connectors: () => nativeRuntime.connectors.list(), alerts: () => nativeRuntime.apps.activeAlerts() });
+  island = startIsland({ settings: () => appSettings.notchIsland, host: nativeRuntime.host, readWork: readActiveWork,
+    onAgentsChanged: (listener) => orchestrator.onStateChanged(listener),
+    paths: { preload: path.join(__dirname, "islandPreload.js"), html: path.join(__dirname, "..", "renderer", "island.html") },
+    openThread: (conversationId) => showInboxTarget({ kind: "thread", conversationId }),
+    openInbox: () => showInboxTarget({ kind: "inbox" }),
+    openTerminalAgent: (agentId) => {
+      windowStartup.activate();
+      void services.session.focusAgent(agentId).then((snapshot) => scheduleStateChanged(snapshot, { preferDelta: false }))
+        .catch((error: unknown) => console.error("The notch island could not open the terminal agent", error));
+    },
+    openNora: () => windowStartup.activate() });
   remoteAccess = createDesktopRemoteAccess({ directory: getStateDir(), runtimeVersion: app.getVersion(), name: os.hostname(),
     management: nativeRuntime.personalization, account: accountRuntime, host: nativeRuntime.host, inbox: inbox.service, boot: () => nativeRuntime.personalization.state(),
     phonePushEnabled: () => appSettings.phonePushNotificationsEnabled,

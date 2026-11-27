@@ -18,7 +18,6 @@ export type UseAppRootSignedInSecondaryWiringArgs = {
   workspaceSpecs: WorkspaceSpecsState;
   workspaceNotes: WorkspaceNotesState;
   workspaceFileTreePaths: string[];
-  windowPlatform: import("@/components/app/types").WindowUiState["platform"];
   setDefaultTerminalShellId: Dispatch<SetStateAction<string | null>>;
   installedIdes: InstalledIde[];
   defaultIdeId: string | null;

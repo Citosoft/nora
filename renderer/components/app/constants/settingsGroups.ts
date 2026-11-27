@@ -1,14 +1,17 @@
 import type { SettingsCategory } from "@/components/app/types/settingsSearch.types";
 import {
+  ArrowRightLeft,
   BarChart3,
   Bot,
   Cpu,
   FlaskConical,
   Globe,
+  Keyboard,
   LayoutDashboard,
   Mic2,
   MessagesSquare,
   Palette,
+  PanelTop,
   Plug,
   ScrollText,
   Smartphone,
@@ -18,6 +21,10 @@ import {
   TerminalSquare,
   Vault
 } from "lucide-react";
+import { detectKeybindingPlatform } from "@/components/app/logic/keybindings/keybindingSet";
+
+/** The notch island exists only on macOS, so its settings appear only there. */
+const isMac = detectKeybindingPlatform() === "darwin";
 
 export const SETTINGS_CATEGORIES: readonly SettingsCategory[] = [
   {
@@ -27,7 +34,9 @@ export const SETTINGS_CATEGORIES: readonly SettingsCategory[] = [
       { value: "appearance", label: "Appearance", icon: Palette },
       { value: "workbench", label: "Workbench", icon: LayoutDashboard },
       { value: "terminal", label: "Terminal", icon: TerminalSquare },
-      { value: "browser", label: "Browser", icon: Globe }
+      { value: "keybindings", label: "Keybindings", icon: Keyboard },
+      { value: "browser", label: "Browser", icon: Globe },
+      ...(isMac ? [{ value: "notchIsland" as const, label: "Notch island", icon: PanelTop }] : [])
     ]
   },
   {
@@ -57,6 +66,7 @@ export const SETTINGS_CATEGORIES: readonly SettingsCategory[] = [
     items: [
       { value: "privacy", label: "Privacy", icon: Shield },
       { value: "system", label: "System", icon: Cpu },
+      { value: "migrate", label: "Migrate", icon: ArrowRightLeft },
       ...(!__NORA_IS_PRODUCTION__ ? [{ value: "dev" as const, label: "Dev", icon: FlaskConical }] : [])
     ]
   }

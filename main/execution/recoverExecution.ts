@@ -6,6 +6,12 @@ import { finalizeSteering } from "./finalizeSteering";
 
 /** Recover durable intent only after acquiring sole environment ownership. */
 export function recoverExecution(transaction: StoreTransaction, now: string, nextId: () => string): void {
+  // Background work dies with the previous process; clear any projected list left from the last session.
+  for (const snapshot of transaction.snapshots()) {
+    if (!snapshot.backgroundTasks.length) continue;
+    const event = transaction.appendEvent(nextId(), snapshot.conversation.id, now, { kind: "background-tasks", tasks: [] });
+    transaction.project(event);
+  }
   for (const effect of transaction.unfinishedEffects().filter((entry) => entry.action.kind === "steer")) {
     finalizeSteering(transaction, effect, { status: effect.status === "claimed" ? "unconfirmed" : "rejected",
       message: effect.status === "claimed" ? "Steering delivery was interrupted and is unconfirmed. This message will not run automatically."

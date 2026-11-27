@@ -1,4 +1,3 @@
-import type { WindowUiState } from "@/components/app/types";
 import type {
 AboutDialogProps,
 AddWorkspaceDialogProps,
@@ -21,7 +20,6 @@ WorkspaceTerminalPresetsDialogProps
 export type AppModalDialogsKeyboardShortcutsSlice = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  platform: WindowUiState["platform"];
 };
 
 export type AppModalDialogsContextValue = {

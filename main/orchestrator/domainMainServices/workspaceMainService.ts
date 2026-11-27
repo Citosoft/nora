@@ -5,6 +5,7 @@ import type {
   ExternalHarnessContextRef,
   NoraDetectableContextBundleSummary,
   TerminalPreset,
+  WorkspaceSetupScriptsUpdate,
   WorkspaceFileRequest,
   WorkspaceGitStatusSummary,
   CheckoutWorkspaceBranchPayload,
@@ -163,6 +164,9 @@ export class WorkspaceMainService implements WorkspaceService {
 
   saveWorkspaceTerminalPresets = (projectId: string, presets: TerminalPreset[]): Promise<AppState> =>
     this.actions().saveWorkspaceTerminalPresets(projectId, presets);
+
+  saveWorkspaceSetupScripts = (projectId: string, update: WorkspaceSetupScriptsUpdate): Promise<AppState> =>
+    this.actions().saveWorkspaceSetupScripts(projectId, update);
 
   createWorkspaceDirectory = (payload: CreateWorkspaceDirectoryPayload): Promise<AppState> =>
     this.d.mutations.createWorkspaceDirectory(payload);

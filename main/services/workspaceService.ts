@@ -40,6 +40,7 @@ export function createWorkspaceService(deps: WorkspaceServiceDeps): WorkspaceSer
     getWorkspaceSplitViews: deps.getWorkspaceSplitViews,
     saveWorkspaceSplitViews: deps.saveWorkspaceSplitViews,
     saveWorkspaceTerminalPresets: deps.saveWorkspaceTerminalPresets,
+    saveWorkspaceSetupScripts: deps.saveWorkspaceSetupScripts,
     createWorkspaceDirectory: deps.createWorkspaceDirectory,
     moveWorkspaceFile: deps.moveWorkspaceFile,
     deleteWorkspaceFile: deps.deleteWorkspaceFile,

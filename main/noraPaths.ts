@@ -32,8 +32,18 @@ export function getRecentProjectsPath(): string {
   return path.join(getStateDir(), "recent-projects.json");
 }
 
+/** Which items "Migrate from another app" already brought in, so running it again doesn't duplicate them. */
+export function getAppImportLedgerPath(): string {
+  return path.join(getStateDir(), "app-import-ledger.json");
+}
+
 export function getToolConfigPath(): string {
   return path.join(getConfigDir(), "tool-config.json");
+}
+
+/** User keybinding overrides; kept apart from app settings so importers and sync never rewrite one through the other. */
+export function getKeybindingsPath(): string {
+  return path.join(getConfigDir(), "keybindings.json");
 }
 
 export function getAppSettingsPath(): string {

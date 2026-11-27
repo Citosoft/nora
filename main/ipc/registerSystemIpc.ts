@@ -16,7 +16,6 @@ import { transcribeVoiceInput } from "@main/ai/voiceTranscription";
 import { getVoiceInputReadiness } from "@main/ai/voiceInputReadiness";
 import type {
   AgentCompletionNotificationPayload,
-  AnalyticsRuntimeConfig,
   AppSettings,
   AppState,
   AutoUpdateStatus,
@@ -60,7 +59,6 @@ interface RegisterSystemIpcDeps {
   getAppSettings: () => AppSettings;
   saveAppSettings: (nextSettings: AppSettings, baseline: AppSettings) => Promise<AppSettings>;
   showAgentCompletionNotification: (payload: AgentCompletionNotificationPayload) => Promise<void>;
-  analyticsRuntimeConfig: AnalyticsRuntimeConfig;
   getSnapshot: () => AppState;
   getLocalTerminalState: () => LocalTerminalState | null;
 }
@@ -76,14 +74,9 @@ export function registerSystemIpc({
   getAppSettings,
   saveAppSettings,
   showAgentCompletionNotification,
-  analyticsRuntimeConfig,
   getSnapshot,
   getLocalTerminalState
 }: RegisterSystemIpcDeps): void {
-  ipcMain.handle("app:log-analytics", (_event, { level, message }: { level: "info" | "warn" | "debug" | "error"; message: string }) => {
-    const logger = console[level] ?? console.log;
-    logger(`[analytics] ${message}`);
-  });
   ipcMain.handle("window:get-state", () => getWindowState());
   ipcMain.handle("app:choose-project", () => showProjectPicker());
   ipcMain.handle("app:choose-project-at-path", (_event, defaultPath: string, title?: string) =>
@@ -112,7 +105,6 @@ export function registerSystemIpc({
     installLocalAiModel(modelId)
   );
   ipcMain.handle("app:install-local-ai-runtime", () => installLocalAiRuntime());
-  ipcMain.handle("app:get-analytics-runtime-config", (): AnalyticsRuntimeConfig => ({ ...analyticsRuntimeConfig }));
   ipcMain.handle("app:get-linux-apt-setup-status", (): Promise<LinuxAptSetupStatus> => getLinuxAptSetupStatus());
   ipcMain.handle("app:install-linux-apt-updates", (): Promise<LinuxAptSetupStatus> => installLinuxAptUpdates());
   ipcMain.handle("app:get-linux-update-status", (): Promise<LinuxUpdateStatus> => getLinuxUpdateStatus());
@@ -187,6 +179,7 @@ export function registerSystemIpc({
       throw new Error("The clipboard did not accept the copied text.");
     }
   });
+  ipcMain.handle("app:read-clipboard-text", () => clipboard.readText());
   ipcMain.handle("app:open-project-in-ide", (_event, ideId: string, projectPath: string) =>
     openProjectInIde(ideId, projectPath)
   );

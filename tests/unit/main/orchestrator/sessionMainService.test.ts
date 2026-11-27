@@ -123,10 +123,10 @@ function createDeps(args: {
         throw new Error("not used");
       },
       refreshWorktreeCollectionAfterDetach: async (_project, worktrees) => {
-        return worktrees;
+        return { worktrees, scriptFailureMessage: null };
       },
       refreshWorktreeCollectionAfterTerminalDetach: async (_project, worktrees) => {
-        return worktrees;
+        return { worktrees, scriptFailureMessage: null };
       }
     },
     getAgentTerminalActionDependencies: () => ({

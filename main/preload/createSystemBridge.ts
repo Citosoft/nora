@@ -1,3 +1,4 @@
+import { ANALYTICS_CHANNELS } from "@shared/analytics/channels";
 import { WINDOW_SETTINGS_CHANNELS, windowSettingsRequestSchema, windowSettingsReplySchema } from "@shared/nora-tools/windowSettings";
 import type { AutoUpdateStatus, ForgeOAuthDevicePrompt } from "@shared/appTypes";
 import type {
@@ -16,6 +17,7 @@ export function createSystemBridge(): SystemBridge {
   return {
     openExternalUrl: (url) => invokeIpc("app:open-external-url", url),
     copyText: (text) => invokeIpc("app:copy-text", text),
+    readClipboardText: () => invokeIpc("app:read-clipboard-text"),
     closeWindow: () => invokeIpc("window:close"),
     minimizeWindow: () => invokeIpc("window:minimize"),
     toggleMaximizeWindow: () => invokeIpc("window:toggle-maximize"),
@@ -31,7 +33,7 @@ export function createSystemBridge(): SystemBridge {
     onAppSettingsChanged: (listener) => subscribeToIpcEvent("app:settings-changed", listener),
     saveAppSettings: (settings, baseline) => invokeIpc("app:save-app-settings", settings, baseline),
     relaunchApplication: (options) => invokeIpc("app:relaunch", options),
-    getAnalyticsRuntimeConfig: () => invokeIpc("app:get-analytics-runtime-config"),
+    getAnalyticsRuntimeConfig: () => invokeIpc(ANALYTICS_CHANNELS.runtimeConfig),
     getStartupDependencyReport: () => invokeIpc("app:get-startup-dependency-report"),
     installStartupDependency: (dependencyId) => invokeIpc("app:install-startup-dependency", dependencyId),
     getLinuxAptSetupStatus: () => invokeIpc("app:get-linux-apt-setup-status"),
@@ -76,7 +78,7 @@ export function createSystemBridge(): SystemBridge {
     showAgentCompletionNotification: (payload) => invokeIpc("app:show-agent-completion-notification", payload),
     onAppClosingProgress: (listener) =>
       subscribeToIpcEvent<AppClosingProgressPayload>("app:closing-progress", listener),
-    logAnalytics: (level, message) => invokeIpc("app:log-analytics", { level, message }),
+    trackAnalytics: (event) => invokeIpc(ANALYTICS_CHANNELS.track, event),
     scanLocalAgentUsage: (request) => invokeIpc("app:scan-local-agent-usage", request),
     getResourceMonitorSnapshot: () => invokeIpc("app:get-resource-monitor-snapshot"),
     syncMacApplicationMenu: (payload: MacApplicationMenuSyncPayload) => invokeIpc("app:sync-mac-application-menu", payload),

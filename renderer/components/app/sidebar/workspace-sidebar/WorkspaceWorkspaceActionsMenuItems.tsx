@@ -1,7 +1,8 @@
 import { TerminalLaunchMenuItems } from "@/components/app/panels/workspace-tools/TerminalLaunchMenuItems";
 import type { WorkspaceWorkspaceActionsMenuItemsProps } from "@/components/app/types/workspaceSidebarActionsMenu.types";
-import { getPreferredWorkspaceScripts } from "@/components/app/logic/workspaceScripts";
+import { getWorkspaceRunnableScripts, hasWorkspaceRunnableScripts } from "@/components/app/logic/workspaceScripts";
 import { WorkspaceScriptMenuItems } from "@/components/app/panels/workspace-tools/WorkspaceScriptMenuItems";
+import { WorkspaceSetupScriptMenuItems } from "@/components/app/panels/workspace-tools/WorkspaceSetupScriptMenuItems";
 import { DropdownMenuGroup, DropdownMenuItem, DropdownMenuSub } from "@/components/ui/dropdown-menu";
 import { FolderKanban, GitBranch, Globe, MessageSquarePlus, Play, ScrollText, StickyNote } from "lucide-react";
 
@@ -26,7 +27,7 @@ export const WorkspaceWorkspaceActionsMenuItems = ({
   onCreateWorktree
 }: WorkspaceWorkspaceActionsMenuItemsProps) => {
   const projectId = workspace.project.id;
-  const scripts = getPreferredWorkspaceScripts(workspace);
+  const scripts = getWorkspaceRunnableScripts(workspace);
   const onSelectWithClose = (action: () => void) => {
     action();
     onItemSelected?.();
@@ -67,9 +68,10 @@ export const WorkspaceWorkspaceActionsMenuItems = ({
         )}
       </DropdownMenuGroup>
       <TerminalLaunchMenuItems workspace={workspace} focusedProjectId={focusedProjectId} terminalShells={terminalShells} preferredShellId={preferredShellId} terminalQuickLaunchDefaults={terminalQuickLaunchDefaults} runnableGlobalTerminalPresets={runnableGlobalTerminalPresets} onItemSelected={onItemSelected} onFocusWorkspace={onFocusWorkspace} onLaunchWorkspaceTerminal={onLaunchWorkspaceTerminal} onOpenCreateTerminal={onOpenCreateTerminal} onOpenWorkspaceTerminalPresets={onOpenWorkspaceTerminalPresets}>
-        {scripts.length > 0 && (
+        {hasWorkspaceRunnableScripts(scripts) && (
           <DropdownMenuSub label="Run script" icon={<Play className="size-4" />}>
-            <WorkspaceScriptMenuItems workspace={workspace} scripts={scripts} onItemSelected={onItemSelected} />
+            <WorkspaceScriptMenuItems workspace={workspace} scripts={scripts.packageScripts} onItemSelected={onItemSelected} />
+            <WorkspaceSetupScriptMenuItems workspace={workspace} onItemSelected={onItemSelected} />
           </DropdownMenuSub>
         )}
       </TerminalLaunchMenuItems>

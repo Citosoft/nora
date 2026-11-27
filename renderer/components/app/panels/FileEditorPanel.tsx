@@ -1,3 +1,4 @@
+import { useWindowKeybinding } from "@/components/app/hooks/useKeybindings";
 import { useNativeRuntimePorts } from "@/components/app/hooks/useNativeRuntimePorts";
 import { handoffThread } from "@/components/app/logic/thread-workspace/handoff";
 import {
@@ -314,22 +315,12 @@ export function FileEditorPanel(props: FileEditorPanelContextProps) {
     };
   }, [isTextTab, monacoEditor, onExitFileEditorForAgentHandoff, sendTargetsKey]);
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
-        event.preventDefault();
-        event.stopPropagation();
-        if (!isLoading && !isSaving && isTextTab && !isReadOnlyTab) {
-          onSave();
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
+  const saveFromShortcut = useCallback(() => {
+    if (!isLoading && !isSaving && isTextTab && !isReadOnlyTab) {
+      onSave();
+    }
   }, [isTextTab, isLoading, isReadOnlyTab, isSaving, onSave]);
+  useWindowKeybinding("save-document", saveFromShortcut);
 
   const monacoFileEditor = (
     <Editor

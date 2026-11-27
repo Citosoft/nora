@@ -1,6 +1,7 @@
 import { normalizeUiFontSize } from "@shared/appearance/fontSize";
 import { DEFAULT_APP_SETTINGS, type AppSettings } from "@shared/appTypes";
 import { parseDesktopLifecycleSettings } from "@shared/desktop-lifecycle/settings";
+import { parseNotchIslandSettings } from "@shared/island/settings";
 import { parseVoiceSettings } from "@shared/voice/settings";
 import { parseAiSimpleTaskProvider, parseMemoryReviewSettings, parseRuntimeModelByProvider } from "@shared/ai/settings";
 
@@ -17,6 +18,7 @@ export function normalizeAppSettings(candidate: AppSettings): AppSettings {
     ...candidate,
     uiFontSize: normalizeUiFontSize(candidate.uiFontSize),
     lifecycle: parseDesktopLifecycleSettings(candidate.lifecycle),
+    notchIsland: parseNotchIslandSettings(candidate.notchIsland),
     terminalQuickLaunchDefaults: {
       ...DEFAULT_APP_SETTINGS.terminalQuickLaunchDefaults,
       ...candidate.terminalQuickLaunchDefaults

@@ -3,6 +3,7 @@ import {
   applyMacApplicationMenuCommand,
   type MacApplicationMenuActionHandlers
 } from "@/components/app/logic/applyMacApplicationMenuCommand";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 import type { MacApplicationMenuSyncPayload } from "@shared/types/macApplicationMenu.types";
 import { useEffect, useRef } from "react";
 
@@ -41,6 +42,7 @@ export function useMacApplicationMenuBridge({ enabled, payload, handlers }: UseM
       }
 
       applyMacApplicationMenuCommand(command, currentHandlers);
+      trackAnalyticsEvent({ name: "command.invoked", properties: { command: command.kind, via: "menu" } });
     });
   }, [enabled]);
 }

@@ -7,11 +7,11 @@ export function projectSqliteEvent(database: DatabaseSync, event: ConversationEv
   switch (payload.kind) {
     case "conversation": {
       const { conversation } = payload;
-      database.prepare(`INSERT INTO conversation_heads(id, cursor, project_id, checkout_id, access, json) VALUES (?, ?, ?, ?, ?, ?)
+      database.prepare(`INSERT INTO conversation_heads(id, cursor, project_id, checkout_id, access, json, background_tasks) VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET cursor = excluded.cursor, project_id = excluded.project_id,
           checkout_id = excluded.checkout_id, access = excluded.access, json = excluded.json`)
         .run(conversationId, cursor, conversation.workspace.projectId, conversation.workspace.checkoutId,
-          conversation.workspace.access, JSON.stringify(conversation));
+          conversation.workspace.access, JSON.stringify(conversation), "[]");
       return;
     }
     case "run":
@@ -32,6 +32,12 @@ export function projectSqliteEvent(database: DatabaseSync, event: ConversationEv
         ON CONFLICT(conversation_id, id) DO UPDATE SET status = excluded.status, json = excluded.json`)
         .run(conversationId, payload.request.id, payload.request.runId, payload.request.status, JSON.stringify(payload.request));
       break;
+    case "background-tasks": {
+      const result = database.prepare("UPDATE conversation_heads SET cursor = ?, background_tasks = ? WHERE id = ?")
+        .run(cursor, JSON.stringify(payload.tasks), conversationId);
+      if (result.changes !== 1) throw new Error("Conversation must exist before its activity");
+      return;
+    }
   }
   const result = database.prepare("UPDATE conversation_heads SET cursor = ? WHERE id = ?").run(cursor, conversationId);
   if (result.changes !== 1) throw new Error("Conversation must exist before its activity");

@@ -1,5 +1,6 @@
 import type { AgentDetectionInfo } from "./session.types";
 import type { TerminalPreset } from "./system.types";
+import type { WorkspaceSetupScript } from "./workspaceSetupScript.types";
 
 export interface WorkspaceTaskSummary {
   path: string;
@@ -195,6 +196,8 @@ export interface ProjectSummary {
   remoteAgentCatalog?: AgentDetectionInfo[] | null;
   workspaceInstructionFile?: WorkspaceInstructionFile | null;
   workspaceTerminalPresets?: TerminalPreset[];
+  /** Commands run in a worktree when it is created or removed, or on demand; see WorkspaceSetupScript. */
+  workspaceSetupScripts?: WorkspaceSetupScript[];
   /** Empty when `versionControl` is "none". */
   baseBranch: string;
   framework: WorkspaceFramework | null;

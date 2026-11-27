@@ -2,7 +2,7 @@
 
 This product includes third-party open-source software.
 
-Generated: 2026-11-25T11:56:02.389Z
+Generated: 2026-11-27T13:08:26.359Z
 
 | Package | Version | License |
 | --- | --- | --- |
@@ -172,7 +172,6 @@ Generated: 2026-11-25T11:56:02.389Z
 | micromark-util-sanitize-uri | 2.0.1 | MIT |
 | micromark-util-subtokenize | 2.1.0 | MIT |
 | node-pty | 1.1.0 | MIT |
-| object-assign | 4.1.1 | MIT |
 | parse5 | 8.1.1 | MIT |
 | pkce-challenge | 5.0.1 | MIT |
 | posthog-js | 1.378.1 | SEE LICENSE IN LICENSE |
@@ -181,7 +180,6 @@ Generated: 2026-11-25T11:56:02.389Z
 | qrcode-generator | 2.0.4 | MIT |
 | react | 19.2.7 | MIT |
 | react-dom | 19.2.7 | MIT |
-| react-is | 16.13.1 | MIT |
 | react-is | 18.3.1 | MIT |
 | react-markdown | 10.1.0 | MIT |
 | react-remove-scroll | 2.7.2 | MIT |
@@ -225,9 +223,19 @@ Generated: 2026-11-25T11:56:02.389Z
 | victory-vendor | 36.9.2 | MIT AND ISC |
 | web-namespaces | 2.0.1 | MIT |
 | ws | 8.21.0 | MIT |
+| yaml | 2.9.1 | ISC |
 | zod | 4.4.3 | MIT |
 | zwitch | 2.0.4 | MIT |
 
 Includes top-level runtime dependencies declared in `package.json` (`dependencies` and `optionalDependencies`) and every package bundled into the renderer.
 
 License texts are available in each dependency package under `node_modules/<package>/LICENSE*`.
+
+## Bundled artwork
+
+| Artwork | Used in | Copyright | License |
+| --- | --- | --- | --- |
+| T3 Code logo | Migrate from another app | Copyright (c) 2026 T3 Tools Inc. | MIT |
+| Orca logo | Migrate from another app | Copyright (c) 2026 Lovecast Inc. | MIT |
+| OpenBot app icon | Migrate bots (identifies the source app) | nightly-labs/openbot | PolyForm Noncommercial 1.0.0 |
+| Grok Bot app icon | Migrate bots (identifies the source app) | SpaceXAI | Proprietary; shown only to name the app being imported from |

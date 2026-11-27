@@ -1,5 +1,5 @@
 import { isAgentBusyAt } from "@/components/app/logic/agentBusy";
-import { SHORTCUT_DEFINITIONS, formatShortcutKeys } from "@/components/app/logic/keyboardShortcuts";
+import { useKeybindingLabel } from "@/components/app/hooks/useKeybindings";
 import { getWorkspaceSessionTabsToClose } from "@/components/app/logic/workspaceSessionTabContextActions";
 import { BusyIndicator } from "@/components/app/shared/BusyIndicator";
 import { useSessionTabOverflow } from "@/components/app/hooks/useSessionTabOverflow";
@@ -25,7 +25,6 @@ function runCloseAction(targets: WorkspaceSessionTab[], onCloseMany: (tabs: Work
 export function WorkspaceSessionTabs({
   tabs,
   activeTabId,
-  platform,
   onSelect,
   onClose,
   onCloseMany,
@@ -36,22 +35,10 @@ export function WorkspaceSessionTabs({
 }: WorkspaceSessionTabsProps) {
   const { containerRef, visibleTabs, overflowTabs } = useSessionTabOverflow(tabs, activeTabId);
   const [now, setNow] = useState(() => Date.now());
-  const newAgentShortcut = formatShortcutKeys(
-    SHORTCUT_DEFINITIONS.find((definition) => definition.id === "open-create-agent")?.keys ?? [],
-    platform
-  );
-  const newTerminalShortcut = formatShortcutKeys(
-    SHORTCUT_DEFINITIONS.find((definition) => definition.id === "open-create-terminal")?.keys ?? [],
-    platform
-  );
-  const newBrowserShortcut = formatShortcutKeys(
-    SHORTCUT_DEFINITIONS.find((definition) => definition.id === "open-workspace-browser")?.keys ?? [],
-    platform
-  );
-  const closeTabShortcut = formatShortcutKeys(
-    SHORTCUT_DEFINITIONS.find((definition) => definition.id === "close-active-session-tab")?.keys ?? [],
-    platform
-  );
+  const newThreadShortcut = useKeybindingLabel("open-create-agent");
+  const newTerminalShortcut = useKeybindingLabel("open-create-terminal");
+  const newBrowserShortcut = useKeybindingLabel("open-workspace-browser");
+  const closeTabShortcut = useKeybindingLabel("close-active-session-tab");
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -175,7 +162,7 @@ export function WorkspaceSessionTabs({
         >
           <DropdownMenuItem onSelect={onCreateThread}>
             <MessageSquare className="size-4" /><span className="whitespace-nowrap">New thread</span>
-            <span className="ml-auto text-[10px] text-muted-foreground">{newAgentShortcut}</span>
+            <span className="ml-auto text-[10px] text-muted-foreground">{newThreadShortcut}</span>
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={onCreateTerminalFromDefaults}>
             <TerminalSquare className="size-4" />

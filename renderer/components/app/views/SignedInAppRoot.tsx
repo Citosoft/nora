@@ -29,7 +29,6 @@ import { useWorkspaceSessionFocusCommands } from "@/components/app/hooks/useWork
 import { getWorkspacePresenceSignature } from "@/components/app/logic/appPresenceSignatures";
 import { buildAppRootSignedInProviderSlicesWiringInput } from "@/components/app/logic/buildAppRootSignedInProviderSlicesWiringInput";
 import { buildKeyboardShortcutActions } from "@/components/app/logic/buildKeyboardShortcutActions";
-import { SHORTCUT_DEFINITIONS } from "@/components/app/logic/keyboardShortcuts";
 import type { MacApplicationMenuActionHandlers } from "@/components/app/logic/applyMacApplicationMenuCommand";
 import { buildMacApplicationMenuSyncPayload } from "@/components/app/logic/buildMacApplicationMenuSyncPayload";
 import { getWorkspaceSwitcherEntries } from "@/components/app/logic/appUtils";
@@ -60,7 +59,6 @@ export function SignedInAppRoot(props: SignedInAppRootProps): ReactElement | nul
       openAiChat={props.centerTabs.openAiChat}
       uiCommands={props.uiCommands}
       normalizeSnapshot={props.normalizeSnapshot}
-      windowPlatform={props.bootstrap.windowUiState.platform}
       setDefaultTerminalShellId={props.setDefaultTerminalShellId}
       installedIdes={props.bootstrap.installedIdes}
       defaultIdeId={props.preferences.defaultIdeId}
@@ -247,7 +245,7 @@ function SignedInAppRootContent({
     ]
   );
 
-  useKeyboardShortcuts(SHORTCUT_DEFINITIONS, keyboardShortcutActions);
+  useKeyboardShortcuts(keyboardShortcutActions);
 
   const handleCopyLinuxUpdateCommand = useCallback((): void => {
     if (!props.linuxUpdateNotice.linuxUpdateStatus) {
@@ -515,6 +513,7 @@ function SignedInAppRootContent({
     updateFileEditorThemeId: props.preferences.updateFileEditorThemeId,
     updateUiFontSize: props.preferences.updateUiFontSize,
     updateThreadBackdrop: props.preferences.updateThreadBackdrop,
+    updateNotchIsland: props.preferences.updateNotchIsland,
     updateHardwareAccelerationEnabled: props.preferences.updateHardwareAccelerationEnabled,
     updateWorkspaceStateStorageMode: props.preferences.updateWorkspaceStateStorageMode,
     updateDefaultAgentLaunchTarget: props.preferences.updateDefaultAgentLaunchTarget,
@@ -525,7 +524,7 @@ function SignedInAppRootContent({
     updateForceMacTitleBarPreview: props.preferences.updateForceMacTitleBarPreview,
     updateLifecycle: props.preferences.updateLifecycle,
     updateNotificationPreferences: props.preferences.updateNotificationPreferences,
-    updateAnalyticsConsentStatus: props.preferences.updateAnalyticsConsentStatus,
+    updateAnalyticsPreferences: props.preferences.updateAnalyticsPreferences,
     analyticsAllowedInCurrentRun: dialogs.analyticsRuntimeConfig?.analyticsAllowedInCurrentRun ?? __NORA_IS_PRODUCTION__,
     analyticsRuntimeConfig: dialogs.analyticsRuntimeConfig,
     updateBrowserPreferences: props.preferences.updateBrowserPreferences,
@@ -609,6 +608,7 @@ function SignedInAppRootContent({
     loadChromeCookieProfiles: dialogs.loadChromeCookieProfiles,
     runChromeBrowserDataImport: dialogs.runChromeBrowserDataImport,
     isAnalyticsConsentDialogOpen: dialogs.isAnalyticsConsentDialogOpen,
+    usageStatisticsRequireConsent: dialogs.usageStatisticsRequireConsent,
     allowAnalyticsConsent: dialogs.allowAnalyticsConsent,
     declineAnalyticsConsent: dialogs.declineAnalyticsConsent,
     workspaceSwitcherEntries
