@@ -78,7 +78,6 @@ export const NORA_AGENT_CLIENT_METHODS = [
   "getAgentContextPreview",
   "getAgentContextState",
   "prepareAgentContextHandoff",
-  "listWorkspaceAgentContextSources",
   "clearAgentContext",
   "clearAgentTerminal",
   "resizeAgentTerminal"

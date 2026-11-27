@@ -25,7 +25,7 @@ async function boundedControl<T>(work: Promise<T>): Promise<T> {
 export class EffectWorker {
   constructor(private readonly engine: ConversationEngine, private readonly providers: ProviderResolver,
     private readonly emit: EmitProviderUpdate = engine.accept.bind(engine),
-    private readonly beforeStart?: (workspace: WorkspaceRef) => Promise<void>,
+    private readonly refreshWorkspace?: (workspace: WorkspaceRef) => Promise<WorkspaceRef>,
     private readonly reviewer: WorkspaceReviewer = async () => ({ status: "unavailable", reason: "unsupported" }),
     private readonly checkpoints?: TurnCheckpoints,
     private readonly options?: EffectWorkerOptions) {}
@@ -63,11 +63,12 @@ export class EffectWorker {
       return;
     }
     if (effect.action.kind === "start") {
-      if (!await this.verifyWorkspace(effect, snapshot.conversation.workspace)) return;
+      const workspace = await this.followWorkspace(effect, snapshot.conversation.workspace);
+      if (!workspace) return;
       if (this.checkpoints) {
-        const capture = await safeCapture(this.checkpoints, snapshot.conversation.workspace);
+        const capture = await safeCapture(this.checkpoints, workspace);
         this.engine.recordCheckpoint(effect.id, "baseline", capture);
-        if (!await this.verifyWorkspace(effect, snapshot.conversation.workspace)) return;
+        if (!await this.followWorkspace(effect, workspace)) return;
       }
       // Interruption can arrive while preparation awaits. No native instruction has been submitted.
       snapshot = this.engine.execution(effect.conversationId, effect.runId);
@@ -143,15 +144,18 @@ export class EffectWorker {
       this.engine.finishEffect(effect.id);
     }
   }
-  private async verifyWorkspace(effect: ExecutionEffect, workspace: WorkspaceRef): Promise<boolean> {
-    try { await this.beforeStart?.(workspace); }
-    catch {
+  /** A branch switch inside the thread's checkout is followed; a missing or replaced checkout fails the turn. */
+  private async followWorkspace(effect: ExecutionEffect, workspace: WorkspaceRef): Promise<WorkspaceRef | null> {
+    try {
+      const current = this.refreshWorkspace ? await this.refreshWorkspace(workspace) : workspace;
+      this.engine.followWorkspace(effect.conversationId, current);
+      return current;
+    } catch {
       this.emit({ eventId: JSON.stringify([effect.id, "workspace"]), conversationId: effect.conversationId,
         runId: effect.runId, attemptId: effect.attemptId, kind: "finished", status: "failed", usage: null,
         failure: { code: "host", message: "Workspace is unavailable or has changed; review the checkout before retrying", retryable: true } });
-      this.engine.finishEffect(effect.id); return false;
+      this.engine.finishEffect(effect.id); return null;
     }
-    return true;
   }
 
 }

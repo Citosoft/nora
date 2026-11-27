@@ -1,6 +1,6 @@
 import { importedHistoryEvents } from "./externalImport";
 import { conversationCommandSchema, workspaceRefSchema } from "@shared/conversations/contracts";
-import type { CommandReceipt, ContextReading, ContextUsage, ConversationCommand, ConversationSnapshot, EventPayload } from "@shared/types/conversation/contracts.types";
+import type { CommandReceipt, ContextReading, ContextUsage, ConversationCommand, ConversationSnapshot, EventPayload, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ActiveSubscription, EngineDependencies, EventSubscription } from "@main/types/execution/engine.types";
 import type { StoreTransaction, ExecutionEffect } from "@main/types/execution/store.types";
 import type { ProviderUpdate } from "@main/types/execution/provider.types";
@@ -286,6 +286,19 @@ export class ConversationEngine {
   }
 
   /** Fills an unknown context from saved history; a live turn's reading always wins because it is newer. */
+  /** Records the checkout's current branch so a thread follows a switch made in its own checkout. */
+  followWorkspace(conversationId: string, current: WorkspaceRef): void {
+    this.deps.assertOwnership();
+    this.deps.store.transaction((transaction) => {
+      const conversation = transaction.state(conversationId)?.conversation;
+      if (!conversation || conversation.workspace.checkoutId !== current.checkoutId || conversation.workspace.branch === current.branch) return;
+      // Following the checkout is not activity, so the conversation's updatedAt (and its sort position) stays put.
+      this.commitEvents(transaction, conversationId, this.deps.now(), [{ kind: "conversation",
+        conversation: { ...conversation, workspace: { ...conversation.workspace, branch: current.branch } } }]);
+    });
+    this.publish();
+  }
+
   recordContext(conversationId: string, reading: ContextReading): ContextUsage | null {
     this.deps.assertOwnership();
     const recorded = this.deps.store.transaction((transaction): ContextUsage | null => {

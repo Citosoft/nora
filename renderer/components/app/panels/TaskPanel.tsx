@@ -1,5 +1,8 @@
 import { useWindowKeybinding } from "@/components/app/hooks/useKeybindings";
 import { useAppMainCenterContent } from "@/components/app/context/appMainCenterContentContext";
+import { useActiveTaskThreads } from "@/components/app/hooks/useActiveTaskThreads";
+import { taskThreadKey } from "@/components/app/logic/taskThreads";
+import { TaskThreadIndicator } from "@/components/app/tasks/TaskThreadIndicator";
 import { MarkdownRenderer } from "@/components/app/shared/MarkdownRenderer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,13 +17,14 @@ export function TaskPanel() {
     throw new Error("TaskPanel must be rendered with taskPanelProps in AppMainCenterContent.");
   }
   const {
+    projectId,
     projectName,
     title,
     path,
     completed,
     updatedAt,
     boardSectionTitle,
-    assignedAgents,
+    onOpenThread,
     content,
     savedContent,
     isCreating,
@@ -35,6 +39,7 @@ export function TaskPanel() {
     onStartThread,
     onDuplicateToNew
   } = taskPanelProps;
+  const activeThread = useActiveTaskThreads().get(taskThreadKey(projectId, path)) ?? null;
   const [mode, setMode] = useState<"preview" | "edit">("preview");
   const isDirty = content !== savedContent;
   const isBusy = isCreating || isLoading || isSaving;
@@ -85,18 +90,9 @@ export function TaskPanel() {
             <div className="mt-1 text-[10px] text-muted-foreground">
               {isCreating ? "Creating task..." : isLoading ? "Loading task..." : isSaving ? "Saving task..." : isDirty ? "Unsaved changes" : "Saved"}
             </div>
-            {assignedAgents.length ? (
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                {assignedAgents.map((assignment) => (
-                  <Badge
-                    key={`${assignment.agentId}:${assignment.assignedAt}`}
-                    variant="outline"
-                    className={assignment.isActive ? "border-primary/40 bg-primary/10 text-primary" : ""}
-                  >
-                    {assignment.agentName}
-                    {assignment.isActive ? " active" : ""}
-                  </Badge>
-                ))}
+            {activeThread ? (
+              <div className="mt-3 flex items-center">
+                <TaskThreadIndicator thread={activeThread} onOpenThread={onOpenThread} variant="labelled" />
               </div>
             ) : null}
           </div>

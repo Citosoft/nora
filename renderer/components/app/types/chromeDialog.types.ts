@@ -1,5 +1,4 @@
 import type {
-  CreateAgentDialogDefaults,
   CreateTerminalDialogDefaults,
   ResolvedTheme,
   ThemeMode,
@@ -8,9 +7,7 @@ import type {
 import type { TitleBarWorkspaceQuickSearchConfig } from "@/components/app/types/titlebarWorkspaceSearch.types";
 import type {
   AgentCatalogEntry,
-  AgentLaunchTargetPreference,
   AgentSession,
-  AgentSkillCatalog,
   AppSettings,
   BrowserCookieProfileSummary,
   ConnectRemoteProjectPayload,
@@ -23,11 +20,9 @@ import type {
   LinuxUpdateStatus,
   ProjectSummary,
   RecentProject,
-  TerminalPreset,
   TerminalShellOption,
   WorkspaceSpecSummary,
   WorkspaceSummary,
-  WorkspaceTaskSummary,
   WorktreeRecord
 } from "@shared/appTypes";
 import type { StartupDependency, StartupDependencyId } from "@shared/types/startupDependency.types";
@@ -97,35 +92,6 @@ export type AddWorkspaceDialogProps = {
   onChooseLocal: () => void;
   onChooseRemote: () => void;
   onCreateNewProjectAgent?: (payload: CreateAgentPayload, projectName: string) => Promise<void>;
-};
-
-export type CreateAgentDialogProps = {
-  open: boolean;
-  project: ProjectSummary | null;
-  tools: AgentCatalogEntry[];
-  agentSkillCatalogs: AgentSkillCatalog[];
-  workspaceTasks: WorkspaceTaskSummary[];
-  worktrees: WorktreeRecord[];
-  projectBranches: string[];
-  activeBranch: string;
-  defaultLaunchTargetMode: LaunchTargetMode;
-  defaultWorktreePrepareCommand: string | null;
-  preferredAgentToolId: string | null;
-  defaults: CreateAgentDialogDefaults | null;
-  workspaceTerminalPresets: TerminalPreset[];
-  globalTerminalPresets: TerminalPreset[];
-  onOpenChange: (open: boolean) => void;
-  onCreateAgent: (payload: CreateAgentPayload, taskPath: string | null) => void;
-};
-
-export type LaunchTargetMode = AgentLaunchTargetPreference;
-
-/** What the current project can offer as agent launch targets. */
-export type LaunchTargetAvailability = {
-  worktrees: Array<Pick<WorktreeRecord, "id">>;
-  projectBranches: string[];
-  /** Plain (non-git) folders only support launching in the project folder itself. */
-  isGitProject: boolean;
 };
 
 export type CreatePullRequestDialogProps = {

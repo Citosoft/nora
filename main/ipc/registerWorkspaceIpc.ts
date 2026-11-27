@@ -76,9 +76,6 @@ export function registerWorkspaceIpc({
   ipcMain.handle("app:create-project-workspace", (_event, payload: CreateProjectWorkspacePayload) =>
     createProjectWorkspace(payload)
   );
-  ipcMain.handle("app:list-workspace-agent-context-sources", (_event, projectId: string, excludeAgentId?: string) =>
-    services.snapshot.listWorkspaceAgentContextSources(projectId, excludeAgentId)
-  );
   ipcMain.handle(
     "app:archive-external-harness-thread",
     (_event, payload: ArchiveExternalHarnessThreadPayload): Promise<void> =>

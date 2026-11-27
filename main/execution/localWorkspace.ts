@@ -17,13 +17,19 @@ export class LocalWorkspaceAuthority implements WorkspaceAuthority {
     return this.resolve({ ...selection, path: matches[0].path });
   }
 
-  async verify(workspace: WorkspaceRef): Promise<void> {
+  async refresh(workspace: WorkspaceRef): Promise<WorkspaceRef> {
     this.assertEnvironment(workspace);
     const current = await this.resolve(workspace);
-    if (current.checkoutId !== workspace.checkoutId || current.branch !== workspace.branch || current.path !== workspace.path
+    if (current.checkoutId !== workspace.checkoutId || current.path !== workspace.path
       || (workspace.versionControl !== undefined && current.versionControl !== workspace.versionControl)) {
-      throw new ExecutionCommandError("conflict", "Workspace identity or branch changed; review the checkout before continuing");
+      throw new ExecutionCommandError("conflict", "Workspace identity changed; review the checkout before continuing");
     }
+    return current;
+  }
+
+  async verify(workspace: WorkspaceRef): Promise<void> {
+    const current = await this.refresh(workspace);
+    if (current.branch !== workspace.branch) throw new ExecutionCommandError("conflict", "Workspace branch changed; review the checkout before continuing");
   }
 
   private assertEnvironment(workspace: WorkspaceRef): void {

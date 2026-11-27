@@ -1,5 +1,4 @@
 import type {
-  AgentContextSourceSummary,
   AgentContextState,
   AgentContextSelection,
   AgentContextPreview,
@@ -24,10 +23,6 @@ export interface SessionBridge {
   getAgentContextPreview: (agentId: string) => Promise<AgentContextPreview>;
   getAgentContextState: (agentId: string) => Promise<AgentContextState>;
   prepareAgentContextHandoff: (selections: AgentContextSelection[]) => Promise<string>;
-  listWorkspaceAgentContextSources: (
-    projectId: string,
-    excludeAgentId?: string
-  ) => Promise<AgentContextSourceSummary[]>;
   clearAgentContext: (agentId: string) => Promise<AgentContextPreview>;
   clearAgentTerminal: (agentId: string) => Promise<AppState>;
   resizeAgentTerminal: (agentId: string, cols: number, rows: number) => Promise<void>;

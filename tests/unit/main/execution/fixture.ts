@@ -11,7 +11,7 @@ import type { WorkspaceAuthority } from "@main/types/execution/workspace.types";
 import type { ProviderUpdate } from "@main/types/execution/provider.types";
 import type { RoleSelection } from "@shared/types/personalization/roles.types";
 
-export const workspaceAuthority: WorkspaceAuthority = { async prepare(selection) { return selection; }, async verify() {} };
+export const workspaceAuthority: WorkspaceAuthority = { async prepare(selection) { return selection; }, async refresh(workspace) { return workspace; }, async verify() {} };
 
 export const provider: ProviderBinding = { kind: "codex", instanceId: "account-a", model: "test-model", reasoning: null, permissionPolicy: "native-default" };
 export function fixture(t: TestContext) {

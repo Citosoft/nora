@@ -14,7 +14,6 @@ type AgentGateway = Pick<
   | "getAgentTerminalBuffer"
   | "getAgentContextPreview"
   | "getAgentContextState"
-  | "listWorkspaceAgentContextSources"
   | "clearAgentContext"
   | "clearAgentTerminal"
   | "resizeAgentTerminal"

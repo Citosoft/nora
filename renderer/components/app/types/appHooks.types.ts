@@ -21,7 +21,6 @@ import type {
   AutoUpdateStatus,
   BrowserCookieProfileSummary,
   BrowserDataImportResult,
-  CreateAgentPayload,
   ForgeAddCommentPayload,
   ForgeBranchPullRequestStatus,
   ForgeOAuthDevicePrompt,
@@ -257,7 +256,6 @@ export type UseWorkspaceContentControllerArgs = {
   runWithStatus: (message: string, action: () => Promise<AppState>) => Promise<AppState | null>;
   statusBar: StatusBarContextValue;
   setIsCenterDiffExpanded: Dispatch<SetStateAction<boolean>>;
-  trackAgentCreation: (payload: CreateAgentPayload, source: "task-panel" | "task-reference" | "task-planner" | "dialog") => void;
 };
 
 export type UseWorkspaceContentControllerResult = {
@@ -298,6 +296,6 @@ export type UseWorkspaceContentControllerResult = {
   handleDeleteNote: (projectId: string, pathName: string) => Promise<void>;
   handleStartTaskThread: () => Promise<void>;
   handleStartTaskThreads: (tasks: TaskCenterTaskReference[]) => Promise<void>;
+  handleOpenTaskThread: (conversationId: string) => void;
   generateWorkspaceTasks: (projectId: string, brief: string | null, specPath: string | null) => Promise<void>;
-  handleCreateAgentFromDialog: (payload: CreateAgentPayload, taskPath: string | null) => Promise<void>;
 };

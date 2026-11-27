@@ -36,7 +36,7 @@ test("large files retain fingerprints while non-Git workspaces and changed works
   assert.deepEqual(large.snapshot.omitted, [{ path: "large.bin", mode: "100644", hash: createHash("sha256").update(Buffer.alloc(maxFileBytes + 1)).digest("hex") }]);
   await rm(join(f.root, "large.bin"));
   const plain = join(f.directory, "plain"); await mkdir(plain);
-  const noChecks = { async verify() {}, async prepare(selection: typeof f.workspace) { return selection; } };
+  const noChecks = { async verify() {}, async prepare(selection: typeof f.workspace) { return selection; }, async refresh(selection: typeof f.workspace) { return selection; } };
   assert.deepEqual(await createGitCheckpoints("git", noChecks, f.now).capture({ ...f.workspace, path: plain }),
     { status: "unavailable", reason: "unsupported" });
   let checks = 0;

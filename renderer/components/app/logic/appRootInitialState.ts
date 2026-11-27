@@ -6,8 +6,6 @@ export const appRootInitialUiState: UiState = {
   activeErrorMessage: null,
   showAddWorkspaceModal: false,
   showRemoteWorkspaceModal: false,
-  showCreateAgentModal: false,
-  createAgentDefaults: null,
   showCreateTerminalModal: false,
   createTerminalDefaults: null,
   showAboutDialog: false,

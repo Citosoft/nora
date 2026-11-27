@@ -20,7 +20,7 @@ test("interrupt while workspace verification awaits cannot send the instruction 
   const providers = new ProviderRegistry(); const provider = new ProviderDouble(); providers.register(provider);
   let release = (): void => {};
   const gate = new Promise<void>((resolve) => { release = resolve; });
-  const worker = new EffectWorker(f.engine, providers, f.engine.accept.bind(f.engine), () => gate);
+  const worker = new EffectWorker(f.engine, providers, f.engine.accept.bind(f.engine), async (workspace) => { await gate; return workspace; });
   const operation = worker.beginNextEffect(["start"]); assert.ok(operation);
   f.command({ kind: "interrupt", commandId: "stop", conversationId: "conversation", runId: "run" });
   // The native interrupt cannot find an owner because preflight has not submitted anything.
@@ -30,4 +30,16 @@ test("interrupt while workspace verification awaits cannot send the instruction 
   assert.equal(f.snapshot().conversation.queuePaused, true);
   await worker.runNext(["review"]);
   assert.equal(f.store.unfinishedEffects().length, 0);
+});
+
+test("a branch switch in the thread's checkout is followed instead of failing every later turn", async (t) => {
+  const f = fixture(t); f.create(); f.submit();
+  const providers = new ProviderRegistry(); const provider = new ProviderDouble(); providers.register(provider);
+  const worker = new EffectWorker(f.engine, providers, f.engine.accept.bind(f.engine),
+    async (workspace) => ({ ...workspace, branch: "feature/switched" }));
+  const operation = worker.beginNextEffect(["start"]); assert.ok(operation);
+  while (provider.active.size === 0) await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(f.snapshot().conversation.workspace.branch, "feature/switched");
+  provider.finish(f.snapshot().runs[0].attemptId, "completed"); await operation;
+  assert.equal(provider.starts, 1); assert.equal(f.snapshot().runs[0].state, "completed");
 });

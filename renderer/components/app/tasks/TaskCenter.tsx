@@ -1,5 +1,6 @@
 import { useAppMainCenterContent } from "@/components/app/context/appMainCenterContentContext";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
+import { useActiveTaskThreads } from "@/components/app/hooks/useActiveTaskThreads";
 import { useWorkflowLaunch } from "@/components/app/hooks/useWorkflowLaunch";
 import { useWorkspaceNavigation } from "@/components/app/hooks/useWorkspaceNavigation";
 import { createTaskBoardSection, deleteTaskBoardSection, moveTaskToBoardSection, renameTaskBoardSection } from "@/components/app/logic/taskBoardUtils";
@@ -27,9 +28,11 @@ export function TaskCenter() {
     onToggleTaskComplete,
     onDeleteTask,
     onStartTaskThreads,
+    onOpenTaskThread,
     generateTasksRequest,
     onClose
   } = taskCenterProps;
+  const activeTaskThreads = useActiveTaskThreads();
   const [viewMode, setViewMode] = useState<TaskBoardViewMode>("list");
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
   const [selectedTaskKeys, setSelectedTaskKeys] = useState<string[]>([]);
@@ -164,6 +167,8 @@ export function TaskCenter() {
       onRunTaskWorkflow={runTaskWorkflow}
       onOpenWorkflows={(id) => openTool(id, "workflows")}
       onOpenTask={onOpenTask}
+      activeTaskThreads={activeTaskThreads}
+      onOpenTaskThread={onOpenTaskThread}
       onCreateTask={onCreateTask}
       onGenerateTasks={onGenerateTasks}
       onToggleTaskComplete={onToggleTaskComplete}

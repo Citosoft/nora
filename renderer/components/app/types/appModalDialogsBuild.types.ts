@@ -7,7 +7,6 @@ import type {
   AppState,
   BrowserCookieProfileSummary,
   BrowserDataImportResult,
-  CreateAgentPayload,
   CreateTerminalPayload,
   ForgeOAuthDevicePrompt,
   ForgeOverview,
@@ -30,11 +29,9 @@ export type AppModalDialogsBuildDeps = {
   setUiState: Dispatch<SetStateAction<UiState>>;
   uiCommands: Pick<
     AppUiCommands,
-    | "closeCreateAgentDialog"
     | "closeCreateTerminalDialog"
     | "setAboutDialogOpen"
     | "setAddWorkspaceDialogOpen"
-    | "setCreateAgentDialogOpen"
     | "setCreateTerminalDialogOpen"
     | "setDestroyAgentDialogOpen"
     | "setDestroyAgentId"
@@ -50,7 +47,6 @@ export type AppModalDialogsBuildDeps = {
   setIsBrowserCookieImportPromptOpen: Dispatch<SetStateAction<boolean>>;
   setSelectedChromeCookieProfileId: Dispatch<SetStateAction<string | null>>;
   setIsCreatePullRequestDialogOpen: Dispatch<SetStateAction<boolean>>;
-  handleCreateAgentFromDialog: (payload: CreateAgentPayload, taskPath: string | null) => void;
   forgeOAuthDevicePrompt: ForgeOAuthDevicePrompt | null;
   clearCapturedError: () => void;
   shouldShowStartupDependenciesDialog: boolean;

@@ -25,8 +25,6 @@ export type AppUiCommands = {
   setWorkspaceSwitcherDialogOpen: (open: boolean) => void;
   setDestroyAgentId: (agentId: string | null) => void;
   setDestroyAgentDialogOpen: (open: boolean) => void;
-  setCreateAgentDialogOpen: (open: boolean) => void;
-  closeCreateAgentDialog: () => void;
   setCreateTerminalDialogOpen: (open: boolean) => void;
   closeCreateTerminalDialog: () => void;
   setResetWorkspacesDialogOpen: (open: boolean) => void;
@@ -136,22 +134,6 @@ export function useAppUiCommands(setUiState: Dispatch<SetStateAction<UiState>>):
     }));
   }, [setUiState]);
 
-  const setCreateAgentDialogOpen = useCallback((open: boolean) => {
-    setUiState((current) => ({
-      ...current,
-      showCreateAgentModal: open,
-      createAgentDefaults: open ? current.createAgentDefaults : null
-    }));
-  }, [setUiState]);
-
-  const closeCreateAgentDialog = useCallback(() => {
-    setUiState((current) => ({
-      ...current,
-      showCreateAgentModal: false,
-      createAgentDefaults: null
-    }));
-  }, [setUiState]);
-
   const setCreateTerminalDialogOpen = useCallback((open: boolean) => {
     setUiState((current) => ({
       ...current,
@@ -233,8 +215,6 @@ export function useAppUiCommands(setUiState: Dispatch<SetStateAction<UiState>>):
     setWorkspaceSwitcherDialogOpen,
     setDestroyAgentId,
     setDestroyAgentDialogOpen,
-    setCreateAgentDialogOpen,
-    closeCreateAgentDialog,
     setCreateTerminalDialogOpen,
     closeCreateTerminalDialog,
     setResetWorkspacesDialogOpen,

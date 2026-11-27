@@ -1,6 +1,6 @@
 import type { WorkspaceTaskSectionGroup } from "@/components/app/types/component.types";
-import type { WorkspaceTaskAssignment, WorkspaceTaskBoard, WorkspaceTaskBoardSection, WorkspaceTaskSummary } from "@shared/appTypes";
-import { createDefaultWorkspaceTaskBoard } from "@shared/appTypes";
+import type { WorkspaceTaskBoard, WorkspaceTaskBoardSection, WorkspaceTaskSummary } from "@shared/appTypes";
+import { createDefaultWorkspaceTaskBoard, TASK_BOARD_IN_PROGRESS_SECTION_ID } from "@shared/appTypes";
 
 export function getTaskBoardSections(board: WorkspaceTaskBoard): WorkspaceTaskBoardSection[] {
   return board.sections.length ? board.sections : createDefaultWorkspaceTaskBoard().sections;
@@ -21,9 +21,6 @@ export function getTaskBoardSectionTitle(taskPath: string, board: WorkspaceTaskB
   return getTaskBoardSections(board).find((section) => section.id === sectionId)?.title || sectionId;
 }
 
-export function getTaskAssignments(taskPath: string, board: WorkspaceTaskBoard): WorkspaceTaskAssignment[] {
-  return board.taskAssignments[taskPath] ?? [];
-}
 
 export function sortTasksForBoard(tasks: WorkspaceTaskSummary[], board: WorkspaceTaskBoard): WorkspaceTaskSummary[] {
   const sectionOrder = new Map(getTaskBoardSections(board).map((section, index) => [section.id, index]));
@@ -90,6 +87,16 @@ export function moveTaskToBoardSection(
       }
     }
   };
+}
+
+/**
+ * Moves a task that was just handed to an agent into In Progress, matching what `start_task` does. Leaves the board
+ * unchanged when the task is already there or the user removed that column.
+ */
+export function startTaskOnBoard(board: WorkspaceTaskBoard, taskPath: string): WorkspaceTaskBoard {
+  const hasColumn = getTaskBoardSections(board).some((section) => section.id === TASK_BOARD_IN_PROGRESS_SECTION_ID);
+  if (!hasColumn || getTaskBoardSectionId(taskPath, board) === TASK_BOARD_IN_PROGRESS_SECTION_ID) return board;
+  return moveTaskToBoardSection(board, taskPath, TASK_BOARD_IN_PROGRESS_SECTION_ID);
 }
 
 export function createTaskBoardSection(board: WorkspaceTaskBoard, title: string): WorkspaceTaskBoard {

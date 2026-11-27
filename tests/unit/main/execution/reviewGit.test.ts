@@ -43,8 +43,8 @@ test("Git review includes staged, unstaged, renamed, deleted and untracked files
     paths: ["deleted.md", "new.md", "notes with spaces.md", "old.md", "staged.md", "unstaged.md"] });
   assert.deepEqual(await readFile(join(root, ".git", "index")), indexBefore);
   await git("checkout", "-b", "other");
-  await assert.rejects(createGitReviewer("git", authority)(workspace), /identity or branch changed/);
+  await assert.rejects(createGitReviewer("git", authority)(workspace), /branch changed/);
   const plain = join(directory, "plain"); await mkdir(plain);
-  assert.deepEqual(await createGitReviewer("git", { async verify() {}, async prepare(selection) { return selection; } })({ ...workspace, path: plain }),
+  assert.deepEqual(await createGitReviewer("git", { async verify() {}, async prepare(selection) { return selection; }, async refresh(selection) { return selection; } })({ ...workspace, path: plain }),
     { status: "unavailable", reason: "unsupported" });
 });

@@ -79,7 +79,7 @@ export class ExecutionHost {
             failure: { code: "uncertain", message: "The runtime sent conflicting turn information. Check or stop this turn before continuing.", retryable: false } });
         } else this.fault();
       }
-    }, deps.workspaces.verify.bind(deps.workspaces), deps.reviewer, deps.checkpoints,
+    }, deps.workspaces.refresh.bind(deps.workspaces), deps.reviewer, deps.checkpoints,
     { now: deps.now, idleCompactionMode: () => deps.idleCompactionMode?.() ?? "suggest" });
     const dispatchMaintenance = (command: ConversationCommand): void => {
       if (this.lifecycle !== "running") throw new ExecutionCommandError("conflict", "Execution host is stopping");

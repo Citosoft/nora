@@ -10,10 +10,9 @@ export const assembleSignedInWorkspaceSidebarBuild = (
   s: SignedInWorkspaceSidebarAssemblySlice
 ): WorkspaceSidebarBuildDeps => {
   const { core, workspaceCatalog, workspaceContent, workspaceSidebarRest, chromeShell, sessionSurface } = s;
-  const { handleCreateAgentFromDialog: _omitAgentDialog, ...workspaceContentForSidebar } = workspaceContent;
 
   return {
-    ...workspaceContentForSidebar,
+    ...workspaceContent,
     ...workspaceSidebarRest,
     focusWorkspaceWithRecovery: core.focusWorkspaceWithRecovery,
     openAddWorkspaceModal: chromeShell.openAddWorkspaceModal,

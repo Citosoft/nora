@@ -11,12 +11,13 @@ export function deriveAppMainCenterContentValue(
   const taskPanelProps = args.taskEditorState
     ? {
         title: args.taskEditorState.title,
+        projectId: args.taskEditorState.projectId,
         projectName: args.taskEditorState.projectName,
         path: args.taskEditorState.path,
         completed: args.taskEditorState.completed,
         updatedAt: args.taskEditorState.updatedAt,
         boardSectionTitle: args.taskEditorState.boardSectionTitle,
-        assignedAgents: args.taskEditorState.assignedAgents,
+        onOpenThread: args.handleOpenTaskThread,
         content: args.taskEditorState.content,
         savedContent: args.taskEditorState.savedContent,
         isCreating: args.taskEditorState.isCreating,
@@ -74,6 +75,7 @@ export function deriveAppMainCenterContentValue(
     onToggleTaskComplete: args.handleToggleTaskComplete,
     onDeleteTask: args.handleDeleteTask,
     onStartTaskThreads: args.handleStartTaskThreads,
+    onOpenTaskThread: args.handleOpenTaskThread,
     generateTasksRequest: args.generateTasksRequest,
     onClose: () => {
       args.setGenerateTasksRequest(null);

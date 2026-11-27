@@ -49,7 +49,6 @@ export type {
   WorkspaceSplitViewCollection,
   WorkspaceSplitViewItemReference,
   WorkspaceSplitViewTile,
-  WorkspaceTaskAssignment,
   WorkspaceTaskBoard,
   WorkspaceTaskBoardSection,
   WorkspaceTaskBoardTaskPosition,

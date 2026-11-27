@@ -1,8 +1,6 @@
 import type { ChangesPanelTab } from "@/components/app/types/changesPanelTab.types";
 import type {
-  AgentSession,
   AppState,
-  CreateAgentPayload,
   CreateTerminalPayload,
   ForgeWorkItemKind,
   WorkspaceNoteSummary,
@@ -86,16 +84,6 @@ export type FileEditorTab = {
 export type FileEditorState = {
   activePath: string;
   tabs: FileEditorTab[];
-};
-
-export type CreateAgentDialogDefaults = {
-  toolId?: string;
-  mode?: AgentSession["mode"];
-  target?: CreateAgentPayload["target"];
-  initialPrompt?: string;
-  contextSelections?: NonNullable<CreateAgentPayload["contextSelections"]>;
-  /** Wizard step to show when the dialog opens: 0 Agent, 1 Workspace, 2 Context. */
-  initialWizardStepIndex?: number;
 };
 
 export type CreateTerminalDialogDefaults = {
@@ -215,8 +203,6 @@ export type UiState = {
   activeErrorMessage: string | null;
   showAddWorkspaceModal: boolean;
   showRemoteWorkspaceModal: boolean;
-  showCreateAgentModal: boolean;
-  createAgentDefaults: CreateAgentDialogDefaults | null;
   showCreateTerminalModal: boolean;
   createTerminalDefaults: CreateTerminalDialogDefaults | null;
   showAboutDialog: boolean;
@@ -295,13 +281,6 @@ export type TaskEditorState = {
   completed: boolean;
   updatedAt: string | null;
   boardSectionTitle: string | null;
-  assignedAgents: Array<{
-    agentId: string;
-    agentName: string;
-    toolLabel: string;
-    assignedAt: string;
-    isActive: boolean;
-  }>;
   content: string;
   savedContent: string;
   isCreating: boolean;

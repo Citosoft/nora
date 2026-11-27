@@ -25,7 +25,7 @@ VercelProjectSummary
 
 export type ChangesPanelWorkspaceSlice = {
   tools: AgentCatalogEntry[];
-  onOpenCreateAgentDialog: (defaults?: ThreadLaunchInput | null) => void;
+  onOpenNewThread: (defaults?: ThreadLaunchInput | null) => void;
 };
 
 export type ChangesPanelFilesSlice = {
