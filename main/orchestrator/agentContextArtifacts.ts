@@ -1,9 +1,7 @@
 import type {
   AgentContextEntry,
-  AgentContextEntryGroup,
   AgentPromptSource,
   AgentContextSelection,
-  AgentContextSourceSummary,
   AgentContextState,
   CreateAgentPayload,
   AgentPromptSubmission,
@@ -465,113 +463,6 @@ export function buildAgentContextState(agent: AgentSession, entries: AgentContex
     terminalStreamPath: agent.terminalStreamPath,
     estimate,
     entries
-  };
-}
-
-function formatConversationLabel(toolLabel: string, rawSessionId: string | null): string {
-  if (!rawSessionId) {
-    return `${toolLabel} session`;
-  }
-
-  const compactId = rawSessionId.length > 18 ? `${rawSessionId.slice(0, 18)}...` : rawSessionId;
-  return `${toolLabel} session ${compactId}`;
-}
-
-function assignContextEntryGroupIds(agent: AgentSession, entries: AgentContextEntry[]): string[] {
-  const harnessAnchors = entries
-    .map((entry, index) => {
-      const harnessConversationId = entry.conversationId || null;
-      if (!harnessConversationId) {
-        return null;
-      }
-
-      return {
-        index,
-        groupId: `${agent.toolId}:${harnessConversationId}`,
-        timestampMs: Date.parse(entry.createdAt)
-      };
-    })
-    .flatMap((anchor) => (anchor ? [anchor] : []));
-
-  const fallbackGroupId = `${agent.toolId}:${agent.resumeSessionId || agent.sessionId}`;
-
-  return entries.map((entry) => {
-    const directConversationId = entry.conversationId || null;
-    if (directConversationId) {
-      return `${agent.toolId}:${directConversationId}`;
-    }
-
-    const entryTimestampMs = Date.parse(entry.createdAt);
-    if (!Number.isFinite(entryTimestampMs) || harnessAnchors.length === 0) {
-      return fallbackGroupId;
-    }
-
-    const nearestAnchor = harnessAnchors
-      .map((anchor) => ({
-        groupId: anchor.groupId,
-        distanceMs: Math.abs(anchor.timestampMs - entryTimestampMs)
-      }))
-      .sort((left, right) => left.distanceMs - right.distanceMs)[0];
-
-    return nearestAnchor?.groupId || fallbackGroupId;
-  });
-}
-
-function buildAgentContextEntryGroups(agent: AgentSession, entries: AgentContextEntry[]): AgentContextEntryGroup[] {
-  const groupedEntries = new Map<string, AgentContextEntry[]>();
-  const groupOrder: string[] = [];
-
-  assignContextEntryGroupIds(agent, entries).forEach((groupId, index) => {
-    if (!groupedEntries.has(groupId)) {
-      groupedEntries.set(groupId, []);
-      groupOrder.push(groupId);
-    }
-
-    groupedEntries.get(groupId)?.push(entries[index] as AgentContextEntry);
-  });
-
-  return groupOrder
-    .map((groupId) => {
-      const groupEntries = groupedEntries.get(groupId) || [];
-      const lastEntry = groupEntries[groupEntries.length - 1] || null;
-      const rawConversationId = groupId.includes(":") ? groupId.split(":").slice(1).join(":") : null;
-      const characters = groupEntries.reduce((total, entry) => total + entry.estimate.characters, 0);
-
-      return {
-        id: groupId,
-        title: formatConversationLabel(agent.toolLabel, rawConversationId),
-        latestPreview: lastEntry?.preview || "",
-        lastUpdatedAt: lastEntry?.createdAt || null,
-        entryCount: groupEntries.length,
-        estimate: estimateContextSize(characters),
-        entryIds: groupEntries.map((entry) => entry.id)
-      };
-    })
-    .sort((left, right) => {
-      const leftTimestamp = left.lastUpdatedAt ? Date.parse(left.lastUpdatedAt) : 0;
-      const rightTimestamp = right.lastUpdatedAt ? Date.parse(right.lastUpdatedAt) : 0;
-      return rightTimestamp - leftTimestamp;
-    });
-}
-
-export function buildAgentContextSourceSummary(agent: AgentSession, entries: AgentContextEntry[]): AgentContextSourceSummary {
-  const lastEntry = entries[entries.length - 1] || null;
-  const estimate = estimateContextSize(entries.reduce((total, entry) => total + entry.estimate.characters, 0));
-  const entryGroups = buildAgentContextEntryGroups(agent, entries).slice(0, 6);
-
-  return {
-    agentId: agent.id,
-    agentName: agent.name,
-    toolId: agent.toolId,
-    toolLabel: agent.toolLabel,
-    contextFilePath: agent.contextFilePath,
-    contextEventsPath: buildAgentContextEventsPath(agent.contextFilePath),
-    terminalStreamPath: agent.terminalStreamPath,
-    entryCount: entries.length,
-    lastUpdatedAt: lastEntry?.createdAt || null,
-    latestPreview: lastEntry?.preview || "",
-    estimate,
-    entryGroups
   };
 }
 

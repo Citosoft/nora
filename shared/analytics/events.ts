@@ -32,7 +32,7 @@ export const rendererAnalyticsEventSchema: z.ZodType<RendererAnalyticsEvent> = z
     name: z.literal("agent.created"),
     properties: z.object({
       toolId: identifier, mode: identifier, targetKind: identifier,
-      via: z.enum(["task-panel", "task-reference", "task-planner", "dialog", "forge-issue", "shortcut"]),
+      via: z.enum(["task-panel", "task-reference", "task-planner", "forge-issue", "shortcut"]),
       hasTask: z.boolean(), workspaceCount: count
     }).strict()
   }).strict(),

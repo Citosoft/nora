@@ -57,14 +57,6 @@ export type ForgeProviderIconProps = SVGProps<SVGSVGElement> & {
 
 export type UpdateSnapshot = (next: AppState) => void;
 
-export type AgentRoleId = "developer" | "reviewer" | "planner" | "researcher" | "tester";
-
-export type AgentRoleOption = {
-  id: AgentRoleId;
-  label: string;
-  promptPrefix: string;
-};
-
 export type AgentSkillCatalogSummary = {
   toolId: string;
   kind: "shared" | "tool";

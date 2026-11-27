@@ -14,7 +14,7 @@ export const ChangesPanelSection = ({ forge, vercel, chrome, fileHandlers, openN
     () => ({
       workspace: {
         tools: snapshot?.agentCatalog ?? [],
-        onOpenCreateAgentDialog: openNewThread
+        onOpenNewThread: openNewThread
       },
       files: {
         paths: workspaceFileTree.paths,

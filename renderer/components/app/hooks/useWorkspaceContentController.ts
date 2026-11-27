@@ -5,12 +5,11 @@ import { noraWorkspaceClient } from "@/components/app/clients/noraWorkspaceClien
 import { formatTaskHandoffInstruction } from "@/components/app/logic/taskHandoff";
 import { createNoteDraft } from "@/components/app/logic/noteUtils";
 import { createSpecDraft } from "@/components/app/logic/specUtils";
-import { getTaskAssignments, getTaskBoardSectionTitle } from "@/components/app/logic/taskBoardUtils";
+import { getTaskBoardSectionTitle, startTaskOnBoard } from "@/components/app/logic/taskBoardUtils";
 import { createDuplicatedTaskContent, createTaskPlanningInstruction, deriveTaskTitle } from "@/components/app/logic/taskUtils";
 import type { TaskEditorState } from "@/components/app/types";
 import type { UseWorkspaceContentControllerArgs, UseWorkspaceContentControllerResult } from "@/components/app/types/appHooks.types";
 import type { TaskCenterTaskReference } from "@/components/app/types/component.types";
-import type { CreateAgentPayload } from "@shared/appTypes";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
 import { useEffect, useState } from "react";
 
@@ -19,6 +18,7 @@ export function useWorkspaceContentController({
   workspaceSpecs,
   workspaceNotes,
   workspaceTaskBoards,
+  updateWorkspaceTaskBoard,
   setWorkspaceTasks,
   setWorkspaceSpecs,
   setWorkspaceNotes,
@@ -84,20 +84,6 @@ export function useWorkspaceContentController({
     }
 
     return snapshot.workspaces.find((workspace) => workspace.project.id === projectId)?.project.name ?? "Project";
-  };
-
-  const buildTaskAssignedAgents = (projectId: string, taskPath: string) => {
-    const board = workspaceTaskBoards[projectId]?.board;
-    const assignments = board ? getTaskAssignments(taskPath, board) : [];
-    const activeAgentIds = new Set(snapshot?.agents.map((agent) => agent.id) ?? []);
-
-    return assignments.map((assignment) => ({
-      agentId: assignment.agentId,
-      agentName: assignment.agentName,
-      toolLabel: assignment.toolLabel,
-      assignedAt: assignment.assignedAt,
-      isActive: activeAgentIds.has(assignment.agentId)
-    }));
   };
 
   const appendSpecContext = (content: string, contextText?: string): string => {
@@ -316,7 +302,6 @@ export function useWorkspaceContentController({
       completed: false,
       updatedAt: null,
       boardSectionTitle: workspaceTaskBoards[projectId]?.board ? getTaskBoardSectionTitle(pathName, workspaceTaskBoards[projectId].board) : null,
-      assignedAgents: buildTaskAssignedAgents(projectId, pathName),
       content: duplicatedContent,
       savedContent: duplicatedContent,
       isCreating: true,
@@ -608,10 +593,19 @@ export function useWorkspaceContentController({
     }
   };
 
+  const closeContentSurfaces = (): void => {
+    setTaskEditorState(null); setIsTaskBoardOpen(false); setIsSpecBrowserOpen(false); setIsNoteBrowserOpen(false);
+  };
   const openTaskThread = async (task: TaskCenterTaskReference): Promise<void> => {
     const id = await native.launch({ submit: true, projectId: task.projectId, text: formatTaskHandoffInstruction(task.path),
       source: { kind: "task", projectId: task.projectId, path: task.path } });
-    if (id) { setTaskEditorState(null); setIsTaskBoardOpen(false); setIsSpecBrowserOpen(false); setIsNoteBrowserOpen(false); }
+    if (!id) return;
+    closeContentSurfaces();
+    // The board shows the task as started straight away instead of waiting for the agent's own start_task call.
+    await updateWorkspaceTaskBoard(task.projectId, (board) => startTaskOnBoard(board, task.path)).catch(captureError);
+  };
+  const handleOpenTaskThread = (conversationId: string): void => {
+    if (native.store.openThread(conversationId)) closeContentSurfaces();
   };
   const handleStartTaskThread = async (): Promise<void> => {
     if (!taskEditorState) return;
@@ -625,14 +619,7 @@ export function useWorkspaceContentController({
     if (!project) throw new Error("Choose an available workspace to plan tasks.");
     const id = await native.launch({ submit: true, projectId, text: createTaskPlanningInstruction({ projectName: project.name, projectRootPath: project.rootPath, brief, specPath }) });
     if (!id) throw new Error(native.store.snapshot().error ?? "Unable to open a planning thread. Try again.");
-    setTaskEditorState(null); setIsTaskBoardOpen(false); setIsSpecBrowserOpen(false); setIsNoteBrowserOpen(false);
-  };
-  const handleCreateAgentFromDialog = async (payload: CreateAgentPayload, taskPath: string | null): Promise<void> => {
-    if (!snapshot?.project) return;
-    try { await native.launch({ projectId: snapshot.project.id, text: payload.initialPrompt || payload.task,
-      contextSelections: payload.contextSelections,
-      ...(taskPath ? { source: { kind: "task", projectId: snapshot.project.id, path: taskPath } as const } : {}) });
-    } catch (cause) { captureError(cause); }
+    closeContentSurfaces();
   };
 
   return {
@@ -663,7 +650,7 @@ export function useWorkspaceContentController({
     handleDeleteNote,
     handleStartTaskThread,
     handleStartTaskThreads,
-    generateWorkspaceTasks,
-    handleCreateAgentFromDialog
+    handleOpenTaskThread,
+    generateWorkspaceTasks
   };
 }

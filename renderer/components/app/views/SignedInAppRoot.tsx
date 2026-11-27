@@ -63,9 +63,6 @@ export function SignedInAppRoot(props: SignedInAppRootProps): ReactElement | nul
       installedIdes={props.bootstrap.installedIdes}
       defaultIdeId={props.preferences.defaultIdeId}
       statusBar={props.shellFrame.statusBar}
-      trackAgentCreation={(payload, source) => {
-        trackAgentCreation(payload, source);
-      }}
     >
       <SignedInAppRootContent {...props} trackAgentCreation={trackAgentCreation} />
     </AppRootWorkspaceSessionProvider>
@@ -574,7 +571,6 @@ function SignedInAppRootContent({
     setIsBrowserCookieImportPromptOpen: dialogs.setIsBrowserCookieImportPromptOpen,
     setSelectedChromeCookieProfileId: dialogs.setSelectedChromeCookieProfileId,
     setIsCreatePullRequestDialogOpen: dialogs.setIsCreatePullRequestDialogOpen,
-    handleCreateAgentFromDialog: content.handleCreateAgentFromDialog,
     forgeOAuthDevicePrompt: props.autoUpdate.forgeOAuthDevicePrompt,
     shouldShowStartupDependenciesDialog: dialogs.shouldShowStartupDependenciesDialog,
     effectiveStartupDependencyReport: dialogs.effectiveStartupDependencyReport,

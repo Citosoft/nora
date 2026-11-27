@@ -261,11 +261,9 @@ test("worker threads are not served the orchestration tools, so delegation never
   assert.ok(plain.includes("app_builder_guide"));
 });
 
-test("task lifecycle uses a stable id, preserves assignments, and can be retried and reopened", async () => {
+test("task lifecycle uses a stable id and can be retried and reopened", async () => {
   const f = noraFixture();
   const context = contextOf(f, "bot");
-  const assignment = { agentId: "bot", sessionId: "session", agentName: "Ada", toolId: "claude", toolLabel: "Claude", assignedAt: "2026-11-13T00:00:00.000Z" };
-  f.board.taskAssignments[".nora/tasks/b.md"] = [assignment];
   assert.match((await f.deps.tasks.read("b", context)).content, /# Second/);
   const started = await f.deps.tasks.start("b", context);
   assert.deepEqual([started.id, started.completed, started.columnId], ["b", false, "in-progress"]);
@@ -273,15 +271,12 @@ test("task lifecycle uses a stable id, preserves assignments, and can be retried
   const finished = await f.deps.tasks.finish("b", context);
   assert.deepEqual([finished.id, finished.path, finished.completed, finished.columnId], ["b", ".nora/tasks/completed/b.md", true, "done"]);
   assert.equal(f.board.taskPositions[started.path], undefined);
-  assert.deepEqual(f.board.taskAssignments[finished.path], [assignment]);
-  assert.equal(f.board.taskAssignments[started.path], undefined);
   assert.deepEqual(await f.deps.tasks.finish("b", context), finished);
   assert.equal(finished.link, started.link);
   assert.equal((await f.deps.tasks.read("b", context)).task.completed, true);
   assert.equal((await f.deps.tasks.list(context)).find((task) => task.id === "b")?.completed, true);
   const reopened = await f.deps.tasks.start("b", context);
   assert.deepEqual(reopened, started);
-  assert.deepEqual(f.board.taskAssignments[reopened.path], [assignment]);
   assert.equal(f.board.taskPositions[finished.path], undefined);
 });
 

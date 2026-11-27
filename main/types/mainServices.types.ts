@@ -1,6 +1,5 @@
 import type {
   ChangeEntry,
-  AgentContextSourceSummary,
   AgentContextState,
   AgentContextPreview,
   AgentPromptDispatchResult,
@@ -62,10 +61,6 @@ export interface SnapshotService {
   getLocalTerminalState: () => LocalTerminalState | null;
   getAgentContextPreview: (agentId: string) => Promise<AgentContextPreview>;
   getAgentContextState: (agentId: string) => Promise<AgentContextState>;
-  listWorkspaceAgentContextSources: (
-    projectId: string,
-    excludeAgentId?: string
-  ) => Promise<AgentContextSourceSummary[]>;
 }
 
 export interface WorkspaceService {

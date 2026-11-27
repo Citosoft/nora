@@ -38,7 +38,7 @@ export type TurnOutcome = "completed" | "failed" | "interrupted";
 /** Where an error was observed. Messages are only attached in the detailed tier, after scrubbing. */
 export type AnalyticsErrorSource = "main" | "renderer" | "ipc" | "turn";
 
-export type AgentCreationSource = "task-panel" | "task-reference" | "task-planner" | "dialog" | "forge-issue" | "shortcut";
+export type AgentCreationSource = "task-panel" | "task-reference" | "task-planner" | "forge-issue" | "shortcut";
 
 /**
  * Every event Nora can send, keyed by name. Properties are flat primitives so free text, paths and payloads cannot slip in

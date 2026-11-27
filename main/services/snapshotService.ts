@@ -1,7 +1,6 @@
 import type { AgentContextEntry } from "@shared/appTypes";
 import type { SnapshotService } from "../types/mainServices.types";
 import {
-  buildAgentContextSourceSummary,
   buildAgentContextState
 } from "../orchestrator/agentContextArtifacts";
 
@@ -39,18 +38,6 @@ export function createSnapshotService(deps: SnapshotServiceDeps): SnapshotServic
       }
 
       return buildAgentContextState(agent, await deps.readContextEntries(agent.contextFilePath));
-    },
-    async listWorkspaceAgentContextSources(projectId: string, excludeAgentId?: string) {
-      const agents = deps.getSnapshot().agents.filter((item) => item.projectId === projectId && item.id !== excludeAgentId);
-      const summaries = await Promise.all(
-        agents.map(async (agent) =>
-          buildAgentContextSourceSummary(agent, await deps.readContextEntries(agent.contextFilePath))
-        )
-      );
-
-      return summaries
-        .filter((summary) => summary.entryCount > 0)
-        .sort((left, right) => (right.lastUpdatedAt || "").localeCompare(left.lastUpdatedAt || ""));
     }
   };
 }

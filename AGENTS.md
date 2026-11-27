@@ -176,6 +176,18 @@ These rules apply to **first-party** source under `main/`, `renderer/`, `shared/
   4. Confirm each line sits under the correct change-type section (Features vs Fixes vs Improvements).
   5. If releasing or tagging, also create the blank changelog file for the version after that.
 
+## Release Process
+
+Only cut a release when explicitly asked. Each release reaches `main` on `Citosoft/nora` as **one squash commit per version**, so the public history reads as one commit per release.
+
+1. **Verify first.** Typecheck, run the full `npm run test:unit` suite and the `check:*` scripts on the development branch. Commit any work the release should include.
+2. **Bump the version.** Set root `package.json` (and `package-lock.json`) to the release version via `npm version X.Y.Z --no-git-tag-version`, keep `changelogs/vX.Y.Z.md` as the release notes, and add a blank `changelogs/vX.Y.(Z+1).md` with empty `### Features`, `### Improvements` and `### Fixes` headings.
+3. **Build the squash commit** on top of public `main` with the development branch's exact tree: `git commit-tree 'HEAD^{tree}' -p <public>/main` titled `Release Nora X.Y.Z`, with a short summary that points to the changelog. Put it on a `release/vX.Y.Z` branch and confirm that `git diff --quiet HEAD release/vX.Y.Z` passes.
+4. **Check for secret-shaped strings before pushing.** GitHub push protection rejects pushes containing strings that look like credentials, including fake keys in test fixtures. Split such literals (for example `"sk_" + "live_…"`) rather than allowlisting them.
+5. **Push the release branch and open a PR** titled `Release Nora X.Y.Z` against `main`. CI runs unit tests on Node 22 across Ubuntu, macOS and Windows, which can differ from a newer local Node. If CI fails, fix it on the development branch, rebuild the squash commit and force-push the release branch.
+6. **Merge with rebase** (`gh pr merge --rebase --delete-branch`) so the squash commit lands unchanged, then push an annotated `vX.Y.Z` tag on it. The tag triggers `.github/workflows/release.yml`, which builds macOS, Windows and Linux and publishes the GitHub release. `release-macos.yml` is a manual fallback only.
+7. **Fast-forward** any other copy of `main` you work from to the release commit.
+
 ## Implementation Standard
 
 - Before adding code, check whether a reusable abstraction already exists.

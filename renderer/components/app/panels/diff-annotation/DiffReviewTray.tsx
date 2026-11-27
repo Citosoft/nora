@@ -23,7 +23,7 @@ export function DiffReviewTray() {
     sendReviewToAgent,
     runningAgentTargets
   } = useDiffAnnotations();
-  const { onOpenCreateAgentDialog } = useChangesPanelWorkspace();
+  const { onOpenNewThread } = useChangesPanelWorkspace();
   const contentId = useId();
   const [isExpanded, setIsExpanded] = useState(true);
   const [selectedAgentId, setSelectedAgentId] = useState("");
@@ -157,7 +157,7 @@ export function DiffReviewTray() {
                   variant="outline"
                   size="sm"
                   className="h-8 shrink-0 px-2.5 text-xs font-medium"
-                  onClick={() => onOpenCreateAgentDialog()}
+                  onClick={() => onOpenNewThread()}
                 >
                   New agent
                 </Button>

@@ -139,10 +139,8 @@ export function noraFixture(extra: { terminals?: NoraTerminalStore; routines?: N
         tasks = tasks.map((task) => task.path === fromPath ? { ...task, path: toPath, completed: toPath.startsWith(".nora/tasks/completed/") } : task);
         // The real workspace move can prune source entries before saving the renamed board.
         const taskPositions = { ...board.taskPositions };
-        const taskAssignments = { ...board.taskAssignments };
         delete taskPositions[fromPath];
-        delete taskAssignments[fromPath];
-        board = { ...board, taskPositions, taskAssignments };
+        board = { ...board, taskPositions };
       },
       async list(projectId) { if (projectId !== "shell-w") throw new Error("wrong project"); return tasks; },
       async board() { return board; },

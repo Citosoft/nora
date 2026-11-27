@@ -1,12 +1,14 @@
-import { CheckCircle2, Circle, Play, Trash2, Users } from "lucide-react";
+import { CheckCircle2, Circle, Play, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { TaskItemProps } from "@/components/app/types/taskCenter.types";
+import { TaskThreadIndicator } from "./TaskThreadIndicator";
 import { TaskWorkflowMenu } from "./TaskWorkflowMenu";
 
 export function TaskItem({
   task,
-  assignmentCount,
+  activeThread,
+  onOpenThread,
   selected,
   isStartingThreads,
   layout,
@@ -62,14 +64,9 @@ export function TaskItem({
             {task.path}
           </span>
         </button>
-        {(isBoard || assignmentCount > 0) && (
+        {(isBoard || activeThread) && (
           <div className={cn("mt-2 flex items-center gap-2", !isBoard && "mt-1")}>
-            {assignmentCount > 0 && (
-              <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
-                <Users className="size-3" aria-hidden="true" />
-                {assignmentCount} {assignmentCount === 1 ? "agent" : "agents"}
-              </span>
-            )}
+            {activeThread && <TaskThreadIndicator thread={activeThread} onOpenThread={onOpenThread} />}
             {isBoard && (
               <span className="text-[10px] text-muted-foreground">{task.completed ? "Completed" : "Open"}</span>
             )}

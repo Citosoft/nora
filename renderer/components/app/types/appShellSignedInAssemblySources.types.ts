@@ -160,7 +160,6 @@ export type AppShellSignedInModalExtrasSources = Pick<
   | "setIsBrowserCookieImportPromptOpen"
   | "setSelectedChromeCookieProfileId"
   | "setIsCreatePullRequestDialogOpen"
-  | "handleCreateAgentFromDialog"
   | "forgeOAuthDevicePrompt"
   | "shouldShowStartupDependenciesDialog"
   | "effectiveStartupDependencyReport"
@@ -264,7 +263,7 @@ export type AppShellSignedInChromeShellSources = {
 export type AppShellSignedInAssemblySources = {
   core: AppShellSignedInCoreSources;
   workspaceCatalog: AppShellSignedInWorkspaceCatalogSources;
-  /** Workspace content controller; `handleCreateAgentFromDialog` is only used by the modal slice. */
+  /** Workspace content controller. */
   workspaceContent: UseWorkspaceContentControllerResult;
   forge: AppShellSignedInForgeSources;
   forgeWorkItemMutators: AppShellSignedInForgeWorkItemMutatorSources;

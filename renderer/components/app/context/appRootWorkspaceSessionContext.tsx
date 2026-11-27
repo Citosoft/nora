@@ -40,7 +40,6 @@ export function AppRootWorkspaceSessionProvider({
   installedIdes,
   defaultIdeId,
   statusBar,
-  trackAgentCreation,
   children
 }: AppRootWorkspaceSessionProviderProps): ReactElement {
   const { uiState, setUiState } = useAppRootState();
@@ -135,8 +134,8 @@ export function AppRootWorkspaceSessionProvider({
     handleDeleteNote,
     handleStartTaskThread,
     handleStartTaskThreads,
-    generateWorkspaceTasks,
-    handleCreateAgentFromDialog
+    handleOpenTaskThread,
+    generateWorkspaceTasks
   } = useWorkspaceContentController({
     workspaceTasks: resources.workspaceTasks,
     workspaceSpecs: resources.workspaceSpecs,
@@ -158,8 +157,7 @@ export function AppRootWorkspaceSessionProvider({
     focusWorkspaceWithRecovery,
     runWithStatus,
     statusBar,
-    setIsCenterDiffExpanded,
-    trackAgentCreation
+    setIsCenterDiffExpanded
   });
   const content: UseWorkspaceContentControllerResult = {
     createTaskDialog,
@@ -189,8 +187,8 @@ export function AppRootWorkspaceSessionProvider({
     handleDeleteNote,
     handleStartTaskThread,
     handleStartTaskThreads,
-    generateWorkspaceTasks,
-    handleCreateAgentFromDialog
+    handleOpenTaskThread,
+    generateWorkspaceTasks
   };
   const fileMutations = useWorkspaceFileMutations({
     workspaceFileTree: resources.workspaceFileTree,

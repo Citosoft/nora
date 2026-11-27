@@ -820,16 +820,9 @@ export function createWorkspaceOperations(deps: WorkspaceOpsDeps) {
       taskPositions: {
         ...board.taskPositions,
         [toPath]: existing
-      },
-      taskAssignments: {
-        ...board.taskAssignments
       }
     };
     delete nextBoard.taskPositions[fromPath];
-    if (board.taskAssignments[fromPath]) {
-      nextBoard.taskAssignments[toPath] = board.taskAssignments[fromPath];
-      delete nextBoard.taskAssignments[fromPath];
-    }
     await writeWorkspaceTaskBoard(target, projectId, nextBoard);
   }
 
@@ -842,13 +835,10 @@ export function createWorkspaceOperations(deps: WorkspaceOpsDeps) {
       return;
     }
     const nextTaskPositions = { ...board.taskPositions };
-    const nextTaskAssignments = { ...board.taskAssignments };
     delete nextTaskPositions[taskPath];
-    delete nextTaskAssignments[taskPath];
     await writeWorkspaceTaskBoard(target, projectId, {
       ...board,
-      taskPositions: nextTaskPositions,
-      taskAssignments: nextTaskAssignments
+      taskPositions: nextTaskPositions
     });
   }
 

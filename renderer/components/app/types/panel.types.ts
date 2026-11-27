@@ -1,4 +1,5 @@
 import type { WorkflowRunTask } from "@/components/app/types/workflowLaunch.types";
+import type { ActiveTaskThreads } from "@/components/app/types/taskThreads.types";
 import type {
 AiChatMessage,
 AiChatReasoningLevel,
@@ -282,6 +283,8 @@ export type TaskBoardPanelProps = {
   onRunTaskWorkflow: (projectId: string, definitionId: string, task: WorkflowRunTask) => void;
   onOpenWorkflows: (projectId: string) => void;
   onOpenTask: (projectId: string, taskPath: string) => void;
+  activeTaskThreads: ActiveTaskThreads;
+  onOpenTaskThread: (conversationId: string) => void;
   onCreateTask: (projectId: string) => void;
   onGenerateTasks: (projectId: string, brief: string | null, specPath: string | null) => Promise<void>;
   onToggleTaskComplete: (projectId: string, fromPath: string, toPath: string) => Promise<void>;
@@ -300,19 +303,14 @@ export type DraggedTask = {
 } | null;
 
 export type TaskPanelProps = {
+  projectId: string;
   projectName: string;
   title: string;
   path: string;
   completed: boolean;
   updatedAt: string | null;
   boardSectionTitle: string | null;
-  assignedAgents: Array<{
-    agentId: string;
-    agentName: string;
-    toolLabel: string;
-    assignedAt: string;
-    isActive: boolean;
-  }>;
+  onOpenThread: (conversationId: string) => void;
   content: string;
   savedContent: string;
   isCreating: boolean;
@@ -548,6 +546,8 @@ export type TaskCenterProps = {
   onToggleTaskComplete: (projectId: string, fromPath: string, toPath: string) => Promise<void>;
   onDeleteTask: (projectId: string, path: string) => Promise<void>;
   onStartTaskThreads: (tasks: TaskCenterTaskReference[]) => Promise<void>;
+  /** Opens a task's thread and leaves the task surfaces. */
+  onOpenTaskThread: (conversationId: string) => void;
   generateTasksRequest: { projectId: string; specPath: string; nonce: number } | null;
   onClose: () => void;
 };

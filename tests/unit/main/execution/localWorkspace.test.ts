@@ -34,7 +34,23 @@ test("registered root and symlink aliases share identity; unrelated checkouts an
   await assert.rejects(authority.prepare({ ...selection, checkoutId: "unregistered" }), /registered checkout/);
   await authority.verify(prepared);
   await rename(root, join(directory, "old")); await mkdir(root);
-  await assert.rejects(authority.verify(prepared), /identity or branch changed/);
+  await assert.rejects(authority.verify(prepared), /identity changed/);
+  await assert.rejects(authority.refresh(prepared), /identity changed/);
+});
+
+test("refresh follows a branch switch in the same checkout while verify still rejects it", async (t) => {
+  const directory = await realpath(await mkdtemp(join(tmpdir(), "nora-workspaces-")));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  let branch = "main";
+  const authority = new LocalWorkspaceAuthority({ environmentId: "local",
+    registrations: () => [{ projectId: "project", checkoutId: "registered", path: directory }],
+    inspectCheckout: async (path: string) => ({ rootPath: path, branch }) });
+  const prepared = await authority.prepare(selection);
+  branch = "feature/switched";
+  const current = await authority.refresh(prepared);
+  assert.equal(current.branch, "feature/switched"); assert.equal(current.checkoutId, prepared.checkoutId);
+  await assert.rejects(authority.verify(prepared), /branch changed/);
+  await authority.verify(current);
 });
 
 test("host canonicalizes create, allows writers across aliases and keeps retry receipts after filesystem loss", async (t) => {

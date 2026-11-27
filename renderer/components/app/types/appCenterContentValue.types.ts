@@ -65,6 +65,7 @@ export type AppCenterContentValueArgs = {
   handleToggleTaskComplete: UseWorkspaceContentControllerResult["handleToggleTaskComplete"];
   handleDeleteTask: UseWorkspaceContentControllerResult["handleDeleteTask"];
   handleStartTaskThreads: (tasks: TaskCenterTaskReference[]) => Promise<void>;
+  handleOpenTaskThread: (conversationId: string) => void;
   generateTasksRequest: { projectId: string; specPath: string; nonce: number } | null;
   setGenerateTasksRequest: Dispatch<SetStateAction<{ projectId: string; specPath: string; nonce: number } | null>>;
   isTaskBoardOpen: boolean;

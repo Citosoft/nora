@@ -13,9 +13,23 @@ export async function withSkillInstallSource(
   const stagingRoot = await fs.mkdtemp(path.join(os.tmpdir(), "nora-bundled-skill-"));
   try {
     const source = path.join(stagingRoot, "nora");
-    await fs.cp(path.join(bundledRoot, "nora"), source, { recursive: true });
+    await copyDirectory(path.join(bundledRoot, "nora"), source);
     await install(source);
   } finally {
     await fs.rm(stagingRoot, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Copies a directory using only calls Electron's asar layer supports. `fs.cp` is not asar-aware, so it fails with
+ * ENOENT when the bundled skill is read from inside `app.asar` in packaged builds.
+ */
+async function copyDirectory(from: string, to: string): Promise<void> {
+  await fs.mkdir(to, { recursive: true });
+  for (const entry of await fs.readdir(from, { withFileTypes: true })) {
+    const source = path.join(from, entry.name);
+    const target = path.join(to, entry.name);
+    if (entry.isDirectory()) await copyDirectory(source, target);
+    else if (entry.isFile()) await fs.writeFile(target, await fs.readFile(source));
   }
 }

@@ -16,13 +16,11 @@ type SignedInCenterContentAssemblySlice = Pick<
 
 export const assembleSignedInCenterContentBuild = (s: SignedInCenterContentAssemblySlice): AppCenterContentValueArgs => {
   const { core, workspaceCatalog, workspaceContent, chromeShell, sessionSurface, centerTabs, forge, aiModels } = s;
-  const { handleCreateAgentFromDialog, ...workspaceContentForCenter } = workspaceContent;
-  void handleCreateAgentFromDialog;
   const { handleCreateForgePullRequest, ...forgeForCenter } = forge;
   void handleCreateForgePullRequest;
 
   return {
-    ...workspaceContentForCenter,
+    ...workspaceContent,
     resolvedTheme: core.resolvedTheme,
     workspaceTasks: workspaceCatalog.workspaceTasks,
     workspaceSpecs: workspaceCatalog.workspaceSpecs,

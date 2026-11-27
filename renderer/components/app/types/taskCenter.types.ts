@@ -1,12 +1,15 @@
 import type { DragEvent, ReactNode } from "react";
 import type { WorkspaceTaskBoardSection, WorkspaceTaskSummary } from "@shared/appTypes";
 import type { TaskBoardPanelProps, TaskBoardWorkspaceEntry } from "./panel.types";
+import type { ActiveTaskThread } from "./taskThreads.types";
 
 export type TaskStatusFilter = "open" | "completed" | "all";
 
 export type TaskItemProps = {
   task: WorkspaceTaskSummary;
-  assignmentCount: number;
+  /** The thread working on this task right now, if any. */
+  activeThread: ActiveTaskThread | null;
+  onOpenThread: (conversationId: string) => void;
   selected: boolean;
   isStartingThreads: boolean;
   layout: "list" | "board";

@@ -36,7 +36,8 @@ export function createSimulatorHost(directory: string, speed = 1, secretEvents: 
   const host = new ExecutionHost({ store, providers, owner: { id: randomUUID(), processId: process.pid }, isProcessAlive: () => false,
     now: () => new Date().toISOString(), nextId: randomUUID, shutdownGraceMs: 500,
     writeThreadReference: createThreadReferenceWriter(join(directory, "thread-references")),
-    workspaces: { async prepare(selection) { await verify(selection); return selection; }, verify },
+    workspaces: { async prepare(selection) { await verify(selection); return selection; },
+      async refresh(selection) { await verify(selection); return selection; }, verify },
     reviewer: async () => ({ status: "ready", scope: "workspace", paths: [] }),
     checkpoints: createSimulatorCheckpoints(),
     onFailure: (failure) => { process.stderr.write(`Simulator: ${failure.message}\n`); } });

@@ -75,34 +75,27 @@ export interface WorkspaceTaskBoardTaskPosition {
   order: number;
 }
 
-export interface WorkspaceTaskAssignment {
-  agentId: string;
-  sessionId: string;
-  agentName: string;
-  toolId: string;
-  toolLabel: string;
-  assignedAt: string;
-}
-
 export interface WorkspaceTaskBoard {
   version: 1;
   sections: WorkspaceTaskBoardSection[];
   taskPositions: Record<string, WorkspaceTaskBoardTaskPosition>;
-  taskAssignments: Record<string, WorkspaceTaskAssignment[]>;
 }
+
+/** Lifecycle columns: starting a task moves it to In Progress and finishing it moves it to Done. */
+export const TASK_BOARD_IN_PROGRESS_SECTION_ID = "in-progress";
+export const TASK_BOARD_DONE_SECTION_ID = "done";
 
 export const DEFAULT_WORKSPACE_TASK_BOARD_SECTIONS: WorkspaceTaskBoardSection[] = [
   { id: "todo", title: "Todo" },
-  { id: "in-progress", title: "In Progress" },
-  { id: "done", title: "Done" }
+  { id: TASK_BOARD_IN_PROGRESS_SECTION_ID, title: "In Progress" },
+  { id: TASK_BOARD_DONE_SECTION_ID, title: "Done" }
 ];
 
 export function createDefaultWorkspaceTaskBoard(): WorkspaceTaskBoard {
   return {
     version: 1,
     sections: DEFAULT_WORKSPACE_TASK_BOARD_SECTIONS.map((section) => ({ ...section })),
-    taskPositions: {},
-    taskAssignments: {}
+    taskPositions: {}
   };
 }
 

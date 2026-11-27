@@ -1,6 +1,7 @@
 import { buildTaskLink } from "@shared/taskLink";
 import { taskIdFromPath } from "@shared/taskIdentity";
 import type { WorkspaceTaskBoard, WorkspaceTaskSummary } from "@shared/appTypes";
+import { TASK_BOARD_DONE_SECTION_ID, TASK_BOARD_IN_PROGRESS_SECTION_ID } from "@shared/appTypes";
 import type { NoraTaskInfo, NoraTaskOperations, NoraToolContext } from "@main/types/nora-tools/noraTools.types";
 import type { NoraTaskStore, NoraToolOperationOptions } from "@main/types/nora-tools/operations.types";
 import { shellProjectOf } from "./shellProject";
@@ -32,7 +33,7 @@ export function createTaskOperations(options: NoraToolOperationOptions): NoraTas
   const transition = async (id: string, completed: boolean, context: NoraToolContext): Promise<NoraTaskInfo> => {
     const { tasks, board, store, projectId } = await snapshot(context);
     const task = findTask(tasks, id);
-    const sectionId = completed ? "done" : "in-progress";
+    const sectionId = completed ? TASK_BOARD_DONE_SECTION_ID : TASK_BOARD_IN_PROGRESS_SECTION_ID;
     if (!board.sections.some((section) => section.id === sectionId)) {
       throw new Error(`The task board has no "${sectionId}" column. Restore that column before changing task status.`);
     }
@@ -40,15 +41,12 @@ export function createTaskOperations(options: NoraToolOperationOptions): NoraTas
     const path = `.nora/tasks/${completed ? "completed/" : ""}${relative}`;
     const last = Math.max(-1, ...Object.entries(board.taskPositions).filter(([key, position]) => key !== task.path && position.sectionId === sectionId).map(([, position]) => position.order));
     const taskPositions = { ...board.taskPositions };
-    const taskAssignments = { ...board.taskAssignments };
     const previousPosition = taskPositions[task.path];
     delete taskPositions[task.path];
-    delete taskAssignments[task.path];
     taskPositions[path] = previousPosition?.sectionId === sectionId ? previousPosition : { sectionId, order: last + 1 };
-    if (board.taskAssignments[task.path]) taskAssignments[path] = board.taskAssignments[task.path];
     // Capture board metadata before moving: the workspace store may prune the old path during the move.
     if (path !== task.path) await store.move(projectId, task.path, path);
-    const saved = await store.saveBoard(projectId, { ...board, taskPositions, taskAssignments });
+    const saved = await store.saveBoard(projectId, { ...board, taskPositions });
     options.onTasksChanged?.(projectId);
     return taskInfo({ ...task, path, completed }, saved, projectId);
   };

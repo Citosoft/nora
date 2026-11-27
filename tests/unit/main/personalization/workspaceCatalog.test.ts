@@ -31,7 +31,7 @@ test("Personal provision is concurrent-idempotent, persisted, folder-backed and 
   const refreshed = await catalog.ensurePersonal();
   assert.equal(refreshed.id, results[0].id);
   assert.notEqual(refreshed.workspace.checkoutId, results[0].workspace.checkoutId);
-  await assert.rejects(authority.verify(results[0].workspace), /identity or branch changed/);
+  await assert.rejects(authority.verify(results[0].workspace), /identity changed|branch changed/);
   await authority.verify(refreshed.workspace);
   assert.equal(catalog.list().length, 1);
   await rm(personalPath, { recursive: true });
@@ -74,7 +74,7 @@ test("rebinding a workspace after a branch switch refreshes the catalog but pres
   assert.equal(refreshed.workspace.branch, "feature");
   assert.equal(refreshed.shellProjectId, "shell-project");
   assert.deepEqual((await openWorkspaceCatalog(options)).list(), [refreshed]);
-  await assert.rejects(authority.verify(original.workspace), /identity or branch changed/);
+  await assert.rejects(authority.verify(original.workspace), /identity changed|branch changed/);
   await authority.verify(refreshed.workspace);
 
   // Reopening a replacement refreshes the selection without rebinding old conversations.
@@ -83,7 +83,7 @@ test("rebinding a workspace after a branch switch refreshes the catalog but pres
   const replacement = await catalog.bindProject("shell-project", projectPath, "Project");
   assert.equal(replacement.id, refreshed.id);
   assert.notEqual(replacement.workspace.checkoutId, refreshed.workspace.checkoutId);
-  await assert.rejects(authority.verify(refreshed.workspace), /identity or branch changed/);
+  await assert.rejects(authority.verify(refreshed.workspace), /identity changed|branch changed/);
   await authority.verify(replacement.workspace);
 });
 
@@ -109,7 +109,7 @@ test("startup refreshes legacy checkout IDs for Personal and repositories withou
   await catalog.bindProject("shell-project", projectPath, "Project");
   const refreshed = catalog.list();
   assert.deepEqual(refreshed.map((entry) => entry.id), legacy.map((entry) => entry.id));
-  for (const entry of legacy) await assert.rejects(authority.verify(entry.workspace), /identity or branch changed/);
+  for (const entry of legacy) await assert.rejects(authority.verify(entry.workspace), /identity changed|branch changed/);
   for (const entry of refreshed) await authority.verify(entry.workspace);
   catalog = await openWorkspaceCatalog(options);
   await catalog.ensurePersonal();

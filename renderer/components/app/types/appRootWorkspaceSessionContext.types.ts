@@ -52,9 +52,5 @@ export type AppRootWorkspaceSessionProviderProps = {
   installedIdes: InstalledIde[];
   defaultIdeId: string | null;
   statusBar: import("@/components/app/types/component.types").StatusBarContextValue;
-  trackAgentCreation: (
-    payload: import("@shared/appTypes").CreateAgentPayload,
-    source: "task-panel" | "task-reference" | "task-planner" | "dialog"
-  ) => void;
   children: ReactNode;
 };

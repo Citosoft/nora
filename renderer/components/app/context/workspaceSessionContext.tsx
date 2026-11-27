@@ -1,6 +1,6 @@
+import type { ThreadLaunchInput } from "@/components/app/types/thread-workspace/runtime.types";
 import type {
   BrowserTabState,
-  CreateAgentDialogDefaults,
   CreateTerminalDialogDefaults,
   ResolvedTheme,
   TerminalFontId,
@@ -29,7 +29,7 @@ export type WorkspaceSessionContextValue = {
   terminalFontId: TerminalFontId;
   onChooseProject: () => Promise<AppState | null>;
   onRefreshCatalog: () => Promise<AppState | null>;
-  onCreateInWorkspace: (defaults: CreateAgentDialogDefaults) => void;
+  onCreateInWorkspace: (defaults: ThreadLaunchInput) => void;
   onOpenCreateTerminal: (defaults: CreateTerminalDialogDefaults) => void;
   onOpenWorkspaceTerminalPresets: (projectId: string) => void;
   onOpenWorkspaceBrowser: (projectId: string, url?: string) => void;

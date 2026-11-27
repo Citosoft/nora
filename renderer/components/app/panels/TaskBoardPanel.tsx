@@ -3,11 +3,8 @@ import { FolderKanban, LoaderCircle, Plus } from "lucide-react";
 import { GenerateTasksDialog } from "@/components/app/dialogs/GenerateTasksDialog";
 import { resolveTaskCompletionTogglePath } from "@/components/app/logic/appUtils";
 import { filterTasks } from "@/components/app/logic/filterTasks";
-import {
-  buildWorkspaceTaskSectionGroups,
-  getTaskAssignments,
-  getTaskBoardSections
-} from "@/components/app/logic/taskBoardUtils";
+import { buildWorkspaceTaskSectionGroups, getTaskBoardSections } from "@/components/app/logic/taskBoardUtils";
+import { taskThreadKey } from "@/components/app/logic/taskThreads";
 import { TaskCenterHeader } from "@/components/app/tasks/TaskCenterHeader";
 import { TaskBoardColumn } from "@/components/app/tasks/TaskBoardColumn";
 import { TaskItem } from "@/components/app/tasks/TaskItem";
@@ -29,6 +26,8 @@ export function TaskBoardPanel(props: TaskBoardPanelProps) {
     onSelectWorkspace,
     onToggleTaskSelection,
     onOpenTask,
+    activeTaskThreads,
+    onOpenTaskThread,
     onStartTask,
     onRunTaskWorkflow,
     onOpenWorkflows,
@@ -134,7 +133,8 @@ export function TaskBoardPanel(props: TaskBoardPanelProps) {
                         key={task.path}
                         task={task}
                         layout="list"
-                        assignmentCount={getTaskAssignments(task.path, activeWorkspace.board).length}
+                        activeThread={activeTaskThreads.get(taskThreadKey(activeWorkspace.projectId, task.path)) ?? null}
+                        onOpenThread={onOpenTaskThread}
                         selected={selectedTaskKeys.includes(`${activeWorkspace.projectId}:${task.path}`)}
                         isStartingThreads={isStartingThreads}
                         onToggleSelection={() => onToggleTaskSelection(activeWorkspace.projectId, task.path)}
@@ -217,7 +217,8 @@ export function TaskBoardPanel(props: TaskBoardPanelProps) {
                     layout="board"
                     isStartingThreads={isStartingThreads}
                     key={task.path}
-                    assignmentCount={getTaskAssignments(task.path, activeWorkspace.board).length}
+                    activeThread={activeTaskThreads.get(taskThreadKey(activeWorkspace.projectId, task.path)) ?? null}
+                    onOpenThread={onOpenTaskThread}
                     selected={selectedTaskKeys.includes(`${activeWorkspace.projectId}:${task.path}`)}
                     task={task}
                     onToggleSelection={() => onToggleTaskSelection(activeWorkspace.projectId, task.path)}

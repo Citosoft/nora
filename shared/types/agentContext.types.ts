@@ -85,16 +85,6 @@ export interface AgentContextSelection {
   externalHarness?: ExternalHarnessContextRef;
 }
 
-export interface AgentContextEntryGroup {
-  id: string;
-  title: string;
-  latestPreview: string;
-  lastUpdatedAt: string | null;
-  entryCount: number;
-  estimate: AgentContextEstimate;
-  entryIds: string[];
-}
-
 export interface AgentPromptAttachment {
   path: string;
   kind: "file" | "directory";
@@ -118,21 +108,6 @@ export interface AgentContextState {
   terminalStreamPath: string;
   estimate: AgentContextEstimate;
   entries: AgentContextEntry[];
-}
-
-export interface AgentContextSourceSummary {
-  agentId: string;
-  agentName: string;
-  toolId: string;
-  toolLabel: string;
-  contextFilePath: string;
-  contextEventsPath: string;
-  terminalStreamPath: string;
-  entryCount: number;
-  lastUpdatedAt: string | null;
-  latestPreview: string;
-  estimate: AgentContextEstimate;
-  entryGroups: AgentContextEntryGroup[];
 }
 
 export interface AgentPromptDispatchResult {
