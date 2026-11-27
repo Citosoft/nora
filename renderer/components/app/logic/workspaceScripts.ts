@@ -1,3 +1,4 @@
+import type { WorkspaceRunnableScripts } from "@/components/app/types/workspaceSetupScripts.types";
 import type { CreateTerminalPayload, WorkspaceScriptLauncher, WorkspaceSummary } from "@shared/appTypes";
 
 export function getPreferredWorkspaceScripts(
@@ -42,4 +43,16 @@ export function createScriptTerminalDefaults(script: WorkspaceScriptLauncher, sh
 
 export function createScriptTerminalPayload(script: WorkspaceScriptLauncher, shellId: string): CreateTerminalPayload {
   return { ...createScriptTerminalDefaults(script, shellId), target: { kind: "root" } };
+}
+
+/** Everything a workspace's Run script menus offer: detected package scripts and configured setup scripts. */
+export function getWorkspaceRunnableScripts(workspace: WorkspaceSummary): WorkspaceRunnableScripts {
+  return {
+    packageScripts: getPreferredWorkspaceScripts(workspace),
+    setupScripts: workspace.project.workspaceSetupScripts ?? []
+  };
+}
+
+export function hasWorkspaceRunnableScripts(scripts: WorkspaceRunnableScripts): boolean {
+  return scripts.packageScripts.length > 0 || scripts.setupScripts.length > 0;
 }

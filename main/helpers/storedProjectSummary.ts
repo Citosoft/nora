@@ -1,5 +1,6 @@
 import type { ProjectSummary } from "@shared/appTypes";
 import { parseProjectVersionControl } from "@shared/projectVersionControl";
+import { normalizeWorkspaceSetupScripts } from "@shared/workspaceSetupScripts";
 
 /** Validates a persisted project and backfills fields added after it was written. */
 export function parseStoredProjectSummary(value: unknown): ProjectSummary | null {
@@ -24,7 +25,8 @@ export function parseStoredProjectSummary(value: unknown): ProjectSummary | null
 
   return {
     ...(candidate as ProjectSummary),
-    versionControl: parseProjectVersionControl(candidate.versionControl)
+    versionControl: parseProjectVersionControl(candidate.versionControl),
+    workspaceSetupScripts: normalizeWorkspaceSetupScripts(candidate.workspaceSetupScripts)
   };
 }
 

@@ -86,7 +86,7 @@ function hostFixture() {
   const host = {
     header: (id: string): ConversationHeader | null => {
       const found = conversations.get(id);
-      return found ? { schemaVersion: 1, cursor, conversation: found, activeRuns: active.has(id) ? [run(id, "active", "running")] : [], queuedRuns: [], pendingRequests: [] } : null;
+      return found ? { schemaVersion: 1, cursor, conversation: found, activeRuns: active.has(id) ? [run(id, "active", "running")] : [], queuedRuns: [], pendingRequests: [], backgroundTasks: [] } : null;
     },
     conversationHistory: ({ conversationId }: { conversationId: string }) =>
       ({ schemaVersion: 1 as const, conversationId, cursor, nextBefore: null, scope: "timeline" as const, items: items.get(conversationId) ?? [] }),

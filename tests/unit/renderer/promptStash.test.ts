@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isPromptStashShortcut, pushStashedPrompt, removeStashedPrompt, takeStashedPrompt, togglePromptStash } from "@/components/app/logic/composer-prompts/promptStash";
+import { pushStashedPrompt, removeStashedPrompt, takeStashedPrompt, togglePromptStash } from "@/components/app/logic/composer-prompts/promptStash";
 import type { StashedPrompt } from "@/components/app/types/composerPrompts.types";
 
 const NOW = "2026-11-18T10:00:00.000Z";
@@ -29,12 +29,4 @@ test("blank drafts are not stashed and entries can be deleted", () => {
   const stash = [entry("a", "one")];
   assert.equal(pushStashedPrompt(stash, " \n", NOW, ids()), stash);
   assert.deepEqual(removeStashedPrompt([entry("a", "one"), entry("b", "two")], "a"), [entry("b", "two")]);
-});
-
-test("Cmd or Ctrl+S is the stash shortcut, without Shift or Alt", () => {
-  const keys = { key: "s", shiftKey: false, altKey: false, ctrlKey: false, metaKey: false };
-  assert.equal(isPromptStashShortcut({ ...keys, metaKey: true }), true);
-  assert.equal(isPromptStashShortcut({ ...keys, ctrlKey: true, key: "S" }), true);
-  assert.equal(isPromptStashShortcut({ ...keys, metaKey: true, shiftKey: true }), false);
-  assert.equal(isPromptStashShortcut(keys), false);
 });

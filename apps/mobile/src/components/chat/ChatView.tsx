@@ -21,6 +21,7 @@ import { RequestCard } from "@/components/approvals/RequestCard";
 import { Banner } from "@/components/common/Banner";
 import { KeyboardAvoidingArea } from "@/components/common/KeyboardAvoidingArea";
 import { Button } from "@/components/common/Button";
+import { BackgroundTasksStatus } from "./BackgroundTasksStatus";
 import { TurnStatus } from "./TurnStatus";
 import { Composer } from "./Composer";
 import { PendingSendRow } from "./PendingSendRow";
@@ -105,6 +106,7 @@ export function ChatView({ runtime, runtimeId, conversation, view, runner, onSen
                 }} />
             ))}
             <TurnStatus view={view} />
+            <BackgroundTasksStatus tasks={view.header.backgroundTasks} />
           </View>
         } />
       <Composer attachments={attachments} draft={draft} onDraftChange={setDraft} onSend={send} stop={stop} placeholder="Reply to Nora"

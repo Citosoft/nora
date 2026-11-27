@@ -6,7 +6,6 @@ import type {
   WindowUiState
 } from "@/components/app/types";
 import type { TitleBarWorkspaceQuickSearchConfig } from "@/components/app/types/titlebarWorkspaceSearch.types";
-import type { ShortcutDefinition } from "@/components/app/types/workflow.types";
 import type {
   AgentCatalogEntry,
   AgentLaunchTargetPreference,
@@ -212,6 +211,7 @@ export type LinuxAptSetupDialogProps = {
 
 export type AnalyticsConsentDialogProps = {
   open: boolean;
+  usageStatisticsRequireConsent: boolean;
   onAllow: () => void;
   onDecline: () => void;
 };
@@ -274,13 +274,6 @@ export type WorkspaceSwitcherDialogProps = {
   workspaces: WorkspaceSummary[];
   activeWorkspaceId: string | null;
   onSelectWorkspace: (projectId: string) => void;
-};
-
-export type KeyboardShortcutsDialogProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  shortcuts: ShortcutDefinition[];
-  chromeHidden: boolean;
 };
 
 export type AboutDialogProps = {

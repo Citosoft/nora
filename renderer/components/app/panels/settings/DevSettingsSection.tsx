@@ -1,10 +1,12 @@
 import { useSettingsRuntime } from "@/components/app/hooks/useSettingsRuntime";
 import { SettingRow, SettingsSectionHeader } from "@/components/app/panels/settings/settingsUi";
 import { Button } from "@/components/ui/button";
+import { useIslandPreview } from "@/components/app/hooks/useIslandPreview";
 import { FlaskConical } from "lucide-react";
 
 export function DevSettingsSection() {
   const { openOnboardingFlow, triggerDevToast } = useSettingsRuntime();
+  const islandPreview = useIslandPreview();
 
   return (
     <div className="space-y-6">
@@ -21,6 +23,20 @@ export function DevSettingsSection() {
             <Button variant="outline" onClick={openOnboardingFlow}>
               Open onboarding
             </Button>
+          )}
+        />
+        <SettingRow
+          title="Notch Island Demo"
+          description="Show the notch island with sample threads for 20 seconds, or until you leave this page, even when it is turned off or nothing is running. Hover it to expand."
+          control={(
+            <div className="space-y-2">
+              <Button variant="outline" onClick={() => islandPreview.preview("running")}>
+                Show island demo
+              </Button>
+              {islandPreview.notice ? <p role="status" className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">{islandPreview.notice.title}.</span> {islandPreview.notice.description}
+              </p> : null}
+            </div>
           )}
         />
         <SettingRow

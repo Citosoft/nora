@@ -1,4 +1,5 @@
 import type { SettingsSearchEntry } from "@/components/app/types/settingsSearch.types";
+import { KEYBINDING_COMMANDS } from "@shared/keybindings/commands";
 
 export const SETTINGS_SEARCH_INDEX: readonly SettingsSearchEntry[] = [
   { group: "remoteAccess", title: "Enable Nora Relay", keywords: ["remote access", "phone", "mobile", "cloudflare", "tunnel", "internet"] },
@@ -34,6 +35,14 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingsSearchEntry[] = [
   { group: "terminal", title: "Default Shell", keywords: ["zsh", "bash", "powershell"] },
   { group: "terminal", title: "Quick Launch Defaults", keywords: ["new terminal"] },
   { group: "terminal", title: "Terminal presets", keywords: ["commands", "scripts"] },
+  { group: "migrate", title: "Migrate from another app", keywords: ["import", "claude", "codex", "t3 code", "orca", "move", "switch", "transfer"] },
+  { group: "migrate", title: "Migrate bots", keywords: ["import", "bots", "orca", "openbot", "grok", "grok bot", "export"] },
+  { group: "keybindings", title: "Reset all keybindings", keywords: ["shortcuts", "hotkeys", "keyboard", "defaults", "restore"] },
+  ...KEYBINDING_COMMANDS.map((command): SettingsSearchEntry => ({
+    group: "keybindings",
+    title: command.title,
+    keywords: ["shortcut", "keybinding", "hotkey", "keyboard", command.category.toLowerCase()]
+  })),
   { group: "browser", title: "Auto-open Browser On New Port", keywords: ["localhost", "url", "dev server"] },
   { group: "browser", title: "Import Chrome Cookies", keywords: ["login", "session", "profile"] },
   { group: "mcp", title: "MCP Servers", keywords: ["mcp", "servers", "tools", "connections", "discovered", "runtime", "authentication", "claude", "codex"] },
@@ -70,8 +79,13 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingsSearchEntry[] = [
   { group: "ai", title: "Anthropic API Key", keywords: ["claude", "key"] },
   { group: "voice", title: "Dictation Engine", keywords: ["microphone", "transcription", "speech"] },
   { group: "voice", title: "Local model", keywords: ["offline", "speech", "whisper", "on-device"] },
-  { group: "privacy", title: "Usage Analytics", keywords: ["telemetry", "tracking", "diagnostics"] },
+  { group: "privacy", title: "Usage statistics", keywords: ["analytics", "telemetry", "tracking", "opt out"] },
+  { group: "privacy", title: "Detailed analytics", keywords: ["analytics", "telemetry", "diagnostics", "errors", "opt in"] },
   { group: "system", title: "Hardware Acceleration", keywords: ["gpu", "rendering"] },
+  { group: "notchIsland", title: "Show the notch island", keywords: ["dynamic island", "notch", "menu bar", "camera", "macbook"] },
+  { group: "notchIsland", title: "Always show", keywords: ["dynamic island", "notch", "inbox", "idle"] },
+  { group: "notchIsland", title: "Size", keywords: ["dynamic island", "notch", "bigger", "larger", "height"] },
+  { group: "notchIsland", title: "Preview", keywords: ["dynamic island", "notch", "demo", "try"] },
   { group: "dev", title: "Onboarding Flow", keywords: ["first run"] },
   { group: "dev", title: "Preview Toast Styles", keywords: ["toast", "notification"] }
 ];

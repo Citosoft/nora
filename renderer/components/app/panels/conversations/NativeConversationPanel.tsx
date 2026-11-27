@@ -14,6 +14,7 @@ import { connectorSubjectOf } from "@shared/connectors/access";
 import { buildConnectorAccessChoices } from "@/components/app/logic/connectorAccess";
 import { NativeThreadReferenceChips } from "./NativeThreadReferenceChips";
 import { useComposerAttachments } from "@/components/app/hooks/useComposerAttachments";
+import { BackgroundTasksIndicator } from "./BackgroundTasksIndicator";
 import { NativeComposerInput } from "./NativeComposerInput";
 import { VoiceInputButton } from "./VoiceInputButton";
 import { useComposerVoiceInput } from "@/components/app/hooks/useComposerVoiceInput";
@@ -195,6 +196,7 @@ export function NativeConversationPanel() {
     {transcript.newActivity && <Button variant="secondary" size="sm" className="mx-auto mb-3 rounded-full" onClick={transcript.jumpToLatest}><ArrowDown className="size-3.5" aria-hidden="true" />Jump to latest</Button>}
     <div className="thread-composer">
     <div className="mx-auto w-full max-w-[848px] space-y-3 px-4 pb-5 sm:px-6">
+      {header && <BackgroundTasksIndicator tasks={header.backgroundTasks} />}
       {header && <NativeRequestStack key={header.conversation.id} requests={header.pendingRequests} busy={busy} visible={ports.visible} onRespond={(requestId, response) => execute({ kind: "respond", commandId: crypto.randomUUID(), conversationId: header.conversation.id, requestId, response })} />}
       {conversationId && <ConnectorAuthPromptStack conversationId={conversationId} />}
       {conversationId && <SecretPromptStack conversationId={conversationId} />}

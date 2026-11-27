@@ -38,3 +38,19 @@ test("isGitProject only disables git for an explicit none", () => {
   assert.equal(isGitProject({ versionControl: "git" }), true);
   assert.equal(isGitProject({ versionControl: "none" }), false);
 });
+
+test("parseStoredProjectSummary gives projects saved before setup scripts an empty list and normalises stored ones", () => {
+  assert.deepEqual(parseStoredProjectSummary(legacyProject)?.workspaceSetupScripts, []);
+
+  const project = parseStoredProjectSummary({
+    ...legacyProject,
+    workspaceSetupScripts: [
+      { id: "install", name: "Install", command: "npm ci", trigger: "worktree-create", origin: { kind: "user" } },
+      { id: "broken", name: "Broken", command: "", trigger: "worktree-create" }
+    ]
+  });
+
+  assert.deepEqual(project?.workspaceSetupScripts, [
+    { id: "install", name: "Install", command: "npm ci", trigger: "worktree-create", origin: { kind: "user" } }
+  ]);
+});

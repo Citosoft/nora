@@ -1,3 +1,4 @@
+import { useKeybindingKeyDown } from "@/components/app/hooks/useKeybindings";
 import {
   reviewComposerSurfaceClass,
   reviewComposerTextareaClass
@@ -17,15 +18,16 @@ export function BrowserCommentComposer({ target, onSave, onCancel, disabled = fa
     textareaRef.current?.focus();
   }, [target.key]);
 
+  const submitOnShortcut = useKeybindingKeyDown("submit-form", () => {
+    const next = draft.trim();
+    if (next) {
+      onSave(next);
+    }
+  });
+
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (disabled) return;
-    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-      event.preventDefault();
-      const next = draft.trim();
-      if (next) {
-        onSave(next);
-      }
-    }
+    if (submitOnShortcut(event)) return;
     if (event.key === "Escape") {
       event.preventDefault();
       onCancel();

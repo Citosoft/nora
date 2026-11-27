@@ -1,111 +1,35 @@
 import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
-import type { EventProperties } from "@/lib/types/analytics.types";
-import type { AnalyticsConsentStatus } from "@shared/appTypes";
-import posthog from "posthog-js";
+import type { RendererAnalyticsEvent } from "@shared/types/analytics.types";
 
-const posthogToken =
-  __NORA_POSTHOG_API_KEY__?.trim() ||
-  __VITE_PUBLIC_POSTHOG_PROJECT_TOKEN__?.trim() ||
-  "";
-const posthogHost =
-  __NORA_POSTHOG_HOST__?.trim() ||
-  __VITE_PUBLIC_POSTHOG_HOST__?.trim() ||
-  "https://us.i.posthog.com";
-
-let runtimeAllowsAnalytics = false;
-let analyticsConsentStatus: AnalyticsConsentStatus = "unknown";
-let posthogInitialized = false;
-
-function logToMain(level: "debug" | "info" | "warn" | "error", message: string): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  noraSystemClient.logAnalytics(level, message).catch(() => {
-    /* best effort */
+/**
+ * Sends an event to the main process, which validates it, checks the user's analytics choice and adds the installation
+ * ID. The window never talks to PostHog itself, so there is one identity and one consent check for the whole app.
+ */
+export function trackAnalyticsEvent(event: RendererAnalyticsEvent): void {
+  noraSystemClient.trackAnalytics(event).catch(() => {
+    /* best effort: analytics must never surface as an app error */
   });
 }
 
-function hasPostHogConfig(): boolean {
-  return Boolean(posthogToken);
+// Error names become event properties, so keep them to identifier characters.
+function errorName(error: unknown): string {
+  const name = error instanceof Error ? error.name : typeof error;
+  return /^[\w.:@-]{1,80}$/.test(name) ? name : "Error";
 }
 
-function isConsentGranted(): boolean {
-  return analyticsConsentStatus === "granted";
-}
-
-function isTrackingEnabled(): boolean {
-  return hasPostHogConfig() && runtimeAllowsAnalytics && isConsentGranted();
-}
-
-function ensurePosthogInitialized(): void {
-  if (posthogInitialized || !isTrackingEnabled()) {
-    return;
-  }
-
-  posthog.init(posthogToken, {
-    api_host: posthogHost,
-    autocapture: false,
-    capture_pageview: false,
-    capture_pageleave: false,
-    capture_dead_clicks: false,
-    capture_performance: false,
-    capture_exceptions: false,
-    person_profiles: "never",
-    disable_persistence: true,
-    disable_external_dependency_loading: true,
-    advanced_disable_feature_flags: true,
-    disable_session_recording: true
+/** Reports a renderer error. Main drops the message and stack unless the user opted in, and scrubs them when it keeps them. */
+export function trackAnalyticsError(error: unknown, context: string): void {
+  trackAnalyticsEvent({
+    name: "error.occurred",
+    properties: {
+      source: "renderer", errorName: errorName(error), errorCode: null, context,
+      ...(error instanceof Error ? { message: error.message.slice(0, 2_000), ...(error.stack ? { stack: error.stack.slice(0, 8_000) } : {}) } : {})
+    }
   });
-  posthogInitialized = true;
-  logToMain("info", `PostHog initialized (host=${posthogHost})`);
 }
 
-function applyAnalyticsTrackingState(): void {
-  if (!hasPostHogConfig()) {
-    logToMain("debug", "PostHog unavailable: missing API key");
-    return;
-  }
-
-  if (isTrackingEnabled()) {
-    ensurePosthogInitialized();
-    if (posthogInitialized) posthog.opt_in_capturing({ captureEventName: false });
-  } else if (posthogInitialized) {
-    posthog.opt_out_capturing();
-  }
-
-  logToMain("debug", isTrackingEnabled() ? "Detailed analytics tracking enabled" : "Detailed analytics tracking disabled");
-}
-
-export function setAnalyticsRuntimeAllowed(allowed: boolean): void {
-  runtimeAllowsAnalytics = allowed;
-  applyAnalyticsTrackingState();
-}
-
-export function setAnalyticsConsentStatus(status: AnalyticsConsentStatus): void {
-  analyticsConsentStatus = status;
-  applyAnalyticsTrackingState();
-}
-
-export function trackAnalyticsEvent(name: string, properties?: EventProperties): void {
-  if (!isTrackingEnabled()) {
-    logToMain("debug", `Analytics disabled, skipping ${name}`);
-    return;
-  }
-
-  capturePostHogEvent(name, properties);
-}
-
-function capturePostHogEvent(name: string, properties?: EventProperties): void {
-  ensurePosthogInitialized();
-  if (!posthogInitialized) {
-    return;
-  }
-
-  try {
-    posthog.capture(name, properties);
-  } catch (error) {
-    console.error("[analytics] capture failed", name, error);
-    logToMain("error", `capture failed ${name}: ${error}`);
-  }
+/** Reports errors nothing else caught. Call once when the window starts. */
+export function observeWindowErrors(): void {
+  window.addEventListener("error", (event) => trackAnalyticsError(event.error ?? event.message, "window-error"));
+  window.addEventListener("unhandledrejection", (event) => trackAnalyticsError(event.reason, "unhandled-rejection"));
 }

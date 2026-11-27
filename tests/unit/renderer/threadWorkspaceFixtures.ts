@@ -83,7 +83,7 @@ export function threadWorkspaceFixture() {
     async summaries() { summaryReads++; return structuredClone(summaries); },
     async header(id) {
       const conversation = summaries.find((entry) => entry.conversation.id === id)?.conversation;
-      return conversation ? { schemaVersion: 1, cursor: 0, conversation, activeRuns: [], queuedRuns: [], pendingRequests: [] } : null;
+      return conversation ? { schemaVersion: 1, cursor: 0, conversation, activeRuns: [], queuedRuns: [], pendingRequests: [], backgroundTasks: [] } : null;
     },
     async history(query) { return query.scope === "timeline"
       ? { schemaVersion: 1, conversationId: query.conversationId, scope: "timeline", cursor: 0, nextBefore: null, items: [] }

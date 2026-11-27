@@ -152,13 +152,11 @@ export function buildPreLaunchRemoteWorkspaceDialogProps(args: {
 
 export function buildPreLaunchKeyboardShortcutsDialogProps(args: {
   uiState: UiState;
-  windowUiState: WindowUiState;
   uiCommands: AppUiCommands;
 }): KeyboardShortcutsDialogProps {
   return {
     open: args.uiState.showKeyboardShortcutsDialog,
-    onOpenChange: args.uiCommands.setKeyboardShortcutsDialogOpen,
-    platform: args.windowUiState.platform
+    onOpenChange: args.uiCommands.setKeyboardShortcutsDialogOpen
   };
 }
 

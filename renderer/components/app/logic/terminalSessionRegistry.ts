@@ -1,4 +1,7 @@
 import { noraTerminalClient } from "@/components/app/clients/noraTerminalClient";
+import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
+import { getKeybindingSet } from "@/components/app/logic/keybindings/keybindingsStore";
+import { keybindingMatchesEvent } from "@/components/app/logic/keybindings/keybindingMatching";
 import {
   getCachedTerminalViewportSize,
   setCachedTerminalViewportSize
@@ -127,19 +130,20 @@ function createPreservedTerminalSessionEntry(
   };
 
   terminal.attachCustomKeyEventHandler((event) => {
-    const isCopy = event.type === "keydown" && event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "c";
-    const isPaste = event.type === "keydown" && event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "v";
+    const { byId } = getKeybindingSet();
+    const isCopy = event.type === "keydown" && keybindingMatchesEvent(byId.get("copy-terminal-selection"), event);
+    const isPaste = event.type === "keydown" && keybindingMatchesEvent(byId.get("paste-into-terminal"), event);
 
     if (isCopy) {
       const selection = terminal.getSelection();
       if (selection) {
-        void navigator.clipboard.writeText(selection);
+        void noraSystemClient.copyText(selection);
       }
       return false;
     }
 
     if (isPaste) {
-      void navigator.clipboard.readText().then((text) => {
+      void noraSystemClient.readClipboardText().then((text) => {
         if (text && runtimeState.canSendInput) {
           void noraTerminalClient.sendTerminalInput(sessionId, text);
         }

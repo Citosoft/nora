@@ -35,7 +35,8 @@ function WorkspaceHomeHarness() {
   const [route, setRoute] = useState<WorkspaceToolRoute | null>(null);
   const [preferences, setPreferences] = useState(() => parseSidebarPreferences(null));
   return <ThreadWorkspaceComposition store={store}><WorkspaceNavigationContext.Provider value={{ route, openedTools: [], preferences, setPreferences, preferenceError: null,
-    openTool: (projectId, tool) => setRoute({ projectId, tool }), closeTool: () => setRoute(null), returnToThread: () => setRoute(null) }}>
+    openTool: (projectId, tool) => setRoute({ projectId, tool }), closeTool: () => setRoute(null), returnToThread: () => setRoute(null),
+    selectSidebarMode: (sidebarMode) => { setPreferences((current) => ({ ...current, sidebarMode })); setRoute(null); } }}>
     <main className="flex h-screen flex-col bg-background text-foreground"><HomePreview /><output id="home-route" className="sr-only">{JSON.stringify(route)}</output></main>
   </WorkspaceNavigationContext.Provider></ThreadWorkspaceComposition>;
 }

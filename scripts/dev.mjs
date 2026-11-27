@@ -20,7 +20,6 @@ const tailwindCli = path.join(root, "node_modules", "tailwindcss", "lib", "cli.j
 const generateOAuthBuildConfigScript = path.join(root, "scripts", "generate-oauth-build-config.mjs");
 const rendererDir = path.join(root, "renderer");
 const rendererIconSvgPath = path.join(root, "renderer", "icon.svg");
-const rendererMarkSvgPath = path.join(root, "renderer", "mark.svg");
 const rendererIconPngPath = path.join(root, "renderer", "icon.png");
 const rendererIcon256Path = path.join(root, "renderer", "icon-256.png");
 const rendererIconIcoPath = path.join(root, "renderer", "icon.ico");
@@ -114,12 +113,14 @@ async function copyStatic() {
   await cp(path.join(root, "skills"), path.join(root, "dist", "skills"), { recursive: true });
   await runCommand(nodeExe, [generateOAuthBuildConfigScript], "oauth-build-config");
   await cp(path.join(root, "renderer", "index.html"), path.join(root, "dist", "renderer", "index.html"));
+  await cp(path.join(root, "renderer", "island.html"), path.join(root, "dist", "renderer", "island.html"));
   await cp(rendererIconSvgPath, path.join(root, "dist", "renderer", "icon.svg"));
-  await cp(rendererMarkSvgPath, path.join(root, "dist", "renderer", "mark.svg"));
   await cp(rendererIconPngPath, path.join(root, "dist", "renderer", "icon.png"));
   await cp(rendererIcon256Path, path.join(root, "dist", "renderer", "icon-256.png"));
   await cp(rendererIconIcoPath, path.join(root, "dist", "renderer", "icon.ico"));
   await cp(rendererIconIcnsPath, path.join(root, "dist", "renderer", "icon.icns"));
+  // App icons the import flow shows; unlike product-icons they have no online fallback.
+  await cp(path.join(root, "renderer", "brand-icons"), path.join(root, "dist", "renderer", "brand-icons"), { recursive: true });
 }
 
 function scheduleStaticCopy() {
@@ -155,8 +156,8 @@ function watchStatic() {
 
   const staticFiles = [
     "index.html",
-    "icon.svg",
-    "mark.svg"
+    "island.html",
+    "icon.svg"
   ];
   const cleanupFns = staticFiles.map((filename) =>
     watchPolledFile(path.join(rendererDir, filename), () => {
@@ -192,12 +193,15 @@ async function watchPreloadBundle() {
   await rm(path.join(root, "dist", "main", "preload"), { recursive: true, force: true });
 
   const ctx = await context({
-    entryPoints: [path.join(root, "main", "preload.ts")],
+    entryPoints: [
+      { in: path.join(root, "main", "preload.ts"), out: "preload" },
+      { in: path.join(root, "main", "preload", "islandPreload.ts"), out: "islandPreload" }
+    ],
     bundle: true,
     format: "cjs",
     platform: "node",
     target: "es2022",
-    outfile: distPreloadPath,
+    outdir: path.dirname(distPreloadPath),
     external: ["electron"],
     sourcemap: true,
     tsconfig: path.join(root, "tsconfig.json")
@@ -209,20 +213,16 @@ async function watchPreloadBundle() {
 
 async function watchRendererBundle() {
   const ctx = await context({
-    entryPoints: ["renderer/main.tsx"],
+    entryPoints: [{ in: "renderer/main.tsx", out: "bundle" }, { in: "renderer/island.tsx", out: "islandBundle" }],
     bundle: true,
     format: "iife",
     platform: "browser",
     target: "es2022",
-    outfile: "dist/renderer/bundle.js",
+    outdir: "dist/renderer",
     jsx: "automatic",
     sourcemap: true,
     define: {
       __NORA_IS_PRODUCTION__: "false",
-      __NORA_POSTHOG_API_KEY__: JSON.stringify(process.env.NORA_POSTHOG_API_KEY ?? ""),
-      __NORA_POSTHOG_HOST__: JSON.stringify(process.env.NORA_POSTHOG_HOST ?? ""),
-      __VITE_PUBLIC_POSTHOG_PROJECT_TOKEN__: JSON.stringify(process.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN ?? ""),
-      __VITE_PUBLIC_POSTHOG_HOST__: JSON.stringify(process.env.VITE_PUBLIC_POSTHOG_HOST ?? ""),
       __NPM_PACKAGE_VERSION__: JSON.stringify(process.env.npm_package_version ?? "")
     },
     tsconfig: "tsconfig.json",

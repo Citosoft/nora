@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { providerKindSchema } from "@shared/providers/providerKinds";
-import { commandReceiptSchema, contextUsageSchema, conversationCommandSchema, conversationEventSchema, conversationSchema,
+import { backgroundTaskSchema, commandReceiptSchema, contextUsageSchema, conversationCommandSchema, conversationEventSchema, conversationSchema,
   requestSchema, runSchema, timelineItemSchema, workspaceRefSchema } from "./contracts";
 import { mcpResultSchema } from "@shared/providers/mcp";
 import { mcpAppResultSchema } from "@shared/providers/mcpApp";
@@ -39,7 +39,8 @@ export const unwatchRequestSchema = z.object({ ...routed, watchId: id }).strict(
 export const cursorHintSchema = z.object({ ...routed, watchId: id, cursor }).strict();
 export const watchReceiptSchema = z.object({ watchId: id, cursor }).strict();
 export const headerSchema = z.object({ schemaVersion: z.literal(1), cursor, conversation: conversationSchema,
-  activeRuns: z.array(runSchema), queuedRuns: z.array(runSchema), pendingRequests: z.array(requestSchema) }).strict();
+  activeRuns: z.array(runSchema), queuedRuns: z.array(runSchema), pendingRequests: z.array(requestSchema),
+  backgroundTasks: z.array(backgroundTaskSchema).default([]) }).strict();
 export const conversationSummarySchema = z.object({ conversation: conversationSchema,
   latestRun: runSchema.pick({ id: true, state: true, createdAt: true, updatedAt: true, failure: true }).nullable(),
   queuedCount: cursor, pendingRequestCount: cursor }).strict();

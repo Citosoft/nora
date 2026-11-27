@@ -15,7 +15,7 @@ function fixture() {
     attemptId: "attempt", nativeTurnId: null, createdAt: summary.conversation.createdAt, updatedAt: summary.conversation.updatedAt,
     failure: null, usage: null, review: "pending" };
   const header: ConversationHeader = { schemaVersion: 1, cursor: 1, conversation: summary.conversation,
-    activeRuns: [], queuedRuns: [run, { ...run, id: "second" }], pendingRequests: [] };
+    activeRuns: [], queuedRuns: [run, { ...run, id: "second" }], pendingRequests: [], backgroundTasks: [] };
   const actions: string[] = [];
   const store: AppBuildCleanupStore = { client: { ...f.deps.client, header: async () => header,
     execute: async (command) => { actions.push(command.kind); return f.deps.client.execute(command); } },

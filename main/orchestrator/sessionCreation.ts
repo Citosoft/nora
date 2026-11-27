@@ -204,7 +204,8 @@ export function createSessionCreationHelpers(deps: SessionCreationDeps): Session
         }),
         focusedAgentId: agentId,
         focusedTerminalId: null,
-        errorMessage: null
+        // A new worktree cleared the banner before it was created, so anything here now is a setup-script failure.
+        errorMessage: createdWorktree ? currentState.errorMessage : null
       };
     });
     await deps.persistWorkspaceState(deps.getSnapshot());

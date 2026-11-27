@@ -1,7 +1,8 @@
 import { useAppMainCenterContent } from "@/components/app/context/appMainCenterContentContext";
 import { useCanonicalAppSnapshot } from "@/components/app/hooks/useAppDomainState";
 import { NORA_ASCII_3D } from "@/components/app/logic/asciiWordmark";
-import { SHORTCUT_DEFINITIONS, formatShortcutKeyParts, shortcutPlatform } from "@/components/app/logic/keyboardShortcuts";
+import { KeybindingKeys } from "@/components/app/shared/KeybindingKeys";
+import { RECENT_WORKSPACE_KEYBINDING_COMMAND_IDS } from "@shared/keybindings/commandIds";
 import { AgentToolIcon } from "@/components/app/shared/Tooling";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,33 +27,10 @@ export function ProjectSelectorScreen() {
     [snapshot?.agentCatalog]
   );
   const availableCount = availableTools.length;
-  const platform = shortcutPlatform();
   const recentWorkspacePreview = useMemo(
     () => snapshot?.recentProjects.slice(0, 5) ?? [],
     [snapshot?.recentProjects]
   );
-  const addWorkspaceShortcutParts = useMemo(() => {
-    const addWorkspaceShortcut = SHORTCUT_DEFINITIONS.find((definition) => definition.id === "open-add-workspace");
-    if (!addWorkspaceShortcut) {
-      return [];
-    }
-    return formatShortcutKeyParts(addWorkspaceShortcut.keys, platform).map((part, index) => ({
-      part,
-      showPlus: index > 0 && platform !== "darwin"
-    }));
-  }, [platform]);
-  const recentWorkspaceShortcutParts = useMemo(() => {
-    return [1, 2, 3, 4, 5].map((position) => {
-      const definition = SHORTCUT_DEFINITIONS.find((entry) => entry.id === `open-recent-workspace-${position}`);
-      if (!definition) {
-        return [];
-      }
-      return formatShortcutKeyParts(definition.keys, platform).map((part, index) => ({
-        part,
-        showPlus: index > 0 && platform !== "darwin"
-      }));
-    });
-  }, [platform]);
 
   if (!snapshot) {
     return null;
@@ -74,18 +52,7 @@ export function ProjectSelectorScreen() {
                 <FolderGit2 className="size-4" />
                 Add project
               </span>
-              {addWorkspaceShortcutParts.length ? (
-                <span className="inline-flex items-center gap-1">
-                  {addWorkspaceShortcutParts.map(({ part, showPlus }, index) => (
-                    <span key={`${part}-${index}`} className="inline-flex items-center gap-1">
-                      {showPlus ? <span className="text-[9px] text-muted-foreground">+</span> : null}
-                      <span className="rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] leading-none text-foreground">
-                        {part}
-                      </span>
-                    </span>
-                  ))}
-                </span>
-              ) : null}
+              <KeybindingKeys commandId="open-add-workspace" />
             </Button>
           </div>
           <div className="mx-auto w-full max-w-xl space-y-2 text-left">
@@ -103,16 +70,7 @@ export function ProjectSelectorScreen() {
                   >
                     <div className="flex items-center gap-2">
                       <div className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{project.name}</div>
-                      <span className="inline-flex items-center gap-1">
-                        {(recentWorkspaceShortcutParts[index] ?? []).map(({ part, showPlus }, partIndex) => (
-                          <span key={`${project.rootPath}-${part}-${partIndex}`} className="inline-flex items-center gap-1">
-                            {showPlus ? <span className="text-[9px] text-muted-foreground">+</span> : null}
-                            <span className="rounded-md border border-border/70 bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] leading-none text-foreground">
-                              {part}
-                            </span>
-                          </span>
-                        ))}
-                      </span>
+                      {RECENT_WORKSPACE_KEYBINDING_COMMAND_IDS[index] ? <KeybindingKeys commandId={RECENT_WORKSPACE_KEYBINDING_COMMAND_IDS[index]} /> : null}
                     </div>
                     <div className="truncate text-xs text-muted-foreground">{project.rootPath}</div>
                   </button>

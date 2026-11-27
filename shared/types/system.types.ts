@@ -2,6 +2,7 @@ import type { AiSettings } from "./ai.types";
 import type { AnalyticsConsentStatus } from "./analytics.types";
 import type { FileEditorThemeId } from "./fileEditorTheme.types";
 import type { ThreadBackdropSettings } from "./threadBackdrop.types";
+import type { NotchIslandSettings } from "./island/island.types";
 import type { VoiceSettings } from "./voice.types";
 import { DEFAULT_VOICE_SETTINGS } from "../voice/settings";
 import type { Personalization } from "./personalization/roles.types";
@@ -303,13 +304,18 @@ export interface AppSettings {
   agentCompletionNotificationsEnabled: boolean;
   /** Push to the user's phones (through the control plane) when a thread finishes or needs them. */
   phonePushNotificationsEnabled: boolean;
+  /** Opt-in to detailed analytics. Only the user may change it; agents can read it but not set it. */
   analyticsConsentStatus: AnalyticsConsentStatus;
+  /** False once the user objects to anonymous usage statistics; also stops detailed analytics. */
+  usageStatisticsEnabled: boolean;
   openInternalBrowserOnNewPortDetection: boolean;
   browserDataImportPromptSeen: boolean;
   linuxAptSetupPromptDismissed: boolean;
   fileEditorThemeId: FileEditorThemeId;
   uiFontSize: UiFontSize;
   threadBackdrop: ThreadBackdropSettings;
+  /** macOS only: the island around the MacBook notch that shows active threads. */
+  notchIsland: NotchIslandSettings;
   terminalQuickLaunchDefaults: TerminalQuickLaunchDefaults;
   terminalPresets: TerminalPreset[];
   ai: AiSettings;
@@ -331,12 +337,14 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   agentCompletionNotificationsEnabled: true,
   phonePushNotificationsEnabled: true,
   analyticsConsentStatus: "unknown",
+  usageStatisticsEnabled: true,
   openInternalBrowserOnNewPortDetection: false,
   browserDataImportPromptSeen: false,
   linuxAptSetupPromptDismissed: false,
   fileEditorThemeId: "default",
   uiFontSize: DEFAULT_UI_FONT_SIZE,
   threadBackdrop: { animated: true, scope: "all" },
+  notchIsland: { enabled: true, alwaysShow: false, size: "notch" },
   terminalQuickLaunchDefaults: {
     name: "Terminal",
     target: "session-default"

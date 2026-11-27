@@ -1,3 +1,4 @@
+import type { AnalyticsPreferencesPatch } from "@shared/types/analytics.types";
 import type { DevToastPayload, NotificationPreferencesUpdate, SettingsRuntimeValue } from "@/components/app/types/settings.types";
 import type {
   AgentSkillSearchResult,
@@ -54,6 +55,7 @@ export type BuildSettingsRuntimeValueDeps = {
   updateFileEditorThemeId: (themeId: AppSettings["fileEditorThemeId"]) => Promise<void>;
   updateUiFontSize: (size: number) => Promise<void>;
   updateThreadBackdrop: (patch: Partial<AppSettings["threadBackdrop"]>) => Promise<void>;
+  updateNotchIsland: (patch: Partial<AppSettings["notchIsland"]>) => Promise<void>;
   updateHardwareAccelerationEnabled: (enabled: boolean) => Promise<void>;
   updateWorkspaceStateStorageMode: (mode: AppSettings["workspaceStateStorageMode"]) => Promise<void>;
   updateDefaultAgentLaunchTarget: (defaultAgentLaunchTarget: AppSettings["defaultAgentLaunchTarget"]) => Promise<void>;
@@ -70,7 +72,7 @@ export type BuildSettingsRuntimeValueDeps = {
   updateForceMacTitleBarPreview: (enabled: boolean) => void;
   updateLifecycle: (lifecycle: AppSettings["lifecycle"]) => Promise<void>;
   updateNotificationPreferences: (next: NotificationPreferencesUpdate) => Promise<void>;
-  updateAnalyticsConsentStatus: (status: "granted" | "declined") => Promise<void>;
+  updateAnalyticsPreferences: (patch: AnalyticsPreferencesPatch) => Promise<void>;
   analyticsAllowedInCurrentRun: boolean;
   analyticsRuntimeConfig: AnalyticsRuntimeConfig | null;
   updateBrowserPreferences: (next: {

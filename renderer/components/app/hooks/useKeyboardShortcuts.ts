@@ -1,67 +1,32 @@
-import type { ShortcutActionMap, ShortcutDefinition } from "@/components/app/types/component.types";
-import { useEffect } from "react";
+import { useKeybindings } from "@/components/app/hooks/useKeybindings";
+import { keybindingMatchesEvent } from "@/components/app/logic/keybindings/keybindingMatching";
+import { trackAnalyticsEvent } from "@/lib/analytics";
+import type { KeyboardShortcutActions } from "@/components/app/types/keybindings.types";
+import { useEffect, useMemo } from "react";
 
-export function useKeyboardShortcuts(
-  definitions: ShortcutDefinition[],
-  actions: ShortcutActionMap
-): void {
+/**
+ * Runs the window-wide (workbench-scope) command whose user-resolved chord matches a keystroke, when `actions`
+ * handles it. Several callers can each own a slice of the workbench commands.
+ */
+export function useKeyboardShortcuts(actions: KeyboardShortcutActions): void {
+  const { bindings } = useKeybindings();
+  const workbenchBindings = useMemo(() => bindings.filter((binding) => binding.scope === "workbench"), [bindings]);
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      const matched = definitions.find((definition) => shortcutMatches(event, definition));
-      if (!matched) {
+      const matched = workbenchBindings.find((binding) => keybindingMatchesEvent(binding, event));
+      const action = matched ? actions[matched.commandId] : undefined;
+      if (!action) {
         return;
       }
-
-      if (!matched.allowInEditable && isEditableEventTarget(event.target)) {
-        return;
-      }
-
       event.preventDefault();
-      actions[matched.id]();
+      action();
+      if (matched) trackAnalyticsEvent({ name: "command.invoked", properties: { command: matched.commandId, via: "keybinding" } });
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [actions, definitions]);
-}
-
-function shortcutMatches(event: KeyboardEvent, definition: ShortcutDefinition): boolean {
-  const requiredKeys = new Set(definition.keys);
-  const expectedMeta = requiredKeys.has("mod");
-  const expectedShift = requiredKeys.has("shift");
-  const expectedAlt = requiredKeys.has("alt");
-
-  if ((event.metaKey || event.ctrlKey) !== expectedMeta) {
-    return false;
-  }
-
-  if (event.shiftKey !== expectedShift) {
-    return false;
-  }
-
-  if (event.altKey !== expectedAlt) {
-    return false;
-  }
-
-  const primaryKey = definition.keys.find((key) => !["mod", "shift", "alt"].includes(key));
-  if (!primaryKey) {
-    return false;
-  }
-
-  return event.key.toLowerCase() === primaryKey;
-}
-
-function isEditableEventTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) {
-    return false;
-  }
-
-  if (target.isContentEditable) {
-    return true;
-  }
-
-  const tagName = target.tagName.toLowerCase();
-  return tagName === "input" || tagName === "textarea" || tagName === "select";
+  }, [actions, workbenchBindings]);
 }

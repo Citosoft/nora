@@ -1,3 +1,4 @@
+import { notchIslandSettingsSchema } from "@shared/island/contracts";
 import { z } from "zod";
 import { portableSettingsSchema, appearanceSchema } from "@shared/settings-sync/contracts";
 import { idleCompactionModeSchema, threadModelDefaultSchema, threadPreferencesSchema, personalizationSchema } from "@shared/personalization/contracts";
@@ -29,11 +30,12 @@ export const generalSettingsSchema = portableSettingsSchema.pick({
   workspaceStateStorageMode: z.enum(["home", "repo"]),
   defaultAgentLaunchTarget: z.enum(["current-branch", "new", "existing", "branch-existing", "branch-new"]),
   preferredAgentToolId: z.string().trim().min(1).max(512).nullable(),
-  analyticsConsentStatus: z.enum(["unknown", "granted", "declined"]),
+  analyticsConsentStatus: z.enum(["unknown", "granted", "declined"]).describe("Read-only: only the user can change analytics consent."),
+  usageStatisticsEnabled: z.boolean().describe("Read-only: only the user can change anonymous usage statistics."),
   browserDataImportPromptSeen: z.boolean(), linuxAptSetupPromptDismissed: z.boolean(),
   terminalQuickLaunchDefaults: quickLaunchSchema,
   terminalPresets: z.array(z.object({ id: z.string().min(1), name: z.string().min(1), shellId: z.string().nullable().optional(), workingDirectory: z.string(), commands: z.array(z.string()) }).strict()),
-  ai: aiSettingsSchema, voice: voiceSettingsSchema, lifecycle: lifecycleSchema
+  ai: aiSettingsSchema, voice: voiceSettingsSchema, lifecycle: lifecycleSchema, notchIsland: notchIslandSettingsSchema
 }).strict();
 
 export const agentSettingsSchema = z.object({
@@ -43,10 +45,11 @@ export const agentSettingsSchema = z.object({
   threads: threadPreferencesSchema.extend({ idleCompaction: idleCompactionModeSchema, threadModel: threadModelDefaultSchema.nullable() })
 }).strict();
 export const agentSettingsPatchSchema = z.object({
-  general: generalSettingsSchema.partial().extend({
+  // Consent must come from the person, so agents can read the privacy choices but never change them.
+  general: generalSettingsSchema.omit({ analyticsConsentStatus: true, usageStatisticsEnabled: true }).partial().extend({
     ai: aiSettingsSchema.partial().extend({ apiKeys: providerStrings.partial().optional(), modelByProvider: providerStrings.partial().optional() }).optional(),
     voice: voiceSettingsSchema.partial().optional(), terminalQuickLaunchDefaults: quickLaunchSchema.partial().optional(),
-    lifecycle: lifecycleSchema.partial().optional()
+    lifecycle: lifecycleSchema.partial().optional(), notchIsland: notchIslandSettingsSchema.partial().optional()
   }).optional(),
   appearance: appearanceSchema.partial().optional(), local: localSettingsSchema.partial().optional(), syncEnabled: z.boolean().optional(),
   personalization: agentSettingsSchema.shape.personalization.partial().optional(),

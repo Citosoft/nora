@@ -1,5 +1,6 @@
 import { Check, Copy, HardDrive, LoaderCircle, Server } from "lucide-react";
 import { useState } from "react";
+import { noraSystemClient } from "@/components/app/clients/noraSystemClient";
 import type { RemoteWorkspaceSetupProps } from "@/components/app/types/remoteWorkspace.types";
 import { Button } from "@/components/ui/button";
 
@@ -85,7 +86,7 @@ export function RemoteWorkspaceSetup({
               variant="ghost"
               onClick={async () => {
                 try {
-                  await navigator.clipboard.writeText(bootstrapScript);
+                  await noraSystemClient.copyText(bootstrapScript);
                   setCopied(true);
                   setCopyError(false);
                 } catch {

@@ -12,7 +12,7 @@ export function ComposerStashMenu({ entries, disabled, shortcut, onRestore, onRe
   return <Popover open={open} onOpenChange={setOpen}>
     <PopoverTrigger asChild>
       <Button type="button" variant="ghost" size="sm" className="h-6 gap-1 px-1.5 text-xs font-normal text-muted-foreground" disabled={disabled}
-        tooltip={`Stashed prompts · ${shortcut} stashes the draft, or restores the latest when the composer is empty`}>
+        tooltip={shortcut ? `Stashed prompts · ${shortcut} stashes the draft, or restores the latest when the composer is empty` : "Stashed prompts"}>
         <Archive className="size-3" aria-hidden="true" />{label}
       </Button>
     </PopoverTrigger>

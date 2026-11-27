@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { applyConversationEvent } from "@shared/conversations/conversationView";
+import { backgroundTasksStatus } from "@shared/conversations/backgroundTasks";
 import type { ConversationView } from "@shared/types/conversation/conversationView.types";
 import type { ApprovalRequest, RuntimeRequest } from "@shared/types/conversation/contracts.types";
 import { threadSummary } from "../renderer/threadWorkspaceFixtures";
@@ -12,7 +13,7 @@ function approval(id: string): ApprovalRequest {
 
 function view(requests: RuntimeRequest[]): ConversationView {
   return { header: { schemaVersion: 1, cursor: 0, conversation: threadSummary().conversation,
-    activeRuns: [], queuedRuns: [], pendingRequests: requests }, items: [], nextBefore: null, runHistory: { runs: [], nextBefore: null } };
+    activeRuns: [], queuedRuns: [], pendingRequests: requests, backgroundTasks: [] }, items: [], nextBefore: null, runHistory: { runs: [], nextBefore: null } };
 }
 
 function update(current: ConversationView, request: RuntimeRequest): ConversationView {
@@ -50,4 +51,23 @@ test("questions share the arrival order with approvals", () => {
   const initial = update(view([approval("first")]), question);
   const next = update(initial, { ...approval("first"), status: "resolved" });
   assert.deepEqual(next.header.pendingRequests, [question]);
+});
+
+test("background-tasks events replace the header list and status hides when empty", () => {
+  const initial = view([]);
+  assert.equal(backgroundTasksStatus(initial.header.backgroundTasks), null);
+  const withTasks = applyConversationEvent(initial, {
+    schemaVersion: 1, id: "bg-1", cursor: 1, conversationId: initial.header.conversation.id, at: "2026-11-11T10:00:00.000Z",
+    payload: { kind: "background-tasks", tasks: [{ id: "task-1", description: "Wait for the build", kind: "local_bash" }] }
+  });
+  assert.deepEqual(withTasks.header.backgroundTasks, [{ id: "task-1", description: "Wait for the build", kind: "local_bash" }]);
+  assert.deepEqual(backgroundTasksStatus(withTasks.header.backgroundTasks), {
+    count: 1, title: "Running in background", descriptions: ["Wait for the build"]
+  });
+  const cleared = applyConversationEvent(withTasks, {
+    schemaVersion: 1, id: "bg-2", cursor: 2, conversationId: initial.header.conversation.id, at: "2026-11-11T10:01:00.000Z",
+    payload: { kind: "background-tasks", tasks: [] }
+  });
+  assert.deepEqual(cleared.header.backgroundTasks, []);
+  assert.equal(backgroundTasksStatus(cleared.header.backgroundTasks), null);
 });

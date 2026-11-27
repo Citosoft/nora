@@ -1,3 +1,4 @@
+import { useWindowKeybinding } from "@/components/app/hooks/useKeybindings";
 import { useAppMainCenterContent } from "@/components/app/context/appMainCenterContentContext";
 import { MarkdownRenderer } from "@/components/app/shared/MarkdownRenderer";
 import { Badge } from "@/components/ui/badge";
@@ -5,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Editor from "@monaco-editor/react";
 import { CheckCircle2, CopyPlus, Eye, FileText, LoaderCircle, PencilLine, RotateCcw, Save, Sparkles, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export function TaskPanel() {
   const { taskPanelProps } = useAppMainCenterContent();
@@ -42,22 +43,12 @@ export function TaskPanel() {
     setMode(completed ? "preview" : "edit");
   }, [completed, path]);
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
-        event.preventDefault();
-        event.stopPropagation();
-        if (!isBusy) {
-          onSave();
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
+  const saveFromShortcut = useCallback(() => {
+    if (!isBusy) {
+      onSave();
+    }
   }, [isBusy, onSave]);
+  useWindowKeybinding("save-document", saveFromShortcut);
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">

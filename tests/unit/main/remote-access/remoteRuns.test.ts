@@ -16,7 +16,7 @@ test("phones get runs without actions they cannot parse, and every other run unc
 });
 
 test("headers, events and event pages are all served in the phone-safe form", () => {
-  const header = remoteHeader({ schemaVersion: 1, cursor: 1, conversation: conversation("conversation"), activeRuns: [run("background-task")], queuedRuns: [run("background-task")], pendingRequests: [] });
+  const header = remoteHeader({ schemaVersion: 1, cursor: 1, conversation: conversation("conversation"), activeRuns: [run("background-task")], queuedRuns: [run("background-task")], pendingRequests: [], backgroundTasks: [] });
   assert.ok([...header.activeRuns, ...header.queuedRuns].every((entry) => !("action" in entry)));
   const event = { schemaVersion: 1 as const, id: "event", conversationId: "conversation", cursor: 1, at: AT, payload: { kind: "run" as const, run: run("background-task") } };
   const served = remoteEvent(event);

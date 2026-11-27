@@ -12,7 +12,7 @@ const AppRootDialogsContext = createContext<AppRootDialogsContextValue | null>(n
 export function AppRootDialogsProvider({
   appSettings,
   isAppSettingsLoaded,
-  updateAnalyticsConsentStatus,
+  updateAnalyticsPreferences,
   updateLinuxAptSetupPromptDismissed,
   updateBrowserPreferences,
   captureError,
@@ -30,7 +30,7 @@ export function AppRootDialogsProvider({
     captureError,
     activeView,
     focusedBrowserTabId: uiState.focusedBrowserTabId,
-    updateAnalyticsConsentStatus,
+    updateAnalyticsPreferences,
     updateLinuxAptSetupPromptDismissed,
     updateBrowserPreferences,
     flashStatus,

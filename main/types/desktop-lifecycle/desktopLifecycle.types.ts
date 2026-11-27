@@ -1,5 +1,6 @@
 import type { AgentSession, DesktopLifecycleSettings } from "@shared/appTypes";
 import type { ConversationSummary } from "@shared/types/conversation/queries.types";
+import type { IslandItem } from "@shared/types/island/island.types";
 import type { RemoteAccessService } from "@main/types/remote-access/service.types";
 
 /** Why the app is about to stop; each reason gets its own confirmation wording. */
@@ -23,16 +24,20 @@ export interface WindowCloseInput {
 
 export interface ActiveWorkInput {
   conversations: readonly (Pick<ConversationSummary, "latestRun" | "queuedCount" | "pendingRequestCount"> & {
-    conversation: { title: string; workspace: Pick<ConversationSummary["conversation"]["workspace"], "path"> };
+    conversation: Pick<ConversationSummary["conversation"], "id" | "title" | "bot" | "updatedAt"> & {
+      workspace: Pick<ConversationSummary["conversation"]["workspace"], "path">;
+      provider: Pick<ConversationSummary["conversation"]["provider"], "kind" | "connection">;
+    };
   })[];
-  agents: readonly Pick<AgentSession, "isBusy" | "name" | "threadTitle" | "workspace">[];
+  agents: readonly Pick<AgentSession, "id" | "isBusy" | "name" | "threadTitle" | "workspace" | "toolId" | "toolLabel" | "lastEventAt">[];
 }
 
-export interface ActiveWorkItem {
+export interface ActiveWorkItem extends Pick<IslandItem, "title" | "status" | "phase" | "identity" | "target"> {
   kind: "thread" | "terminal-agent";
-  title: string;
+  /** The workspace's full path. */
   workspace: string;
-  status: string;
+  /** ISO time of the latest activity, so the most recent work can lead. */
+  activeAt: string;
 }
 
 export interface ActiveWorkCount {

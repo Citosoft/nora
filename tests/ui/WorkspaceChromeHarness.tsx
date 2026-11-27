@@ -29,7 +29,7 @@ const tool: AgentCatalogEntry = {
 const workspace: NativeWorkspace = { id: "repo", shellProjectId: "shell-repo", kind: "repository", name: "Nora", workspace: {
   projectId: "native-repo", environmentId: "local", checkoutId: "checkout", path: "/fixture/nora", branch: "feat/workspace-chrome", versionControl: "git", access: "write"
 } };
-const header: ConversationHeader = { schemaVersion: 1, cursor: 1, activeRuns: [], queuedRuns: [], pendingRequests: [],
+const header: ConversationHeader = { schemaVersion: 1, cursor: 1, activeRuns: [], queuedRuns: [], pendingRequests: [], backgroundTasks: [],
   conversation: { ...threadSummary().conversation, id: "fixture-thread", title: "Simplify the workspace chrome", workspace: workspace.workspace } };
 const items: TimelineItem[] = [{ kind: "review", id: "review", runId: "run", createdAt: "2026-11-10T10:00:00.000Z", result: {
   status: "ready", scope: "turn", attribution: "observed", baselineAt: "2026-11-10T09:00:00.000Z", capturedAt: "2026-11-10T10:00:00.000Z",

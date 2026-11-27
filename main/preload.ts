@@ -14,6 +14,9 @@ import { createAccountBridge } from "./preload/createAccountBridge";
 import { exposeAccountSession } from "./preload/exposeAccountSession";
 import { createSettingsSyncBridge } from "./preload/createSettingsSyncBridge";
 import { createRemoteAccessBridge } from "./preload/createRemoteAccessBridge";
+import { createKeybindingsBridge } from "./preload/createKeybindingsBridge";
+import { createIslandBridge } from "./preload/createIslandBridge";
+import { createAppImportBridge } from "./preload/createAppImportBridge";
 
 import { createAppBridge } from "./preload/createAppBridge";
 import { createIntegrationBridge } from "./preload/createIntegrationBridge";
@@ -37,6 +40,9 @@ const noraApi: NoraBridge = {
   inbox: createInboxBridge(),
   apps: createAppsBridge(),
   remoteAccess: createRemoteAccessBridge(),
+  keybindings: createKeybindingsBridge(),
+  island: createIslandBridge(),
+  appImport: createAppImportBridge(),
   ...createAppBridge(),
   ...createWorkspaceBridge(),
   ...createSessionBridge(),

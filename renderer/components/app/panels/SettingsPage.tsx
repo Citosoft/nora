@@ -15,6 +15,9 @@ import { PrivacySettingsSection } from "@/components/app/panels/settings/Privacy
 import { SkillsSettingsSection } from "@/components/app/panels/settings/SkillsSettingsSection";
 import { SystemSettingsSection } from "@/components/app/panels/settings/SystemSettingsSection";
 import { TerminalSettingsSection } from "@/components/app/panels/settings/TerminalSettingsSection";
+import { KeybindingsSettingsSection } from "@/components/app/panels/settings/KeybindingsSettingsSection";
+import { NotchIslandSettingsSection } from "@/components/app/panels/settings/NotchIslandSettingsSection";
+import { MigrateSettingsSection } from "@/components/app/panels/settings/MigrateSettingsSection";
 import { AgentUsageStatsSection } from "@/components/app/panels/settings/AgentUsageStatsSection";
 import { VoiceSettingsSection } from "@/components/app/panels/settings/VoiceSettingsSection";
 import { WorkbenchSettingsSection } from "@/components/app/panels/settings/WorkbenchSettingsSection";
@@ -23,6 +26,7 @@ import { ConnectionsSettingsSection } from "@/components/app/panels/settings/Con
 import type { SettingsGroup, SettingsPageProps } from "@/components/app/types/component.types";
 import type { SettingRowRevealTarget, SettingsSearchEntry } from "@/components/app/types/settingsSearch.types";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { trackAnalyticsEvent } from "@/lib/analytics";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export function SettingsPage({ initialGroup }: SettingsPageProps) {
@@ -31,6 +35,7 @@ export function SettingsPage({ initialGroup }: SettingsPageProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [revealTarget, setRevealTarget] = useState<SettingRowRevealTarget | null>(null);
   useSettingRowReveal(contentRef, group, revealTarget);
+  useEffect(() => { trackAnalyticsEvent({ name: "view.opened", properties: { view: `settings:${group}` } }); }, [group]);
 
   const revealSetting = useCallback((entry: SettingsSearchEntry) => {
     setGroup(entry.group);
@@ -69,6 +74,18 @@ export function SettingsPage({ initialGroup }: SettingsPageProps) {
 
           <TabsContent value="terminal" className="mt-0">
             <TerminalSettingsSection />
+          </TabsContent>
+
+          <TabsContent value="keybindings" className="mt-0">
+            <KeybindingsSettingsSection />
+          </TabsContent>
+
+          <TabsContent value="migrate" className="mt-0">
+            <MigrateSettingsSection />
+          </TabsContent>
+
+          <TabsContent value="notchIsland" className="mt-0">
+            <NotchIslandSettingsSection />
           </TabsContent>
 
           <TabsContent value="browser" className="mt-0">

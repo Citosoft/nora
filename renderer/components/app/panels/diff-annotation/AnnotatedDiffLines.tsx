@@ -1,3 +1,4 @@
+import { useKeybindingKeyDown } from "@/components/app/hooks/useKeybindings";
 import { useDiffAnnotations } from "@/components/app/context/diffAnnotationContext";
 import { buildDiffAnnotationKey, canAnnotateDiffLine } from "@/components/app/logic/diffAnnotation";
 import { diffGutterClass, diffRowClass } from "@/components/app/logic/diffLineStyles";
@@ -45,14 +46,15 @@ const InlineComposer = ({ onSave, onCancel, disabled = false }: InlineComposerPr
     textareaRef.current?.focus();
   }, []);
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-      event.preventDefault();
-      const next = draft.trim();
-      if (next) {
-        onSave(next);
-      }
+  const submitOnShortcut = useKeybindingKeyDown("submit-form", () => {
+    const next = draft.trim();
+    if (next) {
+      onSave(next);
     }
+  });
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (submitOnShortcut(event)) return;
     if (event.key === "Escape") {
       event.preventDefault();
       onCancel();

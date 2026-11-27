@@ -7,6 +7,13 @@ import type {
   WorktreeRecord
 } from "@shared/appTypes";
 import type { RuntimeSession, WorkspaceTarget } from "./internal.types";
+import type { RunWorktreeLifecycleScripts } from "./worktreeLifecycleScripts.types";
+
+/** Worktrees left after an agent or terminal detaches, plus any archive-script failure to show. */
+export interface WorktreeCollectionAfterDetach {
+  worktrees: WorktreeRecord[];
+  scriptFailureMessage: string | null;
+}
 
 export interface SessionLifecycleHelperDeps {
   nowIso: () => string;
@@ -49,6 +56,7 @@ export interface SessionLifecycleHelperDeps {
   deleteTerminalBuffer: (sessionId: string) => void;
   deleteTerminalActivity: (sessionId: string) => void;
   deleteContextWriteChain: (agentId: string) => void;
+  runWorktreeLifecycleScripts: RunWorktreeLifecycleScripts;
 }
 
 export interface SessionLifecycleHelpers {
@@ -65,12 +73,12 @@ export interface SessionLifecycleHelpers {
     worktrees: WorktreeRecord[],
     remainingAgents: AgentSession[],
     removedAgent: AgentSession
-  ) => Promise<WorktreeRecord[]>;
+  ) => Promise<WorktreeCollectionAfterDetach>;
   refreshWorktreeCollectionAfterTerminalDetach: (
     project: ProjectSummary,
     worktrees: WorktreeRecord[],
     remainingAgents: AgentSession[],
     remainingTerminals: TerminalSession[],
     removedTerminal: TerminalSession
-  ) => Promise<WorktreeRecord[]>;
+  ) => Promise<WorktreeCollectionAfterDetach>;
 }

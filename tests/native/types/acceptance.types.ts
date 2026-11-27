@@ -1,6 +1,6 @@
 import type { LocalHostOptions } from "@main/types/execution/localHost.types";
 import type { ExecutionHost } from "@main/execution/host";
-import type { ConversationRun, TimelineItem, RuntimeRequest, WorkspaceRef } from "@shared/types/conversation/contracts.types";
+import type { BackgroundTask, ConversationRun, TimelineItem, RuntimeRequest, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 
 export interface AcceptanceConfig {
   provider: "codex" | "claude";
@@ -31,6 +31,8 @@ export interface AcceptanceView {
   runs: Map<string, ConversationRun>;
   items: Map<string, TimelineItem>;
   requests: Map<string, RuntimeRequest>;
+  /** The latest background-task list; each `background-tasks` event replaces it whole. */
+  backgroundTasks: BackgroundTask[];
   streamedRuns: Set<string>;
   stop: () => void;
 }

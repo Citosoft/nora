@@ -5,7 +5,6 @@ import { AppRootDialogsProvider, useAppRootDialogs } from "@/components/app/cont
 import { useAppRootShellState } from "@/components/app/context/appRootShellStateContext";
 import { useAppRootState } from "@/components/app/context/appRootStateContext";
 import { useAiModelCatalog } from "@/components/app/hooks/useAiModelCatalog";
-import { useAppAnalyticsLifecycle } from "@/components/app/hooks/useAppAnalyticsLifecycle";
 import { useAppAutoUpdate } from "@/components/app/hooks/useAppAutoUpdate";
 import { useAppBootstrap } from "@/components/app/hooks/useAppBootstrap";
 import { useAppCenterTabs } from "@/components/app/hooks/useAppCenterTabs";
@@ -34,7 +33,6 @@ import { getWorkspacePresenceSignature } from "@/components/app/logic/appPresenc
 import { normalizeSnapshot } from "@/components/app/logic/appUtils";
 import { appRootInitialWindowUiState } from "@/components/app/logic/appRootInitialState";
 import { buildKeyboardShortcutActions } from "@/components/app/logic/buildKeyboardShortcutActions";
-import { SHORTCUT_DEFINITIONS } from "@/components/app/logic/keyboardShortcuts";
 import { getStoredTerminalShellIds } from "@/components/app/logic/terminalShellPreferences";
 import type { AppRootRuntimeProps } from "@/components/app/types/appRootRuntime.types";
 import type { CreateTerminalPayload } from "@shared/appTypes";
@@ -43,6 +41,7 @@ import type { ShortcutActionMap } from "@/components/app/types/workflow.types";
 import { AppPreLaunchView } from "@/components/app/views/AppPreLaunchView";
 import { AppToastRegions } from "@/components/app/views/AppToastRegions";
 import { SignedInAppRoot } from "@/components/app/views/SignedInAppRoot";
+import { trackAnalyticsError } from "@/lib/analytics";
 import { useCallback, useMemo, useRef, useState, type Dispatch, type ReactElement, type SetStateAction } from "react";
 
 export function AppRootRuntime({ storedWorkspaceContentState }: AppRootRuntimeProps): ReactElement {
@@ -52,6 +51,7 @@ export function AppRootRuntime({ storedWorkspaceContentState }: AppRootRuntimePr
   const captureError = useCallback((error: unknown): void => {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error("[nora] captured renderer error", error);
+    trackAnalyticsError(error, "captured");
     setUiState((current) => ({
       ...current,
       activeErrorMessage: message,
@@ -65,7 +65,7 @@ export function AppRootRuntime({ storedWorkspaceContentState }: AppRootRuntimePr
     <AppRootDialogsProvider
       appSettings={preferences.appSettings}
       isAppSettingsLoaded={preferences.isAppSettingsLoaded}
-      updateAnalyticsConsentStatus={preferences.updateAnalyticsConsentStatus}
+      updateAnalyticsPreferences={preferences.updateAnalyticsPreferences}
       updateLinuxAptSetupPromptDismissed={preferences.updateLinuxAptSetupPromptDismissed}
       updateBrowserPreferences={preferences.updateBrowserPreferences}
       captureError={captureError}
@@ -127,12 +127,6 @@ function AppRootRuntimeContent({
     showToast,
     updateToast
   } = shellFrame;
-  const analyticsAllowedInCurrentRun = dialogs.analyticsRuntimeConfig?.analyticsAllowedInCurrentRun ?? __NORA_IS_PRODUCTION__;
-
-  useAppAnalyticsLifecycle({
-    analyticsConsentStatus: preferences.appSettings.analyticsConsentStatus,
-    analyticsAllowedInCurrentRun
-  });
 
   const issueReporter = useAppIssueReporter(captureError);
   const autoUpdate = useAppAutoUpdate({
@@ -539,6 +533,6 @@ function AppRootRuntimeContent({
 }
 
 function PreLaunchKeyboardShortcutsRegistrar({ actions }: { actions: ShortcutActionMap }): null {
-  useKeyboardShortcuts(SHORTCUT_DEFINITIONS, actions);
+  useKeyboardShortcuts(actions);
   return null;
 }

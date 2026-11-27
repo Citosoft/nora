@@ -1,6 +1,8 @@
 import { APP_DOCS_URL } from "@shared/appMeta";
 import type { MacApplicationMenuCommand, MacApplicationMenuSyncPayload } from "@shared/types/macApplicationMenu.types";
 import { MAC_APPLICATION_MENU_COMMAND_CHANNEL } from "@shared/types/macApplicationMenu.types";
+import type { KeybindingAcceleratorLookup } from "@main/types/keybindings/keybindings.types";
+import type { KeybindingCommandId } from "@shared/types/keybindings/keybindings.types";
 import type { BrowserWindow, MenuItemConstructorOptions } from "electron";
 import { shell } from "electron";
 
@@ -15,8 +17,18 @@ function emitMenuCommand(getMainWindow: () => BrowserWindow | null, command: Mac
 
 export function buildMacApplicationMenuTemplate(
   getMainWindow: () => BrowserWindow | null,
-  payload: MacApplicationMenuSyncPayload
+  payload: MacApplicationMenuSyncPayload,
+  acceleratorFor: KeybindingAcceleratorLookup
 ): MenuItemConstructorOptions[] {
+  /**
+   * Shows the user's chord beside the item without registering it: the renderer's shortcut listener stays
+   * the only handler, so a chord never fires twice and edits apply without the menu owning key handling.
+   */
+  const shortcut = (commandId: KeybindingCommandId): Pick<MenuItemConstructorOptions, "accelerator" | "registerAccelerator"> => {
+    const accelerator = acceleratorFor(commandId);
+    return accelerator ? { accelerator, registerAccelerator: false } : {};
+  };
+
   const workspacePathReady =
     payload.hasActiveWorkspace &&
     typeof payload.activeProjectRoot === "string" &&
@@ -26,6 +38,7 @@ export function buildMacApplicationMenuTemplate(
   const fileSubmenu: MenuItemConstructorOptions[] = [
     {
       label: "Add Workspace",
+      ...shortcut("open-add-workspace"),
       click: () => {
         emitMenuCommand(getMainWindow, { kind: "add-workspace" });
       }
@@ -55,18 +68,21 @@ export function buildMacApplicationMenuTemplate(
     fileSubmenu.push(
       {
         label: "New Terminal",
+        ...shortcut("open-create-terminal"),
         click: () => {
           emitMenuCommand(getMainWindow, { kind: "new-terminal" });
         }
       },
       {
-        label: "New Agent",
+        label: "New Thread",
+        ...shortcut("open-create-agent"),
         click: () => {
           emitMenuCommand(getMainWindow, { kind: "new-agent" });
         }
       },
       {
         label: "New Browser",
+        ...shortcut("open-workspace-browser"),
         click: () => {
           emitMenuCommand(getMainWindow, { kind: "new-browser" });
         }
@@ -108,25 +124,29 @@ export function buildMacApplicationMenuTemplate(
 
   const viewSubmenu: MenuItemConstructorOptions[] = [
     {
-      label: "Toggle Workspace Sidebar",
+      label: "Toggle Sidebar",
+      ...shortcut("toggle-workspace-sidebar"),
       click: () => {
         emitMenuCommand(getMainWindow, { kind: "toggle-workspace-sidebar" });
       }
     },
     {
       label: "Toggle Changes Sidebar",
+      ...shortcut("toggle-changes-sidebar"),
       click: () => {
         emitMenuCommand(getMainWindow, { kind: "toggle-changes-sidebar" });
       }
     },
     {
       label: "Toggle Local Terminal Dock",
+      ...shortcut("toggle-local-terminal-dock"),
       click: () => {
         emitMenuCommand(getMainWindow, { kind: "toggle-local-terminal-dock" });
       }
     },
     {
       label: "Focus Local Terminal Dock",
+      ...shortcut("focus-local-terminal-dock"),
       click: () => {
         emitMenuCommand(getMainWindow, { kind: "focus-local-terminal-dock" });
       }
@@ -134,12 +154,14 @@ export function buildMacApplicationMenuTemplate(
     { type: "separator" },
     {
       label: "Previous Session Tab",
+      ...shortcut("focus-previous-session-tab"),
       click: () => {
         emitMenuCommand(getMainWindow, { kind: "focus-previous-session-tab" });
       }
     },
     {
       label: "Next Session Tab",
+      ...shortcut("focus-next-session-tab"),
       click: () => {
         emitMenuCommand(getMainWindow, { kind: "focus-next-session-tab" });
       }
@@ -160,12 +182,14 @@ export function buildMacApplicationMenuTemplate(
     },
     {
       label: "Keyboard Shortcuts",
+      ...shortcut("open-keyboard-shortcuts"),
       click: () => {
         emitMenuCommand(getMainWindow, { kind: "open-keyboard-shortcuts" });
       }
     },
     {
       label: "Startup Dependencies",
+      ...shortcut("open-startup-dependencies"),
       click: () => {
         emitMenuCommand(getMainWindow, { kind: "open-startup-dependencies" });
       }

@@ -194,6 +194,7 @@ export type AppShellSignedInModalExtrasSources = Pick<
   | "loadChromeCookieProfiles"
   | "runChromeBrowserDataImport"
   | "isAnalyticsConsentDialogOpen"
+  | "usageStatisticsRequireConsent"
   | "allowAnalyticsConsent"
   | "declineAnalyticsConsent"
   | "workspaceSwitcherEntries"

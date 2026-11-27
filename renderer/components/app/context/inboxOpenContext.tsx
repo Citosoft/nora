@@ -7,7 +7,7 @@ import { useOptionalSessionCenterPorts } from "@/components/app/context/sessionC
 import type { InboxTarget } from "@shared/types/inbox/inbox.types";
 import type { InboxOpenProviderProps, InboxOpenValue } from "@/components/app/types/inbox.types";
 
-/** Shows what an inbox item is about: its thread, its workflow run's monitor, or connector settings. */
+/** Shows what an inbox item is about (its thread, workflow run monitor or connector settings), or the inbox itself. */
 export const InboxOpenContext = createContext<InboxOpenValue | null>(null);
 
 export function InboxOpenProvider({ children }: InboxOpenProviderProps) {
@@ -21,6 +21,7 @@ export function InboxOpenProvider({ children }: InboxOpenProviderProps) {
       case "workflow": openRun(target.projectId, target.runId); return;
       case "connectors": onOpenConnectorSettings?.(); return;
       case "app": closeTool(); setPreferences((current) => ({ ...current, sidebarMode: "apps", activeAppId: target.appId })); store.showHome(); return;
+      case "inbox": closeTool(); setPreferences((current) => ({ ...current, sidebarMode: "inbox" })); store.showHome(); return;
     }
   }, [closeTool, store, openRun, onOpenConnectorSettings, setPreferences]);
   // A clicked inbox notification shows its item, even a thread hidden from the sidebar.

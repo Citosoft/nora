@@ -8,6 +8,7 @@ import type { WorkspaceAvatarColor } from "@/components/app/types/workspaceAvata
 import type { WorkspaceViewPreferences } from "./workspaceView.types";
 import type { BotsHomePage } from "./routineCalendar.types";
 import type { InboxView } from "./inbox.types";
+import type { NavigationKeybindingCommandId } from "@shared/types/keybindings/keybindings.types";
 
 export type WorkspaceToolId = "worktrees" | "merge-requests" | "issues" | "documents" | "library" | "tasks" | "workflows" | "terminals" | "browser";
 export interface WorkspaceToolItem { id: WorkspaceToolId; label: string; icon: LucideIcon; }
@@ -42,10 +43,17 @@ export interface WorkspaceNavigationValue {
   openTool(projectId: string, tool: WorkspaceToolId): void;
   closeTool(): void;
   returnToThread(): void;
+  /** Switches the rail view; every view but Threads also opens its home. */
+  selectSidebarMode(mode: SidebarMode): void;
   preferences: SidebarPreferences;
   setPreferences: Dispatch<SetStateAction<SidebarPreferences>>;
   preferenceError: string | null;
 }
+/** What a navigation shortcut opens: a rail view, or a tool in the active workspace. */
+export type NavigationShortcutTarget =
+  | { kind: "sidebar-mode"; mode: SidebarMode }
+  | { kind: "workspace-tool"; tool: WorkspaceToolId };
+export type NavigationShortcutTargets = Readonly<Record<NavigationKeybindingCommandId, NavigationShortcutTarget>>;
 export interface WorkspaceNavigationProviderProps { children: ReactNode; }
 export interface WorkspaceToolProps { workspace: WorkspaceSummary; }
 export interface WorkspaceSwitcherProps {

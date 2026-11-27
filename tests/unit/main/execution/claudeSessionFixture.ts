@@ -20,7 +20,8 @@ export function singleTurnOpener(open: (input: ClaudeOpenInput) => ScriptedClaud
       interrupt: () => turn.interrupt(),
       async close() { if (!closed) { closed = true; await turn.close(); } },
       isLive: () => false,
-      hasBackgroundWork: () => false
+      hasBackgroundWork: () => false,
+      backgroundTasks: () => []
     };
   };
 }

@@ -1,4 +1,4 @@
-import type { Conversation, ConversationEvent, ConversationRun, RuntimeRequest, TimelineItem } from "./contracts.types";
+import type { BackgroundTask, Conversation, ConversationEvent, ConversationRun, RuntimeRequest, TimelineItem } from "./contracts.types";
 
 export interface ConversationHeader {
   schemaVersion: 1;
@@ -7,6 +7,8 @@ export interface ConversationHeader {
   activeRuns: ConversationRun[];
   queuedRuns: ConversationRun[];
   pendingRequests: RuntimeRequest[];
+  /** Live background work still running between turns; empty when none. */
+  backgroundTasks: BackgroundTask[];
 }
 /** Stable insertion positions, independent of mutable item text and timestamps. */
 export interface HistoryQuery {

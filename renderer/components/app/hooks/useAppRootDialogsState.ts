@@ -14,7 +14,7 @@ export const useAppRootDialogsState = ({
   captureError,
   activeView,
   focusedBrowserTabId,
-  updateAnalyticsConsentStatus,
+  updateAnalyticsPreferences,
   updateLinuxAptSetupPromptDismissed,
   updateBrowserPreferences,
   flashStatus,
@@ -25,7 +25,7 @@ export const useAppRootDialogsState = ({
     appSettings,
     isAppSettingsLoaded,
     isOnboardingOpen: startupDependencies.isOnboardingOpen,
-    updateAnalyticsConsentStatus,
+    updateAnalyticsPreferences,
     captureError
   });
   const linuxAptSetup = useLinuxAptSetupPrompt({

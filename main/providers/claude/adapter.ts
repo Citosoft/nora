@@ -8,7 +8,8 @@ import type { ProviderAccountAction, ProviderAccountResult } from "@shared/types
 import type { ExecutionProvider, EmitProviderUpdate, ProviderExecution } from "@main/types/execution/provider.types";
 import type { ClaudeActive, ClaudeLive, ClaudeOptions, ClaudePending, ClaudePrompt, ClaudeTurn } from "@main/types/execution/claude.types";
 import type { FollowUpListener, ProviderFollowUpSource } from "@main/types/execution/followUp.types";
-import type { ContextReading, Conversation, RequestResponse, RuntimeRequest, SubagentActivity, ToolActivity, WorkspaceRef } from "@shared/types/conversation/contracts.types";
+import type { BackgroundTasksListener, ProviderBackgroundTasksSource } from "@main/types/execution/backgroundTasks.types";
+import type { BackgroundTask, ContextReading, Conversation, RequestResponse, RuntimeRequest, SubagentActivity, ToolActivity, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import type { ProviderCatalogResult } from "@shared/types/provider/catalog.types";
 import { nativeCapabilities } from "@main/execution/providerCapabilities";
 import { z } from "zod";
@@ -38,6 +39,10 @@ export class ClaudeAdapter implements ExecutionProvider {
   private readonly followUpListeners = new Set<FollowUpListener>();
   readonly followUps: ProviderFollowUpSource = {
     subscribe: (listener) => { this.followUpListeners.add(listener); return () => { this.followUpListeners.delete(listener); }; }
+  };
+  private readonly backgroundTaskListeners = new Set<BackgroundTasksListener>();
+  readonly backgroundTasks: ProviderBackgroundTasksSource = {
+    subscribe: (listener) => { this.backgroundTaskListeners.add(listener); return () => { this.backgroundTaskListeners.delete(listener); }; }
   };
   private readonly requests = new Map<string, ClaudePending>();
   /** The servers each conversation's latest run added, so its widgets reach the same servers until the app restarts. */
@@ -140,7 +145,8 @@ export class ClaudeAdapter implements ExecutionProvider {
     const followUps = new Map<string, ClaudeTurn>();
     const session = this.options.open({ ...fixed, ...turnInput, sessionId, resume: !!snapshot.conversation.nativeConversationId,
       onRequest: (prompt) => this.routeRequest(conversationId, prompt),
-      onFollowUp: (turn, summary) => this.announceFollowUp(conversationId, live, turn, summary) });
+      onFollowUp: (turn, summary) => this.announceFollowUp(conversationId, live, turn, summary),
+      onBackgroundTasksChanged: (tasks) => this.announceBackgroundTasks(conversationId, tasks) });
     const live: ClaudeLive = { session, sessionId, key, followUps };
     this.live.set(conversationId, live);
     await this.runTurn(execution, emit, live, session.opening, nativeTurnId);
@@ -243,6 +249,7 @@ export class ClaudeAdapter implements ExecutionProvider {
     for (const turn of live.followUps.values()) turn.close();
     live.followUps.clear();
     await live.session.close();
+    this.announceBackgroundTasks(conversationId, []);
   }
 
   /** Hands a turn Claude started by itself to the host, which queues a run for it; a refused turn is dropped. */
@@ -255,6 +262,11 @@ export class ClaudeAdapter implements ExecutionProvider {
         followUpId, summary }) || accepted;
     }
     if (!accepted) { live.followUps.delete(followUpId); turn.close(); }
+  }
+
+  private announceBackgroundTasks(conversationId: string, tasks: readonly BackgroundTask[]): void {
+    const update = { conversationId, tasks: [...tasks] };
+    for (const listener of this.backgroundTaskListeners) listener(update);
   }
 
   /**

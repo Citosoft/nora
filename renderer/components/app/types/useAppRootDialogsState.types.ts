@@ -1,3 +1,4 @@
+import type { AnalyticsPreferencesPatch } from "@shared/types/analytics.types";
 import type { StatusBarContextValue } from "@/components/app/types/component.types";
 import type {
   UseBrowserCookieImportResult,
@@ -18,7 +19,7 @@ export type UseAppRootDialogsStateArgs = {
   captureError: (error: unknown) => void;
   activeView: AppView;
   focusedBrowserTabId: string | null;
-  updateAnalyticsConsentStatus: (status: AppSettings["analyticsConsentStatus"]) => Promise<void>;
+  updateAnalyticsPreferences: (patch: AnalyticsPreferencesPatch) => Promise<void>;
   updateLinuxAptSetupPromptDismissed: (dismissed: boolean) => Promise<void>;
   updateBrowserPreferences: (next: { browserDataImportPromptSeen: boolean }) => Promise<void>;
   flashStatus: (message: string, durationMs?: number) => void;

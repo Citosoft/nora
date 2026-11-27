@@ -57,5 +57,5 @@ test("v5 upgrade marks historical guidance unassigned without changing receipts 
   assert.deepEqual(f.submit(), receipt);
   assert.deepEqual(f.store.events(0, 200), events);
   const check = f.openDatabase();
-  assert.equal(check.prepare("PRAGMA user_version").get()?.user_version, 7); check.close();
+  assert.equal(check.prepare("PRAGMA user_version").get()?.user_version, 8); check.close();
 });

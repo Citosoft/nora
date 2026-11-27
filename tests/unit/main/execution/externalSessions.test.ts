@@ -211,3 +211,32 @@ test("the installed Claude SDK discovers and imports a real transcript from a wo
   const result = z.object({ count: z.number(), origin: z.string(), instruction: z.string(), answer: z.string() }).parse(JSON.parse(stdout));
   assert.deepEqual(result, { count: 1, origin: "desktop", instruction: "Synthetic terminal prompt", answer: "Synthetic terminal answer" });
 });
+
+test("supplied history becomes a read-only conversation that runs nothing and is created once", async (t) => {
+  const f = fixture(t);
+  const binding = { ...provider, kind: "claude" as const };
+  const adapter = new ClaudeAdapter({ instanceId: binding.instanceId, policies: { "native-default": "default" },
+    discover: async () => ({ models: [], authentication: "present" }), now: () => session.updatedAt, nextId: randomUUID,
+    open: singleTurnOpener(() => { throw new Error("supplied history must not open a native session"); }) });
+  const registry = new ProviderRegistry(); registry.register(adapter);
+  const host = new ExecutionHost({ store: f.store, providers: registry, workspaces: workspaceAuthority,
+    owner: { id: randomUUID(), processId: process.pid }, isProcessAlive: () => true, now: () => session.updatedAt, nextId: randomUUID, onFailure() {} });
+  host.start();
+  try {
+    const command: ConversationCommand = { kind: "create", commandId: "import-old", conversationId: "old", title: "Old thread", workspace, provider: binding, parentId: null };
+    const history = { nativeConversationId: null, title: "Old thread", createdAt: "2026-01-01T10:00:00.000Z", updatedAt: "2026-01-01T11:00:00.000Z",
+      turns: [{ id: "turn-1", instruction: "Hello", state: "completed" as const, items: [
+        { id: "m1", runId: "turn-1", createdAt: "2026-01-01T10:00:00.000Z", kind: "message" as const, role: "user" as const, text: "Hello", complete: true },
+        { id: "m2", runId: "turn-1", createdAt: "2026-01-01T10:00:01.000Z", kind: "message" as const, role: "assistant" as const, text: "Hi there", complete: true }] }] };
+    const receipt = await host.importHistory(command, history);
+    assert.deepEqual(await host.importHistory(command, history), receipt, "the same command id is accepted once");
+    const snapshot = f.snapshot("old");
+    assert.equal(snapshot.conversation.nativeConversationId, null);
+    assert.equal(snapshot.conversation.createdAt, history.createdAt);
+    assert.deepEqual(snapshot.runs.map((run) => [run.instruction, run.state]), [["Hello", "completed"]]);
+    assert.ok(snapshot.items.some((item) => item.kind === "message" && item.role === "assistant" && item.text === "Hi there"));
+    assert.equal(f.store.effects().length, 0);
+    await assert.rejects(host.importHistory({ ...command, commandId: "adopt", conversationId: "other", externalSessionId: "native" }, history), /without a native session/);
+    await assert.rejects(host.importHistory({ kind: "rename", commandId: "rename", conversationId: "old", title: "x" }, history), /only start a new conversation/);
+  } finally { await host.shutdown(); }
+});

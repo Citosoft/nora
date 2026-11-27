@@ -6,7 +6,6 @@ import { subscribeToIpcEvent } from "./subscribeToIpcEvent";
 
 export function createWorkspaceBridge(): WorkspaceBridge {
   return {
-    discoverWorkspaces: () => invokeIpc("app:discover-workspaces"),
     onWorkspaceTasksChanged: (listener) =>
       subscribeToIpcEvent<unknown>(workspaceTasksChangedChannel, (payload) => {
         if (typeof payload === "string" && payload) listener(payload);
@@ -35,6 +34,7 @@ export function createWorkspaceBridge(): WorkspaceBridge {
     getWorkspaceSplitViews: (projectId) => invokeIpc("app:get-workspace-split-views", projectId),
     saveWorkspaceSplitViews: (projectId, collection) => invokeIpc("app:save-workspace-split-views", projectId, collection),
     saveWorkspaceTerminalPresets: (projectId, presets) => invokeIpc("app:save-workspace-terminal-presets", projectId, presets),
+    saveWorkspaceSetupScripts: (projectId, scripts) => invokeIpc("app:save-workspace-setup-scripts", projectId, scripts),
     readWorkspaceFile: (payload) => invokeIpc("app:read-workspace-file", payload),
     readWorkspaceImageFile: (payload) => invokeIpc("app:read-workspace-image-file", payload),
     readWorkspaceLogo: (projectId) => invokeIpc("app:read-workspace-logo", projectId),

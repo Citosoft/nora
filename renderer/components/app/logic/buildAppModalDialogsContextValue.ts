@@ -10,34 +10,7 @@ import type { AppModalDialogsContextValue } from "@/components/app/types/appModa
 import type { AppModalDialogsBuildDeps } from "@/components/app/types/appModalDialogsBuild.types";
 import type { ConnectRemoteProjectPayload } from "@shared/appTypes";
 
-export const copyForgeOAuthDeviceCode = async (code: string): Promise<void> => {
-  const fallbackCopyWithTextarea = (): void => {
-    const textarea = document.createElement("textarea");
-    textarea.value = code;
-    textarea.setAttribute("readonly", "true");
-    textarea.style.position = "fixed";
-    textarea.style.opacity = "0";
-    textarea.style.pointerEvents = "none";
-    document.body.appendChild(textarea);
-    textarea.select();
-    textarea.setSelectionRange(0, code.length);
-    const copied = document.execCommand("copy");
-    document.body.removeChild(textarea);
-    if (!copied) {
-      throw new Error("Clipboard copy command failed.");
-    }
-  };
-
-  await Promise.resolve()
-    .then(() => noraSystemClient.copyText(code))
-    .catch(async () => {
-      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(code);
-        return;
-      }
-      fallbackCopyWithTextarea();
-    });
-};
+export const copyForgeOAuthDeviceCode = (code: string): Promise<void> => noraSystemClient.copyText(code);
 
 export const buildAppModalDialogsContextValue = (d: AppModalDialogsBuildDeps): AppModalDialogsContextValue => ({
   error: {
@@ -255,6 +228,7 @@ export const buildAppModalDialogsContextValue = (d: AppModalDialogsBuildDeps): A
   },
   analyticsConsent: {
     open: d.isAnalyticsConsentDialogOpen,
+    usageStatisticsRequireConsent: d.usageStatisticsRequireConsent,
     onAllow: d.allowAnalyticsConsent,
     onDecline: d.declineAnalyticsConsent
   },
@@ -265,8 +239,7 @@ export const buildAppModalDialogsContextValue = (d: AppModalDialogsBuildDeps): A
   },
   keyboardShortcuts: {
     open: d.uiState.showKeyboardShortcutsDialog,
-    onOpenChange: d.uiCommands.setKeyboardShortcutsDialogOpen,
-    platform: d.windowUiStatePlatform
+    onOpenChange: d.uiCommands.setKeyboardShortcutsDialogOpen
   },
   resourceMonitor: {
     open: d.uiState.showResourceMonitorDialog,

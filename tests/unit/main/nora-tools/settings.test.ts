@@ -28,7 +28,9 @@ test("settings tools return all preferences and apply partial nested updates", a
 test("settings tools reject unknown fields, empty patches, invalid values and missing providers without saving", async () => {
   const f = noraFixture();
   for (const patch of [{}, { general: {} }, { general: { confirmSplitViewDelete: "false" } }, { general: { unsupported: true } },
-    { threads: { settleAfterDays: 0 } }, { threads: { claudeAutoCompactTokens: 1 } }]) {
+    { threads: { settleAfterDays: 0 } }, { threads: { claudeAutoCompactTokens: 1 } },
+    // Consent has to come from the person, so agents cannot change either privacy choice.
+    { general: { analyticsConsentStatus: "granted" } }, { general: { usageStatisticsEnabled: false } }]) {
     // Tool arguments enter through an untyped protocol; exercise validation at that boundary too.
     await assert.rejects(async () => f.deps.settings.update(agentSettingsPatchSchema.parse(patch)));
   }
@@ -90,7 +92,7 @@ test("all persisted settings are exposed and nested AI, voice, terminal and pers
   const before = structuredClone(f.settings);
   const updated = await f.deps.settings.update({ general: {
     ai: { apiKeys: { openai: "test-key" }, modelByProvider: { openai: "test-model" }, simpleTaskProvider: "codex" },
-    voice: { localModelId: "whisper-tiny.en" }, lifecycle: { launchAtLogin: true }, terminalQuickLaunchDefaults: { name: "Dev" }, analyticsConsentStatus: "declined",
+    voice: { localModelId: "whisper-tiny.en" }, lifecycle: { launchAtLogin: true }, terminalQuickLaunchDefaults: { name: "Dev" },
     terminalPresets: [{ id: "dev", name: "Dev", workingDirectory: "/workspace", commands: ["npm run dev"] }]
   }, personalization: { defaultRole: { id: "developer" }, workspaceRoles: { w: { id: "designer" } } } });
   assert.equal(updated.general.ai.apiKeys.openai, "test-key");

@@ -141,6 +141,8 @@ import { createWorkspaceMutationHelpers } from "./orchestrator/workspaceMutation
 import { createWorkspaceNavigationHelpers } from "./orchestrator/workspaceNavigation";
 import { createWorkspaceRefreshHelpers } from "./orchestrator/workspaceRefresh";
 import { createWorktreeHelpers } from "./orchestrator/worktrees";
+import { createWorktreeLifecycleScriptRunner } from "./helpers/worktreeLifecycleScripts";
+import type { RunWorktreeLifecycleScripts } from "./types/worktreeLifecycleScripts.types";
 import { createWorktreeSelectionHelpers } from "./orchestrator/worktreeSelection";
 import { findSshExecutable, readActiveRemoteMounts, resolveRemotePayload } from "./remoteMounts";
 
@@ -237,6 +239,7 @@ export class Orchestrator implements OrchestratorFacade {
   private readonly onLocalTerminalChanged?: (state: LocalTerminalState | null) => void;
   private readonly workspaceNavigationHelpers: WorkspaceNavigationHelpers;
   private readonly worktreeHelpers: ReturnType<typeof createWorktreeHelpers>;
+  private readonly runWorktreeLifecycleScripts: RunWorktreeLifecycleScripts;
   private readonly worktreeSelectionHelpers: WorktreeSelectionHelpers;
   private readonly terminalStateHelpers: TerminalStateHelpers;
   private readonly runtimeHelpers: ReturnType<typeof createRuntimeHelpers>;
@@ -272,6 +275,13 @@ export class Orchestrator implements OrchestratorFacade {
     this.sessionIndexStore = stores.sessionIndexStore;
     this.onWorkspaceLoadingProgress = options.onWorkspaceLoadingProgress;
     this.onLocalTerminalChanged = options.onLocalTerminalChanged;
+    this.runWorktreeLifecycleScripts = createWorktreeLifecycleScriptRunner({
+      runCommand: (target, command) => this.runtimeHelpers.prepareWorktree(target, command),
+      getWorktreeTarget: (project, worktree) => this.getWorktreeTarget(project, worktree),
+      reportFailure: (message) => {
+        this.stateGateway.updateState((state) => ({ ...state, errorMessage: message }));
+      }
+    });
     this.worktreeHelpers = createWorktreeHelpers({
       nowIso,
       slugify,
@@ -283,7 +293,8 @@ export class Orchestrator implements OrchestratorFacade {
       findRemoteMountForPath,
       getActiveRemoteMounts: () => this.getSnapshot().activeRemoteMounts,
       sessionIndexSaveState: (state) => this.sessionIndexStore.saveState(state),
-      isWindowsUncPath
+      isWindowsUncPath,
+      runWorktreeLifecycleScripts: this.runWorktreeLifecycleScripts
     });
     this.workspaceNavigationHelpers = createWorkspaceNavigationHelpers({
       getSnapshot: () => this.getSnapshot(),
@@ -468,7 +479,8 @@ export class Orchestrator implements OrchestratorFacade {
       },
       deleteContextWriteChain: (agentId) => {
         this.sessionRuntime.deleteContextWriteChain(agentId);
-      }
+      },
+      runWorktreeLifecycleScripts: this.runWorktreeLifecycleScripts
     });
     this.persistenceHelpers = createPersistenceHelpers({
       nowIso,

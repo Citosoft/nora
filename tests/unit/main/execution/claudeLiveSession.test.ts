@@ -7,6 +7,7 @@ import { createClaudeLiveSession, describeFinishedWork } from "@main/providers/c
 import { createClaudeInputQueue } from "@main/providers/claude/sdkBridge";
 import { readClaudeStream } from "@main/providers/claude/readStream";
 import type { ClaudeFrame, ClaudeTurn } from "@main/types/execution/claude.types";
+import type { BackgroundTask } from "@shared/types/conversation/contracts.types";
 import { claudeAssistantMessage, claudeResult } from "./toolFixtures";
 
 // The session's idle and prompt-suggestion timers are unref'd so they never keep the app alive; with only those pending,
@@ -42,18 +43,21 @@ function fakeCli() {
     exit() { ended = true; const resolve = wake; wake = null; resolve?.(); } };
 }
 
-const tasksChanged = (...tasks: { id: string; description: string }[]): SDKMessage => ({ type: "system", subtype: "background_tasks_changed",
-  tasks: tasks.map((task) => ({ task_id: task.id, task_type: "local_bash", description: task.description })), uuid: randomUUID(), session_id: "session" });
+const tasksChanged = (...tasks: ({ id: string; description: string; ambient?: boolean })[]): SDKMessage => ({ type: "system", subtype: "background_tasks_changed",
+  tasks: tasks.map((task) => ({ task_id: task.id, task_type: "local_bash", description: task.description, ...(task.ambient ? { ambient: true } : {}) })),
+  uuid: randomUUID(), session_id: "session" });
 const taskDone = (id: string): SDKMessage => ({ type: "system", subtype: "task_notification", task_id: id, status: "completed",
   output_file: "/tmp/out", summary: "done", uuid: randomUUID(), session_id: "session" });
 const reply = (text: string): SDKMessage => claudeAssistantMessage([{ type: "text", text, citations: null }]);
 
 function open(cli: ReturnType<typeof fakeCli>, idleCloseMs = 20) {
   const followUps: { turn: ClaudeTurn; summary: string }[] = [];
+  const backgroundUpdates: BackgroundTask[][] = [];
   const session = createClaudeLiveSession({ native: cli.native, input: cli.input, sessionId: "session", idleCloseMs,
     opening: { nativeTurnId: randomUUID(), instruction: "Start the build", model: "model-a", permissionMode: "default" },
-    readTurn: (source) => readClaudeStream(source, 5), onFollowUp: (turn, summary) => followUps.push({ turn, summary }) });
-  return { session, followUps };
+    readTurn: (source) => readClaudeStream(source, 5), onFollowUp: (turn, summary) => followUps.push({ turn, summary }),
+    onBackgroundTasksChanged: (tasks) => backgroundUpdates.push([...tasks]) });
+  return { session, followUps, backgroundUpdates };
 }
 
 async function frames(turn: AsyncIterable<ClaudeFrame>): Promise<ClaudeFrame["kind"][]> {
@@ -122,4 +126,31 @@ test("finished work is described for the follow-up's milestone", () => {
   assert.equal(describeFinishedWork([]), "Claude continued after background work changed");
   assert.equal(describeFinishedWork([{ name: "Build", status: "completed" }, { name: "Tests", status: "failed" }]), "Background tasks ended: Build, Tests");
   assert.ok(describeFinishedWork([{ name: "x".repeat(400), status: "completed" }]).length <= 200);
+});
+
+test("background_tasks_changed publishes the live list, skips ambient tasks, and clears when empty", async () => {
+  const cli = fakeCli();
+  const { session, backgroundUpdates } = open(cli);
+  cli.emit(tasksChanged({ id: "task-1", description: "Wait for the build" }, { id: "ambient", description: "Hidden", ambient: true }),
+    reply("Started"), claudeResult());
+  await frames(session.opening);
+  assert.deepEqual(session.backgroundTasks(), [{ id: "task-1", description: "Wait for the build", kind: "local_bash" }]);
+  assert.deepEqual(backgroundUpdates.at(-1), [{ id: "task-1", description: "Wait for the build", kind: "local_bash" }]);
+
+  cli.emit(tasksChanged());
+  await delay(10);
+  assert.deepEqual(session.backgroundTasks(), []);
+  assert.deepEqual(backgroundUpdates.at(-1), []);
+  await session.close();
+});
+
+test("closing a session clears published background tasks", async () => {
+  const cli = fakeCli();
+  const { session, backgroundUpdates } = open(cli);
+  cli.emit(tasksChanged({ id: "task-1", description: "Dev server" }), reply("Running"), claudeResult());
+  await frames(session.opening);
+  assert.equal(session.hasBackgroundWork(), true);
+  await session.close();
+  assert.deepEqual(session.backgroundTasks(), []);
+  assert.deepEqual(backgroundUpdates.at(-1), []);
 });

@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en" class="dark" data-theme="dark" data-color-theme="nora" style="color-scheme: dark">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com">
+    <title>Nora island</title>
+    <link rel="stylesheet" href="./styles.css">
+    <!-- The island draws its own black shape; the rest of the window must stay see-through. -->
+    <style>html, body, #island { background: transparent !important; background-image: none !important; overflow: hidden; }</style>
+  </head>
+  <body>
+    <div id="island"></div>
+    <script src="./islandBundle.js"></script>
+  </body>
+</html>

@@ -1,3 +1,5 @@
+import type { AnalyticsPreferencesPatch } from "@shared/types/analytics.types";
+import type { WorkbenchKeybindingCommandId } from "@shared/types/keybindings/keybindings.types";
 import type { ColorThemeId } from "@shared/types/appearance/colorTheme.types";
 import type {
 AccentColor,
@@ -61,60 +63,6 @@ export type AgentRoleOption = {
   id: AgentRoleId;
   label: string;
   promptPrefix: string;
-};
-
-export type ShortcutKey =
-  | "mod"
-  | "shift"
-  | "alt"
-  | "b"
-  | "k"
-  | "t"
-  | "a"
-  | "j"
-  | "o"
-  | ","
-  | "["
-  | "]"
-  | "/"
-  | "1"
-  | "2"
-  | "3"
-  | "4"
-  | "5"
-  | "s"
-  | "w";
-
-export type ShortcutDefinition = {
-  id:
-    | "toggle-workspace-sidebar"
-    | "toggle-changes-sidebar"
-    | "open-keyboard-shortcuts"
-    | "open-workspace-switcher"
-    | "open-workspace-quick-search"
-    | "open-settings"
-    | "open-startup-dependencies"
-    | "open-create-terminal"
-    | "open-add-workspace"
-    | "open-workspace-browser"
-    | "open-create-agent"
-    | "toggle-local-terminal-dock"
-    | "focus-local-terminal-dock"
-    | "focus-next-session-tab"
-    | "focus-previous-session-tab"
-    | "close-active-session-tab"
-    | "open-recent-workspace-1"
-    | "open-recent-workspace-2"
-    | "open-recent-workspace-3"
-    | "open-recent-workspace-4"
-    | "open-recent-workspace-5";
-  title: string;
-  description: string;
-  category: "Workbench" | "Help";
-  keys: ShortcutKey[];
-  allowInEditable?: boolean;
-  /** When set (help dialog only), overrides formatted `keys` for display. */
-  helpKeysLabel?: string;
 };
 
 export type AgentSkillCatalogSummary = {
@@ -342,6 +290,7 @@ export type AppPreferences = {
   updateFileEditorThemeId: (themeId: AppSettings["fileEditorThemeId"]) => Promise<void>;
   updateUiFontSize: (size: number) => Promise<void>;
   updateThreadBackdrop: (patch: Partial<AppSettings["threadBackdrop"]>) => Promise<void>;
+  updateNotchIsland: (patch: Partial<AppSettings["notchIsland"]>) => Promise<void>;
   updateHardwareAccelerationEnabled: (enabled: boolean) => Promise<void>;
   updateWorkspaceStateStorageMode: (mode: AppSettings["workspaceStateStorageMode"]) => Promise<void>;
   updateDefaultAgentLaunchTarget: (launchTarget: AppSettings["defaultAgentLaunchTarget"]) => Promise<void>;
@@ -362,7 +311,7 @@ export type AppPreferences = {
   ) => Promise<void>;
   updateLifecycle: (lifecycle: AppSettings["lifecycle"]) => Promise<void>;
   updateNotificationPreferences: (nextNotificationSettings: NotificationPreferencesUpdate) => Promise<void>;
-  updateAnalyticsConsentStatus: (status: AppSettings["analyticsConsentStatus"]) => Promise<void>;
+  updateAnalyticsPreferences: (patch: AnalyticsPreferencesPatch) => Promise<void>;
   updateTerminalPresets: (presets: AppSettings["terminalPresets"]) => Promise<void>;
   updateTerminalQuickLaunchDefaults: (defaults: AppSettings["terminalQuickLaunchDefaults"]) => Promise<void>;
   updateAiPreferredProvider: (provider: AiProvider) => Promise<void>;
@@ -402,7 +351,7 @@ export type UseFileEditorStateResult = {
   saveFileEditor: (pathName?: string) => Promise<void>;
 };
 
-export type ShortcutActionMap = Record<ShortcutDefinition["id"], () => void>;
+export type ShortcutActionMap = Record<WorkbenchKeybindingCommandId, () => void>;
 
 export type UseLinuxAptSetupPromptArgs = {
   appSettings: AppSettings;
@@ -414,13 +363,15 @@ export type UseAnalyticsConsentPromptArgs = {
   appSettings: AppSettings;
   isAppSettingsLoaded: boolean;
   isOnboardingOpen: boolean;
-  updateAnalyticsConsentStatus: (status: AppSettings["analyticsConsentStatus"]) => Promise<void>;
+  updateAnalyticsPreferences: (patch: AnalyticsPreferencesPatch) => Promise<void>;
   captureError: (error: unknown) => void;
 };
 
 export type UseAnalyticsConsentPromptResult = {
   analyticsRuntimeConfig: AnalyticsRuntimeConfig | null;
   isAnalyticsConsentDialogOpen: boolean;
+  /** Whether this region needs opt-in before even anonymous statistics, which changes what the prompt asks. */
+  usageStatisticsRequireConsent: boolean;
   allowAnalyticsConsent: () => void;
   declineAnalyticsConsent: () => void;
 };

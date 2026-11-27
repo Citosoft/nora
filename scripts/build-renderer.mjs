@@ -44,22 +44,19 @@ await writeAccountBuildConfig();
 await writeAnalyticsBuildConfig();
 
 const result = await build({
-  entryPoints: ["renderer/main.tsx"],
+  // The app and the macOS notch island, each its own page. `islandBundle` must not be `island`, which tsc emits for island.tsx.
+  entryPoints: [{ in: "renderer/main.tsx", out: "bundle" }, { in: "renderer/island.tsx", out: "islandBundle" }],
   metafile: true,
   bundle: true,
   format: "iife",
   platform: "browser",
   target: "es2022",
-  outfile: "dist/renderer/bundle.js",
+  outdir: "dist/renderer",
   jsx: "automatic",
   sourcemap: false,
   define: {
     "process.env.NODE_ENV": JSON.stringify("production"),
     __NORA_IS_PRODUCTION__: "true",
-    __NORA_POSTHOG_API_KEY__: JSON.stringify(process.env.NORA_POSTHOG_API_KEY ?? ""),
-    __NORA_POSTHOG_HOST__: JSON.stringify(process.env.NORA_POSTHOG_HOST ?? ""),
-    __VITE_PUBLIC_POSTHOG_PROJECT_TOKEN__: JSON.stringify(process.env.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN ?? ""),
-    __VITE_PUBLIC_POSTHOG_HOST__: JSON.stringify(process.env.VITE_PUBLIC_POSTHOG_HOST ?? ""),
     __NPM_PACKAGE_VERSION__: JSON.stringify(process.env.npm_package_version ?? "")
   },
   tsconfig: "tsconfig.json",

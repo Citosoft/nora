@@ -6,7 +6,7 @@ import type { McpAction, McpResult } from "@shared/types/provider/mcp.types";
 import type { SkillsResult } from "@shared/types/provider/skills.types";
 import type { EffortLevel, McpClaudeAIProxyServerConfig, McpServerStatus, Options, PermissionMode, SDKMessage, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { randomUUID } from "node:crypto";
-import type { ApprovalDetails, ContextReading, Conversation, ExecutionFailure, ExecutionUsage, RequestResponse, RuntimeRequest, ToolDetails, ToolState } from "@shared/types/conversation/contracts.types";
+import type { ApprovalDetails, BackgroundTask, ContextReading, Conversation, ExecutionFailure, ExecutionUsage, RequestResponse, RuntimeRequest, ToolDetails, ToolState } from "@shared/types/conversation/contracts.types";
 import type { EmitProviderUpdate, ProviderExecution } from "./provider.types";
 import type { McpAppResource, McpAppToolUi } from "./mcpApp.types";
 import type { ProviderModel, ProviderCatalog } from "@shared/types/provider/catalog.types";
@@ -50,6 +50,8 @@ export interface ClaudeSession {
   isLive(): boolean;
   /** Whether closing now would stop background work. */
   hasBackgroundWork(): boolean;
+  /** Non-ambient background work still running on this process. */
+  backgroundTasks(): readonly BackgroundTask[];
 }
 /** The SDK query a live session drives; narrowed so the session can be tested without the SDK. */
 export interface ClaudeNativeQuery extends AsyncIterable<SDKMessage> {
@@ -72,6 +74,8 @@ export interface ClaudeLiveSessionDeps {
   readTurn(source: ClaudeMessageStream): AsyncIterable<ClaudeFrame>;
   /** A turn Claude started by itself, with a one-line description of what woke it. */
   onFollowUp(turn: ClaudeTurn, summary: string): void;
+  /** Full replace of non-ambient background work still running on this process. */
+  onBackgroundTasksChanged(tasks: readonly BackgroundTask[]): void;
   /** How long an idle session without background work waits for a late suggestion or follow-up before closing. */
   idleCloseMs?: number;
 }
@@ -104,6 +108,8 @@ export interface ClaudeOpenInput {
   onRequest: (prompt: ClaudePrompt) => Promise<RequestResponse>;
   /** A turn Claude started by itself, typically to report background work that finished. */
   onFollowUp: (turn: ClaudeTurn, summary: string) => void;
+  /** Full replace of non-ambient background work still running on this process. */
+  onBackgroundTasksChanged: (tasks: readonly BackgroundTask[]) => void;
 }
 /** claude.ai connectors keyed by the name the runtime lists them under, as the proxy configs that connect them explicitly. */
 export type ClaudeAccountConnectors = Readonly<Record<string, McpClaudeAIProxyServerConfig>>;

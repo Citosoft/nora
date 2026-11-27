@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
-import { conversationSchema, requestSchema, runSchema, timelineItemSchema } from "@shared/conversations/contracts";
+import { backgroundTaskSchema, conversationSchema, requestSchema, runSchema, timelineItemSchema } from "@shared/conversations/contracts";
 import type { Conversation, ConversationSnapshot, TimelineItem, WorkspaceRef } from "@shared/types/conversation/contracts.types";
 import { workspacesOverlap } from "./workspaceConflict";
 import { hasRestorableCheckpoint, listCheckpointRuns, loadCheckpoint, readCheckpointBlob } from "./checkpoints/storage";
@@ -11,7 +11,8 @@ import { activeRunStates, isActiveRun } from "@shared/conversations/runActivity"
 import { summarizeConversation } from "./summaries";
 import { ExecutionCommandError } from "./errors";
 
-const headSchema = z.object({ cursor: z.number().int().nonnegative(), json: z.string() });
+const headSchema = z.object({ cursor: z.number().int().nonnegative(), json: z.string(), background_tasks: z.string() });
+const backgroundTasksSchema = z.array(backgroundTaskSchema);
 const idRowSchema = z.object({ id: z.string() });
 const positionRowSchema = z.object({ position: z.number().int().positive(), json: z.string() });
 const summaryRowSchema = z.object({ latest: z.string().nullable(), queuedCount: z.number().int().nonnegative(), pendingRequestCount: z.number().int().nonnegative() });
@@ -37,10 +38,14 @@ export class SqliteQueries {
     });
   }
   private head(id: string) {
-    const row = this.database.prepare("SELECT cursor, json FROM conversation_heads WHERE id = ?").get(id);
+    const row = this.database.prepare("SELECT cursor, json, background_tasks FROM conversation_heads WHERE id = ?").get(id);
     if (!row) return null;
     const head = headSchema.parse(row);
-    return { cursor: head.cursor, conversation: conversationSchema.parse(JSON.parse(head.json)) };
+    return {
+      cursor: head.cursor,
+      conversation: conversationSchema.parse(JSON.parse(head.json)),
+      backgroundTasks: backgroundTasksSchema.parse(JSON.parse(head.background_tasks))
+    };
   }
   private ids(sql: string): string[] { return this.database.prepare(sql).all().map((row) => idRowSchema.parse(row).id); }
 
@@ -149,7 +154,8 @@ export class SqliteQueries {
     const state = this.state(conversationId);
     return state ? { schemaVersion: 1, cursor: state.cursor, conversation: state.conversation,
       activeRuns: state.runs.filter(isActiveRun), queuedRuns: state.runs.filter((run) => run.state === "queued"),
-      pendingRequests: state.requests.filter((request) => request.status === "pending" || request.status === "responding") } : null;
+      pendingRequests: state.requests.filter((request) => request.status === "pending" || request.status === "responding"),
+      backgroundTasks: state.backgroundTasks } : null;
   }
   history(query: HistoryQuery): ConversationHistoryPage {
     const limit = query.limit ?? 100;

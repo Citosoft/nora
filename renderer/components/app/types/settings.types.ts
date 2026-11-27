@@ -86,8 +86,11 @@ export type SettingsRuntimeValue = {
   updateLifecycle: (lifecycle: AppSettings["lifecycle"]) => Promise<void>;
   updateAgentCompletionNotifications: (enabled: boolean) => void;
   updatePhonePushNotifications: (enabled: boolean) => void;
+  updateNotchIsland: (patch: Partial<AppSettings["notchIsland"]>) => void;
   updateAnalyticsConsent: (enabled: boolean) => void;
+  updateUsageStatistics: (enabled: boolean) => void;
   analyticsAllowedInCurrentRun: boolean;
+  usageStatisticsRequireConsent: boolean;
   analyticsDevModeSwitch: string;
   updateOpenInternalBrowserOnNewPortDetection: (enabled: boolean) => void;
   chromeCookieProfiles: BrowserCookieProfileSummary[];
@@ -139,6 +142,7 @@ export type SettingsGroup =
   | "general"
   | "workbench"
   | "terminal"
+  | "keybindings"
   | "browser"
   | "cli"
   | "threads"
@@ -154,6 +158,8 @@ export type SettingsGroup =
   | "voice"
   | "privacy"
   | "system"
+  | "migrate"
+  | "notchIsland"
   | "dev";
 
 export type SettingsPageToolSkillSearch = (toolId: string, query: string) => Promise<AgentSkillSearchResult>;

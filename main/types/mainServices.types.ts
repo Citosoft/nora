@@ -53,6 +53,7 @@ import type {
   WriteWorkspaceFilePayload
 } from "@shared/appTypes";
 import type { WorkspaceImageFileContent } from "@shared/types/workspaceFile.types";
+import type { WorkspaceProjectSettingsActions } from "./workspaceProjectSettings.types";
 
 export interface SnapshotService {
   getSnapshot: () => AppState;
@@ -160,6 +161,8 @@ export interface WorkspaceService {
     projectId: string,
     presets: TerminalPreset[]
   ) => Promise<AppState>;
+  /** The programmatic entry point for importers and the setup-scripts editor alike. */
+  saveWorkspaceSetupScripts: WorkspaceProjectSettingsActions["saveWorkspaceSetupScripts"];
   createWorkspaceDirectory: (payload: CreateWorkspaceDirectoryPayload) => Promise<AppState>;
   moveWorkspaceFile: (
     payload: { projectId: string; fromPath: string; toPath: string; rootPath?: string }

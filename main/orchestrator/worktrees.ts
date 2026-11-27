@@ -14,6 +14,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { getWorktreeDir, getWorktreeMetaPath, getWorktreeRepoDir } from "../noraPaths";
 import type { PersistedSessionState, WorkspaceTarget } from "../types/internal.types";
+import type { RunWorktreeLifecycleScripts } from "../types/worktreeLifecycleScripts.types";
 
 type WorktreeHelperDeps = {
   nowIso: () => string;
@@ -27,6 +28,7 @@ type WorktreeHelperDeps = {
   getActiveRemoteMounts: () => ActiveRemoteMount[];
   sessionIndexSaveState: (state: PersistedSessionState) => Promise<void>;
   isWindowsUncPath: (value: string) => boolean;
+  runWorktreeLifecycleScripts: RunWorktreeLifecycleScripts;
 };
 
 export function createWorktreeHelpers(deps: WorktreeHelperDeps) {
@@ -176,6 +178,8 @@ export function createWorktreeHelpers(deps: WorktreeHelperDeps) {
       scripts: await deps.detectWorkspaceScripts(deps.getWorktreeTarget(project, worktree))
     };
     await writeWorktreeMetadata(readyWorktree);
+    // Every new checkout passes through here, so the workspace's setup scripts run for all of them.
+    await deps.runWorktreeLifecycleScripts(project, readyWorktree, "worktree-create");
     return readyWorktree;
   }
 

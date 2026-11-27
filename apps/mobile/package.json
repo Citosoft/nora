@@ -9,6 +9,7 @@
     "ios": "expo run:ios",
     "android": "expo run:android",
     "typecheck": "tsc --noEmit",
+    "generate:icons": "node scripts/generateIcons.mjs",
     "test": "vitest run",
     "export:web": "expo export --platform web && node scripts/stampServiceWorker.mjs",
     "config:check": "expo config --type public",

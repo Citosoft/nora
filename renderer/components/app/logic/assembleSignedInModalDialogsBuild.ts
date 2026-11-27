@@ -19,7 +19,6 @@ export const assembleSignedInModalDialogsBuild = (s: SignedInModalDialogsAssembl
     handleCreateForgePullRequest,
     openAddRemoteWorkspaceModal: core.openAddRemoteWorkspaceModal,
     activeBranch: gitBranches.activeBranch,
-    parentRepoBranch: gitBranches.parentRepoBranch,
-    windowUiStatePlatform: core.windowUiState.platform
+    parentRepoBranch: gitBranches.parentRepoBranch
   };
 };

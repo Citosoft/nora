@@ -1,5 +1,5 @@
-import { OnboardingWorkspaceImportStep } from "@/components/app/dialogs/OnboardingWorkspaceImportStep";
-import { useOnboardingWorkspaceImport } from "@/components/app/hooks/useOnboardingWorkspaceImport";
+import { AppImportFlowView } from "@/components/app/panels/app-import/AppImportFlowView";
+import { useAppImportFlow } from "@/components/app/hooks/useAppImportFlow";
 import { OnboardingSkillStep } from "@/components/app/dialogs/OnboardingSkillStep";
 import { useOnboardingSkillInstall } from "@/components/app/hooks/useOnboardingSkillInstall";
 import { formatDependencyLabel, getMissingInstallDependencies } from "@/components/app/logic/toolInstallDependencies";
@@ -30,7 +30,7 @@ import { AlertTriangle, CheckCircle2, ChevronDown, Copy, LoaderCircle, RefreshCc
 import type { MouseEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-type OnboardingStep = "dependencies" | "tools" | "skill" | "appearance" | "settings" | "import" | "workspace";
+type OnboardingStep = "dependencies" | "tools" | "skill" | "appearance" | "settings" | "import" | "bots" | "workspace";
 type DependencyCopyState = "idle" | "copying" | "copied" | "failed";
 
 export type OnboardingDialogProps = {
@@ -82,7 +82,7 @@ const THEME_OPTION_LABELS: Record<ThemeMode, string> = {
   light: "Light",
   dark: "Dark"
 };
-const ONBOARDING_STEPS: OnboardingStep[] = ["dependencies", "tools", "skill", "appearance", "settings", "import", "workspace"];
+const ONBOARDING_STEPS: OnboardingStep[] = ["dependencies", "tools", "skill", "appearance", "settings", "import", "bots", "workspace"];
 const ONBOARDING_STEP_COPY: Record<OnboardingStep, { title: string; description: string }> = {
   dependencies: {
     title: "Check local dependencies",
@@ -105,8 +105,12 @@ const ONBOARDING_STEP_COPY: Record<OnboardingStep, { title: string; description:
     description: "Set your name, preferred IDE, project state location, and rendering defaults."
   },
   import: {
-    title: "Import existing projects",
-    description: "Bring the projects you have worked on with Claude and Codex into Nora."
+    title: "Bring in your work",
+    description: "Import projects from Claude and Codex, and threads, settings, appearance and shortcuts from T3 Code or Orca. Your files stay where they are."
+  },
+  bots: {
+    title: "Bring in your bots",
+    description: "Keep the bots you set up in Orca, OpenBot or Grok Bot, with their instructions and memory. Their routines arrive paused, so nothing runs until you turn it on."
   },
   workspace: {
     title: "Choose your first project",
@@ -156,9 +160,11 @@ export function OnboardingDialog({
   canInstallNoraSkill,
   onInstallNoraSkill
 }: OnboardingDialogProps) {
-  const workspaceImport = useOnboardingWorkspaceImport(open);
   const skillInstall = useOnboardingSkillInstall(onInstallNoraSkill);
   const [step, setStep] = useState<OnboardingStep>("dependencies");
+  const appImport = useAppImportFlow({ scope: "work", enabled: open && step === "import", onThemeMode: onThemeModeChange });
+  const botImport = useAppImportFlow({ scope: "bots", enabled: open && step === "bots", onThemeMode: onThemeModeChange });
+  const importing = appImport.applying || botImport.applying;
   const [isSkipConfirmOpen, setIsSkipConfirmOpen] = useState(false);
   const [activeToolPopover, setActiveToolPopover] = useState<ToolPopoverState | null>(null);
   const [expandedDependencyIds, setExpandedDependencyIds] = useState<StartupDependencyId[]>([]);
@@ -287,7 +293,7 @@ export function OnboardingDialog({
   return (
     <>
     <Dialog open={open} onOpenChange={(nextOpen) => {
-      if (!nextOpen && !workspaceImport.isImporting) {
+      if (!nextOpen && !importing) {
         handleOnboardingDismissAttempt();
       }
     }}>
@@ -301,7 +307,7 @@ export function OnboardingDialog({
         )}
       >
         <DialogBody className="flex min-h-0 flex-col gap-5">
-          <WizardProgress ariaLabel="Onboarding" steps={progressSteps} activeStep={step} onStepChange={(next) => { if (!workspaceImport.isImporting) setStep(next); }} />
+          <WizardProgress ariaLabel="Onboarding" steps={progressSteps} activeStep={step} onStepChange={(next) => { if (!importing) setStep(next); }} />
           <div className="space-y-2 pb-3 pt-3">
             <DialogTitle className="text-2xl">{stepCopy.title}</DialogTitle>
             <DialogDescription>{stepCopy.description}</DialogDescription>
@@ -564,7 +570,9 @@ export function OnboardingDialog({
               </div>
             </div>
           ) : step === "import" ? (
-            <OnboardingWorkspaceImportStep state={workspaceImport} />
+            <AppImportFlowView flow={appImport} />
+          ) : step === "bots" ? (
+            <AppImportFlowView flow={botImport} />
           ) : step === "skill" ? (
             <OnboardingSkillStep installed={isNoraSkillInstalled} available={canInstallNoraSkill}
               state={skillInstall.state} onInstall={() => { void skillInstall.startInstall(); }} />
@@ -826,7 +834,7 @@ export function OnboardingDialog({
 
         <DialogFooter>
           <div className="flex w-full items-center justify-between gap-2">
-            <Button variant="ghost" onClick={handleOnboardingDismissAttempt} disabled={workspaceImport.isImporting}>
+            <Button variant="ghost" onClick={handleOnboardingDismissAttempt} disabled={importing}>
               Skip onboarding
             </Button>
             <div className="flex items-center gap-2">
@@ -834,7 +842,7 @@ export function OnboardingDialog({
                 <Button
                   variant="outline"
                   onClick={() => setStep(previousStep)}
-                  disabled={workspaceImport.isImporting}
+                  disabled={importing}
                 >
                   Back
                 </Button>
@@ -848,7 +856,7 @@ export function OnboardingDialog({
                   Continue
                 </Button>
               ) : nextStep ? (
-                <Button onClick={() => setStep(nextStep)} disabled={workspaceImport.isImporting}>
+                <Button onClick={() => setStep(nextStep)} disabled={importing}>
                   {step === "skill" && !isNoraSkillInstalled && skillInstall.state.kind !== "installing" ? "Skip for now" : "Continue"}
                 </Button>
               ) : (

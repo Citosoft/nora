@@ -22,8 +22,21 @@ export interface PixelFieldProps extends Partial<PixelTerrainShading> {
   color?: string;
 }
 
-/** A small bitmap drawn in the app icon's pixel language: `#` is a lit cell, anything else is empty. */
+/**
+ * A small bitmap drawn in the app icon's pixel language: `#` is a lit cell, `<` and `>` are faint
+ * half-width cells on the left or right of their slot (the mark's diagonal), anything else is empty.
+ */
 export type PixelBitmap = readonly string[];
+
+export type GlyphCellShape = "full" | "left" | "right";
+
+export interface GlyphCell {
+  column: number;
+  row: number;
+  shape: GlyphCellShape;
+  /** Delay before the cell pixels in, sweeping diagonally from the top left. */
+  delayMs: number;
+}
 
 export interface PixelGlyphProps {
   bitmap: PixelBitmap;

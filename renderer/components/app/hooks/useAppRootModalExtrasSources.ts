@@ -47,6 +47,7 @@ export function useAppRootModalExtrasSources(
     loadChromeCookieProfiles,
     runChromeBrowserDataImport,
     isAnalyticsConsentDialogOpen,
+    usageStatisticsRequireConsent,
     allowAnalyticsConsent,
     declineAnalyticsConsent,
     workspaceSwitcherEntries
@@ -92,6 +93,7 @@ export function useAppRootModalExtrasSources(
     loadChromeCookieProfiles,
     runChromeBrowserDataImport,
     isAnalyticsConsentDialogOpen,
+    usageStatisticsRequireConsent,
     allowAnalyticsConsent,
     declineAnalyticsConsent,
     workspaceSwitcherEntries

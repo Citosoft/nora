@@ -5,7 +5,7 @@ import type { ConversationHeader, ConversationHistoryPage, ConversationSummary, 
 import type { CheckpointRun, StoredCheckpoint } from "./checkpoints.types";
 
 /** Only live/queued work and an explicitly selected run; historical transcript is loaded separately. */
-export type ConversationState = Pick<ConversationSnapshot, "cursor" | "conversation" | "runs" | "requests">;
+export type ConversationState = Pick<ConversationSnapshot, "cursor" | "conversation" | "runs" | "requests" | "backgroundTasks">;
 export interface ExecutionState extends ConversationState { items: TimelineItem[] }
 
 export type ExecutionEffect = z.infer<typeof effectSchema>;

@@ -10,15 +10,15 @@ import { composerKeyAction, visiblePromptSuggestion } from "@/components/app/log
 import type { NativeComposerInputProps } from "@/components/app/types/composerInput.types";
 import type { PromptRecall } from "@/components/app/types/composerPrompts.types";
 import { IDLE_PROMPT_RECALL, readPromptHistory, stepPromptRecall } from "@/components/app/logic/composer-prompts/promptHistory";
-import { isPromptStashShortcut, PROMPT_STASH_SHORTCUT } from "@/components/app/logic/composer-prompts/promptStash";
-import { formatShortcutKeys, shortcutPlatform } from "@/components/app/logic/keyboardShortcuts";
+import { useKeybinding, useKeybindingLabel } from "@/components/app/hooks/useKeybindings";
+import { keybindingMatchesEvent } from "@/components/app/logic/keybindings/keybindingMatching";
 import { usePromptStash } from "@/components/app/hooks/usePromptStash";
 import { ComposerStashMenu } from "./ComposerStashMenu";
 
-const STASH_SHORTCUT_LABEL = formatShortcutKeys(PROMPT_STASH_SHORTCUT, shortcutPlatform());
-
 export function NativeComposerInput({ inputRef, value: savedValue, disabled, placeholder, suggestion, onChange: publishChange, onSubmit, onFiles, trailingAction, mentions, issueSource }: NativeComposerInputProps) {
   const draft = useComposerDraft(savedValue, publishChange);
+  const stashBinding = useKeybinding("stash-composer-prompt");
+  const stashShortcutLabel = useKeybindingLabel("stash-composer-prompt");
   const value = draft.text;
   const onChange = draft.change;
   const submit = useRef(onSubmit);
@@ -80,7 +80,7 @@ export function NativeComposerInput({ inputRef, value: savedValue, disabled, pla
           if (event.key === "Escape") { event.preventDefault(); if (mention) setDismissedMention(`${mention.trigger}:${mention.start}`); return; }
         }
         const composing = event.nativeEvent.isComposing || event.keyCode === 229;
-        if (!composing && isPromptStashShortcut(event)) {
+        if (!composing && keybindingMatchesEvent(stashBinding, event)) {
           event.preventDefault();
           const next = stash.toggle(value);
           if (next !== null) replace(next);
@@ -102,7 +102,7 @@ export function NativeComposerInput({ inputRef, value: savedValue, disabled, pla
           submit.current();
         }
       }} />
-    <ComposerStashMenu entries={stash.entries} disabled={disabled} shortcut={STASH_SHORTCUT_LABEL}
+    <ComposerStashMenu entries={stash.entries} disabled={disabled} shortcut={stashShortcutLabel}
       onRestore={(entryId) => { const next = stash.restore(entryId, value); if (next !== null) replace(next); }} onRemove={stash.remove} />
     {open && <ComposerSuggestionList label={suggestions.label} message={suggestions.message} loading={suggestions.loading} onRetry={suggestions.retry} id={listId} options={matches} activeIndex={Math.min(activeIndex, matches.length - 1)} onPick={pick} onHover={setActiveIndex} />}
     {ghost && <>

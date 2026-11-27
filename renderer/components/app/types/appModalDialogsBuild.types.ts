@@ -1,6 +1,6 @@
 import type { CreateTaskDialogProps } from "@/components/app/types/taskCreation.types";
 import type { AppUiCommands } from "@/components/app/hooks/useAppUiCommands";
-import type { AppView, UiState, WindowUiState, WorkspaceTasksState } from "@/components/app/types";
+import type { AppView, UiState, WorkspaceTasksState } from "@/components/app/types";
 import type {
   AgentSession,
   AppSettings,
@@ -99,9 +99,9 @@ export type AppModalDialogsBuildDeps = {
   loadChromeCookieProfiles: () => void | Promise<void>;
   runChromeBrowserDataImport: (profileId: string) => Promise<BrowserDataImportResult | null>;
   isAnalyticsConsentDialogOpen: boolean;
+  usageStatisticsRequireConsent: boolean;
   allowAnalyticsConsent: () => void;
   declineAnalyticsConsent: () => void;
-  windowUiStatePlatform: WindowUiState["platform"];
   workspaceSwitcherEntries: WorkspaceSummary[];
   focusWorkspaceWithRecovery: (projectId: string) => Promise<AppState | null>;
   focusLocalTerminalDock: () => Promise<void>;

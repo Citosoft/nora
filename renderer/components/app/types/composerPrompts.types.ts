@@ -32,11 +32,11 @@ export interface PromptStash {
   restore(id: string, current: string): string | null;
   remove(id: string): void;
 }
-export interface ComposerStashKeyInput { key: string; shiftKey: boolean; altKey: boolean; ctrlKey: boolean; metaKey: boolean; }
 export interface ComposerStashMenuProps {
   entries: readonly StashedPrompt[];
   disabled: boolean;
-  shortcut: string;
+  /** Current label of the stash chord, or null when it is unbound. */
+  shortcut: string | null;
   onRestore(id: string): void;
   onRemove(id: string): void;
 }

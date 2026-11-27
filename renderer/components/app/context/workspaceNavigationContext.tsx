@@ -1,12 +1,14 @@
-import { createContext, useEffect, useMemo, useState } from "react";
+import { trackAnalyticsEvent } from "@/lib/analytics";
+import { createContext, useCallback, useEffect, useMemo, useState } from "react";
 import { useWorkspaceToolNavigation } from "@/components/app/hooks/useWorkspaceToolNavigation";
+import { useNavigationShortcuts } from "@/components/app/hooks/useNavigationShortcuts";
 import { useThreadNavigationPorts } from "@/components/app/hooks/useThreadNavigationPorts";
 import { parseSidebarPreferences, SIDEBAR_PREFERENCES_KEY } from "@/components/app/logic/workspace-navigation/preferences";
-import type { WorkspaceNavigationProviderProps, WorkspaceNavigationValue } from "@/components/app/types/workspaceNavigation.types";
+import type { SidebarMode, WorkspaceNavigationProviderProps, WorkspaceNavigationValue } from "@/components/app/types/workspaceNavigation.types";
 
 export const WorkspaceNavigationContext = createContext<WorkspaceNavigationValue | null>(null);
 export function WorkspaceNavigationProvider({ children }: WorkspaceNavigationProviderProps) {
-  const { setThreadVisible } = useThreadNavigationPorts();
+  const { setThreadVisible, showHome } = useThreadNavigationPorts();
   const [preferences, updatePreferences] = useState(() => {
     try { return parseSidebarPreferences(localStorage.getItem(SIDEBAR_PREFERENCES_KEY)); }
     catch { return parseSidebarPreferences(null); }
@@ -22,9 +24,17 @@ export function WorkspaceNavigationProvider({ children }: WorkspaceNavigationPro
   }, [preferences]);
   const setPreferences = updatePreferences;
   const { route, openedTools, openTool, closeTool, returnToThread } = useWorkspaceToolNavigation({ preferences, setPreferences });
+  // Choosing Bots, Apps or Inbox opens its home; going back to Threads keeps whatever thread is open.
+  const selectSidebarMode = useCallback((sidebarMode: SidebarMode): void => {
+    setPreferences((current) => ({ ...current, sidebarMode }));
+    trackAnalyticsEvent({ name: "view.opened", properties: { view: `sidebar:${sidebarMode}` } });
+    closeTool();
+    if (sidebarMode !== "threads") showHome();
+  }, [closeTool, setPreferences, showHome]);
+  useNavigationShortcuts({ openTool, selectSidebarMode });
   const threadVisible = !route;
   useEffect(() => { setThreadVisible(threadVisible); }, [setThreadVisible, threadVisible]);
-  const value = useMemo<WorkspaceNavigationValue>(() => ({ route, openedTools, openTool, closeTool, returnToThread, preferences, setPreferences, preferenceError }),
-    [route, openedTools, openTool, closeTool, returnToThread, preferences, setPreferences, preferenceError]);
+  const value = useMemo<WorkspaceNavigationValue>(() => ({ route, openedTools, openTool, closeTool, returnToThread, selectSidebarMode, preferences, setPreferences, preferenceError }),
+    [route, openedTools, openTool, closeTool, returnToThread, selectSidebarMode, preferences, setPreferences, preferenceError]);
   return <WorkspaceNavigationContext.Provider value={value}>{children}</WorkspaceNavigationContext.Provider>;
 }
